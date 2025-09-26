@@ -18,7 +18,9 @@ The framework provides both programmatic and CLI interfaces for maximum flexibil
 Traditional AI tools focus on specific tasks. The Semantic Self-Aware Kit enables true meta-cognitive evaluation - AI systems that can introspect, assess their own reasoning, and improve over time with built-in safety mechanisms. This approach enhances collaboration, improves decision-making, and provides empirical validation of AI behaviors and capabilities.
 
 #### Who is it for?
-Designed for AI researchers, developers, and collaborative AI systems that need advanced capabilities with built-in uncertainty management, empirical validation, and proactive guidance for both human and AI users. Whether you're building autonomous AI agents, collaborative development tools, or advanced reasoning systems, this framework provides the foundation for robust, self-aware AI development.
+Designed for AI researchers, developers, and **collaborative AI systems** that need advanced capabilities with built-in uncertainty management, empirical validation, and proactive guidance for both human and AI users. Whether you're building autonomous AI agents, collaborative development tools, or advanced reasoning systems, this framework provides the foundation for robust, self-aware AI development.
+
+**🤖 For AI Agents**: This framework is specifically designed to be AI-safe and collaborative. See [AI_DEVELOPMENT_GUIDE.md](AI_DEVELOPMENT_GUIDE.md) for AI-specific usage patterns and safety guidelines.
 
 ## 🚀 Key Features
 
@@ -33,6 +35,25 @@ Designed for AI researchers, developers, and collaborative AI systems that need 
 -   **🧭 Workspace Awareness**: Provides persistent, intelligent understanding of the AI's digital working environment.
 -   **🛠️ AI-Enhanced Tool Management**: Intelligent system for discovering, managing, and recommending tools.
 -   **🎯 Progressive Enhancement**: Lightweight by default, comprehensive analysis available on demand.
+
+## 🤖 AI Agent Quick Start
+
+**✅ This framework is AI-safe and designed for collaborative development!**
+
+```bash
+# Start here - always safe for AI exploration
+semantic-kit suggest          # Get intelligent recommendations  
+semantic-kit list-components  # Discover all capabilities
+semantic-kit demo            # Experience the framework
+semantic-kit self-test       # Test AI self-awareness
+
+# Safe exploration commands  
+semantic-kit investigate .   # Analyze current directory (lightweight & fast)
+semantic-kit cascade "Should I proceed?"  # Decision support with confidence levels
+semantic-kit awareness       # Check workspace intelligence
+```
+
+**🔍 For comprehensive AI development guidance**: See [AI_DEVELOPMENT_GUIDE.md](AI_DEVELOPMENT_GUIDE.md)
 
 ## 📦 Installation
 

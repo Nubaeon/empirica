@@ -1,8 +1,0 @@
-filename,layout_type,sidebar_type,active_nav
-index.html,base,none,home
-components.html,docs,components,components
-protocols.html,docs,protocols,protocols
-documentation.html,docs,documentation,documentation
-examples.html,docs,examples,documentation
-learning-path.html,docs,learning,documentation
-sovereign-ai.html,docs,sovereign,sovereign-ai

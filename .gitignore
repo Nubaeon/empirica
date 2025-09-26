@@ -121,3 +121,6 @@ local_*
 
 # Digital workspace maps (generated at runtime)
 digital_workspace_map.json
+
+# Web interface (held back for separate release)
+web/

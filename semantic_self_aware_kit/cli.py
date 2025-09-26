@@ -46,24 +46,33 @@ def log_command_execution(command: str, args: argparse.Namespace):
 def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
-        description="Empirical AI Semantic Framework CLI",
+        description="🤖 AI-Safe Empirical Semantic Framework CLI - Designed for collaborative AI development",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
+🤖 AI-SAFE COMMANDS (All commands are safe for AI exploration):
   semantic-kit suggest                           # Get intelligent suggestions (⚡ ~0.17s)
+  semantic-kit list-components                   # Discover framework capabilities  
+  semantic-kit demo                              # Experience framework overview
   semantic-kit self-test                         # Test AI self-awareness capabilities
   semantic-kit investigate ./code               # Quick code analysis (⚡ ~0.35s)
-  semantic-kit investigate ./code --full        # Comprehensive analysis (🔬 slower)
-  semantic-kit cascade "Should we deploy?"      # Run metacognitive cascade
-  semantic-kit benchmark                         # Run performance benchmarks
-  semantic-kit demo                              # Demonstrate framework capabilities
-  semantic-kit list-components                   # Show all available components
-  semantic-kit test-all                          # Test all components
-  semantic-kit watch                             # Start proactive workspace monitoring
+  semantic-kit cascade "Should I proceed?"      # Decision support with confidence
+  semantic-kit awareness                         # Check workspace intelligence
 
-Performance Modes:
-  Default: Lightning-fast analysis for daily development
-  --full:  Comprehensive analysis for thorough investigation
+🔬 COMPREHENSIVE ANALYSIS (Use when thorough investigation needed):
+  semantic-kit investigate ./code --full        # Comprehensive analysis (slower)
+  semantic-kit benchmark                         # Run performance benchmarks
+
+⚡ Performance Modes:
+  Default: Lightning-fast analysis for daily development (~0.1-0.4s)
+  --full:  Comprehensive analysis for thorough investigation (10s-60s)
+
+🛡️ Safety Features:
+  • All commands are read-only and non-destructive
+  • Built-in timeouts prevent resource exhaustion  
+  • Lightweight mode optimized for AI collaboration
+  • Uncertainty quantification for decision confidence
+
+📖 For AI agents: See AI_DEVELOPMENT_GUIDE.md for detailed usage patterns
         """
     )
     
