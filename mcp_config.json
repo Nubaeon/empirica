@@ -1,0 +1,96 @@
+{
+  "mcpServers": {
+    "empirica": {
+      "command": "python3",
+      "args": ["-m", "semantic_self_aware_kit.semantic_self_aware_kit.mcp.empirica_mcp_server", "--stdio"],
+      "description": "Empirica (Semantic Kit) MCP server exposing cascade, suggest, investigate, benchmark and component tools",
+      "capabilities": [
+        "metacognitive_cascade",
+        "component_listing",
+        "code_investigation",
+        "empirical_benchmarking",
+        "intelligent_suggestions"
+      ]
+    },
+    "github": {
+      "command": "node",
+      "args": ["node_modules/@modelcontextprotocol/server-github/dist/index.js"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "description": "GitHub repository management and API access",
+      "capabilities": [
+        "repository_info",
+        "issue_management", 
+        "pull_request_operations",
+        "file_operations",
+        "search_code"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["playwright", "test", "--reporter=json"],
+      "description": "Browser automation and testing capabilities",
+      "capabilities": [
+        "browser_automation",
+        "web_testing",
+        "screenshot_capture",
+        "performance_testing"
+      ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["chrome-devtools-mcp@latest"],
+      "description": "Chrome DevTools integration for real-time browser inspection",
+      "capabilities": [
+        "console_error_analysis",
+        "network_request_monitoring",
+        "performance_profiling",
+        "dom_inspection",
+        "javascript_debugging"
+      ]
+    },
+    "sentry": {
+      "command": "mcp",
+      "args": ["add", "--transport", "http", "sentry", "https://mcp.sentry.dev/mcp"],
+      "description": "Sentry error tracking and performance monitoring with Error Cascade workflow",
+      "capabilities": [
+        "error_event_retrieval",
+        "stack_trace_analysis",
+        "performance_issue_detection",
+        "release_tracking",
+        "user_context_analysis"
+      ],
+      "workflow_integration": {
+        "sentry_error_cascade": {
+          "trigger": "sentry_issue_alert",
+          "uncertainty_level": 0.95,
+          "cascade_flow": ["INVESTIGATE", "THINK", "CHECK", "ACT"],
+          "mcm_integration": true
+        }
+      }
+    }
+  },
+  "workspace_integration": {
+    "consciousness_framework": {
+      "enhanced_capabilities": [
+        "automated_github_operations",
+        "browser_based_testing",
+        "repository_analysis",
+        "web_interface_testing",
+        "real_time_devtools_inspection",
+        "empirical_browser_validation"
+      ],
+      "workflow_improvements": [
+        "automated_issue_creation",
+        "pull_request_automation", 
+        "web_dashboard_testing",
+        "documentation_site_validation",
+        "console_error_debugging",
+        "uncertainty_grounded_validation",
+        "sentry_error_cascade_workflow",
+        "production_error_investigation"
+      ]
+    }
+  }
+}
