@@ -1,0 +1,55 @@
+{
+  "name": "modality_switcher",
+  "version": "1.0.0",
+  "description": "Intelligent routing system for multi-modal AI interactions with epistemic-driven decision logic",
+  "author": "Empirica Team",
+  "license": "MIT",
+  "plugin_type": "routing",
+  "entry_point": "empirica.plugins.modality_switcher",
+  "dependencies": {
+    "anthropic": ">=0.21.0",
+    "requests": ">=2.31.0"
+  },
+  "features": {
+    "routing_strategies": [
+      "EPISTEMIC",
+      "COST",
+      "LATENCY", 
+      "QUALITY",
+      "BALANCED"
+    ],
+    "adapters": [
+      "minimax",
+      "qwen",
+      "local",
+      "rovodev",
+      "github_copilot",
+      "gemini",
+      "openrouter",
+      "qodo",
+      "deepseek"
+    ],
+    "cli_commands": [
+      "empirica cascade",
+      "empirica decision",
+      "empirica config",
+      "empirica monitor"
+    ],
+    "mcp_tools": [
+      "modality_route_query",
+      "modality_list_adapters",
+      "modality_adapter_health",
+      "modality_decision_assist"
+    ]
+  },
+  "configuration": {
+    "config_file": "~/.empirica/modality_config.json",
+    "auth_file": "~/.empirica/modality_auth.json"
+  },
+  "metadata": {
+    "phase": "3",
+    "status": "production",
+    "completion": "50%",
+    "last_updated": "2025-11-02"
+  }
+}

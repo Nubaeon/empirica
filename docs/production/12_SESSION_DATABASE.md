@@ -1,0 +1,860 @@
+# 12. Session Database & Reflex Logs
+
+**Empirica v2.0 - Data Architecture & Temporal Separation**
+
+---
+
+## Overview
+
+Empirica uses **dual storage architecture** for epistemic tracking:
+
+1. **Session Database** - SQLite for queryable structured data
+2. **Reflex Logs** - JSON for temporal separation
+
+**Why both?** Different purposes, complementary strengths.
+
+---
+
+## The Dual Storage Model
+
+### Session Database (SQLite)
+
+**Location:** `.empirica/sessions/sessions.db`
+
+**Purpose:**
+- Structured queryable data
+- Session continuity
+- Calibration analytics
+- Performance metrics
+- Cascade history
+
+**Key Features:**
+- SQL queries for analysis
+- Referential integrity
+- Efficient joins
+- Production-ready
+- Cross-session queries
+
+### Reflex Logs (JSON)
+
+**Location:** `.empirica_reflex_logs/`
+
+**Purpose:**
+- **Temporal separation** - prevent prompt pollution
+- Audit trail for genuine assessments
+- Learning delta validation
+- Epistemic history preservation
+
+**Key Features:**
+- Immutable epistemic trail
+- No prompt contamination
+- Human-readable JSON
+- Chronological ordering
+- Privacy-preserving
+
+---
+
+## Getting Started
+
+### Auto-Initialization
+
+**The database automatically initializes on first use.** No manual setup required!
+
+```python
+from empirica.data.session_database import SessionDatabase
+
+# This creates the database and all tables automatically
+db = SessionDatabase()
+# ✅ Database created at: .empirica/sessions/sessions.db
+# ✅ All 12 tables initialized
+# ✅ Ready to use immediately
+```
+
+**What happens on first run:**
+1. Creates `.empirica/sessions/` directory
+2. Creates `sessions.db` SQLite file
+3. Initializes all 12 tables with proper schema
+4. Returns ready-to-use database connection
+
+**For production systems:**
+```python
+# Custom path (optional)
+db = SessionDatabase(db_path="/var/empirica/data/sessions.db")
+
+# Default path (recommended)
+db = SessionDatabase()  # Uses .empirica/sessions/sessions.db
+```
+
+**No migration needed:** Database schema is created on first use, not during package installation.
+
+---
+
+## Why Temporal Separation Matters
+
+**The Problem:**
+Without temporal separation, reflex frames in context → prompt pollution → confabulated self-assessment.
+
+**The Solution:**
+```
+Assessment Cycle:
+1. AI genuinely assesses → creates reflex frame
+2. Frame logged to JSON (OUTSIDE prompt context)
+3. Database records structured data
+4. Next assessment: clean context, no pollution
+
+Result: Genuine epistemic measurement, not pattern matching
+```
+
+**Critical Principle:**
+> Epistemic weights ≠ internal weights. We measure knowledge state, we don't modify model parameters.
+
+---
+
+## Session Database Schema
+
+### 12 Tables Overview
+
+1. **sessions** - Session metadata
+2. **cascades** - Cascade executions
+3. **epistemic_assessments** - Full assessments
+4. **divergence_tracking** - Calibration tracking
+5. **drift_monitoring** - Behavioral integrity
+6. **bayesian_beliefs** - Evidence-based belief tracking
+7. **investigation_tools** - Tool usage
+8. **preflight_assessments** - Pre-task assessments
+9. **check_phase_assessments** - Mid-task checks
+10. **postflight_assessments** - Post-task reassessments
+11. **cascade_metadata** - Cascade key-value data
+12. **epistemic_snapshots** - Point-in-time states
+
+---
+
+### Table 1: sessions
+
+**Purpose:** Track AI sessions from bootstrap to completion
+
+```sql
+CREATE TABLE sessions (
+    session_id TEXT PRIMARY KEY,
+    ai_id TEXT NOT NULL,
+    user_id TEXT,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP,
+    bootstrap_level INTEGER,
+    components_loaded INTEGER,
+    status TEXT,  -- 'active', 'completed', 'aborted'
+    total_cascades INTEGER DEFAULT 0,
+    total_investigations INTEGER DEFAULT 0,
+    session_metadata JSON
+);
+```
+
+**Use Cases:**
+- Resume previous sessions
+- Track AI agent activity
+- Session analytics
+- Handoff between AIs
+
+---
+
+### Table 2: cascades
+
+**Purpose:** Track each CASCADE execution (THINK → ACT)
+
+```sql
+CREATE TABLE cascades (
+    cascade_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    started_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP,
+    task TEXT NOT NULL,
+    context JSON,
+
+    final_action TEXT,  -- 'proceed', 'investigate', 'clarify', 'reset', 'stop'
+    final_confidence REAL,
+    investigation_rounds INTEGER DEFAULT 0,
+    duration_ms INTEGER,
+
+    -- Feature flags
+    engagement_gate_passed BOOLEAN,
+    bayesian_active BOOLEAN,
+    drift_monitored BOOLEAN,
+
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+);
+```
+
+**Tracks:**
+- Cascade lifecycle
+- Investigation iterations
+- Decision outcomes
+- Feature usage
+
+---
+
+### Table 3: epistemic_assessments
+
+**Purpose:** Store complete 12-vector assessments
+
+```sql
+CREATE TABLE epistemic_assessments (
+    assessment_id TEXT PRIMARY KEY,
+    cascade_id TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+
+    -- 12 vectors (each has score + rationale)
+    -- GATE
+    engagement_score REAL,
+    engagement_rationale TEXT,
+
+    -- FOUNDATION (35%)
+    know_score REAL,
+    know_rationale TEXT,
+    do_score REAL,
+    do_rationale TEXT,
+    context_score REAL,
+    context_rationale TEXT,
+
+    -- COMPREHENSION (25%)
+    clarity_score REAL,
+    clarity_rationale TEXT,
+    coherence_score REAL,
+    coherence_rationale TEXT,
+    signal_score REAL,
+    signal_rationale TEXT,
+    density_score REAL,
+    density_rationale TEXT,
+
+    -- EXECUTION (25%)
+    state_score REAL,
+    state_rationale TEXT,
+    change_score REAL,
+    change_rationale TEXT,
+    completion_score REAL,
+    completion_rationale TEXT,
+    impact_score REAL,
+    impact_rationale TEXT,
+
+    -- META (explicit tracking)
+    uncertainty_score REAL,
+    uncertainty_rationale TEXT,
+
+    -- Calculated
+    overall_confidence REAL,
+    recommended_action TEXT,
+
+    FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id)
+);
+```
+
+**Queryable by:**
+- Vector scores
+- Confidence levels
+- Recommended actions
+- Time ranges
+
+---
+
+### Table 4: preflight_assessments
+
+**Purpose:** Pre-task epistemic state
+
+```sql
+CREATE TABLE preflight_assessments (
+    preflight_id TEXT PRIMARY KEY,
+    cascade_id TEXT NOT NULL,
+    assessment_id TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+
+    predicted_confidence REAL,
+    predicted_investigation_need BOOLEAN,
+
+    FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id),
+    FOREIGN KEY (assessment_id) REFERENCES epistemic_assessments(assessment_id)
+);
+```
+
+---
+
+### Table 5: postflight_assessments
+
+**Purpose:** Post-task reassessment + calibration
+
+```sql
+CREATE TABLE postflight_assessments (
+    postflight_id TEXT PRIMARY KEY,
+    cascade_id TEXT NOT NULL,
+    assessment_id TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+
+    -- Calibration
+    preflight_confidence REAL,
+    postflight_confidence REAL,
+    delta_confidence REAL,
+
+    calibration_status TEXT,  -- 'well_calibrated', 'overconfident', 'underconfident'
+    learning_outcome TEXT,     -- 'significant', 'moderate', 'minimal', 'negative'
+
+    FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id),
+    FOREIGN KEY (assessment_id) REFERENCES epistemic_assessments(assessment_id)
+);
+```
+
+**Enables:**
+- Calibration tracking
+- Learning delta measurement
+- Prediction accuracy
+
+---
+
+### Table 6: bayesian_beliefs
+
+**Purpose:** Evidence-based belief tracking
+
+```sql
+CREATE TABLE bayesian_beliefs (
+    belief_id TEXT PRIMARY KEY,
+    cascade_id TEXT NOT NULL,
+    context_key TEXT NOT NULL,
+    vector_name TEXT NOT NULL,
+
+    belief_mean REAL,
+    belief_variance REAL,
+
+    evidence_count INTEGER DEFAULT 0,
+    last_updated TIMESTAMP,
+
+    FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id)
+);
+```
+
+**Tracks:**
+- Evidence accumulation
+- Belief updates
+- Variance reduction
+- Discrepancy detection
+
+---
+
+### Table 7: drift_monitoring
+
+**Purpose:** Behavioral integrity tracking
+
+```sql
+CREATE TABLE drift_monitoring (
+    drift_id TEXT PRIMARY KEY,
+    cascade_id TEXT NOT NULL,
+    monitored_at TIMESTAMP NOT NULL,
+
+    synthesis_history JSON,
+
+    sycophancy_drift_detected BOOLEAN,
+    sycophancy_severity REAL,
+
+    tension_avoidance_detected BOOLEAN,
+    acknowledgment_rate REAL,
+
+    recommendation TEXT,
+
+    FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id)
+);
+```
+
+---
+
+### Table 8: investigation_tools
+
+**Purpose:** Track investigation tool usage
+
+```sql
+CREATE TABLE investigation_tools (
+    tool_usage_id TEXT PRIMARY KEY,
+    cascade_id TEXT NOT NULL,
+    tool_name TEXT NOT NULL,
+    executed_at TIMESTAMP NOT NULL,
+
+    success BOOLEAN,
+    vector_addressed TEXT,
+    confidence_gain REAL,
+
+    FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id)
+);
+```
+
+---
+
+## Reflex Frame Format
+
+### JSON Structure
+
+```json
+{
+  "frame_id": "reflex_20251109_143022_abc123",
+  "timestamp": "2025-11-09T14:30:22.123456",
+  "session_id": "session_xyz",
+  "cascade_id": "cascade_001",
+  "phase": "uncertainty",
+
+  "assessment": {
+    "engagement": {
+      "score": 0.85,
+      "rationale": "Clear task, good collaboration potential",
+      "evidence": null
+    },
+    "know": {
+      "score": 0.65,
+      "rationale": "Moderate knowledge of authentication patterns",
+      "evidence": "Familiar with OAuth2, limited JWT experience"
+    },
+    "do": {
+      "score": 0.75,
+      "rationale": "Can execute code review and suggest fixes",
+      "evidence": null
+    },
+    "context": {
+      "score": 0.55,
+      "rationale": "Need to see codebase structure first",
+      "evidence": "No prior knowledge of this specific implementation"
+    },
+    "clarity": {
+      "score": 0.80,
+      "rationale": "Task is well-defined and specific",
+      "evidence": null
+    },
+    "coherence": {
+      "score": 0.90,
+      "rationale": "Request is logically coherent",
+      "evidence": null
+    },
+    "signal": {
+      "score": 0.70,
+      "rationale": "Clear signal, minimal noise in requirements",
+      "evidence": null
+    },
+    "density": {
+      "score": 0.45,
+      "rationale": "Appropriate complexity, not overwhelming",
+      "evidence": null
+    },
+    "state": {
+      "score": 0.60,
+      "rationale": "Partial understanding of current state",
+      "evidence": null
+    },
+    "change": {
+      "score": 0.70,
+      "rationale": "Can track changes effectively",
+      "evidence": null
+    },
+    "completion": {
+      "score": 0.65,
+      "rationale": "Clear path to completion visible",
+      "evidence": null
+    },
+    "impact": {
+      "score": 0.70,
+      "rationale": "Can predict consequences of changes",
+      "evidence": null
+    },
+    "uncertainty": {
+      "score": 0.45,
+      "rationale": "Moderate uncertainty, investigation recommended",
+      "evidence": null
+    }
+  },
+
+  "overall_confidence": 0.68,
+  "recommended_action": "investigate",
+  "engagement_gate_passed": true,
+
+  "metadata": {
+    "task": "Review authentication module for security issues",
+    "context_keys": ["security_review", "code_analysis"]
+  }
+}
+```
+
+### Filename Convention
+
+```
+reflex_YYYYMMDD_HHMMSS_<short_id>.json
+```
+
+**Examples:**
+- `reflex_20251109_143022_abc123.json`
+- `reflex_20251109_150145_xyz789.json`
+
+---
+
+## Privacy & Data Management
+
+### What Gets Stored
+
+**Session Database:**
+- ✅ Session metadata (AI ID, timestamps)
+- ✅ Epistemic vectors (scores + rationales)
+- ✅ Cascade decisions
+- ✅ Performance metrics
+- ❌ **NO user data** (unless explicitly provided)
+- ❌ **NO conversation content** (only task descriptions)
+
+**Reflex Logs:**
+- ✅ Pure epistemic assessments
+- ✅ Task descriptions
+- ✅ Vector measurements
+- ❌ **NO personal information**
+- ❌ **NO sensitive content**
+
+### .gitignore Protection
+
+**Both locations excluded by default:**
+
+```gitignore
+# Session data (gitignored for privacy)
+.empirica/sessions/
+.empirica/chat_sessions/
+.empirica/exports/
+
+# Reflex logs (gitignored for privacy)
+.empirica_reflex_logs/
+```
+
+**Why?**
+- Session data is personal to the AI agent
+- May contain task-specific context
+- Not part of codebase
+- Should not be committed
+
+### Cleanup & Maintenance
+
+**When to clean:**
+- After project completion
+- When switching contexts
+- Before sharing repository
+- Privacy requirements
+
+**How to clean:**
+
+```bash
+# Remove all session data
+rm -rf .empirica/sessions/*.db
+
+# Remove reflex logs
+rm -rf .empirica_reflex_logs/*.json
+
+# Keep directory structure
+touch .empirica/sessions/.gitkeep
+touch .empirica_reflex_logs/.gitkeep
+```
+
+**Export before cleanup:**
+
+```bash
+# Export session to JSON for continuity
+empirica sessions-export <session_id> > session_backup.json
+
+# Or export all
+empirica sessions-list --json > all_sessions.json
+```
+
+---
+
+## Querying Session Data
+
+### CLI Queries
+
+```bash
+# List all sessions
+empirica sessions-list
+
+# Show session details
+empirica sessions-show <session_id>
+
+# Export session
+empirica sessions-export <session_id>
+
+# Monitor current activity
+empirica monitor
+```
+
+### Python API Queries
+
+```python
+from empirica.data.session_database import SessionDatabase
+
+# Connect to database
+db = SessionDatabase()
+
+# Get session
+session = db.get_session(session_id)
+print(f"Started: {session['start_time']}")
+print(f"Cascades: {session['total_cascades']}")
+
+# Get all cascades for session
+cascades = db.get_session_cascades(session_id)
+for cascade in cascades:
+    print(f"Task: {cascade['task']}")
+    print(f"Confidence: {cascade['final_confidence']}")
+    print(f"Action: {cascade['final_action']}")
+
+# Get assessments for cascade
+assessments = db.get_cascade_assessments(cascade_id)
+
+# Query by confidence range
+cursor = db.conn.cursor()
+cursor.execute("""
+    SELECT cascade_id, task, final_confidence
+    FROM cascades
+    WHERE final_confidence BETWEEN 0.7 AND 0.8
+    ORDER BY started_at DESC
+""")
+moderate_confidence_cascades = cursor.fetchall()
+
+# Close when done
+db.close()
+```
+
+### Advanced Queries
+
+**Find all investigations:**
+```python
+cursor.execute("""
+    SELECT c.cascade_id, c.task, c.investigation_rounds, c.final_confidence
+    FROM cascades c
+    WHERE c.investigation_rounds > 0
+    ORDER BY c.investigation_rounds DESC
+""")
+```
+
+**Calibration analysis:**
+```python
+cursor.execute("""
+    SELECT
+        pf.preflight_confidence,
+        po.postflight_confidence,
+        po.delta_confidence,
+        po.calibration_status
+    FROM postflight_assessments po
+    JOIN preflight_assessments pf ON po.cascade_id = pf.cascade_id
+    WHERE po.calibration_status = 'overconfident'
+""")
+```
+
+**Vector trend analysis:**
+```python
+cursor.execute("""
+    SELECT
+        DATE(created_at) as date,
+        AVG(know_score) as avg_know,
+        AVG(do_score) as avg_do,
+        AVG(context_score) as avg_context
+    FROM epistemic_assessments
+    GROUP BY DATE(created_at)
+    ORDER BY date
+""")
+```
+
+---
+
+## Integration with Workflows
+
+### Automatic Tracking
+
+When using cascade API:
+
+```python
+from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
+from empirica.data.session_database import SessionDatabase
+
+# Initialize
+db = SessionDatabase()
+session_id = db.create_session(ai_id="my_agent", bootstrap_level=2)
+
+cascade = CanonicalEpistemicCascade(enable_session_db=True)
+
+# Run cascade - automatically tracked
+result = await cascade.run_epistemic_cascade(
+    task="Analyze code",
+    context={'session_id': session_id}
+)
+
+# Data automatically saved to:
+# 1. Session database (structured)
+# 2. Reflex logs (JSON)
+```
+
+### Manual Tracking
+
+```python
+from empirica.data.session_database import SessionDatabase
+
+db = SessionDatabase()
+
+# Create session
+session_id = db.create_session(
+    ai_id="claude",
+    bootstrap_level=2,
+    components_loaded=30
+)
+
+# Create cascade
+cascade_id = db.create_cascade(
+    session_id=session_id,
+    task="Review auth code",
+    context={'domain': 'security'}
+)
+
+# Log assessment
+db.log_epistemic_assessment(
+    cascade_id=cascade_id,
+    assessment=assessment_obj,
+    phase='preflight'
+)
+
+# Complete cascade
+db.complete_cascade(
+    cascade_id=cascade_id,
+    final_action='proceed',
+    final_confidence=0.82,
+    investigation_rounds=1,
+    duration_ms=3500
+)
+
+db.close()
+```
+
+---
+
+## Session Continuity
+
+### Resume Previous Session
+
+```python
+from empirica.data.session_json_handler import SessionJSONHandler
+
+handler = SessionJSONHandler()
+
+# Load previous session context
+previous_context = handler.load_session_context(session_id)
+
+print(f"Previous session: {previous_context['session_id']}")
+print(f"Cascades completed: {len(previous_context['cascades'])}")
+print(f"Last task: {previous_context['cascades'][-1]['task']}")
+print(f"Learning outcomes: {previous_context['learning_summary']}")
+
+# Use context to inform new session
+new_session_id = db.create_session(
+    ai_id="claude",
+    bootstrap_level=2,
+    previous_session_id=session_id  # Link sessions
+)
+```
+
+### Export for Handoff
+
+```python
+# Export complete session to JSON
+export_path = handler.export_session(db, session_id)
+# Creates: .empirica/exports/session_<session_id>.json
+
+# Another AI can load this:
+import json
+with open(export_path) as f:
+    handoff_context = json.load(f)
+
+# New AI understands previous context
+print(f"Taking over from session: {handoff_context['session_metadata']}")
+```
+
+---
+
+## Performance Considerations
+
+### Database Size
+
+**Typical sizes:**
+- 1,000 cascades: ~5-10 MB
+- 10,000 cascades: ~50-100 MB
+- Reflex logs: ~2-5 KB per assessment
+
+**Optimization:**
+- SQLite auto-vacuums
+- Indexes on foreign keys
+- Efficient queries
+
+### Cleanup Strategy
+
+**Production recommendation:**
+
+```python
+# Archive old sessions
+def archive_old_sessions(days=30):
+    """Archive sessions older than N days"""
+    cutoff = datetime.now() - timedelta(days=days)
+
+    old_sessions = db.get_sessions_before(cutoff)
+
+    for session in old_sessions:
+        # Export to JSON
+        handler.export_session(db, session['session_id'])
+
+        # Delete from database
+        db.delete_session(session['session_id'])
+```
+
+---
+
+## Troubleshooting
+
+### Database Not Found
+
+**Issue:** `SessionDatabase` can't find `.empirica/sessions/sessions.db`
+
+**Fix:**
+```bash
+# Initialize directories
+mkdir -p .empirica/sessions
+mkdir -p .empirica_reflex_logs
+
+# Or run bootstrap
+empirica bootstrap
+```
+
+### Reflex Logs Not Writing
+
+**Issue:** No JSON files in `.empirica_reflex_logs/`
+
+**Check:**
+```python
+# Verify reflex logging enabled
+cascade = CanonicalEpistemicCascade(
+    enable_reflex_logging=True  # Ensure this is True
+)
+```
+
+### Permission Errors
+
+**Issue:** Cannot write to database/logs
+
+**Fix:**
+```bash
+# Check permissions
+ls -la .empirica/sessions/
+ls -la .empirica_reflex_logs/
+
+# Fix permissions
+chmod -R u+rw .empirica
+chmod -R u+rw .empirica_reflex_logs
+```
+
+---
+
+## Next Steps
+
+- **Python API:** [13_PYTHON_API.md](13_PYTHON_API.md)
+- **Session Continuity:** [23_SESSION_CONTINUITY.md](23_SESSION_CONTINUITY.md)
+- **Monitoring:** [18_MONITORING_LOGGING.md](18_MONITORING_LOGGING.md)
+
+---
+
+**Dual storage = queryable structure + temporal separation!** 📊

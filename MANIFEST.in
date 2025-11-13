@@ -3,16 +3,25 @@ include LICENSE
 include CONTRIBUTING.md
 include requirements.txt
 include setup.py
-include empirica.py
-include bootstrap.py
-include cli.py
-recursive-include semantic_self_aware_kit *.py *.json *.yaml *.md
-recursive-exclude semantic_self_aware_kit __pycache__
-recursive-exclude semantic_self_aware_kit *.pyc
-recursive-exclude semantic_self_aware_kit *.pyo
-recursive-exclude semantic_self_aware_kit *.pyd
-recursive-exclude semantic_self_aware_kit *.so
-recursive-exclude semantic_self_aware_kit .git*
-recursive-exclude semantic_self_aware_kit .DS_Store
+include pyproject.toml
+recursive-include empirica *.py *.json *.yaml
+recursive-include mcp_local *.py
+recursive-include docs *.md *.txt
+recursive-exclude empirica __pycache__
+recursive-exclude empirica *.pyc
+recursive-exclude empirica *.pyo
+recursive-exclude mcp_local __pycache__
+recursive-exclude mcp_local *.pyc
+exclude tests
+exclude .empirica
+exclude .empirica_reflex_logs
+exclude htmlcov
+exclude .coverage
+exclude coverage.json
+exclude test_goals_session
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.pyo
 global-exclude .DS_Store
 global-exclude Thumbs.db
+global-exclude .git*

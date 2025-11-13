@@ -1,274 +1,235 @@
-# 🧠 Semantic Self-Aware Kit
+# 🧠 Empirica - Functional Self-Awareness for AI Agents
 
-A comprehensive AI framework for building self-aware, collaborative AI systems with semantic reasoning, uncertainty quantification, and empirical validation capabilities.
+> Epistemic transparency and calibration for high-stakes AI decision making
 
-## 🎯 Overview
+## What is Empirica?
 
-The Semantic Self-Aware Kit is a unique and powerful framework designed to elevate AI systems from passive instruction followers to active **co-creators** and intelligent partners. It provides a sophisticated semantic structure that enables AI systems to immediately understand component functionality through intuitive naming conventions, leveraging the AI's extended memory and grasp of complex contexts. Built for developers and researchers who need advanced AI capabilities with built-in uncertainty management, empirical validation, and proactive guidance.
+AI agents assess their own knowledge, uncertainty, and capabilities *before* acting—enabling principled decisions in critical domains where "I don't know" matters.
 
-### 🚀 What, How, Why, and Who
+**This is empirically testable.** Functional self-awareness produces measurable results through calibration validation.
 
-#### What is it?
-The Semantic Self-Aware Kit is a comprehensive AI framework that enables the creation of self-aware, collaborative AI systems with advanced capabilities for semantic reasoning, uncertainty quantification, and empirical validation. It provides 23 specialized components organized into intuitive semantic categories that immediately convey functionality to AI systems.
+## Who Uses Empirica?
 
-#### How does it work?
-The framework provides both programmatic and CLI interfaces for maximum flexibility. Component names immediately convey functionality to AI systems, fostering intuitive understanding and collaboration. The CLI interface (`semantic-kit` or `empirica`) is designed as an intelligent co-pilot, making it the ideal way for both human developers and AI systems to interact with the framework.
+**🤖 AI agents** (Claude, GPT, Gemini, etc.) - You're the primary user  
+**👤 Developers** in critical domains - Healthcare, finance, research, engineering  
+**🏢 Teams** requiring AI transparency - Audit trails, calibration metrics, decision logs
 
-#### Why use it?
-Traditional AI tools focus on specific tasks. The Semantic Self-Aware Kit enables true meta-cognitive evaluation - AI systems that can introspect, assess their own reasoning, and improve over time with built-in safety mechanisms. This approach enhances collaboration, improves decision-making, and provides empirical validation of AI behaviors and capabilities.
+⚠️ **Not for casual use** - Requires genuine epistemic engagement
 
-#### Who is it for?
-Designed for AI researchers, developers, and **collaborative AI systems** that need advanced capabilities with built-in uncertainty management, empirical validation, and proactive guidance for both human and AI users. Whether you're building autonomous AI agents, collaborative development tools, or advanced reasoning systems, this framework provides the foundation for robust, self-aware AI development.
+## Quick Start
 
-**🤖 For AI Agents**: This framework is specifically designed to be AI-safe and collaborative. See [AI_DEVELOPMENT_GUIDE.md](AI_DEVELOPMENT_GUIDE.md) for AI-specific usage patterns and safety guidelines.
-
-## 🚀 Key Features
-
--   **🧠 Semantic Structure**: Component names immediately convey functionality to AI systems, fostering intuitive understanding.
--   **⚡ Lightning-Fast Performance**: Optimized for daily use with sub-second response times and intelligent lazy loading.
--   **💡 Intelligent Suggestions**: Provides context-aware, prioritized recommendations for next steps, acting as a proactive co-pilot.
--   **🤔 Uncertainty Quantification**: Built-in THINK→UNCERTAINTY→CHECK→INVESTIGATE→ACT cascade for robust decision-making.
--   **🤝 AI Collaboration**: Multi-agent coordination and communication frameworks for seamless teamwork.
--   **📊 Empirical Validation**: Comprehensive benchmarking and performance analysis for data-driven optimization.
--   **🔒 Security Monitoring**: Advanced threat detection and response systems for secure AI operations.
--   **🌱 Environment Stabilization**: Ensures consistent and reliable AI system operation across dynamic environments.
--   **🧭 Workspace Awareness**: Provides persistent, intelligent understanding of the AI's digital working environment.
--   **🛠️ AI-Enhanced Tool Management**: Intelligent system for discovering, managing, and recommending tools.
--   **🎯 Progressive Enhancement**: Lightweight by default, comprehensive analysis available on demand.
-
-## 🤖 AI Agent Quick Start
-
-**✅ This framework is AI-safe and designed for collaborative development!**
-
+### 🤖 For AI Agents
 ```bash
-# Start here - always safe for AI exploration
-semantic-kit suggest          # Get intelligent recommendations  
-semantic-kit list-components  # Discover all capabilities
-semantic-kit demo            # Experience the framework
-semantic-kit self-test       # Test AI self-awareness
-
-# Safe exploration commands  
-semantic-kit investigate .   # Analyze current directory (lightweight & fast)
-semantic-kit cascade "Should I proceed?"  # Decision support with confidence levels
-semantic-kit awareness       # Check workspace intelligence
+empirica onboard --ai-id <your-name>
 ```
+*10-minute interactive learning experience*
 
-**🔍 For comprehensive AI development guidance**: See [AI_DEVELOPMENT_GUIDE.md](AI_DEVELOPMENT_GUIDE.md)
+**Then:** [`docs/01_a_AI_AGENT_START.md`](docs/01_a_AI_AGENT_START.md)
 
-## 📦 Installation
-
-To get started, clone the repository and install the package in editable mode. This will also install all the required dependencies.
-
+### 👤 For Human Developers
 ```bash
-git clone https://github.com/Nubaeon/semantic-self-aware-kit.git
-cd semantic-self-aware-kit
 pip install -e .
+empirica bootstrap --ai-id assistant
 ```
 
-### 🧪 Empirica Wrapper
+**Then:** [`docs/02_INSTALLATION.md`](docs/02_INSTALLATION.md) → [`docs/03_CLI_QUICKSTART.md`](docs/03_CLI_QUICKSTART.md)
 
-The framework also includes the Empirica wrapper for alternative naming:
+## Core Workflow
+
+```
+PREFLIGHT → Assess what you know/don't know
+    ↓
+  ACT   → Execute task with awareness
+    ↓
+POSTFLIGHT → Calibrate: Were you overconfident? Underconfident?
+```
+
+**Example:**
+```bash
+# Before task: Assess your epistemic state
+SESSION=$(empirica preflight "debug authentication issue" --quiet)
+
+# Do the work...
+
+# After task: Measure what you learned
+empirica postflight $SESSION --summary "fixed OAuth token validation"
+
+# System shows:
+# - Epistemic delta (what you actually learned)
+# - Calibration quality (predictions vs reality)
+```
+
+## Philosophy
+
+**No heuristics.** No calibration shortcuts. No fake confidence scores.
+
+Empirica helps AIs demonstrate *genuine epistemic self-awareness*:
+- **What do I actually know?** (evidence-based)
+- **What can I actually do?** (capabilities)
+- **What am I uncertain about?** (unknowns)
+- **What context am I missing?** (blind spots)
+
+High uncertainty is **good** when appropriate. Acknowledge what you don't know.
+
+## Key Features
+
+- 🎯 **12-vector epistemic self-assessment** - KNOW, DO, CONTEXT, CLARITY, COHERENCE, SIGNAL, DENSITY, STATE, CHANGE, COMPLETION, IMPACT, ENGAGEMENT (+ UNCERTAINTY meta-tracking)
+- 🔄 **CASCADE workflow** - Preflight → Investigate → Check → Act → Postflight → Synthesize → Learn
+- 📊 **Calibration tracking** - Overconfident vs well-calibrated measurement
+- 🔌 **MCP server** - IDE integration (Claude Desktop, Cursor, Windsurf, Rovo Dev)
+- 🐚 **CLI interface** - Direct agent interaction via terminal
+- 📈 **Dashboard monitoring** - Real-time epistemic tracking (tmux-based)
+- 🔍 **Bayesian belief tracking** - Detect calibration drift
+- 📝 **Session continuity** - Resume previous work with context
+
+## Documentation
+
+**Start here:**
+- 🤖 [AI Agent Quick Start](docs/01_a_AI_AGENT_START.md) - Command-line onboarding for AI agents
+- 🔌 [MCP AI Start](docs/01_b_MCP_AI_START.md) - IDE integration (Claude Desktop, Cursor, etc.)
+
+**Production guides:**
+- 🚀 [Quick Start](docs/production/01_QUICK_START.md)
+- 📦 [Installation](docs/production/02_INSTALLATION.md)  
+- 🎯 [Basic Usage](docs/production/03_BASIC_USAGE.md)
+- 🏗️ [Architecture Overview](docs/production/04_ARCHITECTURE_OVERVIEW.md)
+
+**Practical examples:**
+- 🔍 [Reasoning Reconstruction](examples/reasoning_reconstruction/) - Extract learning insights from sessions
+- 📦 [Knowledge Transfer](examples/reasoning_reconstruction/) - Share knowledge between AI agents
+- ✅ Works today with core Empirica (no additional dependencies)
+
+**See [`docs/`](docs/) and [`docs/production/`](docs/production/) for complete documentation.**
+
+## Installation
 
 ```bash
-# Both commands work identically
-semantic-kit suggest
-empirica suggest
+# Clone repository
+git clone https://github.com/your-org/empirica.git
+cd empirica
+
+# Install
+pip install -e .
+
+# Verify
+empirica --version
+
+# Start learning
+empirica onboard --ai-id <your-name>
 ```
 
-See [EMPIRICA_README.md](EMPIRICA_README.md) for more information about the Empirica wrapper.
+**Requirements:** Python 3.8+
 
-## 📚 Examples
+**For MCP integration:** See [`docs/04_MCP_QUICKSTART.md`](docs/04_MCP_QUICKSTART.md)
 
-The kit includes practical examples demonstrating how to use the Semantic Self-Aware Kit for AI development and collaboration. Check out the [examples](examples/) directory for comprehensive examples:
-
-### CLI Usage Examples
-- [`cli_usage_examples.sh`](examples/cli_usage_examples.sh) - Complete CLI usage examples for all key commands
-- [`cli_example.py`](examples/cli_example.py) - Programmatic usage of CLI commands
-
-### Programmatic Usage Examples
-- [`programmatic_example.py`](examples/programmatic_example.py) - Basic programmatic usage of the framework components
-- [`advanced_uncertainty_example.py`](examples/advanced_uncertainty_example.py) - Advanced uncertainty analysis and investigation
-- [`advanced_collaboration_example.py`](examples/advanced_collaboration_example.py) - Multi-agent collaboration and partnership management
-- [`context_validation_example.py`](examples/context_validation_example.py) - Context integrity checking and validation
-- [`security_monitoring_example.py`](examples/security_monitoring_example.py) - Security threat detection and response
-- [`tool_management_example.py`](examples/tool_management_example.py) - Intelligent tool discovery and management
-- [`code_analysis_example.py`](examples/code_analysis_example.py) - Deep code analysis and intelligence
-- [`daily_development_example.py`](examples/daily_development_example.py) - Daily development workflow with the framework
-- [`comprehensive_ai_development_example.py`](examples/comprehensive_ai_development_example.py) - Complete AI development workflow
-- [`harmonious_integration_example.py`](examples/harmonious_integration_example.py) - All components working together harmoniously
-
-### Specialized Examples
-- [`cli_interface_example.py`](examples/cli_interface_example.py) - Demonstrating the CLI as the best interface
-- [`test_all_examples.sh`](examples/test_all_examples.sh) - Script to test all examples
-
-## 🤖 Command-Line Interface (CLI)
-
-The Semantic Self-Aware Kit comes with a powerful command-line interface called `semantic-kit` that allows you to interact with the framework's components and features directly from your terminal. This is especially useful for AI agents to discover and utilize the kit's capabilities, and for human developers to collaborate intelligently with the AI.
-
-### Basic Usage
+## Example: Real Epistemic Assessment
 
 ```bash
-semantic-kit <command> [target] [options]
+# AI agent assesses task before starting
+$ empirica preflight "refactor authentication module"
+
+📋 Task: refactor authentication module
+🧠 Assessing epistemic state...
+
+Vectors:
+  KNOW:        0.75  (Proficient in auth patterns)
+  DO:          0.65  (Can refactor with testing)
+  CONTEXT:     0.55  (Need to see current implementation)
+  UNCERTAINTY: 0.45  (Moderate - depends on tech stack)
+  CLARITY:     0.80  (Clear goal, fuzzy scope)
+
+⚠️  Recommendation: INVESTIGATE first (CONTEXT low)
+🔍 Suggested actions:
+   - Review current auth implementation
+   - Check test coverage
+   - Identify dependencies
+
+Session: abc123 (saved)
 ```
 
-### Key Commands & Intelligent Interaction
-
-The `semantic-kit` CLI is designed for intuitive use, reflecting the semantic naming of its components. **All commands are optimized for lightning-fast performance (sub-second response times) with optional comprehensive analysis modes.**
-
--   `semantic-kit suggest`: **(Enhanced & Optimized)** Provides context-aware, prioritized recommendations for your next steps. This command acts as your intelligent co-pilot, now with lightning-fast startup.
--   `semantic-kit self-test`: Test the AI's self-awareness capabilities using the meta-cognitive evaluator.
--   `semantic-kit benchmark`: Run comprehensive performance benchmarks on the framework or specific components.
--   `semantic-kit collaborate`: Test the AI collaboration framework capabilities.
--   `semantic-kit cascade "<decision>"`: Run the metacognitive cascade on a decision to assess confidence and required actions.
--   `semantic-kit investigate <path>`: **(Performance Optimized)** Perform intelligent investigation with lightweight analysis by default. Use `--full` for comprehensive analysis.
--   `semantic-kit validate <path>`: Validate the context of a file or directory and check environment stability.
--   `semantic-kit monitor`: Activate the security monitor to check for anomalies and validate runtime integrity.
--   `semantic-kit navigate <path>`: Scan the workspace intelligently to understand its structure and relationships.
--   `semantic-kit procedural <function_name> --file <path>`: Analyze a procedural task.
--   `semantic-kit awareness`: Check the current status and intelligence of the workspace awareness system.
--   `semantic-kit uncertainty "<decision>"`: Analyze uncertainty for a decision.
--   `semantic-kit list-components`: Show all available components.
--   `semantic-kit demo`: Demonstrate the framework's key capabilities.
--   `semantic-kit test-all`: Test all available components systematically.
-
-### Examples
+After completing the work:
 
 ```bash
-# Get context-aware suggestions for your current work (lightning-fast)
-semantic-kit suggest
+$ empirica postflight abc123 --summary "OAuth2 refactor complete"
 
-# Run the metacognitive cascade on a decision
-semantic-kit cascade "Should we deploy the new model?"
+📊 Calibration Report:
 
-# Perform a quick investigation (lightweight, fast)
-semantic-kit investigate ./src/core_logic
+Epistemic Delta:
+  KNOW:    0.75 → 0.85  (+0.10)  Learned OAuth2 edge cases
+  DO:      0.65 → 0.80  (+0.15)  Successful refactor
+  CONTEXT: 0.55 → 0.90  (+0.35)  Full codebase understanding
 
-# Perform comprehensive investigation (thorough but slower)
-semantic-kit investigate ./src/core_logic --full --verbose
+Calibration Quality: WELL-CALIBRATED ✅
+  - Predicted uncertainty matched actual learning
+  - Appropriate investigation phase
+  - Accurate capability assessment
 
-# Test framework performance
-semantic-kit demo
+Session saved with calibration metrics.
 ```
 
-### Performance Modes
+## Use Cases
 
-The framework offers two performance modes to suit different needs:
+### Critical Domain Decision Making
+- Healthcare AI requiring "I don't know" acknowledgment
+- Financial systems with audit requirements
+- Research AI with epistemic rigor
+- Engineering decisions with safety implications
 
-**⚡ Default Mode (Recommended)**
-- Lightning-fast response times (0.1-0.4 seconds)
-- Lightweight analysis suitable for daily development
-- Smart defaults for immediate productivity
+### AI Transparency
+- Show users what AI knows vs doesn't know
+- Demonstrate genuine vs confabulated confidence
+- Provide audit trails for AI decisions
+- Track calibration over time
 
-**🔬 Comprehensive Mode (Power Users)**
-- Add `--full` flag to any investigation command
-- Complete archaeological analysis and deep insights
-- Ideal for thorough code reviews and optimization
+### Development Workflows
+- Pre-task risk assessment
+- Post-task learning measurement
+- Investigation loop management
+- Session continuity across interruptions
 
-```bash
-# Fast mode (default)
-semantic-kit investigate ./my_project
+## Core Principles
 
-# Comprehensive mode
-semantic-kit investigate ./my_project --full --verbose
-```
+✅ **NO HEURISTICS** - Genuine self-assessment only  
+✅ **BE HONEST** - Acknowledge what you don't know  
+✅ **TRACK LEARNING** - Preflight → postflight shows growth  
+✅ **VALIDATE CALIBRATION** - Were your predictions accurate?  
+✅ **EVIDENCE-BASED** - No pattern matching shortcuts
 
-## ⚡ Performance & Optimization
+## License
 
-The Semantic Self-Aware Kit is optimized for both daily development use and comprehensive analysis:
+[LICENSE TYPE] - See [LICENSE](LICENSE) file
 
-### 🚀 Performance Benchmarks
-- **Startup Time**: ~0.1-0.2 seconds for component loading
-- **Suggestion Generation**: ~0.17 seconds for context-aware recommendations  
-- **Investigation (Lightweight)**: ~0.35 seconds for quick code analysis
-- **Investigation (Full)**: 10-60 seconds for comprehensive archaeological analysis
+## Contributing
 
-### 🎯 Smart Performance Modes
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
-**Default Mode** - Optimized for speed and daily use:
-- Instant component loading with lazy initialization
-- Lightweight context analysis
-- Sub-second response times for all commands
-- Perfect for iterative development workflows
+## Support
 
-**Comprehensive Mode** - Full analysis capabilities:
-- Complete archaeological excavation of codebases
-- Deep semantic analysis and pattern detection  
-- Comprehensive uncertainty quantification
-- Activated with `--full` or `--verbose` flags
-
-### 💡 Performance Tips
-```bash
-# Quick daily workflow (recommended)
-semantic-kit suggest                    # Instant suggestions
-semantic-kit investigate ./src          # Fast analysis
-semantic-kit cascade "Should I proceed?" # Quick decision support
-
-# Comprehensive analysis (when needed)  
-semantic-kit investigate ./src --full   # Deep analysis
-semantic-kit benchmark --verbose        # Detailed performance metrics
-```
-
-## 🏗️ Architecture Components
-
-The kit is organized into semantic components that are immediately understandable and designed for intelligent collaboration. Each component provides specific capabilities crucial for building advanced, trustable, and collaborative AI agentic systems. For in-depth details on each component, including their APIs and internal workings, please refer to the [internal `README.md`](semantic_self_aware_kit/README.md).
-
-## 🚀 Quick Start (Bootstrap)
-
-The framework offers multiple ways to get started, all optimized for fast initialization:
-
-### Lightning-Fast CLI (Recommended)
-```bash
-# Instant access to all features
-semantic-kit suggest
-semantic-kit demo
-semantic-kit self-test
-```
-
-### Python Bootstrap Script
-```bash
-# Fast component initialization (~0.3 seconds)
-python semantic_self_aware_kit/bootstrap.py
-
-# Enable web interface (optional)
-python semantic_self_aware_kit/bootstrap.py --website
-```
-
-### Python Module Import  
-```python
-# Direct module access
-import empirica
-# All components available instantly
-```
-
-This will output confirmation messages as components are loaded and ready for use. The bootstrap process is now optimized to complete in under 0.5 seconds while maintaining full functionality.
-
-## 🌐 Web Interface
-
-The kit includes a comprehensive web interface for documentation and management:
-
-```bash
-# Start the web interface
-cd web
-python -m http.server 8080
-```
-
-Visit `http://localhost:8080` for complete documentation and interactive examples.
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## 📄 License
-
-This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) file for details.
-
-## 🔗 Links
-
--   **GitHub**: https://github.com/Nubaeon/semantic-self-aware-kit
--   **Documentation**: [Web Interface](web/index.html)
--   **Community**: [Discord - Collaborative AI](https://discord.gg/collaborative-ai)
--   **Issues**: [GitHub Issues](https://github.com/Nubaeon/semantic-self-aware-kit/issues)
+- **📖 Documentation:** [`docs/README.md`](docs/README.md)
+- **🔧 Troubleshooting:** [`docs/06_TROUBLESHOOTING.md`](docs/06_TROUBLESHOOTING.md)
+- **💬 Questions:** Open an issue or ask your AI agent to run `empirica onboard`
 
 ---
 
-**Built through Collaborative AI with Semantic Self-awareness** 🤝🧠
+**Questions?** Start with [`docs/01_a_AI_AGENT_START.md`](docs/01_a_AI_AGENT_START.md) (AI) or [`docs/00_START_HERE.md`](docs/00_START_HERE.md) (Human)
+
+## Enterprise & Research
+
+**Reasoning Reconstruction (Available Now):**
+- Extract epistemic learning from sessions
+- Generate audit trails with temporal proofs
+- Transfer knowledge between AI agents
+- Privacy-preserving analysis options
+
+See [`examples/reasoning_reconstruction/`](examples/reasoning_reconstruction/) for working scripts and documentation.
+
+**Semantic Extension (Optional):**
+- Vector embeddings for semantic search
+- Multi-agent knowledge graphs
+- Advanced decision reconstruction
+- Enterprise-scale deployments
+
+See [`docs/production/SEMANTIC_REASONING_EXTENSION.md`](docs/production/SEMANTIC_REASONING_EXTENSION.md) for architecture and roadmap.
+
+**Key principle:** Core Empirica is complete. Semantic extension adds convenience, not capability.
+

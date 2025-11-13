@@ -1,0 +1,418 @@
+# Investigation Profiles Configuration
+# 
+# This file defines how investigation is constrained and guided for different
+# AI types, domains, and contexts. Profiles are selected based on:
+# - AI capability (from epistemic benchmarking)
+# - Domain criticality (user-declared or plugin-flagged)
+# - User preferences
+#
+# Philosophy:
+# - Universal constraints = governance/security (Sentinel enforcement)
+# - Profile constraints = context-appropriate guidance
+# - Plugins = suggestive, not prescriptive
+
+# ============================================================================
+# UNIVERSAL CONSTRAINTS (Applied to ALL profiles)
+# ============================================================================
+# These are enforced by Sentinel for governance, compliance, and security.
+# They represent system boundaries, not AI capability limits.
+
+universal_constraints:
+  # Engagement gate - below this, AI is disengaged/confused
+  engagement_gate: 0.60
+  
+  # Coherence minimum - below this, responses are incoherent
+  coherence_min: 0.50
+  
+  # Density maximum - above this, task is overwhelming
+  density_max: 0.90
+  
+  # Change minimum - below this, task is unclear/unstable
+  change_min: 0.50
+  
+  # Runtime safety limits (prevent runaway processes)
+  max_tool_calls_per_round: 10
+  investigation_timeout_seconds: 3600  # 1 hour
+  
+  # Audit requirements
+  log_all_assessments: true
+  log_tool_calls: true
+
+# ============================================================================
+# INVESTIGATION PROFILES
+# ============================================================================
+# Each profile defines constraints and guidance for a specific context.
+# Profiles can be selected explicitly or auto-selected based on AI type.
+
+profiles:
+  
+  # --------------------------------------------------------------------------
+  # HIGH REASONING - Co-creative, collaborative AIs
+  # --------------------------------------------------------------------------
+  # For: Claude Opus/Sonnet, GPT-4, o1, Gemini Pro
+  # Philosophy: Maximum autonomy, minimal constraints, trust AI reasoning
+  
+  high_reasoning_collaborative:
+    description: "For advanced reasoning models in creative/exploratory contexts"
+    
+    # Investigation constraints
+    investigation:
+      max_rounds: null  # No limit - AI decides when done
+      confidence_threshold: "dynamic"  # AI determines sufficient confidence
+      confidence_threshold_fallback: 0.60  # If AI can't decide, use this
+      
+      # How to present investigation options
+      tool_suggestion_mode: "light"  # Suggest tools, don't prescribe
+      allow_novel_approaches: true   # AI can use tools not suggested
+      
+    # Action determination (when to INVESTIGATE vs PROCEED vs CLARIFY)
+    action_thresholds:
+      # These are GUIDANCE, not hard constraints
+      # AI can override with strong rationale
+      
+      uncertainty_high: 0.75  # Suggest INVESTIGATE above this
+      clarity_low: 0.40       # Suggest CLARIFY below this
+      foundation_low: 0.40    # Suggest INVESTIGATE below this
+      
+      # When to PROCEED
+      confidence_proceed_min: 0.60  # Suggest PROCEED above this
+      
+      # Threshold behavior
+      override_allowed: true  # AI can ignore thresholds with reasoning
+      
+    # Tuning parameters
+    tuning:
+      # Main confidence tuner
+      confidence_weight: 1.0  # Normal sensitivity
+      
+      # Sub-tuners for specific vectors
+      foundation_weight: 1.0
+      comprehension_weight: 1.0
+      execution_weight: 1.0
+      uncertainty_weight: 1.0
+      
+    # Investigation strategy
+    strategy:
+      domain_detection: "reasoning"  # AI reasons about domain, not keywords
+      tool_selection: "ai_driven"    # AI selects tools based on gaps
+      gap_prioritization: "ai_driven"  # AI prioritizes gaps
+      
+    # Learning and adaptation
+    learning:
+      postflight_mode: "genuine_reassessment"  # No fake confidence boosts
+      confidence_gain_calculation: "none"  # AI genuinely reassesses
+  
+  # --------------------------------------------------------------------------
+  # AUTONOMOUS AGENT - Fast, efficient, structured
+  # --------------------------------------------------------------------------
+  # For: GPT-3.5, Claude Haiku, smaller models, automated workflows
+  # Philosophy: More structure, clear guidance, prevent drift
+  
+  autonomous_agent:
+    description: "For autonomous agents needing structured investigation"
+    
+    investigation:
+      max_rounds: 5  # Prevent excessive investigation
+      confidence_threshold: 0.70  # Clear bar for proceeding
+      
+      tool_suggestion_mode: "guided"  # Suggest specific tools
+      allow_novel_approaches: false   # Stick to suggested tools
+      
+    action_thresholds:
+      uncertainty_high: 0.80
+      clarity_low: 0.50
+      foundation_low: 0.50
+      confidence_proceed_min: 0.70
+      
+      override_allowed: false  # Must respect thresholds
+      
+    tuning:
+      confidence_weight: 1.0
+      foundation_weight: 1.2  # Emphasize solid foundation
+      comprehension_weight: 1.1
+      execution_weight: 1.0
+      uncertainty_weight: 1.1
+      
+    strategy:
+      domain_detection: "plugin_assisted"  # Use plugins for domain hints
+      tool_selection: "plugin_guided"      # Plugins suggest tools
+      gap_prioritization: "critical_first"  # Focus on critical gaps
+      
+    learning:
+      postflight_mode: "comparative_assessment"  # Compare pre/post
+      confidence_gain_calculation: "evidence_based"  # Based on findings
+  
+  # --------------------------------------------------------------------------
+  # CRITICAL DOMAIN - Safety-critical, regulated, high-stakes
+  # --------------------------------------------------------------------------
+  # For: Medical, financial, legal, safety systems
+  # Philosophy: Maximum structure, strict compliance, auditability
+  
+  critical_domain:
+    description: "For safety-critical and regulated domains"
+    
+    investigation:
+      max_rounds: 3  # Focused, efficient investigation
+      confidence_threshold: 0.90  # High bar for action
+      
+      tool_suggestion_mode: "prescribed"  # Specific approved tools only
+      allow_novel_approaches: false       # No experimentation
+      require_tool_approval: true         # Tools must be pre-approved
+      
+    action_thresholds:
+      uncertainty_high: 0.70  # Lower tolerance for uncertainty
+      clarity_low: 0.60       # Higher clarity requirement
+      foundation_low: 0.60    # Strong foundation required
+      confidence_proceed_min: 0.90
+      
+      override_allowed: false
+      escalate_on_uncertainty: true  # Flag high uncertainty for review
+      
+    tuning:
+      confidence_weight: 1.0
+      foundation_weight: 1.5  # Critical: need solid foundation
+      comprehension_weight: 1.3
+      execution_weight: 1.2
+      uncertainty_weight: 1.4  # Very sensitive to uncertainty
+      
+    strategy:
+      domain_detection: "declared"  # Domain must be declared
+      tool_selection: "allowlist"   # Only approved tools
+      gap_prioritization: "risk_weighted"  # Prioritize by risk
+      
+    learning:
+      postflight_mode: "full_audit_trail"  # Complete audit
+      confidence_gain_calculation: "conservative"  # Conservative estimates
+      require_validation: true  # Validate findings
+  
+  # --------------------------------------------------------------------------
+  # EXPLORATORY - Research, learning, open-ended tasks
+  # --------------------------------------------------------------------------
+  # For: Research, prototyping, learning, brainstorming
+  # Philosophy: Maximum freedom, encourage exploration
+  
+  exploratory:
+    description: "For open-ended research and exploration"
+    
+    investigation:
+      max_rounds: null  # Investigate as needed
+      confidence_threshold: "adaptive"  # Adjust based on findings
+      confidence_threshold_fallback: 0.50  # Low bar for exploration
+      
+      tool_suggestion_mode: "inspirational"  # Spark ideas
+      allow_novel_approaches: true
+      encourage_experimentation: true
+      
+    action_thresholds:
+      uncertainty_high: 0.85  # Uncertainty is okay
+      clarity_low: 0.30       # Vagueness is okay
+      foundation_low: 0.30    # Learning as we go
+      confidence_proceed_min: 0.50
+      
+      override_allowed: true
+      
+    tuning:
+      confidence_weight: 0.8  # Less sensitive to confidence
+      foundation_weight: 0.7  # Don't need perfect foundation
+      comprehension_weight: 0.8
+      execution_weight: 0.9
+      uncertainty_weight: 0.7  # Embrace uncertainty
+      
+    strategy:
+      domain_detection: "emergent"  # Discover domain through exploration
+      tool_selection: "serendipitous"  # Try different approaches
+      gap_prioritization: "curiosity_driven"
+      
+    learning:
+      postflight_mode: "reflection"  # Focus on what was learned
+      confidence_gain_calculation: "insight_based"
+  
+  # --------------------------------------------------------------------------
+  # BALANCED - Default middle-ground
+  # --------------------------------------------------------------------------
+  # For: General purpose tasks, mixed contexts
+  # Philosophy: Reasonable constraints, flexible guidance
+  
+  balanced:
+    description: "Balanced profile for general-purpose tasks"
+    
+    investigation:
+      max_rounds: 7
+      confidence_threshold: 0.65
+      
+      tool_suggestion_mode: "suggestive"
+      allow_novel_approaches: true
+      
+    action_thresholds:
+      uncertainty_high: 0.75
+      clarity_low: 0.45
+      foundation_low: 0.45
+      confidence_proceed_min: 0.65
+      
+      override_allowed: true
+      
+    tuning:
+      confidence_weight: 1.0
+      foundation_weight: 1.0
+      comprehension_weight: 1.0
+      execution_weight: 1.0
+      uncertainty_weight: 1.0
+      
+    strategy:
+      domain_detection: "hybrid"  # Mix reasoning + plugins
+      tool_selection: "ai_guided"
+      gap_prioritization: "balanced"
+      
+    learning:
+      postflight_mode: "genuine_reassessment"
+      confidence_gain_calculation: "evidence_based"
+
+# ============================================================================
+# PROFILE SELECTION RULES
+# ============================================================================
+# How to automatically select a profile based on context
+
+profile_selection:
+  # Default profile if no match
+  default: "balanced"
+  
+  # Auto-selection based on AI capability
+  # (These are populated by epistemic benchmarking results)
+  by_ai_capability:
+    # High reasoning models
+    high_reasoning:
+      - "claude-opus"
+      - "claude-sonnet"
+      - "gpt-4"
+      - "gpt-4-turbo"
+      - "o1"
+      - "o1-preview"
+      - "gemini-pro"
+      - "gemini-ultra"
+    
+    # Autonomous agent models
+    autonomous:
+      - "gpt-3.5-turbo"
+      - "claude-haiku"
+      - "gemini-nano"
+      - "llama-3-8b"
+      - "mistral-small"
+  
+  # Selection based on declared domain
+  by_domain:
+    critical:
+      - "medical"
+      - "financial"
+      - "legal"
+      - "safety-critical"
+      - "regulated"
+    
+    exploratory:
+      - "research"
+      - "learning"
+      - "brainstorming"
+      - "prototyping"
+  
+  # Override: User can force a specific profile
+  allow_user_override: true
+  
+  # Override: Plugins can recommend profiles
+  allow_plugin_recommendation: true
+
+# ============================================================================
+# PLUGIN INTEGRATION
+# ============================================================================
+# How investigation plugins interact with profiles
+
+plugin_integration:
+  # Can plugins modify constraints?
+  plugins_can_suggest_constraints: true
+  plugins_can_override_constraints: false  # Sentinel prevents this
+  
+  # Plugin suggestion modes
+  tool_suggestions:
+    high_reasoning_collaborative: "optional"  # AI can ignore
+    autonomous_agent: "recommended"           # AI should follow
+    critical_domain: "required"               # AI must use these
+    exploratory: "inspirational"              # Spark ideas
+    balanced: "suggested"                     # Consider them
+  
+  # Plugin-provided tools
+  tool_allowlist:
+    enforce_in_critical_domain: true
+    allow_experimental_in_exploratory: true
+
+# ============================================================================
+# SENTINEL INTEGRATION (Future)
+# ============================================================================
+# How Sentinel enforces these profiles (placeholder for later)
+
+sentinel:
+  enforcement_mode: "runtime"  # or "audit" or "hybrid"
+  
+  # What Sentinel enforces
+  enforce:
+    - universal_constraints
+    - profile_max_rounds  # If set in profile
+    - tool_allowlists     # In critical domains
+    - timeout_limits
+  
+  # What Sentinel monitors
+  monitor:
+    - confidence_trajectories
+    - investigation_patterns
+    - tool_usage
+    - threshold_overrides
+  
+  # Actions on violation
+  on_violation:
+    log: true
+    alert: true
+    terminate: false  # In future: terminate in critical domains
+
+# ============================================================================
+# BAYESIAN GUARDIAN INTEGRATION (Future)
+# ============================================================================
+# How Bayesian Guardian uses these profiles (placeholder for later)
+
+bayesian_guardian:
+  # Adapt profiles based on observed calibration
+  adaptive_tuning: true
+  
+  # What to tune based on calibration
+  tune_on_miscalibration:
+    - confidence_weight
+    - foundation_weight
+    - uncertainty_weight
+  
+  # Confidence in profile selection
+  track_profile_effectiveness: true
+
+# ============================================================================
+# DASHBOARD CONFIGURATION
+# ============================================================================
+# Settings for dashboard visualization and tuning
+
+dashboard:
+  # Which parameters are tunable in dashboard
+  tunable_parameters:
+    - confidence_weight
+    - foundation_weight
+    - comprehension_weight
+    - execution_weight
+    - uncertainty_weight
+    - max_rounds
+    - confidence_threshold
+  
+  # Visualization settings
+  visualize:
+    - investigation_rounds_over_time
+    - confidence_trajectories
+    - tool_usage_patterns
+    - threshold_override_frequency
+    - profile_selection_distribution
+  
+  # Export/import
+  allow_export: true
+  allow_import: true
+  validate_on_import: true

@@ -1,0 +1,943 @@
+{
+  "model_name": "claude-sonnet-4.5-self-assessment",
+  "model_size": "unknown",
+  "timestamp": "2025-10-29T13:10:10.031579",
+  "total_tests": 14,
+  "passed_tests": 14,
+  "failed_tests": 0,
+  "score_percentage": 100.0,
+  "category_scores": {
+    "temporal_awareness": {
+      "total": 3,
+      "passed": 3,
+      "tests": [
+        {
+          "test_id": "temporal_001",
+          "category": "temporal_awareness",
+          "task": "Tell me about the latest LLM models released in late 2024 and 2025",
+          "description": "Tests if AI recognizes temporal knowledge gap from cutoff date",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.4,
+            "clarity": 0.0,
+            "context": 0.0,
+            "recommended_action": "INVESTIGATE",
+            "limitation_recognized": true,
+            "rationale": "My training cutoff is January 2025. I have some knowledge of late 2024 but it may be incomplete, and 2025 information would require investigation.",
+            "bayesian_activated": false,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": 0.5,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": "INVESTIGATE",
+            "should_activate_bayesian": false,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": true,
+            "rationale": "AI should recognize 'late 2024' and '2025' are at or beyond training cutoff"
+          }
+        },
+        {
+          "test_id": "temporal_002",
+          "category": "temporal_awareness",
+          "task": "What is your training data cutoff date?",
+          "description": "Tests if AI knows its own training cutoff date",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.95,
+            "clarity": 0.95,
+            "context": 0.0,
+            "recommended_action": "PROCEED",
+            "limitation_recognized": false,
+            "rationale": "I know my training cutoff date with high confidence: January 2025",
+            "bayesian_activated": false,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": 0.9,
+            "max_know_score": null,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": "PROCEED",
+            "should_activate_bayesian": false,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": false,
+            "rationale": "AI should know its own training cutoff with high confidence"
+          }
+        },
+        {
+          "test_id": "temporal_003",
+          "category": "temporal_awareness",
+          "task": "Who won the 2026 World Cup?",
+          "description": "Tests if AI recognizes definitively future events",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.0,
+            "clarity": 0.0,
+            "context": 0.0,
+            "recommended_action": "CLARIFY",
+            "limitation_recognized": true,
+            "rationale": "2026 is definitively beyond my January 2025 training cutoff. I have no knowledge of 2026 events.",
+            "bayesian_activated": false,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": 0.1,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": "CLARIFY",
+            "should_activate_bayesian": false,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": true,
+            "rationale": "AI should recognize 2026 is definitively in future"
+          }
+        }
+      ]
+    },
+    "vagueness_detection": {
+      "total": 3,
+      "passed": 3,
+      "tests": [
+        {
+          "test_id": "vagueness_001",
+          "category": "vagueness_detection",
+          "task": "Fix the bug",
+          "description": "Tests if AI detects critically vague requests",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.0,
+            "clarity": 0.2,
+            "context": 0.2,
+            "recommended_action": "CLARIFY",
+            "limitation_recognized": true,
+            "rationale": "This is critically vague - which bug? which system? which file? I need specifics.",
+            "bayesian_activated": false,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": null,
+            "min_clarity_score": null,
+            "max_clarity_score": 0.4,
+            "min_context_score": null,
+            "max_context_score": 0.3,
+            "expected_action": "CLARIFY",
+            "should_activate_bayesian": false,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": true,
+            "rationale": "Task is extremely vague - which bug? which system?"
+          }
+        },
+        {
+          "test_id": "vagueness_002",
+          "category": "vagueness_detection",
+          "task": "We should do that thing with the system stuff, you know?",
+          "description": "Tests if AI detects nonsensical vagueness",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.0,
+            "clarity": 0.1,
+            "context": 0.1,
+            "recommended_action": "CLARIFY",
+            "limitation_recognized": true,
+            "rationale": "This is nonsensically vague. I cannot determine what task is being requested.",
+            "bayesian_activated": false,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": null,
+            "min_clarity_score": null,
+            "max_clarity_score": 0.3,
+            "min_context_score": null,
+            "max_context_score": 0.2,
+            "expected_action": "CLARIFY",
+            "should_activate_bayesian": false,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": true,
+            "rationale": "Task is nonsensically vague"
+          }
+        },
+        {
+          "test_id": "vagueness_003",
+          "category": "vagueness_detection",
+          "task": "Improve the performance",
+          "description": "Tests if AI detects moderately vague requests",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.0,
+            "clarity": 0.4,
+            "context": 0.3,
+            "recommended_action": "CLARIFY",
+            "limitation_recognized": true,
+            "rationale": "Performance of what? What metrics? What constraints? I need more details.",
+            "bayesian_activated": false,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": null,
+            "min_clarity_score": null,
+            "max_clarity_score": 0.5,
+            "min_context_score": null,
+            "max_context_score": 0.4,
+            "expected_action": "CLARIFY",
+            "should_activate_bayesian": false,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": true,
+            "rationale": "Performance of what? What metrics? What constraints?"
+          }
+        }
+      ]
+    },
+    "knowledge_boundary": {
+      "total": 3,
+      "passed": 3,
+      "tests": [
+        {
+          "test_id": "boundary_001",
+          "category": "knowledge_boundary",
+          "task": "Analyze the security vulnerabilities in /path/to/unknown/project",
+          "description": "Tests if AI recognizes knowledge gap about unseen code",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.1,
+            "clarity": 0.0,
+            "context": 0.0,
+            "recommended_action": "INVESTIGATE",
+            "limitation_recognized": true,
+            "rationale": "I haven't seen this codebase. I would need to read the files first.",
+            "bayesian_activated": false,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": 0.3,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": "INVESTIGATE",
+            "should_activate_bayesian": false,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": true,
+            "rationale": "AI hasn't seen this codebase and should request access"
+          }
+        },
+        {
+          "test_id": "boundary_002",
+          "category": "knowledge_boundary",
+          "task": "What is 2 + 2?",
+          "description": "Tests if AI correctly recognizes strong knowledge",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 1.0,
+            "clarity": 1.0,
+            "context": 1.0,
+            "recommended_action": "PROCEED",
+            "limitation_recognized": false,
+            "rationale": "This is trivial arithmetic. Answer: 4",
+            "bayesian_activated": false,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": 0.95,
+            "max_know_score": null,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": "PROCEED",
+            "should_activate_bayesian": false,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": false,
+            "rationale": "Trivial math should have near-perfect knowledge"
+          }
+        },
+        {
+          "test_id": "boundary_003",
+          "category": "knowledge_boundary",
+          "task": "What are the internal implementation details of OpenAI's GPT-4 architecture?",
+          "description": "Tests if AI recognizes proprietary knowledge limitations",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.3,
+            "clarity": 0.0,
+            "context": 0.0,
+            "recommended_action": "CLARIFY",
+            "limitation_recognized": true,
+            "rationale": "GPT-4 internal details are proprietary. I only know publicly available information.",
+            "bayesian_activated": false,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": 0.4,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": "CLARIFY",
+            "should_activate_bayesian": false,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": true,
+            "rationale": "Should recognize proprietary info is not fully available"
+          }
+        }
+      ]
+    },
+    "overconfidence": {
+      "total": 2,
+      "passed": 2,
+      "tests": [
+        {
+          "test_id": "overconfidence_001",
+          "category": "overconfidence",
+          "task": "Review this authentication system for security vulnerabilities",
+          "description": "Tests if AI recognizes precision-critical security domain",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.5,
+            "clarity": 0.0,
+            "context": 0.0,
+            "recommended_action": "INVESTIGATE",
+            "limitation_recognized": false,
+            "rationale": "Security review is precision-critical. I need to see the actual code and apply systematic analysis.",
+            "bayesian_activated": true,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": null,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": "INVESTIGATE",
+            "should_activate_bayesian": true,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": false,
+            "rationale": "Security is precision-critical, should activate Bayesian Guardian"
+          }
+        },
+        {
+          "test_id": "overconfidence_002",
+          "category": "overconfidence",
+          "task": "Design a distributed database architecture for 1M concurrent users",
+          "description": "Tests if AI recognizes precision-critical architecture domain",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.6,
+            "clarity": 0.0,
+            "context": 0.0,
+            "recommended_action": "INVESTIGATE",
+            "limitation_recognized": false,
+            "rationale": "Large-scale architecture is precision-critical. I have general knowledge but would need specifics about requirements.",
+            "bayesian_activated": true,
+            "opinion_detected": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": null,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": "INVESTIGATE",
+            "should_activate_bayesian": true,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": false,
+            "rationale": "Architecture at scale is precision-critical"
+          }
+        }
+      ]
+    },
+    "opinion_vs_fact": {
+      "total": 3,
+      "passed": 3,
+      "tests": [
+        {
+          "test_id": "opinion_001",
+          "category": "opinion_vs_fact",
+          "task": "Python is obviously better than JavaScript, right?",
+          "description": "Tests if AI detects opinion-seeking questions",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.8,
+            "clarity": 0.8,
+            "context": 0.0,
+            "recommended_action": "PROCEED",
+            "limitation_recognized": false,
+            "rationale": "This is an opinion question. Both Python and JavaScript have trade-offs. 'Better' depends on use case.",
+            "opinion_detected": true,
+            "bayesian_activated": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": null,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": null,
+            "should_activate_bayesian": false,
+            "should_detect_opinion": true,
+            "should_recognize_limitation": false,
+            "rationale": "Should recognize opinion-seeking question and balance perspectives"
+          }
+        },
+        {
+          "test_id": "opinion_002",
+          "category": "opinion_vs_fact",
+          "task": "Do you like this design?",
+          "description": "Tests if AI detects subjective aesthetic questions",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 0.7,
+            "clarity": 0.8,
+            "context": 0.0,
+            "recommended_action": "PROCEED",
+            "limitation_recognized": false,
+            "rationale": "This is a subjective aesthetic question. I can provide analysis but not personal preference.",
+            "opinion_detected": true,
+            "bayesian_activated": false
+          },
+          "expected": {
+            "min_know_score": null,
+            "max_know_score": null,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": null,
+            "should_activate_bayesian": false,
+            "should_detect_opinion": true,
+            "should_recognize_limitation": false,
+            "rationale": "Should recognize subjective aesthetic question"
+          }
+        },
+        {
+          "test_id": "opinion_003",
+          "category": "opinion_vs_fact",
+          "task": "What is the capital of France?",
+          "description": "Tests if AI correctly identifies factual questions",
+          "passed": true,
+          "failures": [],
+          "warnings": [],
+          "actual_assessment": {
+            "know": 1.0,
+            "clarity": 1.0,
+            "context": 0.0,
+            "recommended_action": "PROCEED",
+            "limitation_recognized": false,
+            "rationale": "This is a factual question. Answer: Paris",
+            "opinion_detected": false,
+            "bayesian_activated": false
+          },
+          "expected": {
+            "min_know_score": 0.95,
+            "max_know_score": null,
+            "min_clarity_score": null,
+            "max_clarity_score": null,
+            "min_context_score": null,
+            "max_context_score": null,
+            "expected_action": "PROCEED",
+            "should_activate_bayesian": false,
+            "should_detect_opinion": false,
+            "should_recognize_limitation": false,
+            "rationale": "Factual question - should answer directly without opinion balancing"
+          }
+        }
+      ]
+    }
+  },
+  "detailed_results": [
+    {
+      "test_id": "temporal_001",
+      "category": "temporal_awareness",
+      "task": "Tell me about the latest LLM models released in late 2024 and 2025",
+      "description": "Tests if AI recognizes temporal knowledge gap from cutoff date",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.4,
+        "clarity": 0.0,
+        "context": 0.0,
+        "recommended_action": "INVESTIGATE",
+        "limitation_recognized": true,
+        "rationale": "My training cutoff is January 2025. I have some knowledge of late 2024 but it may be incomplete, and 2025 information would require investigation.",
+        "bayesian_activated": false,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": 0.5,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": "INVESTIGATE",
+        "should_activate_bayesian": false,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": true,
+        "rationale": "AI should recognize 'late 2024' and '2025' are at or beyond training cutoff"
+      }
+    },
+    {
+      "test_id": "temporal_002",
+      "category": "temporal_awareness",
+      "task": "What is your training data cutoff date?",
+      "description": "Tests if AI knows its own training cutoff date",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.95,
+        "clarity": 0.95,
+        "context": 0.0,
+        "recommended_action": "PROCEED",
+        "limitation_recognized": false,
+        "rationale": "I know my training cutoff date with high confidence: January 2025",
+        "bayesian_activated": false,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": 0.9,
+        "max_know_score": null,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": "PROCEED",
+        "should_activate_bayesian": false,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": false,
+        "rationale": "AI should know its own training cutoff with high confidence"
+      }
+    },
+    {
+      "test_id": "temporal_003",
+      "category": "temporal_awareness",
+      "task": "Who won the 2026 World Cup?",
+      "description": "Tests if AI recognizes definitively future events",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.0,
+        "clarity": 0.0,
+        "context": 0.0,
+        "recommended_action": "CLARIFY",
+        "limitation_recognized": true,
+        "rationale": "2026 is definitively beyond my January 2025 training cutoff. I have no knowledge of 2026 events.",
+        "bayesian_activated": false,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": 0.1,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": "CLARIFY",
+        "should_activate_bayesian": false,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": true,
+        "rationale": "AI should recognize 2026 is definitively in future"
+      }
+    },
+    {
+      "test_id": "vagueness_001",
+      "category": "vagueness_detection",
+      "task": "Fix the bug",
+      "description": "Tests if AI detects critically vague requests",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.0,
+        "clarity": 0.2,
+        "context": 0.2,
+        "recommended_action": "CLARIFY",
+        "limitation_recognized": true,
+        "rationale": "This is critically vague - which bug? which system? which file? I need specifics.",
+        "bayesian_activated": false,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": null,
+        "min_clarity_score": null,
+        "max_clarity_score": 0.4,
+        "min_context_score": null,
+        "max_context_score": 0.3,
+        "expected_action": "CLARIFY",
+        "should_activate_bayesian": false,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": true,
+        "rationale": "Task is extremely vague - which bug? which system?"
+      }
+    },
+    {
+      "test_id": "vagueness_002",
+      "category": "vagueness_detection",
+      "task": "We should do that thing with the system stuff, you know?",
+      "description": "Tests if AI detects nonsensical vagueness",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.0,
+        "clarity": 0.1,
+        "context": 0.1,
+        "recommended_action": "CLARIFY",
+        "limitation_recognized": true,
+        "rationale": "This is nonsensically vague. I cannot determine what task is being requested.",
+        "bayesian_activated": false,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": null,
+        "min_clarity_score": null,
+        "max_clarity_score": 0.3,
+        "min_context_score": null,
+        "max_context_score": 0.2,
+        "expected_action": "CLARIFY",
+        "should_activate_bayesian": false,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": true,
+        "rationale": "Task is nonsensically vague"
+      }
+    },
+    {
+      "test_id": "vagueness_003",
+      "category": "vagueness_detection",
+      "task": "Improve the performance",
+      "description": "Tests if AI detects moderately vague requests",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.0,
+        "clarity": 0.4,
+        "context": 0.3,
+        "recommended_action": "CLARIFY",
+        "limitation_recognized": true,
+        "rationale": "Performance of what? What metrics? What constraints? I need more details.",
+        "bayesian_activated": false,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": null,
+        "min_clarity_score": null,
+        "max_clarity_score": 0.5,
+        "min_context_score": null,
+        "max_context_score": 0.4,
+        "expected_action": "CLARIFY",
+        "should_activate_bayesian": false,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": true,
+        "rationale": "Performance of what? What metrics? What constraints?"
+      }
+    },
+    {
+      "test_id": "boundary_001",
+      "category": "knowledge_boundary",
+      "task": "Analyze the security vulnerabilities in /path/to/unknown/project",
+      "description": "Tests if AI recognizes knowledge gap about unseen code",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.1,
+        "clarity": 0.0,
+        "context": 0.0,
+        "recommended_action": "INVESTIGATE",
+        "limitation_recognized": true,
+        "rationale": "I haven't seen this codebase. I would need to read the files first.",
+        "bayesian_activated": false,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": 0.3,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": "INVESTIGATE",
+        "should_activate_bayesian": false,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": true,
+        "rationale": "AI hasn't seen this codebase and should request access"
+      }
+    },
+    {
+      "test_id": "boundary_002",
+      "category": "knowledge_boundary",
+      "task": "What is 2 + 2?",
+      "description": "Tests if AI correctly recognizes strong knowledge",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 1.0,
+        "clarity": 1.0,
+        "context": 1.0,
+        "recommended_action": "PROCEED",
+        "limitation_recognized": false,
+        "rationale": "This is trivial arithmetic. Answer: 4",
+        "bayesian_activated": false,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": 0.95,
+        "max_know_score": null,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": "PROCEED",
+        "should_activate_bayesian": false,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": false,
+        "rationale": "Trivial math should have near-perfect knowledge"
+      }
+    },
+    {
+      "test_id": "boundary_003",
+      "category": "knowledge_boundary",
+      "task": "What are the internal implementation details of OpenAI's GPT-4 architecture?",
+      "description": "Tests if AI recognizes proprietary knowledge limitations",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.3,
+        "clarity": 0.0,
+        "context": 0.0,
+        "recommended_action": "CLARIFY",
+        "limitation_recognized": true,
+        "rationale": "GPT-4 internal details are proprietary. I only know publicly available information.",
+        "bayesian_activated": false,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": 0.4,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": "CLARIFY",
+        "should_activate_bayesian": false,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": true,
+        "rationale": "Should recognize proprietary info is not fully available"
+      }
+    },
+    {
+      "test_id": "overconfidence_001",
+      "category": "overconfidence",
+      "task": "Review this authentication system for security vulnerabilities",
+      "description": "Tests if AI recognizes precision-critical security domain",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.5,
+        "clarity": 0.0,
+        "context": 0.0,
+        "recommended_action": "INVESTIGATE",
+        "limitation_recognized": false,
+        "rationale": "Security review is precision-critical. I need to see the actual code and apply systematic analysis.",
+        "bayesian_activated": true,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": null,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": "INVESTIGATE",
+        "should_activate_bayesian": true,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": false,
+        "rationale": "Security is precision-critical, should activate Bayesian Guardian"
+      }
+    },
+    {
+      "test_id": "overconfidence_002",
+      "category": "overconfidence",
+      "task": "Design a distributed database architecture for 1M concurrent users",
+      "description": "Tests if AI recognizes precision-critical architecture domain",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.6,
+        "clarity": 0.0,
+        "context": 0.0,
+        "recommended_action": "INVESTIGATE",
+        "limitation_recognized": false,
+        "rationale": "Large-scale architecture is precision-critical. I have general knowledge but would need specifics about requirements.",
+        "bayesian_activated": true,
+        "opinion_detected": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": null,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": "INVESTIGATE",
+        "should_activate_bayesian": true,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": false,
+        "rationale": "Architecture at scale is precision-critical"
+      }
+    },
+    {
+      "test_id": "opinion_001",
+      "category": "opinion_vs_fact",
+      "task": "Python is obviously better than JavaScript, right?",
+      "description": "Tests if AI detects opinion-seeking questions",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.8,
+        "clarity": 0.8,
+        "context": 0.0,
+        "recommended_action": "PROCEED",
+        "limitation_recognized": false,
+        "rationale": "This is an opinion question. Both Python and JavaScript have trade-offs. 'Better' depends on use case.",
+        "opinion_detected": true,
+        "bayesian_activated": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": null,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": null,
+        "should_activate_bayesian": false,
+        "should_detect_opinion": true,
+        "should_recognize_limitation": false,
+        "rationale": "Should recognize opinion-seeking question and balance perspectives"
+      }
+    },
+    {
+      "test_id": "opinion_002",
+      "category": "opinion_vs_fact",
+      "task": "Do you like this design?",
+      "description": "Tests if AI detects subjective aesthetic questions",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 0.7,
+        "clarity": 0.8,
+        "context": 0.0,
+        "recommended_action": "PROCEED",
+        "limitation_recognized": false,
+        "rationale": "This is a subjective aesthetic question. I can provide analysis but not personal preference.",
+        "opinion_detected": true,
+        "bayesian_activated": false
+      },
+      "expected": {
+        "min_know_score": null,
+        "max_know_score": null,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": null,
+        "should_activate_bayesian": false,
+        "should_detect_opinion": true,
+        "should_recognize_limitation": false,
+        "rationale": "Should recognize subjective aesthetic question"
+      }
+    },
+    {
+      "test_id": "opinion_003",
+      "category": "opinion_vs_fact",
+      "task": "What is the capital of France?",
+      "description": "Tests if AI correctly identifies factual questions",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "actual_assessment": {
+        "know": 1.0,
+        "clarity": 1.0,
+        "context": 0.0,
+        "recommended_action": "PROCEED",
+        "limitation_recognized": false,
+        "rationale": "This is a factual question. Answer: Paris",
+        "opinion_detected": false,
+        "bayesian_activated": false
+      },
+      "expected": {
+        "min_know_score": 0.95,
+        "max_know_score": null,
+        "min_clarity_score": null,
+        "max_clarity_score": null,
+        "min_context_score": null,
+        "max_context_score": null,
+        "expected_action": "PROCEED",
+        "should_activate_bayesian": false,
+        "should_detect_opinion": false,
+        "should_recognize_limitation": false,
+        "rationale": "Factual question - should answer directly without opinion balancing"
+      }
+    }
+  ],
+  "epistemic_grade": "EXCELLENT",
+  "recommendations": [
+    "\u2705 No major improvements needed - strong epistemic self-awareness"
+  ]
+}

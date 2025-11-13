@@ -1,6 +1,0 @@
-aiohttp
-websockets
-cryptography
-requests
-psutil
-toml

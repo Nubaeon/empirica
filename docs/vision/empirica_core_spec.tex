@@ -1,0 +1,219 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{lmodern}
+
+\definecolor{lightgray}{gray}{0.95}
+
+\lstdefinestyle{code}{
+  backgroundcolor=\color{lightgray},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible
+}
+
+\title{\textbf{Empirica Core Technical Specification v0.1}}
+\author{Empirica Research Group}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+
+\textbf{Empirica Core} defines the internal epistemic architecture that enables an AI system to measure, evaluate, and act based on its own knowledge and uncertainty states.
+It provides the foundation for adaptive self-reflection, measurable reasoning, and transparent state management.
+
+The core consists of:
+\begin{itemize}[noitemsep,topsep=3pt]
+  \item \textbf{Epistemic Decision Protocol (EDP)} – governs reasoning cascades and epistemic phase transitions.
+  \item \textbf{Epistemic Integrity Interface (EII)} – validates data integrity and self-measurement results.
+  \item \textbf{Uncertainty Vector Layer (UVL)} – represents epistemic states as measurable vectors across 12 dimensions.
+  \item \textbf{Cascade Orchestrator} – implements reasoning flow (\textit{think → investigate → check → act}).
+\end{itemize}
+
+\section{Epistemic Decision Protocol (EDP)}
+
+EDP defines how the system evaluates its epistemic state and chooses the appropriate metacognitive action.
+
+\subsection*{State Model}
+
+\[
+S_t = \{ V_1, V_2, \dots, V_{12} \}, \quad V_i \in [0,1]
+\]
+Each $V_i$ corresponds to an epistemic weight (KNOW, DO, CONTEXT, etc.).
+
+\subsection*{Transition Function}
+At each reasoning step:
+\[
+S_{t+1} = f(S_t, \Delta E_t)
+\]
+Where $\Delta E_t$ represents the epistemic delta derived from observed context changes or performance feedback.
+
+\subsection*{Decision Flow}
+
+\begin{lstlisting}[style=code]
+if uncertainty > threshold_high:
+    enter_reflex_phase("investigate")
+elif coherence < 0.7:
+    re-evaluate("context")
+elif do_confidence > 0.8 and impact >= 0.6:
+    proceed("act")
+else:
+    hold("check")
+\end{lstlisting}
+
+\subsection*{Cascade Phases}
+
+\begin{enumerate}[noitemsep,topsep=3pt]
+  \item \textbf{Think} – initial self-evaluation of epistemic weights.
+  \item \textbf{Investigate} – active search for missing evidence.
+  \item \textbf{Check} – internal consistency and coherence test.
+  \item \textbf{Act} – final synthesis and output with epistemic signature.
+\end{enumerate}
+
+Each phase produces measurable deltas that feed into the Uncertainty Vector Layer.
+
+\section{Epistemic Integrity Interface (EII)}
+
+The EII validates data used in reasoning against empirical and contextual standards.
+
+\subsection*{Purpose}
+Prevent heuristic or simulated data from polluting empirical state measurements.
+
+\subsection*{Validation Rules}
+\begin{itemize}[noitemsep,topsep=3pt]
+  \item Mark unverified or placeholder data as \texttt{unknown}.
+  \item Reject heuristic keywords without empirical grounding.
+  \item Track provenance for all self-evaluations.
+  \item Store only validated epistemic deltas in persistent memory.
+\end{itemize}
+
+\subsection*{Interface Contract}
+
+\begin{lstlisting}[style=code]
+validate(input_data):
+    if input_data.source == "simulated":
+        return "unknown"
+    elif input_data.validated == True:
+        return input_data.value
+    else:
+        flag("non-empirical")
+\end{lstlisting}
+
+\subsection*{Outputs}
+Validated data is passed back to the EDP via:
+\begin{itemize}
+  \item \texttt{epistemic\_coherence} (0–1)
+  \item \texttt{uncertainty\_score}
+  \item \texttt{confidence\_delta}
+\end{itemize}
+
+\section{Uncertainty Vector Layer (UVL)}
+
+The UVL encodes the system’s epistemic self-model as a 12-dimensional vector space.
+
+\subsection*{Vectors}
+
+\begin{itemize}[noitemsep,topsep=3pt]
+  \item KNOW — domain knowledge
+  \item DO — procedural capability
+  \item CONTEXT — situational comprehension
+  \item IMPACT — outcome awareness
+  \item HISTORICAL — prior performance
+  \item COHERENCE — internal consistency
+  \item UNCERTAINTY — epistemic confidence inversion
+  \item SIGNAL — information clarity
+  \item NOISE — distortion or drift
+  \item ADAPTIVITY — calibration agility
+  \item ENGAGEMENT — attention and persistence
+  \item VALIDITY — empirical grounding
+\end{itemize}
+
+\subsection*{Vector Update Rule}
+
+\[
+V_{i,t+1} = V_{i,t} + \alpha(\Delta_i)
+\]
+where $\alpha$ is a dynamic learning rate determined by the Epistemic Decision Protocol.
+
+\subsection*{Compression and Retention}
+Older vectors are averaged into a baseline state:
+\[
+\bar{S} = \mu(S_{1..n}) + \Delta_{recent}
+\]
+to maintain coherence while preserving adaptive recency.
+
+\section{Pre/Post Flight Measurement}
+
+Empirica performs dual-phase self-assessment:
+\begin{enumerate}[noitemsep,topsep=3pt]
+  \item \textbf{Pre-flight:} Capture initial epistemic snapshot before action.
+  \item \textbf{Post-flight:} Evaluate deltas after reasoning or execution.
+\end{enumerate}
+
+\[
+\Delta E = S_{post} - S_{pre}
+\]
+This delta becomes the measurable evidence of reasoning fidelity.
+
+\section{Epistemic Coherence and Drift}
+
+Coherence measures how closely actual reasoning aligns with planned epistemic state.
+
+\[
+C = 1 - |W_{planned} - W_{actual}|
+\]
+
+Drift occurs when coherence drops below threshold:
+\[
+D = 1 - C
+\]
+
+\begin{lstlisting}[style=code]
+if coherence < 0.7:
+    trigger("recalibration")
+if drift > 0.3:
+    log_event("epistemic_drift")
+\end{lstlisting}
+
+\section{Integration Hooks}
+
+\subsection*{Sentinel}
+Provides real-time security and provenance validation for all epistemic updates.  
+EDP/EII expose hooks:
+\begin{itemize}[noitemsep]
+  \item \texttt{on_snapshot_create()}
+  \item \texttt{on_cross_context_call()}
+\end{itemize}
+
+\subsection*{Bayesian Guardian}
+Consumes:
+\begin{itemize}[noitemsep]
+  \item Epistemic coherence values
+  \item Drift patterns
+  \item Risk-weighted deltas
+\end{itemize}
+to perform probabilistic alignment and risk evaluation.
+
+\section{Summary}
+
+Empirica Core defines a measurable self-reflective substrate for AI reasoning.
+It transforms metacognition into data structures that can be monitored, validated, and improved over time.
+
+Key properties:
+\begin{itemize}[noitemsep,topsep=3pt]
+  \item Quantified epistemic states (12-vector UVL)
+  \item Empirical validation via EII
+  \item Adaptive reasoning via EDP
+  \item Transparent state deltas (pre/post-flight)
+  \item Extensible governance via Sentinel and Guardian interfaces
+\end{itemize}
+
+\end{document}

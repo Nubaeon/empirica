@@ -1,0 +1,184 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "empirica"
+version = "0.1.0"
+description = "Genuine AI epistemic self-assessment framework - Universal interface for single AI tracking"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "LGPL-3.0-or-later OR MIT"}
+authors = [
+    {name = "Empirica Team"}
+]
+keywords = ["ai", "llm", "epistemic", "self-assessment", "metacognition", "calibration"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "pydantic>=2.0",
+    "sqlalchemy>=2.0",
+    "aiofiles>=23.0",
+    "httpx>=0.24",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.1",
+    "pytest-mock>=3.11",
+    "dirty-equals>=0.7",
+]
+lint = [
+    "ruff>=0.1.0",
+]
+typecheck = [
+    "pyright>=1.1.330",
+]
+dev = [
+    "empirica[test,lint,typecheck]",
+]
+mcp = [
+    "mcp>=0.1.0",
+]
+
+[project.scripts]
+empirica = "empirica.cli.cli_core:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["empirica*", "mcp_local*"]
+exclude = ["tests*", "_archive*", "_dev*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+python_classes = ["Test*"]
+asyncio_mode = "auto"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+    "--cov=empirica",
+    "--cov=mcp_local",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=html",
+    "--cov-report=json",
+]
+markers = [
+    "integration: Integration tests (deselect with '-m \"not integration\"')",
+    "integrity: Framework integrity tests (core principle validation)",
+    "slow: Slow running tests",
+    "requires_mcp: Tests that require MCP server",
+]
+
+[tool.coverage.run]
+source = ["empirica", "mcp_local"]
+omit = [
+    "tests/*",
+    "_archive/*",
+    "_dev/*",
+    "*/conftest.py",
+    "*/__init__.py",
+]
+branch = true
+
+[tool.coverage.report]
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+    "@overload",
+]
+show_missing = true
+skip_covered = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+include = [
+    "empirica/**/*.py",
+    "mcp_local/**/*.py",
+    "tests/**/*.py",
+]
+exclude = [
+    "_archive",
+    "_dev",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+]
+
+[tool.ruff.lint]
+extend-select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C90", # mccabe complexity
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "E741",  # ambiguous variable name
+    "B008",  # function call in argument defaults
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.lint.isort]
+known-first-party = ["empirica", "mcp_local"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["S101"]  # allow assert in tests
+"__init__.py" = ["F401"]  # allow unused imports in __init__
+
+[tool.pyright]
+include = ["empirica", "mcp_local", "tests"]
+exclude = [
+    "_archive",
+    "_dev",
+    ".venv",
+    "venv",
+    "**/__pycache__",
+]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedClass = true
+reportUnusedFunction = true
+reportDuplicateImport = true
+strictListInference = true
+strictDictionaryInference = true
+
+[tool.pyright.defineConstant]
+TESTING = true

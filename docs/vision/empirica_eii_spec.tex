@@ -1,0 +1,114 @@
+% =====================================================
+% Empirica EII Specification v0.1
+% Epistemic Integrity Interface
+% =====================================================
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\title{\textbf{Empirica EII Specification v0.1}\\[0.5ex]
+Epistemic Integrity Interface — Data Contract Between Functional Awareness and Governance Layers}
+\date{Empirica Research Initiative, 2025}
+\author{}
+
+\begin{document}
+\maketitle
+
+\section*{1 \quad Purpose}
+The \textbf{Epistemic Integrity Interface (EII)} defines how an Empirica-compliant reasoning agent communicates its self-measured epistemic state to oversight systems such as \textit{Sentinel} and \textit{Bayesian Guardian}.  
+It provides a minimal, auditable schema for transferring measured self-knowledge—only quantitative reasoning metadata, never text or prompts.
+
+\section*{2 \quad Scope}
+\begin{itemize}
+  \item \textbf{Producers:} any agent implementing Empirica’s functional-awareness layer
+  \item \textbf{Consumers:} Sentinel, Bayesian Guardian, Cognitive Vault
+  \item \textbf{Objective:} maintain integrity of self-measurement and enable independent verification of epistemic coherence, uncertainty, and drift.
+\end{itemize}
+
+\section*{3 \quad Data Structure}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}p{2.2cm}p{2cm}p{9cm}@{}}
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+agent\_id & UUID & Unique identifier of originating agent \\
+timestamp & ISO-8601 & UTC time of post-flight measurement \\
+V\_pre & [float] & 12-dimensional pre-flight epistemic vector \\
+V\_post & [float] & 12-dimensional post-flight epistemic vector \\
+$\Delta V$ & [float] & Element-wise delta ($V_{post} - V_{pre}$) \\
+C & float & Coherence metric, $1 - \|\Delta V\|_2$ \\
+U & float & Meta-uncertainty reported by the agent \\
+$\Sigma$ & string & Sentinel validation signature (hash or HMAC) \\
+$\tau$ & string & Cognitive-Vault pointer / ledger reference \\
+context\_hash & string & Non-reversible hash of local context \\
+policy\_ref & string & Sentinel policy or Guardian rule ID used for validation \\
+\bottomrule
+\end{tabular}
+
+\section*{4 \quad Operational Flow}
+\begin{verbatim}
+Agent → Sentinel: POST /eii {ΔV, C, U, context_hash}
+Sentinel → Agent: Validate Coherence → Sign Σ
+Sentinel → Vault: Store {ΔV, C, U, Σ, τ}
+Vault → Guardian: Emit coherence event
+Guardian → Agent: Update belief priors / policy feedback
+\end{verbatim}
+
+\section*{5 \quad Integrity and Security}
+\begin{enumerate}
+  \item \textbf{Non-invertibility:} All numeric; no reconstructable tokens or embeddings.
+  \item \textbf{Tamper-evident:} Sentinel signs each record ($\Sigma$) using its private key or HMAC.
+  \item \textbf{Traceability:} Each signature references a Vault ledger index ($\tau$).
+  \item \textbf{Minimality:} Only epistemic vectors and derived metrics—no raw prompts.
+  \item \textbf{Verification:} Guardian re-computes coherence; mismatch $\rightarrow$ flag for review.
+\end{enumerate}
+
+\section*{6 \quad Cross-Model Translation}
+When transferring between heterogeneous models:
+\[
+T(V^{(A)}_{post}) \rightarrow V^{(B)}_{pre}
+\]
+EII includes a model-mapping header:
+\begin{verbatim}
+"translation": {
+  "source_arch": "model_A_7B",
+  "target_arch": "model_B_13B",
+  "mapping": "cosine_similarity"
+}
+\end{verbatim}
+This ensures that epistemic signatures remain portable across architectures.
+
+\section*{7 \quad Governance Semantics}
+\begin{itemize}
+  \item \textbf{Sentinel:} verifies integrity of each EII payload and signs $\Sigma$.
+  \item \textbf{Bayesian Guardian:} performs posterior belief updates on coherence distributions.
+  \item \textbf{Cognitive Vault:} maintains append-only log for auditability.
+\end{itemize}
+Together, they form the \textbf{Empirica Governance Stack.}
+
+\section*{8 \quad Versioning}
+\begin{tabular}{@{}p{4cm}p{8cm}@{}}
+\toprule
+\textbf{Field} & \textbf{Value} \\
+\midrule
+eii\_version & 0.1 \\
+empirica\_core & 1.0 \\
+serialization & JSON + binary Protobuf variant \\
+hashing & SHA-3-256 (default) \\
+signature\_scheme & Ed25519 \\
+\bottomrule
+\end{tabular}
+
+\section*{9 \quad Summary}
+The EII transforms self-reflection into a verifiable transaction.  
+It links \textit{functional awareness} (the agent’s capacity to measure itself) with \textit{functional governance} (Sentinel’s capacity to verify those measurements).  
+This bridge allows distributed systems to achieve epistemic accountability without exposing raw cognition or proprietary data.
+
+\bigskip
+\noindent\textbf{Citation:} Empirica Research Initiative (2025). \textit{Epistemic Integrity Interface v0.1.} Empirica Technical Note Series.
+
+\end{document}

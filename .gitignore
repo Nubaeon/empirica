@@ -1,126 +1,59 @@
+# Archive and dev folders
+_archive/
+_dev/
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
 # Virtual environments
-.env
-.venv
-env/
 venv/
+.venv/
+.venv-mcp/
 ENV/
-env.bak/
-venv.bak/
+env/
 
-# IDE
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.db
+
+# IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
+
+# Empirica specific - user data (never commit)
+.empirica/credentials.yaml
+.empirica/sessions/
+.empirica/chat_sessions/
+.empirica/exports/
+.empirica_reflex_logs/
+*.api*
+tmp_*
+test_*.json
+
+# Logs
+*.log
+chat_debug.log
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage
+# Test and coverage artifacts
 htmlcov/
 .coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
+coverage.json
+test_goals_session
+*.db-journal
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# Environments
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Cache and temporary files
-.cache/
-.execution_sight_cache/
-.procedural_cache/
-semantic_self_aware_kit/*/cache/
-semantic_self_aware_kit/*/.cache/
-semantic_self_aware_kit/*/tmp/
-semantic_self_aware_kit/*/.tmp/
-tmp_*
-temp_*
-*.tmp
-*.temp
-
-# Test and performance reports
-component_test_report_*.json
-*_test_report_*.json
-semantic_kit_command_log.json
-
-# Configuration overrides (keep templates)
-config/local_*.json
-config/local_*.yaml
-config/*_local.*
-
-# Documentation builds
-docs/_build/
-site/
-
-# Node.js (for web interface development)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Local development
-.local/
-local_*
-
-# Digital workspace maps (generated at runtime)
-digital_workspace_map.json
-
-# Web interface (held back for separate release)
-web/
+# Runtime data directories (project root)
+.empirica/
+.empirica_reflex_logs/
+.empirica_sessions/

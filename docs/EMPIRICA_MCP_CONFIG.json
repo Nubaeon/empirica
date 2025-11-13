@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "empirica": {
+      "command": "env",
+      "args": [
+        "LD_LIBRARY_PATH=",
+        "/home/yogapad/empirical-ai/empirica/.venv-mcp/bin/python3",
+        "/home/yogapad/empirical-ai/empirica/mcp_local/empirica_mcp_server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "/home/yogapad/empirical-ai/empirica",
+        "EMPIRICA_ENABLE_MODALITY_SWITCHER": "false"
+      },
+      "transport": "stdio"
+    }
+  }
+}

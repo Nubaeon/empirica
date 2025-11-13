@@ -1,0 +1,118 @@
+# Empirica Modality Switching Configuration
+# 
+# This file configures adapter routing, costs, and preferences for the ModalitySwitcher.
+# Override settings via environment variables: EMPIRICA_<SETTING>=value
+
+# Adapter Configuration
+adapters:
+  minimax:
+    enabled: true
+    type: api
+    provider: minimax
+    model: MiniMax-M2
+    base_url: https://api.minimax.io/anthropic
+    cost_per_1k_tokens: 0.01
+    estimated_latency_sec: 3.0
+    quality_score: 0.9
+    requires_api_key: true
+    api_key_env: MINIMAX_API_KEY
+    timeout_sec: 60
+    max_retries: 2
+    capabilities:
+      - text
+      - tool_calls
+      - streaming
+    
+  qwen:
+    enabled: true
+    type: cli
+    provider: qwen
+    model: Qwen-Local
+    cost_per_1k_tokens: 0.0
+    estimated_latency_sec: 30.0
+    quality_score: 0.75
+    requires_api_key: false
+    capabilities:
+      - text
+      - local_inference
+    
+  local:
+    enabled: true
+    type: local
+    provider: local
+    model: Local-Model
+    cost_per_1k_tokens: 0.0
+    estimated_latency_sec: 10.0
+    quality_score: 0.7
+    requires_api_key: false
+    capabilities:
+      - text
+      - privacy
+      - offline
+
+# Routing Configuration
+routing:
+  # Default routing strategy
+  default_strategy: epistemic
+  
+  # Epistemic routing thresholds
+  epistemic:
+    high_uncertainty_threshold: 0.7
+    low_know_threshold: 0.4
+    high_confidence_threshold: 0.8
+  
+  # Cost constraints
+  cost:
+    default_max_cost_usd: 1.0
+    cost_sensitive_threshold: 0.5
+  
+  # Latency constraints
+  latency:
+    default_max_latency_sec: 30.0
+    time_critical_threshold: 5.0
+  
+  # Quality requirements
+  quality:
+    default_min_quality_score: 0.7
+    high_quality_threshold: 0.85
+  
+  # Balanced scoring weights
+  balanced:
+    quality_weight: 0.4
+    cost_weight: 0.3
+    latency_weight: 0.3
+  
+  # Fallback configuration
+  fallback:
+    enabled: true
+    max_attempts: 3
+    backoff_multiplier: 2.0
+
+# Usage Monitoring
+monitoring:
+  enabled: true
+  track_usage: true
+  track_costs: true
+  track_latency: true
+  export_format: json
+  export_path: ~/.empirica/usage_stats.json
+
+# CLI Configuration
+cli:
+  interactive_assessment: true
+  confirmation_prompt: true
+  verbose_by_default: false
+  color_output: true
+
+# MCP Configuration
+mcp:
+  enabled: true
+  health_check_interval_sec: 300
+  include_health_in_list: true
+
+# Advanced Settings
+advanced:
+  cache_adapter_instances: true
+  parallel_health_checks: false
+  rate_limit_retry: true
+  log_level: INFO
