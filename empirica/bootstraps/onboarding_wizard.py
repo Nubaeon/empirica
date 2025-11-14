@@ -19,10 +19,14 @@ Core Vectors for Onboarding:
 
 import asyncio
 import json
+import logging
 import sys
 from datetime import datetime
 from typing import Dict, Any, Optional
 from pathlib import Path
+
+# Set up logging for onboarding wizard
+logger = logging.getLogger(__name__)
 
 # Ensure parent directory is in path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -103,31 +107,31 @@ class EmpericaOnboardingWizard:
     def display_header(self, title: str, level: int = 1):
         """Display formatted section header"""
         if level == 1:
-            print(f"\n{'=' * 60}")
-            print(f"🎓 {title}")
-            print('=' * 60)
+            logger.info(f"\n{'=' * 60}")
+            logger.info(f"🎓 {title}")
+            logger.info('=' * 60)
         else:
-            print(f"\n{'-' * 60}")
-            print(f"📖 {title}")
-            print('-' * 60)
+            logger.info(f"\n{'-' * 60}")
+            logger.info(f"📖 {title}")
+            logger.info('-' * 60)
             
     def display_info(self, message: str, indent: int = 0):
         """Display formatted information"""
         prefix = "  " * indent
-        print(f"{prefix}{message}")
+        logger.info(f"{prefix}{message}")
         
     def display_checkpoint(self, question: str):
         """Display epistemic checkpoint prompt"""
-        print(f"\n🤔 CHECKPOINT:")
-        print(f"   {question}")
-        print(f"\n⏸️  [Pause for AI to respond with honest self-assessment...]")
-        print()
+        logger.info(f"\n🤔 CHECKPOINT:")
+        logger.info(f"   {question}")
+        logger.info(f"\n⏸️  [Pause for AI to respond with honest self-assessment...]")
+        logger.info("")
         
     def display_example(self, title: str, content: str):
         """Display example with formatting"""
-        print(f"\n💡 EXAMPLE: {title}")
-        print("   " + content.replace('\n', '\n   '))
-        print()
+        logger.info(f"\n💡 EXAMPLE: {title}")
+        logger.info("   " + content.replace('\n', '\n   '))
+        logger.info("")
         
     async def run_interactive(self):
         """
@@ -135,12 +139,12 @@ class EmpericaOnboardingWizard:
         Designed to be called via MCP tool or CLI.
         """
         self.display_header("Welcome to Empirica", level=1)
-        print()
-        print("This onboarding teaches Empirica by having you USE it.")
-        print("You'll perform real epistemic self-assessment with guidance.")
-        print()
-        print("Core Principle: Epistemic humility through transparency")
-        print()
+        logger.info("")
+        logger.info("This onboarding teaches Empirica by having you USE it.")
+        logger.info("You'll perform real epistemic self-assessment with guidance.")
+        logger.info("")
+        logger.info("Core Principle: Epistemic humility through transparency")
+        logger.info("")
         
         # Run all phases
         await self.phase_1_bootstrap()
@@ -153,19 +157,19 @@ class EmpericaOnboardingWizard:
         # Export session
         self.export_session()
         
-        print("\n🎉 Onboarding Complete!")
-        print(f"   Session ID: {self.session.session_id}")
-        print(f"   Learning delta calculated and saved")
-        print()
+        logger.info("\n🎉 Onboarding Complete!")
+        logger.info(f"   Session ID: {self.session.session_id}")
+        logger.info(f"   Learning delta calculated and saved")
+        logger.info("")
         
     async def phase_1_bootstrap(self):
         """Phase 1: Bootstrap & Component Discovery"""
         self.display_header("PHASE 1: Bootstrap & Component Discovery", level=2)
         self.session.current_phase = "bootstrap"
         
-        print()
-        print("First, let's load Empirica and see what's available.")
-        print()
+        logger.info("")
+        logger.info("First, let's load Empirica and see what's available.")
+        logger.info("")
         
         # Actually bootstrap
         try:
@@ -173,15 +177,15 @@ class EmpericaOnboardingWizard:
             bootstrap = OptimalMetacognitiveBootstrap(self.ai_id, 'minimal')
             components = bootstrap.bootstrap()
             
-            print(f"✅ Successfully loaded {len(components)} components:")
+            logger.info(f"✅ Successfully loaded {len(components)} components:")
             for name in sorted(components.keys()):
-                print(f"  • {name}")
-            print()
+                logger.info(f"  • {name}")
+            logger.info("")
             
         except Exception as e:
-            print(f"⚠️  Bootstrap encountered issue: {e}")
-            print("   (This is fine - continuing with educational content)")
-            print()
+            logger.warning(f"⚠️  Bootstrap encountered issue: {e}")
+            logger.warning("   (This is fine - continuing with educational content)")
+            logger.warning("")
             
         self.display_checkpoint(
             "What did you just learn?\n"
@@ -197,37 +201,37 @@ class EmpericaOnboardingWizard:
         self.display_header("PHASE 2: Epistemic Self-Assessment Practice", level=2)
         self.session.current_phase = "self_assessment"
         
-        print()
-        print("The heart of Empirica: honest self-assessment using 4 core vectors.")
-        print()
+        logger.info("")
+        logger.info("The heart of Empirica: honest self-assessment using 4 core vectors.")
+        logger.info("")
         
         # Explain the 4 core vectors
-        print("📊 THE 4 CORE VECTORS (0.0-1.0 scale):")
-        print()
-        print("1. KNOW: Domain knowledge")
+        logger.info("📊 THE 4 CORE VECTORS (0.0-1.0 scale):")
+        logger.info("")
+        logger.info("1. KNOW: Domain knowledge")
         self.display_info("How much do I understand about the subject matter?", 1)
         self.display_info("0.0 = No knowledge, 1.0 = Expert understanding", 1)
-        print()
+        logger.info("")
         
-        print("2. DO: Capability to execute")
+        logger.info("2. DO: Capability to execute")
         self.display_info("Can I actually perform the required actions?", 1)
         self.display_info("0.0 = Cannot do it, 1.0 = Fully capable", 1)
         self.display_info("⭐ This tells you when you're ready to ACT", 1)
-        print()
+        logger.info("")
         
-        print("3. CONTEXT: Environmental awareness")
+        logger.info("3. CONTEXT: Environmental awareness")
         self.display_info("Do I understand the situation/environment?", 1)
         self.display_info("0.0 = Context-blind, 1.0 = Full context", 1)
-        print()
+        logger.info("")
         
-        print("4. UNCERTAINTY: Explicit unknowns")
+        logger.info("4. UNCERTAINTY: Explicit unknowns")
         self.display_info("What am I uncertain about?", 1)
         self.display_info("0.0 = Fully certain, 1.0 = Very uncertain", 1)
         self.display_info("⭐ High uncertainty (>0.5) → INVESTIGATE first", 1)
-        print()
+        logger.info("")
         
         # Practice assessment
-        print("🎯 PRACTICE TASK:")
+        logger.info("🎯 PRACTICE TASK:")
         print('   "Explain the difference between PREFLIGHT and POSTFLIGHT"')
         print()
         print("📊 PREFLIGHT ASSESSMENT (before you answer):")
