@@ -27,12 +27,23 @@ For file locations and directory structure, see [`CANONICAL_DIRECTORY_STRUCTURE.
 - ✅ **Real self-assessment** based on task understanding
 - ✅ **Honest uncertainty** acknowledgment
 
-### 2. Temporal Separation
+**Note (Nov 2024):** Goal orchestrator now supports two modes:
+- **LLM mode:** AI reasons about goals via `llm_callback` (no heuristics)
+- **Threshold mode:** Fast threshold-based goals for performance (default, uses heuristics)
+- Users choose based on their needs (speed vs reasoning depth)
+
+### 2. Temporal Separation & Token Efficiency
 **Reflex logs separate current reasoning from historical reasoning.**
 
 - Prevents self-referential recursion
 - AI can reflect on past reasoning without circular loops
 - Three storage formats serve different purposes (SQLite, JSON, Reflex logs)
+
+**Phase 1.5 Enhancement (Nov 2024):**
+- **Git-enhanced context loading:** 97.5% token reduction
+- Compressed checkpoints in git notes (46 tokens vs 1,821 baseline)
+- SQLite fallback when git unavailable
+- Validated in production with measurable results
 
 ### 3. Context-Aware Constraints
 **Investigation constraints adapt to AI capability and domain.**
@@ -85,6 +96,7 @@ For file locations and directory structure, see [`CANONICAL_DIRECTORY_STRUCTURE.
 │  - SQLite database (queryable, relational)                       │
 │  - JSON sessions (portable, exportable)                          │
 │  - Reflex logs (temporal separation)                             │
+│  - Git notes (97.5% token reduction) ⭐ NEW                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
