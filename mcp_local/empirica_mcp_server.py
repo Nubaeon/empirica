@@ -330,6 +330,77 @@ async def list_tools() -> list[types.Tool]:
             }
         ),
         
+        # Git Integration Tools (Phase 1.5)
+        types.Tool(
+            name="create_git_checkpoint",
+            description="Create compressed epistemic checkpoint in git notes (97.5% token reduction vs full history). Use at phase boundaries (PREFLIGHT, CHECK, ACT, POSTFLIGHT).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "phase": {"type": "string", "enum": ["PREFLIGHT", "CHECK", "ACT", "POSTFLIGHT"], "description": "Workflow phase"},
+                    "round_num": {"type": "integer", "description": "Current round/step number"},
+                    "vectors": {"type": "object", "description": "Epistemic vector scores (13 vectors)"},
+                    "metadata": {"type": "object", "description": "Optional metadata (task, decision, etc.)"}
+                },
+                "required": ["session_id", "phase", "round_num", "vectors"]
+            }
+        ),
+        types.Tool(
+            name="load_git_checkpoint",
+            description="Load latest compressed checkpoint from git notes (~450 tokens vs ~6,500 for full history). Use in PREFLIGHT to retrieve context efficiently.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "max_age_hours": {"type": "integer", "description": "Maximum age of checkpoint in hours (default: 24)", "default": 24},
+                    "phase": {"type": "string", "description": "Optional: filter by specific phase"}
+                },
+                "required": ["session_id"]
+            }
+        ),
+        types.Tool(
+            name="get_vector_diff",
+            description="Calculate vector differences between current state and last checkpoint (~400 tokens vs ~3,500 for full CHECK data). Identifies only significant changes.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "current_vectors": {"type": "object", "description": "Current epistemic vector scores"},
+                    "threshold": {"type": "number", "description": "Significance threshold (default: 0.15)", "default": 0.15}
+                },
+                "required": ["session_id", "current_vectors"]
+            }
+        ),
+        types.Tool(
+            name="measure_token_efficiency",
+            description="Measure token usage and calculate efficiency gains vs baseline. Returns token count, reduction percentage, and cost savings.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "phase": {"type": "string", "description": "Workflow phase being measured"},
+                    "method": {"type": "string", "enum": ["git", "prompt"], "description": "Method used (git checkpoints or traditional prompts)"},
+                    "content": {"type": "string", "description": "Content being measured"},
+                    "content_type": {"type": "string", "enum": ["checkpoint", "diff", "full_history"], "description": "Type of content"}
+                },
+                "required": ["session_id", "phase", "method", "content"]
+            }
+        ),
+        types.Tool(
+            name="generate_efficiency_report",
+            description="Generate comprehensive token efficiency report comparing git method vs baseline. Includes per-phase breakdown and total savings (target: 80-90% reduction).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "format": {"type": "string", "enum": ["json", "markdown", "csv"], "description": "Report format (default: json)", "default": "json"},
+                    "output_path": {"type": "string", "description": "Optional file path to save report"}
+                },
+                "required": ["session_id"]
+            }
+        ),
+        
         # Bootstrap & System Management
         types.Tool(
             name="bootstrap_session",
@@ -1856,6 +1927,212 @@ Compare to your PREFLIGHT assessment - what changed?"""
                     "error": str(e),
                     "traceback": traceback.format_exc(),
                     "tool": "get_session_summary"
+                }, indent=2))]
+        
+        # Git Integration Tools (Phase 1.5)
+        elif name == "create_git_checkpoint":
+            try:
+                from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+                
+                session_id = arguments.get("session_id")
+                phase = arguments.get("phase")
+                round_num = arguments.get("round_num")
+                vectors = arguments.get("vectors")
+                metadata = arguments.get("metadata", {})
+                
+                git_logger = GitEnhancedReflexLogger(
+                    session_id=session_id,
+                    enable_git_notes=True
+                )
+                
+                checkpoint_id = git_logger.add_checkpoint(
+                    phase=phase,
+                    round_num=round_num,
+                    vectors=vectors,
+                    metadata=metadata
+                )
+                
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": True,
+                    "checkpoint_id": checkpoint_id,
+                    "phase": phase,
+                    "round": round_num,
+                    "token_count": git_logger.get_last_checkpoint().get("token_count", 0) if checkpoint_id else None,
+                    "storage": "git_notes" if git_logger.git_available else "sqlite_fallback",
+                    "message": "Checkpoint created successfully"
+                }, indent=2))]
+            except Exception as e:
+                import traceback
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": str(e),
+                    "traceback": traceback.format_exc(),
+                    "tool": "create_git_checkpoint"
+                }, indent=2))]
+        
+        elif name == "load_git_checkpoint":
+            try:
+                from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+                
+                session_id = arguments.get("session_id")
+                max_age_hours = arguments.get("max_age_hours", 24)
+                phase = arguments.get("phase")
+                
+                git_logger = GitEnhancedReflexLogger(
+                    session_id=session_id,
+                    enable_git_notes=True
+                )
+                
+                checkpoint = git_logger.get_last_checkpoint(
+                    max_age_hours=max_age_hours,
+                    phase=phase
+                )
+                
+                if not checkpoint:
+                    return [types.TextContent(type="text", text=json.dumps({
+                        "ok": False,
+                        "error": "No checkpoint found",
+                        "session_id": session_id,
+                        "max_age_hours": max_age_hours,
+                        "phase": phase
+                    }, indent=2))]
+                
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": True,
+                    "checkpoint": checkpoint,
+                    "token_count": checkpoint.get("token_count", 0),
+                    "storage_source": "git_notes" if git_logger.git_available else "sqlite_fallback",
+                    "token_savings": f"~{100 - (checkpoint.get('token_count', 0) / 6500 * 100):.1f}% vs full history"
+                }, indent=2))]
+            except Exception as e:
+                import traceback
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": str(e),
+                    "traceback": traceback.format_exc(),
+                    "tool": "load_git_checkpoint"
+                }, indent=2))]
+        
+        elif name == "get_vector_diff":
+            try:
+                from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+                
+                session_id = arguments.get("session_id")
+                current_vectors = arguments.get("current_vectors")
+                threshold = arguments.get("threshold", 0.15)
+                
+                git_logger = GitEnhancedReflexLogger(
+                    session_id=session_id,
+                    enable_git_notes=True
+                )
+                
+                last_checkpoint = git_logger.get_last_checkpoint()
+                
+                if not last_checkpoint:
+                    return [types.TextContent(type="text", text=json.dumps({
+                        "ok": False,
+                        "error": "No checkpoint found for comparison"
+                    }, indent=2))]
+                
+                vector_diff = git_logger.get_vector_diff(
+                    since_checkpoint=last_checkpoint,
+                    current_vectors=current_vectors
+                )
+                
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": True,
+                    "vector_diff": vector_diff,
+                    "significant_changes": vector_diff.get("significant_changes", []),
+                    "token_count": vector_diff.get("token_count", 0),
+                    "comparison": f"vs {last_checkpoint.get('phase')} round {last_checkpoint.get('round')}"
+                }, indent=2))]
+            except Exception as e:
+                import traceback
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": str(e),
+                    "traceback": traceback.format_exc(),
+                    "tool": "get_vector_diff"
+                }, indent=2))]
+        
+        elif name == "measure_token_efficiency":
+            try:
+                from empirica.metrics.token_efficiency import TokenEfficiencyMetrics
+                
+                session_id = arguments.get("session_id")
+                phase = arguments.get("phase")
+                method = arguments.get("method")
+                content = arguments.get("content")
+                content_type = arguments.get("content_type", "checkpoint")
+                
+                metrics = TokenEfficiencyMetrics(session_id=session_id)
+                
+                measurement = metrics.measure_context_load(
+                    phase=phase,
+                    method=method,
+                    content=content,
+                    content_type=content_type
+                )
+                
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": True,
+                    "measurement": {
+                        "phase": measurement.phase,
+                        "method": measurement.method,
+                        "tokens": measurement.tokens,
+                        "timestamp": measurement.timestamp.isoformat(),
+                        "content_type": measurement.content_type
+                    },
+                    "message": f"Measured {measurement.tokens} tokens for {phase}/{method}"
+                }, indent=2))]
+            except Exception as e:
+                import traceback
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": str(e),
+                    "traceback": traceback.format_exc(),
+                    "tool": "measure_token_efficiency"
+                }, indent=2))]
+        
+        elif name == "generate_efficiency_report":
+            try:
+                from empirica.metrics.token_efficiency import TokenEfficiencyMetrics
+                
+                session_id = arguments.get("session_id")
+                format_type = arguments.get("format", "json")
+                output_path = arguments.get("output_path")
+                
+                metrics = TokenEfficiencyMetrics(session_id=session_id)
+                
+                report = metrics.export_report(
+                    format=format_type,
+                    output_path=output_path
+                )
+                
+                # Also get comparison for summary
+                comparison = metrics.compare_efficiency()
+                
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": True,
+                    "report": report if format_type == "json" else None,
+                    "report_path": output_path if output_path else None,
+                    "summary": {
+                        "total_baseline_tokens": comparison["total"]["baseline_tokens"],
+                        "total_actual_tokens": comparison["total"]["actual_tokens"],
+                        "reduction_percentage": comparison["total"]["reduction_percentage"],
+                        "cost_savings_usd": comparison["total"]["cost_savings_usd"],
+                        "target_met": comparison["success_criteria"]["target_met"],
+                        "achieved_reduction": comparison["success_criteria"]["achieved_reduction_pct"]
+                    },
+                    "message": f"Efficiency report generated ({format_type} format)"
+                }, indent=2))]
+            except Exception as e:
+                import traceback
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": str(e),
+                    "traceback": traceback.format_exc(),
+                    "tool": "generate_efficiency_report"
                 }, indent=2))]
         
         # Bootstrap
