@@ -28,10 +28,14 @@ Version: 3.0.0 - Init-Style Bootstrap with Canonical Foundation
 """
 
 import time
+import logging
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 import sys
 import asyncio
+
+# Set up logging for bootstrap
+logger = logging.getLogger(__name__)
 
 # Fix sys.path: Ensure empirica paths come BEFORE semantic_self_aware_kit
 # This prevents importing from old location
@@ -51,10 +55,10 @@ for path in reversed(empirica_paths):
 # Remove any semantic_self_aware_kit paths that might interfere
 sys.path = [p for p in sys.path if 'semantic_self_aware_kit' not in p]
 
-print(f"🔧 Fixed sys.path (empirica first):")
-print(f"   {sys.path[0]}")
-print(f"   {sys.path[1]}")
-print(f"   {sys.path[2]}")
+logger.info(f"🔧 Fixed sys.path (empirica first):")
+logger.info(f"   {sys.path[0]}")
+logger.info(f"   {sys.path[1]}")
+logger.info(f"   {sys.path[2]}")
 
 # Import the base bootstrap
 from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
@@ -104,15 +108,15 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
             bootstrap_level=int(self.init_level)
         )
         
-        print(f"🚀🧠✨ Extended Metacognitive Bootstrap")
-        print(f"   🤖 AI ID: {self.ai_id}")
-        print(f"   📊 Init Level: {self.init_level}")
-        print(f"   🌟 Extended Bootstrap: Init-Style Levels (0-4)")
-        print(f"   🎯 Focus: Epistemic humility + Empirical feedback")
-        print(f"   📈 Auto-tracking: ENABLED")
-        print(f"   📄 AI Agent Guidelines: Please review AI_AGENT_GUIDELINES.md for best practices.")
-        print(f"   🔷 Canonical Foundation: LLM-powered, no heuristics")
-        print()
+        logger.info(f"🚀🧠✨ Extended Metacognitive Bootstrap")
+        logger.info(f"   🤖 AI ID: {self.ai_id}")
+        logger.info(f"   📊 Init Level: {self.init_level}")
+        logger.info(f"   🌟 Extended Bootstrap: Init-Style Levels (0-4)")
+        logger.info(f"   🎯 Focus: Epistemic humility + Empirical feedback")
+        logger.info(f"   📈 Auto-tracking: ENABLED")
+        logger.info(f"   📄 AI Agent Guidelines: Please review AI_AGENT_GUIDELINES.md for best practices.")
+        logger.info(f"   🔷 Canonical Foundation: LLM-powered, no heuristics")
+        logger.info("")
     
     def _normalize_init_level(self, level) -> str:
         """Normalize init level to support both numeric (0-4) and named conventions"""
