@@ -14,7 +14,7 @@ import os
 import logging
 
 # Import centralized thresholds
-from ...thresholds import (
+from empirica.core.thresholds import (
     UNCERTAINTY_LOW, UNCERTAINTY_MODERATE,
     COMPREHENSION_HIGH, COMPREHENSION_MODERATE,
     EXECUTION_HIGH, EXECUTION_MODERATE,
