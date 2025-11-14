@@ -3,9 +3,13 @@ Utility Commands - General purpose CLI commands for feedback, calibration, etc.
 """
 
 import json
+import logging
 import time
 from typing import Dict, Any
 from ..cli_utils import print_component_status, handle_cli_error, parse_json_safely
+
+# Set up logging for utility commands
+logger = logging.getLogger(__name__)
 
 
 def handle_feedback_command(args):
@@ -13,6 +17,7 @@ def handle_feedback_command(args):
     try:
         from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
         
+        logger.info(f"Processing feedback for decision: {args.decision_id}")
         print(f"📝 Processing feedback for decision: {args.decision_id}")
         
         # Create outcome dictionary
@@ -31,6 +36,8 @@ def handle_feedback_command(args):
             confidence_threshold=0.5
         )
         
+        
+        logger.info(f"Feedback processed successfully for decision: {args.decision_id}")
         print(f"✅ Feedback processed for decision: {args.decision_id}")
         print(f"   📊 Outcome: {'Success' if args.success else 'Failure'}")
         print(f"   📝 Notes: {args.notes if args.notes else 'None'}")
@@ -45,6 +52,8 @@ def handle_goal_analysis_command(args):
     try:
         from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
         
+        
+        logger.info(f"Analyzing goal feasibility: {args.goal}")
         print(f"🎯 Analyzing goal: {args.goal}")
         
         context = parse_json_safely(getattr(args, 'context', None))
