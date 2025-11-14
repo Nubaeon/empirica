@@ -36,11 +36,15 @@ Usage Examples:
 """
 
 import asyncio
+import logging
 from typing import Dict, Any, Optional, Callable
 from functools import wraps
 from datetime import datetime
 from pathlib import Path
 import sys
+
+# Set up logging for auto_tracker
+logger = logging.getLogger(__name__)
 
 # Ensure empirica is in path
 empirica_root = Path(__file__).parent.parent
@@ -154,7 +158,7 @@ class EmpericaTracker:
                 bootstrap_level=self.bootstrap_level,
                 components_loaded=components_loaded
             )
-            print(f"📊 Empirica session started: {self.session_id}")
+            logger.info(f"📊 Empirica session started: {self.session_id}")
         return self.session_id
     
     def end_session(self, avg_confidence: Optional[float] = None):
@@ -170,7 +174,7 @@ class EmpericaTracker:
                 avg_confidence=avg_confidence,
                 drift_detected=False  # Could be enhanced with drift detection
             )
-            print(f"📊 Empirica session ended: {self.session_id}")
+            logger.info(f"📊 Empirica session ended: {self.session_id}")
             self.session_id = None
     
     def start_cascade(self, task: str, context: Optional[Dict[str, Any]] = None) -> str:
@@ -198,7 +202,7 @@ class EmpericaTracker:
         )
         self.cascade_count += 1
         
-        print(f"🔄 Cascade started: {task[:50]}...")
+        logger.info(f"🔄 Cascade started: {task[:50]}...")
         return self.current_cascade_id
     
     def end_cascade(self, final_action: Action = Action.PROCEED, 
@@ -229,15 +233,15 @@ class EmpericaTracker:
                 bayesian_active=False,
                 drift_monitored=False
             )
-            print(f"✅ Cascade completed: {final_action} (duration: {duration_ms}ms)")
+            logger.info(f"✅ Cascade completed: {final_action} (duration: {duration_ms}ms)")
             
             # Auto-export to JSON if enabled
             if self.export_json and self.json_handler and self.session_id:
                 try:
                     export_path = self.json_handler.export_session(self.db, self.session_id)
-                    print(f"📤 Session exported: {export_path}")
+                    logger.info(f"📤 Session exported: {export_path}")
                 except Exception as e:
-                    print(f"⚠️  JSON export failed: {e}")
+                    logger.warning(f"⚠️  JSON export failed: {e}")
             
             self.current_cascade_id = None
             self.cascade_start_time = None
@@ -251,7 +255,7 @@ class EmpericaTracker:
             phase: Cascade phase (think, uncertainty, investigate, check, act)
         """
         if self.current_cascade_id is None:
-            print("⚠️  No active cascade - starting one automatically")
+            logger.warning("⚠️  No active cascade - starting one automatically")
             self.start_cascade(assessment.task or "auto-tracked task")
         
         # Log to database
@@ -262,7 +266,7 @@ class EmpericaTracker:
         )
         self.assessment_count += 1
         
-        print(f"📝 Assessment logged: phase={phase}, confidence={assessment.overall_confidence:.2f}, uncertainty={assessment.uncertainty.score:.2f}")
+        logger.info(f"📝 Assessment logged: phase={phase}, confidence={assessment.overall_confidence:.2f}, uncertainty={assessment.uncertainty.score:.2f}")
         
         # Also log to reflex frames for tmux dashboard
         if self.enable_reflex_logs and self.reflex_logger:
@@ -292,10 +296,10 @@ class EmpericaTracker:
                 )
                 # Log asynchronously
                 asyncio.create_task(self.reflex_logger.log_frame(frame, agent_id=self.ai_id))
-                print(f"📊 Reflex frame logged for tmux dashboard (phase={phase})")
+                logger.info(f"📊 Reflex frame logged for tmux dashboard (phase={phase})")
             except Exception as e:
                 import traceback
-                print(f"⚠️  Reflex logging failed: {e}")
+                logger.warning(f"⚠️  Reflex logging failed: {e}")
                 # traceback.print_exc()  # Uncomment for debugging
     
     def update_phase(self, phase: str, completed: bool = True):
