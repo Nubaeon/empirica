@@ -3,9 +3,13 @@ Cascade Commands - Metacognitive cascade and decision-making functionality
 """
 
 import json
+import logging
 import uuid
 from datetime import datetime
 from ..cli_utils import print_component_status, handle_cli_error, format_uncertainty_output, parse_json_safely, print_header
+
+# Set up logging for cascade commands
+logger = logging.getLogger(__name__)
 
 
 def handle_cascade_command(args):
@@ -13,7 +17,7 @@ def handle_cascade_command(args):
     try:
         from empirica.plugins.modality_switcher.modality_switcher import ModalitySwitcher, RoutingPreferences, RoutingStrategy
         
-        print(f"🔄 Running epistemic adaptive cascade: {args.question}")
+        logger.info(f"🔄 Running epistemic adaptive cascade: {args.question}")
         
         # Parse context and epistemic vectors from CLI args
         context = parse_json_safely(getattr(args, 'context', None)) or {}
@@ -108,7 +112,7 @@ def handle_cascade_command(args):
             )
         
         # Create and use modality switcher for routing decision and execution
-        print("🎯 Determining optimal adapter...")
+        logger.info("🎯 Determining optimal adapter...")
         switcher = ModalitySwitcher()
         decision = switcher.route_request(
             query=args.question,
@@ -117,21 +121,21 @@ def handle_cascade_command(args):
             context=context
         )
         
-        print(f"   Selected: {decision.selected_adapter}")
-        print(f"   Rationale: {decision.rationale}")
-        print(f"   Estimated: ${decision.estimated_cost:.4f}, {decision.estimated_latency:.1f}s")
+        logger.info(f"   Selected: {decision.selected_adapter}")
+        logger.info(f"   Rationale: {decision.rationale}")
+        logger.info(f"   Estimated: ${decision.estimated_cost:.4f}, {decision.estimated_latency:.1f}s")
         
         if getattr(args, 'verbose', False):
-            print(f"   Fallbacks: {decision.fallback_adapters}")
+            logger.info(f"   Fallbacks: {decision.fallback_adapters}")
             if not getattr(args, 'yes', False):
                 try:
                     response = input("   Proceed? [Y/n] ").lower()
                     if response and response not in ['y', 'yes']:
-                        print("   ❌ Cancelled by user")
+                        logger.info("   ❌ Cancelled by user")
                         return
                 except (EOFError, KeyboardInterrupt):
                     # Handle non-interactive mode (like when run from shell)
-                    print("   ⏩ Proceeding (non-interactive mode)")
+                    logger.info("   ⏩ Proceeding (non-interactive mode)")
         
         # Execute the request using the switcher's execute_with_routing method
         result = switcher.execute_with_routing(
@@ -145,26 +149,26 @@ def handle_cascade_command(args):
         )
         
         if hasattr(result, 'decision'):
-            print(f"✅ Execution complete")
-            print(f"   🎯 Decision: {result.decision}")
-            print(f"   📊 Confidence: {result.confidence:.2f}")
-            print(f"   💭 Rationale: {result.rationale[:100]}{'...' if len(result.rationale) > 100 else ''}")
+            logger.info(f"✅ Execution complete")
+            logger.info(f"   🎯 Decision: {result.decision}")
+            logger.info(f"   📊 Confidence: {result.confidence:.2f}")
+            logger.info(f"   💭 Rationale: {result.rationale[:100]}{'...' if len(result.rationale) > 100 else ''}")
             
             if getattr(args, 'verbose', False):
-                print("   🧠 Vector References:")
+                logger.info("   🧠 Vector References:")
                 for vector, value in result.vector_references.items():
-                    print(f"      📊 {vector}: {value:.2f}")
+                    logger.info(f"      📊 {vector}: {value:.2f}")
                 
-                print("   🚀 Suggested Actions:")
+                logger.info("   🚀 Suggested Actions:")
                 for action in result.suggested_actions:
-                    print(f"      • {action}")
+                    logger.info(f"      • {action}")
         else:
-            print(f"❌ Execution failed: {result.message if hasattr(result, 'message') else result}")
+            logger.error(f"❌ Execution failed: {result.message if hasattr(result, 'message') else result}")
         
         # Show usage statistics if verbose
         if getattr(args, 'verbose', False):
             stats = switcher.get_usage_stats()
-            print(f"📈 Usage Stats: {stats}")
+            logger.info(f"📈 Usage Stats: {stats}")
         
     except Exception as e:
         handle_cli_error(e, "Cascade", getattr(args, 'verbose', False))
@@ -188,41 +192,41 @@ def handle_decision_command(args):
             confidence_threshold=confidence_threshold
         )
         
-        print(f"✅ Decision analysis complete")
-        print(f"   🎯 Decision: {cascade_result.get('final_decision', 'INVESTIGATE')}")
-        print(f"   📊 Confidence: {cascade_result.get('confidence', 0.0):.2f}")
-        print(f"   ⚖️ Threshold: {confidence_threshold}")
+        logger.info(f"✅ Decision analysis complete")
+        logger.info(f"   🎯 Decision: {cascade_result.get('final_decision', 'INVESTIGATE')}")
+        logger.info(f"   📊 Confidence: {cascade_result.get('confidence', 0.0):.2f}")
+        logger.info(f"   ⚖️ Threshold: {confidence_threshold}")
         
         # Recommendation based on confidence
         meets_threshold = cascade_result.get('confidence', 0.0) >= confidence_threshold
         recommendation = "PROCEED" if meets_threshold else "INVESTIGATE FURTHER"
         emoji = "✅" if meets_threshold else "⚠️"
         
-        print(f"   {emoji} Recommendation: {recommendation}")
-        print(f"   💭 Reasoning: {cascade_result.get('reasoning', 'N/A')}")
+        logger.info(f"   {emoji} Recommendation: {recommendation}")
+        logger.info(f"   💭 Reasoning: {cascade_result.get('reasoning', 'N/A')}")
         
         # Show epistemic state
         epistemic_state = cascade_result.get('epistemic_state', {})
         if epistemic_state and getattr(args, 'verbose', False):
-            print("🧠 Epistemic State:")
+            logger.info("🧠 Epistemic State:")
             if 'know' in epistemic_state:
-                print(f"   📚 KNOW: {epistemic_state['know']:.2f}")
+                logger.info(f"   📚 KNOW: {epistemic_state['know']:.2f}")
             if 'do' in epistemic_state:
-                print(f"   ⚡ DO: {epistemic_state['do']:.2f}")
+                logger.info(f"   ⚡ DO: {epistemic_state['do']:.2f}")
             if 'context' in epistemic_state:
-                print(f"   🌐 CONTEXT: {epistemic_state['context']:.2f}")
+                logger.info(f"   🌐 CONTEXT: {epistemic_state['context']:.2f}")
         
         # Show required actions or next steps
         if cascade_result.get('required_actions'):
-            print("⚡ Next steps:")
+            logger.info("⚡ Next steps:")
             for action in cascade_result['required_actions']:
-                print(f"   • {action}")
+                logger.info(f"   • {action}")
         
         # Show investigation history if verbose
         if getattr(args, 'verbose', False) and cascade_result.get('investigation_history'):
-            print("🔍 Investigation history:")
+            logger.info("🔍 Investigation history:")
             for i, investigation in enumerate(cascade_result['investigation_history'], 1):
-                print(f"   {i}. {investigation.get('action', 'Unknown')}")
+                logger.info(f"   {i}. {investigation.get('action', 'Unknown')}")
         
     except Exception as e:
         handle_cli_error(e, "Decision analysis", getattr(args, 'verbose', False))
@@ -242,16 +246,16 @@ def handle_preflight_command(args):
         # Execute preflight assessment
         assessor = CanonicalEpistemicAssessor(agent_id=session_id)
         
-        print(f"📋 Task: {prompt}")
-        print(f"🆔 Session ID: {session_id}")
-        print(f"\n⏳ Assessing epistemic state...\n")
+        logger.info(f"📋 Task: {prompt}")
+        logger.info(f"🆔 Session ID: {session_id}")
+        logger.info(f"\n⏳ Assessing epistemic state...\n")
         
         # Get self-assessment prompt from canonical assessor
         import asyncio
         assessment_request = asyncio.run(assessor.assess(prompt, {}))
         
         if not isinstance(assessment_request, dict) or 'self_assessment_prompt' not in assessment_request:
-            print("❌ Failed to generate self-assessment prompt")
+            logger.error("❌ Failed to generate self-assessment prompt")
             return
         
         # Check if AI self-assessment was provided via --assessment-json argument
@@ -295,32 +299,32 @@ def handle_preflight_command(args):
                     'uncertainty': assessment.uncertainty.score
                 }
             except Exception as e:
-                print(f"❌ Failed to parse self-assessment: {e}")
+                logger.error(f"❌ Failed to parse self-assessment: {e}")
                 return
         else:
             # Interactive mode: Display prompt and request assessment
-            print("\n" + "=" * 70)
-            print("GENUINE SELF-ASSESSMENT REQUIRED")
-            print("=" * 70)
-            print("\n⚠️  NO HEURISTICS. NO STATIC VALUES. NO CONFABULATION.")
-            print("\nThis command requires genuine AI epistemic self-assessment.")
-            print("\n📋 SELF-ASSESSMENT PROMPT:")
-            print("=" * 70)
-            print(assessment_request['self_assessment_prompt'])
-            print("=" * 70)
-            print("\n💡 HOW TO USE:")
-            print("\nOption 1: MCP Server (Recommended for AI assistants)")
-            print("  - Use MCP tools for genuine real-time self-assessment")
-            print("  - See: docs/guides/MCP_CONFIGURATION_EXAMPLES.md")
-            print("\nOption 2: CLI with --assessment-json")
-            print("  - AI performs genuine self-assessment")
-            print("  - Provide JSON response via --assessment-json flag")
-            print("  - Example: empirica preflight \"task\" --assessment-json '{...}'")
-            print("\nOption 3: Interactive (you are here)")
-            print("  - Paste your genuine self-assessment as JSON when prompted")
+            logger.info("\n" + "=" * 70)
+            logger.info("GENUINE SELF-ASSESSMENT REQUIRED")
+            logger.info("=" * 70)
+            logger.info("\n⚠️  NO HEURISTICS. NO STATIC VALUES. NO CONFABULATION.")
+            logger.info("\nThis command requires genuine AI epistemic self-assessment.")
+            logger.info("\n📋 SELF-ASSESSMENT PROMPT:")
+            logger.info("=" * 70)
+            logger.info(assessment_request['self_assessment_prompt'])
+            logger.info("=" * 70)
+            logger.info("\n💡 HOW TO USE:")
+            logger.info("\nOption 1: MCP Server (Recommended for AI assistants)")
+            logger.info("  - Use MCP tools for genuine real-time self-assessment")
+            logger.info("  - See: docs/guides/MCP_CONFIGURATION_EXAMPLES.md")
+            logger.info("\nOption 2: CLI with --assessment-json")
+            logger.info("  - AI performs genuine self-assessment")
+            logger.info("  - Provide JSON response via --assessment-json flag")
+            logger.info("  - Example: empirica preflight \"task\" --assessment-json '{...}'")
+            logger.info("\nOption 3: Interactive (you are here)")
+            logger.info("  - Paste your genuine self-assessment as JSON when prompted")
             
             if not args.quiet:
-                print("\n" + "=" * 70)
+                logger.info("\n" + "=" * 70)
                 response = input("\nPaste your genuine self-assessment JSON (or press Enter to skip): ")
                 
                 if response.strip():
@@ -347,14 +351,14 @@ def handle_preflight_command(args):
                             'uncertainty': assessment.uncertainty.score
                         }
                     except Exception as e:
-                        print(f"\n❌ Failed to parse assessment: {e}")
+                        logger.error(f"\n❌ Failed to parse assessment: {e}")
                         return
                 else:
-                    print("\n⚠️  Skipping preflight - no genuine assessment provided")
-                    print("💡 Use MCP server for automated genuine self-assessment")
+                    logger.warning("\n⚠️  Skipping preflight - no genuine assessment provided")
+                    logger.info("💡 Use MCP server for automated genuine self-assessment")
                     return
             else:
-                print("\n⚠️  Cannot complete preflight in --quiet mode without --assessment-json")
+                logger.warning("\n⚠️  Cannot complete preflight in --quiet mode without --assessment-json")
                 return
         
         # Store preflight in session database for postflight comparison
@@ -388,7 +392,7 @@ def handle_preflight_command(args):
                 "vectors": vectors,
                 "recommendation": _get_recommendation(vectors)
             }
-            print(json.dumps(output, indent=2))
+            logger.info(json.dumps(output, indent=2))
         
         elif args.compact:
             # Single-line key=value format
@@ -396,13 +400,13 @@ def handle_preflight_command(args):
             for key, value in vectors.items():
                 parts.append(f"{key.upper()}={value:.2f}")
             parts.append(f"RECOMMEND={_get_recommendation(vectors)['action']}")
-            print(" ".join(parts))
+            logger.info(" ".join(parts))
         
         elif args.kv:
             # Multi-line key=value format
-            print(f"session_id={session_id}")
-            print(f"task={prompt}")
-            print(f"timestamp={datetime.utcnow().isoformat()}")
+            logger.info(f"session_id={session_id}")
+            logger.info(f"task={prompt}")
+            logger.info(f"timestamp={datetime.utcnow().isoformat()}")
             for key, value in vectors.items():
                 print(f"{key}={value:.2f}")
             print(f"recommendation={_get_recommendation(vectors)['action']}")
