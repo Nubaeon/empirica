@@ -18,10 +18,12 @@ Usage:
 from typing import Dict, List, Any, Optional, Protocol
 from abc import ABC, abstractmethod
 from enum import Enum
+import logging
 
 
 from empirica.core.canonical import EpistemicAssessment, VectorState
 
+logger = logging.getLogger(__name__)
 
 class Domain(Enum):
     """Task domain categories"""
@@ -561,9 +563,9 @@ async def recommend_investigation_tools(
         )
 
         for rec in recommendations:
-            print(f"Tool: {rec.tool_name} (priority {rec.priority})")
-            print(f"Addresses: {rec.gap_addressed}")
-            print(f"Reasoning: {rec.reasoning}")
+            logger.info(f"Tool: {rec.tool_name} (priority {rec.priority})")
+            logger.info(f"Addresses: {rec.gap_addressed}")
+            logger.info(f"Reasoning: {rec.reasoning}")
     """
     if context is None:
         context = {}

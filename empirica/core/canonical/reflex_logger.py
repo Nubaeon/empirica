@@ -17,6 +17,7 @@ Architecture:
 
 import json
 import asyncio
+import logging
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from datetime import datetime, UTC, date
@@ -24,6 +25,7 @@ import aiofiles
 
 from .reflex_frame import ReflexFrame, EpistemicAssessment
 
+logger = logging.getLogger(__name__)
 
 class ReflexLogger:
     """
@@ -323,11 +325,11 @@ class ReflexLogger:
                     # Remove entire date directory
                     import shutil
                     shutil.rmtree(date_dir)
-                    print(f"Removed old logs: {date_dir}")
+                    logger.info(f"Removed old logs: {date_dir}")
 
             except (ValueError, OSError) as e:
                 # Skip directories that don't match date format or can't be removed
-                print(f"Skipping {date_dir}: {e}")
+                logger.info(f"Skipping {date_dir}: {e}")
 
 
 # CONVENIENCE FUNCTIONS

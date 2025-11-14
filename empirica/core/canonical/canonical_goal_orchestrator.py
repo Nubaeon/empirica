@@ -482,14 +482,12 @@ if __name__ == "__main__":
         {'available_tools': ['read', 'write', 'edit']}
     ))
     
-    print(f"Generated {len(goals)} goals:\n")
+    logger.info(f"Generated {len(goals)} goals:")
     for i, goal in enumerate(goals, 1):
-        print(f"Goal {i}:")
-        print(f"  {goal.goal}")
-        print(f"  Priority: {goal.priority}/10")
-        print(f"  Action: {goal.action_type}")
-        print(f"  Autonomy: {goal.autonomy_level.value}")
-        print(f"  Reasoning: {goal.reasoning}")
-        print()
+        logger.info(f"Goal {i}: {goal.goal}")
+        logger.info(f"  Priority: {goal.priority}/10")
+        logger.info(f"  Action: {goal.action_type}")
+        logger.info(f"  Autonomy: {goal.autonomy_level.value}")
+        logger.info(f"  Reasoning: {goal.reasoning}")
     
-    print("✅ Canonical Goal Orchestrator test complete!")
+    logger.info("Canonical Goal Orchestrator test complete")

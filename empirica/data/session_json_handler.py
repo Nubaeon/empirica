@@ -12,12 +12,14 @@ Pattern: SQLite is source of truth, JSON files are exports/cache
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from empirica.data.session_database import SessionDatabase
 
+logger = logging.getLogger(__name__)
 
 class SessionJSONHandler:
     """Manages JSON exports and caching from SQLite database"""
@@ -31,7 +33,7 @@ class SessionJSONHandler:
         self.export_dir = Path(export_dir)
         self.export_dir.mkdir(parents=True, exist_ok=True)
         
-        print(f"📤 JSON Handler initialized: {self.export_dir}")
+        logger.info(f"JSON Handler initialized: {self.export_dir}")
     
     def export_session(self, db: SessionDatabase, session_id: str) -> Path:
         """Export complete session to JSON file"""
@@ -97,7 +99,7 @@ class SessionJSONHandler:
         with open(filepath, 'w') as f:
             json.dump(session_data, f, indent=2, default=str)
         
-        print(f"✅ Exported session to: {filepath}")
+        logger.info(f"Exported session to: {filepath}")
         return filepath
     
     def export_cascade_graph(self, db: SessionDatabase, cascade_id: str) -> Path:
@@ -240,7 +242,7 @@ class SessionJSONHandler:
         with open(filepath, 'w') as f:
             json.dump(graph_data, f, indent=2, default=str)
         
-        print(f"✅ Exported cascade graph to: {filepath}")
+        logger.info(f"Exported cascade graph to: {filepath}")
         return filepath
     
     def load_session_context(self, session_id: str) -> Optional[Dict]:
@@ -254,7 +256,7 @@ class SessionJSONHandler:
             with open(filepath) as f:
                 return json.load(f)
         except Exception as e:
-            print(f"⚠️  Failed to load session context: {e}")
+            logger.warning(f"Failed to load session context: {e}")
             return None
     
     def read_synthesis_history(self, session_id: str) -> List[Dict[str, Any]]:
@@ -434,7 +436,7 @@ class SessionJSONHandler:
 
 if __name__ == "__main__":
     # Test the JSON handler
-    print("🧪 Testing JSON Handler...")
+    logger.info("Testing JSON Handler...")
     
     # Create test data
     from empirica.data.session_database import SessionDatabase
@@ -454,19 +456,19 @@ if __name__ == "__main__":
     
     # Export session
     session_file = handler.export_session(db, session_id)
-    print(f"✅ Session exported: {session_file.name}")
+    logger.info(f"Session exported: {session_file.name}")
     
     # Export cascade graph
     graph_file = handler.export_cascade_graph(db, cascade_id)
-    print(f"✅ Cascade graph exported: {graph_file.name}")
+    logger.info(f"Cascade graph exported: {graph_file.name}")
     
     # Load back
     loaded = handler.load_session_context(session_id)
-    print(f"✅ Loaded session: {loaded['ai_id']}, {len(loaded['cascades'])} cascades")
+    logger.info(f"Loaded session: {loaded['ai_id']}, {len(loaded['cascades'])} cascades")
     
     # Compact summary
     summary = handler.create_compact_summary(db, session_id)
-    print(f"✅ Compact summary: {summary['statistics']}")
+    logger.info(f"Compact summary: {summary['statistics']}")
     
     db.close()
-    print("\n🎉 JSON Handler tests passed!")
+    logger.info("JSON Handler tests passed!")
