@@ -42,12 +42,19 @@
 
 ### 🎯 Phase 1: Complete Current Empirica (Priority: P0)
 
-**Timeline:** 2-3 weeks  
-**Goal:** Production-ready Empirica without Git
+**Timeline:** 1-2 weeks  
+**Goal:** Production-ready Empirica without Git (establishes baseline)
 
 #### Deliverables:
-- [ ] **Complete MiniMax P1-P2 refactoring**
-  - Replace 19 print statements
+- [ ] **Session 5: Complete P1 refactoring** (MiniMax)
+  - Replace remaining 49 print statements → logger
+  - **Measure baseline token usage** (critical for Phase 1.5 benchmark!)
+  - Status: Ready to start
+  
+- [ ] **Session 5 Token Analysis**
+  - Document PREFLIGHT/CHECK/ACT/POSTFLIGHT token counts
+  - Expected: ~19,000 tokens per session (traditional SQLite approach)
+  - Purpose: Baseline for git notes compression comparison
   - Centralize thresholds
   - Fix SQL injection
   
@@ -73,39 +80,183 @@
 - ✅ 3+ real-world use cases documented
 - ✅ <5 critical bugs in backlog
 
----
-
-### 🔬 Phase 2: Git Integration Research (Priority: P1)
-
-**Timeline:** 1 week  
-**Goal:** Validate Git approach with prototypes
-
-#### Deliverables:
-- [ ] **Compression benchmarks**
-  - Measure actual delta compression on real sessions
-  - Compare Git packfiles vs raw JSON
-  - Test with 1K, 10K, 100K sessions
+- [ ] **Website launch**
+  - Landing page
+  - Documentation site
+  - Example workflows
+  - API reference
   
-- [ ] **Performance testing**
-  - Git operations latency (commit, branch, merge)
-  - Query performance (git log vs SQL)
-  - Scalability limits
+- [ ] **Phase 8 documentation updates**
+  - Architecture overview
+  - Skills guide
+  - Developer onboarding
   
-- [ ] **Integration prototype**
-  - Minimal SentinelGitManager class
-  - Proof-of-concept CLI wrapper
-  - Migration script for 10 test sessions
-  
-- [ ] **Architecture validation**
-  - Confirm Postgres + Git + Vector DB hybrid works
-  - Identify integration pain points
-  - Document trade-offs
+- [ ] **End-to-end testing**
+  - Multi-AI scenarios
+  - Calibration accuracy
+  - Performance benchmarks
 
 #### Success Criteria:
-- ✅ 60%+ compression confirmed
-- ✅ Git operations <100ms for typical sessions
-- ✅ Prototype successfully migrates existing sessions
-- ✅ Architecture document reviewed
+- ✅ P1 complete (140/140 prints refactored)
+- ✅ Session 5 token baseline documented
+- ✅ Empirica CLI fully functional
+- ✅ Website ready for launch
+
+---
+
+### 🧪 Phase 1.5: Git Notes Prototype (Priority: P0+) **← NEW!**
+
+**Timeline:** 1 week  
+**Goal:** Validate 80-90% token savings with git notes integration
+
+**Why Phase 1.5?** The other Claude is right - we need to test git notes compression NOW (before full Git migration). Session 6 is the perfect testbed.
+
+#### Deliverables:
+
+**Day 1-2: Implement Git Notes Integration**
+- [ ] Create `GitEnhancedReflexLogger(ReflexLogger)`
+  - Hybrid approach: SQLite + git notes
+  - `enable_git_notes` flag (default: False)
+  - Backward compatible (no breaking changes)
+  
+- [ ] Add `_add_git_checkpoint()` method
+  - Create git commit with epistemic metadata
+  - Attach structured JSON via `git notes add`
+  - Format: `{"session_id": "...", "phase": "...", "vectors": {...}}`
+  
+- [ ] Add `get_last_checkpoint()` method
+  - Load from git notes (compressed: ~200-500 tokens)
+  - Fall back to SQLite if git notes unavailable
+  - Return standardized checkpoint format
+
+**Day 3: Update MiniMax Session 6 Instructions**
+- [ ] Create `MINIMAX_SESSION6_GIT_NOTES_PROTOTYPE.md`
+  - Primary goal: P2 (threshold centralization)
+  - Secondary goal: Test git notes integration
+  - Add git notes after EVERY phase transition
+  
+- [ ] Add git notes commands to instructions:
+  ```bash
+  # After PREFLIGHT
+  git notes add -m '{"phase": "PREFLIGHT", "round": 5, "vectors": {...}}'
+  
+  # After CHECK  
+  git notes add -m '{"phase": "CHECK", "round": 15, "vectors": {...}, "decision": "proceed"}'
+  
+  # After ACT (each commit)
+  git commit -m "refactor: Create thresholds.py"
+  git notes add -m '{"phase": "ACT", "round": 25, "batch": 1, "vectors": {...}}'
+  
+  # After POSTFLIGHT
+  git notes add -m '{"phase": "POSTFLIGHT", "round": 50, "vectors": {...}, "calibration": {...}}'
+  ```
+
+**Day 4: Run Session 6 with Git Notes**
+- [ ] MiniMax completes P2 WITH git notes
+  - Create `empirica/core/thresholds.py`
+  - Centralize 30-40 hardcoded thresholds
+  - Add git notes at each phase transition
+  - Measure token usage throughout
+
+**Day 5: Benchmark & Document**
+- [ ] Compare Session 5 vs Session 6 token usage
+  - PREFLIGHT: Expect 85-90% reduction
+  - CHECK: Expect 85-90% reduction
+  - ACT: Expect 50-70% reduction
+  - POSTFLIGHT: Expect 70-80% reduction
+  
+- [ ] Document findings in `GIT_NOTES_BENCHMARK_RESULTS.md`
+  - Expected: ~16,000 token savings per session (84% reduction)
+  - Compression ratio: ~6.3x
+  - Cost savings: $50-100/month at scale
+  
+- [ ] Create visualization
+  ```bash
+  # Query epistemic trajectory
+  git log --all --oneline --notes
+  git notes show <commit1>
+  git notes show <commit2>
+  # Show vector changes over time
+  ```
+
+#### Success Criteria:
+- ✅ P2 complete (thresholds centralized)
+- ✅ Git notes added at all phase transitions
+- ✅ Token savings measured: **80-90% reduction validated**
+- ✅ Compression ratio documented: **6-7x**
+- ✅ No regressions (SQLite fallback works)
+
+#### Why This Validates the Approach:
+1. **Real session data** (not synthetic benchmarks)
+2. **Actual token measurements** (not estimates)
+3. **Small scope** (P2 is 30-40 changes vs P1's 140)
+4. **Backward compatible** (SQLite still works)
+5. **Low risk** (Phase 1.5 doesn't block Phase 1 completion)
+
+---
+
+### 🔬 Phase 2: Full Git-Native Implementation (Priority: P1)
+
+**Timeline:** 2-3 weeks  
+**Goal:** Replace SQLite with Git for cognitive state storage
+
+**Prerequisites:** Phase 1.5 complete (git notes validated ✅)
+
+#### Deliverables:
+
+**Week 1: Core Migration**
+- [ ] Replace SQLite queries with git operations
+  - `get_session_history()` → `git log --grep="session:X" --notes`
+  - `get_last_assessment()` → `git notes show HEAD`
+  - `get_epistemic_trajectory()` → `git log --notes | parse_vectors`
+  
+- [ ] Migrate existing sessions to git notes
+  - Export from SQLite (JSON)
+  - Import as git commits + notes
+  - Verify no data loss
+  
+- [ ] Update CLI to use git-native queries
+  - `empirica sessions-show` → query git log
+  - `empirica monitor` → query git notes
+  - `empirica calibration` → compute from git history
+
+**Week 2: Multi-Agent Support**
+- [ ] Branch-based parallel work
+  - `minimax-1/p1-refactor` branch
+  - `minimax-2/p2-thresholds` branch
+  - Sentinel merges when complete
+  
+- [ ] Conflict resolution
+  - Detect epistemic conflicts (divergent vectors)
+  - Auto-resolve simple cases
+  - Escalate complex conflicts
+  
+- [ ] Split-brain detection
+  - Monitor for contradictory cognitive states
+  - Alert on confidence divergence >0.3
+
+**Week 3: Testing & Validation**
+- [ ] End-to-end test suite
+  - Multi-session scenarios
+  - Branch/merge workflows
+  - Conflict resolution
+  
+- [ ] Performance benchmarks
+  - Git operations latency
+  - Query performance vs SQLite
+  - Memory usage
+  
+- [ ] Migration validation
+  - Compare migrated data vs original
+  - Verify epistemic trajectory accuracy
+  - Test rollback procedures
+
+#### Success Criteria:
+- ✅ SQLite fully replaced with git operations
+- ✅ 80-90% token savings (validated from Phase 1.5)
+- ✅ No data loss during migration
+- ✅ Multi-agent branching works
+- ✅ Performance meets targets (<100ms for typical operations)
 
 ---
 
