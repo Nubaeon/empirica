@@ -1034,7 +1034,7 @@ class CanonicalEpistemicCascade:
             return None
             
         except Exception as e:
-            print(f"   ⚠️  Error retrieving MCP assessment: {e}")
+            logger.error(f"   ⚠️  Error retrieving MCP assessment: {e}")
             return None
     
     def _parse_vectors_to_assessment(
@@ -1166,7 +1166,7 @@ class CanonicalEpistemicCascade:
         # Log to JSON file (temporal separation)
         log_path = await self.reflex_logger.log_frame(frame, agent_id=self.agent_id)
 
-        print(f"   📝 Logged to: {log_path}")
+        logger.info(f"   📝 Logged to: {log_path}")
 
     def _identify_knowledge_gaps(self, assessment: EpistemicAssessment) -> List[Dict[str, Any]]:
         """
@@ -1231,16 +1231,16 @@ class CanonicalEpistemicCascade:
         Philosophy: Measurement and capability mapping, not control.
         The LLM understands what needs improvement and chooses appropriate actions.
         """
-        print(f"\n   🔍 Analyzing epistemic gaps...")
+        logger.info(f"\n   🔍 Analyzing epistemic gaps...")
 
         # Extract self-assessed gaps from assessment
         gap_analysis = self._identify_epistemic_gaps(assessment)
 
-        print(f"   📊 Self-assessed gaps: {len(gap_analysis)}")
+        logger.info(f"   📊 Self-assessed gaps: {len(gap_analysis)}")
         for gap in gap_analysis:
             priority_emoji = {'critical': '🔴', 'high': '🟠', 'medium': '🟡', 'low': '⚪'}.get(gap['priority'], '🟡')
-            print(f"      {priority_emoji} {gap['vector']}: {gap['current']:.2f} [{gap['priority']}]")
-            print(f"        Reason: {gap['reason']}")
+            logger.info(f"      {priority_emoji} {gap['vector']}: {gap['current']:.2f} [{gap['priority']}]")
+            logger.info(f"        Reason: {gap['reason']}")
 
         # Note: Investigation decision is made by CASCADE loop based on:
         # 1. Overall confidence < threshold (mandatory)
