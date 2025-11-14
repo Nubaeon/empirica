@@ -410,6 +410,70 @@ def _add_session_parsers(subparsers):
     sessions_export_parser.add_argument('--output', '-o', help='Output file path (default: session_<id>.json)')
 
 
+def _add_checkpoint_parsers(subparsers):
+    """Add git checkpoint management command parsers (Phase 2)"""
+    # Checkpoint create command
+    checkpoint_create_parser = subparsers.add_parser(
+        'checkpoint-create',
+        help='Create git checkpoint for session (Phase 1.5/2.0)'
+    )
+    checkpoint_create_parser.add_argument('--session-id', required=True, help='Session ID')
+    checkpoint_create_parser.add_argument(
+        '--phase',
+        choices=['PREFLIGHT', 'CHECK', 'ACT', 'POSTFLIGHT'],
+        required=True,
+        help='Workflow phase'
+    )
+    checkpoint_create_parser.add_argument('--round', type=int, required=True, help='Round number')
+    checkpoint_create_parser.add_argument('--metadata', help='JSON metadata (optional)')
+    
+    # Checkpoint load command
+    checkpoint_load_parser = subparsers.add_parser(
+        'checkpoint-load',
+        help='Load latest checkpoint for session'
+    )
+    checkpoint_load_parser.add_argument('--session-id', required=True, help='Session ID')
+    checkpoint_load_parser.add_argument('--max-age', type=int, default=24, help='Max age in hours (default: 24)')
+    checkpoint_load_parser.add_argument('--phase', help='Filter by specific phase (optional)')
+    checkpoint_load_parser.add_argument(
+        '--format',
+        choices=['json', 'table'],
+        default='table',
+        help='Output format'
+    )
+    
+    # Checkpoint list command
+    checkpoint_list_parser = subparsers.add_parser(
+        'checkpoint-list',
+        help='List checkpoints for session'
+    )
+    checkpoint_list_parser.add_argument('--session-id', help='Session ID (optional, lists all if omitted)')
+    checkpoint_list_parser.add_argument('--limit', type=int, default=10, help='Maximum checkpoints to show')
+    checkpoint_list_parser.add_argument('--phase', help='Filter by phase (optional)')
+    
+    # Checkpoint diff command
+    checkpoint_diff_parser = subparsers.add_parser(
+        'checkpoint-diff',
+        help='Show vector differences from last checkpoint'
+    )
+    checkpoint_diff_parser.add_argument('--session-id', required=True, help='Session ID')
+    checkpoint_diff_parser.add_argument('--threshold', type=float, default=0.15, help='Significance threshold')
+    
+    # Efficiency report command
+    efficiency_report_parser = subparsers.add_parser(
+        'efficiency-report',
+        help='Generate token efficiency report (Phase 1.5/2.0)'
+    )
+    efficiency_report_parser.add_argument('--session-id', required=True, help='Session ID')
+    efficiency_report_parser.add_argument(
+        '--format',
+        choices=['json', 'markdown', 'csv'],
+        default='markdown',
+        help='Report format'
+    )
+    efficiency_report_parser.add_argument('--output', '-o', help='Save to file (optional)')
+
+
 def _add_profile_parsers(subparsers):
     """Add profile management command parsers"""
     # Profile list command
