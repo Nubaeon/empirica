@@ -13,6 +13,16 @@ from enum import Enum
 import os
 import logging
 
+# Import centralized thresholds
+from ...thresholds import (
+    UNCERTAINTY_LOW, UNCERTAINTY_MODERATE,
+    COMPREHENSION_HIGH, COMPREHENSION_MODERATE,
+    EXECUTION_HIGH, EXECUTION_MODERATE,
+    DENSITY_OVERLOAD,
+    CLARITY_THRESHOLD, SIGNAL_THRESHOLD, COHERENCE_THRESHOLD,
+    STATE_MAPPING_THRESHOLD, COMPLETION_THRESHOLD, IMPACT_THRESHOLD
+)
+
 logger = logging.getLogger(__name__)
 
 class MetacognitiveAction(Enum):
@@ -197,21 +207,21 @@ class MetacognitiveDecisionMatrix:
     """
     
     def __init__(self):
-        # Decision thresholds from specification
+        # Decision thresholds from centralized configuration
         self.thresholds = {
-            'uncertainty_low': 0.7,
-            'uncertainty_moderate': 0.3,
-            'comprehension_high': 0.8,
-            'comprehension_moderate': 0.5,
-            'execution_high': 0.8,
-            'execution_moderate': 0.6,
-            'density_overload': 0.9,
-            'clarity_threshold': 0.5,
-            'signal_threshold': 0.5,
-            'coherence_threshold': 0.5,
-            'state_mapping_threshold': 0.6,
-            'completion_threshold': 0.8,
-            'impact_threshold': 0.5
+            'uncertainty_low': UNCERTAINTY_LOW,
+            'uncertainty_moderate': UNCERTAINTY_MODERATE,
+            'comprehension_high': COMPREHENSION_HIGH,
+            'comprehension_moderate': COMPREHENSION_MODERATE,
+            'execution_high': EXECUTION_HIGH,
+            'execution_moderate': EXECUTION_MODERATE,
+            'density_overload': DENSITY_OVERLOAD,
+            'clarity_threshold': CLARITY_THRESHOLD,
+            'signal_threshold': SIGNAL_THRESHOLD,
+            'coherence_threshold': COHERENCE_THRESHOLD,
+            'state_mapping_threshold': STATE_MAPPING_THRESHOLD,
+            'completion_threshold': COMPLETION_THRESHOLD,
+            'impact_threshold': IMPACT_THRESHOLD
         }
     
     def assess_action(self, result: SelfAwarenessResult) -> Tuple[MetacognitiveAction, str, float]:
