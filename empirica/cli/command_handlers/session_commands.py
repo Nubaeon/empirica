@@ -8,8 +8,12 @@ Provides commands for:
 """
 
 import json
+import logging
 from datetime import datetime
 from ..cli_utils import handle_cli_error, print_header
+
+# Set up logging for session commands
+logger = logging.getLogger(__name__)
 
 
 def handle_sessions_list_command(args):
@@ -34,7 +38,10 @@ def handle_sessions_list_command(args):
         
         sessions = cursor.fetchall()
         
+        logger.info(f"Found {len(sessions)} sessions to display")
+        
         if not sessions:
+            logger.info("No sessions found in database")
             print("\n📭 No sessions found")
             print("💡 Create a session with: empirica preflight <task>")
             db.close()
@@ -90,6 +97,7 @@ def handle_sessions_show_command(args):
         summary = db.get_session_summary(args.session_id, detail_level="detailed")
         
         if not summary:
+            logger.warning(f"Session not found: {args.session_id}")
             print(f"\n❌ Session not found: {args.session_id}")
             print(f"💡 List sessions with: empirica sessions list")
             db.close()
@@ -218,6 +226,7 @@ def handle_sessions_export_command(args):
         summary = db.get_session_summary(args.session_id, detail_level="full")
         
         if not summary:
+            logger.warning(f"Session not found for export: {args.session_id}")
             print(f"\n❌ Session not found: {args.session_id}")
             db.close()
             return
@@ -231,6 +240,8 @@ def handle_sessions_export_command(args):
         # Write to file
         with open(output_file, 'w') as f:
             json.dump(summary, f, indent=2, default=str)
+        
+        logger.info(f"Session data exported to {output_file}")
         
         print(f"\n✅ Session exported successfully")
         print(f"📄 File: {output_file}")
