@@ -6,8 +6,12 @@ Achieves 97.5% token reduction through compressed checkpoint storage.
 """
 
 import json
+import logging
 import sys
 from typing import Optional
+
+# Set up logging for checkpoint commands
+logger = logging.getLogger(__name__)
 
 def handle_checkpoint_create_command(args):
     """
@@ -30,6 +34,7 @@ def handle_checkpoint_create_command(args):
             try:
                 metadata = json.loads(args.metadata)
             except json.JSONDecodeError:
+                logger.warning("Invalid JSON metadata provided, ignoring")
                 print(f"⚠️  Invalid JSON metadata, ignoring")
         
         # Get current vectors from session database
@@ -72,6 +77,7 @@ def handle_checkpoint_create_command(args):
                         'uncertainty': assessment.get('uncertainty', {}).get('score', 0.5)
                     }
         except Exception as e:
+            logger.warning(f"Could not load vectors from session: {e}")
             print(f"⚠️  Could not load vectors from session: {e}")
             print(f"   Creating checkpoint with empty vectors")
         
@@ -91,6 +97,7 @@ def handle_checkpoint_create_command(args):
             metadata=metadata
         )
         
+        logger.info(f"Checkpoint created: {checkpoint_id} (phase={phase}, round={round_num})")
         print(f"✅ Checkpoint created successfully")
         print(f"   ID: {checkpoint_id}")
         print(f"   Phase: {phase}")
@@ -99,6 +106,7 @@ def handle_checkpoint_create_command(args):
         print(f"   Estimated tokens: ~450 (97.5% reduction vs full history)")
         
     except Exception as e:
+        logger.error(f"Failed to create checkpoint: {e}", exc_info=True)
         print(f"❌ Failed to create checkpoint: {e}")
         import traceback
         traceback.print_exc()
@@ -132,6 +140,7 @@ def handle_checkpoint_load_command(args):
         )
         
         if not checkpoint:
+            logger.info(f"No checkpoint found for session {session_id} (phase={phase}, max_age={max_age}h)")
             print(f"⚠️  No checkpoint found for session: {session_id}")
             if phase:
                 print(f"   (filtered by phase: {phase})")
@@ -175,6 +184,7 @@ def handle_checkpoint_load_command(args):
             print(f"  Reduction:  {reduction:.1f}%")
         
     except Exception as e:
+        logger.error(f"Failed to load checkpoint: {e}", exc_info=True)
         print(f"❌ Failed to load checkpoint: {e}")
         import traceback
         traceback.print_exc()
@@ -197,6 +207,7 @@ def handle_checkpoint_list_command(args):
         phase = args.phase if hasattr(args, 'phase') else None
         
         if not session_id:
+            logger.error("Session ID required for listing checkpoints but not provided")
             print("⚠️  Session ID required for listing checkpoints")
             sys.exit(1)
         
@@ -206,6 +217,8 @@ def handle_checkpoint_list_command(args):
         )
         
         checkpoints = git_logger.list_checkpoints(limit=limit, phase=phase)
+        
+        logger.info(f"Found {len(checkpoints)} checkpoints for session {session_id}")
         
         if not checkpoints:
             print(f"No checkpoints found for session: {session_id}")
@@ -223,6 +236,7 @@ def handle_checkpoint_list_command(args):
             print()
         
     except Exception as e:
+        logger.error(f"Failed to list checkpoints: {e}", exc_info=True)
         print(f"❌ Failed to list checkpoints: {e}")
         import traceback
         traceback.print_exc()
@@ -251,6 +265,7 @@ def handle_checkpoint_diff_command(args):
         last_checkpoint = git_logger.get_last_checkpoint()
         
         if not last_checkpoint:
+            logger.info("No checkpoint found for comparison")
             print(f"⚠️  No checkpoint found for comparison")
             print(f"   Create a checkpoint first with: empirica checkpoint-create")
             return
