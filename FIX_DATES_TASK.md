@@ -25,40 +25,40 @@ cd /home/yogapad/empirical-ai/empirica
 
 # Fix these files:
 1. AGENT_WORK_COMPLETE_SUMMARY.md
-   - Line 3: 2024-11-15 → 2025-11-15
-   - Line 152: 2024-11-14 → 2025-11-14
-   - Line 311: December 1, 2024 → November 20, 2025
+   - Line 3: 2025-11-15 → 2025-11-15
+   - Line 152: 2025-11-14 → 2025-11-14
+   - Line 311: November 20, 2025 → November 20, 2025
 
 2. ARCHITECTURE_DECISIONS_2024_11_14.md
    - Filename: Keep as is (historical record)
-   - Line 3: 2024-11-14 → 2025-11-14
-   - Lines 470, 475: 2024-11-14/15 → 2025-11-14/15
+   - Line 3: 2025-11-14 → 2025-11-14
+   - Lines 470, 475: 2025-11-14/15 → 2025-11-14/15
 
 3. CHECKPOINT_SESSION_2024_11_14_COMPLETE.md
    - Filename: Keep as is (historical record)
-   - Line 295: 2024-11-14 → 2025-11-14
-   - Line 340: 2024-11-14 → 2025-11-14
-   - Line 698: 2024-11-14 → 2025-11-14
+   - Line 295: 2025-11-14 → 2025-11-14
+   - Line 340: 2025-11-14 → 2025-11-14
+   - Line 698: 2025-11-14 → 2025-11-14
 
 4. COPILOT_CLAUDE_NEXT_TASKS.md
-   - Line 3: 2024-11-14 → 2025-11-14
+   - Line 3: 2025-11-14 → 2025-11-14
 
 5. DOCUMENTATION_AUDIT_COMPLETE.md
-   - Line 3: 2024-11-14 → 2025-11-14
+   - Line 3: 2025-11-14 → 2025-11-14
 
 6. DOCUMENTATION_AUDIT_REPORT.md
-   - Lines 1, 4: 2024-11-14 → 2025-11-14
+   - Lines 1, 4: 2025-11-14 → 2025-11-14
 
 7. DOCUMENTATION_PLAN_V1.md
-   - Line 3: 2024-11-15 → 2025-11-15
-   - Line 16: December 1, 2024 → November 20, 2025
+   - Line 3: 2025-11-15 → 2025-11-15
+   - Line 16: November 20, 2025 → November 20, 2025
    - Line 292: 2024-12-01 → 2025-11-20
 
 8. HARDENING_SANITIZATION_TASKS.md
-   - Line 3: 2024-11-15 → 2025-11-15
+   - Line 3: 2025-11-15 → 2025-11-15
 
 9. MINIMAX_NEXT_STEPS.md
-   - Line 3: 2024-11-14 → 2025-11-14
+   - Line 3: 2025-11-14 → 2025-11-14
 
 10. SYSTEM_PROMPTS_UPDATED.md
     - Check for any 2024 dates
@@ -81,12 +81,12 @@ cd /home/yogapad/empirical-ai/empirica
 sed -i 's/\*\*Date:\*\* 2024-11/\*\*Date:\*\* 2025-11/g' *.md
 
 # Fix target dates
-sed -i 's/December 1, 2024/November 20, 2025/g' *.md
+sed -i 's/November 20, 2025/November 20, 2025/g' *.md
 sed -i 's/2024-12-01/2025-11-20/g' *.md
 
 # Fix recent dates
-sed -i 's/2024-11-14/2025-11-14/g' *.md
-sed -i 's/2024-11-15/2025-11-15/g' *.md
+sed -i 's/2025-11-14/2025-11-14/g' *.md
+sed -i 's/2025-11-15/2025-11-15/g' *.md
 
 # Verify changes
 git diff *.md | less
@@ -101,7 +101,7 @@ grep -n "2024" *.md
 # Change dates based on context:
 # - Session dates: 2024 → 2025
 # - Launch date: Dec 1, 2024 → Nov 20, 2025
-# - Current dates: 2024-11-14/15 → 2025-11-14/15
+# - Current dates: 2025-11-14/15 → 2025-11-14/15
 ```
 
 ---

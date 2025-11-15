@@ -1,6 +1,6 @@
 # Handoff to Copilot Claude - Non-Architectural Tasks
 
-**Date:** 2024-11-14  
+**Date:** 2025-11-14  
 **From:** Claude (Co-lead Dev)  
 **To:** Copilot Claude  
 **Session Coordination:** Via git commits + epistemic state  
@@ -54,7 +54,7 @@ def serialize_beliefs(beliefs: dict) -> dict:
 
 **Success Criteria:**
 - Tool returns data without error
-- Datetime fields formatted as ISO strings (e.g., "2024-11-14T16:30:00")
+- Datetime fields formatted as ISO strings (e.g., "2025-11-14T16:30:00")
 
 ---
 

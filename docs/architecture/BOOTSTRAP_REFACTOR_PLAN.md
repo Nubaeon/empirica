@@ -113,7 +113,7 @@ goals = ai.generate_goals(context, epistemic_state)
 
 # Save to git note
 git notes add -m '{
-  "goals_generated_at": "2024-11-14T12:00:00Z",
+  "goals_generated_at": "2025-11-14T12:00:00Z",
   "context_hash": "abc123",  # Hash of context
   "goals": [...],
   "tokens_used": 450

@@ -75,9 +75,6 @@ Examples:
     # Checkpoint commands (Phase 2)
     _add_checkpoint_parsers(subparsers)
     
-    # Profile commands
-    _add_profile_parsers(subparsers)
-    
     # User interface commands (for human users)
     _add_user_interface_parsers(subparsers)
     
@@ -164,6 +161,9 @@ def _add_cascade_parsers(subparsers):
     cascade_parser.add_argument('--impact', type=float, help='IMPACT vector (0.0-1.0)')
     cascade_parser.add_argument('--engagement', type=float, help='ENGAGEMENT vector (0.0-1.0)')
     
+    # Quiet mode
+    cascade_parser.add_argument('--quiet', action='store_true', help='Quiet mode (minimal output)')
+    
     # Routing options
     cascade_parser.add_argument('--strategy', choices=['epistemic', 'cost', 'latency', 'quality', 'balanced'],
                                default='epistemic', help='Routing strategy')
@@ -225,6 +225,7 @@ def _add_cascade_parsers(subparsers):
     preflight_parser.add_argument('--compact', action='store_true', help='Output as single-line key=value')
     preflight_parser.add_argument('--kv', action='store_true', help='Output as multi-line key=value')
     preflight_parser.add_argument('--verbose', action='store_true', help='Show detailed assessment')
+    preflight_parser.add_argument('--quiet', action='store_true', help='Quiet mode (requires --assessment-json)')
     
     # Postflight command
     postflight_parser = subparsers.add_parser('postflight', help='Execute postflight epistemic reassessment')
@@ -235,6 +236,7 @@ def _add_cascade_parsers(subparsers):
     postflight_parser.add_argument('--compact', action='store_true', help='Output as single-line key=value')
     postflight_parser.add_argument('--kv', action='store_true', help='Output as multi-line key=value')
     postflight_parser.add_argument('--verbose', action='store_true', help='Show detailed delta analysis')
+    postflight_parser.add_argument('--quiet', action='store_true', help='Quiet mode (requires --assessment-json)')
     
     # Workflow command
     workflow_parser = subparsers.add_parser('workflow', help='Execute full preflight→work→postflight workflow')

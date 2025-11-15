@@ -268,9 +268,9 @@ git diff
 # See FIX_DATES_TASK.md for details
 
 sed -i 's/\*\*Date:\*\* 2024-11/\*\*Date:\*\* 2025-11/g' *.md
-sed -i 's/December 1, 2024/November 20, 2025/g' *.md
-sed -i 's/2024-11-14/2025-11-14/g' *.md
-sed -i 's/2024-11-15/2025-11-15/g' *.md
+sed -i 's/November 20, 2025/November 20, 2025/g' *.md
+sed -i 's/2025-11-14/2025-11-14/g' *.md
+sed -i 's/2025-11-15/2025-11-15/g' *.md
 
 # Verify
 git diff *.md | less

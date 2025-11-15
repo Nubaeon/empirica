@@ -1,6 +1,6 @@
 # Git Integration Assessment: Ready for Minimax?
 
-**Date:** 2024-11-14  
+**Date:** 2025-11-14  
 **Assessment:** Can Minimax use git integration NOW?
 
 ---

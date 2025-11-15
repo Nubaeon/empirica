@@ -237,24 +237,3 @@ Please respond with a JSON object:
 
 
 def execute_preflight_assessment(
-    session_id: str,
-    prompt: str,
-    vectors: Optional[Dict[str, float]] = None,
-    uncertainty_notes: str = ""
-) -> PreflightAssessment:
-    """
-    Convenience function to execute preflight assessment
-    
-    Args:
-        session_id: Current session identifier
-        prompt: User task/prompt
-        vectors: Optional pre-computed vector scores
-        uncertainty_notes: Free-text assessment of unknowns
-    
-    Returns:
-        PreflightAssessment with baseline epistemic state
-    """
-    assessor = PreflightAssessor()
-    return assessor.execute_preflight_assessment(
-        session_id, prompt, vectors, uncertainty_notes
-    )

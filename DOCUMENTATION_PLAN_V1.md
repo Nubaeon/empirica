@@ -1,6 +1,6 @@
 # Documentation Plan for v1.0 Release
 
-**Date:** 2024-11-15  
+**Date:** 2025-11-15  
 **Status:** Planning Phase  
 **Owner:** Claude (Co-lead) + Human (Lead)  
 **Parallel Work:** Minimax + Qwen doing code hardening
@@ -13,7 +13,7 @@
 2. **Clear onboarding** for new users and developers
 3. **Complete API reference** for all features
 4. **Searchable website** with good UX
-5. **Release-ready** by December 1, 2024
+5. **Release-ready** by November 20, 2025
 
 ---
 

@@ -336,29 +336,3 @@ Please respond with JSON:
 
 
 def execute_postflight_assessment(
-    session_id: str,
-    task_summary: str,
-    preflight_vectors: Dict[str, float],
-    check_confidences: List[float],
-    postflight_vectors: Optional[Dict[str, float]] = None,
-    learning_notes: str = ""
-) -> PostflightAssessment:
-    """
-    Convenience function to execute postflight assessment
-    
-    Args:
-        session_id: Current session identifier
-        task_summary: What was accomplished
-        preflight_vectors: Baseline from preflight
-        check_confidences: Check phase confidence scores
-        postflight_vectors: Optional pre-computed vectors
-        learning_notes: Insights and learnings
-    
-    Returns:
-        PostflightAssessment with calibration validation
-    """
-    assessor = PostflightAssessor()
-    return assessor.execute_postflight_assessment(
-        session_id, task_summary, preflight_vectors,
-        check_confidences, postflight_vectors, learning_notes
-    )
