@@ -115,10 +115,9 @@ def test_session_db_checkpoint_integration(temp_db, git_repo):
     temp_db.log_preflight_assessment(
         session_id=session_id,
         cascade_id=cascade_id,
+        prompt_summary="Test task",
         vectors=test_vectors,
-        task="Test task",
-        proceed=True,
-        reasoning="Test reasoning"
+        uncertainty_notes="Test reasoning"
     )
     
     # Try to get checkpoint (will use SQLite fallback if git not available)
@@ -156,10 +155,9 @@ def test_session_db_fallback_to_sqlite(temp_db):
     temp_db.log_preflight_assessment(
         session_id=session_id,
         cascade_id=cascade_id,
+        prompt_summary="Test",
         vectors=test_vectors,
-        task="Test",
-        proceed=True,
-        reasoning="Test"
+        uncertainty_notes="Test"
     )
     
     # Get checkpoint via fallback

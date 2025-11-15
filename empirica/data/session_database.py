@@ -1369,23 +1369,31 @@ class SessionDatabase:
         """SQLite fallback for checkpoint retrieval (Phase 2)"""
         cursor = self.conn.cursor()
         
-        # Get latest assessment for session
+        # Try preflight_assessments first (most common)
         query = """
             SELECT 
-                ea.assessment_id,
-                ea.phase,
-                ea.vectors_json,
-                ea.created_at
-            FROM epistemic_assessments ea
-            WHERE ea.session_id = ?
+                assessment_id,
+                'preflight' as phase,
+                vectors_json,
+                assessed_at as created_at
+            FROM preflight_assessments
+            WHERE session_id = ?
         """
         params = [session_id]
         
-        if phase:
-            query += " AND ea.phase = ?"
-            params.append(phase)
+        if phase and phase.lower() == 'postflight':
+            # Use postflight_assessments instead
+            query = """
+                SELECT 
+                    assessment_id,
+                    'postflight' as phase,
+                    vectors_json,
+                    assessed_at as created_at
+                FROM postflight_assessments
+                WHERE session_id = ?
+            """
         
-        query += " ORDER BY ea.created_at DESC LIMIT 1"
+        query += " ORDER BY assessed_at DESC LIMIT 1"
         
         cursor.execute(query, params)
         result = cursor.fetchone()
@@ -1393,7 +1401,7 @@ class SessionDatabase:
         if result:
             return {
                 "checkpoint_id": result['assessment_id'],
-                "vectors": json.loads(result['vectors_json']),
+                "vectors": json.loads(result['vectors_json']) if result['vectors_json'] else {},
                 "phase": result['phase'],
                 "timestamp": result['created_at'],
                 "round": 0,  # SQLite doesn't track rounds
@@ -1407,17 +1415,32 @@ class SessionDatabase:
         """Get latest epistemic vectors for session (Phase 2)"""
         cursor = self.conn.cursor()
         
+        # Try preflight first, then postflight
         cursor.execute("""
-            SELECT vectors_json
-            FROM epistemic_assessments
+            SELECT vectors_json, assessed_at
+            FROM preflight_assessments
             WHERE session_id = ?
-            ORDER BY created_at DESC
+            ORDER BY assessed_at DESC
             LIMIT 1
         """, (session_id,))
         
         result = cursor.fetchone()
         
-        if result:
+        if result and result['vectors_json']:
+            return json.loads(result['vectors_json'])
+        
+        # Try postflight if preflight not found
+        cursor.execute("""
+            SELECT vectors_json, assessed_at
+            FROM postflight_assessments
+            WHERE session_id = ?
+            ORDER BY assessed_at DESC
+            LIMIT 1
+        """, (session_id,))
+        
+        result = cursor.fetchone()
+        
+        if result and result['vectors_json']:
             return json.loads(result['vectors_json'])
         
         return None

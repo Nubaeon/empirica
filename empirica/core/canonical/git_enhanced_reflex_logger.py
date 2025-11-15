@@ -85,6 +85,16 @@ class GitEnhancedReflexLogger(ReflexLogger):
                 "Falling back to SQLite storage."
             )
     
+    @property
+    def git_enabled(self) -> bool:
+        """
+        Check if git notes are enabled and available.
+        
+        Returns:
+            True if git notes enabled AND git available
+        """
+        return self.enable_git_notes and self.git_available
+    
     def _check_git_available(self) -> bool:
         """
         Check if git repository is available.
