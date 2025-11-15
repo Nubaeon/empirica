@@ -1248,6 +1248,180 @@ class SessionDatabase:
             'avg_confidence': session.get('avg_confidence')
         }
     
+    def get_git_checkpoint(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict]:
+        """
+        Retrieve checkpoint from git notes with SQLite fallback (Phase 2).
+        
+        Priority:
+        1. Try git notes first (via GitEnhancedReflexLogger)
+        2. Fall back to SQLite reflexes if git unavailable
+        
+        Args:
+            session_id: Session identifier
+            phase: Optional phase filter (PREFLIGHT, CHECK, POSTFLIGHT)
+        
+        Returns:
+            Checkpoint dict or None if not found
+        """
+        try:
+            from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+            
+            git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+            
+            if git_logger.git_available:
+                checkpoint = git_logger.get_last_checkpoint(phase=phase)
+                if checkpoint:
+                    logger.debug(f"✅ Loaded git checkpoint for session {session_id}")
+                    return checkpoint
+        except Exception as e:
+            logger.debug(f"Git checkpoint retrieval failed, using SQLite fallback: {e}")
+        
+        # Fallback to SQLite reflexes
+        return self._get_checkpoint_from_reflexes(session_id, phase)
+
+    def list_git_checkpoints(self, session_id: str, limit: int = 10, phase: Optional[str] = None) -> List[Dict]:
+        """
+        List all checkpoints for session from git notes (Phase 2).
+        
+        Args:
+            session_id: Session identifier
+            limit: Maximum number of checkpoints to return
+            phase: Optional phase filter
+        
+        Returns:
+            List of checkpoint dicts
+        """
+        try:
+            from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+            
+            git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+            
+            if git_logger.git_available:
+                checkpoints = git_logger.list_checkpoints(limit=limit, phase=phase)
+                logger.debug(f"✅ Listed {len(checkpoints)} git checkpoints for session {session_id}")
+                return checkpoints
+        except Exception as e:
+            logger.warning(f"Git checkpoint listing failed: {e}")
+        
+        # Fallback: return empty list (SQLite doesn't have checkpoint history in same format)
+        return []
+
+    def get_checkpoint_diff(self, session_id: str, threshold: float = 0.15) -> Dict:
+        """
+        Calculate vector differences between current state and last checkpoint (Phase 2).
+        
+        Args:
+            session_id: Session identifier
+            threshold: Significance threshold for reporting changes
+        
+        Returns:
+            Dict with vector diffs and significant changes
+        """
+        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+        
+        git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+        
+        last_checkpoint = git_logger.get_last_checkpoint()
+        if not last_checkpoint:
+            return {"error": "No checkpoint found for comparison"}
+        
+        # Get current state from latest assessment
+        current_vectors = self._get_latest_vectors(session_id)
+        
+        if not current_vectors:
+            return {"error": "No current state found"}
+        
+        # Calculate diffs
+        diffs = {}
+        significant_changes = []
+        
+        checkpoint_vectors = last_checkpoint.get('vectors', {})
+        
+        for key in current_vectors.keys():
+            old_val = checkpoint_vectors.get(key, 0.5)
+            new_val = current_vectors[key]
+            diff = new_val - old_val
+            
+            diffs[key] = {
+                'old': old_val,
+                'new': new_val,
+                'diff': diff,
+                'abs_diff': abs(diff)
+            }
+            
+            if abs(diff) >= threshold:
+                significant_changes.append({
+                    'vector': key,
+                    'change': diff,
+                    'direction': 'increased' if diff > 0 else 'decreased'
+                })
+        
+        return {
+            'checkpoint_id': last_checkpoint.get('checkpoint_id'),
+            'checkpoint_phase': last_checkpoint.get('phase'),
+            'checkpoint_timestamp': last_checkpoint.get('timestamp'),
+            'diffs': diffs,
+            'significant_changes': significant_changes,
+            'threshold': threshold
+        }
+
+    def _get_checkpoint_from_reflexes(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict]:
+        """SQLite fallback for checkpoint retrieval (Phase 2)"""
+        cursor = self.conn.cursor()
+        
+        # Get latest assessment for session
+        query = """
+            SELECT 
+                ea.assessment_id,
+                ea.phase,
+                ea.vectors_json,
+                ea.created_at
+            FROM epistemic_assessments ea
+            WHERE ea.session_id = ?
+        """
+        params = [session_id]
+        
+        if phase:
+            query += " AND ea.phase = ?"
+            params.append(phase)
+        
+        query += " ORDER BY ea.created_at DESC LIMIT 1"
+        
+        cursor.execute(query, params)
+        result = cursor.fetchone()
+        
+        if result:
+            return {
+                "checkpoint_id": result['assessment_id'],
+                "vectors": json.loads(result['vectors_json']),
+                "phase": result['phase'],
+                "timestamp": result['created_at'],
+                "round": 0,  # SQLite doesn't track rounds
+                "source": "sqlite_fallback",
+                "token_count": None  # Not tracked in SQLite
+            }
+        
+        return None
+
+    def _get_latest_vectors(self, session_id: str) -> Optional[Dict[str, float]]:
+        """Get latest epistemic vectors for session (Phase 2)"""
+        cursor = self.conn.cursor()
+        
+        cursor.execute("""
+            SELECT vectors_json
+            FROM epistemic_assessments
+            WHERE session_id = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (session_id,))
+        
+        result = cursor.fetchone()
+        
+        if result:
+            return json.loads(result['vectors_json'])
+        
+        return None
+    
     def close(self):
         """Close database connection"""
         self.conn.close()
