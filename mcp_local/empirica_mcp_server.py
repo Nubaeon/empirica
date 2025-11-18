@@ -2386,12 +2386,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 }, indent=2))]
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                    "tool": "load_git_checkpoint"
-                }, indent=2))]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    f"Failed to load git checkpoint: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "load_git_checkpoint"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         elif name == "get_vector_diff":
             try:
@@ -2469,12 +2469,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 }, indent=2))]
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                    "tool": "measure_token_efficiency"
-                }, indent=2))]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    f"Failed to measure token efficiency: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "measure_token_efficiency"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         elif name == "generate_efficiency_report":
             try:
@@ -2510,12 +2510,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 }, indent=2))]
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                    "tool": "generate_efficiency_report"
-                }, indent=2))]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    f"Failed to generate efficiency report: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "generate_efficiency_report"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         # Bootstrap
         elif name == "bootstrap_session":
