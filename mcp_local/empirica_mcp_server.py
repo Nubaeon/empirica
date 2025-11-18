@@ -1503,12 +1503,12 @@ You have 22 tools available:
                 }, indent=2))]
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                    "tool": "submit_preflight_assessment"
-                }, indent=2))]
+                error_response = create_error_response(
+                    "database_error",
+                    f"Failed to submit PREFLIGHT assessment: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "submit_preflight_assessment"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         # CHECK Phase
         elif name == "execute_check":
@@ -2029,12 +2029,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 }, indent=2))]
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                    "tool": "submit_postflight_assessment"
-                }, indent=2))]
+                error_response = create_error_response(
+                    "database_error",
+                    f"Failed to submit POSTFLIGHT assessment: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "submit_postflight_assessment"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         # Session Queries
         elif name == "get_epistemic_state":
@@ -2101,12 +2101,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 }, indent=2))]
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                    "tool": "get_epistemic_state"
-                }, indent=2))]
+                error_response = create_error_response(
+                    "database_error",
+                    f"Failed to get epistemic state: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "get_epistemic_state"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         elif name == "get_calibration_report":
             try:
@@ -2243,12 +2243,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 }, indent=2))]
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                    "tool": "get_calibration_report"
-                }, indent=2))]
+                error_response = create_error_response(
+                    "database_error",
+                    f"Failed to get calibration report: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "get_calibration_report"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         elif name == "get_session_summary":
             try:
@@ -2287,12 +2287,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 }, indent=2))]
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                    "tool": "get_session_summary"
-                }, indent=2))]
+                error_response = create_error_response(
+                    "database_error",
+                    f"Failed to get session summary: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "get_session_summary"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         # Git Integration Tools (Phase 1.5)
         elif name == "create_git_checkpoint":
@@ -2328,12 +2328,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 }, indent=2))]
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                    "tool": "create_git_checkpoint"
-                }, indent=2))]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    f"Failed to create git checkpoint: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "create_git_checkpoint"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         elif name == "load_git_checkpoint":
             try:
@@ -2430,12 +2430,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 }, indent=2))]
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                    "tool": "get_vector_diff"
-                }, indent=2))]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    f"Failed to calculate vector diff: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "get_vector_diff"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         elif name == "measure_token_efficiency":
             try:
