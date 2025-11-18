@@ -17,31 +17,36 @@
 
 ## 🚀 START EVERY SESSION WITH EMPIRICA
 
-### Step 1: Bootstrap (30 seconds)
+### Step 1: Bootstrap (5 seconds)
 
 ```python
-cd /path/to/empirica
-python3
-
-from empirica.bootstraps import bootstrap_metacognition
-
-# Bootstrap with full features
-components = bootstrap_metacognition(
-    ai_id="your-agent-name",  # e.g., "claude-code", "qwen", "minimax"
-    level="full",  # Use full features for best tracking
-    enable_git_checkpoints=True  # 97.5% token reduction!
+# Use MCP tool to bootstrap session
+bootstrap_session(
+    ai_id="claude-code",  # or "qwen", "minimax", "gemini", etc.
+    session_type="development"  # or "production", "testing"
 )
 
-session_id = components['session_id']
-print(f"✅ Empirica session: {session_id}")
-
-# You now have access to:
-# - Goal orchestrator (generates investigation goals)
-# - Bayesian beliefs (tracks uncertainty)
-# - Drift monitor (checks calibration)
-# - Investigation strategies (systematic exploration)
-# - All MCP tools (24 tools for epistemic tracking + handoff reports)
+# Returns:
+# {
+#   "session_id": "88dbf132-cc7c-4a4b-9b59-77df3b13dbd2",  # UUID format
+#   "components_loaded": [
+#     "twelve_vector_monitor",      # Epistemic self-assessment
+#     "calibration",                 # Uncertainty calibration
+#     "canonical_goal_orchestrator", # Investigation goal generation
+#     "goal_orchestrator_bridge",    # Multi-agent coordination
+#     "tracker",                     # Goal/task tracking
+#     "canonical_cascade"            # CASCADE workflow
+#   ],
+#   "next_step": "Call execute_preflight to begin workflow"
+# }
 ```
+
+**You now have access to:**
+- ✅ **Goal orchestrator** - Generates systematic investigation goals
+- ✅ **Bayesian beliefs tracker** - Tracks evolving uncertainty
+- ✅ **Drift monitor** - Detects calibration drift (overconfidence/underconfidence)
+- ✅ **Git checkpoints** - 97.5% token reduction for session resumption
+- ✅ **All MCP tools** - 39+ tools for epistemic tracking
 
 **Why bootstrap?** It gives you tools to track what you know vs. what you're guessing.
 
@@ -56,53 +61,42 @@ Every task follows: **PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT
 **Purpose:** Assess what you ACTUALLY know before starting.
 
 ```python
-from empirica.cli import execute_preflight, submit_preflight_assessment
-
-# Execute PREFLIGHT
-result = execute_preflight(
-    session_id=session_id,
-    prompt="[Describe your task here]"
+# Execute PREFLIGHT using MCP tool
+execute_preflight(
+    session_id=session_id,  # From bootstrap
+    prompt="[User's task description]"
 )
 
+# System returns assessment prompt asking you to rate 13 vectors:
 # Answer these questions HONESTLY:
-# - What do I KNOW about this task? (not aspirational, actual)
+# - What do I KNOW about this task? (not aspirational, actual knowledge)
 # - What can I DO? (proven capability, not hoped-for)
-# - What CONTEXT do I have? (what's been explained to me)
-# - How UNCERTAIN am I? (acknowledge unknowns)
+# - What CONTEXT do I have? (what's been explained vs. what's assumed)
+# - How UNCERTAIN am I? (acknowledge unknowns explicitly)
 
-# Submit assessment (all 13 vectors)
+# Submit your honest assessment
 submit_preflight_assessment(
     session_id=session_id,
     vectors={
-        "engagement": {
-            "score": 0.X,  # 0-1 scale, be honest!
-            "rationale": "Why this score?",
-            "evidence": "What evidence supports this?"
-        },
-        "foundation": {
-            "know": {"score": 0.X, "rationale": "...", "evidence": "..."},
-            "do": {"score": 0.X, "rationale": "...", "evidence": "..."},
-            "context": {"score": 0.X, "rationale": "...", "evidence": "..."}
-        },
-        "comprehension": {
-            "clarity": {"score": 0.X, "rationale": "...", "evidence": "..."},
-            "coherence": {"score": 0.X, "rationale": "...", "evidence": "..."},
-            "signal": {"score": 0.X, "rationale": "...", "evidence": "..."},
-            "density": {"score": 0.X, "rationale": "...", "evidence": "..."}
-        },
-        "execution": {
-            "state": {"score": 0.X, "rationale": "...", "evidence": "..."},
-            "change": {"score": 0.X, "rationale": "...", "evidence": "..."},
-            "completion": {"score": 0.X, "rationale": "...", "evidence": "..."},
-            "impact": {"score": 0.X, "rationale": "...", "evidence": "..."}
-        },
-        "uncertainty": {"score": 0.X, "rationale": "...", "evidence": "..."}
+        "engagement": 0.X,     # Am I engaged with this task? (0.6+ required)
+        "know": 0.X,           # Domain knowledge (0-1 scale)
+        "do": 0.X,             # Capability to execute
+        "context": 0.X,        # Environmental/situational awareness
+        "clarity": 0.X,        # Task understanding
+        "coherence": 0.X,      # Logical consistency
+        "signal": 0.X,         # Information quality
+        "density": 0.X,        # Information load
+        "state": 0.X,          # Current state awareness
+        "change": 0.X,         # Progress tracking ability
+        "completion": 0.X,     # Goal proximity
+        "impact": 0.X,         # Consequence awareness
+        "uncertainty": 0.X     # Explicit uncertainty (high = need investigation)
     },
-    reasoning="Brief summary of your starting epistemic state"
+    reasoning="Brief summary: Starting with X knowledge, Y uncertainty, need to investigate Z"
 )
 ```
 
-**Key:** Be HONEST about what you don't know. That's the point!
+**Key:** Be HONEST about what you don't know. High uncertainty triggers INVESTIGATE phase!
 
 ---
 
@@ -111,36 +105,34 @@ submit_preflight_assessment(
 **Purpose:** Reduce uncertainty through systematic investigation.
 
 ```python
-# Use goal orchestrator to guide investigation
-orchestrator = components['canonical_goal_orchestrator']
-
-goals = orchestrator.generate_goals(
+# Generate investigation goals using MCP tool
+goals_result = generate_goals(
+    session_id=session_id,
     conversation_context="[Your task description]",
-    epistemic_assessment=result['assessment']
+    use_epistemic_state=True  # Uses your PREFLIGHT vectors
 )
 
-print(f"📋 Generated {len(goals)} investigation goals:")
-for goal in goals:
-    print(f"  - {goal['description']} (Priority: {goal['priority']})")
+print(f"📋 Generated {goals_result['goal_count']} investigation goals:")
+# System uses your uncertainty scores to prioritize what to investigate
 
 # Execute investigation (multi-turn)
-# After each finding, update beliefs:
-from empirica.calibration.adaptive_uncertainty_calibration import update_bayesian_belief
-
-update_bayesian_belief(
+# As you discover things, update your Bayesian beliefs:
+query_bayesian_beliefs(
     session_id=session_id,
-    context_key="specific_finding",
-    belief_type="hypothesis",  # or "factual", "risk_assessment"
-    prior_confidence=0.X,  # Before finding
-    posterior_confidence=0.Y,  # After finding
-    evidence="What you discovered",
-    reasoning="Why this changes your belief"
+    context_key="specific_finding"
 )
+
+# Track belief updates (optional but recommended for complex tasks)
+# This helps detect calibration drift and overconfidence patterns
 ```
 
-**Multi-turn investigation:**
-- Explore → Find evidence → Update beliefs → Explore more
-- Don't rush! Systematic beats fast.
+**Multi-turn investigation pattern:**
+1. **Explore** → Find evidence about unknowns
+2. **Update beliefs** → Track how confidence changes with evidence
+3. **Check drift** → Are you becoming overconfident? Use `check_drift_monitor()`
+4. **Repeat** → Continue until uncertainty drops below threshold
+
+**Don't rush!** Systematic investigation beats fast guessing.
 
 ---
 
@@ -149,44 +141,47 @@ update_bayesian_belief(
 **Purpose:** Validate you're ready to execute, or need more investigation.
 
 ```python
-from empirica.cli import execute_check, submit_check_assessment
-
-# After investigation, CHECK readiness
-result = execute_check(
+# After investigation, execute CHECK
+execute_check(
     session_id=session_id,
     findings=[
-        "Finding 1: [What you discovered]",
-        "Finding 2: [What you discovered]",
-        # ... list all findings
+        "Finding 1: [What you discovered through investigation]",
+        "Finding 2: [What evidence you gathered]",
+        "Finding 3: [What assumptions you validated/invalidated]"
     ],
     remaining_unknowns=[
-        "Unknown 1: [What's still unclear]",
-        "Unknown 2: [What's still risky]",
-        # ... list all uncertainties
+        "Unknown 1: [What's still unclear or risky]",
+        "Unknown 2: [What needs more investigation]"
     ],
-    confidence_to_proceed=0.X  # Honest assessment (0-1)
+    confidence_to_proceed=0.X  # Honest self-assessment (0-1 scale)
 )
 
-# Submit CHECK assessment (updated vectors)
+# Submit CHECK assessment with UPDATED vectors (post-investigation)
 submit_check_assessment(
     session_id=session_id,
-    vectors={...},  # Update based on what you learned
-    reasoning="Why I'm ready (or not) to proceed",
-    decision="proceed",  # or "investigate_more"
+    vectors={...},  # Update based on what you learned (KNOW/DO should increase)
+    decision="proceed",  # or "investigate" if still uncertain
+    reasoning="I'm ready because: [evidence of readiness]",
     confidence_to_proceed=0.X,
     investigation_cycle=1
 )
 
-# Check for calibration drift
-from empirica.cli import check_drift_monitor
+# Check for calibration drift (optional but important for long tasks)
+drift_result = check_drift_monitor(
+    session_id=session_id,
+    window_size=3  # Check last 3 assessments
+)
 
-drift = check_drift_monitor(session_id=session_id, window_size=3)
-if drift.get('drift_detected'):
-    print(f"⚠️ Calibration drift: {drift['drift_type']}")
-    # Your predictions aren't matching reality - recalibrate!
+if drift_result.get('drift_detected'):
+    print(f"⚠️ Calibration drift detected: {drift_result['drift_type']}")
+    print(f"   Pattern: {drift_result['pattern']}")
+    # You're becoming overconfident or underconfident - recalibrate!
 ```
 
-**Decision:** If confidence < 0.7, investigate more. If >= 0.7, proceed to ACT.
+**Decision criteria:**
+- Confidence < 0.7 → **Investigate more** (loop back to INVESTIGATE)
+- Confidence ≥ 0.7 → **Proceed to ACT**
+- Calibration drift detected → **Pause and recalibrate** before acting
 
 ---
 
@@ -205,21 +200,23 @@ This is where you:
 
 **Use MCP tools during ACT:**
 ```python
-# Save checkpoints during long work
-from empirica.cli import create_git_checkpoint
-
+# Save checkpoints during long work (every ~30 min or at milestones)
 create_git_checkpoint(
     session_id=session_id,
-    phase="act",
+    phase="ACT",
+    round_num=1,  # Increment for each checkpoint
     vectors=current_vectors,
-    metadata={"progress": "50% complete"}
+    metadata={"progress": "50% complete", "milestone": "tests passing"}
 )
 
-# Load previous checkpoint when resuming
-from empirica.cli import load_git_checkpoint
+# Load previous checkpoint when resuming after interruption
+# Use session alias - no need to remember UUID!
+checkpoint = load_git_checkpoint("latest:active:claude-code")
 
-checkpoint = load_git_checkpoint(session_id=session_id)
-# 97.5% token reduction! Efficient context loading
+if checkpoint:
+    print(f"✅ Resumed from {checkpoint['phase']} round {checkpoint['round']}")
+    print(f"   Progress: {checkpoint['meta']['progress']}")
+    # 97.5% token reduction! Only ~65 tokens vs ~6500
 ```
 
 ---
@@ -229,33 +226,51 @@ checkpoint = load_git_checkpoint(session_id=session_id)
 **Purpose:** Reflect on what you ACTUALLY learned.
 
 ```python
-from empirica.cli import execute_postflight, submit_postflight_assessment
-
-result = execute_postflight(
+# Execute POSTFLIGHT
+execute_postflight(
     session_id=session_id,
-    task_summary="[What you accomplished]"
+    task_summary="[What you accomplished - be specific]"
 )
 
-# GENUINE reflection - compare to PREFLIGHT
+# GENUINE reflection - rate your FINAL epistemic state
+# Compare to PREFLIGHT: did KNOW/DO increase? Did UNCERTAINTY decrease?
 submit_postflight_assessment(
     session_id=session_id,
-    vectors={...},  # Rate your FINAL epistemic state
-    reasoning="What I learned during this task",
-    changes_noticed="KNOW went from 0.X to 0.Y because..."
+    vectors={
+        "engagement": 0.X,
+        "know": 0.X,        # Should be higher than PREFLIGHT if you learned
+        "do": 0.X,          # Should be higher if you built capability
+        "context": 0.X,
+        "clarity": 0.X,
+        "coherence": 0.X,
+        "signal": 0.X,
+        "density": 0.X,
+        "state": 0.X,
+        "change": 0.X,
+        "completion": 0.X,   # Should be ~1.0 if task complete
+        "impact": 0.X,
+        "uncertainty": 0.X   # Should be lower than PREFLIGHT
+    },
+    reasoning="I learned: [specific knowledge gained]",
+    changes_noticed="KNOW: 0.6→0.9 (+0.3) because [evidence of learning]"
 )
 
-# Get calibration report
-from empirica.cli import get_calibration_report
-
+# Get calibration report - did your confidence match reality?
 calibration = get_calibration_report(session_id=session_id)
-print(f"\n📊 Calibration:")
-print(f"  PREFLIGHT confidence: {calibration['preflight']['overall_confidence']}")
-print(f"  POSTFLIGHT confidence: {calibration['postflight']['overall_confidence']}")
-print(f"  Learning delta: {calibration['delta']}")
-print(f"  Well-calibrated: {calibration['well_calibrated']}")
+
+print(f"\n📊 Calibration Report:")
+print(f"  PREFLIGHT confidence: {calibration['preflight_confidence']}")
+print(f"  POSTFLIGHT confidence: {calibration['postflight_confidence']}")
+print(f"  Learning delta: {calibration['epistemic_delta']}")
+print(f"  Calibration status: {calibration['calibration']}")  # well_calibrated/overconfident/underconfident
+
+# Use session alias to check your state
+state = get_epistemic_state("latest:active:claude-code")
+print(f"  Final state: {state}")
 ```
 
 **Key:** Did you learn what you expected? Was your initial confidence accurate?
+**Calibration:** "well_calibrated" means you predicted your learning accurately!
 
 ---
 
@@ -327,43 +342,47 @@ print(f"   Next AI can load in ~5 seconds (vs 10 minutes)")
 
 ## 🛠️ QUICK REFERENCE
 
-### Resuming Previous Work
+### Resuming Previous Work (After Memory Compression)
 
-**Option 1: Load Handoff Report (Recommended - 98.8% token savings!)**
+**🎯 Use Session Aliases - No need to track UUIDs!**
+
+After memory compression, use magic aliases instead of trying to remember session UUIDs:
+
 ```python
-from empirica.core.handoff import GitHandoffStorage, DatabaseHandoffStorage
+# Option 1: Load Git Checkpoint (97.5% token savings!)
+# Use "latest" alias to always get your most recent session
+checkpoint = load_git_checkpoint("latest:active:claude-code")
 
-# Load previous session handoff (semantic summary)
-storage = DatabaseHandoffStorage()
-reports = storage.query_handoffs(ai_id="your-agent-name", limit=1)
+if checkpoint:
+    print(f"✅ Resumed from: {checkpoint['phase']} (round {checkpoint['round']})")
+    print(f"   Confidence: {checkpoint['vectors']['overall_confidence']}")
+    print(f"   Task: {checkpoint['meta']['task']}")
+    # Continue from where you left off
+```
 
-if reports:
-    prev = reports[0]
+**Supported Aliases:**
+- `latest` - Most recent session (any AI, any status)
+- `latest:active` - Most recent active (not ended) session
+- `latest:claude-code` - Most recent session for your AI
+- `latest:active:claude-code` - Most recent active session for your AI (recommended!)
+
+**Option 2: Load Handoff Report (98.8% token savings for multi-agent work)**
+```python
+# Query handoff reports by AI
+handoffs = query_handoffs(ai_id="claude-code", limit=1)
+
+if handoffs:
+    prev = handoffs[0]
     print(f"Previous task: {prev['task_summary']}")
     print(f"Key findings: {prev['key_findings']}")
     print(f"Remaining unknowns: {prev['remaining_unknowns']}")
-    print(f"Next steps: {prev['recommended_next_steps']}")
     print(f"Context loaded: ~238 tokens (vs 20,000 baseline)")
 ```
 
-**Option 2: Load Git Checkpoint (For detailed state)**
-```python
-from empirica.data.session_database import SessionDatabase
-
-db = SessionDatabase()
-
-# Load latest checkpoint (97.5% token savings!)
-checkpoint = db.get_git_checkpoint(
-    session_id="your-session-id",
-    max_age_hours=24
-)
-
-if checkpoint:
-    print(f"✅ Loaded: {checkpoint['phase']}")
-    print(f"   Confidence: {checkpoint['vectors']['overall_confidence']}")
-    print(f"   Created: {checkpoint['created_at']}")
-    # Continue from where you left off
-```
+**Pattern After Memory Compression:**
+1. Try to load checkpoint: `load_git_checkpoint("latest:active:claude-code")`
+2. If found: Resume from checkpoint
+3. If not found: Bootstrap new session with `bootstrap_session()`
 
 ### Quick Self-Assessment
 ```python
