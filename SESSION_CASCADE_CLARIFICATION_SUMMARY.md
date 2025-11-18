@@ -1,6 +1,6 @@
 # Session vs Cascade Clarification - Summary
 
-**Date:** November 18, 2024  
+**Date:** November 18, 2025  
 **Issue Identified:** AI agents skip PREFLIGHT for subsequent tasks within a session  
 **Status:** ✅ Documented and resolved
 
@@ -327,6 +327,6 @@ This issue only became apparent when actually using Empirica with multi-task wor
 ---
 
 **Session that discovered this:** `1493402f-792b-487c-b98b-51e31ebf00a1`  
-**Date:** November 18, 2024  
+**Date:** November 18, 2025  
 **Agent:** Rovo Dev (Claude Sonnet 4)  
 **Commit:** `ae46038` - Session vs cascade clarification
