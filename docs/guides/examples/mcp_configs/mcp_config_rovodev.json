@@ -2,9 +2,9 @@
   "mcpServers": {
     "empirica": {
       "command": "python3",
-      "args": ["empirica/mcp_local/empirica_mcp_server.py"],
+      "args": ["empirica/mcp_local/empirica_mcp_server_v2.py"],
       "cwd": "/home/yogapad/empirical-ai",
-      "description": "Empirica Epistemic Self-Assessment Framework - 21 workflow tools for genuine AI self-awareness",
+      "description": "Empirica Epistemic Self-Assessment Framework v2 (CLI wrapper) - 21 workflow tools for genuine AI self-awareness",
       "capabilities": [
         "preflight_assessment",
         "postflight_calibration",

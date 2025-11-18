@@ -63,7 +63,7 @@ except Exception as e:
 print("\n🚀 Test 2: MCP Server Startup")
 print("-" * 80)
 
-mcp_server_path = Path(__file__).parent / "mcp_local" / "empirica_mcp_server.py"
+mcp_server_path = Path(__file__).parent / "mcp_local" / "empirica_mcp_server_v2.py"
 venv_python = Path(__file__).parent / ".venv-mcp" / "bin" / "python3"
 
 if not mcp_server_path.exists():
@@ -200,8 +200,14 @@ try:
                     result_data = json.loads(text_content)
                     if result_data.get("ok"):
                         print(f"✅ bootstrap_session tool working!")
-                        print(f"   Session ID: {result_data.get('session_id', 'N/A')[:8]}...")
-                        print(f"   Components: {len(result_data.get('components_loaded', []))}")
+                        session_id = result_data.get('session_id', 'N/A')
+                        if session_id != 'N/A':
+                            print(f"   Session ID: {session_id[:8]}...")
+                        components = result_data.get('components_loaded', 0)
+                        if isinstance(components, list):
+                            print(f"   Components: {len(components)}")
+                        else:
+                            print(f"   Components: {components}")
                     else:
                         print(f"⚠️  Tool returned error: {result_data.get('error')}")
                 else:
