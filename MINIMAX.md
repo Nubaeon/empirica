@@ -46,7 +46,7 @@ bootstrap_session(
 - ✅ **Bayesian beliefs tracker** - Tracks evolving uncertainty
 - ✅ **Drift monitor** - Detects calibration drift (overconfidence/underconfidence)
 - ✅ **Git checkpoints** - 97.5% token reduction for session resumption
-- ✅ **All MCP tools** - 39+ tools for epistemic tracking
+- ✅ **All MCP tools** - 21 tools for epistemic tracking (via MCP v2 CLI wrapper)
 
 **Why bootstrap?** It gives you tools to track what you know vs. what you're guessing.
 
