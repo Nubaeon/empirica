@@ -1253,7 +1253,19 @@ You have 22 tools available:
             adapter = arguments.get("adapter")
             model = arguments.get("model")
             strategy = arguments.get("strategy", "epistemic")
-            session_id = arguments.get("session_id", f"ai2ai_{uuid.uuid4().hex[:8]}")
+            session_id_or_alias = arguments.get("session_id", f"ai2ai_{uuid.uuid4().hex[:8]}")
+            if session_id_or_alias and not session_id_or_alias.startswith("ai2ai_"):
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
+            else:
+                session_id = session_id_or_alias
             
             # Build CLI command
             cmd = ["python3", "-m", "empirica.cli", "ask", query]
@@ -1315,7 +1327,16 @@ You have 22 tools available:
         if name == "execute_preflight":
             from empirica.core.canonical import CanonicalEpistemicAssessor
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             prompt = arguments.get("prompt")
             
             # Get self-assessment prompt from canonical assessor
@@ -1346,7 +1367,16 @@ You have 22 tools available:
             try:
                 from empirica.data.session_database import SessionDatabase
                 
-                session_id = arguments.get("session_id")
+                session_id_or_alias = arguments.get("session_id")
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 vectors = arguments.get("vectors", {})
                 reasoning = arguments.get("reasoning", "")
                 
@@ -1514,7 +1544,16 @@ You have 22 tools available:
         elif name == "execute_check":
             from empirica.core.canonical import CanonicalEpistemicAssessor
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             findings = arguments.get("findings", [])
             unknowns = arguments.get("remaining_unknowns", [])
             confidence = arguments.get("confidence_to_proceed", 0.0)
@@ -1569,7 +1608,16 @@ Before acting, reassess your epistemic state across all 13 vectors."""
         elif name == "submit_check_assessment":
             from empirica.data.session_database import SessionDatabase
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             vectors = arguments.get("vectors", {})
             decision = arguments.get("decision", "investigate")  # proceed | investigate
             reasoning = arguments.get("reasoning", "")
@@ -1777,7 +1825,16 @@ Before acting, reassess your epistemic state across all 13 vectors."""
         elif name == "execute_postflight":
             from empirica.core.canonical import CanonicalEpistemicAssessor
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             task_summary = arguments.get("task_summary")
             
             # ASSUMPTION: POSTFLIGHT uses same 13-vector assessment as PREFLIGHT
@@ -1839,7 +1896,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
             try:
                 from empirica.data.session_database import SessionDatabase
                 
-                session_id = arguments.get("session_id")
+                session_id_or_alias = arguments.get("session_id")
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 vectors = arguments.get("vectors", {})
                 changes = arguments.get("changes_noticed", "")
                 
@@ -2299,7 +2365,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
             try:
                 from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
                 
-                session_id = arguments.get("session_id")
+                session_id_or_alias = arguments.get("session_id")
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 phase = arguments.get("phase")
                 round_num = arguments.get("round_num")
                 vectors = arguments.get("vectors")
@@ -2397,7 +2472,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
             try:
                 from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
                 
-                session_id = arguments.get("session_id")
+                session_id_or_alias = arguments.get("session_id")
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 current_vectors = arguments.get("current_vectors")
                 threshold = arguments.get("threshold", 0.15)
                 
@@ -2441,7 +2525,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
             try:
                 from empirica.metrics.token_efficiency import TokenEfficiencyMetrics
                 
-                session_id = arguments.get("session_id")
+                session_id_or_alias = arguments.get("session_id")
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 phase = arguments.get("phase")
                 method = arguments.get("method")
                 content = arguments.get("content")
@@ -2480,7 +2573,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
             try:
                 from empirica.metrics.token_efficiency import TokenEfficiencyMetrics
                 
-                session_id = arguments.get("session_id")
+                session_id_or_alias = arguments.get("session_id")
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 format_type = arguments.get("format", "json")
                 output_path = arguments.get("output_path")
                 
@@ -2601,7 +2703,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
         elif name == "query_bayesian_beliefs":
             from empirica.calibration.adaptive_uncertainty_calibration.bayesian_belief_tracker import BayesianBeliefTracker, EmpricaJSONEncoder
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             context_key = arguments.get("context_key")
             
             tracker = BayesianBeliefTracker()
@@ -2632,7 +2743,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
             from empirica.calibration.parallel_reasoning import DriftMonitor
             from empirica.data.session_json_handler import SessionJSONHandler
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             window_size = arguments.get("window_size", 5)
             
             json_handler = SessionJSONHandler()
@@ -2669,7 +2789,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
             # Query goals from database
             from empirica.data.session_database import SessionDatabase
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
             
             cursor = db.conn.cursor()
@@ -2718,7 +2847,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
         
         elif name == "generate_goals":
             # Generate goals using canonical goal orchestrator
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             conversation_context = arguments.get("conversation_context")
             use_epistemic = arguments.get("use_epistemic_state", True)
             
@@ -2790,7 +2928,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
 
         elif name == "create_cascade":
             # Create new cascade (task) without full PREFLIGHT
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             task = arguments.get("task")
             goal_json_str = arguments.get("goal_json")
 
@@ -2844,7 +2991,19 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 )
                 return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            if session_id_or_alias:
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
+            else:
+                session_id = None
             objective = arguments.get("objective")
             success_criteria_data = arguments.get("success_criteria", [])
             scope_str = arguments.get("scope", "task_specific")
@@ -3014,7 +3173,19 @@ Compare to your PREFLIGHT assessment - what changed?"""
             from empirica.core.goals.repository import GoalRepository
             from empirica.core.goals.types import GoalScope
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            if session_id_or_alias:
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
+            else:
+                session_id = None
             is_completed = arguments.get("is_completed")
             scope_str = arguments.get("scope")
             
@@ -3088,7 +3259,16 @@ Compare to your PREFLIGHT assessment - what changed?"""
         elif name == "get_unified_timeline":
             from empirica.core.completion.git_query import GitProgressQuery
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             goal_id = arguments.get("goal_id")
             
             query = GitProgressQuery()
@@ -3182,7 +3362,20 @@ For spec: ENHANCED_CASCADE_WORKFLOW_SPEC.md
             ai_id = arguments.get("ai_id", "claude")
             resume_mode = arguments.get("resume_mode", "last")
             count = arguments.get("count", 1)
-            session_id = arguments.get("session_id")
+            session_id_input = arguments.get("session_id")
+            # Resolve session_id if provided
+            if session_id_input:
+                try:
+                    session_id = resolve_session_id(session_id_input)
+                except ValueError as e:
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_input}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
+            else:
+                session_id = None
             detail_level = arguments.get("detail_level", "summary")
             
             # Use default SessionDatabase path resolution (finds .empirica/sessions/sessions.db)
@@ -3479,7 +3672,16 @@ For spec: ENHANCED_CASCADE_WORKFLOW_SPEC.md
         elif name == "generate_handoff_report":
             from empirica.core.handoff import EpistemicHandoffReportGenerator, GitHandoffStorage, DatabaseHandoffStorage
             
-            session_id = arguments.get("session_id")
+            session_id_or_alias = arguments.get("session_id")
+            try:
+                session_id = resolve_session_id(session_id_or_alias)
+            except ValueError as e:
+                error_response = create_error_response(
+                    "invalid_alias",
+                    f"Session resolution failed: {str(e)}",
+                    {"provided": session_id_or_alias}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             task_summary = arguments.get("task_summary")
             key_findings = arguments.get("key_findings", [])
             remaining_unknowns = arguments.get("remaining_unknowns", [])
