@@ -910,6 +910,30 @@ def create_error_response(error_type: str, error_msg: str, context: dict = None)
             "recovery_commands": [
                 "execute_preflight(session_id='your_session', prompt='task description')"
             ]
+        },
+        "database_error": {
+            "reason": "Database operation failed",
+            "suggestion": "Check database connection and data integrity",
+            "alternatives": [
+                "Retry the operation",
+                "Check if the resource exists",
+                "Verify input data is valid"
+            ],
+            "recovery_commands": [
+                "Retry with valid inputs",
+                "Check logs for detailed error information"
+            ]
+        },
+        "validation_error": {
+            "reason": "Input validation failed - required fields missing or invalid types",
+            "suggestion": "Review the tool schema and ensure all required fields are provided correctly",
+            "alternatives": [
+                "Check MCP tool documentation for correct input format",
+                "Verify data types match expected types"
+            ],
+            "recovery_commands": [
+                "Use get_tool_schema to see required parameters and types"
+            ]
         }
     }
     
@@ -2807,10 +2831,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
             try:
                 validate_mcp_goal_input(arguments)
             except ValidationError as e:
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": f"Input validation failed: {str(e)}"
-                }))]
+                error_response = create_error_response(
+                    "validation_error",
+                    f"Input validation failed: {str(e)}",
+                    {"tool": "create_goal", "validation_error": str(e)}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             
             session_id = arguments.get("session_id")
             objective = arguments.get("objective")
@@ -2857,10 +2883,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                     "message": "Goal created successfully. Use add_subtask to break it down into actionable tasks."
                 }, indent=2))]
             else:
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": "Failed to save goal to database"
-                }))]
+                error_response = create_error_response(
+                    "database_error",
+                    "Failed to save goal to database",
+                    {"tool": "create_goal", "hint": "Check database connection and goal data validity"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         elif name == "add_subtask":
             from empirica.core.tasks.types import SubTask, EpistemicImportance
@@ -2871,10 +2899,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
             try:
                 validate_mcp_subtask_input(arguments)
             except ValidationError as e:
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": f"Input validation failed: {str(e)}"
-                }))]
+                error_response = create_error_response(
+                    "validation_error",
+                    f"Input validation failed: {str(e)}",
+                    {"tool": "add_subtask", "validation_error": str(e)}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             
             goal_id = arguments.get("goal_id")
             description = arguments.get("description")
@@ -2907,10 +2937,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                     "message": "Subtask created successfully. Use complete_subtask when done."
                 }, indent=2))]
             else:
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": "Failed to save subtask to database"
-                }))]
+                error_response = create_error_response(
+                    "database_error",
+                    "Failed to save subtask to database",
+                    {"tool": "add_subtask", "goal_id": goal_id, "hint": "Check database connection and subtask data"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         elif name == "complete_subtask":
             from empirica.core.completion.tracker import CompletionTracker
@@ -2944,10 +2976,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                     }, indent=2))]
             
             tracker.close()
-            return [types.TextContent(type="text", text=json.dumps({
-                "ok": False,
-                "error": "Failed to mark subtask as complete"
-            }))]
+            error_response = create_error_response(
+                "database_error",
+                "Failed to mark subtask as complete",
+                {"tool": "complete_subtask", "subtask_id": subtask_id, "hint": "Check if subtask exists and database is accessible"}
+            )
+            return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         elif name == "get_goal_progress":
             from empirica.core.completion.tracker import CompletionTracker
@@ -3029,10 +3063,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
             goal_ids = arguments.get("goal_ids", [])
             
             if not goal_ids:
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": "goal_ids array is required"
-                }))]
+                error_response = create_error_response(
+                    "validation_error",
+                    "goal_ids array is required",
+                    {"tool": "get_team_progress", "missing_parameter": "goal_ids"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             
             query = GitProgressQuery()
             team_progress = query.get_team_progress(goal_ids)
