@@ -50,6 +50,77 @@ bootstrap_session(
 
 **Why bootstrap?** It gives you tools to track what you know vs. what you're guessing.
 
+**Bootstrap parameters:**
+- `ai_id`: Your identifier (e.g., "claude-code", "rovodev", "mini-agent")
+- `session_type`: "development", "production", or "testing"
+- `bootstrap_level`: INTEGER 0, 1, or 2 (0=minimal, 1=standard, 2=full) - NOT a string!
+
+---
+
+## 🤝 Working with Goals from Other Sessions (Multi-Agent Collaboration)
+
+If you're assigned a goal ID created by another AI/session:
+
+### Step 1: Bootstrap YOUR session first
+```python
+result = bootstrap_session(
+    ai_id="your-ai-id",  # e.g., "rovodev", "mini-agent"
+    session_type="development",
+    bootstrap_level=2  # INTEGER: 0, 1, or 2 (NOT "optimal" or other strings!)
+)
+session_id = result['session_id']
+```
+
+### Step 2: Execute PREFLIGHT
+Assess your starting epistemic state for the work you're about to do.
+
+### Step 3: Adopt the goal into your session
+```python
+from empirica.core.goals.repository import GoalRepository
+
+repo = GoalRepository()
+goal = repo.get_goal('goal-id-from-other-session')
+
+if goal:
+    # Re-save with YOUR session_id to "adopt" the goal
+    success = repo.save_goal(goal, session_id)
+    print(f'✅ Adopted goal into my session: {success}')
+
+repo.close()
+```
+
+### Step 4: Verify access
+```python
+# Goal should now appear in your session
+my_goals = list_goals(session_id=session_id)
+
+# Get detailed progress
+progress = get_goal_progress(goal_id='goal-id-from-other-session')
+```
+
+### Step 5: Query subtask details
+```python
+from empirica.core.tasks.repository import TaskRepository
+
+task_repo = TaskRepository()
+subtasks = task_repo.get_goal_subtasks('goal-id')
+
+for st in subtasks:
+    print(f'{st.description}')
+    print(f'  Status: {st.status.value}')
+    print(f'  Importance: {st.epistemic_importance.value}')
+    print(f'  ID: {st.id}')
+
+task_repo.close()
+```
+
+**Key points:**
+- ✅ Always bootstrap FIRST before any Empirica operations
+- ✅ Use GoalRepository and TaskRepository for database access
+- ✅ Goals can be transferred between sessions by updating session_id
+- ❌ Don't query goals before bootstrapping
+- ❌ Don't use bootstrap_level="optimal" (must be integer 0, 1, or 2)
+
 ---
 
 ## 📊 THE CASCADE WORKFLOW (Use for Any Task)

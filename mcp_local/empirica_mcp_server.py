@@ -853,6 +853,89 @@ async def list_tools() -> list[types.Tool]:
     return tools
 
 @app.call_tool()
+def create_error_response(error_type: str, error_msg: str, context: dict = None) -> dict:
+    """
+    Create structured error response with actionable information.
+    
+    Task 4: Actionable Error Messages (Reliability Improvements)
+    
+    Args:
+        error_type: Category of error (session_not_found, invalid_alias, etc.)
+        error_msg: The error message
+        context: Additional context for error recovery
+        
+    Returns:
+        Structured error response dict
+    """
+    error_responses = {
+        "session_not_found": {
+            "reason": "The session ID could not be found in the database",
+            "suggestion": "Use 'latest:active:rovodev' alias or bootstrap a new session",
+            "alternatives": [
+                "bootstrap_session() to create a new session",
+                "resume_previous_session(ai_id='rovodev') to load recent session"
+            ],
+            "recovery_commands": [
+                "bootstrap_session(ai_id='your_id', session_type='development', bootstrap_level=2)"
+            ]
+        },
+        "invalid_alias": {
+            "reason": "Session alias could not be resolved to a valid session ID",
+            "suggestion": "Check alias format: 'latest', 'latest:active', 'latest:active:ai_id'",
+            "alternatives": [
+                "Use explicit session UUID",
+                "Use bootstrap_session() to create new session"
+            ],
+            "recovery_commands": [
+                "bootstrap_session(ai_id='your_id', session_type='development', bootstrap_level=2)"
+            ]
+        },
+        "component_unavailable": {
+            "reason": "Required component or dependency is not available",
+            "suggestion": "Ensure all Empirica components are properly initialized",
+            "alternatives": [
+                "Run bootstrap_session() to initialize components"
+            ],
+            "recovery_commands": [
+                "bootstrap_session(ai_id='your_id', session_type='development', bootstrap_level=2)"
+            ]
+        },
+        "insufficient_data": {
+            "reason": "Not enough data available for the requested operation",
+            "suggestion": "Complete prerequisite workflow steps first",
+            "alternatives": [
+                "Run PREFLIGHT assessment before CHECK",
+                "Ensure enough history exists for analysis"
+            ],
+            "recovery_commands": [
+                "execute_preflight(session_id='your_session', prompt='task description')"
+            ]
+        }
+    }
+    
+    error_info = error_responses.get(error_type, {
+        "reason": "An unexpected error occurred",
+        "suggestion": "Check the error message for details",
+        "alternatives": ["Review input parameters and try again"],
+        "recovery_commands": []
+    })
+    
+    response = {
+        "ok": False,
+        "error": error_msg,
+        "error_type": error_type,
+        "reason": error_info["reason"],
+        "suggestion": error_info["suggestion"],
+        "alternatives": error_info["alternatives"],
+        "recovery_commands": error_info["recovery_commands"]
+    }
+    
+    if context:
+        response["context"] = context
+    
+    return response
+
+
 async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     """Handle tool calls with canonical cascade integration"""
     
@@ -1545,9 +1628,60 @@ Before acting, reassess your epistemic state across all 13 vectors."""
                 vectors=flat_vectors  # Pass flattened vectors for reflex export
             )
             
+            # AUTOMATIC DRIFT DETECTION (Task 1: Reliability Improvements)
+            # Always check for drift after CHECK assessment
+            drift_analysis = None
+            drift_severity = "none"
+            safe_to_proceed = True
+            drift_warning = None
+            
+            try:
+                from empirica.calibration.parallel_reasoning import DriftMonitor
+                from empirica.data.session_json_handler import SessionJSONHandler
+                
+                json_handler = SessionJSONHandler()
+                synthesis_history = json_handler.read_synthesis_history(session_id)
+                
+                if synthesis_history and len(synthesis_history) >= 5:
+                    monitor = DriftMonitor()
+                    sycophancy_drift = monitor.detect_sycophancy_drift(synthesis_history, window_size=5)
+                    tension_avoidance = monitor.detect_tension_avoidance(synthesis_history, window_size=5)
+                    
+                    # Calculate drift severity
+                    max_drift = max(
+                        sycophancy_drift.get("max_drift", 0.0),
+                        tension_avoidance.get("max_avoidance", 0.0)
+                    )
+                    
+                    if max_drift < 0.3:
+                        drift_severity = "minor"
+                        drift_warning = None
+                    elif max_drift < 0.6:
+                        drift_severity = "moderate"
+                        drift_warning = "⚠️  Moderate drift detected. Review your reasoning for sycophancy or tension avoidance patterns."
+                    else:
+                        drift_severity = "severe"
+                        safe_to_proceed = False
+                        drift_warning = "🛑 SEVERE DRIFT DETECTED! ACT phase should not proceed. Re-assess with genuine epistemic honesty."
+                    
+                    drift_analysis = {
+                        "sycophancy_drift": sycophancy_drift,
+                        "tension_avoidance": tension_avoidance,
+                        "severity": drift_severity,
+                        "max_drift_score": round(max_drift, 3),
+                        "safe_to_proceed": safe_to_proceed
+                    }
+            except Exception as drift_error:
+                # Don't fail CHECK if drift detection fails - log but continue
+                drift_analysis = {
+                    "error": f"Drift detection failed: {str(drift_error)}",
+                    "severity": "unknown",
+                    "safe_to_proceed": True  # Fail open, not closed
+                }
+            
             db.close()
             
-            return [types.TextContent(type="text", text=json.dumps({
+            response_data = {
                 "ok": True,
                 "message": "CHECK assessment logged with reflex export",
                 "session_id": session_id,
@@ -1558,7 +1692,18 @@ Before acting, reassess your epistemic state across all 13 vectors."""
                 "overall_confidence": round(overall_confidence, 3),
                 "vectors_received": list(vectors.keys()),
                 "next_phase": "ACT" if decision == "proceed" else "INVESTIGATE (more rounds)"
-            }, indent=2))]
+            }
+            
+            # Add drift analysis to response
+            if drift_analysis:
+                response_data["drift_analysis"] = drift_analysis
+                if drift_warning:
+                    response_data["drift_warning"] = drift_warning
+                if not safe_to_proceed:
+                    response_data["safe_to_proceed"] = False
+                    response_data["recommended_action"] = "INVESTIGATE - Re-assess with genuine epistemic honesty before proceeding to ACT"
+            
+            return [types.TextContent(type="text", text=json.dumps(response_data, indent=2))]
         
         # POSTFLIGHT Assessment
         # CHECK Phase Evaluation (INTERNAL - called by execute_check)
