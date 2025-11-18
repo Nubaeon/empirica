@@ -1290,32 +1290,26 @@ You have 22 tools available:
                     )]
                 else:
                     error_msg = result.stderr.strip() or result.stdout.strip()
-                    return [types.TextContent(
-                        type="text",
-                        text=json.dumps({
-                            "ok": False,
-                            "error": f"Query failed: {error_msg}",
-                            "query": query
-                        }, indent=2)
-                    )]
+                    error_response = create_error_response(
+                        "database_error",
+                        f"Query failed: {error_msg}",
+                        {"query": query, "tool": "query_ai"}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             except subprocess.TimeoutExpired:
-                return [types.TextContent(
-                    type="text",
-                    text=json.dumps({
-                        "ok": False,
-                        "error": "Query timed out after 60 seconds",
-                        "query": query
-                    }, indent=2)
-                )]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    "Query timed out after 60 seconds",
+                    {"query": query, "timeout": "60s", "hint": "Try a simpler query or increase timeout"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             except Exception as e:
-                return [types.TextContent(
-                    type="text",
-                    text=json.dumps({
-                        "ok": False,
-                        "error": f"Failed to execute query: {str(e)}",
-                        "query": query
-                    }, indent=2)
-                )]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    f"Failed to execute query: {str(e)}",
+                    {"query": query, "error_details": str(e)}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         # PREFLIGHT Assessment
         if name == "execute_preflight":
@@ -1340,10 +1334,12 @@ You have 22 tools available:
                     "next_step": "Call submit_preflight_assessment with your scores and rationale"
                 }, indent=2))]
             else:
-                return [types.TextContent(type="text", text=json.dumps({
-                    "error": "Failed to generate self-assessment prompt",
-                    "ok": False
-                }, indent=2))]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    "Failed to generate self-assessment prompt",
+                    {"phase": "PREFLIGHT", "hint": "Check if PreflightAssessor is properly initialized"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         # Submit PREFLIGHT
         elif name == "submit_preflight_assessment":
@@ -1562,10 +1558,12 @@ Before acting, reassess your epistemic state across all 13 vectors."""
                     "decision_guidance": "If overall_confidence ≥ 0.70, proceed to ACT. Otherwise, INVESTIGATE more."
                 }, indent=2))]
             else:
-                return [types.TextContent(type="text", text=json.dumps({
-                    "error": "Failed to generate CHECK self-assessment prompt",
-                    "ok": False
-                }, indent=2))]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    "Failed to generate CHECK self-assessment prompt",
+                    {"phase": "CHECK", "hint": "Check if CheckAssessor is properly initialized"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         # Submit CHECK Assessment
         elif name == "submit_check_assessment":
@@ -1814,10 +1812,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                     "calibration_note": "System will calculate epistemic delta (POSTFLIGHT - PREFLIGHT)"
                 }, indent=2))]
             else:
-                return [types.TextContent(type="text", text=json.dumps({
-                    "error": "Failed to generate POSTFLIGHT self-assessment prompt",
-                    "ok": False
-                }, indent=2))]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    "Failed to generate POSTFLIGHT self-assessment prompt",
+                    {"phase": "POSTFLIGHT", "hint": "Check if PostflightAssessor is properly initialized"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         # Submit POSTFLIGHT Assessment - see line 1304 for actual implementation
         # (Removed duplicate code - keeping only the improved version below)
