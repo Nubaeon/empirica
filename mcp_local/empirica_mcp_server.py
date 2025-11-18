@@ -2236,11 +2236,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 try:
                     session_id = resolve_session_id(session_id_or_alias)
                 except ValueError as e:
-                    return [types.TextContent(type="text", text=json.dumps({
-                        "ok": False,
-                        "error": f"Session resolution failed: {str(e)}",
-                        "provided": session_id_or_alias
-                    }, indent=2))]
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
                 
                 summary = db.get_session_summary(session_id, detail_level='summary')
@@ -2248,10 +2249,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 db.close()
                 
                 if not summary:
-                    return [types.TextContent(type="text", text=json.dumps({
-                        "ok": False,
-                        "error": f"Session not found: {session_id}"
-                    }, indent=2))]
+                    error_response = create_error_response(
+                        "session_not_found",
+                        f"Session not found: {session_id}",
+                        {"session_id": session_id, "hint": "Use get_session_summary with valid session_id"}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 
                 return [types.TextContent(type="text", text=json.dumps({
                     "ok": True,
@@ -2320,11 +2323,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 try:
                     session_id = resolve_session_id(session_id_or_alias)
                 except ValueError as e:
-                    return [types.TextContent(type="text", text=json.dumps({
-                        "ok": False,
-                        "error": f"Session resolution failed: {str(e)}",
-                        "provided": session_id_or_alias
-                    }, indent=2))]
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 
                 git_logger = GitEnhancedReflexLogger(
                     session_id=session_id,
@@ -3167,10 +3171,12 @@ For spec: ENHANCED_CASCADE_WORKFLOW_SPEC.md
                 elif resume_mode == "last":
                     last_session = db.get_last_session_by_ai(ai_id)
                     if not last_session:
-                        return [types.TextContent(type="text", text=json.dumps({
-                            "ok": False,
-                            "error": f"No sessions found for AI: {ai_id}"
-                        }, indent=2))]
+                        error_response = create_error_response(
+                            "session_not_found",
+                            f"No sessions found for AI: {ai_id}",
+                            {"ai_id": ai_id, "hint": "Bootstrap a new session first"}
+                        )
+                        return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                     
                     session_id = last_session['session_id']
                     summary = db.get_session_summary(session_id, detail_level)
@@ -3189,10 +3195,12 @@ For spec: ENHANCED_CASCADE_WORKFLOW_SPEC.md
                     session_ids = [row['session_id'] for row in cursor.fetchall()]
                     
                     if not session_ids:
-                        return [types.TextContent(type="text", text=json.dumps({
-                            "ok": False,
-                            "error": f"No sessions found for AI: {ai_id}"
-                        }, indent=2))]
+                        error_response = create_error_response(
+                            "session_not_found",
+                            f"No sessions found for AI: {ai_id}",
+                            {"ai_id": ai_id, "count_requested": count, "hint": "Bootstrap a new session first"}
+                        )
+                        return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                     
                     # Get summaries for all sessions
                     summaries = []
@@ -3519,10 +3527,12 @@ For spec: ENHANCED_CASCADE_WORKFLOW_SPEC.md
                     raise ValueError(f"Invalid resume_mode: {resume_mode}")
                 
                 if not sessions:
-                    return [types.TextContent(type="text", text=json.dumps({
-                        "ok": False,
-                        "error": f"No sessions found for ai_id={ai_id}"
-                    }, indent=2))]
+                    error_response = create_error_response(
+                        "session_not_found",
+                        f"No sessions found for ai_id={ai_id}",
+                        {"ai_id": ai_id, "hint": "Create sessions first or check ai_id"}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 
                 # Load handoff reports
                 results = []
