@@ -2365,13 +2365,17 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 )
                 
                 if not checkpoint:
-                    return [types.TextContent(type="text", text=json.dumps({
-                        "ok": False,
-                        "error": "No checkpoint found",
-                        "session_id": session_id,
-                        "max_age_hours": max_age_hours,
-                        "phase": phase
-                    }, indent=2))]
+                    error_response = create_error_response(
+                        "insufficient_data",
+                        "No checkpoint found",
+                        {
+                            "session_id": session_id,
+                            "max_age_hours": max_age_hours,
+                            "phase": phase,
+                            "hint": "Run workflow phases to create checkpoints first"
+                        }
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 
                 return [types.TextContent(type="text", text=json.dumps({
                     "ok": True,
@@ -2405,10 +2409,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 last_checkpoint = git_logger.get_last_checkpoint()
                 
                 if not last_checkpoint:
-                    return [types.TextContent(type="text", text=json.dumps({
-                        "ok": False,
-                        "error": "No checkpoint found for comparison"
-                    }, indent=2))]
+                    error_response = create_error_response(
+                        "insufficient_data",
+                        "No checkpoint found for comparison",
+                        {"session_id": session_id, "hint": "Create checkpoints first with workflow phases"}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 
                 vector_diff = git_logger.get_vector_diff(
                     since_checkpoint=last_checkpoint,
