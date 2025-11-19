@@ -20,25 +20,23 @@
 ### Step 1: Bootstrap (5 seconds)
 
 ```python
-# Use MCP tool to bootstrap session
-bootstrap_session(
-    ai_id="minimax",  # or "qwen", "minimax", "gemini", etc.
-    session_type="development"  # or "production", "testing"
+# Use MCP tool to bootstrap session (CREATES SESSION IN DATABASE!)
+result = bootstrap_session(
+    ai_id="minimax",  # Your AI identifier
+    session_type="development",  # or "production", "testing"
+    bootstrap_level=2  # INTEGER: 0, 1, or 2 (NOT a string!)
 )
 
 # Returns:
 # {
-#   "session_id": "88dbf132-cc7c-4a4b-9b59-77df3b13dbd2",  # UUID format
-#   "components_loaded": [
-#     "twelve_vector_monitor",      # Epistemic self-assessment
-#     "calibration",                 # Uncertainty calibration
-#     "canonical_goal_orchestrator", # Investigation goal generation
-#     "goal_orchestrator_bridge",    # Multi-agent coordination
-#     "tracker",                     # Goal/task tracking
-#     "canonical_cascade"            # CASCADE workflow
-#   ],
-#   "next_step": "Call execute_preflight to begin workflow"
+#   "session_id": "88dbf132-cc7c-4a4b-9b59-77df3b13dbd2",  # UUID - SAVE THIS!
+#   "components_loaded": 6,
+#   "bootstrap_level": 2,
+#   "next_step": "Use this session_id with execute_preflight to begin a cascade"
 # }
+
+# CRITICAL: Save the session_id - you need it for ALL subsequent calls!
+session_id = result["session_id"]
 ```
 
 **You now have access to:**

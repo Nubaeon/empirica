@@ -20,25 +20,23 @@
 ### Step 1: Bootstrap (5 seconds)
 
 ```python
-# Use MCP tool to bootstrap session
-bootstrap_session(
-    ai_id="gemini",  # or "qwen", "minimax", "gemini", etc.
-    session_type="development"  # or "production", "testing"
+# Use MCP tool to bootstrap session (CREATES SESSION IN DATABASE!)
+result = bootstrap_session(
+    ai_id="gemini",  # Your AI identifier
+    session_type="development",  # or "production", "testing"
+    bootstrap_level=2  # INTEGER: 0, 1, or 2 (NOT a string!)
 )
 
 # Returns:
 # {
-#   "session_id": "88dbf132-cc7c-4a4b-9b59-77df3b13dbd2",  # UUID format
-#   "components_loaded": [
-#     "twelve_vector_monitor",      # Epistemic self-assessment
-#     "calibration",                 # Uncertainty calibration
-#     "canonical_goal_orchestrator", # Investigation goal generation
-#     "goal_orchestrator_bridge",    # Multi-agent coordination
-#     "tracker",                     # Goal/task tracking
-#     "canonical_cascade"            # CASCADE workflow
-#   ],
-#   "next_step": "Call execute_preflight to begin workflow"
+#   "session_id": "88dbf132-cc7c-4a4b-9b59-77df3b13dbd2",  # UUID - SAVE THIS!
+#   "components_loaded": 6,
+#   "bootstrap_level": 2,
+#   "next_step": "Use this session_id with execute_preflight to begin a cascade"
 # }
+
+# CRITICAL: Save the session_id - you need it for ALL subsequent calls!
+session_id = result["session_id"]
 ```
 
 **You now have access to:**
@@ -211,7 +209,7 @@ create_git_checkpoint(
 
 # Load previous checkpoint when resuming after interruption
 # Use session alias - no need to remember UUID!
-checkpoint = load_git_checkpoint("latest:active:gemini")
+checkpoint = load_git_checkpoint("latest:active:claude-code")
 
 if checkpoint:
     print(f"✅ Resumed from {checkpoint['phase']} round {checkpoint['round']}")
@@ -265,7 +263,7 @@ print(f"  Learning delta: {calibration['epistemic_delta']}")
 print(f"  Calibration status: {calibration['calibration']}")  # well_calibrated/overconfident/underconfident
 
 # Use session alias to check your state
-state = get_epistemic_state("latest:active:gemini")
+state = get_epistemic_state("latest:active:claude-code")
 print(f"  Final state: {state}")
 ```
 
@@ -351,7 +349,7 @@ After memory compression, use magic aliases instead of trying to remember sessio
 ```python
 # Option 1: Load Git Checkpoint (97.5% token savings!)
 # Use "latest" alias to always get your most recent session
-checkpoint = load_git_checkpoint("latest:active:gemini")
+checkpoint = load_git_checkpoint("latest:active:claude-code")
 
 if checkpoint:
     print(f"✅ Resumed from: {checkpoint['phase']} (round {checkpoint['round']})")
@@ -364,7 +362,7 @@ if checkpoint:
 - `latest` - Most recent session (any AI, any status)
 - `latest:active` - Most recent active (not ended) session
 - `latest:claude-code` - Most recent session for your AI
-- `latest:active:gemini` - Most recent active session for your AI (recommended!)
+- `latest:active:claude-code` - Most recent active session for your AI (recommended!)
 
 **Option 2: Load Handoff Report (98.8% token savings for multi-agent work)**
 ```python
@@ -380,7 +378,7 @@ if handoffs:
 ```
 
 **Pattern After Memory Compression:**
-1. Try to load checkpoint: `load_git_checkpoint("latest:active:gemini")`
+1. Try to load checkpoint: `load_git_checkpoint("latest:active:claude-code")`
 2. If found: Resume from checkpoint
 3. If not found: Bootstrap new session with `bootstrap_session()`
 

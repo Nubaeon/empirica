@@ -14,6 +14,7 @@ These commands provide JSON output for MCP v2 server integration.
 
 import json
 import logging
+import time
 from ..cli_utils import handle_cli_error, parse_json_safely
 
 logger = logging.getLogger(__name__)
@@ -23,41 +24,73 @@ def handle_goals_create_command(args):
     """Handle goals-create command"""
     try:
         from empirica.core.goals.repository import GoalRepository
+        from empirica.core.goals.types import Goal, GoalScope, SuccessCriterion
+        import uuid
         
         # Parse arguments
         session_id = args.session_id
         objective = args.objective
-        scope = args.scope
-        success_criteria = parse_json_safely(args.success_criteria) if args.success_criteria else None
+        scope = GoalScope[args.scope.upper()] if args.scope else GoalScope.TASK_SPECIFIC
+        success_criteria_list = parse_json_safely(args.success_criteria) if args.success_criteria else []
         estimated_complexity = getattr(args, 'estimated_complexity', None)
         constraints = parse_json_safely(args.constraints) if args.constraints else None
         metadata = parse_json_safely(args.metadata) if args.metadata else None
         
-        # Use the create_goal function from the goal orchestrator
+        # Use the actual Goal repository
         goal_repo = GoalRepository()
         
-        # This would call the actual create_goal function
-        # For now, simulate the creation
-        goal_data = {
-            "session_id": session_id,
-            "objective": objective,
-            "scope": scope,
-            "success_criteria": success_criteria,
-            "estimated_complexity": estimated_complexity,
-            "constraints": constraints,
-            "metadata": metadata
-        }
+        # Create real SuccessCriterion objects
+        success_criteria_objects = []
+        for i, criteria in enumerate(success_criteria_list):
+            if isinstance(criteria, dict):
+                success_criteria_objects.append(SuccessCriterion(
+                    id=str(uuid.uuid4()),
+                    description=str(criteria),
+                    validation_method="completion",
+                    is_required=True,
+                    is_met=False
+                ))
+            else:
+                success_criteria_objects.append(SuccessCriterion(
+                    id=str(uuid.uuid4()),
+                    description=str(criteria),
+                    validation_method="completion",
+                    is_required=True,
+                    is_met=False
+                ))
         
-        # Simulate goal creation
-        result = {
-            "ok": True,
-            "goal_id": "simulated-goal-id-" + str(hash(objective) % 10000),
-            "session_id": session_id,
-            "message": "Goal created successfully",
-            "objective": objective,
-            "scope": scope,
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
+        # Create real Goal object
+        goal = Goal.create(
+            objective=objective,
+            success_criteria=success_criteria_objects,
+            scope=scope,
+            estimated_complexity=estimated_complexity,
+            constraints=constraints,
+            metadata=metadata
+        )
+        
+        # Save to database
+        success = goal_repo.save_goal(goal, session_id)
+        
+        if success:
+            result = {
+                "ok": True,
+                "goal_id": goal.id,
+                "session_id": session_id,
+                "message": "Goal created successfully",
+                "objective": objective,
+                "scope": scope.value,
+                "timestamp": goal.created_timestamp
+            }
+        else:
+            result = {
+                "ok": False,
+                "goal_id": None,
+                "session_id": session_id,
+                "message": "Failed to save goal to database",
+                "objective": objective,
+                "scope": scope.value
+            }
         
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
@@ -81,27 +114,51 @@ def handle_goals_add_subtask_command(args):
     """Handle goals-add-subtask command"""
     try:
         from empirica.core.tasks.repository import TaskRepository
+        from empirica.core.tasks.types import SubTask, EpistemicImportance, TaskStatus
+        import uuid
         
         # Parse arguments
         goal_id = args.goal_id
         description = args.description
-        importance = args.importance
-        dependencies = parse_json_safely(args.dependencies) if args.dependencies else None
+        importance = EpistemicImportance[args.importance.upper()] if args.importance else EpistemicImportance.MEDIUM
+        dependencies = parse_json_safely(args.dependencies) if args.dependencies else []
         estimated_tokens = getattr(args, 'estimated_tokens', None)
         
-        # Use the add_subtask function
+        # Use the real Task repository
         task_repo = TaskRepository()
         
-        # Simulate subtask creation
-        result = {
-            "ok": True,
-            "task_id": "simulated-task-id-" + str(hash(description) % 10000),
-            "goal_id": goal_id,
-            "message": "Subtask added successfully",
-            "description": description,
-            "importance": importance,
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
+        # Create real SubTask object
+        subtask = SubTask.create(
+            goal_id=goal_id,
+            description=description,
+            epistemic_importance=importance,
+            dependencies=dependencies,
+            estimated_tokens=estimated_tokens
+        )
+        
+        # Save to database
+        success = task_repo.save_subtask(subtask)
+        
+        if success:
+            result = {
+                "ok": True,
+                "task_id": subtask.id,
+                "goal_id": goal_id,
+                "message": "Subtask added successfully",
+                "description": description,
+                "importance": importance.value,
+                "status": subtask.status.value,
+                "timestamp": subtask.created_timestamp
+            }
+        else:
+            result = {
+                "ok": False,
+                "task_id": None,
+                "goal_id": goal_id,
+                "message": "Failed to save subtask to database",
+                "description": description,
+                "importance": importance.value
+            }
         
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
@@ -131,17 +188,27 @@ def handle_goals_complete_subtask_command(args):
         task_id = args.task_id
         evidence = args.evidence
         
-        # Use the complete_subtask function
+        # Use the Task repository
         task_repo = TaskRepository()
         
-        # Simulate subtask completion
-        result = {
-            "ok": True,
-            "task_id": task_id,
-            "message": "Subtask marked as complete",
-            "evidence": evidence,
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
+        # Complete the subtask in database
+        success = task_repo.complete_subtask(task_id, evidence)
+        
+        if success:
+            result = {
+                "ok": True,
+                "task_id": task_id,
+                "message": "Subtask marked as complete",
+                "evidence": evidence,
+                "timestamp": time.time()
+            }
+        else:
+            result = {
+                "ok": False,
+                "task_id": task_id,
+                "message": "Failed to complete subtask",
+                "evidence": evidence
+            }
         
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
@@ -163,24 +230,43 @@ def handle_goals_progress_command(args):
     """Handle goals-progress command"""
     try:
         from empirica.core.goals.repository import GoalRepository
+        from empirica.core.tasks.repository import TaskRepository
         
         # Parse arguments
         goal_id = args.goal_id
         
-        # Use the get_goal_progress function
+        # Use the repositories to get real data
         goal_repo = GoalRepository()
+        task_repo = TaskRepository()
         
-        # Simulate progress calculation
-        result = {
-            "ok": True,
-            "goal_id": goal_id,
-            "message": "Progress retrieved successfully",
-            "completion_percentage": 75.0,  # Simulated value
-            "total_subtasks": 4,
-            "completed_subtasks": 3,
-            "remaining_subtasks": 1,
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
+        # Get the goal
+        goal = goal_repo.get_goal(goal_id)
+        if not goal:
+            result = {
+                "ok": False,
+                "goal_id": goal_id,
+                "message": "Goal not found",
+                "timestamp": time.time()
+            }
+        else:
+            # Get all subtasks for this goal
+            subtasks = task_repo.get_goal_subtasks(goal_id)
+            
+            # Calculate real progress
+            total_subtasks = len(subtasks)
+            completed_subtasks = sum(1 for task in subtasks if task.status.value == "completed")
+            completion_percentage = (completed_subtasks / total_subtasks * 100) if total_subtasks > 0 else 0.0
+            
+            result = {
+                "ok": True,
+                "goal_id": goal_id,
+                "message": "Progress retrieved successfully",
+                "completion_percentage": completion_percentage,
+                "total_subtasks": total_subtasks,
+                "completed_subtasks": completed_subtasks,
+                "remaining_subtasks": total_subtasks - completed_subtasks,
+                "timestamp": time.time()
+            }
         
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
@@ -209,35 +295,52 @@ def handle_goals_list_command(args):
         scope = getattr(args, 'scope', None)
         completed = getattr(args, 'completed', None)
         
-        # Use the list_goals function
+        # Use the real repository to get goals
         goal_repo = GoalRepository()
         
-        # Simulate goal listing
-        goals = [
-            {
-                "goal_id": "goal-1",
-                "session_id": session_id or "session-1",
-                "objective": "Implement CLI commands with JSON output",
-                "scope": scope or "task_specific",
-                "status": "completed" if completed else "in_progress",
-                "created_at": "2024-01-01T10:00:00Z"
-            },
-            {
-                "goal_id": "goal-2", 
-                "session_id": session_id or "session-1",
-                "objective": "Fix MCP async issues",
-                "scope": scope or "session_scoped",
-                "status": "in_progress",
-                "created_at": "2024-01-01T11:00:00Z"
+        if session_id:
+            goals = goal_repo.get_session_goals(session_id)
+        else:
+            # Get all goals (this would need to be implemented in the repository)
+            goals = []
+            # For now, just handle session-specific goals
+            result = {
+                "ok": False,
+                "session_id": session_id,
+                "goals_count": 0,
+                "goals": [],
+                "message": "Session ID required for goals list",
+                "timestamp": time.time()
             }
-        ]
+        
+        # Convert goals to dictionary format
+        goals_dict = []
+        for goal in goals:
+            if completed is not None and goal.is_completed != completed:
+                continue
+                
+            if scope is not None and goal.scope.value != scope:
+                continue
+                
+            goals_dict.append({
+                "goal_id": goal.id,
+                "session_id": session_id,
+                "objective": goal.objective,
+                "scope": goal.scope.value,
+                "status": "completed" if goal.is_completed else "in_progress",
+                "completion_percentage": 100.0 if goal.is_completed else 0.0,
+                "total_subtasks": len(goal.success_criteria),  # Using success criteria as subtasks
+                "completed_subtasks": sum(1 for sc in goal.success_criteria if sc.is_met),
+                "created_at": goal.created_timestamp,
+                "completed_at": goal.completed_timestamp
+            })
         
         result = {
             "ok": True,
             "session_id": session_id,
-            "goals_count": len(goals),
-            "goals": goals,
-            "timestamp": "2024-01-01T12:00:00Z"
+            "goals_count": len(goals_dict),
+            "goals": goals_dict,
+            "timestamp": time.time()
         }
         
         # Format output
