@@ -595,35 +595,76 @@ def handle_cli_help() -> List[types.TextContent]:
 
     help_text = """# Empirica CLI Commands
 
-## Workflow Commands
-- `empirica bootstrap --ai-id=X --level=2`
-- `empirica preflight --session-id=X --prompt="..."`
-- `empirica preflight-submit --session-id=X --vectors='{}'`
-- `empirica check --session-id=X`
-- `empirica check-submit --session-id=X --vectors='{}' --decision=proceed`
-- `empirica postflight --session-id=X`
-- `empirica postflight-submit --session-id=X --vectors='{}'`
+## Workflow Commands (CASCADE)
+- `empirica bootstrap --ai-id=<your-id> --level=2`
+- `empirica preflight --session-id=<id> --prompt="Task description"`
+- `empirica preflight-submit --session-id=<id> --vectors='{"engagement":0.8,...}'`
+- `empirica check --session-id=<id>`
+- `empirica check-submit --session-id=<id> --vectors='{}' --decision=proceed`
+- `empirica postflight --session-id=<id>`
+- `empirica postflight-submit --session-id=<id> --vectors='{}'`
 
 ## Goal Commands
-- `empirica goals-create --session-id=X --objective="..."`
-- `empirica goals-add-subtask --goal-id=X --description="..."`
-- `empirica goals-complete-subtask --subtask-id=X --evidence="..."`
-- `empirica goals-progress --goal-id=X`
-- `empirica goals-list --session-id=X`
+- `empirica goals-create --session-id=<id> --objective="..." --scope=session_scoped`
+- `empirica goals-add-subtask --goal-id=<id> --description="..."`
+- `empirica goals-complete-subtask --subtask-id=<id> --evidence="Done"`
+- `empirica goals-progress --goal-id=<id>`
+- `empirica goals-list --session-id=<id>`
 
 ## Session Commands
 - `empirica sessions-list`
-- `empirica sessions-show <session-id>`
-- `empirica sessions-resume --ai-id=X`
-- `empirica calibration --session-id=X`
+- `empirica sessions-show <session-id-or-alias>`
+- `empirica sessions-resume --ai-id=<your-id> --count=1`
+- `empirica calibration --session-id=<id>`
 
 ## Checkpoint Commands
-- `empirica checkpoint-create --session-id=X --phase=ACT`
-- `empirica checkpoint-load <session-id>`
+- `empirica checkpoint-create --session-id=<id> --phase=ACT`
+- `empirica checkpoint-load <session-id-or-alias>`
 
-**All commands support `--output json` for programmatic use.**
+## Session Aliases (Magic Shortcuts!)
 
-For detailed help: `empirica <command> --help`
+Instead of UUIDs, use aliases:
+- `latest` - Most recent session
+- `latest:active` - Most recent active session
+- `latest:<ai-id>` - Most recent for your AI
+- `latest:active:<ai-id>` - Most recent active for your AI (recommended!)
+
+**Example:**
+```bash
+# Instead of: empirica sessions-show 88dbf132-cc7c-4a4b-9b59-77df3b13dbd2
+# Use: empirica sessions-show latest:active:claude-code
+
+# Load checkpoint without remembering UUID:
+empirica checkpoint-load latest:active:mini-agent
+```
+
+## Quick CASCADE Workflow
+
+```bash
+# 1. Bootstrap
+empirica bootstrap --ai-id=your-id --level=2
+
+# 2. PREFLIGHT (assess before starting)
+empirica preflight --session-id=latest:active:your-id --prompt="Your task"
+
+# 3. Submit assessment
+empirica preflight-submit --session-id=latest:active:your-id --vectors='{"engagement":0.8,"know":0.5,...}'
+
+# 4. CHECK (validate readiness)
+empirica check --session-id=latest:active:your-id
+empirica check-submit --session-id=latest:active:your-id --decision=proceed
+
+# 5. POSTFLIGHT (reflect on learning)
+empirica postflight --session-id=latest:active:your-id
+empirica postflight-submit --session-id=latest:active:your-id --vectors='{"engagement":0.9,"know":0.8,...}'
+```
+
+## Notes
+
+- **All commands support `--output json` for programmatic use**
+- Session aliases work with: sessions-show, checkpoint-load, and all workflow commands
+- For detailed help: `empirica <command> --help`
+- For MCP tool usage: Use tool names (bootstrap_session, execute_preflight, etc.)
 """
 
     return [types.TextContent(type="text", text=help_text)]
