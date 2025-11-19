@@ -171,9 +171,10 @@ def handle_check_submit_command(args):
         db = SessionDatabase()
         
         cascade_id = None  # Let database handle cascade linkage
-        confidence = vectors.get('uncertainty', 0.5)  # Use uncertainty as inverse of confidence
-        if confidence > 0.5:
-            confidence = 1.0 - confidence  # Convert uncertainty to confidence
+        
+        # Calculate confidence from uncertainty (inverse relationship)
+        uncertainty = vectors.get('uncertainty', 0.5)
+        confidence = 1.0 - uncertainty  # Confidence is inverse of uncertainty
         
         gaps = []  # Could extract from vectors with low values
         for key, value in vectors.items():

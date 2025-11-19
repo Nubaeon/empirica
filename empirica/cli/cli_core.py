@@ -483,6 +483,31 @@ def _add_checkpoint_parsers(subparsers):
     )
     efficiency_report_parser.add_argument('--output', '-o', help='Save to file (optional)')
 
+    # Handoff Reports Commands (Phase 1.6)
+    
+    # Handoff create command
+    handoff_create_parser = subparsers.add_parser(
+        'handoff-create',
+        help='Create epistemic handoff report (98%% token reduction)'
+    )
+    handoff_create_parser.add_argument('--session-id', required=True, help='Session UUID')
+    handoff_create_parser.add_argument('--task-summary', required=True, help='What was accomplished (2-3 sentences)')
+    handoff_create_parser.add_argument('--key-findings', required=True, help='JSON array of findings')
+    handoff_create_parser.add_argument('--remaining-unknowns', help='JSON array of unknowns (optional)')
+    handoff_create_parser.add_argument('--next-session-context', required=True, help='Critical context for next session')
+    handoff_create_parser.add_argument('--artifacts', help='JSON array of files created (optional)')
+    handoff_create_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+    
+    # Handoff query command
+    handoff_query_parser = subparsers.add_parser(
+        'handoff-query',
+        help='Query handoff reports'
+    )
+    handoff_query_parser.add_argument('--session-id', help='Specific session UUID')
+    handoff_query_parser.add_argument('--ai-id', help='Filter by AI ID')
+    handoff_query_parser.add_argument('--limit', type=int, default=5, help='Number of results (default: 5)')
+    handoff_query_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+
     # NEW: Goal Management Commands (MCP v2 Integration)
     
     # Goals create command
@@ -686,6 +711,10 @@ def main(args=None):
             'checkpoint-list': handle_checkpoint_list_command,
             'checkpoint-diff': handle_checkpoint_diff_command,
             'efficiency-report': handle_efficiency_report_command,
+            
+            # Handoff Reports commands (Phase 1.6)
+            'handoff-create': handle_handoff_create_command,
+            'handoff-query': handle_handoff_query_command,
             
             # User interface commands (for human users)
             'ask': handle_ask_command,
