@@ -31,20 +31,44 @@ def handle_preflight_submit_command(args):
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")
         
-        # Call Python API to submit preflight
+        # Call Python API to submit preflight - ACTUALLY SAVE TO DATABASE
         db = SessionDatabase()
         
-        # This would call the submit_preflight_assessment function
-        # For now, let's simulate the call and create a result
-        result = {
-            "ok": True,
-            "session_id": session_id,
-            "message": "PREFLIGHT assessment submitted successfully",
-            "vectors_submitted": len(vectors),
-            "vectors_received": vectors,
-            "reasoning": reasoning,
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
+        # Save preflight assessment to database
+        # Note: cascade_id is optional, will be auto-generated if needed
+        cascade_id = None  # Let database handle cascade creation if needed
+        prompt_summary = reasoning or "Preflight assessment"
+        uncertainty_notes = reasoning or ""
+        
+        try:
+            assessment_id = db.log_preflight_assessment(
+                session_id=session_id,
+                cascade_id=cascade_id,
+                prompt_summary=prompt_summary,
+                vectors=vectors,
+                uncertainty_notes=uncertainty_notes
+            )
+            
+            result = {
+                "ok": True,
+                "session_id": session_id,
+                "assessment_id": assessment_id,
+                "message": "PREFLIGHT assessment submitted and saved to database",
+                "vectors_submitted": len(vectors),
+                "vectors_received": vectors,
+                "reasoning": reasoning,
+                "persisted": True
+            }
+        except Exception as e:
+            logger.error(f"Failed to save preflight assessment: {e}")
+            result = {
+                "ok": False,
+                "session_id": session_id,
+                "message": f"Failed to save PREFLIGHT assessment: {str(e)}",
+                "vectors_submitted": 0,
+                "persisted": False,
+                "error": str(e)
+            }
         
         # Format output based on --output flag
         if hasattr(args, 'output') and args.output == 'json':
@@ -137,22 +161,65 @@ def handle_check_submit_command(args):
         vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
         decision = args.decision
         reasoning = args.reasoning
-        cycle = getattr(args, 'cycle', 1)
+        cycle = getattr(args, 'cycle', None) or 1  # Handle None case
         
         # Validate inputs
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")
         
-        # Simulate check submit
-        result = {
-            "ok": True,
-            "session_id": session_id,
-            "decision": decision,
-            "cycle": cycle,
-            "vectors_count": len(vectors),
-            "reasoning": reasoning,
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
+        # Save CHECK assessment to database - ACTUALLY PERSIST
+        db = SessionDatabase()
+        
+        cascade_id = None  # Let database handle cascade linkage
+        confidence = vectors.get('uncertainty', 0.5)  # Use uncertainty as inverse of confidence
+        if confidence > 0.5:
+            confidence = 1.0 - confidence  # Convert uncertainty to confidence
+        
+        gaps = []  # Could extract from vectors with low values
+        for key, value in vectors.items():
+            if value < 0.5:
+                gaps.append(f"{key}: {value:.2f}")
+        
+        # Extract next targets (areas needing investigation)
+        next_targets = []
+        for key, value in vectors.items():
+            if value < 0.6:  # Slightly higher threshold for investigation targets
+                next_targets.append(key)
+        
+        try:
+            assessment_id = db.log_check_phase_assessment(
+                session_id=session_id,
+                cascade_id=cascade_id,
+                investigation_cycle=cycle,
+                confidence=confidence,
+                decision=decision,
+                gaps=gaps,
+                next_targets=next_targets,
+                notes=reasoning or "Check assessment completed",
+                vectors=vectors
+            )
+            
+            result = {
+                "ok": True,
+                "session_id": session_id,
+                "assessment_id": assessment_id,
+                "decision": decision,
+                "cycle": cycle,
+                "vectors_count": len(vectors),
+                "reasoning": reasoning,
+                "persisted": True
+            }
+        except Exception as e:
+            logger.error(f"Failed to save check assessment: {e}")
+            result = {
+                "ok": False,
+                "session_id": session_id,
+                "message": f"Failed to save CHECK assessment: {str(e)}",
+                "persisted": False,
+                "error": str(e)
+            }
+        
+        db.close()
         
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
@@ -186,15 +253,74 @@ def handle_postflight_submit_command(args):
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")
         
-        # Simulate postflight submit
-        result = {
-            "ok": True,
-            "session_id": session_id,
-            "message": "POSTFLIGHT assessment submitted successfully",
-            "vectors_submitted": len(vectors),
-            "changes": changes,
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
+        # Save POSTFLIGHT assessment to database - ACTUALLY PERSIST
+        db = SessionDatabase()
+        
+        cascade_id = None  # Let database handle cascade linkage
+        task_summary = changes or "Task completed"
+        
+        # Calculate postflight confidence (inverse of uncertainty)
+        uncertainty = vectors.get('uncertainty', 0.5)
+        postflight_confidence = 1.0 - uncertainty
+        
+        # Determine calibration accuracy by comparing completion to confidence
+        completion = vectors.get('completion', 0.5)
+        if abs(completion - postflight_confidence) < 0.2:
+            calibration_accuracy = "good"
+        elif abs(completion - postflight_confidence) < 0.4:
+            calibration_accuracy = "moderate"
+        else:
+            calibration_accuracy = "poor"
+        
+        learning_notes = changes or ""
+        
+        try:
+            assessment_id = db.log_postflight_assessment(
+                session_id=session_id,
+                cascade_id=cascade_id,
+                task_summary=task_summary,
+                vectors=vectors,
+                postflight_confidence=postflight_confidence,
+                calibration_accuracy=calibration_accuracy,
+                learning_notes=learning_notes
+            )
+            
+            # Try to calculate deltas by fetching preflight
+            deltas = {}
+            try:
+                preflight = db.get_preflight_assessment(session_id)
+                if preflight and 'vectors_json' in preflight:
+                    import json
+                    preflight_vectors = json.loads(preflight['vectors_json'])
+                    for key in vectors:
+                        if key in preflight_vectors:
+                            deltas[key] = vectors[key] - preflight_vectors[key]
+            except Exception:
+                pass  # Delta calculation is optional
+            
+            result = {
+                "ok": True,
+                "session_id": session_id,
+                "assessment_id": assessment_id,
+                "message": "POSTFLIGHT assessment submitted and saved to database",
+                "vectors_submitted": len(vectors),
+                "changes": changes,
+                "postflight_confidence": postflight_confidence,
+                "calibration_accuracy": calibration_accuracy,
+                "deltas": deltas,
+                "persisted": True
+            }
+        except Exception as e:
+            logger.error(f"Failed to save postflight assessment: {e}")
+            result = {
+                "ok": False,
+                "session_id": session_id,
+                "message": f"Failed to save POSTFLIGHT assessment: {str(e)}",
+                "persisted": False,
+                "error": str(e)
+            }
+        
+        db.close()
         
         # Format output
         if hasattr(args, 'output') and args.output == 'json':

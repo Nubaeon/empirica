@@ -235,6 +235,37 @@ def handle_decision_command(args):
 def handle_preflight_command(args):
     """Execute preflight epistemic assessment before task"""
     try:
+        from empirica.core.canonical import CanonicalEpistemicAssessor
+        from empirica.data.session_database import SessionDatabase
+        import asyncio
+        
+        prompt = args.prompt
+        session_id = args.session_id or str(uuid.uuid4())[:8]
+        
+        # Execute preflight assessment
+        assessor = CanonicalEpistemicAssessor(agent_id=session_id)
+        
+        # Get self-assessment prompt from canonical assessor
+        assessment_request = asyncio.run(assessor.assess(prompt, {}))
+        
+        if not isinstance(assessment_request, dict) or 'self_assessment_prompt' not in assessment_request:
+            logger.error("❌ Failed to generate self-assessment prompt")
+            return
+        
+        # NEW: --prompt-only flag returns ONLY the prompt (no waiting for input)
+        if hasattr(args, 'prompt_only') and args.prompt_only:
+            output = {
+                "session_id": session_id,
+                "task": prompt,
+                "assessment_id": assessment_request['assessment_id'],
+                "self_assessment_prompt": assessment_request['self_assessment_prompt'],
+                "phase": "preflight",
+                "instructions": "Perform genuine self-assessment and call submit_preflight_assessment with vectors"
+            }
+            print(json.dumps(output, indent=2))
+            return
+        
+        # LEGACY: Original flow with hanging risk
         # CRITICAL FIX: Add Sentinel routing to prevent hanging
         if hasattr(args, 'sentinel_assess') and args.sentinel_assess:
             print("🔮 SENTINEL ASSESSMENT ROUTING")
@@ -247,29 +278,12 @@ def handle_preflight_command(args):
             return
         
         print_header("🚀 Preflight Assessment")
-        print("⚠️  WARNING: This command may hang. Use --sentinel-assess flag for future Sentinel integration")
+        print("⚠️  WARNING: This command may hang. Use --prompt-only flag to get prompt without waiting")
         print()
-        
-        from empirica.core.canonical import CanonicalEpistemicAssessor
-        from empirica.data.session_database import SessionDatabase
-        
-        prompt = args.prompt
-        session_id = args.session_id or str(uuid.uuid4())[:8]
-        
-        # Execute preflight assessment
-        assessor = CanonicalEpistemicAssessor(agent_id=session_id)
         
         logger.info(f"📋 Task: {prompt}")
         logger.info(f"🆔 Session ID: {session_id}")
         logger.info(f"\n⏳ Assessing epistemic state...\n")
-        
-        # Get self-assessment prompt from canonical assessor
-        import asyncio
-        assessment_request = asyncio.run(assessor.assess(prompt, {}))
-        
-        if not isinstance(assessment_request, dict) or 'self_assessment_prompt' not in assessment_request:
-            logger.error("❌ Failed to generate self-assessment prompt")
-            return
         
         # Check if AI self-assessment was provided via --assessment-json argument
         if hasattr(args, 'assessment_json') and args.assessment_json:
@@ -277,7 +291,6 @@ def handle_preflight_command(args):
             try:
                 # Check if it's a file path or inline JSON
                 import os
-                import json
                 
                 if os.path.isfile(args.assessment_json):
                     # It's a file path - read the file
@@ -473,6 +486,37 @@ def handle_preflight_command(args):
 def handle_postflight_command(args):
     """Execute postflight epistemic reassessment after task completion"""
     try:
+        from empirica.core.canonical import CanonicalEpistemicAssessor
+        from empirica.data.session_database import SessionDatabase
+        import asyncio
+        
+        session_id = args.session_id
+        summary = args.summary or "Task completed"
+        
+        # Execute postflight assessment - GENUINE self-assessment required
+        assessor = CanonicalEpistemicAssessor(agent_id=session_id)
+        
+        task_description = f"POSTFLIGHT: {summary}"
+        assessment_request = asyncio.run(assessor.assess(task_description, {"phase": "postflight"}))
+        
+        if not isinstance(assessment_request, dict) or 'self_assessment_prompt' not in assessment_request:
+            logger.error("❌ Failed to generate self-assessment prompt")
+            return
+        
+        # NEW: --prompt-only flag returns ONLY the prompt (no waiting for input)
+        if hasattr(args, 'prompt_only') and args.prompt_only:
+            output = {
+                "session_id": session_id,
+                "summary": summary,
+                "assessment_id": assessment_request['assessment_id'],
+                "self_assessment_prompt": assessment_request['self_assessment_prompt'],
+                "phase": "postflight",
+                "instructions": "Perform genuine self-assessment and call submit_postflight_assessment with vectors"
+            }
+            print(json.dumps(output, indent=2))
+            return
+        
+        # LEGACY: Original flow with hanging risk
         # CRITICAL FIX: Add Sentinel routing to prevent hanging
         if hasattr(args, 'sentinel_assess') and args.sentinel_assess:
             print("🔮 SENTINEL ASSESSMENT ROUTING")
@@ -485,34 +529,15 @@ def handle_postflight_command(args):
             return
         print_header("🏁 Postflight Assessment")
         
-        from empirica.core.canonical import CanonicalEpistemicAssessor
-        from empirica.data.session_database import SessionDatabase
-        
-        session_id = args.session_id
-        summary = args.summary or "Task completed"
-        
         logger.info(f"🆔 Session ID: {session_id}")
         logger.info(f"📋 Task Summary: {summary}")
         logger.info(f"\n⏳ Reassessing epistemic state...\n")
-        
-        # Execute postflight assessment - GENUINE self-assessment required
-        from empirica.core.canonical import CanonicalEpistemicAssessor
-        assessor = CanonicalEpistemicAssessor(agent_id=session_id)
-        
-        import asyncio
-        task_description = f"POSTFLIGHT: {summary}"
-        assessment_request = asyncio.run(assessor.assess(task_description, {"phase": "postflight"}))
-        
-        if not isinstance(assessment_request, dict) or 'self_assessment_prompt' not in assessment_request:
-            logger.error("❌ Failed to generate self-assessment prompt")
-            return
         
         # Check if AI self-assessment was provided
         if hasattr(args, 'assessment_json') and args.assessment_json:
             try:
                 # Check if it's a file path or inline JSON
                 import os
-                import json
                 
                 if os.path.isfile(args.assessment_json):
                     # It's a file path - read the file
