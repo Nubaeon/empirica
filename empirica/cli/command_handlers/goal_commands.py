@@ -24,6 +24,7 @@ def handle_goals_create_command(args):
     """Handle goals-create command"""
     try:
         from empirica.core.goals.repository import GoalRepository
+        from empirica.core.tasks.repository import TaskRepository
         from empirica.core.goals.types import Goal, GoalScope, SuccessCriterion
         import uuid
         
@@ -183,6 +184,7 @@ def handle_goals_complete_subtask_command(args):
     """Handle goals-complete-subtask command"""
     try:
         from empirica.core.tasks.repository import TaskRepository
+        from empirica.core.tasks.types import TaskStatus
         
         # Parse arguments
         task_id = args.task_id
@@ -192,7 +194,7 @@ def handle_goals_complete_subtask_command(args):
         task_repo = TaskRepository()
         
         # Complete the subtask in database
-        success = task_repo.complete_subtask(task_id, evidence)
+        success = task_repo.update_subtask_status(task_id, TaskStatus.COMPLETED, evidence)
         
         if success:
             result = {
@@ -230,6 +232,7 @@ def handle_goals_progress_command(args):
     """Handle goals-progress command"""
     try:
         from empirica.core.goals.repository import GoalRepository
+        from empirica.core.tasks.repository import TaskRepository
         from empirica.core.tasks.repository import TaskRepository
         
         # Parse arguments
@@ -289,6 +292,7 @@ def handle_goals_list_command(args):
     """Handle goals-list command"""
     try:
         from empirica.core.goals.repository import GoalRepository
+        from empirica.core.tasks.repository import TaskRepository
         
         # Parse arguments
         session_id = getattr(args, 'session_id', None)
@@ -297,6 +301,7 @@ def handle_goals_list_command(args):
         
         # Use the real repository to get goals
         goal_repo = GoalRepository()
+        task_repo = TaskRepository()
         
         if session_id:
             goals = goal_repo.get_session_goals(session_id)
@@ -322,15 +327,21 @@ def handle_goals_list_command(args):
             if scope is not None and goal.scope.value != scope:
                 continue
                 
+            # Get subtasks for this goal to calculate real progress
+            subtasks = task_repo.get_goal_subtasks(goal.id)
+            total_subtasks = len(subtasks)
+            completed_subtasks = sum(1 for task in subtasks if task.status.value == "completed")
+            completion_percentage = (completed_subtasks / total_subtasks * 100) if total_subtasks > 0 else 0.0
+            
             goals_dict.append({
                 "goal_id": goal.id,
                 "session_id": session_id,
                 "objective": goal.objective,
                 "scope": goal.scope.value,
-                "status": "completed" if goal.is_completed else "in_progress",
-                "completion_percentage": 100.0 if goal.is_completed else 0.0,
-                "total_subtasks": len(goal.success_criteria),  # Using success criteria as subtasks
-                "completed_subtasks": sum(1 for sc in goal.success_criteria if sc.is_met),
+                "status": "completed" if completion_percentage == 100.0 else "in_progress",
+                "completion_percentage": completion_percentage,
+                "total_subtasks": total_subtasks,
+                "completed_subtasks": completed_subtasks,
                 "created_at": goal.created_timestamp,
                 "completed_at": goal.completed_timestamp
             })
@@ -373,18 +384,77 @@ def handle_sessions_resume_command(args):
         count = args.count
         detail_level = getattr(args, 'detail_level', 'summary')
         
-        # Use the resume_previous_session function
+        # Use real database queries
         db = SessionDatabase()
         
-        # Simulate session resume
+        # Query real sessions from database
+        cursor = db.conn.cursor()
+        
+        if ai_id:
+            # Get sessions for specific AI
+            cursor.execute("""
+                SELECT session_id, ai_id, start_time, end_time, 
+                       bootstrap_level, total_cascades, avg_confidence, session_notes
+                FROM sessions 
+                WHERE ai_id = ? 
+                ORDER BY start_time DESC 
+                LIMIT ?
+            """, (ai_id, count))
+        else:
+            # Get recent sessions for all AIs
+            cursor.execute("""
+                SELECT session_id, ai_id, start_time, end_time, 
+                       bootstrap_level, total_cascades, avg_confidence, session_notes
+                FROM sessions 
+                ORDER BY start_time DESC 
+                LIMIT ?
+            """, (count,))
+        
+        # Convert rows to real session data
         sessions = []
-        for i in range(min(count, 3)):  # Simulate up to 3 sessions
+        for row in cursor.fetchall():
+            session_data = dict(row)
+            
+            # Calculate current phase from cascades if available
+            cascade_cursor = db.conn.cursor()
+            cascade_cursor.execute("""
+                SELECT preflight_completed, think_completed, plan_completed, 
+                       investigate_completed, check_completed, act_completed, postflight_completed 
+                FROM cascades 
+                WHERE session_id = ? ORDER BY started_at DESC LIMIT 1
+            """, (session_data['session_id'],))
+            
+            cascade_row = cascade_cursor.fetchone()
+            if cascade_row:
+                # Determine current phase based on completion status
+                if cascade_row[6]:  # postflight_completed
+                    current_phase = "POSTFLIGHT"
+                elif cascade_row[5]:  # act_completed
+                    current_phase = "ACT"
+                elif cascade_row[4]:  # check_completed
+                    current_phase = "CHECK"
+                elif cascade_row[3]:  # investigate_completed
+                    current_phase = "INVESTIGATE"
+                elif cascade_row[2]:  # plan_completed
+                    current_phase = "PLAN"
+                elif cascade_row[1]:  # think_completed
+                    current_phase = "THINK"
+                else:
+                    current_phase = "PREFLIGHT"
+            else:
+                current_phase = "PREFLIGHT"
+            
             sessions.append({
-                "session_id": f"session-{i+1}",
-                "ai_id": ai_id or "mini-agent",
-                "last_activity": "2024-01-01T12:00:00Z",
-                "status": "active",
-                "phase": "CHECK" if i == 0 else "POSTFLIGHT"
+                "session_id": session_data['session_id'],  # Real UUID!
+                "ai_id": session_data['ai_id'],
+                "start_time": session_data['start_time'],
+                "end_time": session_data['end_time'],
+                "status": "completed" if session_data['end_time'] else "active",
+                "phase": current_phase,
+                "bootstrap_level": session_data['bootstrap_level'],
+                "total_cascades": session_data['total_cascades'],
+                "avg_confidence": session_data['avg_confidence'],
+                "last_activity": session_data['start_time'],  # Real timestamp!
             })
         
         result = {
@@ -393,7 +463,7 @@ def handle_sessions_resume_command(args):
             "sessions_count": len(sessions),
             "detail_level": detail_level,
             "sessions": sessions,
-            "timestamp": "2024-01-01T12:00:00Z"
+            "timestamp": time.time()
         }
         
         # Format output
@@ -406,7 +476,9 @@ def handle_sessions_resume_command(args):
                 print(f"   AI: {session['ai_id']}")
                 print(f"   Phase: {session['phase']}")
                 print(f"   Status: {session['status']}")
-                print(f"   Last activity: {session['last_activity'][:16]}")
+                print(f"   Start time: {str(session['start_time'])[:16]}")
+                if session['total_cascades'] > 0:
+                    print(f"   Cascades: {session['total_cascades']}")
         
         db.close()
         return result
