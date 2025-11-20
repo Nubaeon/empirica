@@ -53,6 +53,24 @@ Systematic methodology: PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIG
 - Well-calibrated predictions
 - Transparent decision trails
 
+### 📈 Advanced Calibration Tools
+- **Bayesian Beliefs Tracker** - Evidence-based belief updating with confidence intervals
+- **Drift Monitor** - Detect overconfidence patterns in long-running sessions
+- **Investigation Plugins** - Extensible strategies for domain-specific exploration
+- **Learning Deltas** - Track epistemic growth (e.g., KNOW: 0.70→0.95, UNCERTAINTY: 0.45→0.10)
+
+### 🗄️ Triple Storage Architecture
+- **Git Notes** - Compressed checkpoints (97.5% token reduction: 46 vs 1,821 tokens)
+- **SQLite Database** - Full audit trail with queryable epistemic state
+- **Handoff Reports** - Semantic summaries (98% token reduction: ~400 vs 20,000 tokens)
+- **JSON Exports** - Portable session data for analysis
+
+### 🤝 Multi-Agent Coordination
+- **Goal Orchestration** - Create, track, and share goals across AI agents
+- **Task Decomposition** - Break goals into subtasks with epistemic importance ratings
+- **Epistemic Snapshots** - Transfer full context between agents efficiently
+- **Session Continuity** - Resume work across days/weeks with preserved state
+
 ### 🔗 MCP Server Integration
 21 tools for epistemic tracking, goal orchestration, and session management.
 
@@ -63,6 +81,32 @@ Systematic methodology: PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIG
 **🏢 Teams** requiring AI transparency - Audit trails, calibration metrics, decision logs
 
 ⚠️ **Not for casual use** - Requires genuine epistemic engagement
+
+## Why Empirica for Complex Projects?
+
+### 📊 Real-World Results
+- **13-cascade session** (170 minutes) - All phases "good" calibration, 3 bugs found & fixed
+- **Documentation overhaul** - 350+ files organized, 247MB cleaned, zero hallucinations
+- **Multi-agent coordination** - RovoDev + mini-agent working on shared goals
+- **Token efficiency** - 98% reduction enables practical multi-agent workflows
+
+### 🎯 For Large Projects (100+ hours)
+- **Track drift** - Detect when AI becomes overconfident over time
+- **Multi-cascade continuity** - Resume work after weeks with full context
+- **Shared epistemic state** - Multiple agents coordinate via queryable database
+- **Audit everything** - Full history of decisions, confidence changes, learning deltas
+
+### 🤖 For AI Agents
+- **Know vs. Guess** - Explicit uncertainty prevents confident mistakes
+- **Measurable growth** - See learning deltas (KNOW before/after)
+- **Systematic investigation** - Replaces random exploration with structured inquiry
+- **Resume efficiently** - 98% token savings on session handoffs
+
+### 👥 For Humans
+- **Trust through transparency** - See exactly what AI knows/doesn't know
+- **Queryable confidence** - Check AI's uncertainty at any time
+- **Calibration tracking** - Measure if AI's confidence matches reality
+- **Multi-agent orchestration** - Coordinate AI teams on complex work
 
 ## Quick Start
 
