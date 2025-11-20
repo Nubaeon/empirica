@@ -28,3 +28,6 @@ tiktoken>=0.5.0            # Token counting (optional)
 # pytest-mock>=3.11.0
 # dirty-equals>=0.7.0
 # ruff>=0.1.0
+rich>=13.0                # REQUIRED: The TUI/Visuals won't work without this
+google-generativeai>=0.5 # REQUIRED: For Gemini 3 / Pro access
+typer>=0.9"                # REQUIRED: If your CLI uses Typer (highly likely)
