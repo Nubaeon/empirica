@@ -105,7 +105,7 @@ profiles:
   # --------------------------------------------------------------------------
   # AUTONOMOUS AGENT - Fast, efficient, structured
   # --------------------------------------------------------------------------
-  # For: GPT-3.5, Claude Haiku, smaller models, automated workflows
+  # For: mini-agent, gpt-oss,  Claude Haiku, smaller models, automated workflows
   # Philosophy: More structure, clear guidance, prevent drift
   
   autonomous_agent:

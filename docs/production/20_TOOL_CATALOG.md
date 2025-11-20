@@ -36,7 +36,7 @@ Empirica includes 11 production-ready enterprise components located in `/empiric
 
 ## Phase 1.6: Handoff Report Tools (NEW ✨)
 
-Efficient context transfer for multi-agent coordination (98% token reduction).
+Efficient context transfer for multi-agent coordination (90%+ token reduction).
 
 ### `generate_handoff_report`
 

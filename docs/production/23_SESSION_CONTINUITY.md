@@ -74,7 +74,7 @@ prev = result['sessions'][0]
 
 **Why Handoff Reports?**
 - ✅ Captures semantic context (what was learned, not just vectors)
-- ✅ 98% token reduction enables frequent loading
+- ✅ 90%+ token reduction enables frequent loading
 - ✅ Uses genuine AI introspection from POSTFLIGHT
 - ✅ Multi-agent coordination built-in
 - ✅ Queryable by AI, date, task pattern

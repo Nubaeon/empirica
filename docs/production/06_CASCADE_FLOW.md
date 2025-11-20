@@ -301,7 +301,7 @@ Each phase logs a Reflex Frame:
 {
     'session_id': 'abc123...',
     'report_id': 'git-sha...',
-    'token_count': 238,  # ~98% reduction vs full history
+    'token_count': 238,  # ~90%+ reduction vs full history
     'markdown': '# Epistemic Handoff Report...',
     'storage_location': 'git:refs/notes/empirica/handoff/abc123'
 }
@@ -338,7 +338,7 @@ report = generator.generate_handoff_report(
 **Why This Matters:**
 - **Multi-session work:** Resume exactly where you left off
 - **Multi-agent coordination:** Pass context between AIs efficiently
-- **Token efficiency:** 98% reduction enables frequent context loading
+- **Token efficiency:** 90%+ reduction enables frequent context loading
 - **Genuine calibration:** Uses your actual POSTFLIGHT introspection
 
 **Integration:**

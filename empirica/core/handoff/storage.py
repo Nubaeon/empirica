@@ -392,3 +392,193 @@ class DatabaseHandoffStorage:
             'markdown': row['markdown_report'],
             'created_at': row['created_at']
         }
+    
+    def list_handoffs(self) -> List[str]:
+        """
+        List all handoff session IDs
+        
+        Returns:
+            List of session IDs
+        """
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT session_id FROM handoff_reports ORDER BY created_at DESC"
+        )
+        
+        return [row[0] for row in cursor.fetchall()]
+
+
+class HybridHandoffStorage:
+    """
+    Dual storage for handoff reports: Git notes + Database
+    
+    Strategy:
+    - Git notes: Distributed, repo-portable, survives repo clones
+    - Database: Fast queries, AI ID indexing, relational integrity
+    
+    Both stores are kept in sync. Reads prefer database (faster).
+    """
+    
+    def __init__(self, repo_path: Optional[str] = None, db_path: Optional[str] = None):
+        """
+        Initialize hybrid storage with both backends
+        
+        Args:
+            repo_path: Path to git repository (default: current directory)
+            db_path: Path to session database (default: .empirica/sessions/sessions.db)
+        """
+        self.git_storage = GitHandoffStorage(repo_path)
+        self.db_storage = DatabaseHandoffStorage(db_path)
+        
+        logger.info("🔄 Hybrid handoff storage initialized (git + database)")
+    
+    def store_handoff(self, session_id: str, report: Dict) -> Dict[str, bool]:
+        """
+        Store handoff in BOTH git notes and database
+        
+        Args:
+            session_id: Session UUID
+            report: Full handoff report dict
+        
+        Returns:
+            {
+                'git_stored': bool,
+                'db_stored': bool,
+                'fully_synced': bool
+            }
+        """
+        result = {
+            'git_stored': False,
+            'db_stored': False,
+            'fully_synced': False
+        }
+        
+        # Store in git notes
+        try:
+            self.git_storage.store_handoff(session_id, report)
+            result['git_stored'] = True
+            logger.info(f"✅ Git notes storage: {session_id[:8]}...")
+        except Exception as e:
+            logger.error(f"❌ Git notes storage failed: {e}")
+        
+        # Store in database
+        try:
+            self.db_storage.store_handoff(session_id, report)
+            result['db_stored'] = True
+            logger.info(f"✅ Database storage: {session_id[:8]}...")
+        except Exception as e:
+            logger.error(f"❌ Database storage failed: {e}")
+        
+        # Check sync status
+        result['fully_synced'] = result['git_stored'] and result['db_stored']
+        
+        if not result['fully_synced']:
+            logger.warning(
+                f"⚠️ Partial storage for {session_id[:8]}... "
+                f"(git={result['git_stored']}, db={result['db_stored']})"
+            )
+        
+        return result
+    
+    def load_handoff(
+        self,
+        session_id: str,
+        format: str = 'json',
+        prefer: str = 'database'
+    ) -> Optional[Dict]:
+        """
+        Load handoff from preferred storage, fallback to alternative
+        
+        Args:
+            session_id: Session UUID
+            format: 'json' or 'markdown'
+            prefer: 'database' or 'git' (default: database for speed)
+        
+        Returns:
+            Handoff report dict or None if not found
+        """
+        if prefer == 'database':
+            # Try database first (faster)
+            handoff = self.db_storage.load_handoff(session_id)
+            if handoff:
+                logger.debug(f"📊 Loaded from database: {session_id[:8]}...")
+                return handoff
+            
+            # Fallback to git notes
+            handoff = self.git_storage.load_handoff(session_id, format)
+            if handoff:
+                logger.debug(f"📝 Loaded from git notes: {session_id[:8]}...")
+                # TODO: Sync to database for future queries
+            return handoff
+        
+        else:  # prefer == 'git'
+            # Try git notes first
+            handoff = self.git_storage.load_handoff(session_id, format)
+            if handoff:
+                logger.debug(f"📝 Loaded from git notes: {session_id[:8]}...")
+                return handoff
+            
+            # Fallback to database
+            handoff = self.db_storage.load_handoff(session_id)
+            if handoff:
+                logger.debug(f"📊 Loaded from database: {session_id[:8]}...")
+            return handoff
+    
+    def query_handoffs(
+        self,
+        ai_id: Optional[str] = None,
+        since: Optional[str] = None,
+        limit: int = 5
+    ) -> List[Dict]:
+        """
+        Query handoffs with filters (uses database for performance)
+        
+        Args:
+            ai_id: Filter by AI ID
+            since: Filter by timestamp (ISO format)
+            limit: Max results to return
+        
+        Returns:
+            List of handoff report dicts
+        """
+        # Always use database for queries (indexed, fast)
+        return self.db_storage.query_handoffs(ai_id, since, limit)
+    
+    def list_handoffs(self, source: str = 'database') -> List[str]:
+        """
+        List all handoff session IDs
+        
+        Args:
+            source: 'database' or 'git' or 'both'
+        
+        Returns:
+            List of session IDs
+        """
+        if source == 'database':
+            return self.db_storage.list_handoffs()
+        elif source == 'git':
+            return self.git_storage.list_handoffs()
+        else:  # both
+            db_ids = set(self.db_storage.list_handoffs())
+            git_ids = set(self.git_storage.list_handoffs())
+            return sorted(list(db_ids | git_ids))
+    
+    def check_sync_status(self, session_id: str) -> Dict[str, bool]:
+        """
+        Check if handoff exists in both stores
+        
+        Returns:
+            {
+                'in_git': bool,
+                'in_database': bool,
+                'synced': bool
+            }
+        """
+        git_handoff = self.git_storage.load_handoff(session_id)
+        db_handoff = self.db_storage.load_handoff(session_id)
+        
+        return {
+            'in_git': git_handoff is not None,
+            'in_database': db_handoff is not None,
+            'synced': git_handoff is not None and db_handoff is not None
+        }
