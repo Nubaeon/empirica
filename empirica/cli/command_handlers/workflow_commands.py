@@ -344,7 +344,6 @@ def handle_postflight_submit_command(args):
             try:
                 preflight = db.get_preflight_assessment(session_id)
                 if preflight and 'vectors_json' in preflight:
-                    import json
                     preflight_vectors = json.loads(preflight['vectors_json'])
                     for key in vectors:
                         if key in preflight_vectors:
