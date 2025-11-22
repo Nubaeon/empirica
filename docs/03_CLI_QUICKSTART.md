@@ -272,6 +272,38 @@ empirica preflight "task" --assessment-json '{
 
 ---
 
+## MCP Parameter Guidance
+
+**When using Empirica via MCP tools, avoid these common parameter errors:**
+
+### CLI vs MCP Differences
+```bash
+# CLI format (what this document covers)
+empirica postflight <session_id> --summary "Completed task"
+
+# MCP format (different parameter names)
+submit_postflight_assessment(
+    session_id="uuid",
+    vectors={...},
+    reasoning="Completed task"  # NOT "changes" or "summary"
+)
+```
+
+### Common MCP Parameter Errors
+```python
+# ✅ Correct MCP usage
+submit_postflight_assessment(
+    session_id="abc123",
+    vectors={"know": 0.8, "do": 0.7},
+    reasoning="What I learned"  # Unified with preflight
+)
+
+# ❌ Common mistakes:
+# - Using "summary" instead of "reasoning"  
+# - Using "changes" instead of "reasoning"
+# - Forgetting that MCP uses different parameter names than CLI
+```
+
 ## User Interface Commands (Human Users)
 
 ### ask - Simple Question Answering

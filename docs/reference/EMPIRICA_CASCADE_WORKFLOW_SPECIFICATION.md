@@ -87,8 +87,22 @@ USER PROMPT
 ### 3.2 Phase Definitions
 
 #### Phase 0: PREFLIGHT ASSESSMENT (Mandatory)
-**Trigger:** Immediately upon receiving user prompt  
+**Trigger:** When starting a significant task (not every user prompt)  
 **Duration:** ~5-10 seconds  
+
+**Use PREFLIGHT for:**
+- New significant tasks (features, bugs, investigations, refactoring)
+- High initial uncertainty (>0.5)
+- Learning expected (exploring new domains, APIs, patterns)
+- Long-duration tasks (>30 minutes expected)
+- Tasks with multiple goals/subtasks
+
+**Skip PREFLIGHT for:**
+- Quick clarifications or simple queries
+- Trivial edits (typos, formatting)
+- Follow-up questions within active CASCADE
+- Low uncertainty tasks (<0.3)
+
 **Actions:**
 1. Use `preflight_epistemic_calibration.py` to assess current state
 2. Measure all 13 epistemic vectors
@@ -96,6 +110,8 @@ USER PROMPT
 4. Store baseline in session database
 
 **Output:** JSON object with 13 vector scores + metadata
+
+**Key Principle:** One CASCADE = one significant task. Multiple goals/subtasks belong to the same CASCADE, not separate CASCADEs per goal.
 
 #### Phase 1: THINK (Always Active)
 **Purpose:** Initial reasoning about the task  

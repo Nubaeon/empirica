@@ -273,6 +273,24 @@ Store results + Generate report
 
 ## Design Principles
 
+### AI vs Agent Architecture Patterns
+
+Empirica supports two distinct architectural patterns:
+
+**🤖 AI (Collaborative Intelligence):**
+- Uses full CASCADE workflow (PREFLIGHT → POSTFLIGHT)
+- High autonomy, planning, design decisions
+- Creates goals and delegates to agents
+
+**🔧 Agent (Acting Intelligence):**
+- Uses simplified CASCADE (ACT-focused)
+- Task-focused execution, minimal dialogue
+- Receives and executes subtasks
+
+**Detailed Patterns:** See [`docs/AI_VS_AGENT_EMPIRICA_PATTERNS.md`](AI_VS_AGENT_EMPIRICA_PATTERNS.md) for comprehensive CASCADE usage patterns, delegation strategies, and best practices.
+
+---
+
 ### 1. NO HEURISTICS
 ```python
 # ❌ WRONG: Static values

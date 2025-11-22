@@ -79,6 +79,61 @@ prev = result['sessions'][0]
 - ✅ Multi-agent coordination built-in
 - ✅ Queryable by AI, date, task pattern
 
+---
+
+## Understanding Epistemic Snapshots
+
+**What is an Epistemic Snapshot?**
+
+An epistemic snapshot captures the **learning delta** from one CASCADE (significant task), not per-interaction noise.
+
+**Structure:**
+```python
+{
+    'epistemic_deltas': {
+        'know': +0.35,        # Domain knowledge increased
+        'uncertainty': -0.40,  # Uncertainty reduced
+        'do': +0.25,          # Capability increased
+        # ... other vectors
+    },
+    'key_findings': [
+        "Learned OAuth flow requires token refresh",
+        "Validated factory pattern for goal creation",
+        "Discovered async handlers needed for MCP"
+    ],
+    'next_session_context': "OAuth implementation complete, rate limiting next"
+}
+```
+
+**Key Principle:** 
+- **One CASCADE = One Snapshot** (~800 tokens)
+- **Not per-interaction**: Lightweight follow-ups don't create snapshots
+- **Task-level learning**: What changed from PREFLIGHT → POSTFLIGHT
+
+**Example Flow:**
+```
+Session {
+    CASCADE: "Implement OAuth"
+        PREFLIGHT: uncertainty=0.7, know=0.4
+        [Work with multiple goals, many interactions]
+        POSTFLIGHT: uncertainty=0.2, know=0.8
+        → Snapshot generated: +0.4 KNOW, -0.5 UNCERTAINTY
+        
+    Lightweight interactions (no snapshots):
+        "Show me the code" → just show
+        "What's the expiry?" → just answer
+        
+    CASCADE: "Add rate limiting"
+        [New significant task, new snapshot]
+}
+```
+
+**Why This Matters:**
+- ✅ Next AI loads: "Last time I worked on OAuth, I learned X, Y, Z" (~800 tokens)
+- ✅ Not: "Here's 20,000 tokens of conversation history"
+- ✅ Efficient context: Semantic learning, not raw interactions
+- ✅ Clean signal: Significant tasks only, not trivial queries
+
 **See also:**
 - `docs/architecture/PHASE_1.6_EPISTEMIC_HANDOFF_REPORTS.md` - Full specification
 - `docs/architecture/PHASE_1.6_IMPLEMENTATION_COMPLETE.md` - Implementation details

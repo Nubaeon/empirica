@@ -75,6 +75,29 @@ empirica postflight $SESSION --summary "task complete"
 
 ---
 
+## AI vs Agent: Choosing the Right Approach
+
+Empirica supports two distinct usage patterns:
+
+### 🤖 AI (Collaborative Intelligence)
+**Definition:** Engaged reasoning partner working WITH the user
+- **Characteristics:** High autonomy, dialogue-based, full CASCADE workflow
+- **Use for:** Planning, design, research, complex problem-solving
+- **CASCADE:** Full workflow (PREFLIGHT → POSTFLIGHT)
+- **Examples:** Claude, GPT-4 collaborating on feature design
+
+### 🔧 Agent (Acting Intelligence)  
+**Definition:** Focused executor of specific, well-defined tasks
+- **Characteristics:** Task-focused, minimal dialogue, simplified CASCADE
+- **Use for:** Implementation, testing, documentation, routine tasks
+- **CASCADE:** ACT-focused (execute subtasks efficiently)
+- **Examples:** Mini-agent implementing tests, code formatters
+
+**Quick Rule:** Use AI for thinking/planning, Agent for execution.  
+**See:** [`docs/AI_VS_AGENT_EMPIRICA_PATTERNS.md`](AI_VS_AGENT_EMPIRICA_PATTERNS.md) for detailed patterns.
+
+---
+
 ## Choose Your Interface
 
 Empirica works **four different ways** - pick what fits your workflow:
@@ -110,6 +133,52 @@ from empirica.core.canonical import CanonicalEpistemicAssessor
 assessor = CanonicalEpistemicAssessor(agent_id="my-ai")
 ```
 **Best for:** Custom integrations, automation
+
+---
+
+## MCP Tool Parameters Guide
+
+When using Empirica via MCP (Model Context Protocol), avoid these common parameter errors:
+
+### Critical Parameters (Most Common Issues)
+
+```python
+# ✅ Correct usage
+create_goal(
+    scope="project_wide",  # Must be enum: "task_specific" | "session_scoped" | "project_wide"
+    success_criteria=["Tests pass", "Documentation updated"],  # Array, not string
+    session_id="uuid"
+)
+
+add_subtask(
+    goal_id="uuid",
+    description="Write unit tests",
+    importance="high",  # NOT "epistemic_importance"
+    estimated_tokens=500
+)
+
+complete_subtask(
+    task_id="uuid",  # NOT "subtask_id"
+    evidence="Created 15 tests, all passing, 95% coverage"
+)
+
+submit_postflight_assessment(
+    session_id="uuid",
+    reasoning="Learned OAuth patterns, confidence improved from 0.6 to 0.9"  # NOT "changes"
+)
+```
+
+### Common Errors to Avoid
+
+| Function | Wrong ❌ | Correct ✅ |
+|----------|----------|------------|
+| `create_goal` | `scope="any text"` | `scope="project_wide"` (enum only) |
+| `create_goal` | `success_criteria="Tests pass"` | `success_criteria=["Tests pass"]` (array) |
+| `add_subtask` | `epistemic_importance="high"` | `importance="high"` |
+| `complete_subtask` | `subtask_id="uuid"` | `task_id="uuid"` |
+| `submit_postflight` | `changes="learned x,y"` | `reasoning="learned x,y"` |
+
+**Tip:** Use IDE autocomplete or check the schema - parameter names matter!
 
 ---
 

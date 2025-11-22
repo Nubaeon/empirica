@@ -165,9 +165,9 @@ async def list_tools() -> List[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "session_id": {"type": "string"},
-                    "vectors": {"type": "object"},
-                    "reasoning": {"type": "string"}
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "vectors": {"type": "object", "description": "Epistemic vectors as JSON object with 13 keys"},
+                    "reasoning": {"type": "string", "description": "Description of what changed from PREFLIGHT (unified with preflight-submit, both use reasoning)"}
                 },
                 "required": ["session_id", "vectors"]
             }
@@ -181,12 +181,12 @@ async def list_tools() -> List[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "session_id": {"type": "string"},
-                    "objective": {"type": "string"},
-                    "scope": {"type": "string"},
-                    "success_criteria": {"type": "array"},
-                    "estimated_complexity": {"type": "number"},
-                    "metadata": {"type": "object"}
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "objective": {"type": "string", "description": "Goal objective/description"},
+                    "scope": {"type": "string", "enum": ["task_specific", "session_scoped", "project_wide"], "description": "Goal scope (use task_specific, session_scoped, or project_wide)"},
+                    "success_criteria": {"type": "array", "items": {"type": "string"}, "description": "Array of success criteria strings"},
+                    "estimated_complexity": {"type": "number", "description": "Complexity estimate 0.0-1.0"},
+                    "metadata": {"type": "object", "description": "Additional metadata as JSON object"}
                 },
                 "required": ["session_id", "objective"]
             }
@@ -198,10 +198,11 @@ async def list_tools() -> List[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "goal_id": {"type": "string"},
-                    "description": {"type": "string"},
-                    "epistemic_importance": {"type": "string"},
-                    "estimated_tokens": {"type": "integer"}
+                    "goal_id": {"type": "string", "description": "Goal UUID"},
+                    "description": {"type": "string", "description": "Subtask description"},
+                    "importance": {"type": "string", "enum": ["critical", "high", "medium", "low"], "description": "Epistemic importance (use importance not epistemic_importance)"},
+                    "dependencies": {"type": "array", "items": {"type": "string"}, "description": "Dependencies as JSON array"},
+                    "estimated_tokens": {"type": "integer", "description": "Estimated token usage"}
                 },
                 "required": ["goal_id", "description"]
             }
@@ -213,10 +214,10 @@ async def list_tools() -> List[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "subtask_id": {"type": "string"},
-                    "evidence": {"type": "string"}
+                    "task_id": {"type": "string", "description": "Subtask UUID (note: parameter is task_id not subtask_id)"},
+                    "evidence": {"type": "string", "description": "Completion evidence (commit hash, file path, etc.)"}
                 },
-                "required": ["subtask_id"]
+                "required": ["task_id"]
             }
         ),
 
@@ -560,11 +561,15 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     arg_map = {
         "session_type": "session-type",  # Not used by CLI - will be ignored
         "bootstrap_level": "level",  # MCP uses bootstrap_level, CLI uses level
-        "task_id": "subtask-id",  # CLI uses subtask-id not task-id
-        "remaining_unknowns": "unknowns",  # MCP uses remaining_unknowns, CLI uses unknowns
+        "task_id": "task-id",  # MCP uses task_id, CLI uses task-id (for goals-complete-subtask)
+        "remaining_unknowns": "unknowns",  # MCP uses remaining_unknowns, CLI uses unknowns (for handoff-create)
         "confidence_to_proceed": "confidence",  # MCP uses confidence_to_proceed, CLI uses confidence (for check command)
         "investigation_cycle": "cycle",  # MCP uses investigation_cycle, CLI uses cycle (for check-submit)
-        "task_summary": "summary",  # MCP uses task_summary, CLI uses summary
+        "task_summary": "summary",  # MCP uses task_summary, CLI uses summary (for postflight)
+        "reasoning": "reasoning",  # MCP uses reasoning, CLI uses reasoning (unified: preflight-submit and postflight-submit)
+        "key_findings": "key-findings",  # MCP uses key_findings, CLI uses key-findings (for handoff-create)
+        "next_session_context": "next-session-context",  # MCP uses next_session_context, CLI uses next-session-context
+        "artifacts_created": "artifacts",  # MCP uses artifacts_created, CLI uses artifacts (for handoff-create)
     }
     
     # Arguments to skip per command (not supported by CLI)

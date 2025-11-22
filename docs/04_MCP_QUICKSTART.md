@@ -500,6 +500,42 @@ execute_cli_command({
 
 ---
 
+## Governance Layer Integration
+
+**Future Enhancement:** Dynamic Role-Based Prompts via Governance Layer
+
+**Concept:** Cognitive Vault + Sentinel provides appropriate prompts based on your role (AI vs Agent).
+
+```python
+# AI requests collaborative prompt
+get_system_prompt(
+    ai_id="rovo-dev",
+    role="collaborative_ai",
+    modality="coding",
+    task_type="feature_design"
+)
+→ Returns: AI_COLLABORATIVE_PROMPT (full CASCADE guidance)
+
+# Agent requests execution prompt  
+get_system_prompt(
+    ai_id="mini-agent", 
+    role="acting_agent",
+    modality="testing",
+    task_type="test_implementation"
+)
+→ Returns: AGENT_EXECUTION_PROMPT (ACT-focused guidance)
+```
+
+**Benefits:**
+- **Right prompt for right role** - AI gets reasoning prompts, agents get execution prompts
+- **Consistent terminology** - AI vs Agent distinction maintained
+- **Token-efficient** - Load only needed guidance
+- **Centrally managed** - Version controlled prompts
+
+**See:** [`docs/AI_VS_AGENT_EMPIRICA_PATTERNS.md`](AI_VS_AGENT_EMPIRICA_PATTERNS.md) for detailed AI vs Agent patterns.
+
+---
+
 ## Configuration Examples
 
 ### Full Configuration Examples

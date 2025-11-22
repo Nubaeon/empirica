@@ -51,7 +51,7 @@ from .mcp_commands import (
 )
 from .session_commands import (
     handle_sessions_list_command, handle_sessions_show_command, handle_sessions_export_command,
-    handle_session_end_command
+    # handle_session_end_command removed - use handoff-create
 )
 from .checkpoint_commands import (
     handle_checkpoint_create_command, handle_checkpoint_load_command,
@@ -190,5 +190,5 @@ __all__ = [
     'handle_chat_command',
     
     # Session-end command
-    'handle_session_end_command',
+    # 'handle_session_end_command',  # removed - use handoff-create
 ]

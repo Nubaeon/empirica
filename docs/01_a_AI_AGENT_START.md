@@ -35,6 +35,29 @@ After task: Call execute_postflight
 System shows: Epistemic delta (what you learned)
 ```
 
+### MCP Tool Parameters
+
+**Common parameter errors to avoid:**
+
+```python
+# ✅ Correct MCP usage
+execute_preflight(
+    session_id="uuid", 
+    prompt="task description"
+)
+
+submit_postflight_assessment(
+    session_id="uuid",
+    vectors={"know": 0.8, "do": 0.7, "uncertainty": 0.3},
+    reasoning="Learned OAuth patterns, confidence improved"  # NOT "changes"
+)
+
+# ❌ Common mistakes to avoid:
+# - Using "epistemic_importance" instead of "importance"
+# - Using "subtask_id" instead of "task_id" 
+# - Using "changes" instead of "reasoning"
+```
+
 **Via CLI (in terminal):**
 ```bash
 SESSION=$(empirica preflight "task description")

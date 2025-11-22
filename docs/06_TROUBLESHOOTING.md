@@ -243,6 +243,111 @@ empirica bootstrap
 
 ---
 
+## MCP Parameter Errors
+
+### `create_goal` parameter errors
+
+**Common Issues:**
+- `scope` parameter errors (not enum value)
+- `success_criteria` type errors (string instead of array)
+
+**Solutions:**
+```python
+# ❌ WRONG
+create_goal(scope="any text")  # Must be enum!
+create_goal(success_criteria="Tests pass")  # Must be array!
+
+# ✅ CORRECT  
+create_goal(scope="project_wide")  # enum: task_specific|session_scoped|project_wide
+create_goal(success_criteria=["Tests pass", "Docs updated"])  # Array
+```
+
+### `add_subtask` parameter errors
+
+**Common Issues:**
+- Using `epistemic_importance` instead of `importance`
+- Wrong parameter types
+
+**Solutions:**
+```python
+# ❌ WRONG
+add_subtask(epistemic_importance="high")  # Wrong parameter name!
+
+# ✅ CORRECT
+add_subtask(
+    goal_id="uuid",
+    description="Write unit tests", 
+    importance="high",  # Correct parameter
+    estimated_tokens=500
+)
+```
+
+### `complete_subtask` parameter errors
+
+**Common Issues:**
+- Using `subtask_id` instead of `task_id`
+
+**Solutions:**
+```python
+# ❌ WRONG
+complete_subtask(subtask_id="uuid")  # Wrong parameter name!
+
+# ✅ CORRECT
+complete_subtask(task_id="uuid", evidence="Completed task")  # Correct parameter
+```
+
+### Postflight parameter errors
+
+**Common Issues:**
+- Using `changes` instead of `reasoning` 
+- Using `summary` instead of `reasoning`
+
+**Solutions:**
+```python
+# ❌ WRONG
+submit_postflight_assessment(session_id="uuid", changes="What I learned")
+submit_postflight_assessment(session_id="uuid", summary="Task complete")
+
+# ✅ CORRECT
+submit_postflight_assessment(
+    session_id="uuid",
+    vectors={...},
+    reasoning="What I learned during this task"  # Unified parameter
+)
+```
+
+### Parameter Type Errors
+
+**Common Issues:**
+- Arrays passed as strings
+- Wrong enum values
+- Missing required parameters
+
+**Quick Reference:**
+```python
+# Scope must be enum
+scope="project_wide"  # ✅ OK
+scope="invalid"       # ❌ Error
+
+# Success criteria must be array  
+success_criteria=["Test 1", "Test 2"]  # ✅ OK
+success_criteria="Test 1"              # ❌ Error
+
+# Importance must be enum
+importance="high"      # ✅ OK  
+importance="urgent"    # ❌ Error
+```
+
+### Debugging MCP Parameter Errors
+
+**Steps to fix:**
+1. **Check parameter names:** Use IDE autocomplete or check schemas
+2. **Validate types:** Arrays vs strings, enums vs free text
+3. **Use MCP tool guidance:** See [`docs/00_START_HERE.md`](00_START_HERE.md#mcp-tool-parameters-guide)
+4. **Test individually:** Test each parameter separately
+
+---
+
 ## Assessment Issues
 
 ### "I don't know what score to give"

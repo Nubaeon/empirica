@@ -44,6 +44,48 @@ You have access to **23 Empirica MCP tools** for epistemic self-awareness:
 
 ---
 
+## MCP Parameter Guidance
+
+**Avoid these common parameter errors:**
+
+### Unified Parameters
+```python
+# ✅ Both preflight and postflight use "reasoning"
+submit_preflight_assessment(
+    session_id="uuid",
+    vectors={...},
+    reasoning="Assessment explanation"  # NOT other parameter names
+)
+
+submit_postflight_assessment(
+    session_id="uuid", 
+    vectors={...},
+    reasoning="What I learned"  # NOT "changes" or "changes_noticed"
+)
+```
+
+### Goal Management Parameters  
+```python
+# ✅ Correct parameter names
+create_goal(
+    scope="project_wide",  # Must be enum: task_specific | session_scoped | project_wide
+    success_criteria=["Tests pass"],  # Array, not string
+    session_id="uuid"
+)
+
+add_subtask(
+    goal_id="uuid",
+    description="task description",
+    importance="high",  # NOT "epistemic_importance"
+    estimated_tokens=500
+)
+
+complete_subtask(
+    task_id="uuid",  # NOT "subtask_id"
+    evidence="Completion details"
+)
+```
+
 ## Core Principle: No Heuristics
 
 **Traditional AI frameworks:** Use pattern matching, keyword counting, confidence tricks
@@ -128,7 +170,7 @@ Call: submit_postflight_assessment(
     "uncertainty": 0.25, // -0.35 from preflight
     // ...
   },
-  changes_noticed="What changed during this task"
+  reasoning="What I learned during this task"
 )
 ```
 

@@ -301,7 +301,7 @@ def handle_postflight_submit_command(args):
         # Parse arguments
         session_id = args.session_id
         vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
-        changes = args.changes
+        changes = args.reasoning  # Unified parameter name (was args.changes)
         
         # Validate vectors
         if not isinstance(vectors, dict):

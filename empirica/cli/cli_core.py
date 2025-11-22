@@ -273,7 +273,8 @@ def _add_cascade_parsers(subparsers):
     postflight_submit_parser = subparsers.add_parser('postflight-submit', help='Submit postflight assessment results')
     postflight_submit_parser.add_argument('--session-id', required=True, help='Session ID')
     postflight_submit_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict')
-    postflight_submit_parser.add_argument('--changes', help='Description of what changed from preflight')
+    postflight_submit_parser.add_argument('--reasoning', help='Description of what changed from preflight (was --changes, now unified with preflight-submit)')
+    postflight_submit_parser.add_argument('--changes', help='Alias for --reasoning (deprecated, use --reasoning)', dest='reasoning')
     postflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
 
@@ -415,15 +416,7 @@ def _add_session_parsers(subparsers):
     sessions_export_parser.add_argument('--output', '-o', help='Output file path (default: session_<id>.json)')
     
     # Session end command
-    session_end_parser = subparsers.add_parser('session-end', help='End session and create handoff report')
-    session_end_parser.add_argument('--session-id', required=True, help='Session ID to end')
-    session_end_parser.add_argument('--commit', action='store_true', help='Create git commit with session summary')
-    session_end_parser.add_argument('--manual', action='store_true', help='Manual mode - provide all data explicitly')
-    session_end_parser.add_argument('--summary', help='Task summary (optional override)')
-    session_end_parser.add_argument('--findings', help='JSON array of key findings (optional)')
-    session_end_parser.add_argument('--unknowns', help='JSON array of remaining unknowns (optional)')
-    session_end_parser.add_argument('--context', help='Next session context (optional)')
-    session_end_parser.add_argument('--artifacts', help='JSON array of artifacts created (optional)')
+    # session-end removed - use handoff-create instead (better parameter names, already in MCP)
 
 
 def _add_action_parsers(subparsers):
@@ -738,7 +731,7 @@ def main(args=None):
             'sessions-list': handle_sessions_list_command,
             'sessions-show': handle_sessions_show_command,
             'sessions-export': handle_sessions_export_command,
-            'session-end': handle_session_end_command,
+            # 'session-end' removed - use 'handoff-create' instead
             
             # Action commands (INVESTIGATE and ACT phase tracking)
             'investigate-log': handle_investigate_log_command,

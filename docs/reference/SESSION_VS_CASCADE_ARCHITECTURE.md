@@ -47,6 +47,67 @@ Session {
 
 ---
 
+## CASCADE Granularity Guidelines
+
+### When to Use Full PREFLIGHT → POSTFLIGHT Cycle
+
+**Use full CASCADE for:**
+- ✅ **Significant tasks**: Features, bug fixes, refactoring, investigations
+- ✅ **High uncertainty**: Initial uncertainty >0.5
+- ✅ **Learning expected**: Exploring new domains, APIs, patterns
+- ✅ **Long tasks**: Expected duration >30 minutes
+- ✅ **Multiple goals/subtasks**: One CASCADE can contain many goals
+
+### When to Skip Formal CASCADE
+
+**Skip for:**
+- ⚠️ **Quick clarifications**: "What does X mean?"
+- ⚠️ **Trivial edits**: "Fix typo on line 42"
+- ⚠️ **Simple queries**: "Show me the logs"
+- ⚠️ **Follow-up questions**: Within active CASCADE
+- ⚠️ **Low uncertainty**: Already know how to proceed (<0.3)
+
+### Examples
+
+**✅ Good CASCADE Usage:**
+```
+Session {
+  CASCADE 1: "Implement OAuth authentication"
+    PREFLIGHT (uncertainty: 0.7)
+    INVESTIGATE: Research OAuth flows, create 3 goals, add 8 subtasks
+    CHECK: Ready to implement? (confidence: 0.8)
+    ACT: Implement, test, document
+    POSTFLIGHT (uncertainty: 0.2) → learned significantly
+    
+  Lightweight interactions (no formal CASCADE):
+    "What's the token expiry?" → just answer
+    "Show me the flow diagram" → just show
+    "Fix this lint error" → just fix
+    
+  CASCADE 2: "Add rate limiting"
+    PREFLIGHT (can reuse OAuth knowledge!)
+    ... continue pattern
+}
+```
+
+**❌ Bad CASCADE Usage (over-formalization):**
+```
+Session {
+  CASCADE 1: "What does this function do?" ← Too trivial for full cycle
+  CASCADE 2: "Fix typo" ← Too simple
+  CASCADE 3: "Show logs" ← Just a query
+}
+```
+
+### Key Principles
+
+1. **CASCADE = Significant Task**: Not per-interaction, per-significant-task
+2. **Multiple Goals per CASCADE**: One task can have many goals/subtasks
+3. **Epistemic Snapshots**: Each CASCADE generates one handoff report (~800 tokens)
+4. **Natural Flow**: Work uninterrupted within CASCADE, assess at boundaries
+
+---
+
 ## Architecture Details
 
 ### Database Schema
