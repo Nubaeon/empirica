@@ -1,0 +1,38 @@
+<svg viewBox="0 0 800 520" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 800px; height: auto;">
+    <!-- Background -->
+    <rect width="800" height="520" fill="#1a1a25" stroke="#6366f1" stroke-width="2" rx="12"/>
+    
+    <!-- Layer 3: SENTINEL -->
+    <rect x="50" y="30" width="700" height="140" fill="#1e293b" stroke="#f59e0b" stroke-width="3" rx="8"/>
+    <text x="80" y="60" fill="#f59e0b" font-size="18" font-weight="bold">Layer 3: SENTINEL (Governance)</text>
+    <text x="80" y="85" fill="#94a3b8" font-size="14">• Monitors epistemic state changes</text>
+    <text x="80" y="105" fill="#94a3b8" font-size="14">• Enforces confidence thresholds</text>
+    <text x="80" y="125" fill="#94a3b8" font-size="14">• Routes requests based on KNOW vectors</text>
+    <text x="80" y="145" fill="#94a3b8" font-size="14">• Updates reputation scores</text>
+    
+    <!-- Arrow down -->
+    <defs>
+        <marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <polygon points="0 0, 10 3, 0 6" fill="#6366f1" />
+        </marker>
+    </defs>
+    <line x1="400" y1="170" x2="400" y2="195" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow3)"/>
+    
+    <!-- Layer 2: GIT NOTES -->
+    <rect x="50" y="195" width="700" height="140" fill="#1e293b" stroke="#8b5cf6" stroke-width="3" rx="8"/>
+    <text x="80" y="225" fill="#8b5cf6" font-size="18" font-weight="bold">Layer 2: GIT NOTES (Epistemic State)</text>
+    <text x="80" y="250" fill="#94a3b8" font-size="14">• refs/notes/empirica/checkpoints</text>
+    <text x="80" y="270" fill="#94a3b8" font-size="14">• Confidence vectors attached to commits</text>
+    <text x="80" y="290" fill="#94a3b8" font-size="14">• Travels with code but doesn't pollute diffs</text>
+    <text x="80" y="310" fill="#94a3b8" font-size="14">• Cross-provider portable via standard git protocol</text>
+    
+    <!-- Arrow down -->
+    <line x1="400" y1="335" x2="400" y2="360" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow3)"/>
+    
+    <!-- Layer 1: GIT -->
+    <rect x="50" y="360" width="700" height="120" fill="#1e293b" stroke="#22c55e" stroke-width="3" rx="8"/>
+    <text x="80" y="390" fill="#22c55e" font-size="18" font-weight="bold">Layer 1: GIT (Content State)</text>
+    <text x="80" y="415" fill="#94a3b8" font-size="14">• Files, code, actual content</text>
+    <text x="80" y="435" fill="#94a3b8" font-size="14">• Standard diffs and merges</text>
+    <text x="80" y="455" fill="#94a3b8" font-size="14">• Who changed what when</text>
+</svg>

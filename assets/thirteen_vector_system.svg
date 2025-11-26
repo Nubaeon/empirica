@@ -1,0 +1,146 @@
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 1200px; height: auto;">
+    <!-- Background -->
+    <rect width="1200" height="800" fill="#1a1a25" stroke="#6366f1" stroke-width="2" rx="12"/>
+
+    <!-- Title -->
+    <text x="600" y="40" text-anchor="middle" fill="#f8fafc" font-size="24" font-weight="bold">13-Vector Epistemic System</text>
+    <text x="600" y="65" text-anchor="middle" fill="#94a3b8" font-size="14">Genuine LLM-Powered Self-Assessment Framework</text>
+    <line x1="50" y1="85" x2="1150" y2="85" stroke="#334155" stroke-width="1"/>
+
+    <!-- Legend -->
+    <text x="50" y="110" fill="#94a3b8" font-size="12">Weight Distribution: Foundation 35% | Comprehension 25% | Execution 25% | Meta 15%</text>
+
+    <!-- FOUNDATION TIER (4 vectors) - Top Left -->
+    <g>
+        <!-- Container -->
+        <rect x="30" y="140" width="550" height="280" fill="#1e293b" stroke="#6366f1" stroke-width="2" rx="8"/>
+
+        <!-- Header -->
+        <rect x="30" y="140" width="550" height="40" fill="#6366f1" stroke="none" rx="8" rx-top="8"/>
+        <text x="305" y="165" text-anchor="middle" fill="#1a1a25" font-size="16" font-weight="bold">Foundation Tier (35% Weight)</text>
+
+        <!-- Vector 1: KNOW -->
+        <rect x="50" y="200" width="500" height="20" fill="#1a1a25" stroke="#6366f1" stroke-width="1" rx="3"/>
+        <text x="60" y="214" fill="#6366f1" font-size="12" font-weight="bold">KNOW</text>
+        <text x="150" y="214" fill="#94a3b8" font-size="11">Domain knowledge confidence assessment</text>
+
+        <!-- Vector 2: DO -->
+        <rect x="50" y="240" width="500" height="20" fill="#1a1a25" stroke="#8b5cf6" stroke-width="1" rx="3"/>
+        <text x="60" y="254" fill="#8b5cf6" font-size="12" font-weight="bold">DO</text>
+        <text x="150" y="254" fill="#94a3b8" font-size="11">Execution capability evaluation</text>
+
+        <!-- Vector 3: CONTEXT -->
+        <rect x="50" y="280" width="500" height="20" fill="#1a1a25" stroke="#f59e0b" stroke-width="1" rx="3"/>
+        <text x="60" y="294" fill="#f59e0b" font-size="12" font-weight="bold">CONTEXT</text>
+        <text x="150" y="294" fill="#94a3b8" font-size="11">Environmental awareness measurement</text>
+
+        <!-- Weight indicator -->
+        <text x="60" y="330" fill="#94a3b8" font-size="13" font-weight="bold">35% Weight</text>
+        <text x="60" y="348" fill="#94a3b8" font-size="11">Core foundation for all reasoning</text>
+        <text x="60" y="363" fill="#94a3b8" font-size="11">Critical for task suitability assessment</text>
+    </g>
+
+    <!-- COMPREHENSION TIER (4 vectors) - Top Right -->
+    <g>
+        <!-- Container -->
+        <rect x="620" y="140" width="550" height="280" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" rx="8"/>
+
+        <!-- Header -->
+        <rect x="620" y="140" width="550" height="40" fill="#8b5cf6" stroke="none" rx="8" rx-top="8"/>
+        <text x="895" y="165" text-anchor="middle" fill="#1a1a25" font-size="16" font-weight="bold">Comprehension Tier (25% Weight)</text>
+
+        <!-- Vector 4: CLARITY -->
+        <rect x="640" y="200" width="500" height="20" fill="#1a1a25" stroke="#6366f1" stroke-width="1" rx="3"/>
+        <text x="650" y="214" fill="#6366f1" font-size="12" font-weight="bold">CLARITY</text>
+        <text x="740" y="214" fill="#94a3b8" font-size="11">Task semantic understanding</text>
+
+        <!-- Vector 5: COHERENCE -->
+        <rect x="640" y="240" width="500" height="20" fill="#1a1a25" stroke="#8b5cf6" stroke-width="1" rx="3"/>
+        <text x="650" y="254" fill="#8b5cf6" font-size="12" font-weight="bold">COHERENCE</text>
+        <text x="740" y="254" fill="#94a3b8" font-size="11">Logical consistency validation</text>
+
+        <!-- Vector 6: SIGNAL -->
+        <rect x="640" y="280" width="500" height="20" fill="#1a1a25" stroke="#f59e0b" stroke-width="1" rx="3"/>
+        <text x="650" y="294" fill="#f59e0b" font-size="12" font-weight="bold">SIGNAL</text>
+        <text x="740" y="294" fill="#94a3b8" font-size="11">Information quality assessment</text>
+
+        <!-- Vector 7: DENSITY -->
+        <rect x="640" y="320" width="500" height="20" fill="#1a1a25" stroke="#22c55e" stroke-width="1" rx="3"/>
+        <text x="650" y="334" fill="#22c55e" font-size="12" font-weight="bold">DENSITY</text>
+        <text x="740" y="334" fill="#94a3b8" font-size="11">Cognitive load management</text>
+
+        <!-- Weight indicator -->
+        <text x="650" y="370" fill="#94a3b8" font-size="13" font-weight="bold">25% Weight</text>
+        <text x="650" y="388" fill="#94a3b8" font-size="11">Validates understanding quality</text>
+        <text x="650" y="403" fill="#94a3b8" font-size="11">Prevents false confidence</text>
+    </g>
+
+    <!-- EXECUTION TIER (4 vectors) - Bottom Left -->
+    <g>
+        <!-- Container -->
+        <rect x="30" y="450" width="550" height="280" fill="#1e293b" stroke="#22c55e" stroke-width="2" rx="8"/>
+
+        <!-- Header -->
+        <rect x="30" y="450" width="550" height="40" fill="#22c55e" stroke="none" rx="8" rx-top="8"/>
+        <text x="305" y="475" text-anchor="middle" fill="#1a1a25" font-size="16" font-weight="bold">Execution Tier (25% Weight)</text>
+
+        <!-- Vector 8: STATE -->
+        <rect x="50" y="510" width="500" height="20" fill="#1a1a25" stroke="#6366f1" stroke-width="1" rx="3"/>
+        <text x="60" y="524" fill="#6366f1" font-size="12" font-weight="bold">STATE</text>
+        <text x="150" y="524" fill="#94a3b8" font-size="11">Current readiness assessment</text>
+
+        <!-- Vector 9: CHANGE -->
+        <rect x="50" y="550" width="500" height="20" fill="#1a1a25" stroke="#8b5cf6" stroke-width="1" rx="3"/>
+        <text x="60" y="564" fill="#8b5cf6" font-size="12" font-weight="bold">CHANGE</text>
+        <text x="150" y="564" fill="#94a3b8" font-size="11">Modification tracking capability</text>
+
+        <!-- Vector 10: COMPLETION -->
+        <rect x="50" y="590" width="500" height="20" fill="#1a1a25" stroke="#f59e0b" stroke-width="1" rx="3"/>
+        <text x="60" y="604" fill="#f59e0b" font-size="12" font-weight="bold">COMPLETION</text>
+        <text x="150" y="604" fill="#94a3b8" font-size="11">Goal proximity confidence</text>
+
+        <!-- Vector 11: IMPACT -->
+        <rect x="50" y="630" width="500" height="20" fill="#1a1a25" stroke="#22c55e" stroke-width="1" rx="3"/>
+        <text x="60" y="644" fill="#22c55e" font-size="12" font-weight="bold">IMPACT</text>
+        <text x="150" y="644" fill="#94a3b8" font-size="11">Consequence awareness evaluation</text>
+
+        <!-- Weight indicator -->
+        <text x="60" y="680" fill="#94a3b8" font-size="13" font-weight="bold">25% Weight</text>
+        <text x="60" y="698" fill="#94a3b8" font-size="11">Measures tangible progress</text>
+        <text x="60" y="713" fill="#94a3b8" font-size="11">Ensures accountability</text>
+    </g>
+
+    <!-- META-EPISTEMIC TIER (3 vectors) - Bottom Right -->
+    <g>
+        <!-- Container -->
+        <rect x="620" y="450" width="550" height="280" fill="#1e293b" stroke="#f59e0b" stroke-width="2" rx="8"/>
+
+        <!-- Header -->
+        <rect x="620" y="450" width="550" height="40" fill="#f59e0b" stroke="none" rx="8" rx-top="8"/>
+        <text x="895" y="475" text-anchor="middle" fill="#1a1a25" font-size="16" font-weight="bold">Meta-Epistemic Tier (15% Weight)</text>
+
+        <!-- Vector 12: UNCERTAINTY -->
+        <rect x="640" y="510" width="500" height="20" fill="#1a1a25" stroke="#6366f1" stroke-width="1" rx="3"/>
+        <text x="650" y="524" fill="#6366f1" font-size="12" font-weight="bold">UNCERTAINTY</text>
+        <text x="740" y="524" fill="#94a3b8" font-size="11">Meta-awareness of knowledge gaps</text>
+
+        <!-- Vector 13: ENGAGEMENT -->
+        <rect x="640" y="550" width="500" height="20" fill="#1a1a25" stroke="#8b5cf6" stroke-width="1" rx="3"/>
+        <text x="650" y="564" fill="#8b5cf6" font-size="12" font-weight="bold">ENGAGEMENT</text>
+        <text x="740" y="564" fill="#94a3b8" font-size="11">Collaborative intelligence gate</text>
+
+        <!-- Vector 14: CALIBRATION -->
+        <rect x="640" y="590" width="500" height="20" fill="#1a1a25" stroke="#f59e0b" stroke-width="1" rx="3"/>
+        <text x="650" y="604" fill="#f59e0b" font-size="12" font-weight="bold">CALIBRATION</text>
+        <text x="740" y="604" fill="#94a3b8" font-size="11">Confidence vs. accuracy tracking</text>
+
+        <!-- Weight indicator -->
+        <text x="650" y="650" fill="#94a3b8" font-size="13" font-weight="bold">15% Weight</text>
+        <text x="650" y="668" fill="#94a3b8" font-size="11">Self-awareness & accountability</text>
+        <text x="650" y="683" fill="#94a3b8" font-size="11">Prevents overconfidence</text>
+        <text x="650" y="698" fill="#94a3b8" font-size="11">Genuine epistemic transparency</text>
+
+        <!-- Note about 13th vector -->
+        <text x="895" y="730" text-anchor="middle" fill="#22c55e" font-size="12" font-weight="bold">13 total vectors = Comprehensive reasoning framework</text>
+    </g>
+</svg>

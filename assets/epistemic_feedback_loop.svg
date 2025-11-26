@@ -1,0 +1,59 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 800px; height: auto;">
+    <!-- Background -->
+    <rect width="800" height="500" fill="#1a1a25" stroke="#6366f1" stroke-width="2" rx="12"/>
+    
+    <!-- Title -->
+    <text x="400" y="40" text-anchor="middle" fill="#f8fafc" font-size="20" font-weight="bold">EPISTEMIC FEEDBACK LOOP</text>
+    <line x1="50" y1="55" x2="750" y2="55" stroke="#334155" stroke-width="1"/>
+    
+    <!-- PREFLIGHT Box -->
+    <rect x="80" y="100" width="150" height="80" fill="#1e293b" stroke="#6366f1" stroke-width="2" rx="8"/>
+    <text x="155" y="130" text-anchor="middle" fill="#6366f1" font-size="16" font-weight="bold">PREFLIGHT</text>
+    <text x="155" y="150" text-anchor="middle" fill="#94a3b8" font-size="13">Vectors</text>
+    <text x="155" y="170" text-anchor="middle" fill="#94a3b8" font-size="12">(predicted)</text>
+    
+    <!-- POSTFLIGHT Box -->
+    <rect x="570" y="100" width="150" height="80" fill="#1e293b" stroke="#6366f1" stroke-width="2" rx="8"/>
+    <text x="645" y="130" text-anchor="middle" fill="#6366f1" font-size="16" font-weight="bold">POSTFLIGHT</text>
+    <text x="645" y="150" text-anchor="middle" fill="#94a3b8" font-size="13">Vectors</text>
+    <text x="645" y="170" text-anchor="middle" fill="#94a3b8" font-size="12">(actual)</text>
+    
+    <!-- Arrow: PREFLIGHT to POSTFLIGHT -->
+    <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <polygon points="0 0, 10 3, 0 6" fill="#0ea5e9" />
+        </marker>
+    </defs>
+    <line x1="230" y1="140" x2="570" y2="140" stroke="#0ea5e9" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <text x="400" y="130" text-anchor="middle" fill="#0ea5e9" font-size="14">Action</text>
+    
+    <!-- Arrows down from PREFLIGHT and POSTFLIGHT -->
+    <line x1="155" y1="180" x2="155" y2="240" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <line x1="645" y1="180" x2="645" y2="240" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- CALIBRATION CHECK Box -->
+    <rect x="250" y="240" width="300" height="60" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" rx="8"/>
+    <text x="400" y="265" text-anchor="middle" fill="#8b5cf6" font-size="15" font-weight="bold">CALIBRATION CHECK</text>
+    <text x="400" y="285" text-anchor="middle" fill="#94a3b8" font-size="12">Did predicted confidence match actual outcome?</text>
+    
+    <!-- Arrows from calibration to results -->
+    <line x1="350" y1="300" x2="250" y2="360" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <line x1="450" y1="300" x2="550" y2="360" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+    
+    <!-- Well Calibrated Box -->
+    <rect x="100" y="360" width="150" height="90" fill="#1e293b" stroke="#22c55e" stroke-width="3" rx="8"/>
+    <text x="175" y="385" text-anchor="middle" fill="#22c55e" font-size="15" font-weight="bold">Well</text>
+    <text x="175" y="405" text-anchor="middle" fill="#22c55e" font-size="15" font-weight="bold">Calibrated</text>
+    <text x="175" y="425" text-anchor="middle" fill="#94a3b8" font-size="13">R(t+1) ↑</text>
+    <text x="175" y="440" text-anchor="middle" fill="#94a3b8" font-size="13">π(t+1) ↑</text>
+    
+    <!-- Poorly Calibrated Box -->
+    <rect x="550" y="360" width="150" height="90" fill="#1e293b" stroke="#ef4444" stroke-width="3" rx="8"/>
+    <text x="625" y="385" text-anchor="middle" fill="#ef4444" font-size="15" font-weight="bold">Poorly</text>
+    <text x="625" y="405" text-anchor="middle" fill="#ef4444" font-size="15" font-weight="bold">Calibrated</text>
+    <text x="625" y="425" text-anchor="middle" fill="#94a3b8" font-size="13">R(t+1) ↓</text>
+    <text x="625" y="440" text-anchor="middle" fill="#94a3b8" font-size="13">π(t+1) ↓</text>
+    
+    <!-- Legend -->
+    <text x="50" y="480" fill="#94a3b8" font-size="12">R = Reputation Score    π = Operational Permission</text>
+</svg>

@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empirica SDK | AI Self-Awareness</title>
+    <meta name="description"
+        content="The meta-framework for AI self-awareness through epistemic humility.">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            /* Semantic Colors (Empirica Palette) */
+            --color-primary: #6366f1;
+            /* Indigo-500 */
+            --color-primary-dark: #4338ca;
+            /* Indigo-700 */
+            --color-secondary: #0ea5e9;
+            /* Sky-500 */
+            --color-bg-dark: #0f172a;
+            /* Slate-900 */
+            --color-bg-card: rgba(30, 41, 59, 0.7);
+            /* Slate-800/70 */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--color-bg-dark);
+        }
+
+        /* MagicUI-style Glow */
+        .glow-effect {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glow-effect::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            transform: skewX(-25deg);
+            transition: 0.5s;
+            pointer-events: none;
+        }
+
+        .glow-effect:hover::before {
+            left: 100%;
+            transition: 0.7s;
+        }
+
+        /* Navigation Styles */
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            color: #94a3b8 !important;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #f8fafc !important;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-active {
+            color: var(--color-primary) !important;
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+
+        /* Code Blocks */
+        pre {
+            background: #000000;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            color: #ffffff;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.875em;
+            word-break: break-word;
+        }
+
+        /* Bento Grid Utilities */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Glass Card Styling */
+        .glass-card {
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Reduce excessive vertical spacing - match MD formatting */
+        .prose hr {
+            margin-top: 1rem !important;
+            margin-bottom: 1rem !important;
+        }
+
+        .prose>*+* {
+            margin-top: 0.75rem;
+        }
+    </style>
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="bg-slate-900 text-slate-200 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <header class="bg-black text-white py-6 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="flex items-center justify-between">
+            <!-- Logo/Brand -->
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                    <img src="/assets/empirica_logo.png" alt="Empirica Logo" class="w-10 h-10"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span style="display: none;" class="text-black font-bold text-lg">E</span>
+                </div>
+                <div>
+                    <a href="/index.html" class="hover:opacity-80 transition-opacity">
+                        <h1 class="text-2xl font-bold italic">EMPIRICA</h1>
+                        <p class="text-sm text-gray-300">Epistemic Humility through Thoughtful AI Self-Reflection</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- CTA Buttons and Search -->
+            <div class="hidden md:flex space-x-4">
+                <a href="/empirica-chat.html"
+                    class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
+                    Empirica Chat
+                </a>
+                <a href="/getting-started.html"
+                    class="border border-white/30 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">
+                    Getting Started
+                </a>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button class="md:hidden text-white" onclick="toggleMobileMenu()">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</header>
+    <nav class="bg-blue-950 shadow-sm border-b border-blue-900 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="flex space-x-8 overflow-x-auto md:overflow-visible py-4 items-center">
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'></path></svg> 
+                        <span>Learn</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/epistemics.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📘</span>
+                                
+                                Epistemics Guide
+                        </a>
+                        
+                        <a href="/features.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">✨</span>
+                                
+                                Features
+                        </a>
+                        
+                        <a href="/use-cases.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🚀</span>
+                                
+                                Use Cases
+                        </a>
+                        
+                        <a href="/skills.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">⚡</span>
+                                
+                                Skills
+                        </a>
+                        
+                        <a href="/developers/system-prompts.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💬</span>
+                                
+                                System Prompts
+                        </a>
+                        
+                        <a href="/MAKING_GIT_SEXY_AGAIN.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🔥</span>
+                                
+                                Making Git Sexy
+                        </a>
+                        
+                        <a href="/unified-theory.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🧬</span>
+                                
+                                Unified Theory
+                        </a>
+                        
+                        <a href="/empirica-chat.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💬</span>
+                                
+                                Empirica Chat
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path></svg> 
+                        <span>Platform</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/developers/architecture.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🏛️</span>
+                                
+                                Architecture
+                        </a>
+                        
+                        <a href="/developers/components.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🧩</span>
+                                
+                                Components
+                        </a>
+                        
+                        <a href="/mcp-integration.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🔌</span>
+                                
+                                MCP Integration
+                        </a>
+                        
+                        <a href="/developers/collaboration.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤝</span>
+                                
+                                Collaboration
+                        </a>
+                        
+                        <a href="/ai-vs-agent.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤖</span>
+                                
+                                AI vs Agent
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4'></path></svg> 
+                        <span>Developers</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/getting-started.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🏁</span>
+                                
+                                Getting Started
+                        </a>
+                        
+                        <a href="/developers/api-reference.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📜</span>
+                                
+                                API Reference
+                        </a>
+                        
+                        <a href="/examples.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💡</span>
+                                
+                                Examples
+                        </a>
+                        
+                        <a href="/docs.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📚</span>
+                                
+                                Documentation
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'></path></svg> 
+                        <span>Support</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/faqs.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤔</span>
+                                
+                                FAQs
+                        </a>
+                        
+                        <a href="/resources.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📚</span>
+                                
+                                Resources
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <a href="/contact.html" class="nav-link flex items-center ">
+                 <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path></svg> 
+                    Contact Us
+            </a>
+            
+            
+
+            <!-- Search Box -->
+            <div class="relative ml-auto">
+                <input type="text" placeholder="Search..." id="search-input"
+                    class="bg-white/10 border border-white/20 rounded-lg px-4 py-2 pl-10 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48" />
+                <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div id="mobile-menu" class="md:hidden hidden bg-blue-950 border-t border-blue-900">
+        <div class="px-6 py-4 space-y-3">
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Learn</div>
+                
+                <a href="/epistemics.html" class="mobile-nav-link pl-6 border-l border-slate-700">Epistemics Guide</a>
+                
+                <a href="/features.html" class="mobile-nav-link pl-6 border-l border-slate-700">Features</a>
+                
+                <a href="/use-cases.html" class="mobile-nav-link pl-6 border-l border-slate-700">Use Cases</a>
+                
+                <a href="/skills.html" class="mobile-nav-link pl-6 border-l border-slate-700">Skills</a>
+                
+                <a href="/developers/system-prompts.html" class="mobile-nav-link pl-6 border-l border-slate-700">System Prompts</a>
+                
+                <a href="/MAKING_GIT_SEXY_AGAIN.html" class="mobile-nav-link pl-6 border-l border-slate-700">Making Git Sexy</a>
+                
+                <a href="/unified-theory.html" class="mobile-nav-link pl-6 border-l border-slate-700">Unified Theory</a>
+                
+                <a href="/empirica-chat.html" class="mobile-nav-link pl-6 border-l border-slate-700">Empirica Chat</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Platform</div>
+                
+                <a href="/developers/architecture.html" class="mobile-nav-link pl-6 border-l border-slate-700">Architecture</a>
+                
+                <a href="/developers/components.html" class="mobile-nav-link pl-6 border-l border-slate-700">Components</a>
+                
+                <a href="/mcp-integration.html" class="mobile-nav-link pl-6 border-l border-slate-700">MCP Integration</a>
+                
+                <a href="/developers/collaboration.html" class="mobile-nav-link pl-6 border-l border-slate-700">Collaboration</a>
+                
+                <a href="/ai-vs-agent.html" class="mobile-nav-link pl-6 border-l border-slate-700">AI vs Agent</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Developers</div>
+                
+                <a href="/getting-started.html" class="mobile-nav-link pl-6 border-l border-slate-700">Getting Started</a>
+                
+                <a href="/developers/api-reference.html" class="mobile-nav-link pl-6 border-l border-slate-700">API Reference</a>
+                
+                <a href="/examples.html" class="mobile-nav-link pl-6 border-l border-slate-700">Examples</a>
+                
+                <a href="/docs.html" class="mobile-nav-link pl-6 border-l border-slate-700">Documentation</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Support</div>
+                
+                <a href="/faqs.html" class="mobile-nav-link pl-6 border-l border-slate-700">FAQs</a>
+                
+                <a href="/resources.html" class="mobile-nav-link pl-6 border-l border-slate-700">Resources</a>
+                
+            </div>
+            
+            
+            
+            <a href="/contact.html" class="mobile-nav-link">Contact Us</a>
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <!-- Breadcrumbs (appears right after navigation) -->
+    
+    <div class="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-[73px] z-40">
+        <div class="max-w-6xl mx-auto px-6 py-3">
+            <nav class="flex items-center space-x-2 text-sm">
+                <a href="/index.html" class="text-slate-400 hover:text-indigo-400 transition-colors">Home</a>
+                
+                <span class="text-slate-600">›</span>
+                <span class="text-slate-200 font-medium">Frequently Asked Questions</span>
+                
+            </nav>
+        </div>
+    </div>
+    
+
+    <!-- Page Header (Non-Homepage) - Glassmorphic Style -->
+    
+    <div class="relative overflow-hidden pt-24 pb-16">
+        <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
+            <!-- Glassmorphic Badge (like homepage) -->
+            <div
+                class="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm mb-6">
+                <span class="flex h-2 w-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
+                Epistemic Self-Awareness for AI
+            </div>
+
+            <!-- Page Title with Gradient -->
+            <h1 class="text-5xl md:text-6xl font-bold tracking-tight mb-6 text-white">
+                Frequently Asked Questions
+            </h1>
+
+            <!-- Page Description (styled like homepage subheader) -->
+            
+            <p class="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                <span class="font-semibold text-white">Quick answers to common questions about Empirica</span>
+            </p>
+            
+        </div>
+
+        <!-- Background Glow (matching homepage) -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+            <div class="absolute top-20 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute top-40 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+        </div>
+    </div>
+    
+
+    <main class="min-h-screen">
+        
+                    <div class="max-w-4xl mx-auto px-6 py-0">
+                        <div class="prose prose-invert prose-lg max-w-none">
+                            <hr />
+<h2>Getting Started</h2>
+<h3>What is Empirica?</h3>
+<p>Empirica is a metacognitive AI framework that helps AI systems measure and validate their knowledge state through genuine self-assessment. It provides a production-grade system for epistemic reasoning and uncertainty tracking.</p>
+<h3>Who should use Empirica?</h3>
+<ul>
+<li><strong>AI Researchers</strong> exploring metacognition and self-awareness</li>
+<li><strong>AI Safety Teams</strong> needing uncertainty tracking and validation</li>
+<li><strong>AI Product Teams</strong> building reliable, high-stakes AI systems</li>
+<li><strong>Developers</strong> integrating AI assistants (Claude Desktop, etc.)</li>
+</ul>
+<h3>How is Empirica different from other AI frameworks?</h3>
+<p><strong>Key differentiators:</strong>
+- <strong>No Heuristics:</strong> Genuine LLM-powered self-assessment, not keyword matching
+- <strong>13-Vector System:</strong> Comprehensive epistemic measurement
+- <strong>Explicit Uncertainty:</strong> "Know what you don't know" tracking
+- <strong>Production-Ready:</strong> SQLite + JSON + Git persistence
+- <strong>MCP Integration:</strong> 23 tools for Claude Desktop and other AI assistants</p>
+<hr />
+<h2>Core Concepts</h2>
+<h3>What are the 13 Epistemic Vectors?</h3>
+<p>Empirica measures AI knowledge state across 13 dimensions:</p>
+<p><strong>Gate Vector:</strong>
+- ENGAGEMENT (≥0.60 required)</p>
+<p><strong>Foundation (35% weight):</strong>
+- KNOW (domain knowledge)
+- DO (execution capability)
+- CONTEXT (environmental awareness)</p>
+<p><strong>Comprehension (25% weight):</strong>
+- CLARITY (task understanding)
+- COHERENCE (logical consistency)
+- SIGNAL (information quality)
+- DENSITY (complexity management)</p>
+<p><strong>Execution (25% weight):</strong>
+- STATE (current state awareness)
+- CHANGE (progress tracking)
+- COMPLETION (goal proximity)
+- IMPACT (consequence awareness)</p>
+<p><strong>Meta-Epistemic:</strong>
+- UNCERTAINTY (explicit uncertainty tracking)</p>
+<p><a href="epistemics.html">Learn more →</a></p>
+<h3>What is the CASCADE Workflow?</h3>
+<p>CASCADE is Empirica's 7-phase epistemic reasoning process:</p>
+<ol>
+<li><strong>PREFLIGHT</strong> - Baseline assessment</li>
+<li><strong>THINK</strong> - Initial reasoning</li>
+<li><strong>PLAN</strong> - Task breakdown</li>
+<li><strong>INVESTIGATE</strong> - Fill knowledge gaps</li>
+<li><strong>CHECK</strong> - Validate readiness</li>
+<li><strong>ACT</strong> - Execute with confidence</li>
+<li><strong>POSTFLIGHT</strong> - Measure learning</li>
+</ol>
+<p>The workflow ensures AI systems understand their knowledge state before acting.</p>
+<h3>What does "epistemic humility" mean?</h3>
+<p>Epistemic humility is knowing what you don't know. Empirica helps AI systems:
+- Recognize knowledge gaps honestly
+- Avoid overconfident assertions
+- Request clarification when uncertain
+- Track uncertainty explicitly</p>
+<hr />
+<h2>Technical Questions</h2>
+<h3>What are the system requirements?</h3>
+<p><strong>Minimum:</strong>
+- Python 3.10+
+- 2GB RAM
+- Git (for checkpoint features)</p>
+<p><strong>Recommended:</strong>
+- Python 3.11+
+- 4GB RAM
+- tmux (for dashboard)
+- SQLite3 (included in Python)</p>
+<h3>Does Empirica require an API key?</h3>
+<p><strong>No API keys required for:</strong>
+- Core CASCADE workflow
+- CLI commands
+- Python API
+- Local development</p>
+<p><strong>Optional integrations:</strong>
+- Claude Desktop (MCP) - Uses your existing Claude Desktop setup
+- Cloud AI models - If using modality switcher plugin</p>
+<h3>Can I use Empirica offline?</h3>
+<p><strong>Yes!</strong> Empirica works completely offline:
+- All processing is local
+- No external API calls required
+- Data stored in SQLite and JSON locally
+- Git notes stored in your local repository</p>
+<h3>What AI models does Empirica support?</h3>
+<p>Empirica is <strong>model-agnostic</strong>. It works with:
+- Claude (via MCP or API)
+- GPT-4 (via API)
+- Gemini (via API)
+- Qwen (via API)
+- Any LLM with function calling support</p>
+<p>The modality switcher plugin enables easy model switching.</p>
+<hr />
+<h2>Integration Questions</h2>
+<h3>How do I integrate Empirica with Claude Desktop?</h3>
+<ol>
+<li>Install Empirica: <code>pip install -e .</code></li>
+<li>Add MCP server to Claude Desktop config</li>
+<li>Restart Claude Desktop</li>
+<li>Use 23 MCP tools for epistemic reasoning</li>
+</ol>
+<p><a href="mcp-integration.html">Full MCP Integration Guide →</a></p>
+<h3>Can I use Empirica in production?</h3>
+<p><strong>Yes!</strong> Empirica is production-ready:
+- ✅ SQLite persistence
+- ✅ Session tracking
+- ✅ Git checkpoint integration (~450 tokens, version-controlled)
+- ✅ Handoff reports (~400 tokens, 73% fewer than manual)
+- ✅ Behavioral drift monitoring
+- ✅ Bayesian belief tracking</p>
+<h3>Does Empirica work with my existing codebase?</h3>
+<p><strong>Yes!</strong> Empirica integrates easily:
+- <strong>Python API:</strong> Import and use in your code
+- <strong>CLI:</strong> Use from command line or scripts
+- <strong>MCP Tools:</strong> Integrate with AI assistants
+- <strong>Plugins:</strong> Extend with custom investigation tools</p>
+<h3>Can I customize the epistemic vectors?</h3>
+<p><strong>Domain-specific vectors are coming!</strong> Currently:
+- Core 13 vectors are fixed
+- Profile-based configuration available
+- Plugin system for custom investigation strategies
+- Domain vector customization in development</p>
+<hr />
+<h2>Use Case Questions</h2>
+<h3>When should I use Empirica?</h3>
+<p><strong>Ideal for:</strong>
+- High-stakes AI decisions (security, compliance, safety)
+- Multi-agent collaboration
+- Long-running tasks with learning
+- AI assistants that need to "think before acting"
+- Research on AI metacognition</p>
+<p><strong>Not ideal for:</strong>
+- Simple CRUD operations
+- Stateless API calls
+- Tasks with no uncertainty
+- Real-time low-latency systems (&lt;100ms requirements)</p>
+<h3>How does Empirica help with AI safety?</h3>
+<p>Empirica improves AI safety through:
+- <strong>Uncertainty Tracking:</strong> Explicit "I don't know" measurement
+- <strong>Confidence Gates:</strong> Prevent action when confidence too low
+- <strong>Drift Monitoring:</strong> Detect behavioral changes
+- <strong>Bayesian Validation:</strong> Evidence-based confidence updates
+- <strong>Learning Measurement:</strong> Track knowledge gained vs predicted</p>
+<h3>Can Empirica prevent AI hallucinations?</h3>
+<p>Empirica <strong>reduces</strong> hallucinations by:
+- Measuring confidence before responding
+- Identifying knowledge gaps explicitly
+- Recommending investigation when uncertain
+- Tracking uncertainty across reasoning</p>
+<p><strong>Note:</strong> Empirica doesn't eliminate hallucinations, but it makes AI systems aware of uncertainty and less likely to confidently assert unknown information.</p>
+<hr />
+<h2>Performance Questions</h2>
+<h3>How much overhead does Empirica add?</h3>
+<p><strong>Typical overhead:</strong>
+- Initial assessment: 1-2 seconds
+- Per-phase assessment: 0.5-1 second
+- Session persistence: &lt;100ms
+- Git checkpoints: &lt;500ms</p>
+<p><strong>Token efficiency:</strong>
+- Git checkpoints: ~450 tokens (55% fewer than manual state descriptions)
+- Handoff reports: ~400 tokens (73% fewer than manual summaries)</p>
+<h3>Can I disable features to improve performance?</h3>
+<p><strong>Yes!</strong> Configure what you need:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">cascade</span> <span class="o">=</span> <span class="n">CanonicalEpistemicCascade</span><span class="p">(</span>
+    <span class="n">enable_bayesian</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>        <span class="c1"># Disable Bayesian tracking</span>
+    <span class="n">enable_drift_monitor</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>   <span class="c1"># Disable drift detection</span>
+    <span class="n">enable_session_db</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>      <span class="c1"># Disable persistence</span>
+    <span class="n">enable_git_notes</span><span class="o">=</span><span class="kc">False</span>        <span class="c1"># Disable checkpoints</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3>How does Empirica scale?</h3>
+<p><strong>Scaling characteristics:</strong>
+- <strong>Sessions:</strong> SQLite handles thousands of sessions
+- <strong>Assessments:</strong> O(1) per assessment
+- <strong>Checkpoints:</strong> Git notes scale with commits
+- <strong>Dashboard:</strong> tmux handles real-time updates</p>
+<hr />
+<h2>Troubleshooting</h2>
+<h3>MCP tools not showing in Claude Desktop?</h3>
+<p><strong>Check:</strong>
+1. Empirica installed: <code>pip show empirica</code>
+2. MCP config correct: Check <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>
+3. Claude Desktop restarted
+4. Check logs: <code>~/Library/Logs/Claude/mcp*.log</code></p>
+<p><a href="docs.html#troubleshooting">Troubleshooting Guide →</a></p>
+<h3>"ModuleNotFoundError: No module named 'empirica'"?</h3>
+<p><strong>Solutions:</strong>
+1. Activate virtual environment: <code>source .venv-empirica/bin/activate</code>
+2. Install in development mode: <code>pip install -e .</code>
+3. Check Python path: <code>which python3</code></p>
+<h3>Sessions not persisting?</h3>
+<p><strong>Check:</strong>
+1. <code>enable_session_db=True</code> in CASCADE config
+2. Database file permissions
+3. SQLite installation: <code>python3 -c "import sqlite3; print(sqlite3.version)"</code></p>
+<h3>Dashboard not showing?</h3>
+<p><strong>Requirements:</strong>
+1. tmux installed: <code>which tmux</code>
+2. Dashboard auto-start enabled: <code>auto_start_dashboard=True</code>
+3. Check tmux sessions: <code>tmux ls</code></p>
+<hr />
+<h2>Pricing &amp; Licensing</h2>
+<h3>Is Empirica free?</h3>
+<p><strong>Yes!</strong> Empirica is open source and free to use.</p>
+<h3>What is the license?</h3>
+<p>Empirica is released under the <a href="../LICENSE.html">MIT License</a>. You can:
+- ✅ Use commercially
+- ✅ Modify the code
+- ✅ Distribute
+- ✅ Use privately</p>
+<h3>Do I need to pay for AI model access?</h3>
+<p><strong>Empirica itself is free</strong>, but you may need:
+- Claude API key (if using Claude via API)
+- OpenAI API key (if using GPT models)
+- Google AI API key (if using Gemini)</p>
+<p><strong>Free options:</strong>
+- Claude Desktop (uses your existing subscription)
+- Local models (via Ollama, etc.)</p>
+<hr />
+<h2>Community &amp; Support</h2>
+<h3>How do I get help?</h3>
+<p><strong>Resources:</strong>
+- 📖 <a href="docs.html">Documentation</a>
+- 💬 <a href="https://github.com/Nubaeon/empirica/discussions">GitHub Discussions</a>
+- 🐛 <a href="https://github.com/Nubaeon/empirica/issues">GitHub Issues</a>
+- 📧 <a href="contact.html">Contact Us</a></p>
+<h3>How can I contribute?</h3>
+<p><strong>We welcome contributions!</strong>
+- Report bugs on GitHub
+- Suggest features in Discussions
+- Submit pull requests
+- Improve documentation
+- Share use cases</p>
+<p><a href="../CONTRIBUTING.html">Contributing Guide →</a></p>
+<h3>Where can I learn more?</h3>
+<ul>
+<li>📚 <a href="docs.html">Complete Documentation</a></li>
+<li>🚀 <a href="getting-started.html">Getting Started Guide</a></li>
+<li>📖 <a href="developers/api-reference.html">API Reference</a></li>
+<li>💡 <a href="examples.html">Examples</a></li>
+<li>🧠 <a href="epistemics.html">Epistemic Awareness</a></li>
+</ul>
+<hr />
+<h2>Still Have Questions?</h2>
+<p><strong>Can't find what you're looking for?</strong></p>
+<ul>
+<li>💬 Ask in <a href="https://github.com/Nubaeon/empirica/discussions">GitHub Discussions</a></li>
+<li>📧 <a href="contact.html">Contact us directly</a></li>
+<li>📖 Check the <a href="docs.html">full documentation</a></li>
+</ul>
+<hr />
+<p><em>Updated: 2025-01-20</em></p>
+                        </div>
+                    </div>
+                    
+    </main>
+
+    <footer class="bg-gray-800 text-white py-12 mt-16">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="grid md:grid-cols-4 gap-8">
+            <!-- Brand Section -->
+            <div class="md:col-span-2">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="text-2xl">🧠</span>
+                    <div>
+                        <h3 class="text-xl font-bold">EMPIRICA</h3>
+                        <p class="text-gray-300 text-sm">Building Humble, Thoughtful AI Systems</p>
+                    </div>
+                </div>
+                <p class="text-gray-300 max-w-md">
+                    The meta-framework for AI self-awareness through epistemic humility
+                    and uncertainty-based reasoning. Teaching AIs to think carefully
+                    about their own thinking.
+                </p>
+            </div>
+
+            <!-- Quick Links -->
+            <div>
+                <h4 class="font-semibold mb-4">Quick Links</h4>
+                <ul class="space-y-2 text-gray-300">
+                    <li><a href="/cli-interface.html" class="hover:text-white transition-colors">CLI Interface</a></li>
+                    <li><a href="/epistemics.html" class="hover:text-white transition-colors">Epistemics</a></li>
+                    <li><a href="/components.html" class="hover:text-white transition-colors">Components</a></li>
+                    <li><a href="/getting-started.html" class="hover:text-white transition-colors">Getting Started</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Resources -->
+            <div>
+                <h4 class="font-semibold mb-4">Resources</h4>
+                <ul class="space-y-2 text-gray-300">
+                    <li><a href="/docs.html" class="hover:text-white transition-colors">Documentation</a></li>
+                    <li><a href="/api-reference.html" class="hover:text-white transition-colors">API Reference</a></li>
+                    <li><a href="https://github.com/empirica-ai" class="hover:text-white transition-colors">GitHub
+                            Repository</a></li>
+                    <li><a href="/epistemics.html" class="hover:text-white transition-colors">Research</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <div class="text-gray-300 text-sm">
+                © 2025 Empirica SDK. Building thoughtful AI systems through epistemic humility.
+            </div>
+            <div class="flex space-x-6 mt-4 md:mt-0">
+                <a href="https://github.com/empirica-ai" class="text-gray-300 hover:text-white transition-colors">
+                    GitHub
+                </a>
+                <a href="/contact.html" class="text-gray-300 hover:text-white transition-colors">
+                    Contact
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <script>
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        }
+    </script>
+    <script src="/assets/search.js"></script>
+</body>
+
+</html>

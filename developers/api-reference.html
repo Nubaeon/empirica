@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empirica SDK | AI Self-Awareness</title>
+    <meta name="description"
+        content="The meta-framework for AI self-awareness through epistemic humility.">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            /* Semantic Colors (Empirica Palette) */
+            --color-primary: #6366f1;
+            /* Indigo-500 */
+            --color-primary-dark: #4338ca;
+            /* Indigo-700 */
+            --color-secondary: #0ea5e9;
+            /* Sky-500 */
+            --color-bg-dark: #0f172a;
+            /* Slate-900 */
+            --color-bg-card: rgba(30, 41, 59, 0.7);
+            /* Slate-800/70 */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--color-bg-dark);
+        }
+
+        /* MagicUI-style Glow */
+        .glow-effect {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glow-effect::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            transform: skewX(-25deg);
+            transition: 0.5s;
+            pointer-events: none;
+        }
+
+        .glow-effect:hover::before {
+            left: 100%;
+            transition: 0.7s;
+        }
+
+        /* Navigation Styles */
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            color: #94a3b8 !important;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #f8fafc !important;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-active {
+            color: var(--color-primary) !important;
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+
+        /* Code Blocks */
+        pre {
+            background: #000000;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            color: #ffffff;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.875em;
+            word-break: break-word;
+        }
+
+        /* Bento Grid Utilities */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Glass Card Styling */
+        .glass-card {
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Reduce excessive vertical spacing - match MD formatting */
+        .prose hr {
+            margin-top: 1rem !important;
+            margin-bottom: 1rem !important;
+        }
+
+        .prose>*+* {
+            margin-top: 0.75rem;
+        }
+    </style>
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="bg-slate-900 text-slate-200 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <header class="bg-black text-white py-6 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="flex items-center justify-between">
+            <!-- Logo/Brand -->
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                    <img src="/assets/empirica_logo.png" alt="Empirica Logo" class="w-10 h-10"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span style="display: none;" class="text-black font-bold text-lg">E</span>
+                </div>
+                <div>
+                    <a href="/index.html" class="hover:opacity-80 transition-opacity">
+                        <h1 class="text-2xl font-bold italic">EMPIRICA</h1>
+                        <p class="text-sm text-gray-300">Epistemic Humility through Thoughtful AI Self-Reflection</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- CTA Buttons and Search -->
+            <div class="hidden md:flex space-x-4">
+                <a href="/empirica-chat.html"
+                    class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
+                    Empirica Chat
+                </a>
+                <a href="/getting-started.html"
+                    class="border border-white/30 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">
+                    Getting Started
+                </a>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button class="md:hidden text-white" onclick="toggleMobileMenu()">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</header>
+    <nav class="bg-blue-950 shadow-sm border-b border-blue-900 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="flex space-x-8 overflow-x-auto md:overflow-visible py-4 items-center">
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'></path></svg> 
+                        <span>Learn</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/epistemics.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📘</span>
+                                
+                                Epistemics Guide
+                        </a>
+                        
+                        <a href="/features.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">✨</span>
+                                
+                                Features
+                        </a>
+                        
+                        <a href="/use-cases.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🚀</span>
+                                
+                                Use Cases
+                        </a>
+                        
+                        <a href="/skills.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">⚡</span>
+                                
+                                Skills
+                        </a>
+                        
+                        <a href="/developers/system-prompts.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💬</span>
+                                
+                                System Prompts
+                        </a>
+                        
+                        <a href="/MAKING_GIT_SEXY_AGAIN.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🔥</span>
+                                
+                                Making Git Sexy
+                        </a>
+                        
+                        <a href="/unified-theory.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🧬</span>
+                                
+                                Unified Theory
+                        </a>
+                        
+                        <a href="/empirica-chat.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💬</span>
+                                
+                                Empirica Chat
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path></svg> 
+                        <span>Platform</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/developers/architecture.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🏛️</span>
+                                
+                                Architecture
+                        </a>
+                        
+                        <a href="/developers/components.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🧩</span>
+                                
+                                Components
+                        </a>
+                        
+                        <a href="/mcp-integration.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🔌</span>
+                                
+                                MCP Integration
+                        </a>
+                        
+                        <a href="/developers/collaboration.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤝</span>
+                                
+                                Collaboration
+                        </a>
+                        
+                        <a href="/ai-vs-agent.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤖</span>
+                                
+                                AI vs Agent
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4'></path></svg> 
+                        <span>Developers</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/getting-started.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🏁</span>
+                                
+                                Getting Started
+                        </a>
+                        
+                        <a href="/developers/api-reference.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📜</span>
+                                
+                                API Reference
+                        </a>
+                        
+                        <a href="/examples.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💡</span>
+                                
+                                Examples
+                        </a>
+                        
+                        <a href="/docs.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📚</span>
+                                
+                                Documentation
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'></path></svg> 
+                        <span>Support</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/faqs.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤔</span>
+                                
+                                FAQs
+                        </a>
+                        
+                        <a href="/resources.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📚</span>
+                                
+                                Resources
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <a href="/contact.html" class="nav-link flex items-center ">
+                 <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path></svg> 
+                    Contact Us
+            </a>
+            
+            
+
+            <!-- Search Box -->
+            <div class="relative ml-auto">
+                <input type="text" placeholder="Search..." id="search-input"
+                    class="bg-white/10 border border-white/20 rounded-lg px-4 py-2 pl-10 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48" />
+                <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div id="mobile-menu" class="md:hidden hidden bg-blue-950 border-t border-blue-900">
+        <div class="px-6 py-4 space-y-3">
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Learn</div>
+                
+                <a href="/epistemics.html" class="mobile-nav-link pl-6 border-l border-slate-700">Epistemics Guide</a>
+                
+                <a href="/features.html" class="mobile-nav-link pl-6 border-l border-slate-700">Features</a>
+                
+                <a href="/use-cases.html" class="mobile-nav-link pl-6 border-l border-slate-700">Use Cases</a>
+                
+                <a href="/skills.html" class="mobile-nav-link pl-6 border-l border-slate-700">Skills</a>
+                
+                <a href="/developers/system-prompts.html" class="mobile-nav-link pl-6 border-l border-slate-700">System Prompts</a>
+                
+                <a href="/MAKING_GIT_SEXY_AGAIN.html" class="mobile-nav-link pl-6 border-l border-slate-700">Making Git Sexy</a>
+                
+                <a href="/unified-theory.html" class="mobile-nav-link pl-6 border-l border-slate-700">Unified Theory</a>
+                
+                <a href="/empirica-chat.html" class="mobile-nav-link pl-6 border-l border-slate-700">Empirica Chat</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Platform</div>
+                
+                <a href="/developers/architecture.html" class="mobile-nav-link pl-6 border-l border-slate-700">Architecture</a>
+                
+                <a href="/developers/components.html" class="mobile-nav-link pl-6 border-l border-slate-700">Components</a>
+                
+                <a href="/mcp-integration.html" class="mobile-nav-link pl-6 border-l border-slate-700">MCP Integration</a>
+                
+                <a href="/developers/collaboration.html" class="mobile-nav-link pl-6 border-l border-slate-700">Collaboration</a>
+                
+                <a href="/ai-vs-agent.html" class="mobile-nav-link pl-6 border-l border-slate-700">AI vs Agent</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Developers</div>
+                
+                <a href="/getting-started.html" class="mobile-nav-link pl-6 border-l border-slate-700">Getting Started</a>
+                
+                <a href="/developers/api-reference.html" class="mobile-nav-link pl-6 border-l border-slate-700">API Reference</a>
+                
+                <a href="/examples.html" class="mobile-nav-link pl-6 border-l border-slate-700">Examples</a>
+                
+                <a href="/docs.html" class="mobile-nav-link pl-6 border-l border-slate-700">Documentation</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Support</div>
+                
+                <a href="/faqs.html" class="mobile-nav-link pl-6 border-l border-slate-700">FAQs</a>
+                
+                <a href="/resources.html" class="mobile-nav-link pl-6 border-l border-slate-700">Resources</a>
+                
+            </div>
+            
+            
+            
+            <a href="/contact.html" class="mobile-nav-link">Contact Us</a>
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <!-- Breadcrumbs (appears right after navigation) -->
+    
+    <div class="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-[73px] z-40">
+        <div class="max-w-6xl mx-auto px-6 py-3">
+            <nav class="flex items-center space-x-2 text-sm">
+                <a href="/index.html" class="text-slate-400 hover:text-indigo-400 transition-colors">Home</a>
+                
+                <span class="text-slate-600">›</span>
+                <span class="text-slate-200 font-medium">API Reference</span>
+                
+            </nav>
+        </div>
+    </div>
+    
+
+    <!-- Page Header (Non-Homepage) - Glassmorphic Style -->
+    
+    <div class="relative overflow-hidden pt-24 pb-16">
+        <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
+            <!-- Glassmorphic Badge (like homepage) -->
+            <div
+                class="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm mb-6">
+                <span class="flex h-2 w-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
+                Epistemic Self-Awareness for AI
+            </div>
+
+            <!-- Page Title with Gradient -->
+            <h1 class="text-5xl md:text-6xl font-bold tracking-tight mb-6 text-white">
+                API Reference
+            </h1>
+
+            <!-- Page Description (styled like homepage subheader) -->
+            
+            <p class="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                <span class="font-semibold text-white">Complete reference for the Empirica Python API</span>
+            </p>
+            
+        </div>
+
+        <!-- Background Glow (matching homepage) -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+            <div class="absolute top-20 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute top-40 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+        </div>
+    </div>
+    
+
+    <main class="min-h-screen">
+        
+                    <div class="max-w-4xl mx-auto px-6 py-0">
+                        <div class="prose prose-invert prose-lg max-w-none">
+                            <p>This documentation covers core modules, CASCADE phases, configuration classes, and integration interfaces. Designed for AI assistants to search and reference.</p>
+<hr />
+<h2>Quick Reference</h2>
+<h3>Essential Imports</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Core classes</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empirica</span><span class="w"> </span><span class="kn">import</span> <span class="n">CanonicalEpistemicCascade</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empirica</span><span class="w"> </span><span class="kn">import</span> <span class="n">CanonicalEpistemicAssessor</span><span class="p">,</span> <span class="n">ReflexLogger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empirica.data.session_database</span><span class="w"> </span><span class="kn">import</span> <span class="n">SessionDatabase</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empirica.data.session_json_handler</span><span class="w"> </span><span class="kn">import</span> <span class="n">SessionJSONHandler</span>
+
+<span class="c1"># Advanced features (optional)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empirica.calibration.bayesian_belief_tracker</span><span class="w"> </span><span class="kn">import</span> <span class="n">BayesianBeliefTracker</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empirica.calibration.parallel_reasoning</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParallelReasoningSystem</span><span class="p">,</span> <span class="n">DriftMonitor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empirica.core.metacognitive_cascade.investigation_strategy</span><span class="w"> </span><span class="kn">import</span> <span class="n">recommend_investigation_tools</span>
+</code></pre></div>
+
+<h3>Most Common Usage Patterns</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Simple workflow with Python API</span>
+<span class="n">cascade</span> <span class="o">=</span> <span class="n">CanonicalEpistemicCascade</span><span class="p">(</span>
+    <span class="n">agent_id</span><span class="o">=</span><span class="s2">&quot;my-agent&quot;</span><span class="p">,</span>
+    <span class="n">enable_bayesian</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">enable_drift_monitor</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">cascade</span><span class="o">.</span><span class="n">run_epistemic_cascade</span><span class="p">(</span><span class="s2">&quot;your task&quot;</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="p">{})</span>
+
+<span class="c1"># Profile-based configuration (recommended)</span>
+<span class="n">cascade</span> <span class="o">=</span> <span class="n">CanonicalEpistemicCascade</span><span class="p">(</span>
+    <span class="n">profile_name</span><span class="o">=</span><span class="s2">&quot;autonomous_agent&quot;</span><span class="p">,</span>
+    <span class="n">ai_model</span><span class="o">=</span><span class="s2">&quot;claude&quot;</span><span class="p">,</span>
+    <span class="n">domain</span><span class="o">=</span><span class="s2">&quot;security&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># MCP integration (recommended for AI assistants)</span>
+<span class="c1"># Use empirica CLI commands or MCP tools directly</span>
+<span class="c1"># See MCP Tools section below</span>
+</code></pre></div>
+
+<hr />
+<h2>Core Classes</h2>
+<h3>CanonicalEpistemicCascade</h3>
+<p>The main class for running complete epistemic reasoning workflows.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">CanonicalEpistemicCascade</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Complete CASCADE workflow implementation&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="c1"># Profile-based configuration (recommended)</span>
+        <span class="n">profile_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ai_model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+
+        <span class="c1"># Agent configuration</span>
+        <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cascade&quot;</span><span class="p">,</span>
+
+        <span class="c1"># Feature toggles</span>
+        <span class="n">enable_bayesian</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">enable_drift_monitor</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">enable_session_db</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">enable_git_notes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">enable_action_hooks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">auto_start_dashboard</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+
+        <span class="c1"># Advanced options</span>
+        <span class="n">investigation_plugins</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">InvestigationPlugin</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">enable_perspective_caching</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">cache_ttl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span>
+        <span class="n">session_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize CASCADE with profile-based configuration&quot;&quot;&quot;</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_epistemic_cascade</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> 
+        <span class="n">task</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">context</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Execute complete CASCADE workflow</span>
+
+<span class="sd">        Phases:</span>
+<span class="sd">        1. PREFLIGHT - Baseline epistemic assessment</span>
+<span class="sd">        2. THINK - Initial reasoning</span>
+<span class="sd">        3. PLAN - Task breakdown (internal)</span>
+<span class="sd">        4. INVESTIGATE - Fill knowledge gaps</span>
+<span class="sd">        5. CHECK - Validate readiness</span>
+<span class="sd">        6. ACT - Execute with confidence</span>
+<span class="sd">        7. POSTFLIGHT - Measure learning</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict with keys:</span>
+<span class="sd">            - action: str (Action.ACT, Action.INVESTIGATE, Action.CLARIFY)</span>
+<span class="sd">            - confidence: float (0.0-1.0)</span>
+<span class="sd">            - rationale: str</span>
+<span class="sd">            - recommended_action: str</span>
+<span class="sd">            - vector_summary: Dict[str, float]</span>
+<span class="sd">            - calibration: Dict (PREFLIGHT vs POSTFLIGHT comparison)</span>
+<span class="sd">            - epistemic_delta: Dict (learning measurements)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+</code></pre></div>
+
+<p><strong>Constructor Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>profile_name</code></td>
+<td>str</td>
+<td>None</td>
+<td>Investigation profile ("balanced", "autonomous_agent", "high_reasoning")</td>
+</tr>
+<tr>
+<td><code>ai_model</code></td>
+<td>str</td>
+<td>None</td>
+<td>Auto-select profile by AI model ("claude", "gpt-4", "gemini")</td>
+</tr>
+<tr>
+<td><code>domain</code></td>
+<td>str</td>
+<td>None</td>
+<td>Domain context for threshold tuning ("security", "research", "critical_domain")</td>
+</tr>
+<tr>
+<td><code>agent_id</code></td>
+<td>str</td>
+<td>"cascade"</td>
+<td>Unique identifier for agent/session</td>
+</tr>
+<tr>
+<td><code>enable_bayesian</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Enable Bayesian Guardian belief tracking</td>
+</tr>
+<tr>
+<td><code>enable_drift_monitor</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Enable behavioral drift detection</td>
+</tr>
+<tr>
+<td><code>enable_session_db</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Enable SQLite session persistence</td>
+</tr>
+<tr>
+<td><code>enable_git_notes</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Enable git checkpoint integration (~450 tokens)</td>
+</tr>
+<tr>
+<td><code>enable_action_hooks</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Enable real-time tmux dashboard updates</td>
+</tr>
+<tr>
+<td><code>auto_start_dashboard</code></td>
+<td>bool</td>
+<td>False</td>
+<td>Auto-launch tmux dashboard</td>
+</tr>
+<tr>
+<td><code>investigation_plugins</code></td>
+<td>Dict</td>
+<td>None</td>
+<td>Custom investigation tools</td>
+</tr>
+<tr>
+<td><code>enable_perspective_caching</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Cache LLM perspectives</td>
+</tr>
+<tr>
+<td><code>cache_ttl</code></td>
+<td>int</td>
+<td>300</td>
+<td>Cache time-to-live in seconds</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td>str</td>
+<td>None</td>
+<td>Explicit session ID for tracking (auto-generated if None)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Method: run_epistemic_cascade()</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>task</code></td>
+<td>str</td>
+<td>Yes</td>
+<td>Task description to assess</td>
+</tr>
+<tr>
+<td><code>context</code></td>
+<td>Dict</td>
+<td>No</td>
+<td>Execution context with keys like "files", "cwd", "requirements"</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> Dict with action recommendation, confidence, rationale, and epistemic measurements</p>
+<hr />
+<h3>Task &amp; Context Format</h3>
+<p><strong>Task:</strong> Simple string describing what needs to be done</p>
+<div class="codehilite"><pre><span></span><code><span class="n">task</span> <span class="o">=</span> <span class="s2">&quot;Review authentication system for SQL injection vulnerabilities&quot;</span>
+</code></pre></div>
+
+<p><strong>Context:</strong> Dictionary with execution environment information</p>
+<div class="codehilite"><pre><span></span><code><span class="n">context</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;files&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;./auth/&quot;</span><span class="p">,</span> <span class="s2">&quot;./security/&quot;</span><span class="p">],</span>           <span class="c1"># Files to analyze</span>
+    <span class="s2">&quot;cwd&quot;</span><span class="p">:</span> <span class="s2">&quot;/path/to/project&quot;</span><span class="p">,</span>                      <span class="c1"># Working directory</span>
+    <span class="s2">&quot;requirements&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;security_focus&quot;</span><span class="p">,</span> <span class="s2">&quot;fast&quot;</span><span class="p">],</span>     <span class="c1"># Task requirements</span>
+    <span class="s2">&quot;environment&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;runtime&quot;</span><span class="p">:</span> <span class="s2">&quot;production&quot;</span><span class="p">},</span>       <span class="c1"># Environment info</span>
+    <span class="s2">&quot;capabilities&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;file_read&quot;</span><span class="p">,</span> <span class="s2">&quot;code_analysis&quot;</span><span class="p">],</span> <span class="c1"># Available tools</span>
+    <span class="s2">&quot;history&quot;</span><span class="p">:</span> <span class="p">[],</span>                                   <span class="c1"># Previous interactions</span>
+    <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="p">{}</span>                                   <span class="c1"># Additional context</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<hr />
+<h2>MCP Tools (Recommended for AI Assistants)</h2>
+<p>For AI assistants like Claude Desktop, use the MCP tools rather than the Python API directly. All 23 tools are available through the Model Context Protocol.</p>
+<h3>Session Management Tools</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># bootstrap_session - Initialize new session</span>
+<span class="n">bootstrap_session</span><span class="p">(</span>
+    <span class="n">ai_id</span><span class="o">=</span><span class="s2">&quot;claude-dev&quot;</span><span class="p">,</span>
+    <span class="n">session_type</span><span class="o">=</span><span class="s2">&quot;development&quot;</span><span class="p">,</span>  <span class="c1"># or &quot;production&quot;, &quot;testing&quot;</span>
+    <span class="n">bootstrap_level</span><span class="o">=</span><span class="mi">2</span>            <span class="c1"># 0=minimal, 1=standard, 2=full</span>
+<span class="p">)</span>
+
+<span class="c1"># get_session_summary - View session details</span>
+<span class="n">get_session_summary</span><span class="p">(</span><span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">)</span>
+
+<span class="c1"># get_epistemic_state - Check current epistemic vectors</span>
+<span class="n">get_epistemic_state</span><span class="p">(</span><span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">)</span>
+
+<span class="c1"># resume_previous_session - Resume from previous session</span>
+<span class="n">resume_previous_session</span><span class="p">(</span><span class="n">ai_id</span><span class="o">=</span><span class="s2">&quot;your-id&quot;</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+
+<h3>CASCADE Workflow Tools</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. PREFLIGHT - Baseline assessment</span>
+<span class="n">execute_preflight</span><span class="p">(</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">,</span>
+    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;Review authentication system for vulnerabilities&quot;</span>
+<span class="p">)</span>
+
+<span class="n">submit_preflight_assessment</span><span class="p">(</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">,</span>
+    <span class="n">vectors</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;engagement&quot;</span><span class="p">:</span> <span class="mf">0.85</span><span class="p">,</span>
+        <span class="s2">&quot;know&quot;</span><span class="p">:</span> <span class="mf">0.60</span><span class="p">,</span>
+        <span class="s2">&quot;do&quot;</span><span class="p">:</span> <span class="mf">0.70</span><span class="p">,</span>
+        <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="mf">0.65</span><span class="p">,</span>
+        <span class="s2">&quot;clarity&quot;</span><span class="p">:</span> <span class="mf">0.90</span><span class="p">,</span>
+        <span class="s2">&quot;coherence&quot;</span><span class="p">:</span> <span class="mf">0.85</span><span class="p">,</span>
+        <span class="s2">&quot;signal&quot;</span><span class="p">:</span> <span class="mf">0.75</span><span class="p">,</span>
+        <span class="s2">&quot;density&quot;</span><span class="p">:</span> <span class="mf">0.50</span><span class="p">,</span>
+        <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="mf">0.70</span><span class="p">,</span>
+        <span class="s2">&quot;change&quot;</span><span class="p">:</span> <span class="mf">0.60</span><span class="p">,</span>
+        <span class="s2">&quot;completion&quot;</span><span class="p">:</span> <span class="mf">0.40</span><span class="p">,</span>
+        <span class="s2">&quot;impact&quot;</span><span class="p">:</span> <span class="mf">0.75</span><span class="p">,</span>
+        <span class="s2">&quot;uncertainty&quot;</span><span class="p">:</span> <span class="mf">0.55</span>
+    <span class="p">},</span>
+    <span class="n">reasoning</span><span class="o">=</span><span class="s2">&quot;Initial assessment before investigation&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># 2. CHECK - Validate readiness</span>
+<span class="n">execute_check</span><span class="p">(</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">,</span>
+    <span class="n">findings</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Found SQL injection risk&quot;</span><span class="p">,</span> <span class="s2">&quot;Auth tokens properly validated&quot;</span><span class="p">],</span>
+    <span class="n">remaining_unknowns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Need to check rate limiting&quot;</span><span class="p">],</span>
+    <span class="n">confidence_to_proceed</span><span class="o">=</span><span class="mf">0.75</span>
+<span class="p">)</span>
+
+<span class="n">submit_check_assessment</span><span class="p">(</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">,</span>
+    <span class="n">vectors</span><span class="o">=</span><span class="p">{</span><span class="o">...</span><span class="p">},</span>  <span class="c1"># All 13 vectors</span>
+    <span class="n">decision</span><span class="o">=</span><span class="s2">&quot;proceed&quot;</span><span class="p">,</span>  <span class="c1"># or &quot;investigate&quot;</span>
+    <span class="n">reasoning</span><span class="o">=</span><span class="s2">&quot;Confidence sufficient to act&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># 3. POSTFLIGHT - Measure learning</span>
+<span class="n">execute_postflight</span><span class="p">(</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">,</span>
+    <span class="n">task_summary</span><span class="o">=</span><span class="s2">&quot;Completed security review, found 2 issues&quot;</span>
+<span class="p">)</span>
+
+<span class="n">submit_postflight_assessment</span><span class="p">(</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">,</span>
+    <span class="n">vectors</span><span class="o">=</span><span class="p">{</span><span class="o">...</span><span class="p">},</span>  <span class="c1"># All 13 vectors</span>
+    <span class="n">reasoning</span><span class="o">=</span><span class="s2">&quot;KNOW +0.25, DO +0.15, UNCERTAINTY -0.30&quot;</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3>Goal Management Tools</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># create_goal - Define investigation goal</span>
+<span class="n">create_goal</span><span class="p">(</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">,</span>
+    <span class="n">objective</span><span class="o">=</span><span class="s2">&quot;Analyze authentication security&quot;</span><span class="p">,</span>
+    <span class="n">scope</span><span class="o">=</span><span class="s2">&quot;session_scoped&quot;</span><span class="p">,</span>  <span class="c1"># or &quot;task_specific&quot;, &quot;project_wide&quot;</span>
+    <span class="n">success_criteria</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;All auth code reviewed&quot;</span><span class="p">,</span> <span class="s2">&quot;Vulnerabilities documented&quot;</span><span class="p">],</span>
+    <span class="n">estimated_complexity</span><span class="o">=</span><span class="mf">0.7</span>
+<span class="p">)</span>
+
+<span class="c1"># add_subtask - Break down goal</span>
+<span class="n">add_subtask</span><span class="p">(</span>
+    <span class="n">goal_id</span><span class="o">=</span><span class="s2">&quot;&lt;goal-uuid&gt;&quot;</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Review JWT token validation&quot;</span><span class="p">,</span>
+    <span class="n">importance</span><span class="o">=</span><span class="s2">&quot;high&quot;</span><span class="p">,</span>  <span class="c1"># or &quot;critical&quot;, &quot;medium&quot;, &quot;low&quot;</span>
+    <span class="n">estimated_tokens</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+    <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;&lt;other-task-uuid&gt;&quot;</span><span class="p">]</span>  <span class="c1"># Optional</span>
+<span class="p">)</span>
+
+<span class="c1"># complete_subtask - Mark subtask done</span>
+<span class="n">complete_subtask</span><span class="p">(</span>
+    <span class="n">task_id</span><span class="o">=</span><span class="s2">&quot;&lt;task-uuid&gt;&quot;</span><span class="p">,</span>
+    <span class="n">evidence</span><span class="o">=</span><span class="s2">&quot;Completed in commit abc123&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># get_goal_progress - Check completion</span>
+<span class="n">get_goal_progress</span><span class="p">(</span><span class="n">goal_id</span><span class="o">=</span><span class="s2">&quot;&lt;goal-uuid&gt;&quot;</span><span class="p">)</span>
+
+<span class="c1"># list_goals - View all goals</span>
+<span class="n">list_goals</span><span class="p">(</span><span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3>Checkpoint &amp; Handoff Tools</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># create_git_checkpoint - Save version-controlled checkpoint (~450 tokens)</span>
+<span class="n">create_git_checkpoint</span><span class="p">(</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">,</span>
+    <span class="n">phase</span><span class="o">=</span><span class="s2">&quot;CHECK&quot;</span><span class="p">,</span>
+    <span class="n">round_num</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">vectors</span><span class="o">=</span><span class="p">{</span><span class="o">...</span><span class="p">},</span>  <span class="c1"># All 13 vectors</span>
+    <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ready_to_act&quot;</span><span class="p">}</span>
+<span class="p">)</span>
+
+<span class="c1"># load_git_checkpoint - Resume from checkpoint</span>
+<span class="n">load_git_checkpoint</span><span class="p">(</span><span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">)</span>
+
+<span class="c1"># create_handoff_report - Create session handoff (~400 tokens)</span>
+<span class="n">create_handoff_report</span><span class="p">(</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">,</span>
+    <span class="n">task_summary</span><span class="o">=</span><span class="s2">&quot;Completed security review of auth system&quot;</span><span class="p">,</span>
+    <span class="n">key_findings</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Found SQL injection risk&quot;</span><span class="p">,</span> <span class="s2">&quot;Rate limiting needed&quot;</span><span class="p">],</span>
+    <span class="n">remaining_unknowns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Impact of fixing auth on sessions&quot;</span><span class="p">],</span>
+    <span class="n">next_session_context</span><span class="o">=</span><span class="s2">&quot;Ready to implement fixes&quot;</span><span class="p">,</span>
+    <span class="n">artifacts_created</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;security_report.md&quot;</span><span class="p">,</span> <span class="s2">&quot;fixes.patch&quot;</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># query_handoff_reports - Find previous handoffs</span>
+<span class="n">query_handoff_reports</span><span class="p">(</span><span class="n">ai_id</span><span class="o">=</span><span class="s2">&quot;your-id&quot;</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</code></pre></div>
+
+<h3>Calibration &amp; Reporting</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># get_calibration_report - Check prediction accuracy</span>
+<span class="n">get_calibration_report</span><span class="p">(</span><span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;latest:active:your-id&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3>Helper Tools</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># get_empirica_introduction - Framework overview</span>
+<span class="n">get_empirica_introduction</span><span class="p">()</span>
+
+<span class="c1"># get_workflow_guidance - Phase-specific guidance</span>
+<span class="n">get_workflow_guidance</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="s2">&quot;preflight&quot;</span><span class="p">)</span>  <span class="c1"># or &quot;check&quot;, &quot;postflight&quot;, etc.</span>
+
+<span class="c1"># cli_help - CLI command reference</span>
+<span class="n">cli_help</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2>Python API Components</h2>
+<h3>CanonicalEpistemicAssessor</h3>
+<p>Low-level epistemic assessment (used internally by CASCADE).</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">empirica.core.canonical</span><span class="w"> </span><span class="kn">import</span> <span class="n">CanonicalEpistemicAssessor</span>
+
+<span class="n">assessor</span> <span class="o">=</span> <span class="n">CanonicalEpistemicAssessor</span><span class="p">(</span><span class="n">agent_id</span><span class="o">=</span><span class="s2">&quot;my-agent&quot;</span><span class="p">)</span>
+
+<span class="c1"># Assess epistemic state</span>
+<span class="n">assessment</span> <span class="o">=</span> <span class="n">assessor</span><span class="o">.</span><span class="n">assess_task</span><span class="p">(</span>
+    <span class="n">task_description</span><span class="o">=</span><span class="s2">&quot;Review authentication security&quot;</span><span class="p">,</span>
+    <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;files&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;./auth/&quot;</span><span class="p">]}</span>
+<span class="p">)</span>
+
+<span class="c1"># Access assessment results</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Engagement: </span><span class="si">{</span><span class="n">assessment</span><span class="o">.</span><span class="n">engagement</span><span class="o">.</span><span class="n">score</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;KNOW: </span><span class="si">{</span><span class="n">assessment</span><span class="o">.</span><span class="n">know</span><span class="o">.</span><span class="n">score</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DO: </span><span class="si">{</span><span class="n">assessment</span><span class="o">.</span><span class="n">do</span><span class="o">.</span><span class="n">score</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Overall Confidence: </span><span class="si">{</span><span class="n">assessment</span><span class="o">.</span><span class="n">overall_confidence</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Engagement Gate Passed: </span><span class="si">{</span><span class="n">assessment</span><span class="o">.</span><span class="n">engagement_gate_passed</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3>SessionDatabase</h3>
+<p>Persist and query epistemic sessions.</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">empirica.data.session_database</span><span class="w"> </span><span class="kn">import</span> <span class="n">SessionDatabase</span>
+
+<span class="n">db</span> <span class="o">=</span> <span class="n">SessionDatabase</span><span class="p">()</span>
+
+<span class="c1"># Create session</span>
+<span class="n">session_id</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">create_session</span><span class="p">(</span>
+    <span class="n">ai_id</span><span class="o">=</span><span class="s2">&quot;my-agent&quot;</span><span class="p">,</span>
+    <span class="n">bootstrap_level</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">components_loaded</span><span class="o">=</span><span class="mi">5</span>
+<span class="p">)</span>
+
+<span class="c1"># Log assessment</span>
+<span class="n">db</span><span class="o">.</span><span class="n">log_epistemic_assessment</span><span class="p">(</span>
+    <span class="n">cascade_id</span><span class="o">=</span><span class="n">session_id</span><span class="p">,</span>
+    <span class="n">assessment</span><span class="o">=</span><span class="n">assessment</span><span class="p">,</span>
+    <span class="n">phase</span><span class="o">=</span><span class="s2">&quot;preflight&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># Query sessions</span>
+<span class="n">sessions</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">list_sessions</span><span class="p">(</span><span class="n">ai_id</span><span class="o">=</span><span class="s2">&quot;my-agent&quot;</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+<span class="c1"># Get session details</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">get_session</span><span class="p">(</span><span class="n">session_id</span><span class="p">)</span>
+
+<span class="n">db</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3>ReflexLogger</h3>
+<p>Log epistemic events with temporal separation.</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">empirica.core.canonical</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReflexLogger</span><span class="p">,</span> <span class="n">ReflexFrame</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">UTC</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">ReflexLogger</span><span class="p">(</span><span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;my-session&quot;</span><span class="p">,</span> <span class="n">ai_id</span><span class="o">=</span><span class="s2">&quot;my-agent&quot;</span><span class="p">)</span>
+
+<span class="c1"># Log phase event</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">log_phase</span><span class="p">(</span>
+    <span class="n">phase</span><span class="o">=</span><span class="s2">&quot;PREFLIGHT&quot;</span><span class="p">,</span>
+    <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;task&quot;</span><span class="p">:</span> <span class="s2">&quot;Review auth&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;vectors&quot;</span><span class="p">:</span> <span class="p">{</span><span class="o">...</span><span class="p">},</span>
+        <span class="s2">&quot;confidence&quot;</span><span class="p">:</span> <span class="mf">0.75</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="c1"># Get historical logs (temporal separation)</span>
+<span class="n">history</span> <span class="o">=</span> <span class="n">logger</span><span class="o">.</span><span class="n">get_historical_logs</span><span class="p">()</span>
+
+<span class="c1"># Load reflex context for assessment</span>
+<span class="n">reflex_context</span> <span class="o">=</span> <span class="n">logger</span><span class="o">.</span><span class="n">load_reflex_context_for_assessment</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2>Configuration Profiles</h2>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Use Case</th>
+<th>Investigation Rounds</th>
+<th>Constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>high_reasoning_collaborative</code></td>
+<td>Claude Opus, GPT-4, o1</td>
+<td>Unlimited</td>
+<td>Maximum autonomy</td>
+</tr>
+<tr>
+<td><code>balanced</code></td>
+<td>General purpose</td>
+<td>5 rounds</td>
+<td>Balanced guidance</td>
+</tr>
+<tr>
+<td><code>autonomous_agent</code></td>
+<td>GPT-3.5, Claude Haiku</td>
+<td>3 rounds</td>
+<td>Structured workflow</td>
+</tr>
+<tr>
+<td><code>critical_domain</code></td>
+<td>Medical, Legal, Financial</td>
+<td>2 rounds</td>
+<td>Strict compliance</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Usage:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="n">cascade</span> <span class="o">=</span> <span class="n">CanonicalEpistemicCascade</span><span class="p">(</span><span class="n">profile_name</span><span class="o">=</span><span class="s2">&quot;autonomous_agent&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2>Advanced Features</h2>
+<h3>Bayesian Guardian</h3>
+<p>Track beliefs with evidence:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">empirica.calibration.bayesian_belief_tracker</span><span class="w"> </span><span class="kn">import</span> <span class="n">BayesianBeliefTracker</span>
+
+<span class="n">tracker</span> <span class="o">=</span> <span class="n">BayesianBeliefTracker</span><span class="p">()</span>
+<span class="n">tracker</span><span class="o">.</span><span class="n">update_belief</span><span class="p">(</span>
+    <span class="n">belief_id</span><span class="o">=</span><span class="s2">&quot;auth_secure&quot;</span><span class="p">,</span>
+    <span class="n">evidence</span><span class="o">=</span><span class="s2">&quot;Found SQL injection&quot;</span><span class="p">,</span>
+    <span class="n">confidence</span><span class="o">=</span><span class="mf">0.85</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3>Drift Monitor</h3>
+<p>Detect behavioral changes:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">empirica.calibration.parallel_reasoning</span><span class="w"> </span><span class="kn">import</span> <span class="n">DriftMonitor</span>
+
+<span class="n">monitor</span> <span class="o">=</span> <span class="n">DriftMonitor</span><span class="p">()</span>
+<span class="n">drift_detected</span> <span class="o">=</span> <span class="n">monitor</span><span class="o">.</span><span class="n">check_drift</span><span class="p">(</span>
+    <span class="n">current_reasoning</span><span class="o">=</span><span class="n">current_state</span><span class="p">,</span>
+    <span class="n">historical_baseline</span><span class="o">=</span><span class="n">baseline</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3>Investigation Strategy</h3>
+<p>Get domain-specific investigation recommendations:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">empirica.core.metacognitive_cascade.investigation_strategy</span><span class="w"> </span><span class="kn">import</span> <span class="n">recommend_investigation_tools</span>
+
+<span class="n">recommendations</span> <span class="o">=</span> <span class="n">recommend_investigation_tools</span><span class="p">(</span>
+    <span class="n">domain</span><span class="o">=</span><span class="s2">&quot;security&quot;</span><span class="p">,</span>
+    <span class="n">low_vectors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;know&quot;</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">],</span>
+    <span class="n">task</span><span class="o">=</span><span class="s2">&quot;Review authentication&quot;</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2>Data Flow</h2>
+<div class="codehilite"><pre><span></span><code>User/AI
+  ↓
+CanonicalEpistemicCascade
+  ↓
+CanonicalEpistemicAssessor (13 vectors)
+  ↓
+SessionDatabase (SQLite)
+  ↓
+ReflexLogger (temporal separation)
+  ↓
+Git Notes (checkpoints)
+</code></pre></div>
+
+<hr />
+<h2>Best Practices</h2>
+<h3>1. Use Profiles</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Good - profile-based</span>
+<span class="n">cascade</span> <span class="o">=</span> <span class="n">CanonicalEpistemicCascade</span><span class="p">(</span><span class="n">profile_name</span><span class="o">=</span><span class="s2">&quot;autonomous_agent&quot;</span><span class="p">)</span>
+
+<span class="c1"># Avoid - manual configuration</span>
+<span class="n">cascade</span> <span class="o">=</span> <span class="n">CanonicalEpistemicCascade</span><span class="p">(</span>
+    <span class="n">threshold_uncertainty_high</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+    <span class="n">max_investigation_rounds</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="c1"># ... many parameters</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3>2. Enable Git Integration</h3>
+<div class="codehilite"><pre><span></span><code><span class="n">cascade</span> <span class="o">=</span> <span class="n">CanonicalEpistemicCascade</span><span class="p">(</span>
+    <span class="n">enable_git_notes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">enable_session_db</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3>3. Use Handoffs for Multi-Session Work</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># End of session</span>
+<span class="n">create_handoff_report</span><span class="p">(</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="n">session_id</span><span class="p">,</span>
+    <span class="n">task_summary</span><span class="o">=</span><span class="s2">&quot;Completed authentication review&quot;</span><span class="p">,</span>
+    <span class="n">key_findings</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;OAuth2 implemented&quot;</span><span class="p">,</span> <span class="s2">&quot;Tests passing&quot;</span><span class="p">],</span>
+    <span class="n">next_context</span><span class="o">=</span><span class="s2">&quot;Deploy to staging&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># Next session</span>
+<span class="n">resume_previous_session</span><span class="p">(</span><span class="n">ai_id</span><span class="o">=</span><span class="s2">&quot;my-agent&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3>4. Leverage MCP Tools for AI Assistants</h3>
+<p>For AI assistants, always use MCP tools instead of direct Python API calls. They provide better integration and session management.</p>
+<hr />
+<h2>Platform Agnostic</h2>
+<p>Empirica works with:
+- <strong>High-reasoning models:</strong> Claude, GPT-4, Gemini
+- <strong>Fast-acting models:</strong> Qwen-3-32B, Phi-4, Mistral, Ollama
+- <strong>IDEs:</strong> Cursor, Windsurf, Antigravity, Claude Desktop
+- <strong>CLIs:</strong> Claude Code, Qwen Code, Gemini CLI</p>
+<hr />
+<p><strong>Next Steps:</strong>
+- <a href="cli-interface.html">CLI Interface</a> - Command-line usage
+- <a href="../mcp-integration.md">MCP Integration</a> - AI assistant integration
+- <a href="architecture.html">Architecture</a> - System design
+- <a href="../examples.md">Examples</a> - Working code samples</p>
+                        </div>
+                    </div>
+                    
+    </main>
+
+    <footer class="bg-gray-800 text-white py-12 mt-16">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="grid md:grid-cols-4 gap-8">
+            <!-- Brand Section -->
+            <div class="md:col-span-2">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="text-2xl">🧠</span>
+                    <div>
+                        <h3 class="text-xl font-bold">EMPIRICA</h3>
+                        <p class="text-gray-300 text-sm">Building Humble, Thoughtful AI Systems</p>
+                    </div>
+                </div>
+                <p class="text-gray-300 max-w-md">
+                    The meta-framework for AI self-awareness through epistemic humility
+                    and uncertainty-based reasoning. Teaching AIs to think carefully
+                    about their own thinking.
+                </p>
+            </div>
+
+            <!-- Quick Links -->
+            <div>
+                <h4 class="font-semibold mb-4">Quick Links</h4>
+                <ul class="space-y-2 text-gray-300">
+                    <li><a href="/cli-interface.html" class="hover:text-white transition-colors">CLI Interface</a></li>
+                    <li><a href="/epistemics.html" class="hover:text-white transition-colors">Epistemics</a></li>
+                    <li><a href="/components.html" class="hover:text-white transition-colors">Components</a></li>
+                    <li><a href="/getting-started.html" class="hover:text-white transition-colors">Getting Started</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Resources -->
+            <div>
+                <h4 class="font-semibold mb-4">Resources</h4>
+                <ul class="space-y-2 text-gray-300">
+                    <li><a href="/docs.html" class="hover:text-white transition-colors">Documentation</a></li>
+                    <li><a href="/api-reference.html" class="hover:text-white transition-colors">API Reference</a></li>
+                    <li><a href="https://github.com/empirica-ai" class="hover:text-white transition-colors">GitHub
+                            Repository</a></li>
+                    <li><a href="/epistemics.html" class="hover:text-white transition-colors">Research</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <div class="text-gray-300 text-sm">
+                © 2025 Empirica SDK. Building thoughtful AI systems through epistemic humility.
+            </div>
+            <div class="flex space-x-6 mt-4 md:mt-0">
+                <a href="https://github.com/empirica-ai" class="text-gray-300 hover:text-white transition-colors">
+                    GitHub
+                </a>
+                <a href="/contact.html" class="text-gray-300 hover:text-white transition-colors">
+                    Contact
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <script>
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        }
+    </script>
+    <script src="/assets/search.js"></script>
+</body>
+
+</html>

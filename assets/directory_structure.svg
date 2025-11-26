@@ -1,0 +1,136 @@
+<svg viewBox="0 0 700 600" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 700px; height: auto;">
+    <!-- Background -->
+    <rect width="700" height="600" fill="#1a1a25" stroke="#6366f1" stroke-width="2" rx="12"/>
+    
+    <!-- Title -->
+    <text x="350" y="35" text-anchor="middle" fill="#f8fafc" font-size="20" font-weight="bold">EMPIRICA DIRECTORY STRUCTURE</text>
+    <line x1="50" y1="50" x2="650" y2="50" stroke="#334155" stroke-width="1"/>
+    
+    <!-- Tree structure -->
+    <text x="80" y="90" fill="#6366f1" font-size="14" font-family="monospace" font-weight="bold">empirica/</text>
+    
+    <!-- Core -->
+    <line x1="80" y1="95" x2="80" y2="110" stroke="#334155" stroke-width="1"/>
+    <line x1="80" y1="110" x2="100" y2="110" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="115" fill="#8b5cf6" font-size="13" font-family="monospace">├── core/</text>
+    <text x="520" y="115" fill="#94a3b8" font-size="11">Epistemic engine</text>
+    
+    <line x1="100" y1="120" x2="100" y2="180" stroke="#334155" stroke-width="1"/>
+    <line x1="100" y1="135" x2="120" y2="135" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="140" fill="#94a3b8" font-size="12" font-family="monospace">│   ├── canonical.py</text>
+    <text x="520" y="140" fill="#94a3b8" font-size="10">CASCADE workflow</text>
+    
+    <line x1="100" y1="150" x2="120" y2="150" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="155" fill="#94a3b8" font-size="12" font-family="monospace">│   ├── assessor.py</text>
+    <text x="520" y="155" fill="#94a3b8" font-size="10">13-vector assessment</text>
+    
+    <line x1="100" y1="165" x2="120" y2="165" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="170" fill="#94a3b8" font-size="12" font-family="monospace">│   └── vectors.py</text>
+    <text x="520" y="170" fill="#94a3b8" font-size="10">Vector definitions</text>
+    
+    <!-- Persistence -->
+    <line x1="80" y1="180" x2="100" y2="180" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="185" fill="#8b5cf6" font-size="13" font-family="monospace">├── persistence/</text>
+    <text x="520" y="185" fill="#94a3b8" font-size="11">Storage layer</text>
+    
+    <line x1="100" y1="190" x2="100" y2="250" stroke="#334155" stroke-width="1"/>
+    <line x1="100" y1="205" x2="120" y2="205" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="210" fill="#94a3b8" font-size="12" font-family="monospace">│   ├── session_db.py</text>
+    <text x="520" y="210" fill="#94a3b8" font-size="10">SQLite storage</text>
+    
+    <line x1="100" y1="220" x2="120" y2="220" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="225" fill="#94a3b8" font-size="12" font-family="monospace">│   ├── git_notes.py</text>
+    <text x="520" y="225" fill="#94a3b8" font-size="10">Git checkpoints</text>
+    
+    <line x1="100" y1="235" x2="120" y2="235" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="240" fill="#94a3b8" font-size="12" font-family="monospace">│   └── handoff.py</text>
+    <text x="520" y="240" fill="#94a3b8" font-size="10">Session handoffs</text>
+    
+    <!-- MCP -->
+    <line x1="80" y1="250" x2="100" y2="250" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="255" fill="#8b5cf6" font-size="13" font-family="monospace">├── mcp_local/</text>
+    <text x="520" y="255" fill="#94a3b8" font-size="11">MCP server</text>
+    
+    <line x1="100" y1="260" x2="100" y2="290" stroke="#334155" stroke-width="1"/>
+    <line x1="100" y1="275" x2="120" y2="275" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="280" fill="#94a3b8" font-size="12" font-family="monospace">│   └── empirica_mcp_server.py</text>
+    <text x="520" y="280" fill="#94a3b8" font-size="10">23 MCP tools</text>
+    
+    <!-- CLI -->
+    <line x1="80" y1="290" x2="100" y2="290" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="295" fill="#8b5cf6" font-size="13" font-family="monospace">├── cli/</text>
+    <text x="520" y="295" fill="#94a3b8" font-size="11">Command-line interface</text>
+    
+    <line x1="100" y1="300" x2="100" y2="360" stroke="#334155" stroke-width="1"/>
+    <line x1="100" y1="315" x2="120" y2="315" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="320" fill="#94a3b8" font-size="12" font-family="monospace">│   ├── preflight.py</text>
+    <text x="520" y="320" fill="#94a3b8" font-size="10">PREFLIGHT command</text>
+    
+    <line x1="100" y1="330" x2="120" y2="330" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="335" fill="#94a3b8" font-size="12" font-family="monospace">│   ├── postflight.py</text>
+    <text x="520" y="335" fill="#94a3b8" font-size="10">POSTFLIGHT command</text>
+    
+    <line x1="100" y1="345" x2="120" y2="345" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="350" fill="#94a3b8" font-size="12" font-family="monospace">│   └── goals.py</text>
+    <text x="520" y="350" fill="#94a3b8" font-size="10">Goal management</text>
+    
+    <!-- Calibration -->
+    <line x1="80" y1="360" x2="100" y2="360" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="365" fill="#8b5cf6" font-size="13" font-family="monospace">├── calibration/</text>
+    <text x="520" y="365" fill="#94a3b8" font-size="11">Learning measurement</text>
+    
+    <line x1="100" y1="370" x2="100" y2="430" stroke="#334155" stroke-width="1"/>
+    <line x1="100" y1="385" x2="120" y2="385" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="390" fill="#94a3b8" font-size="12" font-family="monospace">│   ├── bayesian.py</text>
+    <text x="520" y="390" fill="#94a3b8" font-size="10">Bayesian Guardian</text>
+    
+    <line x1="100" y1="400" x2="120" y2="400" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="405" fill="#94a3b8" font-size="12" font-family="monospace">│   ├── drift.py</text>
+    <text x="520" y="405" fill="#94a3b8" font-size="10">Drift Monitor</text>
+    
+    <line x1="100" y1="415" x2="120" y2="415" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="420" fill="#94a3b8" font-size="12" font-family="monospace">│   └── reports.py</text>
+    <text x="520" y="420" fill="#94a3b8" font-size="10">Calibration reports</text>
+    
+    <!-- Investigation -->
+    <line x1="80" y1="430" x2="100" y2="430" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="435" fill="#8b5cf6" font-size="13" font-family="monospace">├── investigation/</text>
+    <text x="520" y="435" fill="#94a3b8" font-size="11">Knowledge gathering</text>
+    
+    <line x1="100" y1="440" x2="100" y2="485" stroke="#334155" stroke-width="1"/>
+    <line x1="100" y1="455" x2="120" y2="455" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="460" fill="#94a3b8" font-size="12" font-family="monospace">│   ├── strategy.py</text>
+    <text x="520" y="460" fill="#94a3b8" font-size="10">Investigation logic</text>
+    
+    <line x1="100" y1="470" x2="120" y2="470" stroke="#334155" stroke-width="1"/>
+    <text x="125" y="475" fill="#94a3b8" font-size="12" font-family="monospace">│   └── tools.py</text>
+    <text x="520" y="475" fill="#94a3b8" font-size="10">Tool management</text>
+    
+    <!-- Tests -->
+    <line x1="80" y1="485" x2="100" y2="485" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="490" fill="#8b5cf6" font-size="13" font-family="monospace">├── tests/</text>
+    <text x="520" y="490" fill="#94a3b8" font-size="11">Test suite</text>
+    
+    <!-- Docs -->
+    <line x1="80" y1="500" x2="100" y2="500" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="505" fill="#8b5cf6" font-size="13" font-family="monospace">├── docs/</text>
+    <text x="520" y="505" fill="#94a3b8" font-size="11">Documentation</text>
+    
+    <!-- Examples -->
+    <line x1="80" y1="515" x2="100" y2="515" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="520" fill="#8b5cf6" font-size="13" font-family="monospace">├── examples/</text>
+    <text x="520" y="520" fill="#94a3b8" font-size="11">Usage examples</text>
+    
+    <!-- Config files -->
+    <line x1="80" y1="530" x2="100" y2="530" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="535" fill="#94a3b8" font-size="12" font-family="monospace">├── pyproject.toml</text>
+    <text x="520" y="535" fill="#94a3b8" font-size="10">Package config</text>
+    
+    <line x1="80" y1="545" x2="100" y2="545" stroke="#334155" stroke-width="1"/>
+    <text x="105" y="550" fill="#94a3b8" font-size="12" font-family="monospace">├── README.md</text>
+    
+    <text x="105" y="565" fill="#94a3b8" font-size="12" font-family="monospace">└── LICENSE</text>
+    
+    <!-- Legend -->
+    <text x="350" y="590" text-anchor="middle" fill="#94a3b8" font-size="11" font-style="italic">Modular architecture for epistemic self-awareness</text>
+</svg>

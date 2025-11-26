@@ -1,0 +1,91 @@
+<svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 900px; height: auto;">
+    <!-- Background -->
+    <rect width="900" height="600" fill="#1a1a25" stroke="#6366f1" stroke-width="2" rx="12"/>
+    
+    <!-- Title -->
+    <text x="450" y="35" text-anchor="middle" fill="#f8fafc" font-size="20" font-weight="bold">GIT INTEGRATION FLOW</text>
+    <line x1="50" y1="50" x2="850" y2="50" stroke="#334155" stroke-width="1"/>
+    
+    <!-- Arrow markers -->
+    <defs>
+        <marker id="arrow-git" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <polygon points="0 0, 10 3, 0 6" fill="#6366f1" />
+        </marker>
+    </defs>
+    
+    <!-- Left side: AI Work -->
+    <text x="200" y="85" text-anchor="middle" fill="#8b5cf6" font-size="16" font-weight="bold">AI Workflow</text>
+    
+    <!-- PREFLIGHT -->
+    <rect x="100" y="110" width="200" height="60" fill="#1e293b" stroke="#6366f1" stroke-width="2" rx="6"/>
+    <text x="200" y="135" text-anchor="middle" fill="#6366f1" font-size="14" font-weight="bold">PREFLIGHT</text>
+    <text x="200" y="155" text-anchor="middle" fill="#94a3b8" font-size="11">Assess epistemic state</text>
+    
+    <line x1="200" y1="170" x2="200" y2="200" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-git)"/>
+    
+    <!-- INVESTIGATE + ACT -->
+    <rect x="100" y="200" width="200" height="60" fill="#1e293b" stroke="#f59e0b" stroke-width="2" rx="6"/>
+    <text x="200" y="225" text-anchor="middle" fill="#f59e0b" font-size="14" font-weight="bold">INVESTIGATE + ACT</text>
+    <text x="200" y="245" text-anchor="middle" fill="#94a3b8" font-size="11">Make code changes</text>
+    
+    <line x1="200" y1="260" x2="200" y2="290" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-git)"/>
+    
+    <!-- POSTFLIGHT -->
+    <rect x="100" y="290" width="200" height="60" fill="#1e293b" stroke="#6366f1" stroke-width="2" rx="6"/>
+    <text x="200" y="315" text-anchor="middle" fill="#6366f1" font-size="14" font-weight="bold">POSTFLIGHT</text>
+    <text x="200" y="335" text-anchor="middle" fill="#94a3b8" font-size="11">Measure learning delta</text>
+    
+    <!-- Arrow to Git -->
+    <line x1="300" y1="230" x2="400" y2="230" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-git)"/>
+    <text x="350" y="220" text-anchor="middle" fill="#6366f1" font-size="11">Commit</text>
+    
+    <!-- Right side: Git Operations -->
+    <text x="650" y="85" text-anchor="middle" fill="#22c55e" font-size="16" font-weight="bold">Git Storage</text>
+    
+    <!-- Git Commit -->
+    <rect x="550" y="110" width="200" height="80" fill="#1e293b" stroke="#22c55e" stroke-width="2" rx="6"/>
+    <text x="650" y="135" text-anchor="middle" fill="#22c55e" font-size="14" font-weight="bold">Git Commit</text>
+    <text x="650" y="155" text-anchor="middle" fill="#94a3b8" font-size="11">Content changes (code)</text>
+    <text x="650" y="175" text-anchor="middle" fill="#94a3b8" font-size="11">SHA: abc123...</text>
+    
+    <line x1="650" y1="190" x2="650" y2="220" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-git)"/>
+    
+    <!-- Git Notes -->
+    <rect x="550" y="220" width="200" height="100" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" rx="6"/>
+    <text x="650" y="245" text-anchor="middle" fill="#8b5cf6" font-size="14" font-weight="bold">Git Notes</text>
+    <text x="650" y="265" text-anchor="middle" fill="#94a3b8" font-size="11">refs/notes/empirica/checkpoints</text>
+    <text x="650" y="285" text-anchor="middle" fill="#94a3b8" font-size="10">Epistemic vectors (13)</text>
+    <text x="650" y="300" text-anchor="middle" fill="#94a3b8" font-size="10">Learning delta</text>
+    <text x="650" y="315" text-anchor="middle" fill="#94a3b8" font-size="10">~450 bytes</text>
+    
+    <!-- Handoff section -->
+    <line x1="50" y1="380" x2="850" y2="380" stroke="#334155" stroke-width="1"/>
+    <text x="450" y="410" text-anchor="middle" fill="#f8fafc" font-size="16" font-weight="bold">AI-to-AI Handoff</text>
+    
+    <!-- AI 1 pushes -->
+    <rect x="100" y="430" width="150" height="60" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" rx="6"/>
+    <text x="175" y="455" text-anchor="middle" fill="#8b5cf6" font-size="13" font-weight="bold">AI 1 (Claude)</text>
+    <text x="175" y="475" text-anchor="middle" fill="#94a3b8" font-size="11">git push</text>
+    
+    <line x1="250" y1="460" x2="350" y2="460" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-git)"/>
+    <text x="300" y="450" text-anchor="middle" fill="#6366f1" font-size="10">Code + Notes</text>
+    
+    <!-- Remote -->
+    <rect x="350" y="430" width="200" height="60" fill="#1e293b" stroke="#0ea5e9" stroke-width="2" rx="6"/>
+    <text x="450" y="455" text-anchor="middle" fill="#0ea5e9" font-size="13" font-weight="bold">Git Remote</text>
+    <text x="450" y="475" text-anchor="middle" fill="#94a3b8" font-size="11">GitHub / GitLab / etc.</text>
+    
+    <line x1="550" y1="460" x2="650" y2="460" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-git)"/>
+    <text x="600" y="450" text-anchor="middle" fill="#6366f1" font-size="10">git pull</text>
+    
+    <!-- AI 2 pulls -->
+    <rect x="650" y="430" width="150" height="60" fill="#1e293b" stroke="#f59e0b" stroke-width="2" rx="6"/>
+    <text x="725" y="455" text-anchor="middle" fill="#f59e0b" font-size="13" font-weight="bold">AI 2 (GPT-4)</text>
+    <text x="725" y="475" text-anchor="middle" fill="#94a3b8" font-size="11">Inherits state</text>
+    
+    <!-- Benefits -->
+    <text x="450" y="540" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="bold">Benefits</text>
+    <text x="200" y="565" text-anchor="middle" fill="#22c55e" font-size="11">✓ Version-controlled epistemic state</text>
+    <text x="500" y="565" text-anchor="middle" fill="#22c55e" font-size="11">✓ Cross-provider compatible</text>
+    <text x="750" y="565" text-anchor="middle" fill="#22c55e" font-size="11">✓ Distributed collaboration</text>
+</svg>

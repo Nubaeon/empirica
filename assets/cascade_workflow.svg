@@ -1,0 +1,108 @@
+<svg viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 1200px; height: auto;">
+    <!-- Background -->
+    <rect width="1200" height="300" fill="#1a1a25" stroke="#6366f1" stroke-width="2" rx="12"/>
+    
+    <!-- Title -->
+    <text x="600" y="35" text-anchor="middle" fill="#f8fafc" font-size="20" font-weight="bold">CASCADE WORKFLOW</text>
+    <line x1="50" y1="50" x2="1150" y2="50" stroke="#334155" stroke-width="1"/>
+    
+    <!-- Arrow markers -->
+    <defs>
+        <marker id="arrow-cascade" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <polygon points="0 0, 10 3, 0 6" fill="#6366f1" />
+        </marker>
+    </defs>
+    
+    <!-- Phase 1: PREFLIGHT -->
+    <rect x="50" y="80" width="130" height="70" fill="#1e293b" stroke="#6366f1" stroke-width="2" rx="6"/>
+    <text x="115" y="105" text-anchor="middle" fill="#6366f1" font-size="14" font-weight="bold">PREFLIGHT</text>
+    <text x="115" y="125" text-anchor="middle" fill="#94a3b8" font-size="11">Baseline</text>
+    <text x="115" y="140" text-anchor="middle" fill="#94a3b8" font-size="11">Assessment</text>
+    
+    <!-- Arrow 1 -->
+    <line x1="180" y1="115" x2="210" y2="115" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-cascade)"/>
+    
+    <!-- Phase 2: THINK -->
+    <rect x="210" y="80" width="110" height="70" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" rx="6"/>
+    <text x="265" y="105" text-anchor="middle" fill="#8b5cf6" font-size="14" font-weight="bold">THINK</text>
+    <text x="265" y="125" text-anchor="middle" fill="#94a3b8" font-size="11">Initial</text>
+    <text x="265" y="140" text-anchor="middle" fill="#94a3b8" font-size="11">Reasoning</text>
+    
+    <!-- Arrow 2 -->
+    <line x1="320" y1="115" x2="350" y2="115" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-cascade)"/>
+    
+    <!-- Phase 3: PLAN -->
+    <rect x="350" y="80" width="110" height="70" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" rx="6"/>
+    <text x="405" y="105" text-anchor="middle" fill="#8b5cf6" font-size="14" font-weight="bold">PLAN</text>
+    <text x="405" y="125" text-anchor="middle" fill="#94a3b8" font-size="11">Task</text>
+    <text x="405" y="140" text-anchor="middle" fill="#94a3b8" font-size="11">Breakdown</text>
+    
+    <!-- Arrow 3 -->
+    <line x1="460" y1="115" x2="490" y2="115" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-cascade)"/>
+    
+    <!-- Phase 4: INVESTIGATE -->
+    <rect x="490" y="80" width="130" height="70" fill="#1e293b" stroke="#f59e0b" stroke-width="2" rx="6"/>
+    <text x="555" y="105" text-anchor="middle" fill="#f59e0b" font-size="14" font-weight="bold">INVESTIGATE</text>
+    <text x="555" y="125" text-anchor="middle" fill="#94a3b8" font-size="11">Fill Knowledge</text>
+    <text x="555" y="140" text-anchor="middle" fill="#94a3b8" font-size="11">Gaps</text>
+    
+    <!-- Arrow 4 -->
+    <line x1="620" y1="115" x2="650" y2="115" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-cascade)"/>
+    
+    <!-- Phase 5: CHECK -->
+    <rect x="650" y="80" width="110" height="70" fill="#1e293b" stroke="#0ea5e9" stroke-width="2" rx="6"/>
+    <text x="705" y="105" text-anchor="middle" fill="#0ea5e9" font-size="14" font-weight="bold">CHECK</text>
+    <text x="705" y="125" text-anchor="middle" fill="#94a3b8" font-size="11">Validate</text>
+    <text x="705" y="140" text-anchor="middle" fill="#94a3b8" font-size="11">Readiness</text>
+    
+    <!-- Arrow 5 -->
+    <line x1="760" y1="115" x2="790" y2="115" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-cascade)"/>
+    
+    <!-- Phase 6: ACT -->
+    <rect x="790" y="80" width="110" height="70" fill="#1e293b" stroke="#22c55e" stroke-width="2" rx="6"/>
+    <text x="845" y="105" text-anchor="middle" fill="#22c55e" font-size="14" font-weight="bold">ACT</text>
+    <text x="845" y="125" text-anchor="middle" fill="#94a3b8" font-size="11">Execute</text>
+    <text x="845" y="140" text-anchor="middle" fill="#94a3b8" font-size="11">Task</text>
+    
+    <!-- Arrow 6 -->
+    <line x1="900" y1="115" x2="930" y2="115" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-cascade)"/>
+    
+    <!-- Phase 7: POSTFLIGHT -->
+    <rect x="930" y="80" width="130" height="70" fill="#1e293b" stroke="#6366f1" stroke-width="2" rx="6"/>
+    <text x="995" y="105" text-anchor="middle" fill="#6366f1" font-size="14" font-weight="bold">POSTFLIGHT</text>
+    <text x="995" y="125" text-anchor="middle" fill="#94a3b8" font-size="11">Measure</text>
+    <text x="995" y="140" text-anchor="middle" fill="#94a3b8" font-size="11">Learning</text>
+    
+    <!-- Loop back arrow from CHECK to INVESTIGATE -->
+    <path d="M 705 80 Q 705 60, 555 60 Q 555 60, 555 80" 
+          fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrow-cascade)"/>
+    <text x="630" y="55" text-anchor="middle" fill="#f59e0b" font-size="11">If uncertain</text>
+    
+    <!-- Bottom labels -->
+    <text x="115" y="180" text-anchor="middle" fill="#94a3b8" font-size="10">13 vectors</text>
+    <text x="265" y="180" text-anchor="middle" fill="#94a3b8" font-size="10">Internal</text>
+    <text x="405" y="180" text-anchor="middle" fill="#94a3b8" font-size="10">Internal</text>
+    <text x="555" y="180" text-anchor="middle" fill="#94a3b8" font-size="10">Loop until</text>
+    <text x="555" y="195" text-anchor="middle" fill="#94a3b8" font-size="10">confidence ≥ 0.7</text>
+    <text x="705" y="180" text-anchor="middle" fill="#94a3b8" font-size="10">Decision</text>
+    <text x="705" y="195" text-anchor="middle" fill="#94a3b8" font-size="10">point</text>
+    <text x="845" y="180" text-anchor="middle" fill="#94a3b8" font-size="10">Execution</text>
+    <text x="995" y="180" text-anchor="middle" fill="#94a3b8" font-size="10">13 vectors</text>
+    <text x="995" y="195" text-anchor="middle" fill="#94a3b8" font-size="10">+ delta</text>
+    
+    <!-- Legend -->
+    <rect x="50" y="230" width="15" height="15" fill="#1e293b" stroke="#6366f1" stroke-width="2" rx="2"/>
+    <text x="75" y="242" fill="#94a3b8" font-size="11">Epistemic Assessment</text>
+    
+    <rect x="250" y="230" width="15" height="15" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" rx="2"/>
+    <text x="275" y="242" fill="#94a3b8" font-size="11">Internal Processing</text>
+    
+    <rect x="450" y="230" width="15" height="15" fill="#1e293b" stroke="#f59e0b" stroke-width="2" rx="2"/>
+    <text x="475" y="242" fill="#94a3b8" font-size="11">Investigation Loop</text>
+    
+    <rect x="650" y="230" width="15" height="15" fill="#1e293b" stroke="#22c55e" stroke-width="2" rx="2"/>
+    <text x="675" y="242" fill="#94a3b8" font-size="11">Execution</text>
+    
+    <!-- Measurement indicator -->
+    <text x="600" y="270" text-anchor="middle" fill="#94a3b8" font-size="12" font-style="italic">Learning Delta = POSTFLIGHT - PREFLIGHT</text>
+</svg>

@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empirica SDK | AI Self-Awareness</title>
+    <meta name="description"
+        content="The meta-framework for AI self-awareness through epistemic humility.">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            /* Semantic Colors (Empirica Palette) */
+            --color-primary: #6366f1;
+            /* Indigo-500 */
+            --color-primary-dark: #4338ca;
+            /* Indigo-700 */
+            --color-secondary: #0ea5e9;
+            /* Sky-500 */
+            --color-bg-dark: #0f172a;
+            /* Slate-900 */
+            --color-bg-card: rgba(30, 41, 59, 0.7);
+            /* Slate-800/70 */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--color-bg-dark);
+        }
+
+        /* MagicUI-style Glow */
+        .glow-effect {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glow-effect::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            transform: skewX(-25deg);
+            transition: 0.5s;
+            pointer-events: none;
+        }
+
+        .glow-effect:hover::before {
+            left: 100%;
+            transition: 0.7s;
+        }
+
+        /* Navigation Styles */
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            color: #94a3b8 !important;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #f8fafc !important;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-active {
+            color: var(--color-primary) !important;
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+
+        /* Code Blocks */
+        pre {
+            background: #000000;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            color: #ffffff;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.875em;
+            word-break: break-word;
+        }
+
+        /* Bento Grid Utilities */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Glass Card Styling */
+        .glass-card {
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Reduce excessive vertical spacing - match MD formatting */
+        .prose hr {
+            margin-top: 1rem !important;
+            margin-bottom: 1rem !important;
+        }
+
+        .prose>*+* {
+            margin-top: 0.75rem;
+        }
+    </style>
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="bg-slate-900 text-slate-200 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <header class="bg-black text-white py-6 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="flex items-center justify-between">
+            <!-- Logo/Brand -->
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                    <img src="/assets/empirica_logo.png" alt="Empirica Logo" class="w-10 h-10"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span style="display: none;" class="text-black font-bold text-lg">E</span>
+                </div>
+                <div>
+                    <a href="/index.html" class="hover:opacity-80 transition-opacity">
+                        <h1 class="text-2xl font-bold italic">EMPIRICA</h1>
+                        <p class="text-sm text-gray-300">Epistemic Humility through Thoughtful AI Self-Reflection</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- CTA Buttons and Search -->
+            <div class="hidden md:flex space-x-4">
+                <a href="/empirica-chat.html"
+                    class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
+                    Empirica Chat
+                </a>
+                <a href="/getting-started.html"
+                    class="border border-white/30 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">
+                    Getting Started
+                </a>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button class="md:hidden text-white" onclick="toggleMobileMenu()">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</header>
+    <nav class="bg-blue-950 shadow-sm border-b border-blue-900 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="flex space-x-8 overflow-x-auto md:overflow-visible py-4 items-center">
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'></path></svg> 
+                        <span>Learn</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/epistemics.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📘</span>
+                                
+                                Epistemics Guide
+                        </a>
+                        
+                        <a href="/features.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">✨</span>
+                                
+                                Features
+                        </a>
+                        
+                        <a href="/use-cases.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🚀</span>
+                                
+                                Use Cases
+                        </a>
+                        
+                        <a href="/skills.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">⚡</span>
+                                
+                                Skills
+                        </a>
+                        
+                        <a href="/developers/system-prompts.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💬</span>
+                                
+                                System Prompts
+                        </a>
+                        
+                        <a href="/MAKING_GIT_SEXY_AGAIN.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🔥</span>
+                                
+                                Making Git Sexy
+                        </a>
+                        
+                        <a href="/unified-theory.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🧬</span>
+                                
+                                Unified Theory
+                        </a>
+                        
+                        <a href="/empirica-chat.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💬</span>
+                                
+                                Empirica Chat
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path></svg> 
+                        <span>Platform</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/developers/architecture.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🏛️</span>
+                                
+                                Architecture
+                        </a>
+                        
+                        <a href="/developers/components.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🧩</span>
+                                
+                                Components
+                        </a>
+                        
+                        <a href="/mcp-integration.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🔌</span>
+                                
+                                MCP Integration
+                        </a>
+                        
+                        <a href="/developers/collaboration.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤝</span>
+                                
+                                Collaboration
+                        </a>
+                        
+                        <a href="/ai-vs-agent.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤖</span>
+                                
+                                AI vs Agent
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4'></path></svg> 
+                        <span>Developers</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/getting-started.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🏁</span>
+                                
+                                Getting Started
+                        </a>
+                        
+                        <a href="/developers/api-reference.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📜</span>
+                                
+                                API Reference
+                        </a>
+                        
+                        <a href="/examples.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💡</span>
+                                
+                                Examples
+                        </a>
+                        
+                        <a href="/docs.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📚</span>
+                                
+                                Documentation
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'></path></svg> 
+                        <span>Support</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/faqs.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤔</span>
+                                
+                                FAQs
+                        </a>
+                        
+                        <a href="/resources.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📚</span>
+                                
+                                Resources
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <a href="/contact.html" class="nav-link flex items-center ">
+                 <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path></svg> 
+                    Contact Us
+            </a>
+            
+            
+
+            <!-- Search Box -->
+            <div class="relative ml-auto">
+                <input type="text" placeholder="Search..." id="search-input"
+                    class="bg-white/10 border border-white/20 rounded-lg px-4 py-2 pl-10 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48" />
+                <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div id="mobile-menu" class="md:hidden hidden bg-blue-950 border-t border-blue-900">
+        <div class="px-6 py-4 space-y-3">
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Learn</div>
+                
+                <a href="/epistemics.html" class="mobile-nav-link pl-6 border-l border-slate-700">Epistemics Guide</a>
+                
+                <a href="/features.html" class="mobile-nav-link pl-6 border-l border-slate-700">Features</a>
+                
+                <a href="/use-cases.html" class="mobile-nav-link pl-6 border-l border-slate-700">Use Cases</a>
+                
+                <a href="/skills.html" class="mobile-nav-link pl-6 border-l border-slate-700">Skills</a>
+                
+                <a href="/developers/system-prompts.html" class="mobile-nav-link pl-6 border-l border-slate-700">System Prompts</a>
+                
+                <a href="/MAKING_GIT_SEXY_AGAIN.html" class="mobile-nav-link pl-6 border-l border-slate-700">Making Git Sexy</a>
+                
+                <a href="/unified-theory.html" class="mobile-nav-link pl-6 border-l border-slate-700">Unified Theory</a>
+                
+                <a href="/empirica-chat.html" class="mobile-nav-link pl-6 border-l border-slate-700">Empirica Chat</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Platform</div>
+                
+                <a href="/developers/architecture.html" class="mobile-nav-link pl-6 border-l border-slate-700">Architecture</a>
+                
+                <a href="/developers/components.html" class="mobile-nav-link pl-6 border-l border-slate-700">Components</a>
+                
+                <a href="/mcp-integration.html" class="mobile-nav-link pl-6 border-l border-slate-700">MCP Integration</a>
+                
+                <a href="/developers/collaboration.html" class="mobile-nav-link pl-6 border-l border-slate-700">Collaboration</a>
+                
+                <a href="/ai-vs-agent.html" class="mobile-nav-link pl-6 border-l border-slate-700">AI vs Agent</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Developers</div>
+                
+                <a href="/getting-started.html" class="mobile-nav-link pl-6 border-l border-slate-700">Getting Started</a>
+                
+                <a href="/developers/api-reference.html" class="mobile-nav-link pl-6 border-l border-slate-700">API Reference</a>
+                
+                <a href="/examples.html" class="mobile-nav-link pl-6 border-l border-slate-700">Examples</a>
+                
+                <a href="/docs.html" class="mobile-nav-link pl-6 border-l border-slate-700">Documentation</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Support</div>
+                
+                <a href="/faqs.html" class="mobile-nav-link pl-6 border-l border-slate-700">FAQs</a>
+                
+                <a href="/resources.html" class="mobile-nav-link pl-6 border-l border-slate-700">Resources</a>
+                
+            </div>
+            
+            
+            
+            <a href="/contact.html" class="mobile-nav-link">Contact Us</a>
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <!-- Breadcrumbs (appears right after navigation) -->
+    
+    <div class="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-[73px] z-40">
+        <div class="max-w-6xl mx-auto px-6 py-3">
+            <nav class="flex items-center space-x-2 text-sm">
+                <a href="/index.html" class="text-slate-400 hover:text-indigo-400 transition-colors">Home</a>
+                
+                <span class="text-slate-600">›</span>
+                <span class="text-slate-200 font-medium">AI vs Agent: Understanding the Distinction</span>
+                
+            </nav>
+        </div>
+    </div>
+    
+
+    <!-- Page Header (Non-Homepage) - Glassmorphic Style -->
+    
+    <div class="relative overflow-hidden pt-24 pb-16">
+        <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
+            <!-- Glassmorphic Badge (like homepage) -->
+            <div
+                class="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm mb-6">
+                <span class="flex h-2 w-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
+                Epistemic Self-Awareness for AI
+            </div>
+
+            <!-- Page Title with Gradient -->
+            <h1 class="text-5xl md:text-6xl font-bold tracking-tight mb-6 text-white">
+                AI vs Agent: Understanding the Distinction
+            </h1>
+
+            <!-- Page Description (styled like homepage subheader) -->
+            
+            <p class="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                <span class="font-semibold text-white">How Empirica adapts to different AI capabilities and roles</span>
+            </p>
+            
+        </div>
+
+        <!-- Background Glow (matching homepage) -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+            <div class="absolute top-20 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute top-40 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+        </div>
+    </div>
+    
+
+    <main class="min-h-screen">
+        
+                    <div class="max-w-4xl mx-auto px-6 py-0">
+                        <div class="prose prose-invert prose-lg max-w-none">
+                            <hr />
+<h2>The Fundamental Distinction</h2>
+<p>Not all AIs are created equal. Empirica recognizes two distinct categories based on <strong>reasoning capability</strong> and <strong>autonomy level</strong>:</p>
+<h3>AI (Collaborative Intelligence)</h3>
+<p><strong>Definition:</strong> Engaged, reasoning partner working WITH the user</p>
+<p><strong>Characteristics:</strong>
+- ✅ High autonomy and reasoning capability
+- ✅ Engages in dialogue, asks clarifying questions
+- ✅ Plans architecture, makes design decisions
+- ✅ Uses full CASCADE workflow (PREFLIGHT → POSTFLIGHT)
+- ✅ Creates goals, defines success criteria
+- ✅ Delegates work to agents
+- ✅ Learns and tracks epistemic growth</p>
+<p><strong>Examples:</strong>
+- Claude Opus/Sonnet (high reasoning)
+- GPT-4/GPT-4 Turbo (high reasoning)
+- o1/o1-mini (high reasoning)
+- Gemini Pro/Ultra (high reasoning)</p>
+<p><strong>Empirica Usage:</strong> Full CASCADE workflow with maximum autonomy</p>
+<hr />
+<h3>Agent (Acting Intelligence)</h3>
+<p><strong>Definition:</strong> Focused executor of specific, well-defined tasks</p>
+<p><strong>Characteristics:</strong>
+- ✅ Lower autonomy, task-focused
+- ✅ Executes predefined subtasks
+- ✅ Limited dialogue (reports progress/completion)
+- ✅ Uses simplified CASCADE (primarily ACT phase)
+- ✅ Takes goals/subtasks as input
+- ✅ Reports back with evidence
+- ✅ May use lighter epistemic tracking</p>
+<p><strong>Examples:</strong>
+- Mini-agent (Minimax) - Fast execution
+- GPT-3.5 Turbo - Cost-effective tasks
+- Claude Haiku - Quick responses
+- Qwen 2.5/3 - Specialized tasks
+- Grok Fast - Rapid execution
+- Local models (based on modality)</p>
+<p><strong>Empirica Usage:</strong> Simplified CASCADE (ACT-focused) or skip CASCADE for simple tasks</p>
+<hr />
+<h2>Why the Distinction Matters</h2>
+<h3>1. <strong>Reasoning Capability Limits</strong></h3>
+<p>Different models have different reasoning capabilities:</p>
+<div class="codehilite"><pre><span></span><code><span class="nx">High</span><span class="w"> </span><span class="nx">Reasoning</span><span class="w"> </span><span class="p">(</span><span class="nx">Claude</span><span class="w"> </span><span class="nx">Opus</span><span class="p">,</span><span class="w"> </span><span class="nx">GPT</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nx">o1</span><span class="p">):</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Can</span><span class="w"> </span><span class="nx">handle</span><span class="w"> </span><span class="nx">ambiguity</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="k">Self</span><span class="o">-</span><span class="nx">directed</span><span class="w"> </span><span class="nx">investigation</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Complex</span><span class="w"> </span><span class="nx">problem</span><span class="w"> </span><span class="nx">decomposition</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Meta</span><span class="o">-</span><span class="nx">reasoning</span><span class="w"> </span><span class="nx">about</span><span class="w"> </span><span class="nx">approach</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="nx">Use</span><span class="w"> </span><span class="nx">full</span><span class="w"> </span><span class="nx">CASCADE</span><span class="p">,</span><span class="w"> </span><span class="nx">unlimited</span><span class="w"> </span><span class="nx">investigation</span><span class="w"> </span><span class="nx">rounds</span>
+
+<span class="nx">Medium</span><span class="w"> </span><span class="nx">Reasoning</span><span class="w"> </span><span class="p">(</span><span class="nx">GPT</span><span class="o">-</span><span class="m m-Double">3.5</span><span class="p">,</span><span class="w"> </span><span class="nx">Claude</span><span class="w"> </span><span class="nx">Haiku</span><span class="p">):</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Can</span><span class="w"> </span><span class="nx">execute</span><span class="w"> </span><span class="nx">clear</span><span class="w"> </span><span class="nx">tasks</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Needs</span><span class="w"> </span><span class="nx">structured</span><span class="w"> </span><span class="nx">guidance</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Benefits</span><span class="w"> </span><span class="nx">from</span><span class="w"> </span><span class="nx">constraints</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Limited</span><span class="w"> </span><span class="nx">meta</span><span class="o">-</span><span class="nx">reasoning</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="nx">Use</span><span class="w"> </span><span class="nx">simplified</span><span class="w"> </span><span class="nx">CASCADE</span><span class="p">,</span><span class="w"> </span><span class="nx">max</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="nx">investigation</span><span class="w"> </span><span class="nx">rounds</span>
+
+<span class="nx">Low</span><span class="w"> </span><span class="nx">Reasoning</span><span class="w"> </span><span class="p">(</span><span class="nx">Specialized</span><span class="w"> </span><span class="nx">models</span><span class="p">):</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Execute</span><span class="w"> </span><span class="nx">specific</span><span class="w"> </span><span class="nx">tasks</span><span class="w"> </span><span class="nx">well</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Need</span><span class="w"> </span><span class="nx">explicit</span><span class="w"> </span><span class="nx">instructions</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">No</span><span class="w"> </span><span class="nx">meta</span><span class="o">-</span><span class="nx">reasoning</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Fast</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">cost</span><span class="o">-</span><span class="nx">effective</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="nx">Skip</span><span class="w"> </span><span class="nx">CASCADE</span><span class="p">,</span><span class="w"> </span><span class="nx">direct</span><span class="w"> </span><span class="nx">execution</span>
+</code></pre></div>
+
+<h3>2. <strong>Cost vs Capability Trade-off</strong></h3>
+<div class="codehilite"><pre><span></span><code><span class="nv">Task</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;Write 15 unit tests for auth validation&quot;</span>
+
+<span class="nv">Option</span><span class="w"> </span><span class="nv">A</span><span class="o">:</span><span class="w"> </span><span class="nv">Claude</span><span class="w"> </span><span class="nf">Opus</span><span class="w"> </span><span class="p">(</span><span class="nv">High</span><span class="w"> </span><span class="nv">reasoning</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Cost</span><span class="o">:</span><span class="w"> </span><span class="p">$$$</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Time</span><span class="o">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="nf">minutes</span><span class="w"> </span><span class="p">(</span><span class="nv">includes</span><span class="w"> </span><span class="nv">planning</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Quality</span><span class="o">:</span><span class="w"> </span><span class="nf">Excellent</span><span class="w"> </span><span class="p">(</span><span class="nv">comprehensive</span><span class="w"> </span><span class="nv">tests</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Overkill</span><span class="o">:</span><span class="w"> </span><span class="nf">Yes</span><span class="w"> </span><span class="p">(</span><span class="nv">task</span><span class="w"> </span><span class="nv">is</span><span class="w"> </span><span class="nv">straightforward</span><span class="p">)</span>
+
+<span class="nv">Option</span><span class="w"> </span><span class="nv">B</span><span class="o">:</span><span class="w"> </span><span class="nv">Mini</span><span class="o">-</span><span class="nf">agent</span><span class="w"> </span><span class="p">(</span><span class="nv">Fast</span><span class="w"> </span><span class="nv">execution</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Cost</span><span class="o">:</span><span class="w"> </span><span class="p">$</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Time</span><span class="o">:</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nf">minutes</span><span class="w"> </span><span class="p">(</span><span class="nv">direct</span><span class="w"> </span><span class="nv">execution</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Quality</span><span class="o">:</span><span class="w"> </span><span class="nf">Good</span><span class="w"> </span><span class="p">(</span><span class="nv">follows</span><span class="w"> </span><span class="nv">patterns</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Appropriate</span><span class="o">:</span><span class="w"> </span><span class="nf">Yes</span><span class="w"> </span><span class="p">(</span><span class="nv">task</span><span class="w"> </span><span class="nv">is</span><span class="w"> </span><span class="nv">clear</span><span class="p">)</span>
+
+<span class="nv">Savings</span><span class="o">:</span><span class="w"> </span><span class="mi">80</span><span class="nv">%</span><span class="w"> </span><span class="nv">cost</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="nv">%</span><span class="w"> </span><span class="nv">time</span><span class="p">,</span><span class="w"> </span><span class="nv">same</span><span class="w"> </span><span class="nv">outcome</span>
+</code></pre></div>
+
+<h3>3. <strong>Appropriate Tool Selection</strong></h3>
+<div class="codehilite"><pre><span></span><code><span class="nv">Design</span><span class="w"> </span><span class="nv">Task</span>:<span class="w"> </span><span class="s2">&quot;Architect OAuth authentication system&quot;</span>
+→<span class="w"> </span><span class="nv">Use</span><span class="w"> </span><span class="nv">AI</span><span class="w"> </span><span class="ss">(</span><span class="nv">Claude</span><span class="w"> </span><span class="nv">Opus</span><span class="ss">)</span>:<span class="w"> </span><span class="nv">Needs</span><span class="w"> </span><span class="nv">reasoning</span>,<span class="w"> </span><span class="nv">planning</span>,<span class="w"> </span><span class="nv">design</span><span class="w"> </span><span class="nv">decisions</span>
+
+<span class="nv">Implementation</span><span class="w"> </span><span class="nv">Task</span>:<span class="w"> </span><span class="s2">&quot;Implement OAuth flow from spec&quot;</span>
+→<span class="w"> </span><span class="nv">Use</span><span class="w"> </span><span class="nv">AI</span><span class="w"> </span><span class="nv">or</span><span class="w"> </span><span class="nv">Agent</span>:<span class="w"> </span><span class="nv">Depends</span><span class="w"> </span><span class="nv">on</span><span class="w"> </span><span class="nv">complexity</span>
+
+<span class="nv">Testing</span><span class="w"> </span><span class="nv">Task</span>:<span class="w"> </span><span class="s2">&quot;Write tests for OAuth validation&quot;</span>
+→<span class="w"> </span><span class="nv">Use</span><span class="w"> </span><span class="nv">Agent</span><span class="w"> </span><span class="ss">(</span><span class="nv">Mini</span><span class="o">-</span><span class="nv">agent</span><span class="ss">)</span>:<span class="w"> </span><span class="nv">Clear</span><span class="w"> </span><span class="nv">task</span>,<span class="w"> </span><span class="nv">straightforward</span><span class="w"> </span><span class="nv">execution</span>
+
+<span class="nv">Documentation</span><span class="w"> </span><span class="nv">Task</span>:<span class="w"> </span><span class="s2">&quot;Generate API docs from code&quot;</span>
+→<span class="w"> </span><span class="nv">Use</span><span class="w"> </span><span class="nv">Agent</span>:<span class="w"> </span><span class="nv">Mechanical</span><span class="w"> </span><span class="nv">task</span>,<span class="w"> </span><span class="nv">no</span><span class="w"> </span><span class="nv">reasoning</span><span class="w"> </span><span class="nv">needed</span>
+</code></pre></div>
+
+<hr />
+<h2>CASCADE Usage Patterns</h2>
+<h3>Pattern 1: AI Solo Work (Full CASCADE)</h3>
+<p><strong>Use When:</strong>
+- Single AI working independently
+- No delegation needed
+- AI has capability to complete all work</p>
+<p><strong>Workflow:</strong></p>
+<p>The full CASCADE workflow:
+1. <strong>BOOTSTRAP</strong> - Initialize session and load context
+2. <strong>PREFLIGHT</strong> - Assess knowledge and identify uncertainty
+3. <strong>THINK</strong> - Analyze task and classify domain
+4. <strong>PLAN</strong> - Formulate strategy
+5. <strong>INVESTIGATE</strong> - Research, explore, and prototype
+6. <strong>CHECK</strong> - Validate readiness (confidence ≥0.7)
+7. <strong>ACT</strong> - Implement, test, and document
+8. <strong>POSTFLIGHT</strong> - Measure learning and generate handoff</p>
+<p><img alt="CASCADE Workflow" src="/assets/cascade_workflow.svg" /></p>
+<p><strong>Example:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="nx">Claude</span><span class="w"> </span><span class="nx">implements</span><span class="w"> </span><span class="nx">OAuth</span><span class="w"> </span><span class="nx">feature</span><span class="w"> </span><span class="nx">solo</span><span class="p">:</span>
+<span class="w">  </span><span class="nx">PREFLIGHT</span><span class="w"> </span><span class="p">(</span><span class="nx">know</span><span class="p">:</span><span class="w"> </span><span class="m m-Double">0.6</span><span class="p">,</span><span class="w"> </span><span class="nx">uncertainty</span><span class="p">:</span><span class="w"> </span><span class="m m-Double">0.5</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">THINK</span><span class="p">:</span><span class="w"> </span><span class="nx">Classify</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nx">security</span><span class="o">/</span><span class="nx">authentication</span><span class="w"> </span><span class="nx">task</span>
+<span class="w">  </span><span class="nx">PLAN</span><span class="p">:</span><span class="w"> </span><span class="nx">Design</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">pattern</span>
+<span class="w">  </span><span class="nx">INVESTIGATE</span><span class="p">:</span><span class="w"> </span><span class="nx">Research</span><span class="w"> </span><span class="nx">OAuth</span><span class="w"> </span><span class="nx">flows</span><span class="p">,</span><span class="w"> </span><span class="nx">explore</span><span class="w"> </span><span class="nx">libraries</span>
+<span class="w">  </span><span class="nx">CHECK</span><span class="w"> </span><span class="p">(</span><span class="nx">confidence</span><span class="p">:</span><span class="w"> </span><span class="m m-Double">0.8</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">ACT</span><span class="p">:</span><span class="w"> </span><span class="nx">Write</span><span class="w"> </span><span class="nx">auth</span><span class="p">.</span><span class="nx">py</span><span class="p">,</span><span class="w"> </span><span class="nx">tests</span><span class="p">,</span><span class="w"> </span><span class="nx">docs</span>
+<span class="w">  </span><span class="nx">POSTFLIGHT</span><span class="w"> </span><span class="p">(</span><span class="nx">know</span><span class="p">:</span><span class="w"> </span><span class="m m-Double">0.9</span><span class="p">,</span><span class="w"> </span><span class="nx">learned</span><span class="w"> </span><span class="nx">OAuth</span><span class="w"> </span><span class="nx">patterns</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Time:</strong> 15-30 minutes
+<strong>Cost:</strong> $$$ (high reasoning model)
+<strong>Quality:</strong> Excellent (comprehensive solution)</p>
+<hr />
+<h3>Pattern 2: AI Delegates to Agents (Collaborative)</h3>
+<p><strong>Use When:</strong>
+- AI designs/plans, agents execute
+- Clear task decomposition possible
+- Agents have specialized capabilities
+- Parallel execution beneficial</p>
+<p><strong>Workflow:</strong></p>
+<p><strong>Lead AI Phase:</strong>
+1. <strong>BOOTSTRAP</strong> - Initialize session
+2. <strong>PREFLIGHT</strong> - Assess overall knowledge
+3. <strong>THINK</strong> - Analyze requirements
+4. <strong>PLAN</strong> - Design architecture
+5. <strong>INVESTIGATE</strong> - Research and design, create goals &amp; subtasks
+6. <strong>CHECK</strong> - Ready to delegate?
+7. <strong>DELEGATE</strong> - Distribute work to agents (runs in parallel)
+8. <strong>CHECK</strong> - Review agent work
+9. <strong>ACT</strong> - Integrate, verify, and refine
+10. <strong>POSTFLIGHT</strong> - Learn from design + agent feedback</p>
+<p><strong>Agent Phase (in parallel for each subtask):</strong>
+1. <strong>Receive</strong> - Get task_id, description, and context
+2. <strong>ACT</strong> - Execute the subtask
+3. <strong>COMPLETE</strong> - Report with evidence (optional mini-PREFLIGHT if complex)</p>
+<p><strong>Example:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="nx">Claude</span><span class="w"> </span><span class="nx">designs</span><span class="w"> </span><span class="nx">rate</span><span class="w"> </span><span class="nx">limiting</span><span class="p">,</span><span class="w"> </span><span class="nx">Mini</span><span class="o">-</span><span class="nx">agent</span><span class="w"> </span><span class="nx">implements</span><span class="w"> </span><span class="nx">tests</span><span class="p">:</span>
+
+<span class="nx">Claude</span><span class="w"> </span><span class="p">(</span><span class="nx">Lead</span><span class="w"> </span><span class="nx">AI</span><span class="p">):</span>
+<span class="w">  </span><span class="nx">PREFLIGHT</span><span class="w"> </span><span class="p">(</span><span class="nx">know</span><span class="p">:</span><span class="w"> </span><span class="m m-Double">0.7</span><span class="p">,</span><span class="w"> </span><span class="nx">design</span><span class="w"> </span><span class="nx">skills</span><span class="w"> </span><span class="nx">high</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">THINK</span><span class="p">:</span><span class="w"> </span><span class="nx">Classify</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nx">performance</span><span class="o">/</span><span class="nx">security</span><span class="w"> </span><span class="nx">task</span>
+<span class="w">  </span><span class="nx">PLAN</span><span class="p">:</span><span class="w"> </span><span class="nx">Design</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">rate</span><span class="w"> </span><span class="nx">limiting</span>
+<span class="w">  </span><span class="nx">INVESTIGATE</span><span class="p">:</span><span class="w"> </span><span class="nx">Design</span><span class="w"> </span><span class="nx">rate</span><span class="w"> </span><span class="nx">limit</span><span class="w"> </span><span class="nx">strategy</span>
+<span class="w">  </span><span class="nx">CREATE</span><span class="w"> </span><span class="nx">GOALS</span><span class="p">:</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w"> </span><span class="nx">Implement</span><span class="w"> </span><span class="nx">middleware</span><span class="w"> </span><span class="p">(</span><span class="nx">Claude</span><span class="w"> </span><span class="nx">does</span><span class="w"> </span><span class="nx">this</span><span class="p">)</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span><span class="w"> </span><span class="nx">Write</span><span class="w"> </span><span class="nx">unit</span><span class="w"> </span><span class="nx">tests</span><span class="w"> </span><span class="p">(</span><span class="nx">delegate</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">mini</span><span class="o">-</span><span class="nx">agent</span><span class="p">)</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">3</span><span class="p">:</span><span class="w"> </span><span class="nx">Write</span><span class="w"> </span><span class="nx">integration</span><span class="w"> </span><span class="nx">tests</span><span class="w"> </span><span class="p">(</span><span class="nx">delegate</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">mini</span><span class="o">-</span><span class="nx">agent</span><span class="p">)</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">4</span><span class="p">:</span><span class="w"> </span><span class="nx">Update</span><span class="w"> </span><span class="nx">docs</span><span class="w"> </span><span class="p">(</span><span class="nx">Claude</span><span class="w"> </span><span class="nx">does</span><span class="w"> </span><span class="nx">this</span><span class="p">)</span>
+
+<span class="w">  </span><span class="nx">DELEGATE</span><span class="p">:</span>
+<span class="w">    </span><span class="nx">mini</span><span class="o">-</span><span class="nx">agent</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">(</span><span class="nx">unit</span><span class="w"> </span><span class="nx">tests</span><span class="p">)</span>
+<span class="w">    </span><span class="nx">mini</span><span class="o">-</span><span class="nx">agent</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="p">(</span><span class="nx">integration</span><span class="w"> </span><span class="nx">tests</span><span class="p">)</span>
+
+<span class="w">  </span><span class="nx">ACT</span><span class="p">:</span><span class="w"> </span><span class="nx">Implement</span><span class="w"> </span><span class="nx">middleware</span><span class="w"> </span><span class="p">(</span><span class="nx">Goal</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+
+<span class="w">  </span><span class="nx">WAIT</span><span class="p">:</span><span class="w"> </span><span class="nx">Agents</span><span class="w"> </span><span class="nx">complete</span>
+
+<span class="w">  </span><span class="nx">CHECK</span><span class="p">:</span><span class="w"> </span><span class="nx">Review</span><span class="w"> </span><span class="nx">mini</span><span class="o">-</span><span class="nx">agent</span><span class="err">&#39;</span><span class="nx">s</span><span class="w"> </span><span class="nx">tests</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span><span class="w"> </span><span class="err">✅</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="nx">unit</span><span class="w"> </span><span class="nx">tests</span><span class="p">,</span><span class="w"> </span><span class="nx">all</span><span class="w"> </span><span class="nx">passing</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">3</span><span class="p">:</span><span class="w"> </span><span class="err">✅</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="nx">integration</span><span class="w"> </span><span class="nx">tests</span><span class="p">,</span><span class="w"> </span><span class="nx">all</span><span class="w"> </span><span class="nx">passing</span>
+
+<span class="w">  </span><span class="nx">ACT</span><span class="p">:</span><span class="w"> </span><span class="nx">Integrate</span><span class="w"> </span><span class="nx">tests</span><span class="p">,</span><span class="w"> </span><span class="nx">verify</span><span class="p">,</span><span class="w"> </span><span class="nx">write</span><span class="w"> </span><span class="nx">docs</span><span class="w"> </span><span class="p">(</span><span class="nx">Goal</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">POSTFLIGHT</span><span class="p">:</span><span class="w"> </span><span class="nx">Learned</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">implementation</span>
+
+<span class="nx">Mini</span><span class="o">-</span><span class="nx">agent</span><span class="w"> </span><span class="p">(</span><span class="nx">Goal</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">Unit</span><span class="w"> </span><span class="nx">Tests</span><span class="p">):</span>
+<span class="w">  </span><span class="nx">RECEIVE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Write unit tests for rate_limit.py&quot;</span>
+<span class="w">  </span><span class="nx">ACT</span><span class="p">:</span><span class="w"> </span><span class="nx">Write</span><span class="w"> </span><span class="nx">test_rate_limit</span><span class="p">.</span><span class="nx">py</span><span class="w"> </span><span class="p">(</span><span class="mi">15</span><span class="w"> </span><span class="nx">test</span><span class="w"> </span><span class="nx">cases</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">COMPLETE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Unit tests in test_rate_limit.py, 15 tests, all passing&quot;</span>
+
+<span class="nx">Mini</span><span class="o">-</span><span class="nx">agent</span><span class="w"> </span><span class="p">(</span><span class="nx">Goal</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">Integration</span><span class="w"> </span><span class="nx">Tests</span><span class="p">):</span>
+<span class="w">  </span><span class="nx">RECEIVE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Write integration tests for rate limiting&quot;</span>
+<span class="w">  </span><span class="nx">ACT</span><span class="p">:</span><span class="w"> </span><span class="nx">Write</span><span class="w"> </span><span class="nx">test_rate_limit_e2e</span><span class="p">.</span><span class="nx">py</span><span class="w"> </span><span class="p">(</span><span class="mi">5</span><span class="w"> </span><span class="nx">scenarios</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">COMPLETE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Integration tests in test_rate_limit_e2e.py, 5 scenarios, all passing&quot;</span>
+</code></pre></div>
+
+<p><strong>Time:</strong> 20 minutes (parallel execution)
+<strong>Cost:</strong> $$ (AI for design, agents for execution)
+<strong>Quality:</strong> Excellent (AI design + agent execution)
+<strong>Efficiency:</strong> 60% cost savings vs AI doing everything</p>
+<hr />
+<h3>Pattern 3: Multiple AIs Collaborating (Peer CASCADE)</h3>
+<p><strong>Use When:</strong>
+- Multiple reasoning AIs working together
+- Each AI brings domain expertise
+- Work requires multiple perspectives
+- Complex problem requiring specialization</p>
+<p><strong>Workflow:</strong></p>
+<p><strong>Lead AI Phase:</strong>
+1. <strong>PREFLIGHT</strong> - Assess overall problem
+2. <strong>THINK</strong> - Classify required domains
+3. <strong>PLAN</strong> - Decompose into specialist areas
+4. <strong>INVESTIGATE</strong> - Research high-level approach
+5. <strong>CREATE GOALS</strong> - Domain-specific goal assignment
+6. <strong>COORDINATE</strong> - Specialists run CASCADE in parallel (each on their goal)
+7. <strong>CHECK</strong> - Synthesize specialist work
+8. <strong>ACT</strong> - Integrate and resolve conflicts
+9. <strong>POSTFLIGHT</strong> - Learn from specialists' insights</p>
+<p><strong>Specialist AI Phase (runs in parallel):</strong>
+1. <strong>PREFLIGHT</strong> - Domain-specific assessment
+2. <strong>THINK</strong> - Analyze specialist requirements
+3. <strong>PLAN</strong> - Design specialist solution
+4. <strong>INVESTIGATE</strong> - Deep dive in specialty area
+5. <strong>ACT</strong> - Specialized implementation
+6. <strong>POSTFLIGHT</strong> - Report findings back to lead</p>
+<p>This pattern enables true multi-specialist collaboration with each AI running full CASCADE on their domain.</p>
+<p><strong>Example:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="nx">Building</span><span class="w"> </span><span class="nx">secure</span><span class="w"> </span><span class="nx">payment</span><span class="w"> </span><span class="nx">system</span><span class="p">:</span>
+
+<span class="nx">Lead</span><span class="w"> </span><span class="nx">AI</span><span class="w"> </span><span class="p">(</span><span class="nx">Architecture</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">Claude</span><span class="w"> </span><span class="nx">Opus</span><span class="p">):</span>
+<span class="w">  </span><span class="nx">PREFLIGHT</span><span class="p">:</span><span class="w"> </span><span class="nx">Understand</span><span class="w"> </span><span class="nx">payment</span><span class="w"> </span><span class="nx">requirements</span>
+<span class="w">  </span><span class="nx">THINK</span><span class="p">:</span><span class="w"> </span><span class="nx">Classify</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nx">security</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">payment</span><span class="w"> </span><span class="nx">integration</span>
+<span class="w">  </span><span class="nx">PLAN</span><span class="p">:</span><span class="w"> </span><span class="nx">Design</span><span class="w"> </span><span class="nx">system</span><span class="w"> </span><span class="nx">architecture</span>
+<span class="w">  </span><span class="nx">INVESTIGATE</span><span class="p">:</span><span class="w"> </span><span class="nx">Research</span><span class="w"> </span><span class="nx">payment</span><span class="w"> </span><span class="nx">security</span><span class="w"> </span><span class="nx">patterns</span>
+<span class="w">  </span><span class="nx">CREATE</span><span class="w"> </span><span class="nx">GOALS</span><span class="p">:</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w"> </span><span class="nx">Security</span><span class="w"> </span><span class="nx">implementation</span><span class="w"> </span><span class="p">(</span><span class="nx">Security</span><span class="w"> </span><span class="nx">AI</span><span class="p">)</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span><span class="w"> </span><span class="nx">Payment</span><span class="w"> </span><span class="nx">integration</span><span class="w"> </span><span class="p">(</span><span class="nx">Payment</span><span class="w"> </span><span class="nx">AI</span><span class="p">)</span>
+<span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="mi">3</span><span class="p">:</span><span class="w"> </span><span class="nx">Testing</span><span class="w"> </span><span class="nx">strategy</span><span class="w"> </span><span class="p">(</span><span class="nx">Lead</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">Test</span><span class="w"> </span><span class="nx">Agent</span><span class="p">)</span>
+
+<span class="nx">Security</span><span class="w"> </span><span class="nx">AI</span><span class="w"> </span><span class="p">(</span><span class="nx">Specialist</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">o1</span><span class="p">):</span>
+<span class="w">  </span><span class="nx">PREFLIGHT</span><span class="w"> </span><span class="p">(</span><span class="nx">security</span><span class="w"> </span><span class="nx">knowledge</span><span class="p">:</span><span class="w"> </span><span class="m m-Double">0.9</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">THINK</span><span class="p">:</span><span class="w"> </span><span class="nx">Analyze</span><span class="w"> </span><span class="nx">threat</span><span class="w"> </span><span class="nx">landscape</span>
+<span class="w">  </span><span class="nx">PLAN</span><span class="p">:</span><span class="w"> </span><span class="nx">Design</span><span class="w"> </span><span class="nx">security</span><span class="w"> </span><span class="nx">layers</span>
+<span class="w">  </span><span class="nx">INVESTIGATE</span><span class="p">:</span><span class="w"> </span><span class="nx">Threat</span><span class="w"> </span><span class="nx">modeling</span><span class="p">,</span><span class="w"> </span><span class="nx">encryption</span><span class="w"> </span><span class="nx">strategy</span>
+<span class="w">  </span><span class="nx">ACT</span><span class="p">:</span><span class="w"> </span><span class="nx">Implement</span><span class="w"> </span><span class="nx">security</span><span class="w"> </span><span class="nx">layer</span><span class="p">,</span><span class="w"> </span><span class="nx">audit</span><span class="w"> </span><span class="nx">code</span>
+<span class="w">  </span><span class="nx">POSTFLIGHT</span><span class="p">:</span><span class="w"> </span><span class="nx">Report</span><span class="w"> </span><span class="nx">vulnerabilities</span><span class="w"> </span><span class="nx">addressed</span>
+
+<span class="nx">Payment</span><span class="w"> </span><span class="nx">AI</span><span class="w"> </span><span class="p">(</span><span class="nx">Specialist</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">GPT</span><span class="o">-</span><span class="mi">4</span><span class="p">):</span>
+<span class="w">  </span><span class="nx">PREFLIGHT</span><span class="w"> </span><span class="p">(</span><span class="nx">payment</span><span class="w"> </span><span class="nx">APIs</span><span class="w"> </span><span class="nx">knowledge</span><span class="p">:</span><span class="w"> </span><span class="m m-Double">0.8</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">THINK</span><span class="p">:</span><span class="w"> </span><span class="nx">Analyze</span><span class="w"> </span><span class="nx">payment</span><span class="w"> </span><span class="nx">requirements</span>
+<span class="w">  </span><span class="nx">PLAN</span><span class="p">:</span><span class="w"> </span><span class="nx">Compare</span><span class="w"> </span><span class="nx">payment</span><span class="w"> </span><span class="nx">providers</span>
+<span class="w">  </span><span class="nx">INVESTIGATE</span><span class="p">:</span><span class="w"> </span><span class="nx">Compare</span><span class="w"> </span><span class="nx">Stripe</span><span class="w"> </span><span class="nx">vs</span><span class="w"> </span><span class="nx">PayPal</span>
+<span class="w">  </span><span class="nx">ACT</span><span class="p">:</span><span class="w"> </span><span class="nx">Implement</span><span class="w"> </span><span class="nx">payment</span><span class="w"> </span><span class="nx">integration</span>
+<span class="w">  </span><span class="nx">POSTFLIGHT</span><span class="p">:</span><span class="w"> </span><span class="nx">Report</span><span class="w"> </span><span class="nx">integration</span><span class="w"> </span><span class="nx">complete</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">learnings</span>
+
+<span class="nx">Lead</span><span class="w"> </span><span class="nx">AI</span><span class="w"> </span><span class="p">(</span><span class="nx">Integration</span><span class="p">):</span>
+<span class="w">  </span><span class="nx">CHECK</span><span class="p">:</span><span class="w"> </span><span class="nx">Review</span><span class="w"> </span><span class="nx">security</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">payment</span><span class="w"> </span><span class="nx">implementations</span>
+<span class="w">  </span><span class="nx">ACT</span><span class="p">:</span><span class="w"> </span><span class="nx">Integrate</span><span class="w"> </span><span class="nx">both</span><span class="p">,</span><span class="w"> </span><span class="nx">resolve</span><span class="w"> </span><span class="nx">conflicts</span><span class="p">,</span><span class="w"> </span><span class="nx">verify</span>
+<span class="w">  </span><span class="nx">POSTFLIGHT</span><span class="p">:</span><span class="w"> </span><span class="nx">Learned</span><span class="w"> </span><span class="nx">security</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">payment</span><span class="w"> </span><span class="nx">patterns</span>
+</code></pre></div>
+
+<p><strong>Time:</strong> 45 minutes (parallel specialist work)
+<strong>Cost:</strong> $$$$ (multiple high reasoning models)
+<strong>Quality:</strong> Exceptional (specialist expertise)
+<strong>Use Case:</strong> Critical/complex projects only</p>
+<hr />
+<h2>Agent CASCADE Guidelines</h2>
+<h3>Simplified CASCADE for Agents</h3>
+<p>Agents typically use <strong>ACT-focused workflow</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">Agent</span><span class="w"> </span><span class="nv">Workflow</span>:
+<span class="mi">1</span>.<span class="w"> </span><span class="nv">Receive</span><span class="w"> </span><span class="nv">subtask</span><span class="w"> </span><span class="ss">(</span><span class="nv">description</span>,<span class="w"> </span><span class="nv">context</span><span class="ss">)</span>
+<span class="mi">2</span>.<span class="w"> </span><span class="ss">(</span><span class="nv">Optional</span><span class="ss">)</span><span class="w"> </span><span class="nv">Mini</span><span class="o">-</span><span class="nv">PREFLIGHT</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nv">complex</span><span class="o">/</span><span class="nv">uncertain</span>
+<span class="mi">3</span>.<span class="w"> </span><span class="nv">ACT</span><span class="w"> </span>→<span class="w"> </span><span class="nv">Execute</span><span class="w"> </span><span class="nv">work</span>
+<span class="mi">4</span>.<span class="w"> </span><span class="nv">COMPLETE</span><span class="w"> </span>→<span class="w"> </span><span class="nv">Report</span><span class="w"> </span><span class="nv">evidence</span>
+<span class="mi">5</span>.<span class="w"> </span><span class="ss">(</span><span class="nv">Optional</span><span class="ss">)</span><span class="w"> </span><span class="nv">Mini</span><span class="o">-</span><span class="nv">POSTFLIGHT</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nv">learning</span><span class="w"> </span><span class="nv">occurred</span>
+</code></pre></div>
+
+<h3>When Agents Use Full CASCADE</h3>
+<p><strong>Use full CASCADE if:</strong>
+- Subtask is complex (multi-step, &gt;30min)
+- Initial uncertainty high (&gt;0.5)
+- Learning expected (new library/pattern)
+- Multiple approaches need evaluation</p>
+<p><strong>Example:</strong></p>
+<div class="codehilite"><pre><span></span><code>Agent receives: &quot;Implement OAuth token refresh mechanism&quot;
+
+This is complex, so agent uses full CASCADE:
+  PREFLIGHT (uncertainty: 0.6 - don&#39;t know refresh flow)
+  THINK: Classify as authentication task
+  PLAN: Research OAuth refresh spec
+  INVESTIGATE: Research OAuth refresh token spec
+  CHECK (confidence: 0.8)
+  ACT: Implement refresh mechanism
+  POSTFLIGHT (uncertainty: 0.2 - now understand flow)
+</code></pre></div>
+
+<h3>When Agents Skip CASCADE</h3>
+<p><strong>Skip formal CASCADE for:</strong>
+- Simple, well-defined tasks (&lt;10min)
+- Known patterns (done before)
+- No uncertainty (clear instructions)</p>
+<p><strong>Example:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="nx">Agent</span><span class="w"> </span><span class="nx">receives</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Run pytest on all test files&quot;</span>
+
+<span class="nx">Simple</span><span class="w"> </span><span class="nx">task</span><span class="p">,</span><span class="w"> </span><span class="nx">just</span><span class="w"> </span><span class="nx">ACT</span><span class="p">:</span>
+<span class="w">  </span><span class="nx">ACT</span><span class="p">:</span><span class="w"> </span><span class="nx">Run</span><span class="w"> </span><span class="err">`</span><span class="nx">pytest</span><span class="w"> </span><span class="nx">tests</span><span class="o">/</span><span class="w"> </span><span class="o">-</span><span class="nx">v</span><span class="err">`</span>
+<span class="w">  </span><span class="nx">COMPLETE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Tests ran, 42/42 passing&quot;</span>
+</code></pre></div>
+
+<hr />
+<h2>Comparison Table</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>AI (Collaborative)</th>
+<th>Agent (Acting)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Autonomy</strong></td>
+<td>High</td>
+<td>Low-Medium</td>
+</tr>
+<tr>
+<td><strong>Dialogue</strong></td>
+<td>Extensive</td>
+<td>Minimal</td>
+</tr>
+<tr>
+<td><strong>Planning</strong></td>
+<td>Creates goals/plans</td>
+<td>Executes plans</td>
+</tr>
+<tr>
+<td><strong>CASCADE</strong></td>
+<td>Full (PREFLIGHT → POSTFLIGHT)</td>
+<td>Simplified (ACT-focused)</td>
+</tr>
+<tr>
+<td><strong>Investigation</strong></td>
+<td>Self-directed, unlimited rounds</td>
+<td>Structured, limited rounds</td>
+</tr>
+<tr>
+<td><strong>Uncertainty</strong></td>
+<td>Tracks and manages</td>
+<td>Reports blockers</td>
+</tr>
+<tr>
+<td><strong>Learning</strong></td>
+<td>Measures epistemic growth</td>
+<td>Optional, task-specific</td>
+</tr>
+<tr>
+<td><strong>Delegation</strong></td>
+<td>Delegates to agents</td>
+<td>Rarely delegates</td>
+</tr>
+<tr>
+<td><strong>Cost</strong></td>
+<td>$$$ (high reasoning)</td>
+<td>$ (fast execution)</td>
+</tr>
+<tr>
+<td><strong>Speed</strong></td>
+<td>Slower (includes planning)</td>
+<td>Faster (direct execution)</td>
+</tr>
+<tr>
+<td><strong>Quality</strong></td>
+<td>Excellent (comprehensive)</td>
+<td>Good (follows patterns)</td>
+</tr>
+<tr>
+<td><strong>Examples</strong></td>
+<td>Claude Opus, GPT-4, o1</td>
+<td>Mini-agent, GPT-3.5, Haiku</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Best Practices</h2>
+<h3>For AIs (Collaborative Intelligence):</h3>
+<ol>
+<li><strong>Use full CASCADE</strong> for significant work</li>
+<li><strong>Create clear subtasks</strong> when delegating</li>
+<li><strong>Review agent work</strong> before integrating</li>
+<li><strong>Track learning</strong> from both own work and agent feedback</li>
+<li><strong>Generate handoffs</strong> for continuity</li>
+<li><strong>Ask clarifying questions</strong> when uncertain</li>
+<li><strong>Plan before acting</strong> - don't rush to implementation</li>
+</ol>
+<h3>For Agents (Acting Intelligence):</h3>
+<ol>
+<li><strong>Use simplified CASCADE</strong> (ACT-focused) for simple tasks</li>
+<li><strong>Use full CASCADE</strong> for complex/uncertain tasks</li>
+<li><strong>Report evidence</strong> clearly when completing</li>
+<li><strong>Ask for clarification</strong> if subtask unclear</li>
+<li><strong>Don't overthink</strong> - execute efficiently</li>
+<li><strong>Follow patterns</strong> - don't reinvent</li>
+<li><strong>Complete quickly</strong> - optimize for speed</li>
+</ol>
+<h3>For Users (Human Coordinators):</h3>
+<ol>
+<li><strong>Choose right tool</strong> - AI for reasoning, agent for execution</li>
+<li><strong>Delegate appropriately</strong> - match task complexity to tool</li>
+<li><strong>Provide context</strong> when assigning to agents</li>
+<li><strong>Review handoffs</strong> between AIs/agents</li>
+<li><strong>Track costs</strong> - agents cheaper, AIs more capable</li>
+<li><strong>Use parallel execution</strong> - agents can work simultaneously</li>
+<li><strong>Trust but verify</strong> - review agent work</li>
+</ol>
+<hr />
+<h2>Reasoning Capability Selection</h2>
+<h3>How Empirica Measures Reasoning</h3>
+<p>Empirica uses <strong>epistemic reasoning benchmarks</strong> to assess AI capability:</p>
+<p><strong>High Reasoning Indicators:</strong>
+- Can self-assess accurately (calibration &gt;0.85)
+- Handles ambiguity well (clarity &lt;0.5 → investigates)
+- Meta-reasons about approach (plans before acting)
+- Learns effectively (epistemic deltas &gt;0.30)
+- Asks clarifying questions when uncertain</p>
+<p><strong>Medium Reasoning Indicators:</strong>
+- Self-assesses with guidance (calibration 0.70-0.85)
+- Needs structured tasks (clarity &gt;0.60)
+- Follows patterns (limited meta-reasoning)
+- Learns moderately (epistemic deltas 0.15-0.30)
+- Reports blockers when stuck</p>
+<p><strong>Low Reasoning Indicators:</strong>
+- Limited self-assessment (calibration &lt;0.70)
+- Needs explicit instructions (clarity &gt;0.80)
+- Executes without planning
+- Limited learning (epistemic deltas &lt;0.15)
+- Doesn't ask questions</p>
+<h3>Profile Assignment</h3>
+<p>Based on reasoning capability, Empirica assigns profiles:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">High</span><span class="w"> </span><span class="n">Reasoning</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">high_reasoning_collaborative</span><span class="w"> </span><span class="n">profile</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Unlimited</span><span class="w"> </span><span class="n">investigation</span><span class="w"> </span><span class="n">rounds</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Dynamic</span><span class="w"> </span><span class="n">confidence</span><span class="w"> </span><span class="n">thresholds</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Light</span><span class="w"> </span><span class="k">tool</span><span class="w"> </span><span class="n">suggestions</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Maximum</span><span class="w"> </span><span class="n">autonomy</span>
+
+<span class="n">Medium</span><span class="w"> </span><span class="n">Reasoning</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">autonomous_agent</span><span class="w"> </span><span class="n">profile</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Max</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="n">investigation</span><span class="w"> </span><span class="n">rounds</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Confidence</span><span class="w"> </span><span class="n">threshold</span><span class="p">:</span><span class="w"> </span><span class="mf">0.70</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Guided</span><span class="w"> </span><span class="k">tool</span><span class="w"> </span><span class="n">suggestions</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Structured</span><span class="w"> </span><span class="n">guidance</span>
+
+<span class="n">Low</span><span class="w"> </span><span class="n">Reasoning</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">No</span><span class="w"> </span><span class="n">CASCADE</span><span class="w"> </span><span class="p">(</span><span class="n">direct</span><span class="w"> </span><span class="n">execution</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Skip</span><span class="w"> </span><span class="n">epistemic</span><span class="w"> </span><span class="n">assessment</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Execute</span><span class="w"> </span><span class="n">tasks</span><span class="w"> </span><span class="n">directly</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Report</span><span class="w"> </span><span class="n">completion</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Cost</span><span class="o">-</span><span class="n">effective</span>
+</code></pre></div>
+
+<hr />
+<h2>System Prompts: The Foundation</h2>
+<h3>Why System Prompts Matter</h3>
+<p><strong>System prompts</strong> define AI behavior and role:</p>
+<div class="codehilite"><pre><span></span><code><span class="nx">AI</span><span class="w"> </span><span class="nx">System</span><span class="w"> </span><span class="nx">Prompt</span><span class="w"> </span><span class="p">(</span><span class="nx">High</span><span class="w"> </span><span class="nx">Reasoning</span><span class="p">):</span>
+<span class="s">&quot;You are a collaborative AI partner working WITH the user.</span>
+<span class="s">You have high autonomy and reasoning capability.</span>
+<span class="s">Use full CASCADE workflow (PREFLIGHT → POSTFLIGHT).</span>
+<span class="s">Ask clarifying questions when uncertain.</span>
+<span class="s">Plan architecture and make design decisions.</span>
+<span class="s">Create goals and delegate to agents when appropriate.</span>
+<span class="s">Track your epistemic growth and learning.&quot;</span>
+
+<span class="nx">Agent</span><span class="w"> </span><span class="nx">System</span><span class="w"> </span><span class="nx">Prompt</span><span class="w"> </span><span class="p">(</span><span class="nx">Action</span><span class="o">-</span><span class="nx">Based</span><span class="p">):</span>
+<span class="s">&quot;You are an execution agent focused on completing specific tasks.</span>
+<span class="s">You receive well-defined subtasks from lead AIs.</span>
+<span class="s">Use simplified CASCADE (ACT-focused) for simple tasks.</span>
+<span class="s">Use full CASCADE for complex/uncertain tasks.</span>
+<span class="s">Report evidence clearly when completing.</span>
+<span class="s">Ask for clarification if task is unclear.</span>
+<span class="s">Optimize for speed and efficiency.&quot;</span>
+</code></pre></div>
+
+<h3>Future: Dynamic System Prompts</h3>
+<p><strong>Vision:</strong> Cognitive Vault + Sentinel provides role-based prompts</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># AI requests prompt</span>
+<span class="n">prompt</span> <span class="o">=</span> <span class="n">get_system_prompt</span><span class="p">(</span>
+    <span class="n">ai_id</span><span class="o">=</span><span class="s2">&quot;claude-dev&quot;</span><span class="p">,</span>
+    <span class="n">role</span><span class="o">=</span><span class="s2">&quot;collaborative_ai&quot;</span><span class="p">,</span>
+    <span class="n">modality</span><span class="o">=</span><span class="s2">&quot;coding&quot;</span><span class="p">,</span>
+    <span class="n">task_type</span><span class="o">=</span><span class="s2">&quot;feature_design&quot;</span>
+<span class="p">)</span>
+<span class="err">→</span> <span class="n">Returns</span><span class="p">:</span> <span class="n">AI_COLLABORATIVE_PROMPT</span> <span class="p">(</span><span class="n">full</span> <span class="n">CASCADE</span> <span class="n">guidance</span><span class="p">)</span>
+
+<span class="c1"># Agent requests prompt</span>
+<span class="n">prompt</span> <span class="o">=</span> <span class="n">get_system_prompt</span><span class="p">(</span>
+    <span class="n">ai_id</span><span class="o">=</span><span class="s2">&quot;mini-agent&quot;</span><span class="p">,</span>
+    <span class="n">role</span><span class="o">=</span><span class="s2">&quot;acting_agent&quot;</span><span class="p">,</span>
+    <span class="n">modality</span><span class="o">=</span><span class="s2">&quot;testing&quot;</span><span class="p">,</span>
+    <span class="n">task_type</span><span class="o">=</span><span class="s2">&quot;test_implementation&quot;</span>
+<span class="p">)</span>
+<span class="err">→</span> <span class="n">Returns</span><span class="p">:</span> <span class="n">AGENT_EXECUTION_PROMPT</span> <span class="p">(</span><span class="n">ACT</span><span class="o">-</span><span class="n">focused</span> <span class="n">guidance</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Benefits:</strong>
+- Right prompt for right role
+- Consistent terminology (AI vs Agent)
+- Token-efficient (load only needed guidance)
+- Centrally managed, version controlled</p>
+<hr />
+<h2>Next Steps</h2>
+<p><strong>Learn More:</strong>
+- <a href="developers/architecture.html">Architecture</a> - System design and canonical structure
+- <a href="developers/collaboration.html">Collaboration</a> - Sessions, goals, handoffs
+- <a href="epistemics.html">Epistemics</a> - 13-vector system deep dive</p>
+<p><strong>Try It:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># High reasoning AI (full CASCADE)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">empirica.core.metacognitive_cascade.metacognitive_cascade</span><span class="w"> </span><span class="kn">import</span> <span class="n">CanonicalEpistemicCascade</span>
+
+<span class="n">cascade</span> <span class="o">=</span> <span class="n">CanonicalEpistemicCascade</span><span class="p">(</span>
+    <span class="n">profile_name</span><span class="o">=</span><span class="s1">&#39;high_reasoning_collaborative&#39;</span>
+<span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">cascade</span><span class="o">.</span><span class="n">run_epistemic_cascade</span><span class="p">(</span><span class="n">task</span><span class="o">=</span><span class="s2">&quot;Design OAuth system&quot;</span><span class="p">)</span>
+
+<span class="c1"># Agent (simplified CASCADE)</span>
+<span class="n">cascade_agent</span> <span class="o">=</span> <span class="n">CanonicalEpistemicCascade</span><span class="p">(</span>
+    <span class="n">profile_name</span><span class="o">=</span><span class="s1">&#39;autonomous_agent&#39;</span>
+<span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">cascade_agent</span><span class="o">.</span><span class="n">run_epistemic_cascade</span><span class="p">(</span><span class="n">task</span><span class="o">=</span><span class="s2">&quot;Write unit tests&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<p><strong>Built for all AI capabilities. Right tool, right task.</strong> 🤖</p>
+                        </div>
+                    </div>
+                    
+    </main>
+
+    <footer class="bg-gray-800 text-white py-12 mt-16">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="grid md:grid-cols-4 gap-8">
+            <!-- Brand Section -->
+            <div class="md:col-span-2">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="text-2xl">🧠</span>
+                    <div>
+                        <h3 class="text-xl font-bold">EMPIRICA</h3>
+                        <p class="text-gray-300 text-sm">Building Humble, Thoughtful AI Systems</p>
+                    </div>
+                </div>
+                <p class="text-gray-300 max-w-md">
+                    The meta-framework for AI self-awareness through epistemic humility
+                    and uncertainty-based reasoning. Teaching AIs to think carefully
+                    about their own thinking.
+                </p>
+            </div>
+
+            <!-- Quick Links -->
+            <div>
+                <h4 class="font-semibold mb-4">Quick Links</h4>
+                <ul class="space-y-2 text-gray-300">
+                    <li><a href="/cli-interface.html" class="hover:text-white transition-colors">CLI Interface</a></li>
+                    <li><a href="/epistemics.html" class="hover:text-white transition-colors">Epistemics</a></li>
+                    <li><a href="/components.html" class="hover:text-white transition-colors">Components</a></li>
+                    <li><a href="/getting-started.html" class="hover:text-white transition-colors">Getting Started</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Resources -->
+            <div>
+                <h4 class="font-semibold mb-4">Resources</h4>
+                <ul class="space-y-2 text-gray-300">
+                    <li><a href="/docs.html" class="hover:text-white transition-colors">Documentation</a></li>
+                    <li><a href="/api-reference.html" class="hover:text-white transition-colors">API Reference</a></li>
+                    <li><a href="https://github.com/empirica-ai" class="hover:text-white transition-colors">GitHub
+                            Repository</a></li>
+                    <li><a href="/epistemics.html" class="hover:text-white transition-colors">Research</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <div class="text-gray-300 text-sm">
+                © 2025 Empirica SDK. Building thoughtful AI systems through epistemic humility.
+            </div>
+            <div class="flex space-x-6 mt-4 md:mt-0">
+                <a href="https://github.com/empirica-ai" class="text-gray-300 hover:text-white transition-colors">
+                    GitHub
+                </a>
+                <a href="/contact.html" class="text-gray-300 hover:text-white transition-colors">
+                    Contact
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <script>
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        }
+    </script>
+    <script src="/assets/search.js"></script>
+</body>
+
+</html>

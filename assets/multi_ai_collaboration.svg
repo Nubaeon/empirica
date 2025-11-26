@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" style="max-width: 100%; height: auto;">
+  <defs>
+    <style>
+      .multi-bg { fill: #f8fafc; }
+      .ai-box { fill: #ffffff; stroke: #3b82f6; stroke-width: 2; }
+      .ai-claude { fill: #8b5cf6; stroke: #6d28d9; stroke-width: 2; }
+      .ai-gpt { fill: #10b981; stroke: #059669; stroke-width: 2; }
+      .ai-gemini { fill: #f59e0b; stroke: #d97706; stroke-width: 2; }
+      .ai-name { fill: white; font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: 700; }
+      .ai-provider { fill: white; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; }
+      .ai-task { fill: #1e293b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; text-anchor: middle; }
+      .git-box { fill: #1e293b; stroke: #0f172a; stroke-width: 2; }
+      .git-text { fill: white; font-family: 'Consolas', 'Monaco', monospace; font-size: 14px; font-weight: 600; }
+      .git-detail { fill: #94a3b8; font-family: 'Consolas', 'Monaco', monospace; font-size: 12px; }
+      .connection-line { stroke: #3b82f6; stroke-width: 2; fill: none; }
+      .title-text { fill: #1e293b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 20px; font-weight: 700; }
+      .subtitle-text { fill: #64748b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; font-style: italic; }
+    </style>
+  </defs>
+  
+  <!-- Background -->
+  <rect class="multi-bg" width="800" height="500" rx="8"/>
+  
+  <!-- Title -->
+  <text class="title-text" x="400" y="35" text-anchor="middle">Multi-AI Collaboration</text>
+  <text class="subtitle-text" x="400" y="55" text-anchor="middle">Development team with 3 AIs working on different features</text>
+  
+  <!-- AI-1: Claude (Purple) -->
+  <g id="ai-1">
+    <rect class="ai-claude" x="70" y="90" width="160" height="100" rx="12"/>
+    <text class="ai-name" x="150" y="115" text-anchor="middle">AI-1</text>
+    <text class="ai-provider" x="150" y="135" text-anchor="middle">(Claude)</text>
+    <rect class="ai-box" x="85" y="150" width="130" height="30" rx="6"/>
+    <text class="ai-task" x="150" y="171">Auth API</text>
+  </g>
+  
+  <!-- AI-2: GPT-4 (Green) -->
+  <g id="ai-2">
+    <rect class="ai-gpt" x="320" y="90" width="160" height="100" rx="12"/>
+    <text class="ai-name" x="400" y="115" text-anchor="middle">AI-2</text>
+    <text class="ai-provider" x="400" y="135" text-anchor="middle">(GPT-4)</text>
+    <rect class="ai-box" x="335" y="150" width="130" height="30" rx="6"/>
+    <text class="ai-task" x="400" y="171">Frontend</text>
+  </g>
+  
+  <!-- AI-3: Gemini (Orange) -->
+  <g id="ai-3">
+    <rect class="ai-gemini" x="570" y="90" width="160" height="100" rx="12"/>
+    <text class="ai-name" x="650" y="115" text-anchor="middle">AI-3</text>
+    <text class="ai-provider" x="650" y="135" text-anchor="middle">(Gemini)</text>
+    <rect class="ai-box" x="585" y="150" width="130" height="30" rx="6"/>
+    <text class="ai-task" x="650" y="171">Testing</text>
+  </g>
+  
+  <!-- Connection lines from AIs to center point -->
+  <line class="connection-line" x1="150" y1="190" x2="150" y2="240"/>
+  <line class="connection-line" x1="400" y1="190" x2="400" y2="240"/>
+  <line class="connection-line" x1="650" y1="190" x2="650" y2="240"/>
+  
+  <!-- Horizontal line connecting all three -->
+  <line class="connection-line" x1="150" y1="240" x2="650" y2="240"/>
+  
+  <!-- Vertical line down to Git Remote -->
+  <line class="connection-line" x1="400" y1="240" x2="400" y2="290"/>
+  
+  <!-- Git Remote Box -->
+  <g id="git-remote">
+    <rect class="git-box" x="250" y="290" width="300" height="140" rx="12"/>
+    <text class="git-text" x="400" y="320" text-anchor="middle">Git Remote</text>
+    <text class="git-detail" x="400" y="340" text-anchor="middle">(GitHub)</text>
+    
+    <!-- Divider line -->
+    <line x1="270" y1="355" x2="530" y2="355" stroke="#475569" stroke-width="1"/>
+    
+    <text class="git-detail" x="400" y="380" text-anchor="middle">Code Changes</text>
+    <text class="git-detail" x="400" y="400" text-anchor="middle">+</text>
+    <text class="git-detail" x="400" y="420" text-anchor="middle">Epistemic Notes</text>
+  </g>
+  
+  <!-- Benefits callouts -->
+  <g id="benefits">
+    <rect x="50" y="450" width="700" height="30" fill="#dbeafe" rx="6"/>
+    <text x="400" y="470" text-anchor="middle" style="fill: #1e40af; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: 600;">
+      ✓ No coordination overhead  ✓ Automatic conflict detection  ✓ Complete reasoning history  ✓ Cross-provider compatible
+    </text>
+  </g>
+</svg>

@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empirica SDK | AI Self-Awareness</title>
+    <meta name="description"
+        content="The meta-framework for AI self-awareness through epistemic humility.">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            /* Semantic Colors (Empirica Palette) */
+            --color-primary: #6366f1;
+            /* Indigo-500 */
+            --color-primary-dark: #4338ca;
+            /* Indigo-700 */
+            --color-secondary: #0ea5e9;
+            /* Sky-500 */
+            --color-bg-dark: #0f172a;
+            /* Slate-900 */
+            --color-bg-card: rgba(30, 41, 59, 0.7);
+            /* Slate-800/70 */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--color-bg-dark);
+        }
+
+        /* MagicUI-style Glow */
+        .glow-effect {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glow-effect::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            transform: skewX(-25deg);
+            transition: 0.5s;
+            pointer-events: none;
+        }
+
+        .glow-effect:hover::before {
+            left: 100%;
+            transition: 0.7s;
+        }
+
+        /* Navigation Styles */
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            color: #94a3b8 !important;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #f8fafc !important;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-active {
+            color: var(--color-primary) !important;
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+
+        /* Code Blocks */
+        pre {
+            background: #000000;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            color: #ffffff;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.875em;
+            word-break: break-word;
+        }
+
+        /* Bento Grid Utilities */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Glass Card Styling */
+        .glass-card {
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Reduce excessive vertical spacing - match MD formatting */
+        .prose hr {
+            margin-top: 1rem !important;
+            margin-bottom: 1rem !important;
+        }
+
+        .prose>*+* {
+            margin-top: 0.75rem;
+        }
+    </style>
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="bg-slate-900 text-slate-200 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <header class="bg-black text-white py-6 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="flex items-center justify-between">
+            <!-- Logo/Brand -->
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                    <img src="/assets/empirica_logo.png" alt="Empirica Logo" class="w-10 h-10"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span style="display: none;" class="text-black font-bold text-lg">E</span>
+                </div>
+                <div>
+                    <a href="/index.html" class="hover:opacity-80 transition-opacity">
+                        <h1 class="text-2xl font-bold italic">EMPIRICA</h1>
+                        <p class="text-sm text-gray-300">Epistemic Humility through Thoughtful AI Self-Reflection</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- CTA Buttons and Search -->
+            <div class="hidden md:flex space-x-4">
+                <a href="/empirica-chat.html"
+                    class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
+                    Empirica Chat
+                </a>
+                <a href="/getting-started.html"
+                    class="border border-white/30 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">
+                    Getting Started
+                </a>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button class="md:hidden text-white" onclick="toggleMobileMenu()">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</header>
+    <nav class="bg-blue-950 shadow-sm border-b border-blue-900 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="flex space-x-8 overflow-x-auto md:overflow-visible py-4 items-center">
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'></path></svg> 
+                        <span>Learn</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/epistemics.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📘</span>
+                                
+                                Epistemics Guide
+                        </a>
+                        
+                        <a href="/features.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">✨</span>
+                                
+                                Features
+                        </a>
+                        
+                        <a href="/use-cases.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🚀</span>
+                                
+                                Use Cases
+                        </a>
+                        
+                        <a href="/skills.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">⚡</span>
+                                
+                                Skills
+                        </a>
+                        
+                        <a href="/developers/system-prompts.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💬</span>
+                                
+                                System Prompts
+                        </a>
+                        
+                        <a href="/MAKING_GIT_SEXY_AGAIN.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🔥</span>
+                                
+                                Making Git Sexy
+                        </a>
+                        
+                        <a href="/unified-theory.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🧬</span>
+                                
+                                Unified Theory
+                        </a>
+                        
+                        <a href="/empirica-chat.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💬</span>
+                                
+                                Empirica Chat
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path></svg> 
+                        <span>Platform</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/developers/architecture.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🏛️</span>
+                                
+                                Architecture
+                        </a>
+                        
+                        <a href="/developers/components.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🧩</span>
+                                
+                                Components
+                        </a>
+                        
+                        <a href="/mcp-integration.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🔌</span>
+                                
+                                MCP Integration
+                        </a>
+                        
+                        <a href="/developers/collaboration.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤝</span>
+                                
+                                Collaboration
+                        </a>
+                        
+                        <a href="/ai-vs-agent.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤖</span>
+                                
+                                AI vs Agent
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4'></path></svg> 
+                        <span>Developers</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/getting-started.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🏁</span>
+                                
+                                Getting Started
+                        </a>
+                        
+                        <a href="/developers/api-reference.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📜</span>
+                                
+                                API Reference
+                        </a>
+                        
+                        <a href="/examples.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">💡</span>
+                                
+                                Examples
+                        </a>
+                        
+                        <a href="/docs.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📚</span>
+                                
+                                Documentation
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="relative group">
+                <button class="nav-link flex items-center space-x-1 ">
+                     <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'></path></svg> 
+                        <span>Support</span>
+                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                </button>
+                <!-- Dropdown Menu -->
+                <div
+                    class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                    <div class="py-2">
+                        
+                        <a href="/faqs.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">🤔</span>
+                                
+                                FAQs
+                        </a>
+                        
+                        <a href="/resources.html"
+                            class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                            
+                                <span class="mr-2">📚</span>
+                                
+                                Resources
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <a href="/contact.html" class="nav-link flex items-center ">
+                 <svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path></svg> 
+                    Contact Us
+            </a>
+            
+            
+
+            <!-- Search Box -->
+            <div class="relative ml-auto">
+                <input type="text" placeholder="Search..." id="search-input"
+                    class="bg-white/10 border border-white/20 rounded-lg px-4 py-2 pl-10 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48" />
+                <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div id="mobile-menu" class="md:hidden hidden bg-blue-950 border-t border-blue-900">
+        <div class="px-6 py-4 space-y-3">
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Learn</div>
+                
+                <a href="/epistemics.html" class="mobile-nav-link pl-6 border-l border-slate-700">Epistemics Guide</a>
+                
+                <a href="/features.html" class="mobile-nav-link pl-6 border-l border-slate-700">Features</a>
+                
+                <a href="/use-cases.html" class="mobile-nav-link pl-6 border-l border-slate-700">Use Cases</a>
+                
+                <a href="/skills.html" class="mobile-nav-link pl-6 border-l border-slate-700">Skills</a>
+                
+                <a href="/developers/system-prompts.html" class="mobile-nav-link pl-6 border-l border-slate-700">System Prompts</a>
+                
+                <a href="/MAKING_GIT_SEXY_AGAIN.html" class="mobile-nav-link pl-6 border-l border-slate-700">Making Git Sexy</a>
+                
+                <a href="/unified-theory.html" class="mobile-nav-link pl-6 border-l border-slate-700">Unified Theory</a>
+                
+                <a href="/empirica-chat.html" class="mobile-nav-link pl-6 border-l border-slate-700">Empirica Chat</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Platform</div>
+                
+                <a href="/developers/architecture.html" class="mobile-nav-link pl-6 border-l border-slate-700">Architecture</a>
+                
+                <a href="/developers/components.html" class="mobile-nav-link pl-6 border-l border-slate-700">Components</a>
+                
+                <a href="/mcp-integration.html" class="mobile-nav-link pl-6 border-l border-slate-700">MCP Integration</a>
+                
+                <a href="/developers/collaboration.html" class="mobile-nav-link pl-6 border-l border-slate-700">Collaboration</a>
+                
+                <a href="/ai-vs-agent.html" class="mobile-nav-link pl-6 border-l border-slate-700">AI vs Agent</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Developers</div>
+                
+                <a href="/getting-started.html" class="mobile-nav-link pl-6 border-l border-slate-700">Getting Started</a>
+                
+                <a href="/developers/api-reference.html" class="mobile-nav-link pl-6 border-l border-slate-700">API Reference</a>
+                
+                <a href="/examples.html" class="mobile-nav-link pl-6 border-l border-slate-700">Examples</a>
+                
+                <a href="/docs.html" class="mobile-nav-link pl-6 border-l border-slate-700">Documentation</a>
+                
+            </div>
+            
+            
+            
+            <div class="space-y-2">
+                <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">Support</div>
+                
+                <a href="/faqs.html" class="mobile-nav-link pl-6 border-l border-slate-700">FAQs</a>
+                
+                <a href="/resources.html" class="mobile-nav-link pl-6 border-l border-slate-700">Resources</a>
+                
+            </div>
+            
+            
+            
+            <a href="/contact.html" class="mobile-nav-link">Contact Us</a>
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <!-- Breadcrumbs (appears right after navigation) -->
+    
+    <div class="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-[73px] z-40">
+        <div class="max-w-6xl mx-auto px-6 py-3">
+            <nav class="flex items-center space-x-2 text-sm">
+                <a href="/index.html" class="text-slate-400 hover:text-indigo-400 transition-colors">Home</a>
+                
+                <span class="text-slate-600">›</span>
+                <span class="text-slate-200 font-medium">Epistemics: The Foundation of AI Self-Awareness</span>
+                
+            </nav>
+        </div>
+    </div>
+    
+
+    <!-- Page Header (Non-Homepage) - Glassmorphic Style -->
+    
+    <div class="relative overflow-hidden pt-24 pb-16">
+        <div class="max-w-4xl mx-auto px-6 relative z-10 text-center">
+            <!-- Glassmorphic Badge (like homepage) -->
+            <div
+                class="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm mb-6">
+                <span class="flex h-2 w-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
+                Epistemic Self-Awareness for AI
+            </div>
+
+            <!-- Page Title with Gradient -->
+            <h1 class="text-5xl md:text-6xl font-bold tracking-tight mb-6 text-white">
+                Epistemics: The Foundation of AI Self-Awareness
+            </h1>
+
+            <!-- Page Description (styled like homepage subheader) -->
+            
+            <p class="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                <span class="font-semibold text-white">Why measuring what AIs know—and don't know—is critical for reliable AI systems</span>
+            </p>
+            
+        </div>
+
+        <!-- Background Glow (matching homepage) -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+            <div class="absolute top-20 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute top-40 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+        </div>
+    </div>
+    
+
+    <main class="min-h-screen">
+        
+                        <div class="max-w-4xl mx-auto px-6 py-0">
+                            <div class="prose prose-invert prose-lg max-w-none">
+                                <hr />
+<h2>What is Epistemic Self-Assessment?</h2>
+<p><strong>Epistemics</strong> is the study of knowledge—what we know, how we know it, and what we're uncertain about.</p>
+<p>Think about how humans make decisions. When you're confident about something, you act decisively. When you're uncertain, you ask questions, do research, or seek advice. This natural self-awareness is what makes human judgment reliable.</p>
+<h3>Traditional AI vs Empirica</h3>
+<table>
+<thead>
+<tr>
+<th>Traditional AI Systems ❌</th>
+<th>Empirica's Approach ✅</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Overconfident</strong> - Claim certainty when uncertain</td>
+<td><strong>Genuine LLM-powered self-assessment</strong> - Real reasoning, not heuristics</td>
+</tr>
+<tr>
+<td><strong>Underconfident</strong> - Hesitate when capable</td>
+<td><strong>13-vector epistemic measurement</strong> - Comprehensive knowledge state</td>
+</tr>
+<tr>
+<td><strong>Heuristic-based</strong> - Use keyword matching to fake self-awareness</td>
+<td><strong>Explicit uncertainty tracking</strong> - "Know what you don't know"</td>
+</tr>
+<tr>
+<td><strong>No uncertainty tracking</strong> - Can't distinguish "I know" from "I guess"</td>
+<td><strong>Calibrated confidence</strong> - Measure accuracy of self-assessment</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Learning deltas</strong> - Track epistemic growth over time</td>
+</tr>
+<tr>
+<td>Each phase measures all 13 vectors. Learning deltas calculated automatically.</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><img alt="CASCADE Workflow" src="assets/cascade_workflow.svg" />
+<em>7-phase epistemic reasoning: PREFLIGHT → THINK → PLAN → INVESTIGATE → CHECK → ACT → POSTFLIGHT</em></p>
+<p><img alt="Investigation Decision Tree" src="assets/investigation_tree.svg" />
+<em>Decision logic for investigation loops based on epistemic vectors</em></p>
+<p><a href="examples.html">See Examples →</a></p>
+<hr />
+<h2>Calibration: The Differentiator</h2>
+<p><strong>CALIBRATION</strong> is measured only during POSTFLIGHT and compares predictions against reality. This is how we validate that the AI's self-assessment is accurate.</p>
+<p><strong>PREFLIGHT vs POSTFLIGHT</strong> comparison measures learning:</p>
+<div class="codehilite"><pre><span></span><code><span class="nl">PREFLIGHT</span><span class="p">:</span><span class="w">   </span><span class="nl">KNOW</span><span class="p">:</span><span class="w"> </span><span class="mf">0.35</span><span class="p">,</span><span class="w"> </span><span class="nl">UNCERTAINTY</span><span class="p">:</span><span class="w"> </span><span class="mf">0.75</span>
+<span class="err">↓</span><span class="w"> </span><span class="o">[</span><span class="n">INVESTIGATE</span><span class="o">]</span><span class="w"> </span><span class="err">↓</span>
+<span class="nl">POSTFLIGHT</span><span class="p">:</span><span class="w">  </span><span class="nl">KNOW</span><span class="p">:</span><span class="w"> </span><span class="mf">0.90</span><span class="p">,</span><span class="w"> </span><span class="nl">UNCERTAINTY</span><span class="p">:</span><span class="w"> </span><span class="mf">0.15</span>
+
+<span class="k">Result</span><span class="err">:</span><span class="w"> </span><span class="o">+</span><span class="mf">0.55</span><span class="w"> </span><span class="n">Knowledge</span><span class="w"> </span><span class="n">Gain</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mf">0.60</span><span class="w"> </span><span class="n">Uncertainty</span><span class="w"> </span><span class="n">Reduction</span><span class="p">.</span>
+</code></pre></div>
+
+<p>We measure <strong>Epistemic Delta</strong> across all 13 vectors, not just final confidence. This proves the AI actually learned something, rather than just claiming confidence.</p>
+<p><strong>Domain-specific calibration:</strong>
+The epistemic delta changes based on domain—more specific vectors for that domain are weighted higher. For example, in code analysis tasks, the CONTEXT and CHANGE vectors carry more weight, while in research tasks, KNOW and SIGNAL dominate.</p>
+<p><strong>Knowledge distillation:</strong>
+These calibration patterns are used to train smaller models. By analyzing which investigation strategies produce the best epistemic deltas, we can distill this knowledge into more efficient models that "know how to learn" in specific domains.</p>
+<p><strong>Calibration patterns reveal:</strong>
+- <strong>Pattern:</strong> This AI tends to underestimate slightly → can be more confident
+- <strong>Pattern:</strong> This AI overestimates in domain X → needs more investigation
+- <strong>Pattern:</strong> Investigation strategy Y is most effective for this AI</p>
+<hr />
+<h2>The 13 Epistemic Vectors</h2>
+<p>Empirica measures AI knowledge state across <strong>13 dimensions</strong>, organized into 5 groups. Each vector provides a different lens on what the AI knows, can do, and is uncertain about.</p>
+<h3>Gate: ENGAGEMENT (≥0.60 required)</h3>
+<p><strong>Purpose:</strong> Verify meaningful task understanding before beginning</p>
+<p>Before an AI starts working, it needs to understand what's being asked. The ENGAGEMENT gate ensures the task is clear, relevant, and achievable:</p>
+<ul>
+<li><strong>Clarity</strong> - Does the AI understand what's being asked?</li>
+<li><strong>Relevance</strong> - Does the AI have relevant knowledge/capability?</li>
+<li><strong>Readiness</strong> - Is the AI prepared to succeed?</li>
+</ul>
+<p><strong>Why it's a gate:</strong>
+- Low engagement (&lt;0.60) means the task is unclear or mismatched
+- Prevents wasted effort on misunderstood problems
+- Forces clarification upfront</p>
+<p><strong>Example:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="nv">Task</span>:<span class="w"> </span><span class="s2">&quot;Do the thing&quot;</span>
+<span class="nv">ENGAGEMENT</span>:<span class="w"> </span><span class="mi">0</span>.<span class="mi">35</span><span class="w"> </span>❌<span class="w"> </span>→<span class="w"> </span><span class="nv">CLARIFY</span><span class="w"> </span><span class="ss">(</span><span class="nv">too</span><span class="w"> </span><span class="nv">vague</span><span class="ss">)</span>
+
+<span class="nv">Task</span>:<span class="w"> </span><span class="s2">&quot;Fix the SQL injection in the login form&quot;</span>
+<span class="nv">ENGAGEMENT</span>:<span class="w"> </span><span class="mi">0</span>.<span class="mi">85</span><span class="w"> </span>✅<span class="w"> </span>→<span class="w"> </span><span class="nv">Proceed</span><span class="w"> </span><span class="nv">with</span><span class="w"> </span><span class="nv">assessment</span>
+</code></pre></div>
+
+<hr />
+<h2>🏗️ Foundation Vectors (35% weight)</h2>
+<p><strong>Core knowledge and capability assessment</strong></p>
+<p>These three vectors form the foundation of epistemic awareness—what you know, what you can do, and where you are.</p>
+<h3>KNOW - Domain Knowledge</h3>
+<p>Understanding of relevant domain, concepts, and technologies.</p>
+<p><strong>High KNOW (0.8+):</strong> Deep domain understanding, familiar with tools and approaches, know context and implications.</p>
+<p><strong>Low KNOW (&lt;0.5):</strong> Unfamiliar domain, missing critical knowledge, need external research.</p>
+<h3>DO - Execution Capability</h3>
+<p>Ability to execute required actions and technical capability.</p>
+<p><strong>High DO (0.8+):</strong> Have necessary tools/access, technical capability present, know implementation approach.</p>
+<p><strong>Low DO (&lt;0.5):</strong> Missing required tools, lack technical capability, need user assistance.</p>
+<h3>CONTEXT - Environmental Awareness</h3>
+<p>Understanding of environment, current state, and constraints.</p>
+<p><strong>High CONTEXT (0.8+):</strong> Understand current environment, know system state, aware of constraints.</p>
+<p><strong>Low CONTEXT (&lt;0.5):</strong> Don't understand environment, missing system state, unclear on constraints.</p>
+<hr />
+                            </div>
+                        </div>
+                        <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 px-6">
+        <div class="glass-card p-6 rounded-xl glow-effect flex flex-col h-full ">
+            <h3 class="text-xl font-bold text-indigo-400 mb-4 break-words">🧠 Comprehension Vectors (25% weight)</h3>
+            <div class="prose prose-invert prose-lg max-w-none flex-grow overflow-hidden">
+                <div class="break-words overflow-x-auto">
+                    <p><strong>Task understanding and information quality</strong></p>
+<p>These vectors measure how well the AI understands the task and the quality of information it's working with.</p>
+<h3>CLARITY - Task Understanding</h3>
+<p>How clear and well-defined the request is.</p>
+<p><strong>High CLARITY (0.8+):</strong> Specific request, clear goals, defined success criteria.</p>
+<p><strong>Low CLARITY (&lt;0.5):</strong> Vague request, unclear goals, ambiguous requirements.</p>
+<p><strong>Investigation Strategy:</strong> Ask user for clarification (highest priority, 0.40 gain).</p>
+<h3>COHERENCE - Logical Consistency</h3>
+<p>Internal logical consistency of request and approach.</p>
+<p><strong>High COHERENCE (0.8+):</strong> Request makes logical sense, no contradictions, approach is sound.</p>
+<p><strong>Low COHERENCE (&lt;0.5):</strong> Contradictory requirements, logical issues, approach unclear.</p>
+<p><strong>Critical Threshold:</strong> &lt;0.50 → RESET (task incoherent)</p>
+<h3>SIGNAL - Information Quality</h3>
+<p>Ratio of useful information to noise.</p>
+<p><strong>High SIGNAL (0.8+):</strong> Clear signal, relevant information, focused request.</p>
+<p><strong>Low SIGNAL (&lt;0.5):</strong> Lost in noise, too much irrelevant info, hard to extract signal.</p>
+<h3>DENSITY - Complexity Management</h3>
+<p>Information load (inverted - HIGH is bad).</p>
+<p><strong>Low DENSITY (0.3-0.5) - GOOD:</strong> Manageable information load, right amount of detail.</p>
+<p><strong>High DENSITY (0.8+) - BAD:</strong> Information overload, overwhelming complexity, cognitive saturation.</p>
+<p><strong>Critical Threshold:</strong> &gt;0.90 → RESET (cognitive overload)</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass-card p-6 rounded-xl glow-effect flex flex-col h-full ">
+            <h3 class="text-xl font-bold text-indigo-400 mb-4 break-words">⚡ Execution Vectors (25% weight)</h3>
+            <div class="prose prose-invert prose-lg max-w-none flex-grow overflow-hidden">
+                <div class="break-words overflow-x-auto">
+                    <p><strong>Readiness and progress tracking</strong></p>
+<p>These vectors track the AI's ability to execute and monitor progress.</p>
+<h3>STATE - Current Readiness</h3>
+<p>Understanding of current state.</p>
+<p><strong>High STATE (0.8+):</strong> Clear picture of current state, know what exists, see starting point.</p>
+<p><strong>Low STATE (&lt;0.5):</strong> Unclear current state, don't know what exists, can't see starting point.</p>
+<h3>CHANGE - Progress Tracking</h3>
+<p>Ability to track and manage changes.</p>
+<p><strong>High CHANGE (0.8+):</strong> Can track progress, monitor evolution, detect regressions.</p>
+<p><strong>Low CHANGE (&lt;0.5):</strong> Can't track changes, no change visibility, can't detect issues.</p>
+<p><strong>Critical Threshold:</strong> &lt;0.50 → STOP (cannot progress)</p>
+<h3>COMPLETION - Goal Proximity</h3>
+<p>Visibility of path to completion.</p>
+<p><strong>High COMPLETION (0.8+):</strong> Clear path to done, know the steps, success criteria clear.</p>
+<p><strong>Low COMPLETION (&lt;0.5):</strong> Unclear path forward, don't know steps, success criteria vague.</p>
+<h3>IMPACT - Consequence Awareness</h3>
+<p>Ability to predict consequences.</p>
+<p><strong>High IMPACT (0.8+):</strong> Understand consequences, can predict effects, know risks.</p>
+<p><strong>Low IMPACT (&lt;0.5):</strong> Can't predict consequences, unknown effects, risks unclear.</p>
+                </div>
+            </div>
+        </div>
+        </div>
+                    <div class="max-w-4xl mx-auto px-6 py-0">
+                        <div class="prose prose-invert prose-lg max-w-none">
+                            <hr />
+<h2>🔮 Meta-Epistemic: UNCERTAINTY</h2>
+<p><strong>"What you don't know about what you don't know"</strong></p>
+<p>UNCERTAINTY is special—it's a meta-vector that tracks uncertainty about the assessment itself. This is what enables genuine epistemic humility.</p>
+<p><strong>Low UNCERTAINTY (&lt;0.3) - GOOD:</strong>
+- Confident in assessment
+- Domain well-understood
+- Few unknowns</p>
+<p><strong>High UNCERTAINTY (0.7+) - INVESTIGATE:</strong>
+- Significant epistemic gaps
+- Domain beyond training data
+- Many unknowns present</p>
+<p><strong>Why it's different:</strong>
+- Tracks uncertainty ABOUT the 13-vector assessment itself
+- Enables PREFLIGHT vs POSTFLIGHT comparison
+- Validates investigation effectiveness</p>
+<p><strong>Example:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="n">PREFLIGHT</span><span class="o">:</span>
+<span class="w">  </span><span class="n">KNOW</span><span class="o">:</span><span class="w"> </span><span class="mf">0.35</span><span class="w"> </span><span class="o">(</span><span class="n">low</span><span class="w"> </span><span class="n">knowledge</span><span class="o">)</span>
+<span class="w">  </span><span class="n">UNCERTAINTY</span><span class="o">:</span><span class="w"> </span><span class="mf">0.75</span><span class="w"> </span><span class="o">(</span><span class="n">high</span><span class="w"> </span><span class="n">uncertainty</span><span class="o">)</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="n">Action</span><span class="o">:</span><span class="w"> </span><span class="n">INVESTIGATE</span>
+
+<span class="o">...</span><span class="w"> </span><span class="n">investigation</span><span class="w"> </span><span class="n">happens</span><span class="w"> </span><span class="o">...</span>
+
+<span class="n">POSTFLIGHT</span><span class="o">:</span>
+<span class="w">  </span><span class="n">KNOW</span><span class="o">:</span><span class="w"> </span><span class="mf">0.80</span><span class="w"> </span><span class="o">(</span><span class="n">knowledge</span><span class="w"> </span><span class="n">increased</span><span class="w"> </span><span class="o">+</span><span class="mf">0.45</span><span class="o">)</span>
+<span class="w">  </span><span class="n">UNCERTAINTY</span><span class="o">:</span><span class="w"> </span><span class="mf">0.25</span><span class="w"> </span><span class="o">(</span><span class="n">uncertainty</span><span class="w"> </span><span class="n">reduced</span><span class="w"> </span><span class="o">-</span><span class="mf">0.50</span><span class="o">)</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="n">Investigation</span><span class="w"> </span><span class="n">was</span><span class="w"> </span><span class="n">effective</span><span class="o">!</span><span class="w"> </span><span class="err">✅</span>
+</code></pre></div>
+
+<hr />
+<h2>Critical Thresholds</h2>
+<p>Safety rails to prevent unsafe operation. When vectors cross these thresholds, automated decisions are triggered:</p>
+<table>
+<thead>
+<tr>
+<th>Threshold</th>
+<th>Value</th>
+<th>Consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ENGAGEMENT</strong></td>
+<td>&lt; 0.60</td>
+<td>Stop (Clarify)</td>
+</tr>
+<tr>
+<td><strong>COHERENCE</strong></td>
+<td>&lt; 0.50</td>
+<td>Reset (Incoherent)</td>
+</tr>
+<tr>
+<td><strong>DENSITY</strong></td>
+<td>&gt; 0.90</td>
+<td>Reset (Overload)</td>
+</tr>
+<tr>
+<td><strong>CHANGE</strong></td>
+<td>&lt; 0.50</td>
+<td>Stop (Cannot Progress)</td>
+</tr>
+<tr>
+<td><strong>UNCERTAINTY</strong></td>
+<td>&gt; 0.80</td>
+<td>Investigate</td>
+</tr>
+</tbody>
+</table>
+<p>These thresholds ensure the AI never proceeds when it shouldn't, creating a reliable safety net.</p>
+<hr />
+<h2>Investigation Strategies</h2>
+<p>When vectors indicate gaps, Empirica recommends specific investigation strategies:</p>
+<div class="codehilite"><pre><span></span><code>KNOW &lt; 0.50 (low domain knowledge)
+→ Strategy: External search (web, documentation)
+
+CLARITY &lt; 0.50 (unclear task)
+→ Strategy: User clarification (HIGHEST PRIORITY)
+
+CONTEXT &lt; 0.50 (missing environment info)
+→ Strategy: Environmental scanning (workspace, files)
+
+UNCERTAINTY &gt; 0.80 (high overall uncertainty)
+→ Strategy: Comprehensive investigation required
+
+UNCERTAINTY &lt; 0.30 (low uncertainty)
+→ Action: PROCEED with confidence
+</code></pre></div>
+
+<p>Each investigation strategy is tailored to the specific epistemic gap, making the process efficient and targeted.</p>
+<hr />
+<p><strong>Next Steps:</strong>
+- <a href="developers/architecture.html">CASCADE Workflow</a> - How vectors drive decisions
+- <a href="developers/collaboration.html">Cross-AI Collaboration</a> - Shared epistemic state
+- <a href="ai_vs_agent.html">AI vs Agent Patterns</a> - When to use full assessment</p>
+                        </div>
+                    </div>
+                    
+    </main>
+
+    <footer class="bg-gray-800 text-white py-12 mt-16">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="grid md:grid-cols-4 gap-8">
+            <!-- Brand Section -->
+            <div class="md:col-span-2">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="text-2xl">🧠</span>
+                    <div>
+                        <h3 class="text-xl font-bold">EMPIRICA</h3>
+                        <p class="text-gray-300 text-sm">Building Humble, Thoughtful AI Systems</p>
+                    </div>
+                </div>
+                <p class="text-gray-300 max-w-md">
+                    The meta-framework for AI self-awareness through epistemic humility
+                    and uncertainty-based reasoning. Teaching AIs to think carefully
+                    about their own thinking.
+                </p>
+            </div>
+
+            <!-- Quick Links -->
+            <div>
+                <h4 class="font-semibold mb-4">Quick Links</h4>
+                <ul class="space-y-2 text-gray-300">
+                    <li><a href="/cli-interface.html" class="hover:text-white transition-colors">CLI Interface</a></li>
+                    <li><a href="/epistemics.html" class="hover:text-white transition-colors">Epistemics</a></li>
+                    <li><a href="/components.html" class="hover:text-white transition-colors">Components</a></li>
+                    <li><a href="/getting-started.html" class="hover:text-white transition-colors">Getting Started</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Resources -->
+            <div>
+                <h4 class="font-semibold mb-4">Resources</h4>
+                <ul class="space-y-2 text-gray-300">
+                    <li><a href="/docs.html" class="hover:text-white transition-colors">Documentation</a></li>
+                    <li><a href="/api-reference.html" class="hover:text-white transition-colors">API Reference</a></li>
+                    <li><a href="https://github.com/empirica-ai" class="hover:text-white transition-colors">GitHub
+                            Repository</a></li>
+                    <li><a href="/epistemics.html" class="hover:text-white transition-colors">Research</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <div class="text-gray-300 text-sm">
+                © 2025 Empirica SDK. Building thoughtful AI systems through epistemic humility.
+            </div>
+            <div class="flex space-x-6 mt-4 md:mt-0">
+                <a href="https://github.com/empirica-ai" class="text-gray-300 hover:text-white transition-colors">
+                    GitHub
+                </a>
+                <a href="/contact.html" class="text-gray-300 hover:text-white transition-colors">
+                    Contact
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <script>
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        }
+    </script>
+    <script src="/assets/search.js"></script>
+</body>
+
+</html>
