@@ -1,0 +1,29 @@
+{
+  "goal_id": "4c27c243-9806-4d1d-8c11-a072ac2c5e66",
+  "session_id": "470024d8-8602-4b80-92a7-8c33d635b5b2",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-11-27T18:50:43.110141+00:00",
+  "goal_data": {
+    "objective": "Update MINI_AGENT_TEST_SUITE.md to reflect workflow learning and add 3-step CASCADE guidance",
+    "scope": "task_specific",
+    "success_criteria": [
+      "Add critical 3-step CASCADE workflow section to test suite",
+      "Update troubleshooting to reflect workflow usage issues vs code bugs",
+      "Add working examples using MCP tools vs --prompt-only",
+      "Update test procedures to use proper 3-step workflow",
+      "Remove assumptions about code bugs being root cause",
+      "Verify test suite reflects current understanding"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-11-27T18:50:43.110158+00:00",
+      "action": "created"
+    }
+  ]
+}
