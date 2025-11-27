@@ -1,0 +1,29 @@
+{
+  "goal_id": "ebaa37c2-2b39-4f6a-a88b-72c6a697530d",
+  "session_id": "test-3-goals-workflow",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-11-27T18:56:58.489389+00:00",
+  "goal_data": {
+    "objective": "Test 3: Goal storage verification using complete workflow",
+    "scope": "task_specific",
+    "success_criteria": [
+      "Goal created and stored",
+      "Git notes contain goal data",
+      "Lineage tracking works"
+    ],
+    "estimated_complexity": 0.3,
+    "constraints": null,
+    "metadata": {
+      "test_phase": "Test 3: Goal storage verification",
+      "workflow": "3-step CASCADE validation"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-11-27T18:56:58.489402+00:00",
+      "action": "created"
+    }
+  ]
+}
