@@ -1,0 +1,78 @@
+#!/bin/bash
+# WORKING example for mini-agent checkpoint testing
+
+set -e
+
+SESSION_ID="test-working-$(date +%s)"
+AI_ID="mini-agent"
+
+echo "🧪 Phase 1 Checkpoint Test - CORRECT Workflow"
+echo "Session: $SESSION_ID"
+echo ""
+
+# Step 1: Get prompt (optional for testing, but let's show it)
+echo "Step 1: Getting prompt..."
+empirica preflight "Test checkpoint" --ai-id "$AI_ID" --session-id "$SESSION_ID" --prompt-only > /tmp/prompt.json
+echo "✓ Prompt received"
+echo ""
+
+# Step 2: Create assessment JSON (mini-agent would use genuine self-assessment)
+echo "Step 2: Creating assessment..."
+cat > /tmp/assessment.json << 'EOF'
+{
+  "vectors": {
+    "engagement": 0.85,
+    "know": 0.70,
+    "do": 0.65,
+    "context": 0.75,
+    "clarity": 0.80,
+    "coherence": 0.82,
+    "signal": 0.78,
+    "density": 0.60,
+    "state": 0.70,
+    "change": 0.50,
+    "completion": 0.40,
+    "impact": 0.55,
+    "uncertainty": 0.25
+  }
+}
+EOF
+echo "✓ Assessment created"
+echo ""
+
+# Step 3: Submit with assessment (THIS creates checkpoint!)
+echo "Step 3: Submitting assessment (checkpoint created here)..."
+empirica preflight "Test checkpoint" \
+  --ai-id "$AI_ID" \
+  --session-id "$SESSION_ID" \
+  --assessment-json /tmp/assessment.json \
+  --json > /tmp/result.json
+
+echo "✓ Assessment submitted"
+echo ""
+
+# Step 4: Verify checkpoint
+echo "Step 4: Verifying checkpoint creation..."
+sleep 1  # Give git a moment
+
+CHECKPOINT_COUNT=$(git notes --ref=empirica/checkpoints list | wc -l)
+echo "Total checkpoints: $CHECKPOINT_COUNT"
+
+# Check HEAD for checkpoint
+echo ""
+echo "Checking HEAD for checkpoint..."
+if git notes --ref=empirica/checkpoints show HEAD 2>/dev/null; then
+    echo "✅ Checkpoint found on HEAD!"
+else
+    echo "⚠️  No checkpoint on HEAD, checking recent commits..."
+    for commit in $(git log --oneline -5 | awk '{print $1}'); do
+        if git notes --ref=empirica/checkpoints show "$commit" 2>/dev/null | grep -q "$SESSION_ID"; then
+            echo "✅ Found checkpoint for session $SESSION_ID on commit $commit!"
+            exit 0
+        fi
+    done
+    echo "❌ Checkpoint not found in recent commits"
+fi
+
+# Cleanup
+rm -f /tmp/prompt.json /tmp/assessment.json /tmp/result.json
