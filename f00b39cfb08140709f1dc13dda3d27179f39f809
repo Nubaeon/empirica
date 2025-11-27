@@ -1,0 +1,22 @@
+{
+  "goal_id": "c508e321-99c4-46f6-af59-b566f66b6967",
+  "session_id": "latest:active:rovodev",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-11-27T17:42:19.046174+00:00",
+  "goal_data": {
+    "objective": "Phase 2: Implement cryptographic trust layer (EEP-1)",
+    "scope": "project_wide",
+    "success_criteria": [],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-11-27T17:42:19.046192+00:00",
+      "action": "created"
+    }
+  ]
+}
