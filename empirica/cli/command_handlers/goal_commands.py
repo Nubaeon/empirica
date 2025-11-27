@@ -83,6 +83,32 @@ def handle_goals_create_command(args):
                 "scope": scope.value,
                 "timestamp": goal.created_timestamp
             }
+            
+            # Store goal in git notes for cross-AI discovery (Phase 1: Git Automation)
+            try:
+                from empirica.core.canonical.empirica_git import GitGoalStore
+                
+                ai_id = getattr(args, 'ai_id', 'empirica_cli')
+                goal_store = GitGoalStore()
+                goal_data = {
+                    'objective': objective,
+                    'scope': scope.value,
+                    'success_criteria': [sc.description for sc in success_criteria_objects],
+                    'estimated_complexity': estimated_complexity,
+                    'constraints': constraints,
+                    'metadata': metadata
+                }
+                
+                goal_store.store_goal(
+                    goal_id=goal.id,
+                    session_id=session_id,
+                    ai_id=ai_id,
+                    goal_data=goal_data
+                )
+                logger.debug(f"Goal {goal.id[:8]} stored in git notes for cross-AI discovery")
+            except Exception as e:
+                # Safe degradation - don't fail goal creation if git storage fails
+                logger.debug(f"Git goal storage skipped: {e}")
         else:
             result = {
                 "ok": False,

@@ -184,6 +184,7 @@ def _add_cascade_parsers(subparsers):
     preflight_parser.add_argument('prompt', help='Task description to assess')
     preflight_parser.add_argument('--session-id', help='Optional session ID (auto-generated if not provided)')
     preflight_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier for session tracking')
+    preflight_parser.add_argument('--no-git', action='store_true', help='Disable automatic git checkpoint creation')
     preflight_parser.add_argument('--prompt-only', action='store_true', help='Return ONLY the self-assessment prompt as JSON (no waiting, for genuine AI assessment)')
     preflight_parser.add_argument('--assessment-json', help='Genuine AI self-assessment JSON (required for genuine assessment)')
     preflight_parser.add_argument('--sentinel-assess', action='store_true', help='Route to Sentinel assessment system (future feature)')
@@ -199,6 +200,7 @@ def _add_cascade_parsers(subparsers):
     postflight_parser.add_argument('session_id', help='Session ID from preflight')
     postflight_parser.add_argument('--summary', help='Task completion summary')
     postflight_parser.add_argument('--ai-id', help='AI identifier for session tracking (should match preflight)')
+    postflight_parser.add_argument('--no-git', action='store_true', help='Disable automatic git checkpoint creation')
     postflight_parser.add_argument('--prompt-only', action='store_true', help='Return ONLY the self-assessment prompt as JSON (no waiting, for genuine AI assessment)')
     postflight_parser.add_argument('--assessment-json', help='Genuine AI self-assessment JSON (required for genuine assessment)')
     postflight_parser.add_argument('--sentinel-assess', action='store_true', help='Route to Sentinel assessment system (future feature)')
@@ -553,6 +555,18 @@ def _add_checkpoint_parsers(subparsers):
     goals_list_parser.add_argument('--completed', action='store_true', help='Filter by completion status')
     goals_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
+    # Goals-discover command (NEW: Phase 1 - Cross-AI Goal Discovery)
+    goals_discover_parser = subparsers.add_parser('goals-discover', help='Discover goals from other AIs via git')
+    goals_discover_parser.add_argument('--from-ai-id', help='Filter by AI creator')
+    goals_discover_parser.add_argument('--session-id', help='Filter by session')
+    goals_discover_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Goals-resume command (NEW: Phase 1 - Cross-AI Goal Handoff)
+    goals_resume_parser = subparsers.add_parser('goals-resume', help='Resume another AI\'s goal')
+    goals_resume_parser.add_argument('goal_id', help='Goal ID to resume')
+    goals_resume_parser.add_argument('--ai-id', default='empirica_cli', help='Your AI identifier')
+    goals_resume_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
     # Sessions resume command
     sessions_resume_parser = subparsers.add_parser('sessions-resume', help='Resume previous sessions')
     sessions_resume_parser.add_argument('--ai-id', help='Filter by AI ID')
@@ -716,6 +730,8 @@ def main(args=None):
             'goals-complete-subtask': handle_goals_complete_subtask_command,
             'goals-progress': handle_goals_progress_command,
             'goals-list': handle_goals_list_command,
+            'goals-discover': handle_goals_discover_command,
+            'goals-resume': handle_goals_resume_command,
             'sessions-resume': handle_sessions_resume_command,
             
             # Checkpoint commands (Phase 2)

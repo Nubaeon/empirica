@@ -38,6 +38,10 @@ from .goal_commands import (
     handle_goals_list_command,
     handle_sessions_resume_command
 )
+from .goal_discovery_commands import (
+    handle_goals_discover_command,
+    handle_goals_resume_command
+)
 from .decision_commands import handle_decision_command, handle_decision_batch_command
 from .config_commands import (
     handle_config_command,
@@ -115,6 +119,8 @@ __all__ = [
     'handle_goals_complete_subtask_command',
     'handle_goals_progress_command',
     'handle_goals_list_command',
+    'handle_goals_discover_command',
+    'handle_goals_resume_command',
     'handle_sessions_resume_command',
     
     # Decision commands

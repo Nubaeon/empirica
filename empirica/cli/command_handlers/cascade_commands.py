@@ -253,6 +253,30 @@ def handle_preflight_command(args):
         db.conn.commit()
         db.close()
         
+        # Automatic git checkpoint creation (Phase 1: Git Automation)
+        try:
+            from empirica.core.canonical.empirica_git import auto_checkpoint
+            
+            no_git = getattr(args, 'no_git', False)
+            checkpoint_hash = auto_checkpoint(
+                session_id=session_id,
+                ai_id=ai_id,
+                phase='PREFLIGHT',
+                vectors=vectors,
+                round_num=1,
+                metadata={
+                    'recommended_action': recommendation['action'],
+                    'cascade_id': cascade_id
+                },
+                no_git_flag=no_git
+            )
+            
+            if checkpoint_hash:
+                logger.debug(f"Git checkpoint created: {checkpoint_hash[:8]}")
+        except Exception as e:
+            # Safe degradation - don't fail CASCADE if checkpoint fails
+            logger.debug(f"Checkpoint creation skipped: {e}")
+        
         # Format output based on requested format
         if args.json:
             output = {
@@ -496,6 +520,30 @@ def handle_postflight_command(args):
                 print(f"⚠️  Could not calculate delta: {e}")
         finally:
             db.close()
+        
+        # Automatic git checkpoint creation (Phase 1: Git Automation)
+        try:
+            from empirica.core.canonical.empirica_git import auto_checkpoint
+            
+            no_git = getattr(args, 'no_git', False)
+            checkpoint_hash = auto_checkpoint(
+                session_id=session_id,
+                ai_id=ai_id if ai_id else session_id,
+                phase='POSTFLIGHT',
+                vectors=postflight_vectors,
+                round_num=1,
+                metadata={
+                    'calibration': calibration,
+                    'delta': delta
+                },
+                no_git_flag=no_git
+            )
+            
+            if checkpoint_hash:
+                logger.debug(f"Git checkpoint created: {checkpoint_hash[:8]}")
+        except Exception as e:
+            # Safe degradation - don't fail CASCADE if checkpoint fails
+            logger.debug(f"Checkpoint creation skipped: {e}")
         
         # Format output based on requested format
         if args.json:
