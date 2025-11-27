@@ -140,7 +140,8 @@ def handle_metacognitive_command(args):
         
         print(f"🤔 Running metacognitive evaluation: {args.task}")
         
-        evaluator = MetacognitionMonitor()
+        # Use mode='llm' to ensure NO heuristics are used
+        evaluator = MetacognitionMonitor(mode='llm')
         context = parse_json_safely(getattr(args, 'context', None))
         
         # Run metacognitive evaluation

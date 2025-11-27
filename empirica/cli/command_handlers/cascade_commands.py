@@ -84,9 +84,10 @@ def handle_preflight_command(args):
         
         prompt = args.prompt
         session_id = args.session_id or str(uuid.uuid4())[:8]
+        ai_id = getattr(args, 'ai_id', 'empirica_cli')
         
         # Execute preflight assessment
-        assessor = CanonicalEpistemicAssessor(agent_id=session_id)
+        assessor = CanonicalEpistemicAssessor(agent_id=ai_id)
         
         # Get self-assessment prompt from canonical assessor
         assessment_request = asyncio.run(assessor.assess(prompt, {}))
@@ -234,7 +235,7 @@ def handle_preflight_command(args):
         from empirica.data.session_database import SessionDatabase
         db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
         try:
-            db.create_session(ai_id=assessment.assessor.agent_id if hasattr(assessment, 'assessor') and hasattr(assessment.assessor, 'agent_id') else session_id, bootstrap_level=1, components_loaded=5, user_id=None)
+            db.create_session(ai_id=ai_id, bootstrap_level=1, components_loaded=5, user_id=None)
         except:
             pass  # Session might already exist
         
@@ -335,9 +336,11 @@ def handle_postflight_command(args):
         
         session_id = args.session_id
         summary = args.summary or "Task completed"
+        ai_id = getattr(args, 'ai_id', None)
         
         # Execute postflight assessment - GENUINE self-assessment required
-        assessor = CanonicalEpistemicAssessor(agent_id=session_id)
+        # Use ai_id if provided, otherwise fall back to session_id for backward compatibility
+        assessor = CanonicalEpistemicAssessor(agent_id=ai_id if ai_id else session_id)
         
         task_description = f"POSTFLIGHT: {summary}"
         assessment_request = asyncio.run(assessor.assess(task_description, {"phase": "postflight"}))

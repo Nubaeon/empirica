@@ -207,7 +207,8 @@ def _investigate_concept(concept: str, context: str = None, verbose: bool = Fals
     try:
         from empirica.core.metacognition_12d_monitor.metacognition_12d_monitor import MetacognitionMonitor
         
-        evaluator = MetacognitionMonitor()
+        # Use mode='llm' to ensure NO heuristics are used
+        evaluator = MetacognitionMonitor(mode='llm')
         context_data = parse_json_safely(context)
         
         # Use available method or create mock result
