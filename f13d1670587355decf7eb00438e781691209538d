@@ -1,0 +1,26 @@
+{
+  "goal_id": "a431bfea-acf4-4ca5-a613-fcafb85662dd",
+  "session_id": "df2ba3c8-bf4c-4c3c-9153-cb489d9eec79",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-11-28T20:22:59.818508+00:00",
+  "goal_data": {
+    "objective": "Continue Empirica testing - Phase 2/3 validation and Integration Tests investigation",
+    "scope": "project_wide",
+    "success_criteria": [
+      "Identity management tests passing",
+      "Goal discovery and resume working",
+      "Integration tests investigated and documented"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-11-28T20:22:59.818524+00:00",
+      "action": "created"
+    }
+  ]
+}
