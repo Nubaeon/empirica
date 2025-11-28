@@ -1,0 +1,28 @@
+{
+  "goal_id": "214c53df-c53c-49f7-a72f-721b07ad99d0",
+  "session_id": "31c902d0-684f-4681-862a-03b5595e0dcc",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-11-28T11:15:18.017833+00:00",
+  "goal_data": {
+    "objective": "Implement SentinelOrchestrator for multi-persona coordination with cognitive_vault integration",
+    "scope": "project_wide",
+    "success_criteria": [
+      "Cognitive vault and bayesian_guardian investigated and documented",
+      "SentinelOrchestrator implemented with COMPOSE and ARBITRATE operations",
+      "CLI commands for persona management (list, create, validate, orchestrate)",
+      "Integration tests passing for multi-persona workflows",
+      "Documentation complete"
+    ],
+    "estimated_complexity": 0.75,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-11-28T11:15:18.017850+00:00",
+      "action": "created"
+    }
+  ]
+}
