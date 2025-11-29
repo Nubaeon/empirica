@@ -1,0 +1,29 @@
+{
+  "goal_id": "758fba91-ec44-4082-8d3a-644f7108af28",
+  "session_id": "c4d89c72-f5a4-4ef5-a59f-b16bdfda91d5",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-11-29T11:45:04.603580+00:00",
+  "goal_data": {
+    "objective": "Implement dynamic threshold configuration system (MCO-aligned)",
+    "scope": "project_wide",
+    "success_criteria": [
+      "cascade_styles.yaml created with 6 profiles (default, exploratory, rigorous, rapid, expert, novice)",
+      "ThresholdLoader class implemented with dynamic loading and profile switching",
+      "thresholds.py refactored to use dynamic configuration",
+      "Bootstrap Level 0 loads thresholds from profile",
+      "Unit tests pass for threshold loading and profile switching",
+      "Backwards compatible - existing code works without changes"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-11-29T11:45:04.603593+00:00",
+      "action": "created"
+    }
+  ]
+}
