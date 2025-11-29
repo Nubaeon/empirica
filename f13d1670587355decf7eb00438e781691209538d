@@ -1,0 +1,43 @@
+{
+  "goal_id": "0cc3d206-b353-4ec5-a091-236302280b90",
+  "session_id": "test-session",
+  "ai_id": "test-ai",
+  "created_at": "2025-11-29T16:24:17.306148+00:00",
+  "goal_data": {
+    "id": "0cc3d206-b353-4ec5-a091-236302280b90",
+    "objective": "Complete end-to-end system test",
+    "success_criteria": [
+      {
+        "id": "eddbbc44-373c-4860-b48f-08d91b25a28c",
+        "description": "End-to-end test criterion",
+        "validation_method": "automated",
+        "threshold": 0.9,
+        "is_required": true,
+        "is_met": false
+      }
+    ],
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.4,
+      "coordination": 0.6
+    },
+    "dependencies": [],
+    "constraints": {},
+    "metadata": {},
+    "estimated_complexity": null,
+    "created_timestamp": 1764433457.258165,
+    "completed_timestamp": null,
+    "is_completed": false
+  },
+  "epistemic_state": {
+    "engagement": 0.8,
+    "know": 0.7
+  },
+  "lineage": [
+    {
+      "ai_id": "test-ai",
+      "timestamp": "2025-11-29T16:24:17.306163+00:00",
+      "action": "created"
+    }
+  ]
+}
