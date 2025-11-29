@@ -1,0 +1,30 @@
+{
+  "goal_id": "50b36855-5672-4cb2-adc0-bd89ddd32578",
+  "session_id": "test-session-db-git-check",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-11-29T16:30:09.676967+00:00",
+  "goal_data": {
+    "objective": "Test goal scope vector serialization in database and git",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Database stores scope vector correctly",
+      "Git store preserves scope data",
+      "Scope retrieval works"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-11-29T16:30:09.676979+00:00",
+      "action": "created"
+    }
+  ]
+}
