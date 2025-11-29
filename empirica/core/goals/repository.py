@@ -12,7 +12,7 @@ from typing import List, Optional, Dict, Any
 from pathlib import Path
 
 from empirica.data.session_database import SessionDatabase
-from .types import Goal, GoalScope
+from .types import Goal, ScopeVector
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ class GoalRepository:
                 goal.id,
                 session_id,
                 goal.objective,
-                goal.scope.value,
+                json.dumps(goal.scope.to_dict()),
                 goal.estimated_complexity,
                 goal.created_timestamp,
                 goal.completed_timestamp,
@@ -257,7 +257,7 @@ class GoalRepository:
         self,
         session_id: Optional[str] = None,
         is_completed: Optional[bool] = None,
-        scope: Optional[GoalScope] = None
+        scope: Optional[ScopeVector] = None
     ) -> List[Goal]:
         """
         Query goals with filters
@@ -284,7 +284,7 @@ class GoalRepository:
             
             if scope:
                 query += " AND scope = ?"
-                params.append(scope.value)
+                params.append(json.dumps(scope.to_dict()))
             
             query += " ORDER BY created_timestamp DESC"
             

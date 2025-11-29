@@ -4,7 +4,9 @@ import asyncio
 import json
 import pytest
 from empirica.core.canonical.canonical_epistemic_assessment import CanonicalEpistemicAssessor, Action
-from empirica.core.canonical.reflex_frame import EpistemicAssessment, VectorState, ENGAGEMENT_THRESHOLD
+from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
+EpistemicAssessment = EpistemicAssessmentSchema  # Alias for backwards compat
+from empirica.core.canonical.reflex_frame import VectorState, ENGAGEMENT_THRESHOLD
 
 
 class TestCanonicalEpistemicAssessor:

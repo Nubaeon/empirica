@@ -1,0 +1,6243 @@
+{
+  "metadata": {
+    "timestamp": "2025-11-29T13:31:06.876175",
+    "total_experiments": 75,
+    "framework_version": "1.0"
+  },
+  "results": [
+    {
+      "handoff_id": "46b0b81b",
+      "task_scenario": {
+        "task_id": "e4b79745",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Fix null pointer exception in user authentication",
+        "estimated_tokens": 3000,
+        "required_knowledge_domains": [
+          "python",
+          "authentication",
+          "web_frameworks"
+        ],
+        "success_criteria": [
+          "Tests pass",
+          "No regression",
+          "Error handled"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e4b79745",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "372d3f8f-f0e9-4728-83ea-1efd695204af",
+          "task_description": "Fix null pointer exception in user authentication",
+          "task_type": "bug_fix",
+          "complexity": "simple",
+          "domains": [
+            "python",
+            "authentication",
+            "web_frameworks"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 27,
+      "accuracy_score": 0.8395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 1.0618315018315019
+    },
+    {
+      "handoff_id": "d431a6f0",
+      "task_scenario": {
+        "task_id": "e4b79745",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Fix null pointer exception in user authentication",
+        "estimated_tokens": 3000,
+        "required_knowledge_domains": [
+          "python",
+          "authentication",
+          "web_frameworks"
+        ],
+        "success_criteria": [
+          "Tests pass",
+          "No regression",
+          "Error handled"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e4b79745",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "c378da17-93fa-4535-a26c-ce9016d3d288",
+          "task_description": "Fix null pointer exception in user authentication",
+          "task_type": "bug_fix",
+          "complexity": "simple",
+          "domains": [
+            "python",
+            "authentication",
+            "web_frameworks"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 27,
+      "accuracy_score": 0.8395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 1.0618315018315019
+    },
+    {
+      "handoff_id": "047bcbd3",
+      "task_scenario": {
+        "task_id": "e4b79745",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Fix null pointer exception in user authentication",
+        "estimated_tokens": 3000,
+        "required_knowledge_domains": [
+          "python",
+          "authentication",
+          "web_frameworks"
+        ],
+        "success_criteria": [
+          "Tests pass",
+          "No regression",
+          "Error handled"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e4b79745",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "ca0a0c70-3569-4c45-b9ef-7e337eb1f6c3",
+          "task_description": "Fix null pointer exception in user authentication",
+          "task_type": "bug_fix",
+          "complexity": "simple",
+          "domains": [
+            "python",
+            "authentication",
+            "web_frameworks"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 32,
+      "accuracy_score": 0.8440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.9661697247706422
+    },
+    {
+      "handoff_id": "98db1ef5",
+      "task_scenario": {
+        "task_id": "e4b79745",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Fix null pointer exception in user authentication",
+        "estimated_tokens": 3000,
+        "required_knowledge_domains": [
+          "python",
+          "authentication",
+          "web_frameworks"
+        ],
+        "success_criteria": [
+          "Tests pass",
+          "No regression",
+          "Error handled"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e4b79745",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "4c9a2bc9-e12c-4913-955a-ee4048511687",
+          "task_description": "Fix null pointer exception in user authentication",
+          "task_type": "bug_fix",
+          "complexity": "simple",
+          "domains": [
+            "python",
+            "authentication",
+            "web_frameworks"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 31,
+      "accuracy_score": 0.8451977401129944,
+      "token_cost": 2655,
+      "recommendation_score": 0.9865208675050119
+    },
+    {
+      "handoff_id": "1e39dfee",
+      "task_scenario": {
+        "task_id": "e4b79745",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Fix null pointer exception in user authentication",
+        "estimated_tokens": 3000,
+        "required_knowledge_domains": [
+          "python",
+          "authentication",
+          "web_frameworks"
+        ],
+        "success_criteria": [
+          "Tests pass",
+          "No regression",
+          "Error handled"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e4b79745",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "99addde7-a3f5-49ab-bc51-a2803ebfb5fe",
+          "task_description": "Fix null pointer exception in user authentication",
+          "task_type": "bug_fix",
+          "complexity": "simple",
+          "domains": [
+            "python",
+            "authentication",
+            "web_frameworks"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 53,
+      "accuracy_score": 0.826875699888018,
+      "token_cost": 4465,
+      "recommendation_score": 0.7106864712966681
+    },
+    {
+      "handoff_id": "a43a2a95",
+      "task_scenario": {
+        "task_id": "efbfa7f9",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Resolve race condition in concurrent payment processing",
+        "estimated_tokens": 8000,
+        "required_knowledge_domains": [
+          "concurrency",
+          "payment_systems",
+          "databases"
+        ],
+        "success_criteria": [
+          "Thread safety",
+          "Performance maintained",
+          "Edge cases covered"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "efbfa7f9",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "7748d4a4-e1ac-436e-a696-7a4f93f192e9",
+          "task_description": "Resolve race condition in concurrent payment processing",
+          "task_type": "bug_fix",
+          "complexity": "medium",
+          "domains": [
+            "concurrency",
+            "payment_systems",
+            "databases"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 34,
+      "accuracy_score": 0.7395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 0.8845765998707176
+    },
+    {
+      "handoff_id": "a1a545a6",
+      "task_scenario": {
+        "task_id": "efbfa7f9",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Resolve race condition in concurrent payment processing",
+        "estimated_tokens": 8000,
+        "required_knowledge_domains": [
+          "concurrency",
+          "payment_systems",
+          "databases"
+        ],
+        "success_criteria": [
+          "Thread safety",
+          "Performance maintained",
+          "Edge cases covered"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "efbfa7f9",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "feb66a10-e3df-4f1b-882d-8a1ea72d6256",
+          "task_description": "Resolve race condition in concurrent payment processing",
+          "task_type": "bug_fix",
+          "complexity": "medium",
+          "domains": [
+            "concurrency",
+            "payment_systems",
+            "databases"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 34,
+      "accuracy_score": 0.7395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 0.8845765998707176
+    },
+    {
+      "handoff_id": "7382ab97",
+      "task_scenario": {
+        "task_id": "efbfa7f9",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Resolve race condition in concurrent payment processing",
+        "estimated_tokens": 8000,
+        "required_knowledge_domains": [
+          "concurrency",
+          "payment_systems",
+          "databases"
+        ],
+        "success_criteria": [
+          "Thread safety",
+          "Performance maintained",
+          "Edge cases covered"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "efbfa7f9",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "00afdf50-27a2-4f22-bec7-af7ca0071739",
+          "task_description": "Resolve race condition in concurrent payment processing",
+          "task_type": "bug_fix",
+          "complexity": "medium",
+          "domains": [
+            "concurrency",
+            "payment_systems",
+            "databases"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 40,
+      "accuracy_score": 0.7440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.8136697247706421
+    },
+    {
+      "handoff_id": "c6d46a93",
+      "task_scenario": {
+        "task_id": "efbfa7f9",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Resolve race condition in concurrent payment processing",
+        "estimated_tokens": 8000,
+        "required_knowledge_domains": [
+          "concurrency",
+          "payment_systems",
+          "databases"
+        ],
+        "success_criteria": [
+          "Thread safety",
+          "Performance maintained",
+          "Edge cases covered"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "efbfa7f9",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "18e4b661-f8ee-4b9c-aa62-09086c4b6d35",
+          "task_description": "Resolve race condition in concurrent payment processing",
+          "task_type": "bug_fix",
+          "complexity": "medium",
+          "domains": [
+            "concurrency",
+            "payment_systems",
+            "databases"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 39,
+      "accuracy_score": 0.7451977401129944,
+      "token_cost": 2655,
+      "recommendation_score": 0.8274141677531508
+    },
+    {
+      "handoff_id": "e6ed3234",
+      "task_scenario": {
+        "task_id": "efbfa7f9",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Resolve race condition in concurrent payment processing",
+        "estimated_tokens": 8000,
+        "required_knowledge_domains": [
+          "concurrency",
+          "payment_systems",
+          "databases"
+        ],
+        "success_criteria": [
+          "Thread safety",
+          "Performance maintained",
+          "Edge cases covered"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "efbfa7f9",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "222b4f6a-04fd-4f2f-b687-e6157e57c3d6",
+          "task_description": "Resolve race condition in concurrent payment processing",
+          "task_type": "bug_fix",
+          "complexity": "medium",
+          "domains": [
+            "concurrency",
+            "payment_systems",
+            "databases"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 66,
+      "accuracy_score": 0.726875699888018,
+      "token_cost": 4465,
+      "recommendation_score": 0.6037911025145068
+    },
+    {
+      "handoff_id": "5bf9a0ca",
+      "task_scenario": {
+        "task_id": "e5e63eee",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Debug distributed system deadlock in microservices architecture",
+        "estimated_tokens": 20000,
+        "required_knowledge_domains": [
+          "microservices",
+          "distributed_systems",
+          "orchestration"
+        ],
+        "success_criteria": [
+          "Root cause identified",
+          "Fix implemented",
+          "Monitoring added"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e5e63eee",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "be1cf81e-effa-4c91-8b6e-af42700f475c",
+          "task_description": "Debug distributed system deadlock in microservices architecture",
+          "task_type": "bug_fix",
+          "complexity": "complex",
+          "domains": [
+            "microservices",
+            "distributed_systems",
+            "orchestration"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 51,
+      "accuracy_score": 0.6395604395604395,
+      "token_cost": 2275,
+      "recommendation_score": 0.6681060116354234
+    },
+    {
+      "handoff_id": "e9cb96cb",
+      "task_scenario": {
+        "task_id": "e5e63eee",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Debug distributed system deadlock in microservices architecture",
+        "estimated_tokens": 20000,
+        "required_knowledge_domains": [
+          "microservices",
+          "distributed_systems",
+          "orchestration"
+        ],
+        "success_criteria": [
+          "Root cause identified",
+          "Fix implemented",
+          "Monitoring added"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e5e63eee",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "b17c9e81-c420-4e67-84f4-c7fe136b31d9",
+          "task_description": "Debug distributed system deadlock in microservices architecture",
+          "task_type": "bug_fix",
+          "complexity": "complex",
+          "domains": [
+            "microservices",
+            "distributed_systems",
+            "orchestration"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 51,
+      "accuracy_score": 0.6395604395604395,
+      "token_cost": 2275,
+      "recommendation_score": 0.6681060116354234
+    },
+    {
+      "handoff_id": "26e6491f",
+      "task_scenario": {
+        "task_id": "e5e63eee",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Debug distributed system deadlock in microservices architecture",
+        "estimated_tokens": 20000,
+        "required_knowledge_domains": [
+          "microservices",
+          "distributed_systems",
+          "orchestration"
+        ],
+        "success_criteria": [
+          "Root cause identified",
+          "Fix implemented",
+          "Monitoring added"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e5e63eee",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "7d67b41c-c895-4edd-8c25-c5300b7b2b15",
+          "task_description": "Debug distributed system deadlock in microservices architecture",
+          "task_type": "bug_fix",
+          "complexity": "complex",
+          "domains": [
+            "microservices",
+            "distributed_systems",
+            "orchestration"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 61,
+      "accuracy_score": 0.6440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.618751691983757
+    },
+    {
+      "handoff_id": "270c33c0",
+      "task_scenario": {
+        "task_id": "e5e63eee",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Debug distributed system deadlock in microservices architecture",
+        "estimated_tokens": 20000,
+        "required_knowledge_domains": [
+          "microservices",
+          "distributed_systems",
+          "orchestration"
+        ],
+        "success_criteria": [
+          "Root cause identified",
+          "Fix implemented",
+          "Monitoring added"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e5e63eee",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "7508fe22-d2b3-4be6-a37b-b05df43ad4ca",
+          "task_description": "Debug distributed system deadlock in microservices architecture",
+          "task_type": "bug_fix",
+          "complexity": "complex",
+          "domains": [
+            "microservices",
+            "distributed_systems",
+            "orchestration"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 59,
+      "accuracy_score": 0.6451977401129945,
+      "token_cost": 2655,
+      "recommendation_score": 0.6309604519774012
+    },
+    {
+      "handoff_id": "dd0a046d",
+      "task_scenario": {
+        "task_id": "e5e63eee",
+        "task_type": "TaskType.BUG_FIX",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Debug distributed system deadlock in microservices architecture",
+        "estimated_tokens": 20000,
+        "required_knowledge_domains": [
+          "microservices",
+          "distributed_systems",
+          "orchestration"
+        ],
+        "success_criteria": [
+          "Root cause identified",
+          "Fix implemented",
+          "Monitoring added"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e5e63eee",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "26cf00ec-2247-4642-b762-7382c5daca13",
+          "task_description": "Debug distributed system deadlock in microservices architecture",
+          "task_type": "bug_fix",
+          "complexity": "complex",
+          "domains": [
+            "microservices",
+            "distributed_systems",
+            "orchestration"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 100,
+      "accuracy_score": 0.6268756998880181,
+      "token_cost": 4465,
+      "recommendation_score": 0.4710638297872341
+    },
+    {
+      "handoff_id": "5c151553",
+      "task_scenario": {
+        "task_id": "88630d64",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Add user preference settings page",
+        "estimated_tokens": 5000,
+        "required_knowledge_domains": [
+          "frontend",
+          "ui_design",
+          "state_management"
+        ],
+        "success_criteria": [
+          "UI functional",
+          "State persists",
+          "Tests written"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "88630d64",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "62b309bd-182d-4b6e-b7f5-74576c86784d",
+          "task_description": "Add user preference settings page",
+          "task_type": "feature_implementation",
+          "complexity": "simple",
+          "domains": [
+            "frontend",
+            "ui_design",
+            "state_management"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 27,
+      "accuracy_score": 0.8395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 1.0618315018315019
+    },
+    {
+      "handoff_id": "98c5fa68",
+      "task_scenario": {
+        "task_id": "88630d64",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Add user preference settings page",
+        "estimated_tokens": 5000,
+        "required_knowledge_domains": [
+          "frontend",
+          "ui_design",
+          "state_management"
+        ],
+        "success_criteria": [
+          "UI functional",
+          "State persists",
+          "Tests written"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "88630d64",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "8859a185-0de4-4e78-95c2-41d4804c8923",
+          "task_description": "Add user preference settings page",
+          "task_type": "feature_implementation",
+          "complexity": "simple",
+          "domains": [
+            "frontend",
+            "ui_design",
+            "state_management"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 27,
+      "accuracy_score": 0.8395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 1.0618315018315019
+    },
+    {
+      "handoff_id": "35733e37",
+      "task_scenario": {
+        "task_id": "88630d64",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Add user preference settings page",
+        "estimated_tokens": 5000,
+        "required_knowledge_domains": [
+          "frontend",
+          "ui_design",
+          "state_management"
+        ],
+        "success_criteria": [
+          "UI functional",
+          "State persists",
+          "Tests written"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "88630d64",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "084fa807-f03c-4450-9baa-2d7a5d23f731",
+          "task_description": "Add user preference settings page",
+          "task_type": "feature_implementation",
+          "complexity": "simple",
+          "domains": [
+            "frontend",
+            "ui_design",
+            "state_management"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 32,
+      "accuracy_score": 0.8440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.9661697247706422
+    },
+    {
+      "handoff_id": "769e5b0c",
+      "task_scenario": {
+        "task_id": "88630d64",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Add user preference settings page",
+        "estimated_tokens": 5000,
+        "required_knowledge_domains": [
+          "frontend",
+          "ui_design",
+          "state_management"
+        ],
+        "success_criteria": [
+          "UI functional",
+          "State persists",
+          "Tests written"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "88630d64",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "fc92d0a5-2b25-478b-a43f-b3bf7e016957",
+          "task_description": "Add user preference settings page",
+          "task_type": "feature_implementation",
+          "complexity": "simple",
+          "domains": [
+            "frontend",
+            "ui_design",
+            "state_management"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 31,
+      "accuracy_score": 0.8451977401129944,
+      "token_cost": 2655,
+      "recommendation_score": 0.9865208675050119
+    },
+    {
+      "handoff_id": "27f411e0",
+      "task_scenario": {
+        "task_id": "88630d64",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Add user preference settings page",
+        "estimated_tokens": 5000,
+        "required_knowledge_domains": [
+          "frontend",
+          "ui_design",
+          "state_management"
+        ],
+        "success_criteria": [
+          "UI functional",
+          "State persists",
+          "Tests written"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "88630d64",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "186c9dea-f90a-468a-8a95-31c76b94490b",
+          "task_description": "Add user preference settings page",
+          "task_type": "feature_implementation",
+          "complexity": "simple",
+          "domains": [
+            "frontend",
+            "ui_design",
+            "state_management"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 53,
+      "accuracy_score": 0.826875699888018,
+      "token_cost": 4465,
+      "recommendation_score": 0.7106864712966681
+    },
+    {
+      "handoff_id": "03ef35ab",
+      "task_scenario": {
+        "task_id": "e3ab7bb6",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Implement real-time chat with WebSocket support",
+        "estimated_tokens": 15000,
+        "required_knowledge_domains": [
+          "websockets",
+          "real_time",
+          "state_sync"
+        ],
+        "success_criteria": [
+          "Message delivery",
+          "Connection handling",
+          "Error recovery"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e3ab7bb6",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "20738552-d35b-4959-aaae-48b7848f3f8c",
+          "task_description": "Implement real-time chat with WebSocket support",
+          "task_type": "feature_implementation",
+          "complexity": "medium",
+          "domains": [
+            "websockets",
+            "real_time",
+            "state_sync"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 34,
+      "accuracy_score": 0.7395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 0.8845765998707176
+    },
+    {
+      "handoff_id": "c37844e2",
+      "task_scenario": {
+        "task_id": "e3ab7bb6",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Implement real-time chat with WebSocket support",
+        "estimated_tokens": 15000,
+        "required_knowledge_domains": [
+          "websockets",
+          "real_time",
+          "state_sync"
+        ],
+        "success_criteria": [
+          "Message delivery",
+          "Connection handling",
+          "Error recovery"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e3ab7bb6",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "fe8506c3-3d10-4c92-a868-c01c5286d663",
+          "task_description": "Implement real-time chat with WebSocket support",
+          "task_type": "feature_implementation",
+          "complexity": "medium",
+          "domains": [
+            "websockets",
+            "real_time",
+            "state_sync"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 34,
+      "accuracy_score": 0.7395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 0.8845765998707176
+    },
+    {
+      "handoff_id": "71ff5f61",
+      "task_scenario": {
+        "task_id": "e3ab7bb6",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Implement real-time chat with WebSocket support",
+        "estimated_tokens": 15000,
+        "required_knowledge_domains": [
+          "websockets",
+          "real_time",
+          "state_sync"
+        ],
+        "success_criteria": [
+          "Message delivery",
+          "Connection handling",
+          "Error recovery"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e3ab7bb6",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "70635cec-a981-4602-87ff-dbc75aa91b9e",
+          "task_description": "Implement real-time chat with WebSocket support",
+          "task_type": "feature_implementation",
+          "complexity": "medium",
+          "domains": [
+            "websockets",
+            "real_time",
+            "state_sync"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 40,
+      "accuracy_score": 0.7440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.8136697247706421
+    },
+    {
+      "handoff_id": "76a578b8",
+      "task_scenario": {
+        "task_id": "e3ab7bb6",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Implement real-time chat with WebSocket support",
+        "estimated_tokens": 15000,
+        "required_knowledge_domains": [
+          "websockets",
+          "real_time",
+          "state_sync"
+        ],
+        "success_criteria": [
+          "Message delivery",
+          "Connection handling",
+          "Error recovery"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e3ab7bb6",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "7c35aeda-18c0-4c71-8f79-3b7e57f51662",
+          "task_description": "Implement real-time chat with WebSocket support",
+          "task_type": "feature_implementation",
+          "complexity": "medium",
+          "domains": [
+            "websockets",
+            "real_time",
+            "state_sync"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 39,
+      "accuracy_score": 0.7451977401129944,
+      "token_cost": 2655,
+      "recommendation_score": 0.8274141677531508
+    },
+    {
+      "handoff_id": "84b0857f",
+      "task_scenario": {
+        "task_id": "e3ab7bb6",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Implement real-time chat with WebSocket support",
+        "estimated_tokens": 15000,
+        "required_knowledge_domains": [
+          "websockets",
+          "real_time",
+          "state_sync"
+        ],
+        "success_criteria": [
+          "Message delivery",
+          "Connection handling",
+          "Error recovery"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "e3ab7bb6",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "a9700813-de41-44e3-9343-fb94e3964909",
+          "task_description": "Implement real-time chat with WebSocket support",
+          "task_type": "feature_implementation",
+          "complexity": "medium",
+          "domains": [
+            "websockets",
+            "real_time",
+            "state_sync"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 66,
+      "accuracy_score": 0.726875699888018,
+      "token_cost": 4465,
+      "recommendation_score": 0.6037911025145068
+    },
+    {
+      "handoff_id": "592365c8",
+      "task_scenario": {
+        "task_id": "514443a6",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Build AI-powered recommendation engine with ML pipeline",
+        "estimated_tokens": 40000,
+        "required_knowledge_domains": [
+          "machine_learning",
+          "data_pipeline",
+          "recommendation_algorithms"
+        ],
+        "success_criteria": [
+          "Model accuracy",
+          "Pipeline efficiency",
+          "Scalable architecture"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "514443a6",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "66b83c65-cb00-4a3b-afe2-f7ba2efb59ce",
+          "task_description": "Build AI-powered recommendation engine with ML pipeline",
+          "task_type": "feature_implementation",
+          "complexity": "complex",
+          "domains": [
+            "machine_learning",
+            "data_pipeline",
+            "recommendation_algorithms"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 51,
+      "accuracy_score": 0.6395604395604395,
+      "token_cost": 2275,
+      "recommendation_score": 0.6681060116354234
+    },
+    {
+      "handoff_id": "03a84f2b",
+      "task_scenario": {
+        "task_id": "514443a6",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Build AI-powered recommendation engine with ML pipeline",
+        "estimated_tokens": 40000,
+        "required_knowledge_domains": [
+          "machine_learning",
+          "data_pipeline",
+          "recommendation_algorithms"
+        ],
+        "success_criteria": [
+          "Model accuracy",
+          "Pipeline efficiency",
+          "Scalable architecture"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "514443a6",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "07b34fc8-511e-4dfe-a21a-4a1bba3cba5b",
+          "task_description": "Build AI-powered recommendation engine with ML pipeline",
+          "task_type": "feature_implementation",
+          "complexity": "complex",
+          "domains": [
+            "machine_learning",
+            "data_pipeline",
+            "recommendation_algorithms"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 51,
+      "accuracy_score": 0.6395604395604395,
+      "token_cost": 2275,
+      "recommendation_score": 0.6681060116354234
+    },
+    {
+      "handoff_id": "12696e01",
+      "task_scenario": {
+        "task_id": "514443a6",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Build AI-powered recommendation engine with ML pipeline",
+        "estimated_tokens": 40000,
+        "required_knowledge_domains": [
+          "machine_learning",
+          "data_pipeline",
+          "recommendation_algorithms"
+        ],
+        "success_criteria": [
+          "Model accuracy",
+          "Pipeline efficiency",
+          "Scalable architecture"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "514443a6",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "79230e92-3de0-4bb8-bdf7-6fce19772168",
+          "task_description": "Build AI-powered recommendation engine with ML pipeline",
+          "task_type": "feature_implementation",
+          "complexity": "complex",
+          "domains": [
+            "machine_learning",
+            "data_pipeline",
+            "recommendation_algorithms"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 61,
+      "accuracy_score": 0.6440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.618751691983757
+    },
+    {
+      "handoff_id": "3b4f6976",
+      "task_scenario": {
+        "task_id": "514443a6",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Build AI-powered recommendation engine with ML pipeline",
+        "estimated_tokens": 40000,
+        "required_knowledge_domains": [
+          "machine_learning",
+          "data_pipeline",
+          "recommendation_algorithms"
+        ],
+        "success_criteria": [
+          "Model accuracy",
+          "Pipeline efficiency",
+          "Scalable architecture"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "514443a6",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "5c21d3e6-af68-4ceb-9cbc-5a1a9d77b93b",
+          "task_description": "Build AI-powered recommendation engine with ML pipeline",
+          "task_type": "feature_implementation",
+          "complexity": "complex",
+          "domains": [
+            "machine_learning",
+            "data_pipeline",
+            "recommendation_algorithms"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 59,
+      "accuracy_score": 0.6451977401129945,
+      "token_cost": 2655,
+      "recommendation_score": 0.6309604519774012
+    },
+    {
+      "handoff_id": "f60bcd52",
+      "task_scenario": {
+        "task_id": "514443a6",
+        "task_type": "TaskType.FEATURE_IMPLEMENTATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Build AI-powered recommendation engine with ML pipeline",
+        "estimated_tokens": 40000,
+        "required_knowledge_domains": [
+          "machine_learning",
+          "data_pipeline",
+          "recommendation_algorithms"
+        ],
+        "success_criteria": [
+          "Model accuracy",
+          "Pipeline efficiency",
+          "Scalable architecture"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "514443a6",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "6dda373c-9b3c-40b5-a982-a73e032c8d00",
+          "task_description": "Build AI-powered recommendation engine with ML pipeline",
+          "task_type": "feature_implementation",
+          "complexity": "complex",
+          "domains": [
+            "machine_learning",
+            "data_pipeline",
+            "recommendation_algorithms"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 100,
+      "accuracy_score": 0.6268756998880181,
+      "token_cost": 4465,
+      "recommendation_score": 0.4710638297872341
+    },
+    {
+      "handoff_id": "2cd8edb0",
+      "task_scenario": {
+        "task_id": "3f894f86",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Extract duplicate validation logic into utility function",
+        "estimated_tokens": 2500,
+        "required_knowledge_domains": [
+          "code_quality",
+          "DRY_principle",
+          "maintainability"
+        ],
+        "success_criteria": [
+          "No functional change",
+          "Coverage maintained",
+          "Performance equal"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "3f894f86",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "6f0ededa-40ce-4966-bca7-e5785f1993b7",
+          "task_description": "Extract duplicate validation logic into utility function",
+          "task_type": "refactoring",
+          "complexity": "simple",
+          "domains": [
+            "code_quality",
+            "DRY_principle",
+            "maintainability"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 27,
+      "accuracy_score": 0.8395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 1.0618315018315019
+    },
+    {
+      "handoff_id": "76a4d025",
+      "task_scenario": {
+        "task_id": "3f894f86",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Extract duplicate validation logic into utility function",
+        "estimated_tokens": 2500,
+        "required_knowledge_domains": [
+          "code_quality",
+          "DRY_principle",
+          "maintainability"
+        ],
+        "success_criteria": [
+          "No functional change",
+          "Coverage maintained",
+          "Performance equal"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "3f894f86",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "46a88004-9d48-41e4-8cbe-05be0c983a62",
+          "task_description": "Extract duplicate validation logic into utility function",
+          "task_type": "refactoring",
+          "complexity": "simple",
+          "domains": [
+            "code_quality",
+            "DRY_principle",
+            "maintainability"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 27,
+      "accuracy_score": 0.8395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 1.0618315018315019
+    },
+    {
+      "handoff_id": "9f07fa5c",
+      "task_scenario": {
+        "task_id": "3f894f86",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Extract duplicate validation logic into utility function",
+        "estimated_tokens": 2500,
+        "required_knowledge_domains": [
+          "code_quality",
+          "DRY_principle",
+          "maintainability"
+        ],
+        "success_criteria": [
+          "No functional change",
+          "Coverage maintained",
+          "Performance equal"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "3f894f86",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "7975a41b-4e2a-435c-b26c-b5314ffae264",
+          "task_description": "Extract duplicate validation logic into utility function",
+          "task_type": "refactoring",
+          "complexity": "simple",
+          "domains": [
+            "code_quality",
+            "DRY_principle",
+            "maintainability"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 32,
+      "accuracy_score": 0.8440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.9661697247706422
+    },
+    {
+      "handoff_id": "843c6f00",
+      "task_scenario": {
+        "task_id": "3f894f86",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Extract duplicate validation logic into utility function",
+        "estimated_tokens": 2500,
+        "required_knowledge_domains": [
+          "code_quality",
+          "DRY_principle",
+          "maintainability"
+        ],
+        "success_criteria": [
+          "No functional change",
+          "Coverage maintained",
+          "Performance equal"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "3f894f86",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "760ed823-c53e-4856-be44-5a8a0090269b",
+          "task_description": "Extract duplicate validation logic into utility function",
+          "task_type": "refactoring",
+          "complexity": "simple",
+          "domains": [
+            "code_quality",
+            "DRY_principle",
+            "maintainability"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 31,
+      "accuracy_score": 0.8451977401129944,
+      "token_cost": 2655,
+      "recommendation_score": 0.9865208675050119
+    },
+    {
+      "handoff_id": "c96f72a3",
+      "task_scenario": {
+        "task_id": "3f894f86",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Extract duplicate validation logic into utility function",
+        "estimated_tokens": 2500,
+        "required_knowledge_domains": [
+          "code_quality",
+          "DRY_principle",
+          "maintainability"
+        ],
+        "success_criteria": [
+          "No functional change",
+          "Coverage maintained",
+          "Performance equal"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "3f894f86",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "d1631df3-e152-4798-a04b-f48432320028",
+          "task_description": "Extract duplicate validation logic into utility function",
+          "task_type": "refactoring",
+          "complexity": "simple",
+          "domains": [
+            "code_quality",
+            "DRY_principle",
+            "maintainability"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 53,
+      "accuracy_score": 0.826875699888018,
+      "token_cost": 4465,
+      "recommendation_score": 0.7106864712966681
+    },
+    {
+      "handoff_id": "705ee8ba",
+      "task_scenario": {
+        "task_id": "4500ec09",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Migrate monolithic authentication to microservices",
+        "estimated_tokens": 18000,
+        "required_knowledge_domains": [
+          "microservices",
+          "authentication",
+          "migration_patterns"
+        ],
+        "success_criteria": [
+          "Backward compatibility",
+          "Zero downtime",
+          "Gradual rollout"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "4500ec09",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "39787370-b1eb-4132-84e0-c6e0da7cd1d9",
+          "task_description": "Migrate monolithic authentication to microservices",
+          "task_type": "refactoring",
+          "complexity": "medium",
+          "domains": [
+            "microservices",
+            "authentication",
+            "migration_patterns"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 34,
+      "accuracy_score": 0.7395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 0.8845765998707176
+    },
+    {
+      "handoff_id": "407244bc",
+      "task_scenario": {
+        "task_id": "4500ec09",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Migrate monolithic authentication to microservices",
+        "estimated_tokens": 18000,
+        "required_knowledge_domains": [
+          "microservices",
+          "authentication",
+          "migration_patterns"
+        ],
+        "success_criteria": [
+          "Backward compatibility",
+          "Zero downtime",
+          "Gradual rollout"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "4500ec09",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "7ecd82a3-0545-4bd2-b1bc-9ca49c1611ab",
+          "task_description": "Migrate monolithic authentication to microservices",
+          "task_type": "refactoring",
+          "complexity": "medium",
+          "domains": [
+            "microservices",
+            "authentication",
+            "migration_patterns"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 34,
+      "accuracy_score": 0.7395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 0.8845765998707176
+    },
+    {
+      "handoff_id": "d377e9dd",
+      "task_scenario": {
+        "task_id": "4500ec09",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Migrate monolithic authentication to microservices",
+        "estimated_tokens": 18000,
+        "required_knowledge_domains": [
+          "microservices",
+          "authentication",
+          "migration_patterns"
+        ],
+        "success_criteria": [
+          "Backward compatibility",
+          "Zero downtime",
+          "Gradual rollout"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "4500ec09",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "3c3d968f-5ec9-462f-bc42-e47cc9e9d436",
+          "task_description": "Migrate monolithic authentication to microservices",
+          "task_type": "refactoring",
+          "complexity": "medium",
+          "domains": [
+            "microservices",
+            "authentication",
+            "migration_patterns"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 40,
+      "accuracy_score": 0.7440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.8136697247706421
+    },
+    {
+      "handoff_id": "afb9af0a",
+      "task_scenario": {
+        "task_id": "4500ec09",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Migrate monolithic authentication to microservices",
+        "estimated_tokens": 18000,
+        "required_knowledge_domains": [
+          "microservices",
+          "authentication",
+          "migration_patterns"
+        ],
+        "success_criteria": [
+          "Backward compatibility",
+          "Zero downtime",
+          "Gradual rollout"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "4500ec09",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "3135915a-dfd4-4482-9813-5fd7afbae86f",
+          "task_description": "Migrate monolithic authentication to microservices",
+          "task_type": "refactoring",
+          "complexity": "medium",
+          "domains": [
+            "microservices",
+            "authentication",
+            "migration_patterns"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 39,
+      "accuracy_score": 0.7451977401129944,
+      "token_cost": 2655,
+      "recommendation_score": 0.8274141677531508
+    },
+    {
+      "handoff_id": "ad243e2b",
+      "task_scenario": {
+        "task_id": "4500ec09",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Migrate monolithic authentication to microservices",
+        "estimated_tokens": 18000,
+        "required_knowledge_domains": [
+          "microservices",
+          "authentication",
+          "migration_patterns"
+        ],
+        "success_criteria": [
+          "Backward compatibility",
+          "Zero downtime",
+          "Gradual rollout"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "4500ec09",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "6a7e565e-fed3-45df-acc5-854873668abe",
+          "task_description": "Migrate monolithic authentication to microservices",
+          "task_type": "refactoring",
+          "complexity": "medium",
+          "domains": [
+            "microservices",
+            "authentication",
+            "migration_patterns"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 66,
+      "accuracy_score": 0.726875699888018,
+      "token_cost": 4465,
+      "recommendation_score": 0.6037911025145068
+    },
+    {
+      "handoff_id": "4e41af2b",
+      "task_scenario": {
+        "task_id": "68a29f0b",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Redesign entire database schema for horizontal scaling",
+        "estimated_tokens": 35000,
+        "required_knowledge_domains": [
+          "database_design",
+          "scaling",
+          "performance_optimization"
+        ],
+        "success_criteria": [
+          "Data integrity",
+          "Migration strategy",
+          "Query performance"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "68a29f0b",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "c1955ce3-62f7-4818-a78f-6a5f55dd9f0d",
+          "task_description": "Redesign entire database schema for horizontal scaling",
+          "task_type": "refactoring",
+          "complexity": "complex",
+          "domains": [
+            "database_design",
+            "scaling",
+            "performance_optimization"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 51,
+      "accuracy_score": 0.6395604395604395,
+      "token_cost": 2275,
+      "recommendation_score": 0.6681060116354234
+    },
+    {
+      "handoff_id": "569bbb5e",
+      "task_scenario": {
+        "task_id": "68a29f0b",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Redesign entire database schema for horizontal scaling",
+        "estimated_tokens": 35000,
+        "required_knowledge_domains": [
+          "database_design",
+          "scaling",
+          "performance_optimization"
+        ],
+        "success_criteria": [
+          "Data integrity",
+          "Migration strategy",
+          "Query performance"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "68a29f0b",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "6a1718f7-acb3-4f97-bb08-f4c9e4f192b6",
+          "task_description": "Redesign entire database schema for horizontal scaling",
+          "task_type": "refactoring",
+          "complexity": "complex",
+          "domains": [
+            "database_design",
+            "scaling",
+            "performance_optimization"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 51,
+      "accuracy_score": 0.6395604395604395,
+      "token_cost": 2275,
+      "recommendation_score": 0.6681060116354234
+    },
+    {
+      "handoff_id": "b7283412",
+      "task_scenario": {
+        "task_id": "68a29f0b",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Redesign entire database schema for horizontal scaling",
+        "estimated_tokens": 35000,
+        "required_knowledge_domains": [
+          "database_design",
+          "scaling",
+          "performance_optimization"
+        ],
+        "success_criteria": [
+          "Data integrity",
+          "Migration strategy",
+          "Query performance"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "68a29f0b",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "0ee9a093-7560-417d-95db-3a006bb780dc",
+          "task_description": "Redesign entire database schema for horizontal scaling",
+          "task_type": "refactoring",
+          "complexity": "complex",
+          "domains": [
+            "database_design",
+            "scaling",
+            "performance_optimization"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 61,
+      "accuracy_score": 0.6440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.618751691983757
+    },
+    {
+      "handoff_id": "a9635dcb",
+      "task_scenario": {
+        "task_id": "68a29f0b",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Redesign entire database schema for horizontal scaling",
+        "estimated_tokens": 35000,
+        "required_knowledge_domains": [
+          "database_design",
+          "scaling",
+          "performance_optimization"
+        ],
+        "success_criteria": [
+          "Data integrity",
+          "Migration strategy",
+          "Query performance"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "68a29f0b",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "1decedcf-ad82-48ac-aaf4-b44fa338700b",
+          "task_description": "Redesign entire database schema for horizontal scaling",
+          "task_type": "refactoring",
+          "complexity": "complex",
+          "domains": [
+            "database_design",
+            "scaling",
+            "performance_optimization"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 59,
+      "accuracy_score": 0.6451977401129945,
+      "token_cost": 2655,
+      "recommendation_score": 0.6309604519774012
+    },
+    {
+      "handoff_id": "97947459",
+      "task_scenario": {
+        "task_id": "68a29f0b",
+        "task_type": "TaskType.REFACTORING",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Redesign entire database schema for horizontal scaling",
+        "estimated_tokens": 35000,
+        "required_knowledge_domains": [
+          "database_design",
+          "scaling",
+          "performance_optimization"
+        ],
+        "success_criteria": [
+          "Data integrity",
+          "Migration strategy",
+          "Query performance"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "68a29f0b",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "2b933a23-2688-4d95-99d7-44a9eb7c225e",
+          "task_description": "Redesign entire database schema for horizontal scaling",
+          "task_type": "refactoring",
+          "complexity": "complex",
+          "domains": [
+            "database_design",
+            "scaling",
+            "performance_optimization"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 100,
+      "accuracy_score": 0.6268756998880181,
+      "token_cost": 4465,
+      "recommendation_score": 0.4710638297872341
+    },
+    {
+      "handoff_id": "8bdb0b6a",
+      "task_scenario": {
+        "task_id": "05469080",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Investigate intermittent API timeout errors",
+        "estimated_tokens": 4000,
+        "required_knowledge_domains": [
+          "debugging",
+          "api_troubleshooting",
+          "network_analysis"
+        ],
+        "success_criteria": [
+          "Root cause identified",
+          "Reproducible steps found",
+          "Fix recommended"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "05469080",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "a42ad932-c9ba-4338-a025-2ecf423baad8",
+          "task_description": "Investigate intermittent API timeout errors",
+          "task_type": "investigation",
+          "complexity": "simple",
+          "domains": [
+            "debugging",
+            "api_troubleshooting",
+            "network_analysis"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 27,
+      "accuracy_score": 0.8395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 1.0618315018315019
+    },
+    {
+      "handoff_id": "af182ac7",
+      "task_scenario": {
+        "task_id": "05469080",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Investigate intermittent API timeout errors",
+        "estimated_tokens": 4000,
+        "required_knowledge_domains": [
+          "debugging",
+          "api_troubleshooting",
+          "network_analysis"
+        ],
+        "success_criteria": [
+          "Root cause identified",
+          "Reproducible steps found",
+          "Fix recommended"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "05469080",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "5f49fc73-409c-4ac3-9aa1-e80c02d71cd3",
+          "task_description": "Investigate intermittent API timeout errors",
+          "task_type": "investigation",
+          "complexity": "simple",
+          "domains": [
+            "debugging",
+            "api_troubleshooting",
+            "network_analysis"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 27,
+      "accuracy_score": 0.8395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 1.0618315018315019
+    },
+    {
+      "handoff_id": "e0749b1e",
+      "task_scenario": {
+        "task_id": "05469080",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Investigate intermittent API timeout errors",
+        "estimated_tokens": 4000,
+        "required_knowledge_domains": [
+          "debugging",
+          "api_troubleshooting",
+          "network_analysis"
+        ],
+        "success_criteria": [
+          "Root cause identified",
+          "Reproducible steps found",
+          "Fix recommended"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "05469080",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "b9620214-dedb-4fdd-961f-70ecf43c3caa",
+          "task_description": "Investigate intermittent API timeout errors",
+          "task_type": "investigation",
+          "complexity": "simple",
+          "domains": [
+            "debugging",
+            "api_troubleshooting",
+            "network_analysis"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 32,
+      "accuracy_score": 0.8440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.9661697247706422
+    },
+    {
+      "handoff_id": "e04f6c8d",
+      "task_scenario": {
+        "task_id": "05469080",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Investigate intermittent API timeout errors",
+        "estimated_tokens": 4000,
+        "required_knowledge_domains": [
+          "debugging",
+          "api_troubleshooting",
+          "network_analysis"
+        ],
+        "success_criteria": [
+          "Root cause identified",
+          "Reproducible steps found",
+          "Fix recommended"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "05469080",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "fa94d7aa-d9d2-4d50-b2fe-e019994c833b",
+          "task_description": "Investigate intermittent API timeout errors",
+          "task_type": "investigation",
+          "complexity": "simple",
+          "domains": [
+            "debugging",
+            "api_troubleshooting",
+            "network_analysis"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 31,
+      "accuracy_score": 0.8451977401129944,
+      "token_cost": 2655,
+      "recommendation_score": 0.9865208675050119
+    },
+    {
+      "handoff_id": "e0ab93d7",
+      "task_scenario": {
+        "task_id": "05469080",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Investigate intermittent API timeout errors",
+        "estimated_tokens": 4000,
+        "required_knowledge_domains": [
+          "debugging",
+          "api_troubleshooting",
+          "network_analysis"
+        ],
+        "success_criteria": [
+          "Root cause identified",
+          "Reproducible steps found",
+          "Fix recommended"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "05469080",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "103de720-a80a-4349-b1e5-cb4404239c89",
+          "task_description": "Investigate intermittent API timeout errors",
+          "task_type": "investigation",
+          "complexity": "simple",
+          "domains": [
+            "debugging",
+            "api_troubleshooting",
+            "network_analysis"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 53,
+      "accuracy_score": 0.826875699888018,
+      "token_cost": 4465,
+      "recommendation_score": 0.7106864712966681
+    },
+    {
+      "handoff_id": "489898b5",
+      "task_scenario": {
+        "task_id": "df28010d",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Analyze performance bottleneck in data processing pipeline",
+        "estimated_tokens": 12000,
+        "required_knowledge_domains": [
+          "performance_analysis",
+          "profiling",
+          "optimization"
+        ],
+        "success_criteria": [
+          "Bottleneck identified",
+          "Impact quantified",
+          "Optimization plan"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "df28010d",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "133dec40-7ee1-4266-aa2a-96534b7118eb",
+          "task_description": "Analyze performance bottleneck in data processing pipeline",
+          "task_type": "investigation",
+          "complexity": "medium",
+          "domains": [
+            "performance_analysis",
+            "profiling",
+            "optimization"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 34,
+      "accuracy_score": 0.7395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 0.8845765998707176
+    },
+    {
+      "handoff_id": "d5f81597",
+      "task_scenario": {
+        "task_id": "df28010d",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Analyze performance bottleneck in data processing pipeline",
+        "estimated_tokens": 12000,
+        "required_knowledge_domains": [
+          "performance_analysis",
+          "profiling",
+          "optimization"
+        ],
+        "success_criteria": [
+          "Bottleneck identified",
+          "Impact quantified",
+          "Optimization plan"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "df28010d",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "f2f24051-3477-4dc9-8799-a088e9abb93b",
+          "task_description": "Analyze performance bottleneck in data processing pipeline",
+          "task_type": "investigation",
+          "complexity": "medium",
+          "domains": [
+            "performance_analysis",
+            "profiling",
+            "optimization"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 34,
+      "accuracy_score": 0.7395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 0.8845765998707176
+    },
+    {
+      "handoff_id": "2a19f542",
+      "task_scenario": {
+        "task_id": "df28010d",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Analyze performance bottleneck in data processing pipeline",
+        "estimated_tokens": 12000,
+        "required_knowledge_domains": [
+          "performance_analysis",
+          "profiling",
+          "optimization"
+        ],
+        "success_criteria": [
+          "Bottleneck identified",
+          "Impact quantified",
+          "Optimization plan"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "df28010d",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "40d4b4f7-a832-442b-abd8-6ea56efafa4d",
+          "task_description": "Analyze performance bottleneck in data processing pipeline",
+          "task_type": "investigation",
+          "complexity": "medium",
+          "domains": [
+            "performance_analysis",
+            "profiling",
+            "optimization"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 40,
+      "accuracy_score": 0.7440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.8136697247706421
+    },
+    {
+      "handoff_id": "987daddf",
+      "task_scenario": {
+        "task_id": "df28010d",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Analyze performance bottleneck in data processing pipeline",
+        "estimated_tokens": 12000,
+        "required_knowledge_domains": [
+          "performance_analysis",
+          "profiling",
+          "optimization"
+        ],
+        "success_criteria": [
+          "Bottleneck identified",
+          "Impact quantified",
+          "Optimization plan"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "df28010d",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "b51b4ee8-df24-4696-9519-92e2eaac9929",
+          "task_description": "Analyze performance bottleneck in data processing pipeline",
+          "task_type": "investigation",
+          "complexity": "medium",
+          "domains": [
+            "performance_analysis",
+            "profiling",
+            "optimization"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 39,
+      "accuracy_score": 0.7451977401129944,
+      "token_cost": 2655,
+      "recommendation_score": 0.8274141677531508
+    },
+    {
+      "handoff_id": "ea9d73a0",
+      "task_scenario": {
+        "task_id": "df28010d",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Analyze performance bottleneck in data processing pipeline",
+        "estimated_tokens": 12000,
+        "required_knowledge_domains": [
+          "performance_analysis",
+          "profiling",
+          "optimization"
+        ],
+        "success_criteria": [
+          "Bottleneck identified",
+          "Impact quantified",
+          "Optimization plan"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "df28010d",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "3a422a2e-05ff-4c5a-8f5b-a6f26cf579f0",
+          "task_description": "Analyze performance bottleneck in data processing pipeline",
+          "task_type": "investigation",
+          "complexity": "medium",
+          "domains": [
+            "performance_analysis",
+            "profiling",
+            "optimization"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 66,
+      "accuracy_score": 0.726875699888018,
+      "token_cost": 4465,
+      "recommendation_score": 0.6037911025145068
+    },
+    {
+      "handoff_id": "f276e3b1",
+      "task_scenario": {
+        "task_id": "98224620",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Audit security vulnerabilities in distributed system",
+        "estimated_tokens": 25000,
+        "required_knowledge_domains": [
+          "security_analysis",
+          "vulnerability_assessment",
+          "compliance"
+        ],
+        "success_criteria": [
+          "All vulnerabilities found",
+          "Risk assessed",
+          "Mitigation plan"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "98224620",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "c4c4b460-26e8-4581-8f35-b5710da0edf4",
+          "task_description": "Audit security vulnerabilities in distributed system",
+          "task_type": "investigation",
+          "complexity": "complex",
+          "domains": [
+            "security_analysis",
+            "vulnerability_assessment",
+            "compliance"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 51,
+      "accuracy_score": 0.6395604395604395,
+      "token_cost": 2275,
+      "recommendation_score": 0.6681060116354234
+    },
+    {
+      "handoff_id": "2bfcdb53",
+      "task_scenario": {
+        "task_id": "98224620",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Audit security vulnerabilities in distributed system",
+        "estimated_tokens": 25000,
+        "required_knowledge_domains": [
+          "security_analysis",
+          "vulnerability_assessment",
+          "compliance"
+        ],
+        "success_criteria": [
+          "All vulnerabilities found",
+          "Risk assessed",
+          "Mitigation plan"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "98224620",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "a05c6fd1-f72e-47bc-845b-794f48898abd",
+          "task_description": "Audit security vulnerabilities in distributed system",
+          "task_type": "investigation",
+          "complexity": "complex",
+          "domains": [
+            "security_analysis",
+            "vulnerability_assessment",
+            "compliance"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 51,
+      "accuracy_score": 0.6395604395604395,
+      "token_cost": 2275,
+      "recommendation_score": 0.6681060116354234
+    },
+    {
+      "handoff_id": "64cc76c0",
+      "task_scenario": {
+        "task_id": "98224620",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Audit security vulnerabilities in distributed system",
+        "estimated_tokens": 25000,
+        "required_knowledge_domains": [
+          "security_analysis",
+          "vulnerability_assessment",
+          "compliance"
+        ],
+        "success_criteria": [
+          "All vulnerabilities found",
+          "Risk assessed",
+          "Mitigation plan"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "98224620",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "7af0fee6-2e04-49c1-8cab-3302b8c7a85a",
+          "task_description": "Audit security vulnerabilities in distributed system",
+          "task_type": "investigation",
+          "complexity": "complex",
+          "domains": [
+            "security_analysis",
+            "vulnerability_assessment",
+            "compliance"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 61,
+      "accuracy_score": 0.6440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.618751691983757
+    },
+    {
+      "handoff_id": "afb07d9d",
+      "task_scenario": {
+        "task_id": "98224620",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Audit security vulnerabilities in distributed system",
+        "estimated_tokens": 25000,
+        "required_knowledge_domains": [
+          "security_analysis",
+          "vulnerability_assessment",
+          "compliance"
+        ],
+        "success_criteria": [
+          "All vulnerabilities found",
+          "Risk assessed",
+          "Mitigation plan"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "98224620",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "967f0a41-987d-4bdb-978f-9103b5f7486c",
+          "task_description": "Audit security vulnerabilities in distributed system",
+          "task_type": "investigation",
+          "complexity": "complex",
+          "domains": [
+            "security_analysis",
+            "vulnerability_assessment",
+            "compliance"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 59,
+      "accuracy_score": 0.6451977401129945,
+      "token_cost": 2655,
+      "recommendation_score": 0.6309604519774012
+    },
+    {
+      "handoff_id": "dd16f39b",
+      "task_scenario": {
+        "task_id": "98224620",
+        "task_type": "TaskType.INVESTIGATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Audit security vulnerabilities in distributed system",
+        "estimated_tokens": 25000,
+        "required_knowledge_domains": [
+          "security_analysis",
+          "vulnerability_assessment",
+          "compliance"
+        ],
+        "success_criteria": [
+          "All vulnerabilities found",
+          "Risk assessed",
+          "Mitigation plan"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "98224620",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "05cbab60-fc5b-479e-95fc-eb022ac2d5be",
+          "task_description": "Audit security vulnerabilities in distributed system",
+          "task_type": "investigation",
+          "complexity": "complex",
+          "domains": [
+            "security_analysis",
+            "vulnerability_assessment",
+            "compliance"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 100,
+      "accuracy_score": 0.6268756998880181,
+      "token_cost": 4465,
+      "recommendation_score": 0.4710638297872341
+    },
+    {
+      "handoff_id": "04e3501a",
+      "task_scenario": {
+        "task_id": "64985ecb",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Document API endpoints with examples",
+        "estimated_tokens": 2000,
+        "required_knowledge_domains": [
+          "api_documentation",
+          "technical_writing",
+          "developer_experience"
+        ],
+        "success_criteria": [
+          "All endpoints covered",
+          "Examples provided",
+          "Format consistent"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "64985ecb",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "afca1b9e-5111-4a8f-9838-ef016a70a295",
+          "task_description": "Document API endpoints with examples",
+          "task_type": "documentation",
+          "complexity": "simple",
+          "domains": [
+            "api_documentation",
+            "technical_writing",
+            "developer_experience"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 27,
+      "accuracy_score": 0.8395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 1.0618315018315019
+    },
+    {
+      "handoff_id": "301d1b53",
+      "task_scenario": {
+        "task_id": "64985ecb",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Document API endpoints with examples",
+        "estimated_tokens": 2000,
+        "required_knowledge_domains": [
+          "api_documentation",
+          "technical_writing",
+          "developer_experience"
+        ],
+        "success_criteria": [
+          "All endpoints covered",
+          "Examples provided",
+          "Format consistent"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "64985ecb",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "840ca5da-b143-42bf-a7f5-24131bff8a55",
+          "task_description": "Document API endpoints with examples",
+          "task_type": "documentation",
+          "complexity": "simple",
+          "domains": [
+            "api_documentation",
+            "technical_writing",
+            "developer_experience"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 27,
+      "accuracy_score": 0.8395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 1.0618315018315019
+    },
+    {
+      "handoff_id": "c2a1b061",
+      "task_scenario": {
+        "task_id": "64985ecb",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Document API endpoints with examples",
+        "estimated_tokens": 2000,
+        "required_knowledge_domains": [
+          "api_documentation",
+          "technical_writing",
+          "developer_experience"
+        ],
+        "success_criteria": [
+          "All endpoints covered",
+          "Examples provided",
+          "Format consistent"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "64985ecb",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "6a0f30ce-c3c5-4dbb-9bfd-4effc657442e",
+          "task_description": "Document API endpoints with examples",
+          "task_type": "documentation",
+          "complexity": "simple",
+          "domains": [
+            "api_documentation",
+            "technical_writing",
+            "developer_experience"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 32,
+      "accuracy_score": 0.8440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.9661697247706422
+    },
+    {
+      "handoff_id": "661f8069",
+      "task_scenario": {
+        "task_id": "64985ecb",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Document API endpoints with examples",
+        "estimated_tokens": 2000,
+        "required_knowledge_domains": [
+          "api_documentation",
+          "technical_writing",
+          "developer_experience"
+        ],
+        "success_criteria": [
+          "All endpoints covered",
+          "Examples provided",
+          "Format consistent"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "64985ecb",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "bf18dacb-8dc4-496e-9e1c-2206bf19c769",
+          "task_description": "Document API endpoints with examples",
+          "task_type": "documentation",
+          "complexity": "simple",
+          "domains": [
+            "api_documentation",
+            "technical_writing",
+            "developer_experience"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 31,
+      "accuracy_score": 0.8451977401129944,
+      "token_cost": 2655,
+      "recommendation_score": 0.9865208675050119
+    },
+    {
+      "handoff_id": "d1397cee",
+      "task_scenario": {
+        "task_id": "64985ecb",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.SIMPLE",
+        "description": "Document API endpoints with examples",
+        "estimated_tokens": 2000,
+        "required_knowledge_domains": [
+          "api_documentation",
+          "technical_writing",
+          "developer_experience"
+        ],
+        "success_criteria": [
+          "All endpoints covered",
+          "Examples provided",
+          "Format consistent"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "64985ecb",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "dbd58d14-6455-4a31-a38b-9cd1afb0ad99",
+          "task_description": "Document API endpoints with examples",
+          "task_type": "documentation",
+          "complexity": "simple",
+          "domains": [
+            "api_documentation",
+            "technical_writing",
+            "developer_experience"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 53,
+      "accuracy_score": 0.826875699888018,
+      "token_cost": 4465,
+      "recommendation_score": 0.7106864712966681
+    },
+    {
+      "handoff_id": "fc8a5024",
+      "task_scenario": {
+        "task_id": "77d97ca3",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Create comprehensive developer onboarding guide",
+        "estimated_tokens": 6000,
+        "required_knowledge_domains": [
+          "onboarding",
+          "knowledge_transfer",
+          "developer_experience"
+        ],
+        "success_criteria": [
+          "New developers onboarded",
+          "Setup automated",
+          "FAQ covered"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "77d97ca3",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "f3b5984b-ec48-4ad5-9736-e8d8c6160ba9",
+          "task_description": "Create comprehensive developer onboarding guide",
+          "task_type": "documentation",
+          "complexity": "medium",
+          "domains": [
+            "onboarding",
+            "knowledge_transfer",
+            "developer_experience"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 34,
+      "accuracy_score": 0.7395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 0.8845765998707176
+    },
+    {
+      "handoff_id": "1d1ad067",
+      "task_scenario": {
+        "task_id": "77d97ca3",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Create comprehensive developer onboarding guide",
+        "estimated_tokens": 6000,
+        "required_knowledge_domains": [
+          "onboarding",
+          "knowledge_transfer",
+          "developer_experience"
+        ],
+        "success_criteria": [
+          "New developers onboarded",
+          "Setup automated",
+          "FAQ covered"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "77d97ca3",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "6c19504c-39db-4b49-aa78-3ab3787a3707",
+          "task_description": "Create comprehensive developer onboarding guide",
+          "task_type": "documentation",
+          "complexity": "medium",
+          "domains": [
+            "onboarding",
+            "knowledge_transfer",
+            "developer_experience"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 34,
+      "accuracy_score": 0.7395604395604396,
+      "token_cost": 2275,
+      "recommendation_score": 0.8845765998707176
+    },
+    {
+      "handoff_id": "53dbb93a",
+      "task_scenario": {
+        "task_id": "77d97ca3",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Create comprehensive developer onboarding guide",
+        "estimated_tokens": 6000,
+        "required_knowledge_domains": [
+          "onboarding",
+          "knowledge_transfer",
+          "developer_experience"
+        ],
+        "success_criteria": [
+          "New developers onboarded",
+          "Setup automated",
+          "FAQ covered"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "77d97ca3",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "c47135ab-970a-441e-bc0a-cffd6601a966",
+          "task_description": "Create comprehensive developer onboarding guide",
+          "task_type": "documentation",
+          "complexity": "medium",
+          "domains": [
+            "onboarding",
+            "knowledge_transfer",
+            "developer_experience"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 40,
+      "accuracy_score": 0.7440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.8136697247706421
+    },
+    {
+      "handoff_id": "f895a361",
+      "task_scenario": {
+        "task_id": "77d97ca3",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Create comprehensive developer onboarding guide",
+        "estimated_tokens": 6000,
+        "required_knowledge_domains": [
+          "onboarding",
+          "knowledge_transfer",
+          "developer_experience"
+        ],
+        "success_criteria": [
+          "New developers onboarded",
+          "Setup automated",
+          "FAQ covered"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "77d97ca3",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "baa978c2-1524-4101-9416-1f8fc65aa0cb",
+          "task_description": "Create comprehensive developer onboarding guide",
+          "task_type": "documentation",
+          "complexity": "medium",
+          "domains": [
+            "onboarding",
+            "knowledge_transfer",
+            "developer_experience"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 39,
+      "accuracy_score": 0.7451977401129944,
+      "token_cost": 2655,
+      "recommendation_score": 0.8274141677531508
+    },
+    {
+      "handoff_id": "d20545f0",
+      "task_scenario": {
+        "task_id": "77d97ca3",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.MEDIUM",
+        "description": "Create comprehensive developer onboarding guide",
+        "estimated_tokens": 6000,
+        "required_knowledge_domains": [
+          "onboarding",
+          "knowledge_transfer",
+          "developer_experience"
+        ],
+        "success_criteria": [
+          "New developers onboarded",
+          "Setup automated",
+          "FAQ covered"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "77d97ca3",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "a8d2e71e-9289-4141-a8d5-cc5476cd3706",
+          "task_description": "Create comprehensive developer onboarding guide",
+          "task_type": "documentation",
+          "complexity": "medium",
+          "domains": [
+            "onboarding",
+            "knowledge_transfer",
+            "developer_experience"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 66,
+      "accuracy_score": 0.726875699888018,
+      "token_cost": 4465,
+      "recommendation_score": 0.6037911025145068
+    },
+    {
+      "handoff_id": "28ca681a",
+      "task_scenario": {
+        "task_id": "280ad484",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Build architecture decision records for microservices migration",
+        "estimated_tokens": 15000,
+        "required_knowledge_domains": [
+          "architecture_decisions",
+          "documentation",
+          "knowledge_preservation"
+        ],
+        "success_criteria": [
+          "All decisions documented",
+          "Rationale clear",
+          "Future team can reference"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "280ad484",
+        "handoff_phase": "HandoffPhase.AFTER_PREFLIGHT",
+        "session_data": {
+          "session_id": "ba0b6422-17f6-4ea1-9ffa-dfad0c2540a3",
+          "task_description": "Build architecture decision records for microservices migration",
+          "task_type": "documentation",
+          "complexity": "complex",
+          "domains": [
+            "architecture_decisions",
+            "documentation",
+            "knowledge_preservation"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.6,
+            "do": 0.7,
+            "uncertainty": 0.4,
+            "context": 0.5
+          },
+          "confidence": 0.65,
+          "status": "preflight_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.6,
+          "do": 0.7,
+          "context": 0.5,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.4
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 51,
+      "accuracy_score": 0.6395604395604395,
+      "token_cost": 2275,
+      "recommendation_score": 0.6681060116354234
+    },
+    {
+      "handoff_id": "e5a98c7c",
+      "task_scenario": {
+        "task_id": "280ad484",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Build architecture decision records for microservices migration",
+        "estimated_tokens": 15000,
+        "required_knowledge_domains": [
+          "architecture_decisions",
+          "documentation",
+          "knowledge_preservation"
+        ],
+        "success_criteria": [
+          "All decisions documented",
+          "Rationale clear",
+          "Future team can reference"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "280ad484",
+        "handoff_phase": "HandoffPhase.AFTER_INVESTIGATION",
+        "session_data": {
+          "session_id": "6b77c20b-adb6-464f-af95-372e0ce259f0",
+          "task_description": "Build architecture decision records for microservices migration",
+          "task_type": "documentation",
+          "complexity": "complex",
+          "domains": [
+            "architecture_decisions",
+            "documentation",
+            "knowledge_preservation"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.8,
+            "do": 0.7,
+            "uncertainty": 0.3,
+            "context": 0.7
+          },
+          "investigation_findings": [
+            "Identified key components",
+            "Found relevant APIs",
+            "Located similar implementations"
+          ],
+          "confidence": 0.78,
+          "status": "investigation_complete"
+        },
+        "git_diffs": [],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.8,
+          "do": 0.7,
+          "context": 0.7,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.3
+        },
+        "minimal_context_size": 450,
+        "full_context_size": 2275,
+        "token_efficiency": 0.1978021978021978
+      },
+      "takeover_time": 51,
+      "accuracy_score": 0.6395604395604395,
+      "token_cost": 2275,
+      "recommendation_score": 0.6681060116354234
+    },
+    {
+      "handoff_id": "63820421",
+      "task_scenario": {
+        "task_id": "280ad484",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Build architecture decision records for microservices migration",
+        "estimated_tokens": 15000,
+        "required_knowledge_domains": [
+          "architecture_decisions",
+          "documentation",
+          "knowledge_preservation"
+        ],
+        "success_criteria": [
+          "All decisions documented",
+          "Rationale clear",
+          "Future team can reference"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "280ad484",
+        "handoff_phase": "HandoffPhase.AFTER_CHECK",
+        "session_data": {
+          "session_id": "b0fcce1c-cc21-4d2c-a377-5229d8ff11e4",
+          "task_description": "Build architecture decision records for microservices migration",
+          "task_type": "documentation",
+          "complexity": "complex",
+          "domains": [
+            "architecture_decisions",
+            "documentation",
+            "knowledge_preservation"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.85,
+            "do": 0.75,
+            "uncertainty": 0.25,
+            "context": 0.8
+          },
+          "check_decision": "proceed",
+          "check_vectors": {
+            "engagement": 0.85,
+            "clarity": 0.9,
+            "coherence": 0.8,
+            "uncertainty": 0.2
+          },
+          "confidence": 0.85,
+          "status": "check_complete"
+        },
+        "git_diffs": [
+          {
+            "file": "docs/design.md",
+            "type": "add",
+            "lines_added": 45,
+            "content_preview": "# Implementation Design\n## Architecture Overview..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.85,
+          "do": 0.7,
+          "context": 0.8,
+          "clarity": 0.9,
+          "coherence": 0.8,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.4,
+          "change": 0.3,
+          "completion": 0.3,
+          "impact": 0.3,
+          "uncertainty": 0.25
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2725,
+        "token_efficiency": 0.22018348623853212
+      },
+      "takeover_time": 61,
+      "accuracy_score": 0.6440366972477065,
+      "token_cost": 2725,
+      "recommendation_score": 0.618751691983757
+    },
+    {
+      "handoff_id": "0a800c3b",
+      "task_scenario": {
+        "task_id": "280ad484",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Build architecture decision records for microservices migration",
+        "estimated_tokens": 15000,
+        "required_knowledge_domains": [
+          "architecture_decisions",
+          "documentation",
+          "knowledge_preservation"
+        ],
+        "success_criteria": [
+          "All decisions documented",
+          "Rationale clear",
+          "Future team can reference"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "280ad484",
+        "handoff_phase": "HandoffPhase.AFTER_PARTIAL_ACT",
+        "session_data": {
+          "session_id": "9691e4a7-9b94-4fcc-bd83-6ab2ca2de031",
+          "task_description": "Build architecture decision records for microservices migration",
+          "task_type": "documentation",
+          "complexity": "complex",
+          "domains": [
+            "architecture_decisions",
+            "documentation",
+            "knowledge_preservation"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.9,
+            "do": 0.85,
+            "uncertainty": 0.2,
+            "context": 0.85
+          },
+          "check_decision": "proceed",
+          "progress": 0.6,
+          "files_modified": [
+            "auth.py",
+            "test_auth.py"
+          ],
+          "status": "partial_implementation"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 23,
+            "lines_removed": 0,
+            "content_preview": "+def authenticate_user(username, password):"
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 15,
+            "lines_removed": 2,
+            "content_preview": "+def test_valid_authentication():"
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.9,
+          "do": 0.85,
+          "context": 0.85,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.6,
+          "change": 0.6,
+          "completion": 0.6,
+          "impact": 0.3,
+          "uncertainty": 0.2
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 2655,
+        "token_efficiency": 0.22598870056497175
+      },
+      "takeover_time": 59,
+      "accuracy_score": 0.6451977401129945,
+      "token_cost": 2655,
+      "recommendation_score": 0.6309604519774012
+    },
+    {
+      "handoff_id": "f6cf5522",
+      "task_scenario": {
+        "task_id": "280ad484",
+        "task_type": "TaskType.DOCUMENTATION",
+        "complexity": "ComplexityLevel.COMPLEX",
+        "description": "Build architecture decision records for microservices migration",
+        "estimated_tokens": 15000,
+        "required_knowledge_domains": [
+          "architecture_decisions",
+          "documentation",
+          "knowledge_preservation"
+        ],
+        "success_criteria": [
+          "All decisions documented",
+          "Rationale clear",
+          "Future team can reference"
+        ]
+      },
+      "handoff_context": {
+        "task_id": "280ad484",
+        "handoff_phase": "HandoffPhase.AFTER_COMPLETE",
+        "session_data": {
+          "session_id": "e3ac9d0d-7304-4cd3-9eaa-9656ea49218e",
+          "task_description": "Build architecture decision records for microservices migration",
+          "task_type": "documentation",
+          "complexity": "complex",
+          "domains": [
+            "architecture_decisions",
+            "documentation",
+            "knowledge_preservation"
+          ],
+          "preflight_vectors": {
+            "engagement": 0.8,
+            "know": 0.95,
+            "do": 0.9,
+            "uncertainty": 0.15,
+            "context": 0.9
+          },
+          "check_decision": "proceed",
+          "postflight_vectors": {
+            "engagement": 0.9,
+            "completion": 0.95,
+            "impact": 0.85,
+            "uncertainty": 0.1
+          },
+          "files_modified": [
+            "auth.py",
+            "test_auth.py",
+            "docs/auth.md"
+          ],
+          "test_results": "15/15 passing",
+          "status": "complete"
+        },
+        "git_diffs": [
+          {
+            "file": "auth.py",
+            "type": "modify",
+            "lines_added": 78,
+            "lines_removed": 5,
+            "content_preview": "+def authenticate_user(username, password):\n+    \"\"\"..."
+          },
+          {
+            "file": "test_auth.py",
+            "type": "modify",
+            "lines_added": 52,
+            "lines_removed": 3,
+            "content_preview": "+def test_valid_authentication():\n+    assert..."
+          },
+          {
+            "file": "docs/auth.md",
+            "type": "add",
+            "lines_added": 89,
+            "content_preview": "# Authentication Module\n## Overview\n..."
+          }
+        ],
+        "epistemic_state": {
+          "engagement": 0.8,
+          "know": 0.95,
+          "do": 0.9,
+          "context": 0.9,
+          "clarity": 0.6,
+          "coherence": 0.6,
+          "signal": 0.7,
+          "density": 0.5,
+          "state": 0.95,
+          "change": 0.3,
+          "completion": 0.95,
+          "impact": 0.85,
+          "uncertainty": 0.15
+        },
+        "minimal_context_size": 600,
+        "full_context_size": 4465,
+        "token_efficiency": 0.1343784994400896
+      },
+      "takeover_time": 100,
+      "accuracy_score": 0.6268756998880181,
+      "token_cost": 4465,
+      "recommendation_score": 0.4710638297872341
+    }
+  ],
+  "analysis": {
+    "overview": {
+      "total_experiments": 75,
+      "average_accuracy": 0.7390462032739196,
+      "median_accuracy": 0.7395604395604396,
+      "average_takeover_time_seconds": 47,
+      "average_token_cost": 2879,
+      "average_recommendation_score": 0.79053708393562
+    },
+    "by_task_type": {
+      "bug_fix": {
+        "count": 15,
+        "avg_accuracy": 0.7390462032739196,
+        "avg_takeover_time": 47,
+        "avg_token_cost": 2879,
+        "avg_recommendation": 0.79053708393562
+      },
+      "feature_implementation": {
+        "count": 15,
+        "avg_accuracy": 0.7390462032739196,
+        "avg_takeover_time": 47,
+        "avg_token_cost": 2879,
+        "avg_recommendation": 0.79053708393562
+      },
+      "refactoring": {
+        "count": 15,
+        "avg_accuracy": 0.7390462032739196,
+        "avg_takeover_time": 47,
+        "avg_token_cost": 2879,
+        "avg_recommendation": 0.79053708393562
+      },
+      "investigation": {
+        "count": 15,
+        "avg_accuracy": 0.7390462032739196,
+        "avg_takeover_time": 47,
+        "avg_token_cost": 2879,
+        "avg_recommendation": 0.79053708393562
+      },
+      "documentation": {
+        "count": 15,
+        "avg_accuracy": 0.7390462032739196,
+        "avg_takeover_time": 47,
+        "avg_token_cost": 2879,
+        "avg_recommendation": 0.79053708393562
+      }
+    },
+    "by_complexity": {
+      "simple": {
+        "count": 25,
+        "avg_accuracy": 0.8390462032739197,
+        "avg_takeover_time": 34,
+        "avg_token_cost": 2879,
+        "token_efficiency": 0.1952310163695978
+      },
+      "medium": {
+        "count": 25,
+        "avg_accuracy": 0.7390462032739197,
+        "avg_takeover_time": 42.6,
+        "avg_token_cost": 2879,
+        "token_efficiency": 0.1952310163695978
+      },
+      "complex": {
+        "count": 25,
+        "avg_accuracy": 0.6390462032739196,
+        "avg_takeover_time": 64.4,
+        "avg_token_cost": 2879,
+        "token_efficiency": 0.1952310163695978
+      }
+    },
+    "by_phase": {
+      "after_preflight": {
+        "count": 15,
+        "avg_accuracy": 0.7395604395604396,
+        "avg_token_cost": 2275,
+        "avg_minimal_context": 450
+      },
+      "after_investigation": {
+        "count": 15,
+        "avg_accuracy": 0.7395604395604396,
+        "avg_token_cost": 2275,
+        "avg_minimal_context": 450
+      },
+      "after_check": {
+        "count": 15,
+        "avg_accuracy": 0.7440366972477065,
+        "avg_token_cost": 2725,
+        "avg_minimal_context": 600
+      },
+      "after_partial_act": {
+        "count": 15,
+        "avg_accuracy": 0.7451977401129944,
+        "avg_token_cost": 2655,
+        "avg_minimal_context": 600
+      },
+      "after_complete": {
+        "count": 15,
+        "avg_accuracy": 0.726875699888018,
+        "avg_token_cost": 4465,
+        "avg_minimal_context": 600
+      }
+    },
+    "token_efficiency": {
+      "average": 0.1952310163695978,
+      "median": 0.1978021978021978,
+      "best_case": 0.22598870056497175,
+      "worst_case": 0.1343784994400896,
+      "efficiency_by_phase": {
+        "after_preflight": 0.1978021978021978,
+        "after_investigation": 0.1978021978021978,
+        "after_check": 0.22018348623853212,
+        "after_partial_act": 0.22598870056497175,
+        "after_complete": 0.1343784994400896
+      }
+    },
+    "recommendations": [
+      {
+        "category": "handoff_timing",
+        "priority": "high",
+        "finding": "Best handoff phase: after_partial_act (accuracy: 0.75)",
+        "recommendation": "Handoff after after_partial_act for optimal performance"
+      },
+      {
+        "category": "handoff_timing",
+        "priority": "medium",
+        "finding": "Avoid handoff after after_complete (accuracy: 0.73)",
+        "recommendation": "Plan handoffs before after_complete phase"
+      }
+    ]
+  }
+}

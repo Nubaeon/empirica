@@ -1,0 +1,530 @@
+# =============================================================================
+# EMPIRICA PROTOCOLS CONFIGURATION
+# =============================================================================
+# 
+# Purpose: Standardized schemas for MCP tool interfaces across all AIs
+# Usage: Defines canonical tool schemas for consistent cross-AI communication
+# 
+# Architecture: Part of MCO (Meta-Agent Configuration Object)
+#   - Personas: config/mco/personas.yaml
+#   - CASCADE styles: config/mco/cascade_styles.yaml
+#   - Protocols (this file): config/mco/protocols.yaml
+#   - Model profiles: config/mco/model_profiles.yaml
+#
+# Protocol Categories:
+#   - cascade: CASCADE phase protocols (preflight, check, postflight)
+#   - goals: Goal management protocols
+#   - session: Session management protocols
+#   - epistemic: Epistemic assessment protocols
+#   - git: Git-based coordination protocols
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2025-01-29"
+  author: "Empirica Framework"
+  protocol_namespace: "empirica"
+
+# =============================================================================
+# PROTOCOL DEFINITIONS
+# =============================================================================
+
+protocols:
+
+  # ---------------------------------------------------------------------------
+  # CASCADE PHASE PROTOCOLS
+  # ---------------------------------------------------------------------------
+  preflight_assessment:
+    name: "Preflight Epistemic Assessment"
+    description: "Initial self-assessment before task engagement"
+    category: "cascade"
+    
+    input_schema:
+      type: "object"
+      required: ["session_id", "prompt"]
+      properties:
+        session_id:
+          type: "string"
+          description: "Session identifier"
+        prompt:
+          type: "string"
+          description: "Task description to assess"
+        context:
+          type: "object"
+          description: "Additional context (optional)"
+    
+    output_schema:
+      type: "object"
+      required: ["assessment_id", "vectors", "reasoning"]
+      properties:
+        assessment_id:
+          type: "string"
+          description: "Unique assessment identifier"
+        session_id:
+          type: "string"
+          description: "Session identifier"
+        vectors:
+          type: "object"
+          description: "13 epistemic vector scores (0.0-1.0)"
+          properties:
+            engagement: {type: "number", minimum: 0.0, maximum: 1.0}
+            know: {type: "number", minimum: 0.0, maximum: 1.0}
+            do: {type: "number", minimum: 0.0, maximum: 1.0}
+            context: {type: "number", minimum: 0.0, maximum: 1.0}
+            clarity: {type: "number", minimum: 0.0, maximum: 1.0}
+            coherence: {type: "number", minimum: 0.0, maximum: 1.0}
+            signal: {type: "number", minimum: 0.0, maximum: 1.0}
+            density: {type: "number", minimum: 0.0, maximum: 1.0}
+            state: {type: "number", minimum: 0.0, maximum: 1.0}
+            change: {type: "number", minimum: 0.0, maximum: 1.0}
+            completion: {type: "number", minimum: 0.0, maximum: 1.0}
+            impact: {type: "number", minimum: 0.0, maximum: 1.0}
+            uncertainty: {type: "number", minimum: 0.0, maximum: 1.0}
+        reasoning:
+          type: "string"
+          description: "Self-assessment reasoning and justification"
+    
+    validation_rules:
+      - "All vector scores must be between 0.0 and 1.0"
+      - "Engagement must be >= 0.6 to proceed"
+      - "Coherence must be >= 0.5 to avoid reset"
+      - "Uncertainty evidence required if uncertainty > 0.8"
+
+  check_phase_assessment:
+    name: "Check Phase Self-Assessment"
+    description: "Mid-investigation confidence and decision assessment"
+    category: "cascade"
+    
+    input_schema:
+      type: "object"
+      required: ["session_id", "findings", "remaining_unknowns", "confidence_to_proceed"]
+      properties:
+        session_id:
+          type: "string"
+          description: "Session identifier"
+        cascade_id:
+          type: "string"
+          description: "Cascade identifier (optional)"
+        findings:
+          type: "array"
+          items: {type: "string"}
+          description: "List of investigation findings"
+        remaining_unknowns:
+          type: "array"
+          items: {type: "string"}
+          description: "List of remaining unknowns"
+        confidence_to_proceed:
+          type: "number"
+          minimum: 0.0
+          maximum: 1.0
+          description: "Confidence score to proceed with execution"
+    
+    output_schema:
+      type: "object"
+      required: ["check_id", "decision", "reasoning"]
+      properties:
+        check_id:
+          type: "string"
+          description: "Unique check identifier"
+        decision:
+          type: "string"
+          enum: ["proceed", "investigate"]
+          description: "Decision based on assessment"
+        reasoning:
+          type: "string"
+          description: "Decision justification and reasoning"
+    
+    validation_rules:
+      - "Confidence must be >= threshold to proceed"
+      - "Decision must be 'proceed' or 'investigate'"
+      - "Findings must be non-empty if decision is 'proceed'"
+
+  postflight_assessment:
+    name: "Postflight Calibration Assessment"
+    description: "Final self-assessment for calibration and learning"
+    category: "cascade"
+    
+    input_schema:
+      type: "object"
+      required: ["session_id", "task_summary"]
+      properties:
+        session_id:
+          type: "string"
+          description: "Session identifier"
+        cascade_id:
+          type: "string"
+          description: "Cascade identifier (optional)"
+        task_summary:
+          type: "string"
+          description: "Summary of completed task"
+    
+    output_schema:
+      type: "object"
+      required: ["assessment_id", "vectors", "reasoning"]
+      properties:
+        assessment_id:
+          type: "string"
+          description: "Unique assessment identifier"
+        vectors:
+          type: "object"
+          description: "13 epistemic vector scores (0.0-1.0)"
+          properties:
+            engagement: {type: "number", minimum: 0.0, maximum: 1.0}
+            know: {type: "number", minimum: 0.0, maximum: 1.0}
+            do: {type: "number", minimum: 0.0, maximum: 1.0}
+            context: {type: "number", minimum: 0.0, maximum: 1.0}
+            clarity: {type: "number", minimum: 0.0, maximum: 1.0}
+            coherence: {type: "number", minimum: 0.0, maximum: 1.0}
+            signal: {type: "number", minimum: 0.0, maximum: 1.0}
+            density: {type: "number", minimum: 0.0, maximum: 1.0}
+            state: {type: "number", minimum: 0.0, maximum: 1.0}
+            change: {type: "number", minimum: 0.0, maximum: 1.0}
+            completion: {type: "number", minimum: 0.0, maximum: 1.0}
+            impact: {type: "number", minimum: 0.0, maximum: 1.0}
+            uncertainty: {type: "number", minimum: 0.0, maximum: 1.0}
+        reasoning:
+          type: "string"
+          description: "Assessment reasoning and learning insights"
+    
+    validation_rules:
+      - "All vector scores must be between 0.0 and 1.0"
+      - "Completion vector must be >= 0.8 for completed tasks"
+      - "Learning notes required for calibration tracking"
+
+  # ---------------------------------------------------------------------------
+  # GOAL MANAGEMENT PROTOCOLS
+  # ---------------------------------------------------------------------------
+  create_goal:
+    name: "Create Structured Goal"
+    description: "Create new goal with ScopeVector and success criteria"
+    category: "goals"
+    
+    input_schema:
+      type: "object"
+      required: ["session_id", "objective", "scope"]
+      properties:
+        session_id:
+          type: "string"
+          description: "Session identifier"
+        objective:
+          type: "string"
+          description: "Clear, actionable goal statement"
+        scope:
+          type: "object"
+          description: "Goal scope as epistemic vectors"
+          required: ["breadth", "duration", "coordination"]
+          properties:
+            breadth:
+              type: "number"
+              minimum: 0.0
+              maximum: 1.0
+              description: "How wide the goal spans (0.0=single function, 1.0=entire codebase)"
+            duration:
+              type: "number"
+              minimum: 0.0
+              maximum: 1.0
+              description: "Expected lifetime (0.0=minutes/hours, 1.0=weeks/months)"
+            coordination:
+              type: "number"
+              minimum: 0.0
+              maximum: 1.0
+              description: "Multi-agent/session coordination needed (0.0=solo, 1.0=heavy coordination)"
+        success_criteria:
+          type: "array"
+          items: {type: "string"}
+          description: "Array of success criteria strings"
+        estimated_complexity:
+          type: "number"
+          minimum: 0.0
+          maximum: 1.0
+          description: "Complexity estimate 0.0-1.0"
+        metadata:
+          type: "object"
+          description: "Additional metadata as JSON object"
+    
+    output_schema:
+      type: "object"
+      required: ["goal_id", "success"]
+      properties:
+        goal_id:
+          type: "string"
+          description: "Generated goal identifier"
+        success:
+          type: "boolean"
+          description: "Whether goal was created successfully"
+        message:
+          type: "string"
+          description: "Creation status message"
+    
+    validation_rules:
+      - "Objective must be non-empty and actionable"
+      - "Scope vector values must be between 0.0 and 1.0"
+      - "Success criteria must be specific and measurable"
+      - "Goal scope coherence validated automatically"
+
+  add_subtask:
+    name: "Add Subtask to Goal"
+    description: "Add subtask to existing goal"
+    category: "goals"
+    
+    input_schema:
+      type: "object"
+      required: ["goal_id", "description"]
+      properties:
+        goal_id:
+          type: "string"
+          description: "Goal identifier"
+        description:
+          type: "string"
+          description: "Subtask description"
+        importance:
+          type: "string"
+          enum: ["critical", "high", "medium", "low"]
+          description: "Subtask importance level"
+        dependencies:
+          type: "array"
+          items: {type: "string"}
+          description: "Array of dependency task IDs"
+        estimated_tokens:
+          type: "integer"
+          description: "Estimated token usage"
+    
+    output_schema:
+      type: "object"
+      required: ["task_id", "success"]
+      properties:
+        task_id:
+          type: "string"
+          description: "Generated subtask identifier"
+        success:
+          type: "boolean"
+          description: "Whether subtask was added successfully"
+    
+    validation_rules:
+      - "Goal must exist before adding subtask"
+      - "Description must be non-empty"
+      - "Dependencies must reference existing tasks"
+
+  complete_subtask:
+    name: "Complete Subtask"
+    description: "Mark subtask as complete with evidence"
+    category: "goals"
+    
+    input_schema:
+      type: "object"
+      required: ["task_id", "evidence"]
+      properties:
+        task_id:
+          type: "string"
+          description: "Subtask identifier"
+        evidence:
+          type: "string"
+          description: "Completion evidence (commit hash, file path, etc.)"
+    
+    output_schema:
+      type: "object"
+      required: ["success", "message"]
+      properties:
+        success:
+          type: "boolean"
+          description: "Whether subtask was marked complete"
+        message:
+          type: "string"
+          description: "Completion status message"
+    
+    validation_rules:
+      - "Task must exist and not already be complete"
+      - "Evidence must be provided and valid"
+      - "Parent goal completion updated automatically"
+
+  # ---------------------------------------------------------------------------
+  # SESSION MANAGEMENT PROTOCOLS
+  # ---------------------------------------------------------------------------
+  bootstrap_session:
+    name: "Bootstrap Empirica Session"
+    description: "Initialize new session with metacognitive configuration"
+    category: "session"
+    
+    input_schema:
+      type: "object"
+      required: ["ai_id"]
+      properties:
+        ai_id:
+          type: "string"
+          description: "AI agent identifier"
+        bootstrap_level:
+          type: "integer"
+          minimum: 0
+          maximum: 2
+          description: "Bootstrap level 0-2 (0=minimal, 1=standard, 2=full)"
+        session_type:
+          type: "string"
+          enum: ["development", "production", "testing"]
+          description: "Session type for context"
+    
+    output_schema:
+      type: "object"
+      required: ["session_id", "success"]
+      properties:
+        session_id:
+          type: "string"
+          description: "Generated session identifier"
+        success:
+          type: "boolean"
+          description: "Whether session was created successfully"
+        components_loaded:
+          type: "integer"
+          description: "Number of components loaded"
+    
+    validation_rules:
+      - "AI ID must be non-empty and valid"
+      - "Bootstrap level determines loaded components"
+
+  # ---------------------------------------------------------------------------
+  # GIT COORDINATION PROTOCOLS
+  # ---------------------------------------------------------------------------
+  create_git_checkpoint:
+    name: "Create Compressed Checkpoint"
+    description: "Create compressed checkpoint in git notes"
+    category: "git"
+    
+    input_schema:
+      type: "object"
+      required: ["session_id", "phase"]
+      properties:
+        session_id:
+          type: "string"
+          description: "Session identifier"
+        phase:
+          type: "string"
+          enum: ["PREFLIGHT", "INVESTIGATE", "CHECK", "ACT", "POSTFLIGHT"]
+          description: "CASCADE phase"
+        round_num:
+          type: "integer"
+          description: "Round number (optional)"
+        vectors:
+          type: "object"
+          description: "Epistemic vectors snapshot"
+        metadata:
+          type: "object"
+          description: "Additional checkpoint metadata"
+    
+    output_schema:
+      type: "object"
+      required: ["checkpoint_id", "success"]
+      properties:
+        checkpoint_id:
+          type: "string"
+          description: "Generated checkpoint identifier"
+        success:
+          type: "boolean"
+          description: "Whether checkpoint was created"
+        token_count:
+          type: "integer"
+          description: "Original token count before compression"
+        compression_ratio:
+          type: "number"
+          description: "Achieved compression ratio"
+    
+    validation_rules:
+      - "Session must be active"
+      - "Phase must be valid CASCADE phase"
+      - "Vectors required for epistemic checkpoints"
+
+  discover_goals:
+    name: "Discover Goals from Other AIs"
+    description: "Find goals created by other AIs via git notes"
+    category: "git"
+    
+    input_schema:
+      type: "object"
+      properties:
+        from_ai_id:
+          type: "string"
+          description: "Filter by AI creator"
+        session_id:
+          type: "string"
+          description: "Filter by session"
+    
+    output_schema:
+      type: "object"
+      required: ["goals", "success"]
+      properties:
+        goals:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              goal_id: {type: "string"}
+              ai_id: {type: "string"}
+              objective: {type: "string"}
+              scope: {type: "object"}
+              lineage: {type: "array"}
+        success:
+          type: "boolean"
+          description: "Whether discovery was successful"
+    
+    validation_rules:
+      - "Git repository required"
+      - "Valid filters must be provided"
+
+  resume_goal:
+    name: "Resume Another AI's Goal"
+    description: "Resume goal from another AI with epistemic handoff"
+    category: "git"
+    
+    input_schema:
+      type: "object"
+      required: ["goal_id", "ai_id"]
+      properties:
+        goal_id:
+          type: "string"
+          description: "Goal UUID to resume"
+        ai_id:
+          type: "string"
+          description: "Your AI identifier"
+    
+    output_schema:
+      type: "object"
+      required: ["goal_data", "epistemic_handoff", "success"]
+      properties:
+        goal_data:
+          type: "object"
+          description: "Complete goal data from original AI"
+        epistemic_handoff:
+          type: "object"
+          description: "Epistemic state transfer data"
+        success:
+          type: "boolean"
+          description: "Whether handoff was successful"
+    
+    validation_rules:
+      - "Goal must exist and be resumable"
+      - "Epistemic state transfer must be complete"
+
+# =============================================================================
+# PROTOCOL VALIDATION RULES
+# =============================================================================
+#
+# Cross-Protocol Validation:
+#   - All assessments must include session_id
+#   - Vector scores must be consistent across phases
+#   - Goal IDs must be UUID format
+#   - Timestamp fields must be ISO format
+#
+# Security Validation:
+#   - No SQL injection in string fields
+#   - File paths must be validated and sanitized
+#   - Command execution must be whitelisted
+#   - Network requests must be authorized
+#
+# Performance Validation:
+#   - Token limits enforced per protocol
+#   - Response time limits enforced
+#   - Resource usage monitored and logged
+#   - Rate limiting applied per AI agent
+#
+# Integration Validation:
+#   - Database operations must be atomic
+#   - Git operations must be transactional
+#   - Cross-AI communication must be validated
+#   - Session continuity must be maintained

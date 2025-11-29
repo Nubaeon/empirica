@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from empirica.core.completion.git_query import GitProgressQuery
-from empirica.core.goals.types import Goal, SuccessCriterion, GoalScope
+from empirica.core.goals.types import Goal, SuccessCriterion, ScopeVector
 from empirica.core.tasks.types import SubTask, EpistemicImportance
 
 def main():
@@ -23,7 +23,7 @@ def main():
         # Create test goal
         goal = Goal.create(
             objective="Phase 2 Validation Test",
-            scope=GoalScope.TASK_SPECIFIC,
+            scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1),
             success_criteria=[
                 SuccessCriterion(
                     id=str(uuid.uuid4()),

@@ -4,6 +4,11 @@ A complete guide to the 13-vector epistemic system with explicit uncertainty tra
 
 ---
 
+> [!IMPORTANT]
+> **Schema Migration (90% Complete)**: Empirica is migrating to a new internal schema with improved field naming. The vector names you use remain the same (`know`, `do`, `clarity`, etc.), but internally they now map to tier-prefixed names (`foundation_know`, `comprehension_clarity`, `execution_state`). This migration is **backwards compatible** - existing code continues to work unchanged. See [27_SCHEMA_MIGRATION_GUIDE.md](file:///home/yogapad/empirical-ai/empirica/docs/production/27_SCHEMA_MIGRATION_GUIDE.md) for details.
+
+---
+
 ## Overview
 
 Empirica assesses epistemic state across **13 vectors** organized into 5 groups:

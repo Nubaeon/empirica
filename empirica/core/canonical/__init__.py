@@ -18,14 +18,18 @@ Key Principles:
 
 from .reflex_frame import (
     VectorState,
-    EpistemicAssessment,
-    ReflexFrame,
     Action,
     CANONICAL_WEIGHTS
 )
 
 # Import centralized thresholds
 from ..thresholds import ENGAGEMENT_THRESHOLD, CRITICAL_THRESHOLDS
+
+# OLD EpistemicAssessment and ReflexFrame removed - use EpistemicAssessmentSchema
+# For backwards compatibility during migration, import from schemas
+from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
+# Alias for backwards compatibility (will be removed after all code is updated)
+EpistemicAssessment = EpistemicAssessmentSchema
 
 from .reflex_logger import (
     ReflexLogger,
@@ -40,8 +44,7 @@ from .canonical_epistemic_assessment import (
 __all__ = [
     # Data Structures
     'VectorState',
-    'EpistemicAssessment',
-    'ReflexFrame',
+    'EpistemicAssessment',  # Alias for EpistemicAssessmentSchema (backwards compat)
     'Action',
 
     # Constants
@@ -55,5 +58,8 @@ __all__ = [
     'log_assessment_sync',
 
     # Assessor
-    'CanonicalEpistemicAssessor'
+    'CanonicalEpistemicAssessor',
+    
+    # NEW schema (main export)
+    'EpistemicAssessmentSchema'
 ]

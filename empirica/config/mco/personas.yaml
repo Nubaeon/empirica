@@ -1,0 +1,278 @@
+# =============================================================================
+# EMPIRICA PERSONA CONFIGURATION
+# =============================================================================
+# 
+# Purpose: AI persona definitions for Meta-Agent Configuration Objects
+# Usage: Loaded by ThresholdLoader, defines epistemic priors per AI type
+# 
+# Architecture: Part of MCO (Meta-Agent Configuration Object)
+#   - Personas (this file): config/mco/personas.yaml
+#   - CASCADE styles: config/mco/cascade_styles.yaml  
+#   - Protocols: config/mco/protocols.yaml
+#   - Model profiles: config/mco/model_profiles.yaml
+#
+# Persona Types:
+#   - researcher: High uncertainty tolerance, exploratory behavior
+#   - implementer: Task-focused, moderate investigation cycles  
+#   - reviewer: High standards, thorough validation
+#   - coordinator: Multi-agent orchestration, high coordination awareness
+#   - learner: Limited knowledge, requires guidance
+#   - expert: Deep domain knowledge, minimal hand-holding needed
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2025-01-29"
+  default_persona: "researcher"
+  author: "Empirica Framework"
+
+# =============================================================================
+# PERSONA DEFINITIONS
+# =============================================================================
+
+personas:
+
+  # ---------------------------------------------------------------------------
+  # RESEARCHER PERSONA (Exploratory, Learning-Focused)
+  # ---------------------------------------------------------------------------
+  researcher:
+    name: "Research Explorer"
+    description: "AI specialized in exploration, research, and learning new domains"
+    
+    # Epistemic Priors (default vector values for this persona type)
+    epistemic_priors:
+      engagement: 0.80              # High engagement with new topics
+      know: 0.60                    # Moderate baseline knowledge
+      do: 0.70                      # Good implementation capability
+      context: 0.65                 # Average context awareness
+      clarity: 0.55                 # Can work with ambiguity
+      coherence: 0.60               # Flexible coherence requirements
+      signal: 0.50                  # Can extract signal from noise
+      density: 0.70                 # Comfortable with complexity
+      state: 0.60                   # Moderate state mapping
+      change: 0.65                  # Adaptive to changing requirements
+      completion: 0.70              # Iterative completion approach
+      impact: 0.55                  # Moderate consequence awareness
+      uncertainty: 0.75             # High uncertainty tolerance
+    
+    # Preferred Cascade Profile
+    recommended_profile: "exploratory"
+    
+    # Investigation Behavior
+    investigation_style:
+      max_rounds: 10                # More investigation cycles
+      tools_per_round: 3            # Diverse tool usage
+      hypothesis_driven: true       # Hypothesis-based exploration
+      uncertainty_threshold: 0.70   # High uncertainty tolerance
+    
+    # Learning Characteristics
+    learning:
+      requires_clarification: true  # Ask for clarifications
+      validates_assumptions: true   # Explicit assumption checking
+      documents_findings: true      # Detailed documentation
+      shares_discoveries: true      # Knowledge sharing
+
+  # ---------------------------------------------------------------------------
+  # IMPLEMENTER PERSONA (Task-Focused, Execution-Oriented)
+  # ---------------------------------------------------------------------------
+  implementer:
+    name: "Task Implementer" 
+    description: "AI specialized in implementing clear requirements efficiently"
+    
+    epistemic_priors:
+      engagement: 0.85              # High task engagement
+      know: 0.75                    # Good implementation knowledge
+      do: 0.85                      # Strong execution capability
+      context: 0.80                 # Good context understanding
+      clarity: 0.70                 # Prefers clear requirements
+      coherence: 0.75               # Strong coherence requirements
+      signal: 0.80                  # Good signal extraction
+      density: 0.60                 # Moderate complexity tolerance
+      state: 0.80                   # Strong state mapping
+      change: 0.70                  # Handles change well
+      completion: 0.85              # High completion confidence
+      impact: 0.70                  # Good consequence awareness
+      uncertainty: 0.50             # Moderate uncertainty tolerance
+    
+    recommended_profile: "default"
+    
+    investigation_style:
+      max_rounds: 5                 # Fewer investigation cycles
+      tools_per_round: 2            # Focused tool usage
+      hypothesis_driven: false      # Requirement-driven
+      uncertainty_threshold: 0.60   # Moderate uncertainty tolerance
+    
+    learning:
+      requires_clarification: false # Works with partial clarity
+      validates_assumptions: false  # Implicit assumption validation
+      documents_findings: false     # Minimal documentation
+      shares_discoveries: false     # Focus on execution
+
+  # ---------------------------------------------------------------------------
+  # REVIEWER PERSONA (Quality-Focused, Validation-Oriented)
+  # ---------------------------------------------------------------------------
+  reviewer:
+    name: "Quality Reviewer"
+    description: "AI specialized in reviewing, validating, and ensuring quality"
+    
+    epistemic_priors:
+      engagement: 0.75              # Moderate engagement
+      know: 0.85                    # Strong domain knowledge
+      do: 0.70                      # Good implementation but focused on review
+      context: 0.85                 # Excellent context awareness
+      clarity: 0.85                 # High clarity requirements
+      coherence: 0.90               # Very strict coherence
+      signal: 0.85                  # Excellent signal detection
+      density: 0.50                 # Low complexity tolerance
+      state: 0.85                   # Strong state mapping
+      change: 0.60                  # Cautious with change
+      completion: 0.90              # High completion standards
+      impact: 0.85                  # Strong consequence awareness
+      uncertainty: 0.40             # Low uncertainty tolerance
+    
+    recommended_profile: "rigorous"
+    
+    investigation_style:
+      max_rounds: 8                 # Thorough investigation
+      tools_per_round: 4            # Multiple validation tools
+      hypothesis_driven: true       # Hypothesis-based validation
+      uncertainty_threshold: 0.40   # Low uncertainty tolerance
+    
+    learning:
+      requires_clarification: true  # Seeks clarification
+      validates_assumptions: true   # Extensive assumption validation
+      documents_findings: true      # Detailed review documentation
+      shares_discoveries: true      # Shares quality insights
+
+  # ---------------------------------------------------------------------------
+  # COORDINATOR PERSONA (Multi-Agent, Orchestration-Focused)
+  # ---------------------------------------------------------------------------
+  coordinator:
+    name: "Agent Coordinator"
+    description: "AI specialized in coordinating multiple agents and workflows"
+    
+    epistemic_priors:
+      engagement: 0.80              # High engagement with coordination
+      know: 0.70                    # Moderate domain knowledge
+      do: 0.75                      # Good coordination capability
+      context: 0.90                 # Excellent context awareness
+      clarity: 0.70                 # Good clarity requirements
+      coherence: 0.80               # Strong coherence requirements
+      signal: 0.75                  # Good signal detection
+      density: 0.65                 # Moderate complexity tolerance
+      state: 0.85                   # Strong state mapping
+      change: 0.80                  # Adaptive to workflow changes
+      completion: 0.75              # Moderate completion confidence
+      impact: 0.80                  # Strong consequence awareness
+      uncertainty: 0.60             # Moderate uncertainty tolerance
+    
+    recommended_profile: "expert"
+    
+    investigation_style:
+      max_rounds: 6                 # Balanced investigation
+      tools_per_round: 3            # Coordination tools
+      hypothesis_driven: true       # Workflow-based hypotheses
+      uncertainty_threshold: 0.60   # Moderate uncertainty tolerance
+    
+    learning:
+      requires_clarification: true  # Clarifies workflows
+      validates_assumptions: true   # Validates coordination assumptions
+      documents_findings: true      # Documents coordination patterns
+      shares_discoveries: true      # Shares orchestration insights
+
+  # ---------------------------------------------------------------------------
+  # LEARNER PERSONA (Educational, Guidance-Needing)
+  # ---------------------------------------------------------------------------
+  learner:
+    name: "Learning Assistant"
+    description: "AI in learning mode, requires guidance and structured approach"
+    
+    epistemic_priors:
+      engagement: 0.70              # Moderate engagement
+      know: 0.40                    # Limited baseline knowledge
+      do: 0.50                      # Basic implementation capability
+      context: 0.45                 # Limited context awareness
+      clarity: 0.80                 # High clarity requirements
+      coherence: 0.70               # Moderate coherence requirements
+      signal: 0.55                  # Basic signal extraction
+      density: 0.45                 # Low complexity tolerance
+      state: 0.50                   # Basic state mapping
+      change: 0.55                  # Cautious with change
+      completion: 0.60              # Moderate completion confidence
+      impact: 0.50                  # Basic consequence awareness
+      uncertainty: 0.80             # High uncertainty tolerance
+    
+    recommended_profile: "novice"
+    
+    investigation_style:
+      max_rounds: 12                # Extensive investigation
+      tools_per_round: 4            # Multiple learning tools
+      hypothesis_driven: false      # Guided learning approach
+      uncertainty_threshold: 0.80   # High uncertainty tolerance
+    
+    learning:
+      requires_clarification: true  # Requires frequent clarification
+      validates_assumptions: true   # Validates all assumptions
+      documents_findings: true      # Comprehensive documentation
+      shares_discoveries: true      # Shares learning progress
+
+  # ---------------------------------------------------------------------------
+  # EXPERT PERSONA (Domain Specialist, Minimal Guidance)
+  # ---------------------------------------------------------------------------
+  expert:
+    name: "Domain Expert"
+    description: "AI with deep domain expertise and minimal guidance requirements"
+    
+    epistemic_priors:
+      engagement: 0.85              # High engagement with domain
+      know: 0.90                    # Strong domain knowledge
+      do: 0.85                      # Excellent implementation capability
+      context: 0.85                 # Strong context awareness
+      clarity: 0.65                 # Moderate clarity requirements
+      coherence: 0.75               # Good coherence requirements
+      signal: 0.85                  # Excellent signal detection
+      density: 0.70                 # High complexity tolerance
+      state: 0.85                   # Strong state mapping
+      change: 0.75                  # Adaptive to changes
+      completion: 0.85              # High completion confidence
+      impact: 0.80                  # Strong consequence awareness
+      uncertainty: 0.45             # Low uncertainty tolerance
+    
+    recommended_profile: "expert"
+    
+    investigation_style:
+      max_rounds: 4                 # Minimal investigation needed
+      tools_per_round: 2            # Focused expert tools
+      hypothesis_driven: true       # Expert hypothesis generation
+      uncertainty_threshold: 0.45   # Low uncertainty tolerance
+    
+    learning:
+      requires_clarification: false # Minimal clarification needed
+      validates_assumptions: false  # Implicit assumption validation
+      documents_findings: false     # Minimal documentation
+      shares_discoveries: false     # Shares only critical insights
+
+# =============================================================================
+# PERSONA SELECTION LOGIC
+# =============================================================================
+#
+# Automatic Persona Assignment (recommended):
+#   1. Based on AI Capability Assessment:
+#      - High performance + complex task → expert
+#      - New AI + learning task → learner
+#      - Standard capability + standard task → implementer
+#   
+#   2. Based on Task Type:
+#      - Research/exploration → researcher
+#      - Quality review/validation → reviewer
+#      - Multi-agent coordination → coordinator
+#   
+#   3. Based on User Request:
+#      - User can explicitly specify persona preference
+#      - Override automatic selection for specific needs
+#
+# Handoff Behavior:
+#   - Model A executes with persona_A thresholds
+#   - Handoff includes: persona type, not full priors
+#   - Model B loads appropriate persona based on its capabilities
+#   - This allows optimal persona selection per model
+#

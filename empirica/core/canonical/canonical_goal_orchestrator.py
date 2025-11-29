@@ -26,11 +26,16 @@ logger = logging.getLogger(__name__)
 
 # Import canonical components
 try:
-    from .reflex_frame import EpistemicAssessment, Action
+    from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
+    from .reflex_frame import Action
+    # Use NEW schema
+    EpistemicAssessment = EpistemicAssessmentSchema
     CANONICAL_AVAILABLE = True
 except ImportError:
     try:
-        from reflex_frame import EpistemicAssessment, Action
+        from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
+        from reflex_frame import Action
+        EpistemicAssessment = EpistemicAssessmentSchema
         CANONICAL_AVAILABLE = True
     except ImportError:
         # Fallback: create placeholder types

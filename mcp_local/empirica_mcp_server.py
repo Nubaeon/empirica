@@ -183,7 +183,31 @@ async def list_tools() -> List[types.Tool]:
                 "properties": {
                     "session_id": {"type": "string", "description": "Session UUID"},
                     "objective": {"type": "string", "description": "Goal objective/description"},
-                    "scope": {"type": "string", "enum": ["task_specific", "session_scoped", "project_wide"], "description": "Goal scope (use task_specific, session_scoped, or project_wide)"},
+                    "scope": {
+                        "type": "object",
+                        "description": "Goal scope as epistemic vectors (AI self-assesses dimensions)",
+                        "properties": {
+                            "breadth": {
+                                "type": "number",
+                                "minimum": 0.0,
+                                "maximum": 1.0,
+                                "description": "How wide the goal spans (0.0=single function, 1.0=entire codebase)"
+                            },
+                            "duration": {
+                                "type": "number",
+                                "minimum": 0.0,
+                                "maximum": 1.0,
+                                "description": "Expected lifetime (0.0=minutes/hours, 1.0=weeks/months)"
+                            },
+                            "coordination": {
+                                "type": "number",
+                                "minimum": 0.0,
+                                "maximum": 1.0,
+                                "description": "Multi-agent/session coordination needed (0.0=solo, 1.0=heavy coordination)"
+                            }
+                        },
+                        "required": ["breadth", "duration", "coordination"]
+                    },
                     "success_criteria": {"type": "array", "items": {"type": "string"}, "description": "Array of success criteria strings"},
                     "estimated_complexity": {"type": "number", "description": "Complexity estimate 0.0-1.0"},
                     "metadata": {"type": "object", "description": "Additional metadata as JSON object"}

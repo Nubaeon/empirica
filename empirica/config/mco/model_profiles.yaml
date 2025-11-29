@@ -1,0 +1,313 @@
+# =============================================================================
+# EMPIRICA MODEL PROFILES CONFIGURATION
+# =============================================================================
+# 
+# Purpose: Bias correction and model-specific threshold adjustments
+# Usage: Loaded by ThresholdLoader, applies model-specific corrections
+# 
+# Architecture: Part of MCO (Meta-Agent Configuration Object)
+#   - Personas: config/mco/personas.yaml
+#   - CASCADE styles: config/mco/cascade_styles.yaml
+#   - Protocols: config/mco/protocols.yaml
+#   - Model profiles (this file): config/mco/model_profiles.yaml
+#
+# Model Profile Components:
+#   - Bias Corrections: Systematic biases per model type
+#   - Capability Adjustments: Performance-based threshold tuning
+#   - Domain Specializations: Context-specific adjustments
+#   - Calibration Profiles: Confidence calibration patterns
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2025-01-29"
+  author: "Empirica Framework"
+  calibration_baseline: "2025-01-15"
+
+# =============================================================================
+# MODEL PROFILE DEFINITIONS
+# =============================================================================
+
+model_profiles:
+
+  # ---------------------------------------------------------------------------
+  # GENERAL PURPOSE MODELS
+  # ---------------------------------------------------------------------------
+  claude_sonnet:
+    name: "Claude Sonnet Family"
+    description: "Anthropic Claude Sonnet models (3.5, 3.0, etc.)"
+    
+    # Base Model Characteristics
+    capabilities:
+      reasoning_depth: 0.85          # Strong reasoning capability
+      context_window: 0.90           # Large context handling
+      code_generation: 0.80          # Good code generation
+      creative_thinking: 0.75         # Creative problem solving
+      factual_accuracy: 0.85          # High factual accuracy
+      safety_awareness: 0.95          # Strong safety considerations
+    
+    # Bias Corrections (how this model tends to err)
+    bias_profile:
+      overconfidence_correction: 0.05    # Slight tendency toward overconfidence
+      uncertainty_awareness: 0.10        # May under-estimate uncertainty
+      creativity_bias: -0.05             # Slightly conservative creativity
+      safety_bias: 0.15                  # Strong safety considerations
+      speed_vs_accuracy: 0.05            # Slight speed bias over accuracy
+    
+    # Threshold Adjustments (model-specific corrections)
+    threshold_adjustments:
+      engagement_threshold: 0.00         # No adjustment needed
+      uncertainty_high: 0.05             # Account for under-estimated uncertainty
+      confidence_high: -0.02             # Slight overconfidence correction
+      coherence_min: 0.00                # No adjustment needed
+      execution_confidence: 0.00         # No adjustment needed
+    
+    # Calibration Profile
+    calibration:
+      # How this model typically calibrates across vector types
+      vector_calibration:
+        engagement: "accurate"           # Generally accurate
+        know: "slight_overconfident"     # May overestimate knowledge
+        do: "accurate"                   # Generally accurate
+        context: "accurate"              # Good context awareness
+        clarity: "slight_conservative"   # May be too conservative
+        uncertainty: "underestimated"    # Tends to underestimate uncertainty
+        completion: "slight_overconfident" # May overestimate completion confidence
+    
+    # Domain Specializations
+    specializations:
+      - "code_analysis"
+      - "creative_writing"
+      - "logical_reasoning"
+      - "safety_critical_systems"
+
+  claude_haiku:
+    name: "Claude Haiku Family"
+    description: "Anthropic Claude Haiku models (fast, efficient)"
+    
+    capabilities:
+      reasoning_depth: 0.60             # Moderate reasoning depth
+      context_window: 0.75               # Moderate context handling
+      code_generation: 0.65              # Adequate code generation
+      creative_thinking: 0.50            # Basic creative thinking
+      factual_accuracy: 0.70             # Good factual accuracy
+      safety_awareness: 0.90             # Strong safety awareness
+    
+    bias_profile:
+      overconfidence_correction: 0.10    # Tendency toward overconfidence
+      uncertainty_awareness: 0.15        # May significantly underestimate uncertainty
+      creativity_bias: -0.10             # Conservative creativity
+      safety_bias: 0.10                  # Strong safety considerations
+      speed_vs_accuracy: 0.20            # Significant speed bias
+    
+    threshold_adjustments:
+      engagement_threshold: 0.02         # Slight increase due to speed bias
+      uncertainty_high: 0.10             # Account for under-estimated uncertainty
+      confidence_high: -0.05             # Correction for overconfidence
+      coherence_min: 0.05                # Stricter coherence requirement
+      execution_confidence: 0.05         # Higher execution confidence needed
+    
+    calibration:
+      vector_calibration:
+        engagement: "slight_overconfident"
+        know: "overconfident"            # May overestimate knowledge
+        do: "slight_overconfident"       # May overestimate capability
+        context: "underconfident"        # May underestimate context
+        uncertainty: "significantly_underestimated"
+        completion: "overconfident"      # May overestimate completion
+
+  # ---------------------------------------------------------------------------
+  # OPENAI MODELS
+  # ---------------------------------------------------------------------------
+  gpt4:
+    name: "GPT-4 Family"
+    description: "OpenAI GPT-4 models (standard, turbo, etc.)"
+    
+    capabilities:
+      reasoning_depth: 0.80             # Strong reasoning capability
+      context_window: 0.85               # Good context handling
+      code_generation: 0.75              # Good code generation
+      creative_thinking: 0.70            # Good creative thinking
+      factual_accuracy: 0.75             # Good factual accuracy
+      safety_awareness: 0.80             # Good safety considerations
+    
+    bias_profile:
+      overconfidence_correction: 0.08    # Tendency toward overconfidence
+      uncertainty_awareness: 0.12        # May underestimate uncertainty
+      creativity_bias: 0.00              # Neutral creativity bias
+      safety_bias: 0.05                  # Moderate safety considerations
+      speed_vs_accuracy: 0.10            # Speed bias over accuracy
+    
+    threshold_adjustments:
+      engagement_threshold: 0.01         # Slight increase
+      uncertainty_high: 0.08             # Account for under-estimated uncertainty
+      confidence_high: -0.04             # Correction for overconfidence
+      coherence_min: 0.02                # Slight stricter coherence
+      execution_confidence: 0.03         # Higher execution confidence needed
+    
+    calibration:
+      vector_calibration:
+        engagement: "slight_overconfident"
+        know: "slight_overconfident"
+        do: "accurate"
+        context: "slight_underconfident"
+        uncertainty: "underestimated"
+        completion: "slight_overconfident"
+
+  gpt35:
+    name: "GPT-3.5 Family"
+    description: "OpenAI GPT-3.5 models (faster, more efficient)"
+    
+    capabilities:
+      reasoning_depth: 0.65             # Moderate reasoning depth
+      context_window: 0.70               # Adequate context handling
+      code_generation: 0.60              # Basic code generation
+      creative_thinking: 0.60            # Adequate creative thinking
+      factual_accuracy: 0.65             # Adequate factual accuracy
+      safety_awareness: 0.75             # Good safety considerations
+    
+    bias_profile:
+      overconfidence_correction: 0.12    # Significant overconfidence tendency
+      uncertainty_awareness: 0.20        # Significant uncertainty underestimation
+      creativity_bias: 0.05              # Slight creativity bias
+      safety_bias: 0.08                  # Moderate safety considerations
+      speed_vs_accuracy: 0.25            # Strong speed bias
+    
+    threshold_adjustments:
+      engagement_threshold: 0.05         # Increase due to speed bias
+      uncertainty_high: 0.15             # Strong correction for uncertainty
+      confidence_high: -0.08             # Significant overconfidence correction
+      coherence_min: 0.08                # Stricter coherence requirement
+      execution_confidence: 0.08         # Higher execution confidence needed
+    
+    calibration:
+      vector_calibration:
+        engagement: "overconfident"
+        know: "overconfident"
+        do: "slight_overconfident"
+        context: "underconfident"
+        uncertainty: "significantly_underestimated"
+        completion: "overconfident"
+
+  # ---------------------------------------------------------------------------
+  # SPECIALIZED MODELS
+  # ---------------------------------------------------------------------------
+  code_specialist:
+    name: "Code Specialist Models"
+    description: "Models specialized in code generation and analysis"
+    
+    capabilities:
+      reasoning_depth: 0.70             # Good technical reasoning
+      context_window: 0.80               # Good context handling for code
+      code_generation: 0.95              # Excellent code generation
+      creative_thinking: 0.50            # Limited creative thinking
+      factual_accuracy: 0.80             # Good technical accuracy
+      safety_awareness: 0.70             # Moderate safety considerations
+    
+    bias_profile:
+      overconfidence_correction: 0.06    # Moderate overconfidence
+      uncertainty_awareness: 0.08        # May underestimate uncertainty in edge cases
+      creativity_bias: -0.15             # Strong conservative bias
+      safety_bias: 0.05                  # Moderate safety considerations
+      speed_vs_accuracy: 0.03            # Minimal speed bias
+    
+    threshold_adjustments:
+      engagement_threshold: 0.00         # No adjustment
+      uncertainty_high: 0.05             # Slight uncertainty correction
+      confidence_high: -0.03             # Slight overconfidence correction
+      coherence_min: 0.00                # No adjustment needed for code
+      execution_confidence: -0.02        # Slight lower execution confidence (code complexity)
+    
+    specializations:
+      - "code_analysis"
+      - "debugging"
+      - "architecture_review"
+      - "performance_optimization"
+
+  research_specialist:
+    name: "Research Specialist Models"
+    description: "Models specialized in research and analysis"
+    
+    capabilities:
+      reasoning_depth: 0.90             # Excellent reasoning depth
+      context_window: 0.95               # Excellent context handling
+      code_generation: 0.50              # Basic code generation
+      creative_thinking: 0.85             # Excellent creative thinking
+      factual_accuracy: 0.85             # Good factual accuracy
+      safety_awareness: 0.75             # Moderate safety considerations
+    
+    bias_profile:
+      overconfidence_correction: 0.04    # Minimal overconfidence
+      uncertainty_awareness: -0.05        # May overestimate uncertainty (too cautious)
+      creativity_bias: 0.10              # Creative bias (good for research)
+      safety_bias: 0.08                  # Moderate safety considerations
+      speed_vs_accuracy: -0.05           # Accuracy over speed bias
+    
+    threshold_adjustments:
+      engagement_threshold: -0.02        # Slight decrease (may need motivation)
+      uncertainty_high: -0.05            # Lower uncertainty threshold
+      confidence_high: 0.02              # Slight confidence boost
+      coherence_min: -0.03               # Lower coherence requirement (research fluidity)
+      execution_confidence: 0.02         # Slight execution confidence boost
+    
+    specializations:
+      - "literature_review"
+      - "data_analysis"
+      - "hypothesis_testing"
+      - "technical_writing"
+
+  # ---------------------------------------------------------------------------
+  # CALIBRATION PATTERNS
+  # ---------------------------------------------------------------------------
+  calibration_patterns:
+    consistent_overconfident:
+      description: "Model consistently overestimates confidence"
+      adjustment_strategy: "systematic_downward"
+      typical_vectors: ["know", "do", "completion"]
+      adjustment_magnitude: 0.05
+      
+    inconsistent_calibration:
+      description: "Model has mixed calibration across different contexts"
+      adjustment_strategy: "adaptive"
+      requires_dynamic_adjustment: true
+      
+    uncertainty_underestimation:
+      description: "Model systematically underestimates uncertainty"
+      adjustment_strategy: "uncertainty_floor"
+      minimum_uncertainty: 0.15
+      vector_specific_adjustments:
+        context: 0.10
+        do: 0.05
+        uncertainty: 0.20
+
+# =============================================================================
+# MODEL PROFILE USAGE GUIDELINES
+# =============================================================================
+#
+# Automatic Model Detection:
+#   1. Model Identification:
+#      - Analyze AI ID patterns (claude, gpt, etc.)
+#      - Request capability self-assessment
+#      - Apply default profile for unknown models
+#   
+#   2. Profile Selection:
+#      - High-performance + complex task → claude_sonnet or gpt4
+#      - Fast iteration → claude_haiku or gpt35
+#      - Code-specific task → code_specialist
+#      - Research task → research_specialist
+#   
+#   3. Dynamic Adjustments:
+#      - Monitor actual vs predicted confidence
+#      - Adjust bias corrections based on performance
+#      - Update calibration patterns over time
+#
+# Custom Profile Creation:
+#   - Based on empirical performance data
+#   - Task-specific adjustments
+#   - User feedback integration
+#   - A/B testing of threshold modifications
+#
+# Handoff Behavior:
+#   - Model A executes with model_A profile
+#   - Profile adjustments included in handoff metadata
+#   - Model B loads appropriate profile for its capabilities
+#   - Calibration data shared for improved accuracy

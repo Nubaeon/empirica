@@ -17,31 +17,57 @@ Components:
 - Protocol: Persona <-> Sentinel communication
 
 Usage:
-    from empirica.core.persona import PersonaProfile, PersonaManager
+    from empirica.core.persona import PersonaManager, PersonaHarness
 
     # Create security expert persona
-    profile = PersonaProfile(
+    manager = PersonaManager()
+    persona = manager.create_persona(
         persona_id="security_expert",
         name="Security Expert",
-        epistemic_priors={"know": 0.90, "uncertainty": 0.15},
-        focus_domains=["security", "vulnerabilities"]
+        template="builtin:security"
     )
+    manager.save_persona(persona)
 
-    manager = PersonaManager()
-    manager.save_persona(profile)
+    # Execute task with persona
+    harness = PersonaHarness("security_expert")
+    result = await harness.execute_task("Review authentication code")
 """
 
-from .persona_profile import PersonaProfile, EpistemicConfig, SigningIdentityConfig
+from .persona_profile import (
+    PersonaProfile,
+    EpistemicConfig,
+    SigningIdentityConfig,
+    CapabilitiesConfig,
+    SentinelConfig,
+    PersonaMetadata
+)
 from .persona_manager import PersonaManager
 from .validation import validate_persona_profile, ValidationError
+from .harness import (
+    PersonaHarness,
+    PersonaMessage,
+    SentinelMessage,
+    MessageType
+)
 
 __all__ = [
+    # Core
     'PersonaProfile',
     'EpistemicConfig',
     'SigningIdentityConfig',
+    'CapabilitiesConfig',
+    'SentinelConfig',
+    'PersonaMetadata',
+    # Management
     'PersonaManager',
     'validate_persona_profile',
-    'ValidationError'
+    'ValidationError',
+    # Runtime
+    'PersonaHarness',
+    # Communication
+    'PersonaMessage',
+    'SentinelMessage',
+    'MessageType'
 ]
 
 __version__ = '3.0.0'  # Phase 3

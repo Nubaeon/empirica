@@ -87,16 +87,21 @@ class SentinelMessage:
         Args:
             identity: AIIdentity instance with loaded keypair
         """
-        from empirica.core.identity.signature import create_eep1_payload
+        from empirica.core.identity.signature import sign_assessment
+        import json
 
-        # Create EEP-1 payload
+        # Create message content
         payload_dict = self.to_dict()
         payload_dict.pop('signature', None)  # Remove existing signature
 
-        signed_payload = create_eep1_payload(
+        content = json.dumps(payload_dict, sort_keys=True)
+
+        # Sign using EEP-1
+        signed_payload = sign_assessment(
+            content=content,
+            epistemic_state={},  # Messages don't have epistemic state
             identity=identity,
-            payload_type="sentinel_message",
-            data=payload_dict
+            session_id=self.message_id
         )
 
         self.signature = signed_payload['signature']
@@ -156,16 +161,21 @@ class PersonaMessage:
         Args:
             identity: AIIdentity instance with loaded keypair
         """
-        from empirica.core.identity.signature import create_eep1_payload
+        from empirica.core.identity.signature import sign_assessment
+        import json
 
-        # Create EEP-1 payload
+        # Create message content
         payload_dict = self.to_dict()
         payload_dict.pop('signature', None)  # Remove existing signature
 
-        signed_payload = create_eep1_payload(
+        content = json.dumps(payload_dict, sort_keys=True)
+
+        # Sign using EEP-1
+        signed_payload = sign_assessment(
+            content=content,
+            epistemic_state={},  # Messages don't have epistemic state
             identity=identity,
-            payload_type="persona_message",
-            data=payload_dict
+            session_id=self.message_id
         )
 
         self.signature = signed_payload['signature']

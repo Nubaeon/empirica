@@ -13,11 +13,42 @@ import time
 import uuid
 
 
-class GoalScope(Enum):
-    """Goal scope classification"""
-    TASK_SPECIFIC = "task_specific"      # Single task completion
-    SESSION_SCOPED = "session_scoped"    # Multiple related tasks
-    PROJECT_WIDE = "project_wide"        # Long-term objectives
+@dataclass
+class ScopeVector:
+    """
+    Goal scope as epistemic vectors (AI self-assesses, Sentinel validates coherence)
+    
+    Replaces categorical enum with numeric dimensions for genuine AI assessment.
+    """
+    breadth: float      # 0.0-1.0: How wide the goal spans (0=single function, 1=entire codebase)
+    duration: float     # 0.0-1.0: Expected lifetime (0=minutes/hours, 1=weeks/months)
+    coordination: float # 0.0-1.0: Multi-agent/session coordination needed
+    
+    def __post_init__(self):
+        """Validate ranges"""
+        for field_name in ['breadth', 'duration', 'coordination']:
+            value = getattr(self, field_name)
+            if not isinstance(value, (int, float)):
+                raise ValueError(f"{field_name} must be numeric, got {type(value)}")
+            if not (0.0 <= value <= 1.0):
+                raise ValueError(f"{field_name} must be 0.0-1.0, got {value}")
+    
+    def to_dict(self) -> Dict[str, float]:
+        """Serialize to dictionary"""
+        return {
+            'breadth': self.breadth,
+            'duration': self.duration,
+            'coordination': self.coordination
+        }
+    
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> 'ScopeVector':
+        """Deserialize from dictionary"""
+        return ScopeVector(
+            breadth=float(data['breadth']),
+            duration=float(data['duration']),
+            coordination=float(data['coordination'])
+        )
 
 
 class DependencyType(Enum):
@@ -58,7 +89,7 @@ class Goal:
     id: str
     objective: str                       # Clear, actionable goal statement
     success_criteria: List[SuccessCriterion]
-    scope: GoalScope
+    scope: ScopeVector
     dependencies: List[Dependency] = field(default_factory=list)
     constraints: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -71,10 +102,12 @@ class Goal:
     def create(
         objective: str,
         success_criteria: List[SuccessCriterion],
-        scope: GoalScope = GoalScope.TASK_SPECIFIC,
+        scope: ScopeVector = None,
         **kwargs
     ) -> 'Goal':
         """Convenience factory method"""
+        if scope is None:
+            scope = ScopeVector(breadth=0.3, duration=0.2, coordination=0.1)  # Default: narrow, short, solo
         return Goal(
             id=str(uuid.uuid4()),
             objective=objective,
@@ -99,7 +132,7 @@ class Goal:
                 }
                 for sc in self.success_criteria
             ],
-            'scope': self.scope.value,
+            'scope': self.scope.to_dict(),
             'dependencies': [
                 {
                     'id': dep.id,
@@ -134,7 +167,7 @@ class Goal:
                 )
                 for sc in data['success_criteria']
             ],
-            scope=GoalScope(data['scope']),
+            scope=ScopeVector.from_dict(data['scope']),
             dependencies=[
                 Dependency(
                     id=dep['id'],

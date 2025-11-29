@@ -319,7 +319,11 @@ def handle_preflight_command(args):
                 logger.error(f"Signing failed: {e}")
         
         # Format output based on requested format
-        if args.json:
+        # Handle both --json (deprecated, sets output_format) and --output json
+        output_format = getattr(args, 'output_format', None) or getattr(args, 'output', 'default')
+        json_output = output_format == 'json' or getattr(args, 'json', False)
+        
+        if json_output:
             output = {
                 "session_id": session_id,
                 "task": prompt,
@@ -589,7 +593,11 @@ def handle_postflight_command(args):
             logger.debug(f"Checkpoint creation skipped: {e}")
         
         # Format output based on requested format
-        if args.json:
+        # Handle both --json (deprecated, sets output_format) and --output json
+        output_format = getattr(args, 'output_format', None) or getattr(args, 'output', 'default')
+        json_output = output_format == 'json' or getattr(args, 'json', False)
+        
+        if json_output:
             output = {
                 "session_id": session_id,
                 "summary": summary,

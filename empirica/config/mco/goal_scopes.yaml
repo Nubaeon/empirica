@@ -1,0 +1,182 @@
+# =============================================================================
+# GOAL SCOPE MAPPING - Epistemic Vector to Scope Vector Recommendations
+# =============================================================================
+# 
+# Purpose: Map epistemic vectors to recommended scope vectors for goal setting
+# Usage: Loaded by AI during self-assessment to determine appropriate scope
+# Philosophy: NO goal heuristics/templates - AI determines goals, system maps vectors
+#
+# Architecture: Part of MCO (Meta-Agent Configuration Object)
+#   - This file provides SCOPE RECOMMENDATIONS based on epistemic state
+#   - Goals themselves are determined by Sentinel or AI, never heuristics
+#   - AI self-assesses epistemic vectors and consults this mapping
+#
+# Vector Definitions:
+#   - breadth: 0.0-1.0 (0=single function, 1=entire codebase)  
+#   - duration: 0.0-1.0 (0=minutes/hours, 1=weeks/months)
+#   - coordination: 0.0-1.0 (0=solo work, 1=heavy cross-AI coordination)
+#
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2025-01-29"
+  author: "Empirica Framework"
+  description: "Epistemic vector to scope vector mapping - no goal heuristics"
+
+# =============================================================================
+# SCOPE RECOMMENDATIONS BY EPISTEMIC PATTERN
+# =============================================================================
+
+scope_recommendations:
+
+  # ---------------------------------------------------------------------------
+  # HIGH KNOWLEDGE + HIGH CONFIDENCE = BROADER SCOPE
+  # ---------------------------------------------------------------------------
+  knowledge_leader:
+    description: "AI has strong domain knowledge and confidence"
+    epistemic_pattern:
+      know: {min: 0.80}          # Strong domain knowledge
+      clarity: {min: 0.75}       # Clear understanding
+      coherence: {min: 0.70}     # Coherent mental model
+      confidence: {min: 0.75}    # High confidence in approach
+    
+    recommended_scope:
+      breadth: 0.7              # Can handle broader scope
+      duration: 0.6             # Can commit to longer duration
+      coordination: 0.4         # Moderate coordination needed
+    
+    rationale: "High knowledge + confidence enables broader scope work"
+
+  # ---------------------------------------------------------------------------
+  # LOW KNOWLEDGE + LOW CONFIDENCE = NARROW SCOPE
+  # ---------------------------------------------------------------------------
+  learning_mode:
+    description: "AI learning new domain or uncertain approach"
+    epistemic_pattern:
+      know: {max: 0.50}         # Limited knowledge
+      uncertainty: {min: 0.60}  # High uncertainty
+      engagement: {min: 0.60}   # Still engaged though
+      clarity: {max: 0.60}      # Less clear understanding
+    
+    recommended_scope:
+      breadth: 0.2              # Keep scope narrow for learning
+      duration: 0.2             # Short duration to iterate
+      coordination: 0.1         # Minimal coordination
+    
+    rationale: "Uncertainty requires narrow scope for safety and learning"
+
+  # ---------------------------------------------------------------------------
+  # HIGH COMPLEXITY SIGNAL = REDUCE SCOPE
+  # ---------------------------------------------------------------------------
+  complexity_signals:
+    description: "High complexity indicators suggest scope reduction"
+    epistemic_pattern:
+      density: {min: 0.75}      # High cognitive load
+      uncertainty: {min: 0.70}  # Significant uncertainty
+      signal: {max: 0.60}       # Weak signal quality
+    
+    recommended_scope:
+      breadth: 0.3              # Reduce breadth
+      duration: 0.3             # Reduce duration
+      coordination: 0.2         # Reduce coordination
+    
+    rationale: "High complexity signals require scope reduction"
+
+  # ---------------------------------------------------------------------------
+  # HIGH COORDINATION NEEDED = BROADEN SCOPE FOR INTEGRATION
+  # ---------------------------------------------------------------------------
+  coordination_heavy:
+    description: "Task requires significant cross-AI coordination"
+    epistemic_pattern:
+      context: {min: 0.70}      # Good context awareness
+      coherence: {min: 0.75}    # Strong coherence
+      impact: {min: 0.60}       # High impact task
+    
+    recommended_scope:
+      breadth: 0.6              # Broader scope for integration
+      duration: 0.7             # Longer duration for coordination
+      coordination: 0.8         # Heavy coordination required
+    
+    rationale: "Coordination-heavy tasks require broader scope"
+
+  # ---------------------------------------------------------------------------
+  # RAPID ITERATION MODE = SMALL SCOPE
+  # ---------------------------------------------------------------------------
+  rapid_iteration:
+    description: "Rapid prototyping or exploration mode"
+    epistemic_pattern:
+      engagement: {min: 0.85}   # High engagement
+      uncertainty: {min: 0.50}  # Some uncertainty but manageable
+      density: {max: 0.70}      # Manageable complexity
+    
+    recommended_scope:
+      breadth: 0.3              # Small scope for quick iterations
+      duration: 0.2             # Very short duration
+      coordination: 0.2         # Minimal coordination
+    
+    rationale: "Rapid iteration requires small, focused scope"
+
+  # ---------------------------------------------------------------------------
+  # PRODUCTION WORK = MEDIUM-HIGH SCOPE
+  # ---------------------------------------------------------------------------
+  production_focused:
+    description: "Production-quality work with standards"
+    epistemic_pattern:
+      know: {min: 0.70}         # Solid knowledge base
+      clarity: {min: 0.70}      # Clear requirements
+      coherence: {min: 0.65}    # Coherent design
+      completion: {min: 0.60}   # Strong completion focus
+    
+    recommended_scope:
+      breadth: 0.5              # Medium scope for production
+      duration: 0.5             # Medium duration
+      coordination: 0.4         # Moderate coordination
+    
+    rationale: "Production work requires balanced scope with standards"
+
+# =============================================================================
+# DYNAMIC ADJUSTMENT RULES
+# =============================================================================
+
+adjustment_rules:
+  # Rules for dynamically adjusting scope based on epistemic changes during CASCADE execution
+  uncertainty_spike:
+    condition: "uncertainty increases by >0.2 during execution"
+    action: "reduce scope by reducing breadth and duration by 0.2"
+    
+  knowledge_gain:
+    condition: "know increases by >0.2 during investigation"
+    action: "consider expanding scope by increasing breadth by 0.2"
+    
+  complexity_overload:
+    condition: "density > 0.85 OR coherence < 0.4"
+    action: "immediately reduce scope to prevent overload"
+  complexity_overload:
+    condition: "density > 0.85 OR coherence < 0.4"
+    action: "immediately reduce scope to prevent overload"
+
+# =============================================================================
+# SCOPE VALIDATION RULES
+# =============================================================================
+
+validation_coherence:
+  # Sentinel validates scope coherence - warnings for inconsistent combinations
+  # Note: Warnings are advisory, not blocking
+  high_coord_narrow_scope:
+    scope: {coordination: {min: 0.7}, breadth: {max: 0.3}}
+    warning: "High coordination without breadth scope may indicate analysis paralysis"
+    
+  short_duration_heavy_coordination:
+    scope: {duration: {max: 0.3}, coordination: {min: 0.6}}
+    warning: "Heavy coordination with short duration may be unrealistic"
+
+# =============================================================================
+# USAGE GUIDELINES
+# =============================================================================
+
+usage_notes:
+  - "This mapping is ADVISORY only - AI can override based on task requirements"
+  - "Sentinel may override for strategic reasons (priority, resource allocation)"
+  - "AI should consider multiple patterns and choose most relevant"
+  - "Scope adjustments can happen during CASCADE execution based on epistemic changes"
+  - "Goal objectives are NEVER predefined - only scope vector recommendations"

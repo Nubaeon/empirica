@@ -35,14 +35,18 @@ if str(parent_dir) not in sys.path:
 
 from empirica.core.canonical import (
     CanonicalEpistemicAssessor,
-    EpistemicAssessment,
-    ReflexFrame,
     ReflexLogger,
     Action,
     CANONICAL_WEIGHTS,
-    ENGAGEMENT_THRESHOLD,
-    log_assessment
+    ENGAGEMENT_THRESHOLD
 )
+
+# NEW SCHEMA (this is now THE schema)
+from empirica.core.schemas.epistemic_assessment import (
+    EpistemicAssessmentSchema,
+    CascadePhase as NewCascadePhase
+)
+# Converters removed - using EpistemicAssessmentSchema directly
 
 from .investigation_strategy import recommend_investigation_tools, Domain, ToolRecommendation
 from .investigation_plugin import InvestigationPlugin, PluginRegistry
@@ -105,14 +109,14 @@ class CascadePhase(Enum):
 class CanonicalCascadeState:
     """Current state in the canonical 7-phase epistemic cascade"""
     current_phase: CascadePhase
-    assessment: Optional[EpistemicAssessment]
+    assessment: Optional[EpistemicAssessmentSchema]
     engagement_gate_passed: bool
     knowledge_gaps: List[str]
     investigation_rounds: int
     decision_rationale: str
     task_id: str
-    preflight_assessment: Optional[EpistemicAssessment] = None  # Baseline
-    postflight_assessment: Optional[EpistemicAssessment] = None  # Final
+    preflight_assessment: Optional[EpistemicAssessmentSchema] = None  # Baseline
+    postflight_assessment: Optional[EpistemicAssessmentSchema] = None  # Final
     epistemic_delta: Optional[Dict[str, float]] = None  # Learning measurement
 
     def to_json(self) -> Dict[str, Any]:
@@ -991,159 +995,141 @@ class CanonicalEpistemicCascade:
         task_id: str,
         phase: CascadePhase,
         round_num: Optional[int] = None,
-        investigation_rounds: int = 0  # NEW: Track how much work was done
-    ) -> EpistemicAssessment:
+        investigation_rounds: int = 0
+    ) -> EpistemicAssessmentSchema:
         """
-        Perform genuine AI-powered epistemic self-assessment
+        Assess epistemic state returning EpistemicAssessmentSchema
         
-        This method checks for MCP-provided assessments first, then falls back to baseline.
-        
-        Flow:
-        1. Check database for real assessment (from MCP tools)
-        2. If found: Parse and return it
-        3. If not found: Return baseline assessment
-        
-        Returns:
-            EpistemicAssessment - real assessment or baseline
+        Uses parse_llm_response() from assessor.
         """
-        # PHASE A: Check database for real assessment from MCP tools
+        # Convert OLD CascadePhase enum to NEW CascadePhase enum
+        # Note: NEW schema doesn't have PLAN phase, map it to THINK
+        phase_map = {
+            CascadePhase.PREFLIGHT: NewCascadePhase.PREFLIGHT,
+            CascadePhase.THINK: NewCascadePhase.THINK,
+            CascadePhase.PLAN: NewCascadePhase.THINK,  # NEW schema doesn't have PLAN
+            CascadePhase.INVESTIGATE: NewCascadePhase.INVESTIGATE,
+            CascadePhase.CHECK: NewCascadePhase.CHECK,
+            CascadePhase.ACT: NewCascadePhase.ACT,
+            CascadePhase.POSTFLIGHT: NewCascadePhase.POSTFLIGHT
+        }
+        new_phase = phase_map.get(phase, NewCascadePhase.PREFLIGHT)
+        
+        # Check database for real assessment from MCP tools
         if self.session_db:
-            real_assessment = await self._retrieve_mcp_assessment(task_id, phase)
-            if real_assessment:
-                logger.info(f"\n   ✅ Using genuine self-assessment from MCP for phase: {phase.value}")
-                return real_assessment
+            real_assessment_old = await self._retrieve_mcp_assessment(task_id, phase)
+            if real_assessment_old:
+                phase_str = phase.value if hasattr(phase, 'value') else str(phase)
+                logger.info(f"\n   ✅ Using genuine self-assessment from MCP for phase: {phase_str}")
+                # Return NEW schema directly
+                return real_assessment_old
         
         # Get self-assessment prompt from canonical assessor
         assessment_request = await self.assessor.assess(task, context)
         
         # Check if we need AI self-assessment
         if isinstance(assessment_request, dict) and 'self_assessment_prompt' in assessment_request:
-            # No MCP assessment found - use baseline
-            logger.info(f"\n   🤔 No MCP assessment found - using baseline for phase: {phase.value}")
-            logger.info(f"   📋 (In MCP mode, call execute_{phase.value} to get self-assessment prompt)")
+            # No MCP assessment found - use baseline with NEW schema
+            logger.info(f"\n   🤔 No MCP assessment found - using baseline for phase: {phase}")
+            logger.info(f"\n   📋 (In MCP mode, call execute_{phase} to get self-assessment prompt)")
             
-            # Create baseline assessment
-            from empirica.core.canonical.reflex_frame import VectorState
+            # Import for baseline creation
+            from empirica.core.schemas.epistemic_assessment import VectorAssessment
             
-            # Adjust baseline based on phase and investigation work
+            # Create baseline assessment with NEW schema format
             if phase == CascadePhase.PREFLIGHT:
-                # PREFLIGHT: Conservative baseline (we don't know much yet)
-                baseline_assessment = EpistemicAssessment(
-                    assessment_id=assessment_request['assessment_id'],
-                    task=task,
-                    # GATE (35%)
-                    engagement=VectorState(0.70, "Baseline engagement - needs self-assessment"),
-                    engagement_gate_passed=True,
-                    # FOUNDATION (25%)
-                    know=VectorState(0.55, "PREFLIGHT: Limited initial knowledge"),
-                    do=VectorState(0.60, "PREFLIGHT: Capability needs verification"),
-                    context=VectorState(0.65, "PREFLIGHT: Context understood at surface level"),
-                    foundation_confidence=0.60,
-                    # COMPREHENSION (25%)
-                    clarity=VectorState(0.65, "PREFLIGHT: Initial clarity"),
-                    coherence=VectorState(0.70, "PREFLIGHT: Basic coherence"),
-                    signal=VectorState(0.60, "PREFLIGHT: Priority identified"),
-                    density=VectorState(0.65, "PREFLIGHT: Manageable complexity"),
-                    comprehension_confidence=0.65,
-                    # EXECUTION (15%)
-                    state=VectorState(0.60, "PREFLIGHT: Environment not yet mapped"),
-                    change=VectorState(0.55, "PREFLIGHT: Changes not tracked"),
-                    completion=VectorState(0.30, "PREFLIGHT: Not yet started"),
-                    impact=VectorState(0.50, "PREFLIGHT: Impact needs analysis"),
-                    execution_confidence=0.49,
-                    # META-EPISTEMIC (13th vector)
-                    uncertainty=VectorState(0.60, "PREFLIGHT: High initial uncertainty"),
-                    overall_confidence=0.58,
-                    recommended_action=Action.INVESTIGATE
+                # PREFLIGHT: Conservative baseline
+                baseline = EpistemicAssessmentSchema(
+                    # GATE
+                    engagement=VectorAssessment(0.70, "Baseline engagement - needs self-assessment"),
+                    # FOUNDATION (with "foundation_" prefix)
+                    foundation_know=VectorAssessment(0.55, "PREFLIGHT: Limited initial knowledge"),
+                    foundation_do=VectorAssessment(0.60, "PREFLIGHT: Capability needs verification"),
+                    foundation_context=VectorAssessment(0.65, "PREFLIGHT: Context understood at surface level"),
+                    # COMPREHENSION (with "comprehension_" prefix)
+                    comprehension_clarity=VectorAssessment(0.65, "PREFLIGHT: Initial clarity"),
+                    comprehension_coherence=VectorAssessment(0.70, "PREFLIGHT: Basic coherence"),
+                    comprehension_signal=VectorAssessment(0.60, "PREFLIGHT: Priority identified"),
+                    comprehension_density=VectorAssessment(0.65, "PREFLIGHT: Manageable complexity"),
+                    # EXECUTION (with "execution_" prefix)
+                    execution_state=VectorAssessment(0.60, "PREFLIGHT: Environment not yet mapped"),
+                    execution_change=VectorAssessment(0.55, "PREFLIGHT: Changes not tracked"),
+                    execution_completion=VectorAssessment(0.30, "PREFLIGHT: Not yet started"),
+                    execution_impact=VectorAssessment(0.50, "PREFLIGHT: Impact needs analysis"),
+                    # UNCERTAINTY
+                    uncertainty=VectorAssessment(0.60, "PREFLIGHT: High initial uncertainty"),
+                    # METADATA
+                    phase=new_phase,
+                    round_num=round_num or 0,
+                    investigation_count=investigation_rounds
                 )
             elif phase == CascadePhase.POSTFLIGHT:
-                # POSTFLIGHT: NO HEURISTICS - AI must genuinely reassess
-                # No artificial learning boosts - genuine self-assessment only
-                # AI will compare with PREFLIGHT to provide real calibration data
-                
-                baseline_assessment = EpistemicAssessment(
-                    assessment_id=assessment_request['assessment_id'],
-                    task=task,
-                    # NOTE: These are just fallback baselines if AI doesn't provide scores
-                    # The AI should provide genuine POSTFLIGHT assessment in all vectors
-                    engagement=VectorState(0.70, "POSTFLIGHT: Awaiting genuine self-assessment"),
-                    engagement_gate_passed=True,
-                    # FOUNDATION - AI must genuinely assess knowledge gained
-                    know=VectorState(0.60, "POSTFLIGHT: Awaiting genuine reassessment of knowledge"),
-                    do=VectorState(0.65, "POSTFLIGHT: Awaiting genuine reassessment of capability"),
-                    context=VectorState(0.70, "POSTFLIGHT: Awaiting genuine reassessment of context"),
-                    foundation_confidence=0.65,
-                    # COMPREHENSION - AI must genuinely assess understanding achieved
-                    clarity=VectorState(0.70, "POSTFLIGHT: Awaiting genuine reassessment of clarity"),
-                    coherence=VectorState(0.75, "POSTFLIGHT: Awaiting genuine reassessment of coherence"),
-                    signal=VectorState(0.65, "POSTFLIGHT: Awaiting genuine reassessment of signal"),
-                    density=VectorState(0.60, "POSTFLIGHT: Awaiting genuine reassessment of density"),
-                    comprehension_confidence=0.68,
-                    # EXECUTION - AI must genuinely assess execution state
-                    state=VectorState(0.65, "POSTFLIGHT: Awaiting genuine reassessment of state"),
-                    change=VectorState(0.70, "POSTFLIGHT: Awaiting genuine reassessment of change"),
-                    completion=VectorState(0.60, "POSTFLIGHT: Awaiting genuine reassessment of completion"),
-                    impact=VectorState(0.65, "POSTFLIGHT: Awaiting genuine reassessment of impact"),
-                    execution_confidence=0.65,
-                    # UNCERTAINTY - AI must genuinely reassess uncertainty
-                    uncertainty=VectorState(0.50, "POSTFLIGHT: Awaiting genuine reassessment of uncertainty"),
-                    overall_confidence=0.65,
-                    recommended_action=Action.PROCEED
+                # POSTFLIGHT: Awaiting genuine reassessment
+                baseline = EpistemicAssessmentSchema(
+                    engagement=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine self-assessment"),
+                    foundation_know=VectorAssessment(0.60, "POSTFLIGHT: Awaiting genuine reassessment of knowledge"),
+                    foundation_do=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of capability"),
+                    foundation_context=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine reassessment of context"),
+                    comprehension_clarity=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine reassessment of clarity"),
+                    comprehension_coherence=VectorAssessment(0.75, "POSTFLIGHT: Awaiting genuine reassessment of coherence"),
+                    comprehension_signal=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of signal"),
+                    comprehension_density=VectorAssessment(0.60, "POSTFLIGHT: Awaiting genuine reassessment of density"),
+                    execution_state=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of state"),
+                    execution_change=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine reassessment of change"),
+                    execution_completion=VectorAssessment(0.60, "POSTFLIGHT: Awaiting genuine reassessment of completion"),
+                    execution_impact=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of impact"),
+                    uncertainty=VectorAssessment(0.50, "POSTFLIGHT: Awaiting genuine reassessment of uncertainty"),
+                    phase=new_phase,
+                    round_num=round_num or 0,
+                    investigation_count=investigation_rounds
                 )
             else:
-                # Other phases: Use moderate baseline
-                baseline_assessment = EpistemicAssessment(
-                    assessment_id=assessment_request['assessment_id'],
-                    task=task,
-                    # GATE (35%)
-                    engagement=VectorState(0.70, "Baseline engagement - needs self-assessment"),
-                    engagement_gate_passed=True,
-                    # FOUNDATION (25%)
-                    know=VectorState(0.60, "Baseline knowledge - needs self-assessment"),
-                    do=VectorState(0.65, "Baseline capability - needs self-assessment"),
-                    context=VectorState(0.70, "Baseline context - needs self-assessment"),
-                    foundation_confidence=0.65,
-                    # COMPREHENSION (25%)
-                    clarity=VectorState(0.70, "Baseline clarity - needs self-assessment"),
-                    coherence=VectorState(0.75, "Baseline coherence - needs self-assessment"),
-                    signal=VectorState(0.65, "Baseline signal - needs self-assessment"),
-                    density=VectorState(0.60, "Baseline density - needs self-assessment"),
-                    comprehension_confidence=0.68,
-                    # EXECUTION (15%)
-                    state=VectorState(0.65, "Baseline state awareness - needs self-assessment"),
-                    change=VectorState(0.70, "Baseline change tracking - needs self-assessment"),
-                    completion=VectorState(0.50, "Baseline completion - needs self-assessment"),
-                    impact=VectorState(0.60, "Baseline impact - needs self-assessment"),
-                    execution_confidence=0.61,
-                    # META-EPISTEMIC (13th vector)
-                    uncertainty=VectorState(0.50, "Baseline uncertainty - needs genuine self-assessment"),
-                    overall_confidence=0.66,
-                    recommended_action=Action.INVESTIGATE
+                # Other phases: Moderate baseline
+                baseline = EpistemicAssessmentSchema(
+                    engagement=VectorAssessment(0.70, "Baseline engagement - needs self-assessment"),
+                    foundation_know=VectorAssessment(0.60, "Baseline knowledge - needs self-assessment"),
+                    foundation_do=VectorAssessment(0.65, "Baseline capability - needs self-assessment"),
+                    foundation_context=VectorAssessment(0.70, "Baseline context - needs self-assessment"),
+                    comprehension_clarity=VectorAssessment(0.70, "Baseline clarity - needs self-assessment"),
+                    comprehension_coherence=VectorAssessment(0.75, "Baseline coherence - needs self-assessment"),
+                    comprehension_signal=VectorAssessment(0.65, "Baseline signal - needs self-assessment"),
+                    comprehension_density=VectorAssessment(0.60, "Baseline density - needs self-assessment"),
+                    execution_state=VectorAssessment(0.65, "Baseline state awareness - needs self-assessment"),
+                    execution_change=VectorAssessment(0.70, "Baseline change tracking - needs self-assessment"),
+                    execution_completion=VectorAssessment(0.50, "Baseline completion - needs self-assessment"),
+                    execution_impact=VectorAssessment(0.60, "Baseline impact - needs self-assessment"),
+                    uncertainty=VectorAssessment(0.50, "Baseline uncertainty - needs genuine self-assessment"),
+                    phase=new_phase,
+                    round_num=round_num or 0,
+                    investigation_count=investigation_rounds
                 )
             
-            return baseline_assessment
+            return baseline
         else:
-            # Already an EpistemicAssessment
+            # Already an EpistemicAssessmentSchema - return as is
             return assessment_request
+
+    # _assess_epistemic_state_new renamed to _assess_epistemic_state below
     
     async def _retrieve_mcp_assessment(
         self,
         task_id: str,
-        phase: CascadePhase
-    ) -> Optional[EpistemicAssessment]:
+        phase
+    ) -> Optional[EpistemicAssessmentSchema]:
         """
         Retrieve genuine MCP assessment from database if it exists
         
         Args:
             task_id: Current task ID (session_id)
-            phase: Which phase (preflight, check, postflight)
+            phase: Which phase (preflight, check, postflight) - can be string or CascadePhase enum
         
         Returns:
-            EpistemicAssessment if found, None otherwise
+            EpistemicAssessmentSchema if found, None otherwise
         """
         try:
-            # Query database for assessment stored by MCP tools
-            phase_key = f"{phase.value}_vectors"
+            # Handle both string and enum phase parameters
+            phase_str = phase.value if hasattr(phase, 'value') else str(phase)
+            phase_key = f"{phase_str}_vectors"
             
             # Get most recent assessment for this session/phase
             cursor = self.session_db.conn.cursor()
@@ -1163,7 +1149,7 @@ class CanonicalEpistemicCascade:
                 vectors_json, cascade_id = result
                 vectors = json.loads(vectors_json)
                 
-                # Parse vectors dict into EpistemicAssessment
+                # Parse vectors dict into EpistemicAssessmentSchema
                 return self._parse_vectors_to_assessment(vectors, task_id, phase)
             
             return None
@@ -1177,9 +1163,9 @@ class CanonicalEpistemicCascade:
         vectors: Dict[str, float],
         task_id: str,
         phase: CascadePhase
-    ) -> EpistemicAssessment:
+    ) -> EpistemicAssessmentSchema:
         """
-        Parse vectors dict from MCP into full EpistemicAssessment object
+        Parse vectors dict from MCP into full EpistemicAssessmentSchema object
         
         Args:
             vectors: Dict of vector_name -> score (0.0-1.0)
@@ -1187,7 +1173,7 @@ class CanonicalEpistemicCascade:
             phase: Current phase
         
         Returns:
-            EpistemicAssessment with all vectors populated
+            EpistemicAssessmentSchema with all vectors populated
         """
         from empirica.core.canonical.reflex_frame import VectorState
         
@@ -1232,9 +1218,9 @@ class CanonicalEpistemicCascade:
         else:
             recommended_action = Action.ESCALATE
         
-        return EpistemicAssessment(
-            assessment_id=f"mcp_{task_id}_{phase.value}",
-            task=f"MCP assessment for {phase.value}",
+        return EpistemicAssessmentSchema(
+            assessment_id=f"mcp_{task_id}_{phase_str}",
+            task=f"MCP assessment for {phase_str}",
             # GATE
             engagement=get_vector('engagement', 0.70),
             engagement_gate_passed=vectors.get('engagement', 0.70) >= 0.60,
@@ -1263,7 +1249,7 @@ class CanonicalEpistemicCascade:
 
     async def _log_reflex_frame(
         self,
-        assessment: EpistemicAssessment,
+        assessment: EpistemicAssessmentSchema,
         phase: CascadePhase,
         task_id: str,
         task: str,
@@ -1285,25 +1271,27 @@ class CanonicalEpistemicCascade:
             'postflight': 1.0 if phase == CascadePhase.POSTFLIGHT else 0.0
         }
 
-        # Create ReflexFrame
-        frame = ReflexFrame.from_assessment(
-            assessment,
-            frame_id=frame_id,
-            task=task,
-            context=context,
-            meta_state_vector=meta_state_vector
-        )
+        # Create frame dict directly (ReflexFrame removed)
+        frame_dict = {
+            'frameId': frame_id,
+            'timestamp': assessment.timestamp,
+            'selfAwareFlag': True,
+            'epistemicVector': assessment.model_dump(),
+            'metaStateVector': meta_state_vector,
+            'task': task,
+            'context': context
+        }
 
         # Add investigation results if present
         if investigation_results:
-            frame.investigation_results = investigation_results
+            frame_dict['investigation_results'] = investigation_results
 
         # Log to JSON file (temporal separation)
-        log_path = await self.reflex_logger.log_frame(frame, agent_id=self.agent_id)
+        log_path = await self.reflex_logger.log_frame(frame_dict, agent_id=self.agent_id)
 
         logger.info(f"   📝 Logged to: {log_path}")
 
-    def _identify_knowledge_gaps(self, assessment: EpistemicAssessment) -> List[Dict[str, Any]]:
+    def _identify_knowledge_gaps(self, assessment: EpistemicAssessmentSchema) -> List[Dict[str, Any]]:
         """
         Extract self-assessed knowledge gaps from canonical assessment
 
@@ -1355,7 +1343,7 @@ class CanonicalEpistemicCascade:
         task: str,
         context: Dict[str, Any],
         gaps: List[str],
-        assessment: EpistemicAssessment
+        assessment: EpistemicAssessmentSchema
     ) -> Dict[str, Any]:
         """
         Provide epistemic gap analysis + tool capability mapping + strategic guidance
@@ -1448,7 +1436,7 @@ class CanonicalEpistemicCascade:
             }
         }
 
-    def _identify_epistemic_gaps(self, assessment: EpistemicAssessment) -> List[Dict[str, Any]]:
+    def _identify_epistemic_gaps(self, assessment: EpistemicAssessmentSchema) -> List[Dict[str, Any]]:
         """
         Extract self-assessed epistemic gaps - NO HEURISTICS
 
@@ -1751,7 +1739,7 @@ class CanonicalEpistemicCascade:
             'evidence_count': updated_belief.evidence_count
         }
     
-    def _verify_readiness(self, assessment: EpistemicAssessment) -> Dict[str, Any]:
+    def _verify_readiness(self, assessment: EpistemicAssessmentSchema) -> Dict[str, Any]:
         """
         Verify readiness to act based on canonical assessment + Bayesian Guardian
         
@@ -1892,7 +1880,7 @@ class CanonicalEpistemicCascade:
 
     def _make_final_decision(
         self,
-        assessment: EpistemicAssessment,
+        assessment: EpistemicAssessmentSchema,
         check_result: Dict[str, Any],
         investigation_rounds: int
     ) -> Dict[str, Any]:
@@ -1917,7 +1905,7 @@ class CanonicalEpistemicCascade:
 
     def _build_decision_rationale(
         self,
-        assessment: EpistemicAssessment,
+        assessment: EpistemicAssessmentSchema,
         investigation_rounds: int
     ) -> str:
         """Build comprehensive decision rationale"""
@@ -1941,7 +1929,7 @@ class CanonicalEpistemicCascade:
 
         return ". ".join(parts)
 
-    def _extract_vector_summary(self, assessment: EpistemicAssessment) -> Dict[str, float]:
+    def _extract_vector_summary(self, assessment: EpistemicAssessmentSchema) -> Dict[str, float]:
         """Extract vector summary for reporting"""
         return {
             'engagement': assessment.engagement.score,
@@ -1962,7 +1950,7 @@ class CanonicalEpistemicCascade:
             'overall_confidence': assessment.overall_confidence
         }
 
-    def _generate_execution_guidance(self, assessment: EpistemicAssessment) -> List[str]:
+    def _generate_execution_guidance(self, assessment: EpistemicAssessmentSchema) -> List[str]:
         """
         Generate execution guidance from AI's self-assessed gaps - NO HEURISTICS
 
@@ -2006,8 +1994,8 @@ class CanonicalEpistemicCascade:
 
     def _calculate_epistemic_delta(
         self,
-        preflight: EpistemicAssessment,
-        postflight: EpistemicAssessment
+        preflight: EpistemicAssessmentSchema,
+        postflight: EpistemicAssessmentSchema
     ) -> Dict[str, float]:
         """
         Calculate epistemic delta between PREFLIGHT and POSTFLIGHT
@@ -2042,8 +2030,8 @@ class CanonicalEpistemicCascade:
     
     def _check_calibration_accuracy(
         self,
-        preflight: EpistemicAssessment,
-        postflight: EpistemicAssessment,
+        preflight: EpistemicAssessmentSchema,
+        postflight: EpistemicAssessmentSchema,
         final_decision: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
@@ -2087,7 +2075,7 @@ class CanonicalEpistemicCascade:
     def _update_tmux_display(
         self,
         phase: CascadePhase,
-        assessment: EpistemicAssessment,
+        assessment: EpistemicAssessmentSchema,
         gaps: Optional[List[str]] = None,
         round_num: Optional[int] = None
     ):

@@ -39,7 +39,8 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta, UTC
 
 from .reflex_logger import ReflexLogger
-from .reflex_frame import ReflexFrame, EpistemicAssessment
+from .reflex_frame import VectorState, Action
+from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema as EpistemicAssessment
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ import json
 import uuid
 from pathlib import Path
 
-from empirica.core.goals.types import Goal, SuccessCriterion, GoalScope
+from empirica.core.goals.types import Goal, SuccessCriterion, ScopeVector
 from empirica.core.goals.repository import GoalRepository
 from empirica.core.tasks.types import SubTask, EpistemicImportance, TaskStatus
 from empirica.core.tasks.repository import TaskRepository
@@ -65,7 +65,7 @@ class TestGoalArchitectureE2E:
         goal = Goal.create(
             objective="Implement input validation for Goal Architecture",
             success_criteria=success_criteria,
-            scope=GoalScope.TASK_SPECIFIC,
+            scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1),
             estimated_complexity=0.6
         )
         
@@ -160,7 +160,7 @@ class TestGoalArchitectureE2E:
             goal = Goal.create(
                 objective="",  # Invalid: empty
                 success_criteria=[],
-                scope=GoalScope.TASK_SPECIFIC
+                scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1)
             )
             goal_repo.save_goal(goal, session_id)
         
@@ -180,13 +180,13 @@ class TestGoalArchitectureE2E:
                     validation_method="completion"
                 )
             ],
-            scope=GoalScope.TASK_SPECIFIC
+            scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1)
         )
         assert goal_repo.save_goal(goal, session_id)
         
-        # Invalid scope should fail
-        with pytest.raises(ValueError):
-            GoalScope("invalid_scope")
+        # Invalid scope values should fail
+        with pytest.raises((ValueError, TypeError)):
+            ScopeVector(breadth=2.0, duration=0.2, coordination=0.1)  # breadth > 1.0
         
         goal_repo.close()
     
@@ -204,7 +204,7 @@ class TestGoalArchitectureE2E:
         goal = Goal.create(
             objective="Test goal",
             success_criteria=[valid_sc],
-            scope=GoalScope.TASK_SPECIFIC
+            scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1)
         )
         assert goal_repo.save_goal(goal, session_id)
         
@@ -242,10 +242,10 @@ class TestGoalArchitectureE2E:
         
         # Create multiple goals with different scopes
         goals_data = [
-            ("Task 1", GoalScope.TASK_SPECIFIC, False),
-            ("Session 1", GoalScope.SESSION_SCOPED, False),
-            ("Project 1", GoalScope.PROJECT_WIDE, True),
-            ("Task 2", GoalScope.TASK_SPECIFIC, True)
+            ("Task 1", ScopeVector(breadth=0.2, duration=0.1, coordination=0.05), False),
+            ("Session 1", ScopeVector(breadth=0.5, duration=0.6, coordination=0.3), False),
+            ("Project 1", ScopeVector(breadth=0.9, duration=0.9, coordination=0.8), True),
+            ("Task 2", ScopeVector(breadth=0.2, duration=0.1, coordination=0.05), True)
         ]
         
         for obj, scope, completed in goals_data:
@@ -273,14 +273,14 @@ class TestGoalArchitectureE2E:
         assert len(incomplete_goals) == 2, "Should find 2 incomplete goals"
         
         # Query by scope
-        task_goals = goal_repo.query_goals(session_id=session_id, scope=GoalScope.TASK_SPECIFIC)
+        task_goals = goal_repo.query_goals(session_id=session_id, scope=ScopeVector(breadth=0.2, duration=0.1, coordination=0.05))
         assert len(task_goals) == 2, "Should find 2 task-specific goals"
         
         # Query completed + specific scope
         completed_tasks = goal_repo.query_goals(
             session_id=session_id,
             is_completed=True,
-            scope=GoalScope.TASK_SPECIFIC
+            scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1)
         )
         assert len(completed_tasks) == 1, "Should find 1 completed task-specific goal"
         
@@ -308,7 +308,7 @@ class TestGoalArchitectureE2E:
                     is_required=False
                 )
             ],
-            scope=GoalScope.SESSION_SCOPED,
+            scope=ScopeVector(breadth=0.6, duration=0.7, coordination=0.4),
             estimated_complexity=0.7,
             constraints={"max_iterations": 50, "token_budget": 10000},
             metadata={"tags": ["testing", "serialization"], "priority": "high"}

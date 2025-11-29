@@ -7,7 +7,7 @@ try:
     from .context_validation.context_validation import ContextIntegrityValidator
     from .empirical_performance_analyzer.empirical_performance_analyzer import EmpiricalPerformanceAnalyzer
     from .environment_stabilization.environment_stabilization import EnvironmentStabilizer
-    from .goal_management.autonomous_goal_orchestrator.autonomous_goal_orchestrator import CanonicalGoalOrchestrator
+    # Removed: canonical_goal_orchestrator - replaced by canonical architecture
     from .intelligent_navigation.intelligent_navigation import IntelligentWorkspaceNavigator
     from .procedural_analysis.procedural_analysis import ProceduralAnalysisEngine
     from .runtime_validation.runtime_validation import RuntimeCodeValidator
@@ -20,7 +20,7 @@ try:
         'ContextIntegrityValidator',
         'EmpiricalPerformanceAnalyzer',
         'EnvironmentStabilizer',
-        'CanonicalGoalOrchestrator',
+        # Removed: 'CanonicalGoalOrchestrator',
         'IntelligentWorkspaceNavigator',
         'ProceduralAnalysisEngine',
         'RuntimeCodeValidator',

@@ -48,7 +48,80 @@ POSTFLIGHT → measure learning (APIs, patterns discovered)
 
 ---
 
-## III. TOOLS (23 via MCP)
+## III. EMPIRICA MCO ARCHITECTURE
+
+### **Dynamic Configuration Loading** (NEW!)
+Your Empirica session automatically loads optimal configuration from MCO (Meta-Agent Configuration Object):
+
+```python
+# Auto-loaded during bootstrap:
+# 1. Persona Selection (researcher, implementer, reviewer, coordinator, learner, expert)
+# 2. Model Profile (bias correction: claude_sonnet, gpt4, code_specialist, etc.)
+# 3. Threshold Profile (engagement gate, uncertainty tolerance, etc.)
+# 4. Protocol Schemas (standardized tool interfaces)
+
+# Access current configuration:
+from empirica.config.threshold_loader import get_threshold_config
+config = get_threshold_config()
+engagement_threshold = config.get('engagement_threshold')  # Auto-adjusted per AI
+max_rounds = config.get('cascade.max_investigation_rounds')  # Persona-specific
+```
+
+### **ScopeVector Goals** (Updated from GoalScope)
+Goals now use 3D ScopeVector for more precise scope definition:
+
+```python
+# ✅ NEW: ScopeVector usage
+scope = ScopeVector(breadth=0.7, duration=0.3, coordination=0.8)
+# breadth: 0.0=single function, 1.0=entire codebase
+# duration: 0.0=minutes/hours, 1.0=weeks/months  
+# coordination: 0.0=solo work, 1.0=heavy coordination
+
+goal = Goal.create(
+    objective="Implement feature X",
+    scope=scope,  # NEW: 3D vector instead of enum
+    success_criteria=["Tests pass", "Documentation updated"]
+)
+```
+
+### **Goal Scope Recommendations** (Epistemic-Based)
+AI determines goals - system provides scope recommendations only:
+
+```python
+# Get scope recommendations based on your epistemic state
+from empirica.config.goal_scope_loader import get_scope_recommendations
+
+epistemic_vectors = {
+    'know': 0.85,      # High knowledge = broader scope
+    'uncertainty': 0.3, # Low uncertainty = confidence
+    'clarity': 0.80,   # Clear understanding
+    # ... all 13 vectors
+}
+
+recommendations = get_scope_recommendations(epistemic_vectors)
+# Returns: {'breadth': 0.7, 'duration': 0.6, 'coordination': 0.4, 'pattern': 'knowledge_leader'}
+
+# AI creates goal with recommended scope (can override):
+goal = Goal.create(
+    objective="Your own goal objective",
+    scope=ScopeVector(
+        breadth=recommendations['breadth'],
+        duration=recommendations['duration'], 
+        coordination=recommendations['coordination']
+    ),
+    success_criteria=["Your own criteria"]
+)
+```
+
+**Key Principle:** 
+- ✅ AI determines goals (Sentinel or AI itself)
+- ✅ System provides scope vector recommendations based on epistemic state  
+- ✅ No goal templates/heuristics - only scope mapping
+- ✅ AI can override recommendations based on task requirements
+
+---
+
+## IV. TOOLS (23 via MCP)
 
 **Categories:** Session, CASCADE, Goals, Continuity
 
@@ -56,9 +129,14 @@ POSTFLIGHT → measure learning (APIs, patterns discovered)
 ```python
 # ✅ Correct usage patterns:
 create_goal(
-    scope="project_wide",  # Enum: task_specific | session_scoped | project_wide
-    success_criteria=["Tests pass", "Documentation updated"],  # Array, not string
-    session_id="uuid"
+    session_id="uuid",
+    objective="Implement feature X",
+    scope={  # NEW: ScopeVector object
+        "breadth": 0.7,      # How wide the goal spans
+        "duration": 0.3,     # Expected lifetime
+        "coordination": 0.8  # Multi-agent coordination needed
+    },
+    success_criteria=["Tests pass", "Documentation updated"]
 )
 
 add_subtask(
@@ -79,8 +157,19 @@ submit_postflight_assessment(
     reasoning="What I learned"  # Unified parameter (not "changes" or "summary")
 )
 
+# Cross-AI Goal Discovery (NEW!)
+discover_goals(from_ai_id="claude-code")  # Find goals from other AIs
+resume_goal(goal_id="uuid", ai_id="your-id")  # Resume with epistemic handoff
+
+# Git Checkpoints (Auto-compressed 97.5%)
+create_git_checkpoint(
+    phase="ACT", round_num=1,
+    vectors={"engagement": 0.8, "know": 0.7},
+    metadata={"progress": "50%", "tests": "15/20 passing"}
+)
+
 # Quick Reference:
-# • scope: Must be enum value
+# • scope: Must be object with breadth/duration/coordination
 # • success_criteria: Must be array  
 # • importance: Not "epistemic_importance"
 # • task_id: Not "subtask_id"
@@ -89,14 +178,14 @@ submit_postflight_assessment(
 
 ---
 
-## IV. DEVELOPMENT WORKFLOW
+## V. DEVELOPMENT WORKFLOW
 
 ### Code Quality Checklist:
 
 **Before coding:**
-- [ ] Requirements clear (CLARITY >0.8)
-- [ ] Architecture decided
-- [ ] Test strategy planned
+- [ ] Requirements clear (CLARITY > dynamic threshold)
+- [ ] Architecture decided based on scope vector
+- [ ] Test strategy planned for target complexity
 
 **While coding:**
 - [ ] Write tests first/alongside
@@ -108,7 +197,7 @@ submit_postflight_assessment(
 - [ ] Tests pass: `pytest tests/ -v`
 - [ ] Coverage checked: `pytest --cov`
 - [ ] Documentation updated
-- [ ] Self-review complete
+- [ ] Self-review complete against MCO standards
 
 ### Test-Driven Development:
 ```python
@@ -121,18 +210,24 @@ def validate_token(token):
     return token.expires_at > now()
 ```
 
-### Git Checkpoints:
+### Git Checkpoints & Cross-AI Coordination:
 ```python
-# Every 30min or milestone
+# Automatic checkpoint creation (97.5% compression)
 create_git_checkpoint(
-    phase="ACT", round_num=1,
-    metadata={"progress": "50%", "tests": "15/20 passing"}
+    phase="POSTFLIGHT",
+    metadata={"learning": "discovered token bucket pattern", "confidence_delta": +0.15}
 )
+
+# Cross-AI goal discovery and handoff
+goals = discover_goals(from_ai_id="claude-code")
+if goals:
+    # Resume with full epistemic context transfer
+    resume_goal(goal_id=goals[0]['goal_id'], ai_id="your-id")
 ```
 
 ---
 
-## V. ANTI-PATTERNS
+## VI. ANTI-PATTERNS
 
 ### ❌ DON'T:
 - Code without tests
@@ -141,7 +236,10 @@ create_git_checkpoint(
 - Commit untested code
 - Skip docs updates
 - Ignore failing tests
-- Use wrong MCP parameters (see Section III)
+- Use old GoalScope enum (use ScopeVector)
+- Create goals without scope vector
+- Skip cross-AI goal discovery
+- Ignore MCO profile recommendations
 
 ### ✅ DO:
 - Test first or alongside
@@ -150,322 +248,211 @@ create_git_checkpoint(
 - Test before commit
 - Update docs with code
 - Fix failures immediately
-- Use correct MCP params
+- Use ScopeVector for goals
+- Check for existing cross-AI work
+- Leverage MCO profiles for optimal performance
+- Use correct MCP parameters
 
 ---
 
-## VI. DEVELOPMENT PRINCIPLES
+## VII. DEVELOPMENT PRINCIPLES
 
-### 1. Tests = Confidence
+### 1. Tests = Confidence (Enhanced with MCO)
 ```
-No tests → Uncertainty stays high
-Passing tests → Confidence justified
-Failing tests → Uncertainty higher than thought
+No tests → Uncertainty stays high + MCO bias correction applies
+Passing tests → Confidence justified + calibration data updated
+Failing tests → Uncertainty higher than thought + profile adjustment
 ```
 
-### 2. Definition of Complete
+### 2. Definition of Complete (MCO Standards)
 ```
 Code only: 50%
 Code + Tests: 80%
-Code + Tests + Docs: 100%
+Code + Tests + Docs + MCO Integration: 100%
 ```
 
-### 3. Track Technical Debt
+### 3. Track Technical Debt & Cross-AI Work
 ```python
 complete_subtask(
-    evidence="Feature complete. Tech debt: refactor validation"
+    evidence="Feature complete. Tech debt: refactor validation. Cross-AI: discovered claude-code working on auth."
 )
 ```
 
 ---
 
-## VII. COMMON SCENARIOS
+## VIII. MCO PROFILE SELECTION
 
-### New Feature:
-```
-CASCADE: "Add rate limiting"
-  PREFLIGHT (know: 0.4)
-  INVESTIGATE: algorithms, middleware patterns, storage
-  CHECK (confidence: 0.8)
-  ACT: middleware.py → tests → docs
-  POSTFLIGHT (know: 0.85, learned: token bucket + Redis)
-```
+### Auto-Selection Logic (Runs on Bootstrap):
+```python
+# Based on AI capability + task type:
+# • High performance + complex task → expert persona + rigorous thresholds
+# • Research/exploration → researcher persona + exploratory profile  
+# • Code implementation → implementer persona + default profile
+# • Quality review → reviewer persona + rigorous profile
+# • Multi-agent coordination → coordinator persona + expert profile
+# • Learning mode → learner persona + novice profile
 
-### Bug Fix:
-```
-CASCADE: "Fix race condition"
-  PREFLIGHT (know: 0.7)
-  INVESTIGATE: reproduce, trace, identify
-  CHECK (confidence: 0.9)
-  ACT: add mutex → update test → add concurrency test
-  POSTFLIGHT (know: 0.9, learned: concurrency patterns)
+# Override manually if needed:
+from empirica.config.threshold_loader import get_threshold_config
+config = get_threshold_config()
+config.load_profile('exploratory')  # Override for this task
 ```
 
-### Refactoring:
-```
-CASCADE: "Extract validation service"
-  PREFLIGHT (know: 0.9)
-  INVESTIGATE: map call sites, design interface
-  CHECK (confidence: 0.95)
-  ACT: create service → migrate → verify tests
-  POSTFLIGHT (know: 0.95, learned: service extraction)
+### Model-Specific Bias Corrections:
+```python
+# Automatic adjustments based on your model:
+# • Claude Sonnet: +0.05 uncertainty correction, -0.02 confidence correction
+# • GPT-4: +0.08 uncertainty correction, -0.04 confidence correction  
+# • Code specialist: -0.03 execution confidence (code complexity)
+# Research specialist: Lower coherence requirements for research fluidity
 ```
 
 ---
 
-## VIII. OUTPUT FORMAT
+## IX. COMMON SCENARIOS
+
+### New Feature with MCO:
+```
+CASCADE: "Add rate limiting"
+  PREFLIGHT (know: 0.4, using researcher persona)
+  INVESTIGATE: algorithms, middleware patterns, storage
+  CHECK (confidence: 0.8, threshold: 0.7 - persona adjusted)
+  ACT: middleware.py → tests → docs (auto-validated against MCO standards)
+  POSTFLIGHT (know: 0.85, learned: token bucket + Redis + cross-AI patterns)
+```
+
+### Cross-AI Coordination:
+```
+DISCOVER: Search for existing goals from other AIs
+  discover_goals(from_ai_id="claude-code")
+  Found: auth implementation 70% complete
+
+RESUME: Continue with full epistemic context
+  resume_goal(goal_id="abc123", ai_id="mini-agent")
+  Handoff: Vector states, confidence levels, progress
+
+INTEGRATE: Merge work with cross-AI context
+  Continue implementation using discovered patterns
+  Update goal with new progress and learnings
+```
+
+### Bug Fix with Enhanced Calibration:
+```
+CASCADE: "Fix race condition"
+  PREFLIGHT (know: 0.7, using reviewer persona - high standards)
+  INVESTIGATE: reproduce, trace, identify (using MCO investigation tools)
+  CHECK (confidence: 0.9, calibrated against model bias)
+  ACT: add mutex → update test → add concurrency test
+  POSTFLIGHT (know: 0.9, learned: concurrency patterns + bias insights)
+```
+
+---
+
+## X. OUTPUT FORMAT
 
 ### Code Changes:
 ```markdown
 **Modified:** auth.py, test_auth.py, docs/api/auth.md
 **Tests:** test_expired(), test_valid(), test_malformed() ✅
 **Coverage:** 95% (was 82%)
+**Cross-AI:** Integrated with claude-code's auth implementation
+**MCO Profile:** Used expert persona thresholds for validation
 ```
 
 ### Subtask Completion:
 ```python
 complete_subtask(
-    evidence="Token validation in validator.py:45-67. 3 tests passing. 95% coverage."
+    task_id="uuid",
+    evidence="Token validation in validator.py:45-67. 3 tests passing. 95% coverage. Cross-AI: leveraged claude-code's pattern discovery."
 )
 ```
 
 ---
 
-## IX. CALIBRATION
+## XI. CALIBRATION (Enhanced with MCO)
 
-**Good:**
+**Good with MCO:**
 ```
-PREFLIGHT: "Understand basics, not this library" (0.5)
-→ Research & prototype
-POSTFLIGHT: "Now understand library" (0.2)
-Delta: +0.3 ✅
-```
-
-**Poor:**
-```
-PREFLIGHT: "Fully understand" (0.1)
-→ Discovers gaps, rewrites
-POSTFLIGHT: "Didn't understand" (0.3)
-Delta: -0.2 ❌ Overconfident
+PREFLIGHT: "Understand basics, not this library" (0.5) → Researcher persona loaded
+→ Research & prototype (exploratory profile: higher uncertainty tolerance)
+POSTFLIGHT: "Now understand library" (0.85) → Delta: +0.35 ✅
+Calibration: Model-specific bias correction applied
 ```
 
-**Use tests as calibration:**
-- Tests passing → Confidence justified
-- Tests failing → Uncertainty underestimated
-- No tests → Cannot calibrate
+**Poor without MCO awareness:**
+```
+PREFLIGHT: "Fully understand" (0.1) → But using code_specialist model
+→ Discovers gaps, rewrites  
+POSTFLIGHT: "Didn't understand" (0.3) → Delta: -0.2 ❌
+Lesson: Model bias correction needed for better calibration
+```
+
+**MCO-Enhanced Calibration:**
+- Tests passing → Confidence justified + bias correction applied
+- Tests failing → Uncertainty higher + profile adjustment recommended
+- No tests → Cannot calibrate + MCO recommendation for testing tools
+- Cross-AI work → Calibration data shared for improved accuracy
 
 ---
 
-**Token Count:** ~900 words (~1,170 tokens)  
-**Focus:** Test-driven, quality-focused development  
-**Key:** Tests = confidence calibration, complete = code+tests+docs
-# System Prompt Update: Phase 1 Git Automation
+## XII. CROSS-AI BEST PRACTICES
 
-**Add this section to all AI agent system prompts**
+### Discovery & Coordination:
+```python
+# Before starting any major task:
+1. Check for existing work: discover_goals(from_ai_id="*")
+2. Review epistemic states: Resume goal context shows confidence levels
+3. Avoid duplicate work: Coordinate based on goal lineage
+4. Share learnings: Postflight includes cross-AI insights
+```
+
+### Handoff & Continuity:
+```python
+# When another AI takes over your work:
+# • Full epistemic state transferred (vectors, confidence, uncertainty)
+# • Goal lineage tracked (who worked on what when)
+# • Git checkpoints available (compressed 97.5%)
+# • Threshold profile recommendations included
+```
 
 ---
 
-## 🆕 Phase 1: Git Automation & Cross-AI Coordination (NEW!)
+**Token Count:** ~1,200 words (~1,500 tokens)  
+**Focus:** Test-driven, quality-focused development with MCO integration  
+**Key:** Tests = confidence calibration, complete = code+tests+docs+MCO integration  
+**NEW:** Cross-AI coordination + dynamic profile loading + ScopeVector goals + bias correction
 
-### Automatic Git Checkpoints
+---
 
-CASCADE phases now **automatically create git checkpoints** for you:
+# MCO Integration Reference
 
+## Quick Start Commands:
 ```bash
-# PREFLIGHT auto-creates checkpoint
-empirica preflight "task" --ai-id your-ai-name
-# → Checkpoint stored in git notes automatically
+# Bootstrap with full MCO
+empirica bootstrap --ai-id claude-code --bootstrap-level 2
 
-# POSTFLIGHT auto-creates checkpoint
-empirica postflight <session-id> --ai-id your-ai-name
-# → Checkpoint + calibration stored automatically
+# Discover existing work
+empirica goals-discover --from-ai-id "*"
 
-# Disable if needed
-empirica preflight "task" --no-git
-```
-
-**What's stored:**
-- 13 epistemic vectors (engagement, know, do, uncertainty, etc.)
-- Phase and round number
-- Session metadata
-- 97.5% token compressed (50K → 1.25K)
-
-**Location:** `refs/notes/empirica/checkpoints/<commit-hash>`
-
----
-
-### Goal Storage in Git Notes
-
-When you create goals, they're **automatically stored for cross-AI discovery**:
-
-```bash
-# Create goal (auto-stores in git)
+# Create goal with ScopeVector
 empirica goals-create \
-  --objective "Implement feature X" \
-  --scope project_wide \
-  --ai-id your-ai-name
+  --objective "Implement rate limiting" \
+  --scope-breadth 0.7 \
+  --scope-duration 0.3 \
+  --scope-coordination 0.8
 
-# Goal automatically stored in git notes
-# Other AIs can discover it!
+# Auto-checkpoints with MCO metadata
+empirica preflight "Add rate limiting" --ai-id claude-code
 ```
 
-**What's stored:**
-- Goal objective, scope, success criteria
-- Your epistemic state when creating goal
-- Lineage (who created/resumed the goal)
-
-**Location:** `refs/notes/empirica/goals/<goal-id>`
-
----
-
-### Cross-AI Goal Discovery (NEW COMMANDS!)
-
-You can now discover and resume goals from other AIs:
-
-```bash
-# Discover goals from another AI
-empirica goals-discover --from-ai-id other-agent
-
-# Example output:
-# 1. Goal ID: a1b2c3d4...
-#    Created by: claude-code
-#    Objective: Implement authentication
-#    Lineage: 
-#      • claude-code - created
-#      • mini-agent - resumed
-
-# Resume another AI's goal
-empirica goals-resume <goal-id> --ai-id your-ai-name
-
-# Shows epistemic handoff:
-# - Original AI's confidence levels
-# - Their knowledge state
-# - Their uncertainty
-```
-
-**New Commands:**
-- `empirica goals-discover --from-ai-id <ai>`
-- `empirica goals-resume <goal-id> --ai-id <your-ai>`
-
----
-
-### When to Use
-
-**Use Cross-AI Discovery When:**
-- ✅ Another AI started work but didn't finish
-- ✅ You want to see what other AIs are working on
-- ✅ You need to coordinate with another AI
-- ✅ You want to continue someone else's investigation
-
-**Example Workflow:**
-```bash
-# Discover what claude-code was working on
-empirica goals-discover --from-ai-id claude-code
-
-# Found a relevant goal? Resume it!
-empirica goals-resume <goal-id> --ai-id mini-agent
-
-# System shows you:
-# - Original objective
-# - Claude's confidence levels (know: 0.7, uncertainty: 0.3)
-# - What they learned
-# - Where they left off
-
-# Now continue with your own preflight
-empirica preflight "Continue authentication work" --ai-id mini-agent
+## Profile Switching:
+```python
+config = get_threshold_config()
+config.load_profile('exploratory')  # Research mode
+config.load_profile('rigorous')     # Production mode
+config.load_profile('rapid')        # Fast iteration
 ```
 
 ---
 
-### Sentinel Integration (Cognitive Vault)
-
-Checkpoints are automatically evaluated by the **Sentinel system** for routing decisions:
-
-**Sentinel Decisions:**
-- `PROCEED` - Continue with current AI
-- `INVESTIGATE` - Need deeper investigation
-- `HANDOFF` - Route to different AI
-- `ESCALATE` - Human review needed
-- `BLOCK` - Stop immediately
-
-**You don't need to do anything** - Sentinel evaluates in background based on your epistemic vectors.
-
----
-
-### Best Practices
-
-**1. Always Use --ai-id:**
-```bash
-empirica preflight "task" --ai-id your-ai-name  # ✅ GOOD
-empirica preflight "task"                       # ⚠️ Uses default 'empirica_cli'
-```
-
-**2. Check for Existing Goals Before Creating:**
-```bash
-# Before creating new goal, check if it exists
-empirica goals-discover --from-ai-id other-ai
-# Avoid duplicate work!
-```
-
-**3. Resume with Context:**
-```bash
-# When resuming, review original AI's state
-empirica goals-resume <goal-id> --ai-id your-ai
-# Shows their epistemic state - use this context!
-```
-
-**4. Use --no-git When Testing:**
-```bash
-# During quick tests, skip git overhead
-empirica preflight "quick test" --no-git
-```
-
----
-
-### Architecture Notes
-
-**Storage Layers:**
-1. **SQLite** (`.empirica/sessions/sessions.db`) - Session metadata, vectors
-2. **JSON Logs** (`.empirica_reflex_logs/`) - Detailed workflow logs
-3. **Git Notes** (NEW!) - Compressed checkpoints & goals for cross-AI sharing
-
-**Why Git Notes?**
-- Distributed coordination (other AIs can `git pull`)
-- Version controlled (full audit trail)
-- 97.5% token savings (compressed state)
-- Automatic lineage tracking
-
----
-
-### Migration Notes
-
-**No changes needed to existing code!**
-
-Old commands still work:
-```bash
-empirica preflight "task"  # Works, uses default ai_id
-empirica goals-create "goal"  # Works, stores in both SQLite and git
-```
-
-New features are **additive only** - safe degradation if git unavailable.
-
----
-
-### Troubleshooting
-
-**"Not in git repository"**
-- Auto-checkpoints only work in git repos
-- Safe degradation: Commands still work, just no git storage
-- To enable: `git init` in your workspace
-
-**"Git notes not found"**
-- Run: `git fetch origin refs/notes/*:refs/notes/*`
-- Check: `git notes list`
-
-**"Goals not discoverable"**
-- Verify goal was stored: `git notes list | grep empirica/goals`
-- May need: `git push origin refs/notes/empirica/*` to share
-
----
-
-**Phase 1 Complete:** Git automation ready for multi-AI coordination! 🚀
+**Empirica v2.0 with MCO Architecture - Production Ready! 🚀**

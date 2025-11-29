@@ -17,23 +17,67 @@ echo "✓ Prompt received"
 echo ""
 
 # Step 2: Create assessment JSON (mini-agent would use genuine self-assessment)
+# CORRECT FORMAT: Nested structure matching canonical_epistemic_assessment.py parser
 echo "Step 2: Creating assessment..."
 cat > /tmp/assessment.json << 'EOF'
 {
-  "vectors": {
-    "engagement": 0.85,
-    "know": 0.70,
-    "do": 0.65,
-    "context": 0.75,
-    "clarity": 0.80,
-    "coherence": 0.82,
-    "signal": 0.78,
-    "density": 0.60,
-    "state": 0.70,
-    "change": 0.50,
-    "completion": 0.40,
-    "impact": 0.55,
-    "uncertainty": 0.25
+  "engagement": {
+    "score": 0.85,
+    "rationale": "Testing Phase 1 git automation with genuine checkpoint creation"
+  },
+  "foundation": {
+    "know": {
+      "score": 0.70,
+      "rationale": "Understanding checkpoint mechanism and git notes system"
+    },
+    "do": {
+      "score": 0.75,
+      "rationale": "Capable of executing test workflow"
+    },
+    "context": {
+      "score": 0.80,
+      "rationale": "Full test context provided"
+    }
+  },
+  "comprehension": {
+    "clarity": {
+      "score": 0.85,
+      "rationale": "Clear test objectives"
+    },
+    "coherence": {
+      "score": 0.82,
+      "rationale": "Coherent with Phase 1 goals"
+    },
+    "signal": {
+      "score": 0.78,
+      "rationale": "Focus on checkpoint creation"
+    },
+    "density": {
+      "score": 0.40,
+      "rationale": "Low complexity test"
+    }
+  },
+  "execution": {
+    "state": {
+      "score": 0.75,
+      "rationale": "Test environment mapped"
+    },
+    "change": {
+      "score": 0.70,
+      "rationale": "Tracking checkpoint changes"
+    },
+    "completion": {
+      "score": 0.60,
+      "rationale": "Verifiable via git notes"
+    },
+    "impact": {
+      "score": 0.65,
+      "rationale": "Test-only impact"
+    }
+  },
+  "uncertainty": {
+    "score": 0.25,
+    "rationale": "Low uncertainty in test procedure"
   }
 }
 EOF

@@ -23,7 +23,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, UTC, date
 import aiofiles
 
-from .reflex_frame import ReflexFrame, EpistemicAssessment
+# ReflexFrame removed - using EpistemicAssessmentSchema directly
+from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
 
 logger = logging.getLogger(__name__)
 
@@ -99,15 +100,15 @@ class ReflexLogger:
 
     async def log_frame(
         self,
-        frame: ReflexFrame,
+        frame_dict: Dict[str, Any],
         agent_id: str = "default",
         session_id: Optional[str] = None
     ) -> Path:
         """
-        Log a ReflexFrame to JSON file
+        Log a frame dictionary to JSON file
 
         Args:
-            frame: ReflexFrame to log
+            frame_dict: Frame data as dictionary
             agent_id: Agent identifier for organizing logs
             session_id: Session UUID for session-specific organization
 
@@ -116,19 +117,20 @@ class ReflexLogger:
 
         Example:
             logger = ReflexLogger()
-            frame = ReflexFrame.from_assessment(assessment, frame_id="assess_001")
+            frame_dict = {'frameId': 'assess_001', 'epistemicVector': {...}}
             log_path = await logger.log_frame(
-                frame, 
+                frame_dict, 
                 agent_id="minimax",
                 session_id="abc-123-def"
             )
         """
         log_dir = self._get_agent_log_dir(agent_id, session_id)
-        filename = self._generate_log_filename(frame.frame_id)
+        frame_id = frame_dict.get('frameId', 'unknown')
+        filename = self._generate_log_filename(frame_id)
         log_path = log_dir / filename
 
         # Serialize frame to JSON
-        frame_json = frame.to_json(indent=2)
+        frame_json = json.dumps(frame_dict, indent=2)
 
         # Write async to avoid blocking
         async with aiofiles.open(log_path, 'w') as f:
@@ -138,7 +140,7 @@ class ReflexLogger:
 
     def log_frame_sync(
         self,
-        frame: ReflexFrame,
+        frame_dict: Dict[str, Any],
         agent_id: str = "default",
         session_id: Optional[str] = None
     ) -> Path:
@@ -146,7 +148,7 @@ class ReflexLogger:
         Synchronous version of log_frame for non-async contexts
 
         Args:
-            frame: ReflexFrame to log
+            frame_dict: Frame data as dictionary
             agent_id: Agent identifier
             session_id: Session UUID for session-specific organization
 
@@ -154,12 +156,13 @@ class ReflexLogger:
             Path to logged file
         """
         log_dir = self._get_agent_log_dir(agent_id, session_id)
-        filename = self._generate_log_filename(frame.frame_id)
+        frame_id = frame_dict.get('frameId', 'unknown')
+        filename = self._generate_log_filename(frame_id)
         log_path = log_dir / filename
 
         # Write synchronously
         with open(log_path, 'w') as f:
-            f.write(frame.to_json(indent=2))
+            f.write(json.dumps(frame_dict, indent=2))
 
         return log_path
 
@@ -335,23 +338,23 @@ class ReflexLogger:
 # CONVENIENCE FUNCTIONS
 
 async def log_assessment(
-    assessment: EpistemicAssessment,
+    assessment: EpistemicAssessmentSchema,
     frame_id: str,
     task: str = "",
     context: Dict[str, Any] = None,
     agent_id: str = "default",
-    logger: Optional[ReflexLogger] = None
+    logger_instance: Optional[ReflexLogger] = None
 ) -> Path:
     """
     Convenience function to log an assessment
 
     Args:
-        assessment: EpistemicAssessment to log
+        assessment: EpistemicAssessmentSchema to log
         frame_id: Unique frame identifier
         task: Task description
         context: Additional context
         agent_id: Agent identifier
-        logger: ReflexLogger instance (creates default if None)
+        logger_instance: ReflexLogger instance (creates default if None)
 
     Returns:
         Path to logged file
@@ -366,43 +369,47 @@ async def log_assessment(
             agent_id="metacognitive_cascade"
         )
     """
-    if logger is None:
-        logger = ReflexLogger()
+    if logger_instance is None:
+        logger_instance = ReflexLogger()
 
-    frame = ReflexFrame.from_assessment(
-        assessment,
-        frame_id=frame_id,
-        task=task,
-        context=context or {}
-    )
-
-    return await logger.log_frame(frame, agent_id=agent_id)
+    # Build dict directly from assessment (no ReflexFrame needed)
+    frame_dict = {
+        'frameId': frame_id,
+        'timestamp': assessment.timestamp,
+        'selfAwareFlag': True,
+        'epistemicVector': assessment.model_dump(),
+        'task': task,
+        'context': context or {},
+        'agent_id': agent_id
+    }
+    
+    # Write to file
+    log_dir = logger_instance._get_agent_log_dir(agent_id)
+    filename = logger_instance._generate_log_filename(frame_id)
+    log_path = log_dir / filename
+    
+    async with aiofiles.open(log_path, 'w') as f:
+        await f.write(json.dumps(frame_dict, indent=2))
+    
+    return log_path
 
 
 def log_assessment_sync(
-    assessment: EpistemicAssessment,
+    assessment: EpistemicAssessmentSchema,
     frame_id: str,
     task: str = "",
     context: Dict[str, Any] = None,
     agent_id: str = "default",
-    logger: Optional[ReflexLogger] = None
+    logger_instance: Optional[ReflexLogger] = None
 ) -> Path:
     """
     Synchronous version of log_assessment
 
     See log_assessment for documentation.
     """
-    if logger is None:
-        logger = ReflexLogger()
-
-    frame = ReflexFrame.from_assessment(
-        assessment,
-        frame_id=frame_id,
-        task=task,
-        context=context or {}
-    )
-
-    return logger.log_frame_sync(frame, agent_id=agent_id)
+    return asyncio.run(log_assessment(
+        assessment, frame_id, task, context, agent_id, logger_instance
+    ))
 
 
 # Fix missing import

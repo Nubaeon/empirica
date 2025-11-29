@@ -7,7 +7,9 @@ from empirica.core.canonical.canonical_goal_orchestrator import (
     GoalPriority,
     GoalAutonomyLevel
 )
-from empirica.core.canonical.reflex_frame import EpistemicAssessment, VectorState, Action
+from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
+EpistemicAssessment = EpistemicAssessmentSchema  # Alias for backwards compat
+from empirica.core.canonical.reflex_frame import VectorState, Action
 
 
 class TestCanonicalGoalOrchestrator:

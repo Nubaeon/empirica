@@ -22,7 +22,7 @@ import uuid
 from typing import List, Dict, Any, Optional
 
 from .canonical_goal_orchestrator import Goal as LLMGoal, CanonicalGoalOrchestrator
-from empirica.core.goals.types import Goal, SuccessCriterion, GoalScope
+from empirica.core.goals.types import Goal, SuccessCriterion, ScopeVector
 from empirica.core.goals.repository import GoalRepository
 
 logger = logging.getLogger(__name__)
@@ -141,11 +141,11 @@ class GoalOrchestratorBridge:
         
         # Determine scope from priority
         if llm_goal.priority >= 8:
-            scope = GoalScope.PROJECT_WIDE
+            scope = ScopeVector(breadth=0.9, duration=0.9, coordination=0.8)  # Project-wide
         elif llm_goal.priority >= 6:
-            scope = GoalScope.SESSION_SCOPED
+            scope = ScopeVector(breadth=0.6, duration=0.7, coordination=0.4)  # Session-scoped
         else:
-            scope = GoalScope.TASK_SPECIFIC
+            scope = ScopeVector(breadth=0.3, duration=0.2, coordination=0.1)  # Task-specific
         
         # Create structured goal
         structured_goal = Goal.create(

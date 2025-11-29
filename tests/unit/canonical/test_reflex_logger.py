@@ -6,7 +6,9 @@ import asyncio
 from pathlib import Path
 from datetime import date
 from empirica.core.canonical.reflex_logger import ReflexLogger, log_assessment, log_assessment_sync
-from empirica.core.canonical.reflex_frame import ReflexFrame, EpistemicAssessment, VectorState, Action
+from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
+EpistemicAssessment = EpistemicAssessmentSchema  # Alias for backwards compat
+from empirica.core.canonical.reflex_frame import ReflexFrame, VectorState, Action
 
 
 class TestReflexLogger:

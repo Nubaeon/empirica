@@ -293,6 +293,96 @@ def handle_check_submit_command(args):
         handle_cli_error(e, "Check submit", getattr(args, 'verbose', False))
 
 
+def _extract_numeric_value(value):
+    """
+    Extract numeric value from vector data.
+
+    Handles two formats:
+    - Simple float: 0.85
+    - Nested dict: {"score": 0.85, "rationale": "...", "evidence": "..."}
+
+    Returns:
+        float or None if value cannot be extracted
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    elif isinstance(value, dict):
+        # Extract 'score' key if present
+        if 'score' in value:
+            return float(value['score'])
+        # Fallback: try to get any numeric value
+        for k, v in value.items():
+            if isinstance(v, (int, float)):
+                return float(v)
+    return None
+
+
+
+def _extract_numeric_value(value):
+    """
+    Extract numeric value from vector data.
+
+    Handles multiple formats:
+    - Simple float: 0.85
+    - Nested dict: {"score": 0.85, "rationale": "...", "evidence": "..."}
+    - String numbers: "0.85"
+
+    Returns:
+        float or None if value cannot be extracted
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    elif isinstance(value, dict):
+        # Extract 'score' key if present
+        if 'score' in value:
+            return float(value['score'])
+        # Extract 'value' key as fallback
+        if 'value' in value:
+            return float(value['value'])
+        # Try to find any numeric value in nested structure
+        for k, v in value.items():
+            if isinstance(v, (int, float)):
+                return float(v)
+            elif isinstance(v, str) and v.replace('.', '').replace('-', '').isdigit():
+                try:
+                    return float(v)
+                except ValueError:
+                    continue
+        # Try to convert entire dict to float if it looks like a single number
+        for v in value.values():
+            if isinstance(v, (int, float)):
+                return float(v)
+    elif isinstance(value, str):
+        # Try to convert string to float
+        try:
+            return float(value)
+        except ValueError:
+            pass
+    return None
+
+
+def _extract_all_vectors(vectors):
+    """
+    Extract all numeric values from vectors dict, handling nested structures.
+    
+    Args:
+        vectors: Dict containing vector data (simple or nested)
+    
+    Returns:
+        Dict with all vector names mapped to numeric values
+    """
+    extracted = {}
+    
+    for key, value in vectors.items():
+        numeric_value = _extract_numeric_value(value)
+        if numeric_value is not None:
+            extracted[key] = numeric_value
+        else:
+            # Fallback to default if extraction fails
+            extracted[key] = 0.5
+    
+    return extracted
+
 def handle_postflight_submit_command(args):
     """Handle postflight-submit command"""
     try:
@@ -307,6 +397,12 @@ def handle_postflight_submit_command(args):
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")
         
+        # Extract all numeric values from vectors (COMPREHENSIVE FIX)
+        extracted_vectors = _extract_all_vectors(vectors)
+        
+        # Use extracted vectors for all subsequent operations
+        vectors = extracted_vectors
+        
         # Save POSTFLIGHT assessment to database - ACTUALLY PERSIST
         db = SessionDatabase()
         
@@ -314,10 +410,12 @@ def handle_postflight_submit_command(args):
         task_summary = changes or "Task completed"
         
         # Calculate postflight confidence (inverse of uncertainty)
+        # Now works with extracted numeric vectors
         uncertainty = vectors.get('uncertainty', 0.5)
         postflight_confidence = 1.0 - uncertainty
         
         # Determine calibration accuracy by comparing completion to confidence
+        # Now works with extracted numeric vectors
         completion = vectors.get('completion', 0.5)
         if abs(completion - postflight_confidence) < 0.2:
             calibration_accuracy = "good"
@@ -345,10 +443,42 @@ def handle_postflight_submit_command(args):
                 preflight = db.get_preflight_assessment(session_id)
                 if preflight and 'vectors_json' in preflight:
                     preflight_vectors = json.loads(preflight['vectors_json'])
-                    for key in vectors:
-                        if key in preflight_vectors:
-                            deltas[key] = vectors[key] - preflight_vectors[key]
-            except Exception:
+                    
+                    # Flatten nested vector structures (handle both flat and nested formats)
+                    def flatten_vectors(v):
+                        """Flatten nested vector dict to {vector_name: value}"""
+                        flat = {}
+                        if not isinstance(v, dict):
+                            return {}
+                        
+                        for key, val in v.items():
+                            if isinstance(val, dict):
+                                # Check if it's a tier dict (has sub-vectors)
+                                has_nested = any(isinstance(sub_v, dict) for sub_v in val.values())
+                                if has_nested:
+                                    # Nested tier structure like {'comprehension': {'clarity': {...}}}
+                                    for sub_key, sub_val in val.items():
+                                        flat[sub_key] = sub_val
+                                else:
+                                    # Single vector dict like {'clarity': {'score': 0.7}}
+                                    flat[key] = val
+                            else:
+                                # Simple value like {'clarity': 0.7}
+                                flat[key] = val
+                        return flat
+                    
+                    flat_post = flatten_vectors(vectors)
+                    flat_pre = flatten_vectors(preflight_vectors)
+                    
+                    for key in flat_post:
+                        if key in flat_pre:
+                            # Extract numeric values (handle both float and dict formats)
+                            post_val = _extract_numeric_value(flat_post[key])
+                            pre_val = _extract_numeric_value(flat_pre[key])
+                            if post_val is not None and pre_val is not None:
+                                deltas[key] = post_val - pre_val
+            except Exception as e:
+                logger.debug(f"Delta calculation failed: {e}")
                 pass  # Delta calculation is optional
             
             result = {

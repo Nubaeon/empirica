@@ -1,0 +1,125 @@
+{
+  "comment": "NEW EpistemicAssessmentSchema format (60% migration complete - Jan 2025)",
+  "note": "Field names now have tier prefixes: foundation_, comprehension_, execution_",
+  "see_also": "docs/reference/NEW_SCHEMA_GUIDE.md",
+  
+  "engagement": {
+    "score": 0.75,
+    "rationale": "Good collaborative engagement with clear task",
+    "evidence": "User provided clear prompt and context",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "foundation_know": {
+    "score": 0.60,
+    "rationale": "Moderate domain knowledge, familiar with concepts",
+    "evidence": "Have worked with similar systems before",
+    "warrants_investigation": true,
+    "investigation_priority": 7
+  },
+  
+  "foundation_do": {
+    "score": 0.65,
+    "rationale": "Good capability to execute task",
+    "evidence": "Have necessary tools and skills",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "foundation_context": {
+    "score": 0.70,
+    "rationale": "Good understanding of situational context",
+    "evidence": "Requirements and constraints are clear",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "comprehension_clarity": {
+    "score": 0.70,
+    "rationale": "Task is clearly defined",
+    "evidence": "Specifications provided",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "comprehension_coherence": {
+    "score": 0.75,
+    "rationale": "Understanding is coherent and consistent",
+    "evidence": "All pieces fit together logically",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "comprehension_signal": {
+    "score": 0.65,
+    "rationale": "Good signal-to-noise ratio in information",
+    "evidence": "Information is relevant and actionable",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "comprehension_density": {
+    "score": 0.60,
+    "rationale": "Information density is manageable",
+    "evidence": "Not overwhelmed by complexity",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "execution_state": {
+    "score": 0.65,
+    "rationale": "Good awareness of current state",
+    "evidence": "Know where I am in the process",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "execution_change": {
+    "score": 0.60,
+    "rationale": "Tracking changes and progress",
+    "evidence": "Monitoring what's changing",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "execution_completion": {
+    "score": 0.40,
+    "rationale": "Low completion, task just started",
+    "evidence": "Early in execution phase",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "execution_impact": {
+    "score": 0.65,
+    "rationale": "Understanding potential impact",
+    "evidence": "Know the consequences of actions",
+    "warrants_investigation": false,
+    "investigation_priority": 0
+  },
+  
+  "uncertainty": {
+    "score": 0.50,
+    "rationale": "Moderate uncertainty remains",
+    "evidence": "Some unknowns still exist",
+    "warrants_investigation": true,
+    "investigation_priority": 5
+  },
+  
+  "metadata": {
+    "phase": "PREFLIGHT",
+    "round_num": 0,
+    "investigation_count": 0,
+    "note": "OLD schema had assessment_id, task, timestamp - these are removed in NEW"
+  },
+  
+  "calculated_values": {
+    "foundation_confidence": 0.65,
+    "comprehension_confidence": 0.675,
+    "execution_confidence": 0.575,
+    "overall_confidence": 0.65,
+    "recommended_action": "investigate",
+    "note": "These are calculated via methods, not stored in NEW schema"
+  }
+}

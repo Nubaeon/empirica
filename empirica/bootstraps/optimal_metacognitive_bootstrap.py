@@ -97,11 +97,12 @@ class OptimalMetacognitiveBootstrap:
         level_map = {"minimal": 0, "standard": 1, "full": 2}
         return level_map.get(level, 1)
     
-    def __init__(self, ai_id: str = "empirica_ai", level: str = "standard", llm_callback=None):
+    def __init__(self, ai_id: str = "empirica_ai", level: str = "standard", llm_callback=None, cascade_style: Optional[str] = None):
         self.ai_id = ai_id
         # Normalize level to handle both numeric and named inputs
         self.level = self._normalize_level(level)
         self.llm_callback = llm_callback
+        self.cascade_style = cascade_style  # NEW: Threshold profile to load
         self.components = {}
         self.bootstrap_start_time = time.time()
         
@@ -140,6 +141,37 @@ class OptimalMetacognitiveBootstrap:
         """
         print("🧠 PHASE 1: Foundation (minimal)")
         print("=" * 50)
+        
+        # 0. Load threshold configuration (MCO - CASCADE styles)
+        print("0️⃣ Loading threshold configuration...")
+        try:
+            from empirica.config.threshold_loader import get_threshold_config
+            
+            threshold_config = get_threshold_config()
+            
+            # Load specified profile or use default
+            if self.cascade_style:
+                if threshold_config.load_profile(self.cascade_style):
+                    print(f"   ✅ Threshold profile loaded: {self.cascade_style}")
+                else:
+                    print(f"   ⚠️  Profile '{self.cascade_style}' not found, using default")
+            else:
+                print(f"   ✅ Threshold profile loaded: default")
+            
+            self.components['threshold_config'] = threshold_config
+            
+            # Show key thresholds
+            engagement = threshold_config.get('engagement_threshold')
+            max_rounds = threshold_config.get('cascade.max_investigation_rounds')
+            check_confidence = threshold_config.get('cascade.check_confidence_to_proceed')
+            
+            print(f"   📊 Engagement threshold: {engagement}")
+            print(f"   🔄 Max investigation rounds: {max_rounds}")
+            print(f"   ✅ CHECK confidence gate: {check_confidence}")
+            
+        except Exception as e:
+            print(f"   ⚠️  Threshold config failed: {e}")
+            print(f"   ℹ️  Using hardcoded defaults from thresholds.py")
         
         # 1. Load 13-vector metacognition (FOUNDATION)
         print("1️⃣ Loading 13-vector metacognition...")
@@ -208,20 +240,11 @@ class OptimalMetacognitiveBootstrap:
             print("   🎯 ENGAGEMENT-driven autonomy: ACTIVE")
         except Exception as e:
             print(f"   ⚠️ Canonical goal orchestrator failed: {e}")
-            print("   ⚠️ Goal orchestrator unavailable (minimal profile or load failure)")
+            print("   ❌ Goal orchestrator unavailable - canonical orchestrator is required")
+            print("   💡 Install missing dependencies or check canonical goal orchestrator")
             
-            from empirica.components.goal_management.autonomous_goal_orchestrator import (
-                DynamicContextAnalyzer,
-                create_dynamic_goals,
-                enhanced_orchestrate_with_context
-            )
-            
-            self.components['context_analyzer'] = DynamicContextAnalyzer()
-            self.components['create_goals'] = create_dynamic_goals
-            self.components['orchestrate'] = enhanced_orchestrate_with_context
-            
-            print("   ✅ Legacy goal orchestrator loaded (context-aware, heuristic-based)")
-            print("   🎯 Dynamic goal generation: ACTIVE")
+            # No heuristic fallback - raise error instead
+            raise RuntimeError(f"Canonical goal orchestrator failed: {e}")
         
         # 4. Note: Cascade workflow is built into the metacognitive cascade
         # The 7-phase workflow (PREFLIGHT → Think → Plan → Investigate → Check → Act → POSTFLIGHT)
@@ -424,7 +447,7 @@ class OptimalMetacognitiveBootstrap:
 
 
 # Convenience function for quick bootstrap
-def bootstrap_metacognition(ai_id: str = "empirica_ai", level: str = "standard", llm_callback=None) -> Dict[str, Any]:
+def bootstrap_metacognition(ai_id: str = "empirica_ai", level: str = "standard", llm_callback=None, cascade_style: Optional[str] = None) -> Dict[str, Any]:
     """
     Quick bootstrap function
     
@@ -432,6 +455,7 @@ def bootstrap_metacognition(ai_id: str = "empirica_ai", level: str = "standard",
         ai_id: AI identifier
         level: Bootstrap level (minimal, standard, full)
         llm_callback: Optional function(prompt: str) -> str for AI-powered goal generation
+        cascade_style: Optional CASCADE threshold profile (default, exploratory, rigorous, rapid, expert, novice)
         
     Returns:
         Dictionary of loaded components
@@ -440,13 +464,16 @@ def bootstrap_metacognition(ai_id: str = "empirica_ai", level: str = "standard",
         # Threshold-based mode (default)
         components = bootstrap_metacognition("my-ai", "minimal")
         
+        # With custom CASCADE style
+        components = bootstrap_metacognition("my-ai", "minimal", cascade_style="exploratory")
+        
         # AI reasoning mode
         def my_llm(prompt: str) -> str:
             return ai_client.reason(prompt)
         
-        components = bootstrap_metacognition("my-ai", "minimal", llm_callback=my_llm)
+        components = bootstrap_metacognition("my-ai", "minimal", llm_callback=my_llm, cascade_style="rigorous")
     """
-    bootstrap = OptimalMetacognitiveBootstrap(ai_id, level, llm_callback)
+    bootstrap = OptimalMetacognitiveBootstrap(ai_id, level, llm_callback, cascade_style)
     return bootstrap.bootstrap()
 
 

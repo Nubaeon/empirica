@@ -21,7 +21,9 @@ import sys
 # Add paths
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from empirica.core.canonical import CanonicalEpistemicAssessor, EpistemicAssessment
+from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
+EpistemicAssessment = EpistemicAssessmentSchema  # Alias for backwards compat
+from empirica.core.canonical import CanonicalEpistemicAssessor, 
 from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade, CascadePhase
 from empirica.data.session_database import SessionDatabase
 

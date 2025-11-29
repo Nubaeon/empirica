@@ -274,10 +274,10 @@ result = await cascade.run_epistemic_cascade(task, context)
 assessment = result['phases']['uncertainty']['assessment']
 
 # Check specific vectors
-if assessment.know.score < 0.5:
+if assessment.know.score < 0.5:  # OLD schema (still works via wrappers)
     print("⚠️  Low domain knowledge")
 
-if assessment.clarity.score < 0.5:
+if assessment.clarity.score < 0.5:  # OLD schema (still works via wrappers)
     print("⚠️  Task unclear")
 
 if not assessment.engagement_gate_passed:

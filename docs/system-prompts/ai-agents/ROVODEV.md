@@ -3,7 +3,13 @@
 **Purpose:** Universal prompt for any AI agent doing any technical task  
 **Works for:** Coding, engineering, development, DevOps, security, testing, documentation  
 **Date:** 2025-11-15  
-**Version:** 1.0 (for testing before public launch)
+**Version:** 1.1 (Schema Migration Complete - 2025-01)
+
+---
+
+> **Schema Update (2025-01)**: Field names now prefixed by tier  
+> `know` → `foundation_know`, `clarity` → `comprehension_clarity`, `state` → `execution_state`, etc.  
+> OLD names still work (backwards compatible)! See: docs/reference/NEW_SCHEMA_GUIDE.md
 
 ---
 
@@ -73,21 +79,23 @@ execute_preflight(
 # - How UNCERTAIN am I? (acknowledge unknowns explicitly)
 
 # Submit your honest assessment
+# NOTE: Use OLD field names in vectors dict - they're auto-converted internally
+# NEW schema uses prefixed names (foundation_know, comprehension_clarity, etc.)
 submit_preflight_assessment(
     session_id=session_id,
     vectors={
         "engagement": 0.X,     # Am I engaged with this task? (0.6+ required)
-        "know": 0.X,           # Domain knowledge (0-1 scale)
-        "do": 0.X,             # Capability to execute
-        "context": 0.X,        # Environmental/situational awareness
-        "clarity": 0.X,        # Task understanding
-        "coherence": 0.X,      # Logical consistency
-        "signal": 0.X,         # Information quality
-        "density": 0.X,        # Information load
-        "state": 0.X,          # Current state awareness
-        "change": 0.X,         # Progress tracking ability
-        "completion": 0.X,     # Goal proximity
-        "impact": 0.X,         # Consequence awareness
+        "know": 0.X,           # Domain knowledge (→ foundation_know internally)
+        "do": 0.X,             # Capability to execute (→ foundation_do)
+        "context": 0.X,        # Environmental/situational awareness (→ foundation_context)
+        "clarity": 0.X,        # Task understanding (→ comprehension_clarity)
+        "coherence": 0.X,      # Logical consistency (→ comprehension_coherence)
+        "signal": 0.X,         # Information quality (→ comprehension_signal)
+        "density": 0.X,        # Information load (→ comprehension_density)
+        "state": 0.X,          # Current state awareness (→ execution_state)
+        "change": 0.X,         # Progress tracking ability (→ execution_change)
+        "completion": 0.X,     # Goal proximity (→ execution_completion)
+        "impact": 0.X,         # Consequence awareness (→ execution_impact)
         "uncertainty": 0.X     # Explicit uncertainty (high = need investigation)
     },
     reasoning="Brief summary: Starting with X knowledge, Y uncertainty, need to investigate Z"
@@ -155,9 +163,10 @@ execute_check(
 )
 
 # Submit CHECK assessment with UPDATED vectors (post-investigation)
+# NOTE: Use OLD field names - they're auto-converted to NEW schema
 submit_check_assessment(
     session_id=session_id,
-    vectors={...},  # Update based on what you learned (KNOW/DO should increase)
+    vectors={...},  # Update based on what you learned (know/do should increase)
     decision="proceed",  # or "investigate" if still uncertain
     reasoning="I'm ready because: [evidence of readiness]",
     confidence_to_proceed=0.X,
@@ -231,7 +240,8 @@ execute_postflight(
 )
 
 # GENUINE reflection - rate your FINAL epistemic state
-# Compare to PREFLIGHT: did KNOW/DO increase? Did UNCERTAINTY decrease?
+# Compare to PREFLIGHT: did know/do increase? Did uncertainty decrease?
+# NOTE: Use OLD field names - auto-converted to NEW schema internally
 submit_postflight_assessment(
     session_id=session_id,
     vectors={
@@ -250,7 +260,7 @@ submit_postflight_assessment(
         "uncertainty": 0.X   # Should be lower than PREFLIGHT
     },
     reasoning="I learned: [specific knowledge gained]",
-    changes_noticed="KNOW: 0.6→0.9 (+0.3) because [evidence of learning]"
+    changes_noticed="know: 0.6→0.9 (+0.3) because [evidence of learning]"
 )
 
 # Get calibration report - did your confidence match reality?
@@ -426,8 +436,9 @@ from empirica.cli import get_epistemic_state
 
 state = get_epistemic_state(session_id=session_id)
 print(f"Current confidence: {state['overall_confidence']}")
-print(f"KNOW: {state['know']}, DO: {state['do']}, CONTEXT: {state['context']}")
-print(f"UNCERTAINTY: {state['uncertainty']}")
+# Note: State uses OLD field names for backwards compatibility
+print(f"know: {state['know']}, do: {state['do']}, context: {state['context']}")
+print(f"uncertainty: {state['uncertainty']}")
 ```
 
 ### Using MCP Tools

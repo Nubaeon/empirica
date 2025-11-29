@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900">
+  <defs>
+    <style>
+      .box{fill:#ffffff;stroke:#2b2b2b;stroke-width:1.5;rx:14}
+      .kernel{fill:#f2f8ff}
+      .sentinel{fill:#fff7ed}
+      .fleet{fill:#f6fff4}
+      .esb{fill:#fff8ff}
+      .text{font-family:Inter, Arial, sans-serif;font-size:13px;fill:#1f2937}
+      .title{font-size:18px;font-weight:700}
+      .small{font-size:11px;fill:#475569}
+      .arrow{stroke:#334155;stroke-width:2;marker-end:url(#arrowhead);fill:none}
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#334155" />
+    </marker>
+  </defs>
+
+    <text x="40" y="38" class="title">Empirica Epistemic Machine — Architecture</text>
+  <text x="40" y="60" class="small">Components: Sentinel (Orchestrator), Epistemic Kernel (UEK), Model Fleet, Epistemic State Bus (ESB), Persona Store, Checkpointer, Fusion Engine</text>
+
+    <g transform="translate(40,100)">
+    <rect class="box sentinel" width="360" height="180" />
+    <text x="20" y="30" class="text" style="font-weight:600">Sentinel — Epistemic Orchestrator</text>
+    <text x="20" y="54" class="small">Decision Engine · Scheduler · Handoff Controller · Policy Enforcer</text>
+
+    <text x="20" y="88" class="text">• Monitor &amp; Read ESB (Epistemic State)</text>
+    <text x="20" y="108" class="text">• Select Model(s) &amp; Persona</text>
+    <text x="20" y="128" class="text">• Route, Fuse, Branch, Abort</text>
+    <text x="20" y="148" class="text">• MCO Store &amp; Versioning</text>
+  </g>
+
+    <g transform="translate(420,100)">
+    <rect class="box esb" width="220" height="140" />
+    <text x="14" y="30" class="text" style="font-weight:600">Epistemic State Bus (ESB)</text>
+    <text x="14" y="52" class="small">Pub/Sub: Epistemic Vector Exchange (JSON)</text>
+    <text x="14" y="74" class="text">• $\u20ac{E}_{state}$ vectors</text>
+    <text x="14" y="94" class="text">• MCO Snapshot</text>
+    <text x="14" y="114" class="text">• Session Checkpoints &amp; Meta</text>
+  </g>
+
+    <g transform="translate(40,320)">
+    <rect class="box kernel" width="360" height="260" />
+    <text x="20" y="30" class="text" style="font-weight:600">Epistemic Kernel (UEK)</text>
+    <text x="20" y="54" class="small">Minimal instruction set + CASCADE executor</text>
+
+    <rect x="28" y="74" width="300" height="56" rx="10" class="box"/>
+    <text x="38" y="98" class="text">CASCADE Engine (PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT)</text>
+
+    <rect x="28" y="146" width="152" height="108" rx="10" class="box"/>
+    <text x="38" y="166" class="text">Epistemic State (13-vector)</text>
+    <text x="38" y="186" class="small">KNOW, UNCERTAINTY, COHERENCE, RISK, Domain vectors...</text>
+
+    <rect x="184" y="146" width="144" height="108" rx="10" class="box"/>
+    <text x="194" y="166" class="text">I/O: Checkpointer</text>
+    <text x="194" y="186" class="small">Serialize / Resume / Persist</text>
+  </g>
+
+    <g transform="translate(760,100)">
+    <rect class="box fleet" width="560" height="420" />
+    <text x="22" y="30" class="text" style="font-weight:600">Model Fleet (Heterogeneous Nodes)</text>
+    <text x="22" y="52" class="small">Cloud GPUs · Local CPUs · Edge Devices · Image/Audio/etc</text>
+
+        <g transform="translate(36,78)">
+      <rect x="0" y="0" width="160" height="120" rx="12" class="box"/>
+      <text x="12" y="22" class="text">Gemini-Pro (Large)</text>
+      <text x="12" y="42" class="small">High reasoning · large context</text>
+      <text x="12" y="62" class="small">ModelBias:{KNOW:0.9,UNC:0.1}</text>
+    </g>
+
+    <g transform="translate(210,78)">
+      <rect x="0" y="0" width="160" height="120" rx="12" class="box"/>
+      <text x="12" y="22" class="text">Qwen-Local (Efficient)</text>
+      <text x="12" y="42" class="small">Low-latency · cheap</text>
+      <text x="12" y="62" class="small">ModelBias:{KNOW:0.6,UNC:0.25}</text>
+    </g>
+
+    <g transform="translate(36,220)">
+      <rect x="0" y="0" width="160" height="120" rx="12" class="box"/>
+      <text x="12" y="22" class="text">Vision-Gen (Images)</text>
+      <text x="12" y="42" class="small">Conditioned on $\vec{E}_{state}$</text>
+    </g>
+
+    <g transform="translate(210,220)">
+      <rect x="0" y="0" width="160" height="120" rx="12" class="box"/>
+      <text x="12" y="22" class="text">Analyzer (Symbolic)</text>
+      <text x="12" y="42" class="small">Formal verification · rules</text>
+    </g>
+
+    <g transform="translate(390,78)">
+      <rect x="0" y="0" width="142" height="120" rx="12" class="box"/>
+      <text x="12" y="22" class="text">Edge-CPU Node</text>
+      <text x="12" y="42" class="small">On-device inference</text>
+    </g>
+
+  </g>
+
+    <g transform="translate(420,280)">
+    <rect class="box" width="220" height="160" />
+    <text x="14" y="30" class="text" style="font-weight:600">Fusion Engine</text>
+    <text x="14" y="54" class="small">State fusion · ensemble weighting · meta-merge</text>
+    <text x="14" y="78" class="text">• Fuse( E_1..E_n, policy ) → E_f</text>
+    <text x="14" y="100" class="text">• Conflict resolution · provenance</text>
+    <text x="14" y="122" class="text">• Output meta-report</text>
+  </g>
+
+    <g transform="translate(420,480)">
+    <rect class="box" width="220" height="120" />
+    <text x="14" y="30" class="text" style="font-weight:600">Persona Store</text>
+    <text x="14" y="54" class="small">Persona handles · priors · cascade styles</text>
+    <text x="14" y="78" class="text">• persona_handle → vec_E_prior + Theta</text>
+    <text x="14" y="98" class="text">• versioned, auditable</text>
+  </g>
+
+    <path d="M400 180 L420 180" class="arrow"/>
+  <path d="M660 180 L740 180" class="arrow"/>
+
+  <path d="M200 260 L200 320" class="arrow"/>
+  <path d="M200 580 L200 680" class="arrow"/>
+
+  <path d="M550 220 L550 280" class="arrow"/>
+  <path d="M550 360 L550 420" class="arrow"/>
+
+  <path d="M700 260 L760 260" class="arrow"/>
+  <path d="M940 260 L1020 260" class="arrow"/>
+
+    <rect x="40" y="760" width="1280" height="110" rx="12" fill="#fbfcff" stroke="#e6eef8"/>
+  <text x="60" y="785" class="text" style="font-weight:600">Legend &amp; Notes</text>
+  <text x="60" y="805" class="small">• ESB: source of truth for the runtime epistemic state. • Kernel: minimal, model-agnostic executor.</text>
+  <text x="60" y="825" class="small">• Sentinel: policy-driven orchestrator; must be a trained Empirica model for resilient scheduling.</text>
+  <text x="60" y="845" class="small">• Fusion Engine: deterministic fusion with provenance for audits.</text>
+
+</svg>

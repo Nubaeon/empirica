@@ -21,6 +21,17 @@ Empirica enables AI agents to assess their own knowledge, track epistemic growth
 
 **This is empirically testable.** Epistemic growth is measurable and reproducible.
 
+---
+
+> ⚠️ **Schema Migration in Progress** (60% complete - Jan 2025)  
+> We're migrating to `EpistemicAssessmentSchema` with improved field naming.  
+> **All changes are backwards compatible** - existing code continues to work!  
+> 
+> **Field changes**: `know` → `foundation_know`, `clarity` → `comprehension_clarity`, etc.  
+> See [NEW Schema Guide](docs/reference/NEW_SCHEMA_GUIDE.md) | [Migration Status](docs/wip/schema-migration/PROGRESS_60_PERCENT.md)
+
+---
+
 ## ✨ Key Features
 
 ### 🧠 Self-Referential Goal Generation

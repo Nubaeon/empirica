@@ -10,7 +10,7 @@ import uuid
 import subprocess
 from pathlib import Path
 
-from empirica.core.goals.types import Goal, SuccessCriterion, GoalScope
+from empirica.core.goals.types import Goal, SuccessCriterion, ScopeVector
 from empirica.core.goals.repository import GoalRepository
 from empirica.core.tasks.types import SubTask, EpistemicImportance
 from empirica.core.tasks.repository import TaskRepository
@@ -54,7 +54,7 @@ class TestGitNotesIntegration:
                     validation_method="completion"
                 )
             ],
-            scope=GoalScope.TASK_SPECIFIC
+            scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1)
         )
         goal_repo.save_goal(goal, session_id)
         

@@ -16,7 +16,7 @@ def test_goal_creation():
     """Test basic goal creation"""
     print("🧪 Testing Goal Creation...")
     try:
-        from empirica.core.goals.types import Goal, SuccessCriterion, GoalScope
+        from empirica.core.goals.types import Goal, SuccessCriterion, ScopeVector
         from empirica.core.goals.repository import GoalRepository
         
         # Create temporary database
@@ -37,7 +37,7 @@ def test_goal_creation():
             session_id="test-session",
             objective="Test Goal Architecture Implementation",
             success_criteria=success_criteria,
-            scope=GoalScope.TASK_SPECIFIC,
+            scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1),
             estimated_complexity=0.5,
             metadata={"test": True}
         )

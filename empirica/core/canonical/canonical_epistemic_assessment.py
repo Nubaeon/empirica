@@ -33,11 +33,17 @@ logger = logging.getLogger(__name__)
 
 from .reflex_frame import (
     VectorState,
-    EpistemicAssessment,
     Action,
     CANONICAL_WEIGHTS,
     ENGAGEMENT_THRESHOLD,
     CRITICAL_THRESHOLDS
+)
+
+# NEW SCHEMA (this is now THE schema)
+from empirica.core.schemas.epistemic_assessment import (
+    EpistemicAssessmentSchema,
+    VectorAssessment,
+    CascadePhase
 )
 
 
@@ -74,7 +80,7 @@ class CanonicalEpistemicAssessor:
         task: str,
         context: Optional[Dict[str, Any]] = None,
         profile: Optional['InvestigationProfile'] = None
-    ) -> Union[EpistemicAssessment, Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """
         Perform genuine LLM-powered epistemic self-assessment
 
@@ -84,9 +90,7 @@ class CanonicalEpistemicAssessor:
             profile: Investigation profile for context-aware assessment
 
         Returns:
-            EpistemicAssessment: Structured assessment with 12 vectors
-            OR
-            Dict with 'meta_prompt': If LLM execution needed externally
+            Dict with 'self_assessment_prompt': Assessment prompt for LLM execution
 
         Process:
             1. Generate meta-prompt for LLM self-assessment
@@ -103,12 +107,9 @@ class CanonicalEpistemicAssessor:
                 context={'available_tools': ['read', 'write', 'edit']}
             )
 
-            if isinstance(result, dict) and 'meta_prompt' in result:
-                # Execute meta_prompt with LLM, get response
-                llm_response = await llm.complete(result['meta_prompt'])
-                assessment = assessor.parse_llm_response(llm_response, result['assessment_id'], task, context, profile)
-            else:
-                assessment = result
+            # Execute self_assessment_prompt with LLM, get response
+            llm_response = await llm.complete(result['self_assessment_prompt'])
+            assessment = assessor.parse_llm_response(llm_response, result['assessment_id'], task, context, profile)
 
             if assessment.engagement_gate_passed:
                 logger.info(f"Action: {assessment.recommended_action}")
@@ -589,20 +590,24 @@ Respond with a structured JSON object in this EXACT format:
         assessment_id: str,
         task: str,
         context: Optional[Dict[str, Any]] = None,
-        profile: Optional['InvestigationProfile'] = None
-    ) -> EpistemicAssessment:
+        profile: Optional['InvestigationProfile'] = None,
+        phase: CascadePhase = CascadePhase.PREFLIGHT,
+        round_num: int = 0
+    ) -> EpistemicAssessmentSchema:
         """
-        Parse LLM's self-assessment response into EpistemicAssessment
+        Parse LLM's self-assessment response into EpistemicAssessmentSchema
 
         Args:
             llm_response: LLM's JSON response (string or dict)
-            assessment_id: Assessment identifier
-            task: Original task
-            context: Original context
+            assessment_id: Assessment identifier (not used in NEW schema)
+            task: Original task (not used in NEW schema)
+            context: Original context (not used in NEW schema)
             profile: Investigation profile for action determination
+            phase: Current CASCADE phase
+            round_num: Current round number
 
         Returns:
-            EpistemicAssessment: Structured canonical assessment
+            EpistemicAssessmentSchema: Structured canonical assessment
 
         Raises:
             ValueError: If response format is invalid or missing required fields
@@ -626,164 +631,146 @@ Respond with a structured JSON object in this EXACT format:
         else:
             data = llm_response
 
-        # Extract vector states
+        # Extract vector assessments (NEW format)
         try:
             # GATE: ENGAGEMENT
             engagement_data = data.get('engagement', {})
-            engagement = VectorState(
+            engagement = VectorAssessment(
                 score=engagement_data['score'],
                 rationale=engagement_data['rationale'],
-                evidence=engagement_data.get('evidence')
+                evidence=engagement_data.get('evidence'),
+                warrants_investigation=engagement_data.get('warrants_investigation', False),
+                investigation_priority=engagement_data.get('investigation_priority', 0)
             )
-            engagement_gate_passed = engagement.score >= ENGAGEMENT_THRESHOLD
 
             # TIER 0: FOUNDATION
             foundation_data = data.get('foundation', {})
-            know = VectorState(
+            foundation_know = VectorAssessment(
                 score=foundation_data['know']['score'],
                 rationale=foundation_data['know']['rationale'],
-                evidence=foundation_data['know'].get('evidence')
+                evidence=foundation_data['know'].get('evidence'),
+                warrants_investigation=foundation_data['know'].get('warrants_investigation', False),
+                investigation_priority=foundation_data['know'].get('investigation_priority', 0)
             )
-            do = VectorState(
+            foundation_do = VectorAssessment(
                 score=foundation_data['do']['score'],
                 rationale=foundation_data['do']['rationale'],
-                evidence=foundation_data['do'].get('evidence')
+                evidence=foundation_data['do'].get('evidence'),
+                warrants_investigation=foundation_data['do'].get('warrants_investigation', False),
+                investigation_priority=foundation_data['do'].get('investigation_priority', 0)
             )
-            context_vec = VectorState(
+            foundation_context = VectorAssessment(
                 score=foundation_data['context']['score'],
                 rationale=foundation_data['context']['rationale'],
-                evidence=foundation_data['context'].get('evidence')
+                evidence=foundation_data['context'].get('evidence'),
+                warrants_investigation=foundation_data['context'].get('warrants_investigation', False),
+                investigation_priority=foundation_data['context'].get('investigation_priority', 0)
             )
 
             # TIER 1: COMPREHENSION
             comprehension_data = data.get('comprehension', {})
-            clarity = VectorState(
+            comprehension_clarity = VectorAssessment(
                 score=comprehension_data['clarity']['score'],
                 rationale=comprehension_data['clarity']['rationale'],
-                evidence=comprehension_data['clarity'].get('evidence')
+                evidence=comprehension_data['clarity'].get('evidence'),
+                warrants_investigation=comprehension_data['clarity'].get('warrants_investigation', False),
+                investigation_priority=comprehension_data['clarity'].get('investigation_priority', 0)
             )
-            coherence = VectorState(
+            comprehension_coherence = VectorAssessment(
                 score=comprehension_data['coherence']['score'],
                 rationale=comprehension_data['coherence']['rationale'],
-                evidence=comprehension_data['coherence'].get('evidence')
+                evidence=comprehension_data['coherence'].get('evidence'),
+                warrants_investigation=comprehension_data['coherence'].get('warrants_investigation', False),
+                investigation_priority=comprehension_data['coherence'].get('investigation_priority', 0)
             )
-            signal = VectorState(
+            comprehension_signal = VectorAssessment(
                 score=comprehension_data['signal']['score'],
                 rationale=comprehension_data['signal']['rationale'],
-                evidence=comprehension_data['signal'].get('evidence')
+                evidence=comprehension_data['signal'].get('evidence'),
+                warrants_investigation=comprehension_data['signal'].get('warrants_investigation', False),
+                investigation_priority=comprehension_data['signal'].get('investigation_priority', 0)
             )
-            density = VectorState(
+            comprehension_density = VectorAssessment(
                 score=comprehension_data['density']['score'],
                 rationale=comprehension_data['density']['rationale'],
-                evidence=comprehension_data['density'].get('evidence')
+                evidence=comprehension_data['density'].get('evidence'),
+                warrants_investigation=comprehension_data['density'].get('warrants_investigation', False),
+                investigation_priority=comprehension_data['density'].get('investigation_priority', 0)
             )
 
             # TIER 2: EXECUTION
             execution_data = data.get('execution', {})
-            state = VectorState(
+            execution_state = VectorAssessment(
                 score=execution_data['state']['score'],
                 rationale=execution_data['state']['rationale'],
-                evidence=execution_data['state'].get('evidence')
+                evidence=execution_data['state'].get('evidence'),
+                warrants_investigation=execution_data['state'].get('warrants_investigation', False),
+                investigation_priority=execution_data['state'].get('investigation_priority', 0)
             )
-            change = VectorState(
+            execution_change = VectorAssessment(
                 score=execution_data['change']['score'],
                 rationale=execution_data['change']['rationale'],
-                evidence=execution_data['change'].get('evidence')
+                evidence=execution_data['change'].get('evidence'),
+                warrants_investigation=execution_data['change'].get('warrants_investigation', False),
+                investigation_priority=execution_data['change'].get('investigation_priority', 0)
             )
-            completion = VectorState(
+            execution_completion = VectorAssessment(
                 score=execution_data['completion']['score'],
                 rationale=execution_data['completion']['rationale'],
-                evidence=execution_data['completion'].get('evidence')
+                evidence=execution_data['completion'].get('evidence'),
+                warrants_investigation=execution_data['completion'].get('warrants_investigation', False),
+                investigation_priority=execution_data['completion'].get('investigation_priority', 0)
             )
-            impact = VectorState(
+            execution_impact = VectorAssessment(
                 score=execution_data['impact']['score'],
                 rationale=execution_data['impact']['rationale'],
-                evidence=execution_data['impact'].get('evidence')
+                evidence=execution_data['impact'].get('evidence'),
+                warrants_investigation=execution_data['impact'].get('warrants_investigation', False),
+                investigation_priority=execution_data['impact'].get('investigation_priority', 0)
             )
 
             # META-EPISTEMIC: UNCERTAINTY
             uncertainty_data = data.get('uncertainty', {})
-            uncertainty = VectorState(
-                score=uncertainty_data.get('score', 0.5),  # Default to 0.5 if not provided
+            uncertainty = VectorAssessment(
+                score=uncertainty_data.get('score', 0.5),
                 rationale=uncertainty_data.get('rationale', 'Uncertainty not explicitly assessed'),
-                evidence=uncertainty_data.get('evidence')
+                evidence=uncertainty_data.get('evidence'),
+                warrants_investigation=uncertainty_data.get('warrants_investigation', False),
+                investigation_priority=uncertainty_data.get('investigation_priority', 0)
             )
 
         except (KeyError, TypeError) as e:
             raise ValueError(f"Missing or invalid field in LLM response: {e}")
 
-        # Calculate tier confidences using canonical weights
-        foundation_confidence = (
-            know.score + do.score + context_vec.score
-        ) / 3
-
-        # Comprehension: density is inverted
-        comprehension_confidence = (
-            clarity.score + coherence.score + signal.score + (1.0 - density.score)
-        ) / 4
-
-        execution_confidence = (
-            state.score + change.score + completion.score + impact.score
-        ) / 4
-
-        # Calculate overall confidence using canonical weights
-        overall_confidence = (
-            foundation_confidence * CANONICAL_WEIGHTS['foundation'] +
-            comprehension_confidence * CANONICAL_WEIGHTS['comprehension'] +
-            execution_confidence * CANONICAL_WEIGHTS['execution'] +
-            engagement.score * CANONICAL_WEIGHTS['engagement']
-        )
-
-        # Determine recommended action using canonical decision logic
-        recommended_action = self._determine_action(
-            engagement=engagement,
-            engagement_gate_passed=engagement_gate_passed,
-            coherence=coherence,
-            density=density,
-            change=change,
-            clarity=clarity,
-            foundation_confidence=foundation_confidence,
-            overall_confidence=overall_confidence,
-            uncertainty=uncertainty,
-            profile=profile
-        )
-
-        # Build EpistemicAssessment
-        assessment = EpistemicAssessment(
+        # Build NEW EpistemicAssessmentSchema
+        assessment = EpistemicAssessmentSchema(
             # GATE
             engagement=engagement,
-            engagement_gate_passed=engagement_gate_passed,
-
-            # TIER 0: FOUNDATION
-            know=know,
-            do=do,
-            context=context_vec,
-            foundation_confidence=foundation_confidence,
-
-            # TIER 1: COMPREHENSION
-            clarity=clarity,
-            coherence=coherence,
-            signal=signal,
-            density=density,
-            comprehension_confidence=comprehension_confidence,
-
-            # TIER 2: EXECUTION
-            state=state,
-            change=change,
-            completion=completion,
-            impact=impact,
-            execution_confidence=execution_confidence,
-
+            
+            # FOUNDATION (Tier 0) - with prefixes
+            foundation_know=foundation_know,
+            foundation_do=foundation_do,
+            foundation_context=foundation_context,
+            
+            # COMPREHENSION (Tier 1) - with prefixes
+            comprehension_clarity=comprehension_clarity,
+            comprehension_coherence=comprehension_coherence,
+            comprehension_signal=comprehension_signal,
+            comprehension_density=comprehension_density,
+            
+            # EXECUTION (Tier 2) - with prefixes
+            execution_state=execution_state,
+            execution_change=execution_change,
+            execution_completion=execution_completion,
+            execution_impact=execution_impact,
+            
             # META-EPISTEMIC: UNCERTAINTY
             uncertainty=uncertainty,
-
-            # OVERALL
-            overall_confidence=overall_confidence,
-            recommended_action=recommended_action,
-
-            # METADATA
-            assessment_id=assessment_id,
-            task=task
+            
+            # METADATA (NEW schema uses phase, round_num, investigation_count)
+            phase=phase,
+            round_num=round_num,
+            investigation_count=0  # Will be set by caller if needed
         )
 
         return assessment

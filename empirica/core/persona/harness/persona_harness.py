@@ -32,6 +32,13 @@ from .communication import (
     receive_message
 )
 
+# NEW SCHEMA IMPORTS (Phase 4: Schema Migration)
+from empirica.core.schemas.epistemic_assessment import (
+    EpistemicAssessmentSchema,
+    VectorAssessment
+)
+# Using EpistemicAssessmentSchema directly
+
 logger = logging.getLogger(__name__)
 
 
@@ -243,94 +250,61 @@ class PersonaHarness:
 
         return persona_aware_assessment
 
-    def _apply_priors(self, assessment, phase):
+    def _apply_priors(self, assessment: EpistemicAssessmentSchema, phase) -> EpistemicAssessmentSchema:
         """
         Apply persona priors to assessment
-
-        Persona priors represent domain-specific starting knowledge.
-        For example, a security expert starts with high KNOW in security domain.
-
-        This modifies the baseline assessment to reflect the persona's expertise.
+        
+        Works with EpistemicAssessmentSchema using prefixed field names.
         """
-        from empirica.core.canonical.reflex_frame import VectorState
-
         priors = self.persona.epistemic_config.priors
 
         # Apply priors based on phase
         if phase.value == 'preflight':
-            # PREFLIGHT: Apply priors at full strength
             strength = 1.0
         elif phase.value == 'think':
-            # THINK: Apply priors at 80% strength
             strength = 0.8
         else:
-            # Other phases: Priors fade as evidence accumulates
             strength = 0.5
 
-        # Blend baseline with persona priors
-        def blend_vector(baseline_vector, prior_value, vector_name):
-            """Blend baseline assessment with persona prior"""
+        # Blend baseline with persona priors (NEW schema)
+        def blend_vector_new(baseline_vector: VectorAssessment, prior_value: float, vector_name: str) -> VectorAssessment:
+            """Blend baseline assessment with persona prior (NEW schema)"""
             blended_score = baseline_vector.score * (1 - strength) + prior_value * strength
             rationale = f"{baseline_vector.rationale} [Persona prior: {prior_value:.2f}, strength: {strength:.1f}]"
-            return VectorState(
-                blended_score,
-                rationale,
+            return VectorAssessment(
+                score=blended_score,
+                rationale=rationale,
+                evidence=baseline_vector.evidence,
                 warrants_investigation=baseline_vector.warrants_investigation,
-                investigation_priority=baseline_vector.investigation_priority,
-                investigation_reason=baseline_vector.investigation_reason
+                investigation_priority=baseline_vector.investigation_priority
             )
 
-        # Apply priors to each vector
-        assessment.engagement = blend_vector(assessment.engagement, priors['engagement'], 'engagement')
-        assessment.know = blend_vector(assessment.know, priors['know'], 'know')
-        assessment.do = blend_vector(assessment.do, priors['do'], 'do')
-        assessment.context = blend_vector(assessment.context, priors['context'], 'context')
-        assessment.clarity = blend_vector(assessment.clarity, priors['clarity'], 'clarity')
-        assessment.coherence = blend_vector(assessment.coherence, priors['coherence'], 'coherence')
-        assessment.signal = blend_vector(assessment.signal, priors['signal'], 'signal')
-        assessment.density = blend_vector(assessment.density, priors['density'], 'density')
-        assessment.state = blend_vector(assessment.state, priors['state'], 'state')
-        assessment.change = blend_vector(assessment.change, priors['change'], 'change')
-        assessment.completion = blend_vector(assessment.completion, priors['completion'], 'completion')
-        assessment.impact = blend_vector(assessment.impact, priors['impact'], 'impact')
-        assessment.uncertainty = blend_vector(assessment.uncertainty, priors['uncertainty'], 'uncertainty')
+        # Apply priors to each vector (NEW field names with prefixes)
+        assessment.engagement = blend_vector_new(assessment.engagement, priors['engagement'], 'engagement')
+        assessment.foundation_know = blend_vector_new(assessment.foundation_know, priors['know'], 'know')
+        assessment.foundation_do = blend_vector_new(assessment.foundation_do, priors['do'], 'do')
+        assessment.foundation_context = blend_vector_new(assessment.foundation_context, priors['context'], 'context')
+        assessment.comprehension_clarity = blend_vector_new(assessment.comprehension_clarity, priors['clarity'], 'clarity')
+        assessment.comprehension_coherence = blend_vector_new(assessment.comprehension_coherence, priors['coherence'], 'coherence')
+        assessment.comprehension_signal = blend_vector_new(assessment.comprehension_signal, priors['signal'], 'signal')
+        assessment.comprehension_density = blend_vector_new(assessment.comprehension_density, priors['density'], 'density')
+        assessment.execution_state = blend_vector_new(assessment.execution_state, priors['state'], 'state')
+        assessment.execution_change = blend_vector_new(assessment.execution_change, priors['change'], 'change')
+        assessment.execution_completion = blend_vector_new(assessment.execution_completion, priors['completion'], 'completion')
+        assessment.execution_impact = blend_vector_new(assessment.execution_impact, priors['impact'], 'impact')
+        assessment.uncertainty = blend_vector_new(assessment.uncertainty, priors['uncertainty'], 'uncertainty')
 
-        # Recalculate tier confidences
-        weights = self.persona.epistemic_config.weights
-
-        assessment.foundation_confidence = (
-            assessment.know.score * 0.33 +
-            assessment.do.score * 0.33 +
-            assessment.context.score * 0.34
-        )
-
-        assessment.comprehension_confidence = (
-            assessment.clarity.score * 0.25 +
-            assessment.coherence.score * 0.25 +
-            assessment.signal.score * 0.25 +
-            assessment.density.score * 0.25
-        )
-
-        assessment.execution_confidence = (
-            assessment.state.score * 0.25 +
-            assessment.change.score * 0.25 +
-            assessment.completion.score * 0.25 +
-            assessment.impact.score * 0.25
-        )
-
-        # Apply persona-specific weights to overall confidence
-        assessment.overall_confidence = (
-            assessment.foundation_confidence * weights['foundation'] +
-            assessment.comprehension_confidence * weights['comprehension'] +
-            assessment.execution_confidence * weights['execution'] +
-            assessment.engagement.score * weights['engagement']
-        )
-
+        # NEW schema calculates confidences via methods, no need to set them manually
         logger.debug(f"   🎭 Applied persona priors (strength: {strength:.1f})")
-        logger.debug(f"      KNOW: {assessment.know.score:.2f}")
-        logger.debug(f"      Overall: {assessment.overall_confidence:.2f}")
+        logger.debug(f"      KNOW: {assessment.foundation_know.score:.2f}")
+        
+        # Calculate overall confidence using NEW schema method
+        tier_confidences = assessment.calculate_tier_confidences()
+        logger.debug(f"      Overall: {tier_confidences['overall_confidence']:.2f}")
 
         return assessment
+
+    # _apply_priors_new renamed to _apply_priors below
 
     def _select_investigation_profile(self) -> str:
         """

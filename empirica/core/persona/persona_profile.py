@@ -228,6 +228,24 @@ class PersonaProfile:
         }
 
     @classmethod
+    def _parse_sentinel_config(cls, sentinel_data: Dict) -> 'SentinelConfig':
+        """Parse sentinel config from dictionary"""
+        # Extract escalation_triggers separately to avoid double-pass
+        escalation_triggers = [
+            EscalationTrigger(**t)
+            for t in sentinel_data.get('escalation_triggers', [])
+        ]
+
+        # Remove from dict to avoid passing twice
+        sentinel_data_copy = sentinel_data.copy()
+        sentinel_data_copy.pop('escalation_triggers', None)
+
+        return SentinelConfig(
+            **sentinel_data_copy,
+            escalation_triggers=escalation_triggers
+        )
+
+    @classmethod
     def from_dict(cls, data: Dict) -> 'PersonaProfile':
         """Load persona profile from dictionary"""
         return cls(
@@ -237,13 +255,7 @@ class PersonaProfile:
             signing_identity=SigningIdentityConfig(**data['signing_identity']),
             epistemic_config=EpistemicConfig(**data['epistemic_config']),
             capabilities=CapabilitiesConfig(**data.get('capabilities', {})),
-            sentinel_config=SentinelConfig(
-                **data.get('sentinel_config', {}),
-                escalation_triggers=[
-                    EscalationTrigger(**t)
-                    for t in data.get('sentinel_config', {}).get('escalation_triggers', [])
-                ]
-            ),
+            sentinel_config=cls._parse_sentinel_config(data.get('sentinel_config', {})),
             metadata=PersonaMetadata(**data.get('metadata', {}))
         )
 

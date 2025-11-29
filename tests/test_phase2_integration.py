@@ -12,7 +12,7 @@ from pathlib import Path
 # Add the empirica package to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from empirica.core.goals.types import Goal, GoalScope, SuccessCriterion
+from empirica.core.goals.types import Goal, ScopeVector, SuccessCriterion
 from empirica.core.tasks.types import SubTask, TaskStatus, EpistemicImportance
 from empirica.core.completion.tracker import CompletionTracker
 from empirica.core.completion.git_query import GitProgressQuery
@@ -26,7 +26,7 @@ def main():
         print("🔍 Phase 1: Creating goal and tracking progress...")
         goal = Goal.create(
             objective="Integration Test",
-            scope=GoalScope.TASK_SPECIFIC,
+            scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1),
             success_criteria=[
                 SuccessCriterion(
                     id=str(uuid.uuid4()),
@@ -82,7 +82,7 @@ def main():
         # Create another goal and task to test multi-goal coordination
         goal2 = Goal.create(
             objective="Integration Test Goal 2",
-            scope=GoalScope.TASK_SPECIFIC,
+            scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1),
             success_criteria=[
                 SuccessCriterion(
                     id=str(uuid.uuid4()),

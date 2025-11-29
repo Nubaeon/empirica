@@ -15,6 +15,7 @@ These commands provide JSON output for MCP v2 server integration.
 import json
 import logging
 import time
+import sys
 from ..cli_utils import handle_cli_error, parse_json_safely
 
 logger = logging.getLogger(__name__)
@@ -25,13 +26,19 @@ def handle_goals_create_command(args):
     try:
         from empirica.core.goals.repository import GoalRepository
         from empirica.core.tasks.repository import TaskRepository
-        from empirica.core.goals.types import Goal, GoalScope, SuccessCriterion
+        from empirica.core.goals.types import Goal, ScopeVector, SuccessCriterion
         import uuid
         
         # Parse arguments
         session_id = args.session_id
         objective = args.objective
-        scope = GoalScope[args.scope.upper()] if args.scope else GoalScope.TASK_SPECIFIC
+        
+        # Parse scope vector from CLI args
+        scope = ScopeVector(
+            breadth=float(args.scope_breadth) if hasattr(args, 'scope_breadth') and args.scope_breadth else 0.3,
+            duration=float(args.scope_duration) if hasattr(args, 'scope_duration') and args.scope_duration else 0.2,
+            coordination=float(args.scope_coordination) if hasattr(args, 'scope_coordination') and args.scope_coordination else 0.1
+        )
         success_criteria_list = parse_json_safely(args.success_criteria) if args.success_criteria else []
         estimated_complexity = getattr(args, 'estimated_complexity', None)
         constraints = parse_json_safely(args.constraints) if args.constraints else None
@@ -80,7 +87,7 @@ def handle_goals_create_command(args):
                 "session_id": session_id,
                 "message": "Goal created successfully",
                 "objective": objective,
-                "scope": scope.value,
+                "scope": scope.to_dict(),
                 "timestamp": goal.created_timestamp
             }
             
@@ -92,7 +99,7 @@ def handle_goals_create_command(args):
                 goal_store = GitGoalStore()
                 goal_data = {
                     'objective': objective,
-                    'scope': scope.value,
+                    'scope': scope.to_dict(),
                     'success_criteria': [sc.description for sc in success_criteria_objects],
                     'estimated_complexity': estimated_complexity,
                     'constraints': constraints,
@@ -116,7 +123,7 @@ def handle_goals_create_command(args):
                 "session_id": session_id,
                 "message": "Failed to save goal to database",
                 "objective": objective,
-                "scope": scope.value
+                "scope": scope.to_dict()
             }
         
         # Format output
@@ -322,8 +329,17 @@ def handle_goals_list_command(args):
         
         # Parse arguments
         session_id = getattr(args, 'session_id', None)
-        scope = getattr(args, 'scope', None)
         completed = getattr(args, 'completed', None)
+        
+        # Parse scope filtering parameters
+        scope_filters = {
+            'breadth_min': getattr(args, 'scope_breadth_min', None),
+            'breadth_max': getattr(args, 'scope_breadth_max', None),
+            'duration_min': getattr(args, 'scope_duration_min', None),
+            'duration_max': getattr(args, 'scope_duration_max', None),
+            'coordination_min': getattr(args, 'scope_coordination_min', None),
+            'coordination_max': getattr(args, 'scope_coordination_max', None),
+        }
         
         # Use the real repository to get goals
         goal_repo = GoalRepository()
@@ -332,25 +348,63 @@ def handle_goals_list_command(args):
         if session_id:
             goals = goal_repo.get_session_goals(session_id)
         else:
-            # Get all goals (this would need to be implemented in the repository)
-            goals = []
-            # For now, just handle session-specific goals
+            # For now, require session ID - prevents overwhelming results
             result = {
                 "ok": False,
-                "session_id": session_id,
+                "session_id": None,
                 "goals_count": 0,
                 "goals": [],
-                "message": "Session ID required for goals list",
+                "message": "Session ID required for goals list. Use: goals-list --session-id <id>",
                 "timestamp": time.time()
             }
+            
+            if hasattr(args, 'output') and args.output == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                print("❌ Session ID required")
+                print("   Usage: goals-list --session-id <session_id>")
+                print("   Use 'sessions-list' to find session IDs")
+            
+            goal_repo.close()
+            return result
         
-        # Convert goals to dictionary format
+        # Convert goals to dictionary format with proper scope filtering
         goals_dict = []
         for goal in goals:
-            if completed is not None and goal.is_completed != completed:
-                continue
+            # Filter by completion status
+            if completed is not None:
+                subtasks = task_repo.get_goal_subtasks(goal.id)
+                total_subtasks = len(subtasks)
+                completed_subtasks = sum(1 for task in subtasks if task.status.value == "completed")
+                completion_percentage = (completed_subtasks / total_subtasks * 100) if total_subtasks > 0 else 0.0
+                is_completed = completion_percentage == 100.0
                 
-            if scope is not None and goal.scope.value != scope:
+                if is_completed != completed:
+                    continue
+            
+            # Filter by scope parameters
+            scope = goal.scope
+            skip_goal = False
+            
+            # Check breadth range
+            if scope_filters['breadth_min'] is not None and scope.breadth < scope_filters['breadth_min']:
+                skip_goal = True
+            if scope_filters['breadth_max'] is not None and scope.breadth > scope_filters['breadth_max']:
+                skip_goal = True
+            
+            # Check duration range
+            if scope_filters['duration_min'] is not None and scope.duration < scope_filters['duration_min']:
+                skip_goal = True
+            if scope_filters['duration_max'] is not None and scope.duration > scope_filters['duration_max']:
+                skip_goal = True
+            
+            # Check coordination range
+            if scope_filters['coordination_min'] is not None and scope.coordination < scope_filters['coordination_min']:
+                skip_goal = True
+            if scope_filters['coordination_max'] is not None and scope.coordination > scope_filters['coordination_max']:
+                skip_goal = True
+            
+            if skip_goal:
                 continue
                 
             # Get subtasks for this goal to calculate real progress
@@ -363,7 +417,7 @@ def handle_goals_list_command(args):
                 "goal_id": goal.id,
                 "session_id": session_id,
                 "objective": goal.objective,
-                "scope": goal.scope.value,
+                "scope": goal.scope.to_dict(),
                 "status": "completed" if completion_percentage == 100.0 else "in_progress",
                 "completion_percentage": completion_percentage,
                 "total_subtasks": total_subtasks,
@@ -377,6 +431,7 @@ def handle_goals_list_command(args):
             "session_id": session_id,
             "goals_count": len(goals_dict),
             "goals": goals_dict,
+            "scope_filters_applied": {k: v for k, v in scope_filters.items() if v is not None},
             "timestamp": time.time()
         }
         
@@ -384,13 +439,19 @@ def handle_goals_list_command(args):
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(result, indent=2))
         else:
-            print(f"✅ Found {len(goals)} goal(s):")
-            for i, goal in enumerate(goals, 1):
+            print(f"✅ Found {len(goals_dict)} goal(s) for session {session_id}:")
+            
+            # Show applied filters if any
+            active_filters = [f"{k.replace('_', ' ').title()}: {v}" for k, v in scope_filters.items() if v is not None]
+            if active_filters:
+                print(f"   Filters: {', '.join(active_filters)}")
+            
+            for i, goal in enumerate(goals_dict, 1):
                 status_emoji = "✅" if goal['status'] == 'completed' else "⏳"
-                print(f"\n{status_emoji} {goal['goal_id']}")
+                print(f"\n{status_emoji} Goal {i}: {goal['goal_id']}")
                 print(f"   Objective: {goal['objective'][:60]}...")
-                print(f"   Scope: {goal['scope']}")
-                print(f"   Status: {goal['status']}")
+                print(f"   Scope: breadth={goal['scope']['breadth']:.2f}, duration={goal['scope']['duration']:.2f}, coordination={goal['scope']['coordination']:.2f}")
+                print(f"   Progress: {goal['completion_percentage']:.1f}% ({goal['completed_subtasks']}/{goal['total_subtasks']} subtasks)")
                 print(f"   Created: {goal['created_at'][:10]}")
         
         goal_repo.close()

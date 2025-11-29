@@ -7,7 +7,10 @@ Designed to catch errors early and provide clear feedback.
 """
 
 from typing import List, Dict, Any, Optional
-from .types import Goal, SuccessCriterion, GoalScope
+import logging
+from .types import Goal, SuccessCriterion, ScopeVector
+
+logger = logging.getLogger(__name__)
 
 
 class ValidationError(Exception):
@@ -89,6 +92,46 @@ def validate_complexity(complexity: Optional[float]) -> None:
             )
 
 
+def validate_scope_vector(scope: ScopeVector) -> None:
+    """
+    Validate scope vector and check coherence
+    
+    Args:
+        scope: ScopeVector to validate
+        
+    Raises:
+        ValidationError: If scope values are out of range
+        
+    Logs warnings for incoherent combinations (advisory, not blocking).
+    """
+    if not isinstance(scope, ScopeVector):
+        raise ValidationError(f"scope must be ScopeVector, got {type(scope)}")
+    
+    # Ranges already validated by ScopeVector.__post_init__
+    # Now check for coherence (advisory warnings, not blocking)
+    
+    if scope.coordination > 0.7 and scope.breadth < 0.4:
+        logger.warning(
+            f"Scope coherence: High coordination ({scope.coordination:.2f}) "
+            f"with low breadth ({scope.breadth:.2f}) may indicate narrow multi-agent goal. "
+            "Consider if coordination is truly needed."
+        )
+    
+    if scope.duration > 0.8 and scope.breadth < 0.6:
+        logger.warning(
+            f"Scope coherence: Long duration ({scope.duration:.2f}) "
+            f"with narrow breadth ({scope.breadth:.2f}) may indicate long-running single-task goal. "
+            "Verify this is intentional."
+        )
+    
+    if scope.breadth < 0.3 and scope.coordination > 0.7:
+        logger.warning(
+            f"Scope coherence: Very narrow breadth ({scope.breadth:.2f}) "
+            f"with high coordination ({scope.coordination:.2f}) is unusual. "
+            "Most narrow tasks don't need multi-agent coordination."
+        )
+
+
 def validate_goal(goal: Goal) -> None:
     """
     Validate complete goal object
@@ -102,10 +145,7 @@ def validate_goal(goal: Goal) -> None:
     validate_objective(goal.objective)
     validate_success_criteria(goal.success_criteria)
     validate_complexity(goal.estimated_complexity)
-    
-    # Validate scope is valid enum
-    if not isinstance(goal.scope, GoalScope):
-        raise ValidationError(f"Invalid scope: must be GoalScope enum")
+    validate_scope_vector(goal.scope)
 
 
 def validate_mcp_goal_input(arguments: Dict[str, Any]) -> None:
@@ -156,9 +196,20 @@ def validate_mcp_goal_input(arguments: Dict[str, Any]) -> None:
     # Validate scope if provided
     scope = arguments.get("scope")
     if scope:
-        valid_scopes = ["task_specific", "session_scoped", "project_wide"]
-        if scope not in valid_scopes:
-            raise ValidationError(f"scope must be one of {valid_scopes}, got '{scope}'")
+        if not isinstance(scope, dict):
+            raise ValidationError(f"scope must be an object with breadth/duration/coordination, got {type(scope)}")
+        
+        required_fields = ['breadth', 'duration', 'coordination']
+        for field in required_fields:
+            if field not in scope:
+                raise ValidationError(f"scope.{field} is required")
+            
+            try:
+                value = float(scope[field])
+                if not (0.0 <= value <= 1.0):
+                    raise ValidationError(f"scope.{field} must be 0.0-1.0, got {value}")
+            except (TypeError, ValueError) as e:
+                raise ValidationError(f"scope.{field} must be a number, got {scope[field]}")
     
     # Validate complexity if provided
     complexity = arguments.get("estimated_complexity")

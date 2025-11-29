@@ -64,7 +64,6 @@ except ImportError:
 # Optional reflex logging for tmux dashboard
 try:
     from empirica.core.canonical.reflex_logger import ReflexLogger
-    from empirica.core.canonical.reflex_frame import ReflexFrame
     REFLEX_LOGGING_AVAILABLE = True
 except ImportError:
     REFLEX_LOGGING_AVAILABLE = False
@@ -268,35 +267,25 @@ class EmpericaTracker:
         
         logger.info(f"📝 Assessment logged: phase={phase}, confidence={assessment.overall_confidence:.2f}, uncertainty={assessment.uncertainty.score:.2f}")
         
-        # Also log to reflex frames for tmux dashboard
+        # Also log to reflex logger for tmux dashboard
         if self.enable_reflex_logs and self.reflex_logger:
             try:
                 import asyncio
-                # Create reflex frame matching the actual ReflexFrame structure
-                frame = ReflexFrame(
-                    frame_id=assessment.assessment_id,
-                    timestamp=datetime.utcnow().isoformat(),
-                    self_aware_flag=True,  # Always true for auto-tracked assessments
-                    epistemic_assessment=assessment,
-                    task=assessment.task,
-                    context={
-                        'session_id': self.session_id,
-                        'cascade_id': self.current_cascade_id,
-                        'ai_id': self.ai_id,
-                        'cascade_count': self.cascade_count,
-                        'phase': phase
-                    },
-                    meta_state_vector={
-                        'think': 1.0 if phase == 'think' else 0.0,
-                        'uncertainty': 1.0 if phase == 'uncertainty' else 0.0,
-                        'investigate': 1.0 if phase == 'investigate' else 0.0,
-                        'check': 1.0 if phase == 'check' else 0.0,
-                        'act': 1.0 if phase == 'act' else 0.0,
-                    }
-                )
-                # Log asynchronously
-                asyncio.create_task(self.reflex_logger.log_frame(frame, agent_id=self.ai_id))
-                logger.info(f"📊 Reflex frame logged for tmux dashboard (phase={phase})")
+                # Log assessment directly using reflex logger
+                assessment_data = {
+                    'assessment_id': assessment.assessment_id,
+                    'task': assessment.task if hasattr(assessment, 'task') else 'auto-tracked',
+                    'phase': phase,
+                    'session_id': self.session_id,
+                    'cascade_id': self.current_cascade_id,
+                    'ai_id': self.ai_id,
+                    'cascade_count': self.cascade_count,
+                    'self_aware_flag': True,  # Always true for auto-tracked assessments
+                    'assessment': assessment
+                }
+                # Log assessment data directly
+                asyncio.create_task(self.reflex_logger.log_assessment(self.session_id, assessment_data))
+                logger.info(f"📊 Assessment logged for tmux dashboard (phase={phase})")
             except Exception as e:
                 import traceback
                 logger.warning(f"⚠️  Reflex logging failed: {e}")

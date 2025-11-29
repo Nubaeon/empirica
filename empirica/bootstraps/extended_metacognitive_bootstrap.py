@@ -170,7 +170,7 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
             elif 'calibration' in comp_name:
                 component_key = 'adaptive_uncertainty_calibration'
             elif 'goal' in comp_name or 'orchestr' in comp_name:
-                component_key = 'autonomous_goal_orchestrator'
+                component_key = 'canonical_goal_orchestrator'
             elif 'cascade' in comp_name:
                 component_key = 'metacognitive_cascade'
             elif 'context_validator' in comp_name:
@@ -325,17 +325,16 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
             print("1️⃣ Loading canonical data structures...")
             from canonical.reflex_frame import (
                 VectorState,
-                EpistemicAssessment,
-                ReflexFrame,
+                EpistemicAssessmentSchema as EpistemicAssessment,
                 Action
             )
+            from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
             
             self.components['vector_state'] = VectorState
-            self.components['epistemic_assessment'] = EpistemicAssessment
-            self.components['reflex_frame'] = ReflexFrame
+            self.components['epistemic_assessment'] = EpistemicAssessmentSchema  # Updated schema
             self.components['action_enum'] = Action
             
-            print("   ✅ Canonical data structures loaded (VectorState, EpistemicAssessment, ReflexFrame)")
+            print("   ✅ Canonical data structures loaded (VectorState, EpistemicAssessmentSchema, Action)")
             loaded += 1
         except Exception as e:
             print(f"   ❌ Canonical data structures failed: {e}")
@@ -505,19 +504,23 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
         """Load Tier 3 (Advanced) components"""
         loaded = 0
         
-        # 1. Code Intelligence Analyzer
+        # 1. Code Intelligence Analyzer - DISABLED (contains heuristics)
         try:
             print("1️⃣ Loading code_intelligence_analyzer...")
-            from empirica.components.code_intelligence_analyzer import (
-                CodeIntelligenceAnalyzer,
-                ProjectArchaeologist
-            )
+            print("   ⚠️ Code intelligence analyzer skipped (contains heuristics)")
+            print("   💡 Use canonical architecture for code analysis")
             
-            self.components['code_analyzer_class'] = CodeIntelligenceAnalyzer
-            self.components['project_archaeologist'] = ProjectArchaeologist
+            # Disabled due to heuristic patterns
+            # from empirica.components.code_intelligence_analyzer import (
+            #     CodeIntelligenceAnalyzer,
+            #     ProjectArchaeologist
+            # )
             
-            print("   ✅ Code intelligence loaded (AI archaeologist ready)")
-            loaded += 1
+            # self.components['code_analyzer_class'] = CodeIntelligenceAnalyzer
+            # self.components['project_archaeologist'] = ProjectArchaeologist
+            
+            # print("   ✅ Code intelligence loaded (AI archaeologist ready)")
+            loaded += 0  # Not loaded
         except Exception as e:
             print(f"   ❌ Code intelligence failed: {e}")
         
@@ -605,19 +608,23 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
         except Exception as e:
             print(f"   ❌ Procedural analysis failed: {e}")
         
-        # 3. Tool Management
+        # 3. Tool Management - DISABLED (contains heuristics)
         try:
             print("\n3️⃣ Loading tool_management...")
-            from empirica.components.tool_management import (
-                AIEnhancedToolManager,
-                activate_standalone_tool_management
-            )
+            print("   ⚠️ Tool management skipped (contains heuristics)")
+            print("   💡 Use canonical architecture for tool selection")
             
-            self.components['tool_manager_class'] = AIEnhancedToolManager
-            self.components['activate_tool_management'] = activate_standalone_tool_management
+            # Disabled due to heuristic patterns
+            # from empirica.components.tool_management import (
+            #     AIEnhancedToolManager,
+            #     activate_standalone_tool_management
+            # )
             
-            print("   ✅ Tool management loaded (AI-enhanced tools ready)")
-            loaded += 1
+            # self.components['tool_manager_class'] = AIEnhancedToolManager
+            # self.components['activate_tool_management'] = activate_standalone_tool_management
+            
+            # print("   ✅ Tool management loaded (AI-enhanced tools ready)")
+            loaded += 0  # Not loaded
         except Exception as e:
             print(f"   ❌ Tool management failed: {e}")
         

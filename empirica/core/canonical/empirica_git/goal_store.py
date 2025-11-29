@@ -35,7 +35,7 @@ class GitGoalStore:
             "ai_id": "claude-code",
             "created_at": "2025-11-27T...",
             "objective": "Implement feature X",
-            "scope": "project_wide",
+            "scope": {"breadth": 0.8, "duration": 0.9, "coordination": 0.7},
             "success_criteria": [...],
             "estimated_complexity": 0.7,
             "subtasks": [...],
