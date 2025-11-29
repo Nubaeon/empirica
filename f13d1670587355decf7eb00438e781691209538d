@@ -1,0 +1,31 @@
+{
+  "goal_id": "94aa9e1d-ed8e-4a83-ae14-68778c31ce99",
+  "session_id": "9ba0f837-7abf-42ae-990a-7d19cdf2f699",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-11-29T17:18:17.626432+00:00",
+  "goal_data": {
+    "objective": "Test and evaluate Empirica system MCP tools effectiveness and user interface intuitiveness",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Document system effectiveness findings",
+      "Test all major MCP tools",
+      "Evaluate CLI command intuitiveness",
+      "Create comprehensive evaluation report"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-11-29T17:18:17.626444+00:00",
+      "action": "created"
+    }
+  ]
+}
