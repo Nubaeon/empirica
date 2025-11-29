@@ -1,0 +1,32 @@
+{
+  "goal_id": "3f39a06c-e3bb-446b-ac46-5bdf232cf720",
+  "session_id": "ee388b8a-8048-447f-b7cb-83b26be8ffc0",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-11-29T16:01:18.756118+00:00",
+  "goal_data": {
+    "objective": "Test ScopeVector implementation after fixes",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "ScopeVector works",
+      "Validation passes",
+      "MCP tool functional"
+    ],
+    "estimated_complexity": 0.3,
+    "constraints": null,
+    "metadata": {
+      "testing": "scope_vector_replacement"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-11-29T16:01:18.756137+00:00",
+      "action": "created"
+    }
+  ]
+}
