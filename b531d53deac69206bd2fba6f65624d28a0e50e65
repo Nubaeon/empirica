@@ -1,0 +1,32 @@
+{
+  "goal_id": "87c8f1e3-a691-471a-98e8-e826d1d45f76",
+  "session_id": "",
+  "ai_id": "gemini",
+  "created_at": "2025-12-01T16:07:52.538061+00:00",
+  "goal_data": {
+    "objective": "Audit and update 27 production docs for architecture changes (no heuristics, cleaned codebase, Core vs Advanced)",
+    "scope": {
+      "breadth": 0.9,
+      "duration": 0.7,
+      "coordination": 0.8
+    },
+    "success_criteria": [
+      "All 27 production docs reviewed and updated",
+      "No references to deprecated calibration code",
+      "Core vs Advanced clearly marked in 00_COMPLETE_SUMMARY.md",
+      "All code examples tested",
+      "Drift monitor references updated to MirrorDriftMonitor"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "gemini",
+      "timestamp": "2025-12-01T16:07:52.538074+00:00",
+      "action": "created"
+    }
+  ]
+}
