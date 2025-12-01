@@ -1,0 +1,31 @@
+{
+  "goal_id": "e31bae7a-28d3-4001-b1ae-a0fd08f26418",
+  "session_id": "64d49d60-ecc7-4e04-9c73-e91fdd4eb186",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-01T16:11:46.127509+00:00",
+  "goal_data": {
+    "objective": "CLI/MCP Documentation - Extract, document, and map 60+ CLI commands and MCP tools for discoverability",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.6
+    },
+    "success_criteria": [
+      "Comprehensive CLI command reference created",
+      "MCP tools documented with usage examples",
+      "Cross-reference mapping between CLI and MCP created",
+      "Documentation integrated into cleanup effort (136\u219230 files)"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-01T16:11:46.127519+00:00",
+      "action": "created"
+    }
+  ]
+}
