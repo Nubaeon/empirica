@@ -1,0 +1,33 @@
+{
+  "goal_id": "9facdb1b-3324-4976-8aec-0c847f0c91c4",
+  "session_id": "",
+  "ai_id": "qwen",
+  "created_at": "2025-12-01T16:07:54.299616+00:00",
+  "goal_data": {
+    "objective": "Create 3 new user-facing docs (installation, architecture, getting-started) with all 4 interfaces, git automation, and cross-AI coordination",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.6,
+      "coordination": 0.7
+    },
+    "success_criteria": [
+      "installation.md created with 4 interfaces (MCP, CLI, API, Skills)",
+      "architecture.md created with Core focus and git automation",
+      "getting-started.md created with first CASCADE in <30min",
+      "All code examples tested",
+      "Git checkpoint automation explained",
+      "Skills doc referenced"
+    ],
+    "estimated_complexity": 0.65,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "qwen",
+      "timestamp": "2025-12-01T16:07:54.299634+00:00",
+      "action": "created"
+    }
+  ]
+}
