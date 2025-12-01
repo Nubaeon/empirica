@@ -1,0 +1,33 @@
+{
+  "goal_id": "92848363-f66d-4320-a0af-0f4b6ae02410",
+  "session_id": "",
+  "ai_id": "rovodev",
+  "created_at": "2025-12-01T16:07:57.807605+00:00",
+  "goal_data": {
+    "objective": "Documentation cleanup, archive deprecated docs, update cross-references, create navigation, final integration",
+    "scope": {
+      "breadth": 0.9,
+      "duration": 0.5,
+      "coordination": 0.9
+    },
+    "success_criteria": [
+      "Deprecated docs archived to empirica-dev",
+      "All cross-references updated",
+      "Navigation structure created (docs/INDEX.md)",
+      "README.md points to correct docs",
+      "Consistent terminology across all docs",
+      "CHANGELOG.md updated"
+    ],
+    "estimated_complexity": 0.55,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "rovodev",
+      "timestamp": "2025-12-01T16:07:57.807619+00:00",
+      "action": "created"
+    }
+  ]
+}
