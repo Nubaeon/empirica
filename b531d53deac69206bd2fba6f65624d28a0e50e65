@@ -1,0 +1,30 @@
+{
+  "goal_id": "84b45de9-e0d6-4c3f-90d9-2b48268de33b",
+  "session_id": "5c6e00d1-f441-4112-be78-072dd8464fc8",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-01T14:26:18.145887+00:00",
+  "goal_data": {
+    "objective": "Audit goals system and MCP tools functionality",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Goals system creates and lists goals",
+      "MCP tools are accurately documented",
+      "Issues identified for Qwen to fix"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-01T14:26:18.145906+00:00",
+      "action": "created"
+    }
+  ]
+}
