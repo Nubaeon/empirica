@@ -1,0 +1,1 @@
+{"session_id": "1efd206b", "phase": "CHECK", "round": 1, "timestamp": "2025-12-01T20:10:21.201354+00:00", "vectors": {}, "overall_confidence": 0.5, "meta": {"checkpoint": "post_check", "progress": "60%", "decision": "proceed", "vectors": {"engagement": 0.85, "know": 0.75, "coherence": 0.85, "uncertainty": 0.25}}, "token_count": 36}
