@@ -1,0 +1,29 @@
+{
+  "goal_id": "c0a2d192-2d12-4fc8-b96a-40462dda018e",
+  "session_id": "2d71e1db",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-02T10:26:43.977406+00:00",
+  "goal_data": {
+    "objective": "Test end-to-end MCP integration",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.6,
+      "coordination": 0.4
+    },
+    "success_criteria": [
+      "All MCP commands work",
+      "Checkpoints created"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-02T10:26:43.977427+00:00",
+      "action": "created"
+    }
+  ]
+}
