@@ -1,0 +1,1 @@
+{"session_id": "test-crypto-sign", "phase": "PREFLIGHT", "round": 1, "timestamp": "2025-12-02T11:49:29.375873+00:00", "vectors": {"know": 0.85, "do": 0.9, "context": 0.8, "uncertainty": 0.15}, "overall_confidence": 0.85, "meta": {"task": "Test crypto signing", "test": true}, "token_count": 33}
