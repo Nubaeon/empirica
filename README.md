@@ -125,6 +125,33 @@ Complete self-evaluation framework:
 - **Calibration tracking** - Measure if AI's confidence matches reality
 - **Multi-agent orchestration** - Coordinate AI teams on complex work
 
+## 🚀 The Vision: Sentinel + Empirica OS
+
+Empirica is evolving into a complete **epistemic operating system**:
+
+**📖 Read the vision:**
+- **[VISION_EMPIRICA_SENTINEL_SYSTEM.md](VISION_EMPIRICA_SENTINEL_SYSTEM.md)** - Complete end-state vision, business model, and 6-phase roadmap
+- **[ARCHITECTURE_SENTINEL_INTEGRATION.md](ARCHITECTURE_SENTINEL_INTEGRATION.md)** - Technical architecture with component interfaces and data models
+- **[SESSION_COMPLETE_VISION_CAPTURE.md](SESSION_COMPLETE_VISION_CAPTURE.md)** - How the vision emerged, feasibility analysis, Phase 0 planning
+
+**What's Coming:**
+- **Sentinel**: Small Language Model trained on epistemic deltas, chooses optimal model automatically
+- **Model Switching**: Transparent routing based on epistemic state (not user choice)
+- **Epistemic Distillation**: Large models generate learning signals, Sentinel learns over time
+- **Cognitive Vault**: Enterprise key management, compliance, security integration
+- **Bayesian Guardian**: Probabilistic safety verification, uncertainty-grounded access control
+
+**Why It Matters:**
+- No vendor lock-in (swap models anytime)
+- Right tool automatically selected (cost + quality optimized)
+- Learning preserved across model switches
+- Complete reproducibility (git-backed everything)
+- Measurable calibration (epistemic vectors traceable)
+
+**Timeline:** MVP (Empirica + Sentinel v0.1) in 2-3 months. All pieces exist, just need integration.
+
+---
+
 ## Quick Start
 
 ### 🤖 For AI Agents
@@ -135,6 +162,8 @@ empirica --help  # View available commands
 *10-minute interactive learning experience*
 
 **Then:** [`docs/01_a_AI_AGENT_START.md`](docs/01_a_AI_AGENT_START.md)
+
+**Interested in the bigger vision?** Start with [`VISION_EMPIRICA_SENTINEL_SYSTEM.md`](VISION_EMPIRICA_SENTINEL_SYSTEM.md)
 
 ### 👤 For Human Developers
 
