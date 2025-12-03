@@ -1,0 +1,41 @@
+{
+  "goal_id": "638fa4ed-c1d6-4592-a212-3321a504ce38",
+  "session_id": "ddb3ea22-c42f-4b74-8526-9c7dda8b5096",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-03T12:49:32.683892+00:00",
+  "goal_data": {
+    "objective": "Add findings/unknowns storage to CHECK phase for session continuity",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Schema migration: findings + remaining_unknowns columns added to check_phase_assessments",
+      "SessionDatabase.log_check_phase_assessment accepts findings/unknowns parameters",
+      "CLI/MCP submit_check_assessment passes findings through",
+      "API route exposes findings for dashboard/handoff",
+      "Test: Store and retrieve findings successfully",
+      "Backward compatible: existing CHECK records still work"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {
+      "estimated_hours": "2-3 hours",
+      "risk_level": "medium",
+      "files_to_modify": [
+        "empirica/data/session_database.py",
+        "empirica/cli/command_handlers/workflow_commands.py",
+        "empirica/api/routes/sessions.py"
+      ]
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-03T12:49:32.683901+00:00",
+      "action": "created"
+    }
+  ]
+}
