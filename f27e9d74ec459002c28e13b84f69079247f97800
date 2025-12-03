@@ -1,0 +1,38 @@
+{
+  "goal_id": "81c6fbb6-1fce-402b-8e09-ee4e72e70564",
+  "session_id": "9d971607-0d1b-4c76-bf38-3329f0df81eb",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-03T12:01:56.694091+00:00",
+  "goal_data": {
+    "objective": "Fix CascadePhase import warnings - remove __init__ deprecation method",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Zero warnings on import (test with warnings.simplefilter('always'))",
+      "All 52 cascade tests still pass",
+      "Docstring deprecation notices remain",
+      "Both CascadePhase enums fixed (epistemic_assessment.py and metacognitive_cascade.py)"
+    ],
+    "estimated_complexity": 0.2,
+    "constraints": null,
+    "metadata": {
+      "files_to_modify": [
+        "empirica/core/schemas/epistemic_assessment.py",
+        "empirica/core/metacognitive_cascade/metacognitive_cascade.py"
+      ],
+      "risk_level": "low",
+      "estimated_time": "10 minutes"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-03T12:01:56.694107+00:00",
+      "action": "created"
+    }
+  ]
+}
