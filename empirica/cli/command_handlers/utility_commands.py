@@ -218,7 +218,12 @@ def handle_sessions_list_command(args):
     """List all sessions"""
     try:
         from ..cli_utils import print_header
-        print_header("📋 Empirica Sessions")
+        
+        # Check if JSON output requested
+        output_json = getattr(args, 'output', None) == 'json'
+        
+        if not output_json:
+            print_header("📋 Empirica Sessions")
         
         from empirica.data.session_database import SessionDatabase
         from datetime import datetime
@@ -236,6 +241,27 @@ def handle_sessions_list_command(args):
         """, (args.limit,))
         
         sessions = cursor.fetchall()
+        
+        # JSON output
+        if output_json:
+            output = {
+                "sessions": [
+                    {
+                        "session_id": s[0],
+                        "ai_id": s[1],
+                        "start_time": s[2],
+                        "end_time": s[3],
+                        "cascade_count": s[4],
+                        "status": "complete" if s[3] and s[3] != 'None' else "active"
+                    }
+                    for s in sessions
+                ],
+                "total": len(sessions)
+            }
+            
+            print(json.dumps(output, indent=2, default=str))
+            db.close()
+            return
         
         if not sessions:
             print("\n📭 No sessions found")
@@ -295,7 +321,12 @@ def handle_sessions_show_command(args):
     """Show detailed session information"""
     try:
         from ..cli_utils import print_header
-        print_header(f"📄 Session Details: {args.session_id}")
+        
+        # Check if JSON output requested
+        output_json = getattr(args, 'output', None) == 'json'
+        
+        if not output_json:
+            print_header(f"📄 Session Details: {args.session_id}")
         
         from empirica.data.session_database import SessionDatabase
         from datetime import datetime
@@ -323,6 +354,39 @@ def handle_sessions_show_command(args):
         # Parse timestamps
         started = datetime.fromisoformat(start_time) if start_time else None
         ended = datetime.fromisoformat(end_time) if end_time and end_time != 'None' else None
+        
+        # JSON output
+        if output_json:
+            # Get cascades for JSON
+            cursor.execute("""
+                SELECT cascade_id, task, started_at, ended_at
+                FROM cascades
+                WHERE session_id = ?
+                ORDER BY started_at DESC
+            """, (args.session_id,))
+            
+            cascades = cursor.fetchall()
+            
+            output = {
+                "session_id": session_id,
+                "ai_id": ai_id,
+                "start_time": start_time,
+                "end_time": end_time,
+                "status": "complete" if ended else "active",
+                "cascades": [
+                    {
+                        "cascade_id": c[0],
+                        "task": c[1],
+                        "started_at": c[2],
+                        "ended_at": c[3]
+                    }
+                    for c in cascades
+                ]
+            }
+            
+            print(json.dumps(output, indent=2, default=str))
+            db.close()
+            return
         
         # Show session info
         print(f"\n🆔 Session ID: {session_id}")
