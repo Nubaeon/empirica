@@ -1,0 +1,32 @@
+{
+  "goal_id": "274da895-c971-4e92-801d-e9c7a38594a3",
+  "session_id": "1df1cc21-5e0b-4e39-a98f-cce5fd84be24",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-03T18:25:29.341889+00:00",
+  "goal_data": {
+    "objective": "Formalize Empirica research paper comparing theoretical framework to codebase implementation",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.4,
+      "coordination": 0.6
+    },
+    "success_criteria": [
+      "Research paper sections formalized with academic rigor",
+      "Theory-implementation alignment verified",
+      "Badge system and trust dynamics documented",
+      "Tier 1/2 metacognitive signals explained",
+      "Paper ready for review"
+    ],
+    "estimated_complexity": 0.75,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-03T18:25:29.341900+00:00",
+      "action": "created"
+    }
+  ]
+}
