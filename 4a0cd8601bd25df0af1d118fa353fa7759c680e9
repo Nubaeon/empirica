@@ -1,0 +1,41 @@
+{
+  "goal_id": "31bcec3a-b1df-4a0c-8e19-f547a58e7f56",
+  "session_id": "6ac2927d-d017-45e3-a034-89b81201019e",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-03T12:34:28.928100+00:00",
+  "goal_data": {
+    "objective": "Phase 2: Remove phase enforcement, use AssessmentType tracking, add integration tests",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Integration tests added for AssessmentType (PRE/CHECK/POST)",
+      "Remove _enter_phase() calls (6 locations) and method definition",
+      "Replace phase enforcement with optional work_context logging",
+      "All 40 cascade tests still pass (12 skipped)",
+      "Backward compatible - existing code still works",
+      "Git commit created with changes"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {
+      "phase": "Phase 2 - Internal refactoring",
+      "estimated_hours": "3-4 hours",
+      "files_to_modify": [
+        "empirica/core/metacognitive_cascade/metacognitive_cascade.py",
+        "tests/integration/test_assessment_type.py (new)"
+      ],
+      "risk_level": "medium"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-03T12:34:28.928111+00:00",
+      "action": "created"
+    }
+  ]
+}
