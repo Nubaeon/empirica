@@ -853,8 +853,15 @@ class SessionDatabase:
                                    decision: str, gaps: List[str],
                                    next_targets: List[str],
                                    notes: str = "",
-                                   vectors: Optional[Dict[str, float]] = None) -> str:
-        """Store check phase self-assessment with NEW 13-vector system support"""
+                                   vectors: Optional[Dict[str, float]] = None,
+                                   findings: Optional[List[str]] = None,
+                                   remaining_unknowns: Optional[List[str]] = None) -> str:
+        """Store check phase self-assessment with NEW 13-vector system support
+        
+        Args:
+            findings: List of investigation findings (e.g., ["Found bug in auth.py:45", "JWT expires in 1h"])
+            remaining_unknowns: List of remaining unknowns (e.g., ["Token refresh mechanism unclear"])
+        """
         check_id = str(uuid.uuid4())
         
         cursor = self.conn.cursor()
@@ -862,11 +869,13 @@ class SessionDatabase:
             INSERT INTO check_phase_assessments (
                 check_id, session_id, cascade_id, investigation_cycle,
                 confidence, decision, gaps_identified, next_investigation_targets,
-                self_assessment_notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                self_assessment_notes, findings, remaining_unknowns
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             check_id, session_id, cascade_id, investigation_cycle,
-            confidence, decision, json.dumps(gaps), json.dumps(next_targets), notes
+            confidence, decision, json.dumps(gaps), json.dumps(next_targets), notes,
+            json.dumps(findings) if findings else None,
+            json.dumps(remaining_unknowns) if remaining_unknowns else None
         ))
         
         self.conn.commit()

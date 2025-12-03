@@ -192,3 +192,54 @@ def get_session(session_id: str):
             "message": str(e),
             "status_code": 500
         }), 500
+
+
+@bp.route("/sessions/<session_id>/checks", methods=["GET"])
+def get_session_checks(session_id: str):
+    """Get all CHECK assessments for a session with findings/unknowns"""
+    try:
+        from empirica.data.session_database import SessionDatabase
+        import json
+        
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+        
+        cursor.execute("""
+            SELECT check_id, assessed_at, decision, confidence,
+                   gaps_identified, next_investigation_targets,
+                   self_assessment_notes, findings, remaining_unknowns,
+                   investigation_cycle
+            FROM check_phase_assessments
+            WHERE session_id = ?
+            ORDER BY assessed_at ASC
+        """, (session_id,))
+        
+        checks = []
+        for row in cursor.fetchall():
+            checks.append({
+                "check_id": row[0],
+                "timestamp": row[1],
+                "decision": row[2],
+                "confidence": row[3],
+                "gaps_identified": json.loads(row[4]) if row[4] else [],
+                "next_investigation_targets": json.loads(row[5]) if row[5] else [],
+                "reasoning": row[6],
+                "findings": json.loads(row[7]) if row[7] else [],
+                "remaining_unknowns": json.loads(row[8]) if row[8] else [],
+                "investigation_cycle": row[9]
+            })
+        
+        return jsonify({
+            "ok": True,
+            "session_id": session_id,
+            "checks": checks,
+            "total": len(checks)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting checks for session {session_id}: {e}")
+        return jsonify({
+            "ok": False,
+            "error": "database_error",
+            "message": str(e)
+        }), 500

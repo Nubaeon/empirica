@@ -187,6 +187,10 @@ def handle_check_submit_command(args):
             if value < 0.6:  # Slightly higher threshold for investigation targets
                 next_targets.append(key)
         
+        # Extract findings and unknowns from vectors if provided
+        findings = vectors.get('findings', None) if isinstance(vectors, dict) else None
+        remaining_unknowns = vectors.get('remaining_unknowns', None) if isinstance(vectors, dict) else None
+        
         try:
             assessment_id = db.log_check_phase_assessment(
                 session_id=session_id,
@@ -197,7 +201,9 @@ def handle_check_submit_command(args):
                 gaps=gaps,
                 next_targets=next_targets,
                 notes=reasoning or "Check assessment completed",
-                vectors=vectors
+                vectors=vectors,
+                findings=findings,
+                remaining_unknowns=remaining_unknowns
             )
             
             # ALSO save findings to cascade.context_json for handoff generation
