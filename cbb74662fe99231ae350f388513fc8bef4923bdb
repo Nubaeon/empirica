@@ -1,0 +1,40 @@
+{
+  "goal_id": "3a861c36-b000-4101-9a02-d5084361b801",
+  "session_id": "87e25297-2ed6-4f54-867d-2b73c9ade182",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-03T11:38:58.965798+00:00",
+  "goal_data": {
+    "objective": "Refactor CascadePhase to AssessmentType - Phase 1: Add new enums with backward compatibility",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "AssessmentType enum added to epistemic_assessment.py with PRE/CHECK/POST values",
+      "current_assessment field added to CascadeState while keeping current_phase deprecated",
+      "Backward compatibility maintained - CascadePhase still works as deprecated alias",
+      "All 52 cascade tests still passing (40 passed, 12 skipped)",
+      "Deprecation warnings added to CascadePhase enum"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {
+      "phase": "Phase 1 - Additive changes only",
+      "estimated_hours": "2-3 hours",
+      "files_to_modify": [
+        "empirica/core/schemas/epistemic_assessment.py",
+        "empirica/core/metacognitive_cascade/metacognitive_cascade.py"
+      ],
+      "risk_level": "low"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-03T11:38:58.965816+00:00",
+      "action": "created"
+    }
+  ]
+}
