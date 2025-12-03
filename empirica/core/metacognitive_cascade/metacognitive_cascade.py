@@ -440,7 +440,9 @@ class CanonicalEpistemicCascade:
         logger.info(f"  PHASE 0: PREFLIGHT - Baseline Epistemic Assessment")
         logger.info(f"{'='*70}")
         
-        self._enter_phase(CascadePhase.PREFLIGHT)
+        # Phase 2: Track assessment checkpoint, not phase enforcement
+        self.state.current_assessment = AssessmentType.PRE
+        self.state.work_context = "baseline assessment"
         
         # Get baseline epistemic self-assessment (all 13 vectors)
         preflight_assessment = await self._assess_epistemic_state(
@@ -543,7 +545,8 @@ class CanonicalEpistemicCascade:
         logger.info(f"  PHASE 1: THINK - Initial Reasoning")
         logger.info(f"{'='*70}")
         
-        self._enter_phase(CascadePhase.THINK)
+        # Phase 2: Optional work context (not enforced)
+        self.state.work_context = "thinking"
 
         # Get LLM-powered self-assessment
         assessment = await self._assess_epistemic_state(task, context, task_id, CascadePhase.THINK)
@@ -829,7 +832,8 @@ class CanonicalEpistemicCascade:
                 break
 
             investigation_rounds += 1
-            self._enter_phase(CascadePhase.INVESTIGATE)
+            # Phase 2: Optional work context for observability
+            self.state.work_context = "investigating"
 
             # Conduct investigation using new strategy
             investigation_results = await self._conduct_investigation(
@@ -881,7 +885,9 @@ class CanonicalEpistemicCascade:
         # ================================================================
         # PHASE 4: CHECK - Verify readiness to act
         # ================================================================
-        self._enter_phase(CascadePhase.CHECK)
+        # Phase 2: Track CHECK assessment checkpoint
+        self.state.current_assessment = AssessmentType.CHECK
+        self.state.work_context = "verifying readiness"
 
         check_result = self._verify_readiness(current_assessment)
 
@@ -924,7 +930,8 @@ class CanonicalEpistemicCascade:
         # ================================================================
         # PHASE 5: ACT - Make final decision
         # ================================================================
-        self._enter_phase(CascadePhase.ACT)
+        # Phase 2: Optional work context (not enforced)
+        self.state.work_context = "deciding"
 
         final_decision = self._make_final_decision(current_assessment, check_result, investigation_rounds)
 
@@ -994,7 +1001,9 @@ class CanonicalEpistemicCascade:
         logger.info(f"  PHASE 6: POSTFLIGHT - Final Epistemic Assessment")
         logger.info(f"{'='*70}")
         
-        self._enter_phase(CascadePhase.POSTFLIGHT)
+        # Phase 2: Track POST assessment checkpoint
+        self.state.current_assessment = AssessmentType.POST
+        self.state.work_context = "calibration"
         
         # Get final epistemic self-assessment (measure learning)
         postflight_assessment = await self._assess_epistemic_state(
@@ -2199,10 +2208,14 @@ class CanonicalEpistemicCascade:
         return hashlib.sha256(content.encode()).hexdigest()[:12]
 
     def _enter_phase(self, phase: CascadePhase):
-        """Enter a new cascade phase"""
-        logger.info(f"\n{'='*70}")
-        logger.info(f"🔄 Phase: {phase.value.upper()}")
-        logger.info(f"{'='*70}")
+        """
+        DEPRECATED: Phase enforcement removed in Phase 2 refactoring.
+        
+        This method is now a no-op for backward compatibility.
+        Use self.state.work_context instead for optional logging.
+        """
+        # No-op for backward compatibility
+        pass
 
     def _update_tmux_display(
         self,
