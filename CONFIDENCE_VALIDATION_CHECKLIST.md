@@ -129,96 +129,13 @@ If <22: Fix issues, re-validate, recount
 **Your Confidence:**
 ```
 Checkboxes passed: ____ / 36
-If ≥34 (94%): Proceed to Phase 2 ✅
+If ≥34 (94%): Proceed to Phase 2 (Docker) ✅
 If <34: Fix issues, re-validate, recount
 ```
 
 ---
 
-## Phase 2: Provider-Agnostic System Prompts
-
-**STOP.** Do not proceed to Phase 3 until ALL items are checked.
-
-### File Creation
-
-- [ ] **EMPIRICA_UNIVERSAL.md created** - File exists at `docs/system-prompts/`
-- [ ] **EMPIRICA_CLAUDE.md created** - File exists at `docs/system-prompts/`
-- [ ] **EMPIRICA_GPT5.md created** - File exists at `docs/system-prompts/`
-- [ ] **EMPIRICA_GEMINI.md created** - File exists at `docs/system-prompts/`
-- [ ] **Markdown is valid** - All 4 files have valid markdown syntax
-- [ ] **All have epistemic vectors** - All 4 files define the 13 vectors
-- [ ] **All have CASCADE workflow** - PREFLIGHT, INVESTIGATE, ACT, POSTFLIGHT in all 4
-
-### Universal Prompt Verification
-
-- [ ] **Contains role definition** - Explains what the AI should do
-- [ ] **Contains 13 vectors** - KNOW, UNCERTAINTY, CLARITY, COHERENCE, SIGNAL, DENSITY, STATE, CHANGE, COMPLETION, IMPACT, plus others
-- [ ] **Vector scoring defined** - Explains 0.0-1.0 scale
-- [ ] **CASCADE phases clear** - Each phase has purpose and process
-- [ ] **No provider specifics** - Uses no API-specific terms (no "Claude models", "GPT reasoning", etc.)
-- [ ] **Works with any LLM** - Explicitly states this
-- [ ] **Goal structure defined** - Objective, success criteria, scope format
-
-### Claude Variant Verification
-
-- [ ] **Includes universal core** - Has all base content from universal
-- [ ] **Leverages 1M context** - Mentions Claude's token window
-- [ ] **Uses extended thinking** - Mentions or references extended thinking if available
-- [ ] **Computer use optional** - Notes computer use capability
-- [ ] **Claude-specific optimizations** - Tailored phrasing for Claude's behavior
-
-### GPT-5 Variant Verification
-
-- [ ] **Includes universal core** - Has all base content from universal
-- [ ] **Leverages reasoning_effort** - References or explains reasoning effort parameter
-- [ ] **Uses json_mode** - Structured output format
-- [ ] **Token-efficient** - More concise than universal (GPT has different token costs)
-- [ ] **GPT-5 specific optimizations** - Tailored for GPT behavior patterns
-
-### Gemini Variant Verification
-
-- [ ] **Includes universal core** - Has all base content from universal
-- [ ] **Leverages 1M context** - Mentions Gemini's token window
-- [ ] **Clean formatting** - Formatted for Gemini's text parsing
-- [ ] **Grounding integration** - Mentions or explains grounding capability
-- [ ] **Gemini-specific optimizations** - Tailored for Gemini behavior patterns
-
-### Testing (Critical)
-
-- [ ] **Tested with Claude** - Ran same goal with Claude + EMPIRICA_CLAUDE.md
-- [ ] **Tested with GPT-4** - Ran same goal with GPT-4 + EMPIRICA_GPT5.md (or GPT-5 if available)
-- [ ] **Tested with Gemini** - Ran same goal with Gemini + EMPIRICA_GEMINI.md
-- [ ] **Tested with universal** - Ran same goal with all 3 providers + EMPIRICA_UNIVERSAL.md
-- [ ] **Epistemic vectors measurable** - Can assess vectors before and after for all providers
-- [ ] **CASCADE works** - Each provider can execute PREFLIGHT → INVESTIGATE → ACT → POSTFLIGHT
-- [ ] **Consistent learning patterns** - Different providers show similar epistemic delta patterns
-- [ ] **No provider breaks** - None of the 4 providers fail or error with their respective prompts
-
-### Comparison Analysis
-
-- [ ] **Optimized > Universal** - Each provider's optimized prompt outperforms universal on that provider
-- [ ] **Results are different but valid** - Different providers produce different outputs, but all achieve goal
-- [ ] **Learning signals similar** - Epistemic deltas are similar magnitude across providers
-- [ ] **Documented differences** - Noted where/why different providers behave differently
-
-### Confidence Assessment
-
-**Ask yourself:**
-- Does the universal prompt work on all 4 providers? (must = YES)
-- Does each provider's optimized prompt work better than universal? (must = YES)
-- Can you explain the CASCADE workflow? (must = YES)
-- Did you actually test with real providers or assume? (must = TESTED)
-
-**Your Confidence:**
-```
-Checkboxes passed: ____ / 41
-If ≥39 (95%): Proceed to Phase 3 ✅
-If <39: Fix issues, retest, re-validate
-```
-
----
-
-## Phase 3: Docker Distribution (OPTIONAL)
+## Phase 2: Docker Distribution (OPTIONAL)
 
 Skip this section if not implementing Docker distribution.
 
@@ -253,13 +170,13 @@ Skip this section if not implementing Docker distribution.
 **Your Confidence:**
 ```
 Checkboxes passed: ____ / 17
-If ≥16 (94%): Mark Phase 3 done ✅
+If ≥16 (94%): Mark Phase 2 done ✅
 If <16: Fix issues, re-validate
 ```
 
 ---
 
-## Phase 4: Provider Integrations (OPTIONAL)
+## Phase 3: Provider Integrations (OPTIONAL)
 
 Skip this section if not implementing skills/integrations.
 
@@ -279,13 +196,13 @@ Validate for each integration you implement:
 **Your Confidence:**
 ```
 Checkboxes passed: ____ / (6 * number_of_integrations)
-If ≥95%: Mark Phase 4 done ✅
+If ≥95%: Mark Phase 3 done ✅
 If <95%: Fix failing integrations
 ```
 
 ---
 
-## Phase 5: Validation & Testing (CRITICAL)
+## Phase 4: Validation & Testing (CRITICAL)
 
 **FINAL GATE.** Do not release until ALL items are checked.
 

@@ -113,62 +113,7 @@ Epistemic State Assessment:
 
 ---
 
-### Phase 2: Provider-Agnostic Prompts ✅ HIGH PRIORITY
-**Status:** Framework designed, ready to implement
-**Time:** 4-6 hours
-**Owner:** Next Claude (solo or with another AI for testing)
-**Success Metric:** Four system prompts created and tested with respective providers
-
-**Four variants to create:**
-
-**2A: EMPIRICA_UNIVERSAL.md**
-- Works with any LLM
-- Core epistemic framework
-- CASCADE workflow
-- No provider-specific features
-- Test with: Claude, GPT-4, Gemini (same task, verify consistency)
-
-**2B: EMPIRICA_CLAUDE.md**
-- Optimized for Claude
-- Leverage 1M token context
-- Use extended thinking
-- Optimized for computer use
-- Test with: Claude Sonnet 4.5
-
-**2C: EMPIRICA_GPT5.md**
-- Optimized for GPT-5
-- Leverage reasoning_effort
-- Use json_mode
-- Token-efficient phrasing
-- Test with: GPT-5 (if available) or GPT-4o
-
-**2D: EMPIRICA_GEMINI.md**
-- Optimized for Gemini
-- Clean formatting for Gemini parser
-- Leverage 1M context
-- Grounding integration points
-- Test with: Gemini 2.5 Pro
-
-**95% Confidence Criteria:**
-- All 4 prompts created
-- Each tested with respective provider
-- Universal produces consistent results across providers
-- Optimized variants outperform universal on their provider
-- Epistemic vectors handled correctly in all
-- CASCADE workflow clear in all
-- No provider-specific assumptions in universal
-
-**Testing approach:**
-- Same goal executed with 3+ providers
-- Measure epistemic deltas
-- Verify learning patterns similar
-- Document differences
-
-**Risk:** Provider behavior differences (mitigated by testing upfront)
-
----
-
-### Phase 3: Docker Distribution (OPTIONAL)
+### Phase 2: Docker Distribution (OPTIONAL)
 **Status:** Template provided
 **Time:** 1-2 hours
 **Owner:** Next Claude (if proceeding; can defer)
@@ -190,7 +135,7 @@ Epistemic State Assessment:
 
 ---
 
-### Phase 4: Provider Integrations (OPTIONAL)
+### Phase 3: Provider Integrations (OPTIONAL)
 **Status:** Documented in INSTALLATION_GUIDE
 **Time:** 2-4 hours per platform
 **Owner:** Next Claude (if proceeding; can defer)
@@ -206,7 +151,7 @@ Epistemic State Assessment:
 
 ---
 
-### Phase 5: Validation & Testing (CRITICAL)
+### Phase 4: Validation & Testing (CRITICAL)
 **Status:** Plan provided
 **Time:** 2-4 hours
 **Owner:** Next Claude
@@ -282,22 +227,18 @@ Phase 0 Complete? (95% confidence)
   └─ NO → Debug, fix, re-validate
 
 Phase 1 Complete? (95% confidence)
-  ├─ YES → Proceed to Phases 2-5 (can run in parallel)
+  ├─ YES → Proceed to Phases 2-4 (can run in parallel)
   └─ NO → Debug, fix, re-validate
 
 Phase 2 Complete? (95% confidence)
-  ├─ YES → Proceed to Phase 5 (validation)
-  └─ NO → Debug, fix, test with more providers
+  ├─ YES → Mark as done (optional phase)
+  └─ NO → Skip or defer (not critical path)
 
 Phase 3 Complete? (95% confidence)
   ├─ YES → Mark as done (optional phase)
   └─ NO → Skip or defer (not critical path)
 
 Phase 4 Complete? (95% confidence)
-  ├─ YES → Mark as done (optional phase)
-  └─ NO → Skip or defer (not critical path)
-
-Phase 5 Complete? (95% confidence)
   ├─ YES → 🎉 RELEASE READY
   └─ NO → Go back to failing phase, fix, re-test
 ```
@@ -314,7 +255,7 @@ You will know you've succeeded when:
 4. ✅ Users can use with Claude, GPT-5, Gemini, or local models
 5. ✅ `empirica --help` works identically on all platforms
 6. ✅ Epistemic framework works identically on all providers
-7. ✅ System prompts are available in 4 variants
+7. ✅ System prompt (CANONICAL_SYSTEM_PROMPT.md) works with all providers
 8. ✅ Documentation is comprehensive and accurate
 9. ✅ No critical bugs reported by testers
 10. ✅ Installation takes <5 minutes for new user
@@ -338,12 +279,11 @@ You will know you've succeeded when:
 **Must complete in order:**
 1. Phase 0: PyPI Foundation
 2. Phase 1: Package Managers
-3. Phase 2: Provider Prompts
-4. Phase 5: Validation
+3. Phase 4: Validation
 
 **Can run in parallel or defer:**
-- Phase 3: Docker (nice-to-have)
-- Phase 4: Skills (nice-to-have)
+- Phase 2: Docker (nice-to-have)
+- Phase 3: Skills (nice-to-have)
 
 ---
 
@@ -351,14 +291,13 @@ You will know you've succeeded when:
 
 - **Phase 0:** 2-3 hours (solo)
 - **Phase 1:** 4-6 hours (solo)
-- **Phase 2:** 4-6 hours (solo or with another AI for testing)
-- **Phase 3:** 1-2 hours (solo, optional)
-- **Phase 4:** 2-4 hours (solo per platform, optional)
-- **Phase 5:** 2-4 hours (solo)
+- **Phase 2:** 1-2 hours (solo, optional Docker)
+- **Phase 3:** 2-4 hours (solo per platform, optional Skills)
+- **Phase 4:** 2-4 hours (solo)
 
-**Total critical path:** 12-19 hours
-**With optional phases:** 16-27 hours
-**If parallelized with 2 AIs:** 6-12 hours
+**Total critical path:** 8-13 hours
+**With optional phases:** 11-19 hours
+**If parallelized with 2 AIs:** 5-10 hours
 
 ---
 

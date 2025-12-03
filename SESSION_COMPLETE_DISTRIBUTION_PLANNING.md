@@ -25,17 +25,15 @@
 ### 3. Empirica Used to Structure This Work
 - **Bootstrap session:** 5a6823e6-8f2a-4450-af9c-afd87ae73416
 - **Created goal:** 09c478a1-3154-454f-92fe-aa2c4f956a02
-- **Added 5 subtasks:** Phase 0-5 with dependencies
+- **Added 4 subtasks:** Phase 0-3 with dependencies (Note: Phase 2 prompts are superfluous - CANONICAL_SYSTEM_PROMPT.md already exists)
 - **Built validation framework:** 95% confidence gates per phase
 
 ### 4. Implementation Roadmap Created
 - **Phase 0:** PyPI foundation (2-3 hours)
 - **Phase 1:** Package managers (4-6 hours)
-- **Phase 2:** Provider prompts (4-6 hours)
-- **Phase 3:** Docker (1-2 hours, optional)
-- **Phase 4:** Skills/integrations (2-4 hours, optional)
-- **Phase 5:** Validation (2-4 hours)
-- **Total:** 18-26 hours solo work
+- **Phase 2:** Docker (1-2 hours, optional)
+- **Phase 3:** Skills/integrations (4-6 hours)
+- **Total critical path:** 8-13 hours solo work
 
 ### 5. Comprehensive Handoff Documents Created
 - Complete specifications and checklists for next Claude
@@ -81,8 +79,8 @@
 - Part II: Complete implementation roadmap
   - Phase 0: Full pyproject.toml template + testing steps
   - Phase 1: PyPI, Homebrew, Chocolatey, GitHub Actions templates
-  - Phase 2: System prompt frameworks (4 variants)
-  - Phase 3-5: Detailed instructions
+  - Phase 2: Docker distribution framework
+  - Phase 3: Provider integrations & skills
 - Success criteria for each phase
 
 **Reference this during each phase.** Has the actual code templates and commands.
@@ -95,10 +93,9 @@
 **What it is:** Detailed 95% confidence checkpoints with:
 - Phase 0: 23 items to verify
 - Phase 1: 36 items to verify (tasks 1A-1D)
-- Phase 2: 41 items to verify (4 prompts + testing)
-- Phase 3: 17 items to verify (optional)
-- Phase 4: 6 items per integration (optional)
-- Phase 5: 38 items to verify (final gate)
+- Phase 2: 17 items to verify (Docker, optional)
+- Phase 3: 6 items per integration (optional)
+- Phase 4: 38 items to verify (final validation gate)
 
 **Use this religiously.** Don't proceed without ≥95% checkboxes checked.
 
@@ -136,13 +133,11 @@
 ```
 Objective: Implement one-click cross-platform distribution for Empirica CLI
 
-Subtasks:
+Subtasks (Critical Path - Phase 2 removed as superfluous):
 ├─ Phase 0: Convert requirements.txt → pyproject.toml, test with uv, publish to TestPyPI
 ├─ Phase 1: Publish to PyPI, create Homebrew tap, submit to Chocolatey, GitHub Actions
-├─ Phase 2: Create provider-agnostic system prompts (Universal, Claude, GPT-5, Gemini)
-├─ Phase 3: Create Docker image, publish to Docker Hub
-├─ Phase 4: Create Skill/GPT/Workspace integrations
-└─ Phase 5: Cross-platform testing, provider testing, final validation
+├─ Phase 2: Create Docker image, publish to Docker Hub (optional)
+└─ Phase 3: Create Skill/GPT/Workspace integrations (optional)
 ```
 
 ### How to Resume This Session
@@ -171,9 +166,9 @@ empirica tasks-complete --task-id [task-id] --evidence "[what you completed]"
 ### Your Success Criteria
 - ✅ Phase 0: Package publishable on TestPyPI with ≥95% confidence
 - ✅ Phase 1: Package installable via PyPI, Homebrew, Chocolatey with ≥95% confidence
-- ✅ Phase 2: 4 system prompts created and tested with ≥95% confidence
-- ✅ Phase 5: Cross-platform and cross-provider testing complete with ≥95% confidence
-- ✅ Phases 3-4: (Optional) Docker and Skills done if proceeding
+- ✅ Phase 2: (Optional) Docker distribution with ≥95% confidence
+- ✅ Phase 3: (Optional) Provider integrations with ≥95% confidence
+- ✅ Phase 4: Cross-platform and cross-provider testing complete with ≥95% confidence
 
 ### Critical Rules
 1. **Don't skip validation.** The 95% confidence gates exist for a reason.
@@ -255,7 +250,7 @@ empirica tasks-complete --task-id bf709586-acb3-4aa6-9ece-8d658230d2fc \
 ### Risk 2: Provider-Specific Issues
 **Likelihood:** Medium (each provider is slightly different)
 **Impact:** Medium (breaks one provider, not all)
-**Mitigation:** Test each provider separately in Phase 2
+**Mitigation:** Test each provider separately in Phase 4 (validation/testing)
 
 ### Risk 3: Package Manager Moderation Delays
 **Likelihood:** Low-Medium (Chocolatey takes 1-2 days)

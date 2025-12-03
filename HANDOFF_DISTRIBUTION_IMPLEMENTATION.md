@@ -15,18 +15,18 @@
 1. **Market research completed** (2025 developer landscape)
 2. **Distribution strategy architected** (PyPI + Homebrew + Chocolatey + Docker)
 3. **Provider support plan designed** (Claude, GPT-5, Gemini, Llama, local models)
-4. **Implementation roadmap created** (5 phases, 18-26 hours solo work)
+4. **Implementation roadmap created** (4 phases, 8-13 hours solo work critical path)
 5. **All risks identified and mitigated**
 6. **Two implementation guides created**
 
 ### What Needs to Happen
-Execute the 5-phase distribution implementation plan with systematic rigor, validating each phase at 95% confidence before moving to the next.
+Execute the 4-phase distribution implementation plan with systematic rigor, validating each phase at 95% confidence before moving to the next.
 
 ### Why 95% Confidence Threshold
 - **Phase 0** (PyPI): Must work perfectly - it's the foundation
 - **Phase 1** (Homebrew/Chocolatey): Package managers have strict requirements - no guess work
-- **Phase 2** (Prompts): Provider support must be tested - can't assume equivalence
-- **Phase 3-5** (Docker/Skills/Testing): Final validation before users encounter this
+- **Phase 2** (Docker): Containerization for teams and cloud deployments
+- **Phase 3** (Provider Skills): Final validation and integration before users encounter this
 
 **You should NOT proceed to next phase without ≥95% confidence in current phase.**
 
@@ -73,7 +73,7 @@ Execute the 5-phase distribution implementation plan with systematic rigor, vali
 - ✅ Users pick variant for their provider OR use universal
 - ✅ Enables true multi-provider support
 
-**Decision 4: Five-phase implementation with validation gates**
+**Decision 4: Four-phase implementation with validation gates**
 - Each phase has success criteria
 - Each phase must reach 95% confidence before next
 - This prevents early failures from cascading
@@ -418,215 +418,11 @@ git push origin v0.2.0
 
 ---
 
-### Phase 2: Provider-Agnostic System Prompts (4-6 hours)
-
-**Goal:** Create system prompts that work with all AI providers, plus optimized variants
-
-**Task 2A: Create Universal System Prompt**
-
-Location: `docs/system-prompts/EMPIRICA_UNIVERSAL.md`
-
-```markdown
-# Empirica Metacognitive Framework (Universal)
-
-**Works with:** Claude, GPT-5, Gemini, Llama, Qwen, DeepSeek, local models, and any LLM
-
-## Design Principle
-
-This framework is deliberately provider-agnostic. It works with:
-- Any large language model
-- Any API provider
-- Local models (Ollama, vLLM)
-- Any inference engine
-
-The framework relies on:
-- Epistemic reasoning (model-independent)
-- Structured reasoning (any LLM can do this)
-- Goal tracking (simple data structures)
-- Systematic iteration (logical workflow)
-
-## Core Components (Always Include)
-
-### 1. Epistemic Vectors (13-dimensional assessment)
-
-Assess your current state using these dimensions:
-
-- **ENGAGEMENT**: How present/focused are you on this task?
-- **KNOW**: How much do you understand about the problem?
-- **DO**: How capable are you to execute?
-- **CONTEXT**: How well do you understand the broader context?
-- **CLARITY**: How clear are the success criteria?
-- **COHERENCE**: How logically consistent is your plan?
-- **SIGNAL**: How confident in the feedback/results?
-- **DENSITY**: How information-rich is your understanding?
-- **STATE**: How stable/predictable is the current state?
-- **CHANGE**: How much change has occurred?
-- **COMPLETION**: How complete is this phase?
-- **IMPACT**: How significant is the outcome?
-- **UNCERTAINTY**: How many unknowns remain?
-
-Score each 0.0-1.0 where 0.0 = minimum, 1.0 = maximum.
-
-### 2. CASCADE Workflow
-
-Execute work through four phases:
-
-**PREFLIGHT (Assessment)**
-- Assess epistemic vectors
-- Clarify success criteria
-- Identify unknowns
-- Plan approach
-
-**INVESTIGATE (Discovery)**
-- Gather information
-- Reduce uncertainty
-- Build understanding
-- Document findings
-
-**ACT (Execution)**
-- Implement plan
-- Make decisions
-- Execute changes
-- Capture results
-
-**POSTFLIGHT (Learning)**
-- Assess final epistemic state
-- Compare before/after
-- Capture learning signals
-- Generate delta package
-
-### 3. Goal Orchestration
-
-Create structured goals with:
-- **Objective**: What are you trying to accomplish?
-- **Success Criteria**: How will you know you succeeded?
-- **Scope**: Breadth (1 function → entire system), Duration (minutes → months), Coordination (solo → multi-agent)
-- **Initial State**: Epistemic vectors at start
-- **Final State**: Epistemic vectors at completion
-
-### 4. Learning from Outcomes
-
-After each goal:
-- Measure epistemic delta (change in vectors)
-- Identify what worked and didn't
-- Preserve learning for next similar task
-- Share insights with other AIs if possible
-
-## Provider-Specific Considerations
-
-### OpenAI (GPT-4, GPT-5)
-- System prompt works directly
-- Leverage reasoning_effort parameter if available
-- Note: Token limits ~128k, be concise
-
-### Claude (Anthropic)
-- System prompt works directly
-- Leverage extended thinking if needed
-- 1M token context available
-- Use computer use if you need system interaction
-
-### Gemini (Google)
-- System prompt works as instructions
-- Leverage 1M token context
-- Works well with structured reasoning
-
-### Meta Llama
-- Works with local models
-- No token limit beyond memory
-- Prompt engineering more critical
-- May need simpler language
-
-### Local Models (Ollama, vLLM)
-- Works with any model
-- No API costs
-- No external dependencies
-- Quality depends on model size
-
-## Usage Pattern
-
-```
-1. Start with PREFLIGHT
-   → Assess epistemic state
-   → Plan work
-
-2. Execute INVESTIGATE or ACT
-   → Reduce uncertainty
-   → Make progress
-
-3. Check progress against epistemic vectors
-   → Are unknowns being resolved?
-   → Is understanding growing?
-
-4. Iterate phases as needed
-   → More investigation if uncertain
-   → More action if confident
-
-5. Complete with POSTFLIGHT
-   → Measure learning
-   → Generate delta
-```
-
-## What This Is NOT
-
-- Not a rigid procedure (adapt to your needs)
-- Not a guarantee (use your judgment)
-- Not provider-specific (works everywhere)
-- Not a replacement for domain knowledge (use your expertise)
-
-## This Framework Assumes
-
-- You can reason systematically
-- You understand uncertainty
-- You want to improve over time
-- You can learn from mistakes
-```
-
-**Task 2B: Create Claude-Optimized Variant**
-
-Location: `docs/system-prompts/EMPIRICA_CLAUDE.md`
-
-This version leverages Claude-specific capabilities:
-- 1M token context window
-- Extended thinking (if available)
-- Computer use (if needed)
-- Structured output format support
-
-**Task 2C: Create GPT-5-Optimized Variant**
-
-Location: `docs/system-prompts/EMPIRICA_GPT5.md`
-
-This version optimizes for GPT-5:
-- Shorter core prompt (leverage reasoning effort)
-- Use json_mode for structured output
-- Leverage o1 reasoning if available
-- Token-efficient phrasing
-
-**Task 2D: Create Gemini-Optimized Variant**
-
-Location: `docs/system-prompts/EMPIRICA_GEMINI.md`
-
-This version optimizes for Gemini:
-- Clean formatting for Gemini's parsing
-- Leverage 1M context
-- Use grounding if available
-- Concise epistemic vector definitions
-
-**Success Criteria (95% confidence):**
-- [ ] All 4 prompts (Universal, Claude, GPT-5, Gemini) created
-- [ ] Each tested with respective model/provider
-- [ ] Universal works identically on all providers (verify by same task)
-- [ ] Optimized variants produce better results than universal on their provider
-- [ ] All prompts handle epistemic vectors correctly
-- [ ] CASCADE workflow is clear in each version
-- [ ] Documentation is comprehensive
-
----
-
-### Phase 3: Docker Distribution (1-2 hours)
+### Phase 2: Docker Distribution (1-2 hours)
 
 **Goal:** Containerize Empirica for teams, cloud deployments
 
-**Task 3A: Create Dockerfile**
+**Task 2A: Create Dockerfile**
 
 Location: `Dockerfile`
 
@@ -654,7 +450,7 @@ ENTRYPOINT ["empirica"]
 CMD ["--help"]
 ```
 
-**Task 3B: Publish to Docker Hub**
+**Task 2B: Publish to Docker Hub**
 
 ```bash
 # Create account at https://hub.docker.com
@@ -684,11 +480,11 @@ docker push YOUR_DOCKER_USERNAME/empirica-cli:latest
 
 ---
 
-### Phase 4: Provider Integrations & Skills (4-6 hours)
+### Phase 3: Provider Integrations & Skills (4-6 hours)
 
 **Goal:** Enable Empirica on Claude.ai, ChatGPT, Gemini, Ollama with Skill/GPT/workspace support
 
-**Task 4A: Claude Skill**
+**Task 3A: Claude Skill**
 
 Already documented in EMPIRICA_INSTALLATION_GUIDE.md.
 
