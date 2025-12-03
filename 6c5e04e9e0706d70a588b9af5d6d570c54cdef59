@@ -1,0 +1,31 @@
+{
+  "goal_id": "f98d7d3b-73de-46a8-94d1-d1d3f62bc347",
+  "session_id": "9fc34143-7763-422c-90b8-b37a28ffab3f",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-03T14:40:32.702771+00:00",
+  "goal_data": {
+    "objective": "Implement Empirica statusline integration with 4 display modes for Claude Code",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Statusline script queries Empirica MCP tools successfully",
+      "Four display modes (minimal, balanced, learning-focused, full) implemented with ANSI colors",
+      "Handles edge cases (no session, no goals, errors) gracefully",
+      "Integration documented for user configuration"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-03T14:40:32.702782+00:00",
+      "action": "created"
+    }
+  ]
+}
