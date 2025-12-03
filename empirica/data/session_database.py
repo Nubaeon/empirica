@@ -1612,15 +1612,25 @@ class SessionDatabase:
                 
             findings = json.loads(findings_json)
             for finding in findings:
-                # Check if filename appears in any file ref
-                for ref in finding.get("refs", {}).get("files", []):
-                    if filename in ref.get("file", ""):
+                # Backward compatibility: handle both string and structured findings
+                if isinstance(finding, str):
+                    # Old format: plain string, check if filename appears in text
+                    if filename in finding:
                         results.append({
-                            "finding": finding,
+                            "finding": {"text": finding, "refs": {"files": [], "docs": [], "urls": []}},
                             "session_id": row[1],
                             "check_id": row[2]
                         })
-                        break
+                else:
+                    # New format: structured with refs
+                    for ref in finding.get("refs", {}).get("files", []):
+                        if filename in ref.get("file", ""):
+                            results.append({
+                                "finding": finding,
+                                "session_id": row[1],
+                                "check_id": row[2]
+                            })
+                            break
         
         return results
     
