@@ -1,0 +1,31 @@
+{
+  "goal_id": "3eee733a-fedc-490a-94dd-94dd31ef8ef6",
+  "session_id": "1da76aa9-d3eb-4ad4-998a-1e3051b2d612",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-04T10:57:50.368708+00:00",
+  "goal_data": {
+    "objective": "Comprehensively test all MCP and CLI commands to surface issues",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All MCP tools tested",
+      "All CLI commands tested",
+      "Issues documented",
+      "Easy fixes applied"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-04T10:57:50.368724+00:00",
+      "action": "created"
+    }
+  ]
+}
