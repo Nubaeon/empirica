@@ -1,0 +1,31 @@
+{
+  "goal_id": "b162f374-2961-48c4-9ff9-18d4497be3ae",
+  "session_id": "latest:active:claude-sonnet",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-04T19:02:52.091190+00:00",
+  "goal_data": {
+    "objective": "Fix statusline queries to use reflexes table and verify end-to-end CASCADE workflow integration",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Statusline queries reflexes table instead of epistemic_assessments",
+      "Website displays CASCADE workflow with live epistemic tracking",
+      "MCP tools work with new reflexes table storage",
+      "Complete PREFLIGHT\u2192CHECK\u2192POSTFLIGHT workflow runs successfully"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-04T19:02:52.091203+00:00",
+      "action": "created"
+    }
+  ]
+}
