@@ -1,0 +1,31 @@
+{
+  "goal_id": "b8c25c04-f066-4412-817e-028ff1c8445b",
+  "session_id": "352e888e-36d1-4fbc-829a-44a7379b3f68",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-04T11:18:36.175010+00:00",
+  "goal_data": {
+    "objective": "Fix remaining Empirica MCP/CLI issues from comprehensive testing (10 issues after 2 fixes already applied)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All HIGH severity MCP tools functional",
+      "CLI commands have consistent --output json support",
+      "MCP arg_map matches CLI flags exactly",
+      "Tests pass for fixed components"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-04T11:18:36.175021+00:00",
+      "action": "created"
+    }
+  ]
+}
