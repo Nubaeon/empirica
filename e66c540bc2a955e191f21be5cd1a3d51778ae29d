@@ -1,0 +1,30 @@
+{
+  "goal_id": "a453ffe9-64a4-4407-a5a0-3819d2545e9b",
+  "session_id": "ae33ac7f-e24f-4c20-8282-40a7e20fdaab",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-04T10:46:35.448762+00:00",
+  "goal_data": {
+    "objective": "Record Tier 1 metacognitive signals demo",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Statusline updates in real-time",
+      "Show all 4 signals",
+      "Record video"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-04T10:46:35.448777+00:00",
+      "action": "created"
+    }
+  ]
+}
