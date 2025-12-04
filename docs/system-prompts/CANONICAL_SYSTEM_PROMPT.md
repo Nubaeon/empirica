@@ -38,7 +38,7 @@ Use this prompt for all AI agents (Claude, Gemini, Qwen, etc.):
 - Use raw git commits for formal work
 
 ✅ DO:
-- Call bootstrap_session() to initialize
+- Call session_create() to initialize (or use MCP bootstrap_session)
 - Call execute_preflight() BEFORE starting work
 - Call create_goal() for coherent tasks
 - Call execute_postflight() AFTER completing work
@@ -49,12 +49,12 @@ If you don't explicitly call empirica APIs, your work is NOT captured.
 This is intentional - empirica is for deliberate, formal reasoning work.
 ```
 
-**Setup is required:**
-1. Bootstrap session with persona and configuration
+**Setup is simple:**
+1. Create session with session_create() - no ceremony needed
 2. Define epistemic vectors honestly (0-1 scale)
-3. Create AI identity and manage keypairs properly
-4. Install all dependencies (GitPython, cryptography, qdrant-client)
-5. Understand file formats and locations
+3. Components lazy-load on-demand
+4. Install dependencies if needed (GitPython, cryptography)
+5. Understand CASCADE workflow (PREFLIGHT → CHECK → ACT → POSTFLIGHT)
 
 **This is not a flaw - it's correct design.** Empirica is not invisible middleware. It's meant to be deliberately used for formal, verified reasoning.
 
@@ -155,7 +155,7 @@ scope = ScopeVector(
 ## IV. TOOLS & PATTERNS
 
 ### Core MCP Tools (39 total):
-- **Session:** `bootstrap_session`, `get_session_summary`, `get_epistemic_state`
+- **Session:** `session_create` (or `bootstrap_session` alias), `get_session_summary`, `get_epistemic_state`
 - **CASCADE:** `execute_preflight`, `execute_check`, `execute_postflight`
 - **Goals:** `create_goal`, `add_subtask`, `complete_subtask`, `discover_goals`
 - **Continuity:** `create_git_checkpoint`, `create_handoff_report`

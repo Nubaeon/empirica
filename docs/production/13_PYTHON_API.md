@@ -2,540 +2,552 @@
 
 **Empirica v2.0 - Direct API Usage**
 
+**Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
+
 ---
 
 ## Quick Reference
 
 ### Core Imports
 ```python
-# Bootstrap
-from empirica.bootstraps.extended_metacognitive_bootstrap import ExtendedMetacognitiveBootstrap
-from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
-
-# Core assessment & cascade
-from empirica.core.canonical import CanonicalEpistemicAssessor, ReflexLogger
-from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
-
-# Data & session management
+# Session management
 from empirica.data.session_database import SessionDatabase
-from empirica.data.session_json_handler import SessionJSONHandler
+
+# Core assessment & logging
+from empirica.core.canonical import CanonicalEpistemicAssessor, ReflexLogger
+from empirica.core.canonical.reflex_logger import ReflexLogger
+
+# Goal management
+from empirica.core.goals.repository import GoalRepository
+from empirica.core.goals.types import Goal, ScopeVector, SuccessCriterion
+
+# Handoff reports
+from empirica.core.handoff import EpistemicHandoffReportGenerator
 ```
 
 ---
 
-## Bootstrap API
+## Session Management API
 
-### ExtendedMetacognitiveBootstrap
+### SessionDatabase
 
-Initialize the system with tiered component loading.
+Create and manage Empirica sessions.
 
 ```python
-from empirica.bootstraps.extended_metacognitive_bootstrap import ExtendedMetacognitiveBootstrap
+from empirica.data.session_database import SessionDatabase
 
-bootstrap = ExtendedMetacognitiveBootstrap(
-    ai_id="your_ai_name",          # Identifier for this AI
-    level="2"                      # Init level: "0"-"4"
+db = SessionDatabase()
+
+# Create new session
+session_id = db.create_session(
+    ai_id="myai",              # AI identifier
+    bootstrap_level=1,         # 0-4, default 1
+    components_loaded=6        # Component count (informational)
 )
-components = bootstrap.bootstrap()
+
+# Get session info
+session = db.get_session(session_id)
+
+# End session
+db.end_session(session_id)
+
+db.close()
 ```
+
+**Methods:**
+
+#### `create_session(ai_id, bootstrap_level=0, components_loaded=0) -> str`
+Creates new session, returns session_id (UUID).
 
 **Parameters:**
-- `ai_id` (str): AI identifier for logging
-- `level` (str): "0" (minimal), "1" (basic), "2" (standard), "3" (extended), "4" (complete)
+- `ai_id` (str): AI identifier for tracking
+- `bootstrap_level` (int): 0-4, indicates session type
+- `components_loaded` (int): Informational component count
 
-**Returns:** dict of loaded components
+**Bootstrap Levels:**
+- `0`: Minimal (production)
+- `1`: Standard (recommended)
+- `2`: Extended (full metacognitive tracking)
+- `3-4`: Experimental
 
-**Levels:**
-- `"0"`: 14 components (canonical + core)
-- `"1"`: 25 components (+ foundation)
-- `"2"`: 30 components (+ calibration) ← **DEFAULT**
-- `"3"`: ~35 components (+ advanced)
-- `"4"`: ~40 components (complete)
+#### `get_session(session_id) -> dict`
+Returns session metadata.
 
-**Example:**
-```python
-bootstrap = ExtendedMetacognitiveBootstrap(level="2", ai_id="production")
-components = bootstrap.bootstrap()
+#### `end_session(session_id)`
+Marks session as complete.
 
-# Access components
-cascade = components['canonical_cascade']
-assessor = components['canonical_assessor']
-bayesian = components.get('bayesian_tracker')  # Optional
-```
+#### `get_last_session_by_ai(ai_id) -> dict`
+Gets most recent session for AI.
 
 ---
 
-## Cascade API
+## CASCADE Logging API
 
-### CanonicalEpistemicCascade
+### ReflexLogger
 
-Main reasoning cascade: THINK → UNCERTAINTY → INVESTIGATE → CHECK → ACT
-
-```python
-from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
-
-cascade = CanonicalEpistemicCascade(
-    action_confidence_threshold=0.70,
-    max_investigation_rounds=3,
-    agent_id="cascade",
-    enable_bayesian=True,
-    enable_drift_monitor=True,
-    enable_action_hooks=True,
-    enable_session_db=True
-)
-```
-
-**Parameters:**
-- `action_confidence_threshold` (float): Minimum confidence to proceed (0.0-1.0)
-- `max_investigation_rounds` (int): Maximum investigation loops
-- `agent_id` (str): Agent identifier
-- `enable_bayesian` (bool): Activate Bayesian Guardian
-- `enable_drift_monitor` (bool): Activate drift detection
-- `enable_action_hooks` (bool): Enable tmux dashboard
-- `enable_session_db` (bool): Enable database tracking
-
-### run_epistemic_cascade()
-
-Execute complete cascade.
+Log epistemic assessments during CASCADE workflow.
 
 ```python
-result = await cascade.run_epistemic_cascade(
-    task="Your task description",
-    context={
-        'cwd': '/path/to/project',
-        'available_tools': ['read', 'write', 'edit'],
-        'urgency': 'high'
-    }
-)
-```
+from empirica.core.canonical.reflex_logger import ReflexLogger
 
-**Parameters:**
-- `task` (str): Task description (clear and specific)
-- `context` (dict): Contextual information
+logger = ReflexLogger(session_id=session_id)
 
-**Returns:** dict with:
-```python
-{
-    'action': str,                # 'proceed', 'investigate', 'clarify', 'reset', 'stop'
-    'confidence': float,          # Final confidence (0.0-1.0)
-    'investigation_rounds': int,  # Number of rounds executed
-    'phases': {
-        'think': {...},
-        'uncertainty': {...},
-        'investigate': {...},
-        'check': {...},
-        'act': {...}
-    }
+# Log PREFLIGHT assessment
+vectors = {
+    "engagement": 0.8,
+    "know": 0.6,
+    "do": 0.7,
+    "context": 0.7,
+    "clarity": 0.8,
+    "coherence": 0.9,
+    "signal": 0.8,
+    "density": 0.4,
+    "state": 0.7,
+    "change": 0.8,
+    "completion": 0.2,
+    "impact": 0.7,
+    "uncertainty": 0.4
 }
+
+logger.log_reflex(
+    phase="PREFLIGHT",
+    round_num=1,
+    vectors=vectors,
+    reasoning="Initial task assessment"
+)
+
+# ... do work ...
+
+# Log POSTFLIGHT assessment
+postflight_vectors = vectors.copy()
+postflight_vectors["know"] = 0.85
+postflight_vectors["completion"] = 1.0
+postflight_vectors["uncertainty"] = 0.15
+
+logger.log_reflex(
+    phase="POSTFLIGHT",
+    round_num=1,
+    vectors=postflight_vectors,
+    reasoning="Task complete, learned significantly"
+)
 ```
+
+**Methods:**
+
+#### `log_reflex(phase, round_num, vectors, reasoning, metadata=None)`
+Logs epistemic assessment to SQLite + git notes.
+
+**Parameters:**
+- `phase` (str): "PREFLIGHT", "CHECK", "POSTFLIGHT"
+- `round_num` (int): CASCADE round number (1-N)
+- `vectors` (dict): 13 epistemic vectors (0.0-1.0)
+- `reasoning` (str): Human-readable explanation
+- `metadata` (dict, optional): Additional context
+
+**Required Vectors:**
+- `engagement`, `know`, `do`, `context`
+- `clarity`, `coherence`, `signal`, `density`
+- `state`, `change`, `completion`, `impact`
+- `uncertainty`
 
 ---
 
-## Assessment API
+## Epistemic Assessment API
 
 ### CanonicalEpistemicAssessor
 
-LLM-powered epistemic self-assessment.
+Generate self-assessment prompts for AIs.
 
 ```python
 from empirica.core.canonical import CanonicalEpistemicAssessor
 
 assessor = CanonicalEpistemicAssessor()
-assessment = await assessor.assess(
-    task="Analyze authentication system",
-    context={'domain': 'security'}
+
+# Generate PREFLIGHT prompt
+prompt = assessor.generate_assessment_prompt(
+    phase="PREFLIGHT",
+    task="Your task description",
+    context={"session_id": session_id}
 )
+
+print(prompt)  # LLM-friendly self-assessment prompt
 ```
 
-**Returns:** `EpistemicAssessment` with:
-- `engagement`: VectorState (GATE)
-- `know`, `do`, `context`: VectorState (FOUNDATION)
-- `clarity`, `coherence`, `signal`, `density`: VectorState (COMPREHENSION)
-- `state`, `change`, `completion`, `impact`: VectorState (EXECUTION)
-- `overall_confidence`: float
-- `recommended_action`: Action enum
+**Methods:**
 
-### VectorState
+#### `generate_assessment_prompt(phase, task, context=None) -> str`
+Generates structured self-assessment prompt.
 
-Individual vector measurement with self-assessment capabilities.
+**Parameters:**
+- `phase` (str): "PREFLIGHT", "CHECK", "POSTFLIGHT"
+- `task` (str): Task description for AI to assess
+- `context` (dict, optional): Additional context
 
-```python
-vector = assessment.know
-print(f"Score: {vector.score}")        # 0.0-1.0
-print(f"Rationale: {vector.rationale}") # AI reasoning
-
-# Self-assessment fields (NO HEURISTICS)
-if vector.warrants_investigation:
-    print(f"Priority: {vector.investigation_priority}")  # 'low', 'medium', 'high', 'critical'
-    print(f"Reason: {vector.investigation_reason}")
-```
-
-**Attributes:**
-- `score` (float): 0.0-1.0 measurement
-- `rationale` (str): AI's genuine reasoning
-- `evidence` (str, optional): Supporting context
-- `warrants_investigation` (bool): AI flags if investigation needed (NOT system thresholds)
-- `investigation_priority` (str, optional): 'low', 'medium', 'high', 'critical'
-- `investigation_reason` (str, optional): Why investigation is warranted
+**Returns:** Markdown-formatted prompt asking AI to rate 13 vectors
 
 ---
 
-## Database API
+## Goal Management API
 
-### SessionDatabase
+### GoalRepository
 
-SQLite storage for epistemic states and cascades.
+Manage goals and subtasks.
+
+```python
+from empirica.core.goals.repository import GoalRepository
+from empirica.core.goals.types import Goal, ScopeVector, SuccessCriterion
+import uuid
+
+repo = GoalRepository()
+
+# Create goal
+scope = ScopeVector(
+    breadth=0.5,      # How wide (0=single file, 1=entire codebase)
+    duration=0.3,     # How long (0=minutes, 1=months)
+    coordination=0.2  # Multi-agent? (0=solo, 1=heavy coordination)
+)
+
+criteria = [
+    SuccessCriterion(
+        id=str(uuid.uuid4()),
+        description="Tests pass",
+        validation_method="completion",
+        is_required=True,
+        is_met=False
+    )
+]
+
+goal = Goal.create(
+    objective="Fix bug in authentication",
+    success_criteria=criteria,
+    scope=scope
+)
+
+# Save goal
+success = repo.save_goal(goal, session_id)
+
+# Query goals
+goals = repo.list_goals_for_session(session_id)
+
+# Update goal progress
+repo.update_goal_progress(goal.id, completion=0.5)
+
+repo.close()
+```
+
+**Key Types:**
+
+#### `ScopeVector(breadth, duration, coordination)`
+Defines goal scope in 3 dimensions (all 0.0-1.0).
+
+#### `SuccessCriterion`
+Defines measurable success condition.
+
+#### `Goal.create(objective, success_criteria, scope=None)`
+Factory method for creating goals.
+
+---
+
+## Handoff Reports API
+
+### EpistemicHandoffReportGenerator
+
+Create compressed handoff reports for session continuity.
+
+```python
+from empirica.core.handoff import EpistemicHandoffReportGenerator
+
+generator = EpistemicHandoffReportGenerator()
+
+# Generate handoff report
+handoff = generator.generate_handoff_report(
+    session_id=session_id,
+    task_summary="What you accomplished",
+    key_findings=["Learning 1", "Learning 2"],
+    remaining_unknowns=["Unknown 1"],
+    next_session_context="Critical context for next AI",
+    artifacts_created=["file1.py", "file2.md"]
+)
+
+print(f"Handoff size: {len(handoff['compressed_json'])} chars")
+# ~238 tokens vs 20,000 baseline = 98.8% reduction!
+```
+
+**Methods:**
+
+#### `generate_handoff_report(...) -> dict`
+Creates compressed semantic summary.
+
+**Parameters:**
+- `session_id` (str): Session UUID
+- `task_summary` (str): 2-3 sentence summary
+- `key_findings` (list): What you learned
+- `remaining_unknowns` (list): What's still unclear
+- `next_session_context` (str): Critical context for next session
+- `artifacts_created` (list, optional): Files created
+
+**Returns:** dict with `compressed_json`, `storage_location`, `token_count`
+
+#### `query_handoff_reports(ai_id=None, session_id=None, limit=5) -> list`
+Queries previous handoff reports.
+
+---
+
+## Complete Workflow Example
 
 ```python
 from empirica.data.session_database import SessionDatabase
+from empirica.core.canonical.reflex_logger import ReflexLogger
+from empirica.core.canonical import CanonicalEpistemicAssessor
+from empirica.core.handoff import EpistemicHandoffReportGenerator
 
-db = SessionDatabase()  # Uses .empirica/sessions/sessions.db
-# OR
-db = SessionDatabase("/custom/path/sessions.db")
-```
-
-#### create_session()
-```python
-session_id = db.create_session(
-    ai_id="my_ai",
-    bootstrap_level=2,
-    components_loaded=30,
-    user_id="user123"  # optional
-)
-```
-
-#### create_cascade()
-```python
-cascade_id = db.create_cascade(
-    session_id=session_id,
-    task="My task",
-    context={'test': True}
-)
-```
-
-#### complete_cascade()
-```python
-db.complete_cascade(
-    cascade_id=cascade_id,
-    final_action="proceed",
-    final_confidence=0.82,
-    investigation_rounds=2,
-    duration_ms=5000,
-    engagement_gate_passed=True,
-    bayesian_active=True,
-    drift_monitored=True
-)
-```
-
-#### log_epistemic_assessment()
-```python
-db.log_epistemic_assessment(
-    cascade_id=cascade_id,
-    assessment=assessment,
-    phase='uncertainty'  # or 'investigate_round_1', 'check'
-)
-```
-
-#### Query Methods
-```python
-# Get session data
-session = db.get_session(session_id)
-
-# Get all cascades for session
-cascades = db.get_session_cascades(session_id)
-
-# Get assessments for cascade
-assessments = db.get_cascade_assessments(cascade_id)
-
-# Close database
+# 1. Create session
+db = SessionDatabase()
+session_id = db.create_session(ai_id="workflow_example")
 db.close()
+
+# 2. Initialize components
+logger = ReflexLogger(session_id=session_id)
+assessor = CanonicalEpistemicAssessor()
+
+# 3. PREFLIGHT - Generate and submit assessment
+preflight_prompt = assessor.generate_assessment_prompt(
+    phase="PREFLIGHT",
+    task="Build authentication system"
+)
+
+# (AI performs self-assessment)
+preflight_vectors = {
+    "engagement": 0.85,
+    "know": 0.6,  # Moderate initial knowledge
+    "do": 0.7,
+    "context": 0.8,
+    "clarity": 0.9,
+    "coherence": 0.9,
+    "signal": 0.85,
+    "density": 0.5,
+    "state": 0.7,
+    "change": 0.8,
+    "completion": 0.0,  # Haven't started
+    "impact": 0.8,
+    "uncertainty": 0.4  # Moderate uncertainty
+}
+
+logger.log_reflex(
+    phase="PREFLIGHT",
+    round_num=1,
+    vectors=preflight_vectors,
+    reasoning="Starting with moderate knowledge of auth systems"
+)
+
+# 4. Do the work...
+# (Your implementation code here)
+
+# 5. POSTFLIGHT - Reflect on learning
+postflight_vectors = preflight_vectors.copy()
+postflight_vectors.update({
+    "know": 0.85,  # Learned significantly
+    "do": 0.9,     # Built capability
+    "completion": 1.0,  # Task complete
+    "uncertainty": 0.15  # Much clearer
+})
+
+logger.log_reflex(
+    phase="POSTFLIGHT",
+    round_num=1,
+    vectors=postflight_vectors,
+    reasoning="Auth system complete, learned OAuth2 flow deeply"
+)
+
+# 6. Create handoff report
+generator = EpistemicHandoffReportGenerator()
+handoff = generator.generate_handoff_report(
+    session_id=session_id,
+    task_summary="Built OAuth2 authentication system with JWT tokens",
+    key_findings=[
+        "OAuth2 refresh token rotation is critical for security",
+        "JWT claims should be minimal for performance"
+    ],
+    remaining_unknowns=[
+        "Best practices for token revocation at scale"
+    ],
+    next_session_context="Auth system in place, next: authorization layer",
+    artifacts_created=["auth/oauth.py", "auth/jwt_handler.py"]
+)
+
+print(f"✅ Session complete: {session_id}")
+print(f"📊 Learning delta: KNOW {preflight_vectors['know']} → {postflight_vectors['know']}")
+print(f"📦 Handoff stored: {handoff['storage_location']}")
 ```
 
 ---
 
-### SessionJSONHandler
+## Advanced Features
 
-Export SQLite data to AI-readable JSON.
+### Git-Enhanced Logging
 
 ```python
-from empirica.data.session_json_handler import SessionJSONHandler
+from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
 
-handler = SessionJSONHandler()  # Uses .empirica/exports/
+# Enables git notes storage (97.5% token reduction)
+git_logger = GitEnhancedReflexLogger(
+    session_id=session_id,
+    enable_git_notes=True
+)
 
-# Export complete session
-filepath = handler.export_session(db, session_id)
-# Creates: .empirica/exports/session_{session_id}.json
+# Creates checkpoint in git notes
+checkpoint_id = git_logger.add_checkpoint(
+    phase="ACT",
+    round_num=1,
+    vectors=current_vectors,
+    metadata={"milestone": "tests passing"}
+)
 
-# Export cascade as graph
-graph_path = handler.export_cascade_graph(db, cascade_id)
-# Creates: .empirica/exports/cascade_{cascade_id}_graph.json
+# Load checkpoint
+checkpoint = git_logger.get_last_checkpoint()
+```
 
-# Load session context (for continuity)
-previous_session = handler.load_session_context(session_id)
+### Bayesian Belief Tracking
 
-# Create compact summary
-summary = handler.create_compact_summary(db, session_id)
+```python
+from empirica.core.canonical.bayesian_guardian import BayesianGuardian
+
+guardian = BayesianGuardian(session_id=session_id)
+
+# Track belief evolution
+guardian.update_belief(
+    context_key="oauth_security",
+    evidence="Implemented refresh token rotation",
+    confidence_delta=0.2
+)
+
+# Query beliefs
+beliefs = guardian.get_beliefs_for_context("oauth_security")
 ```
 
 ---
 
-## Investigation API
+## Migration from v1.x
 
-### recommend_investigation_tools()
-
-Get strategic tool recommendations for gaps.
-
+### Old Bootstrap Pattern (v1.x)
 ```python
-from empirica.investigation import recommend_investigation_tools
-
-recommendations = recommend_investigation_tools(
-    assessment=epistemic_assessment,
-    context={'domain': 'code_analysis'},
-    domain='code_analysis'
-)
-
-for rec in recommendations:
-    print(f"{rec.tool_name}: {rec.reasoning}")
-    print(f"Gap: {rec.gap_addressed}, Gain: {rec.confidence}")
-```
-
-**Returns:** List of `ToolRecommendation` with:
-- `tool_name` (str): Tool identifier
-- `reasoning` (str): Why this tool
-- `gap_addressed` (str): Which vector it improves
-- `confidence` (float): Expected confidence gain
-
----
-
-## Plugin API
-
-### InvestigationPlugin
-
-Define custom investigation tools.
-
-```python
-from empirica.investigation import InvestigationPlugin
-
-plugin = InvestigationPlugin(
-    name='custom_tool',
-    description='What it does',
-    execute_fn=lambda ctx: my_function(ctx),
-    improves_vectors=['know', 'context'],
-    confidence_gain=0.25,
-    required_context=['key1', 'key2'],
-    domain_specific='code_analysis'  # optional
-)
-
-# Use in cascade
-cascade = CanonicalEpistemicCascade(
-    investigation_plugins={'custom_tool': plugin}
-)
-```
-
-### PluginRegistry
-
-Manage multiple plugins.
-
-```python
-from empirica.investigation import PluginRegistry
-
-registry = PluginRegistry()
-registry.register(plugin1)
-registry.register(plugin2)
-
-# Query
-plugins_for_know = registry.get_plugins_by_vector('know')
-plugins_for_domain = registry.get_plugins_by_domain('security')
-
-# Validate
-is_valid = registry.validate_plugin(plugin)
-```
-
----
-
-## Calibration API
-
-### BayesianBeliefTracker
-
-Evidence-based belief tracking.
-
-```python
-from empirica.calibration.adaptive_uncertainty_calibration.bayesian_belief_tracker import (
-    BayesianBeliefTracker,
-    Evidence
-)
-
-tracker = BayesianBeliefTracker()
-
-# Initialize beliefs
-tracker.initialize_beliefs(
-    context_key='task_123',
-    initial_assessment={'know': 0.7, 'do': 0.6},
-    initial_variance=0.3
-)
-
-# Update with evidence
-evidence = Evidence(
-    outcome=True,
-    strength=0.8,
-    timestamp=time.time(),
-    source='documentation_search',
-    vector_addressed='know'
-)
-belief = tracker.update_belief('task_123:know', evidence)
-
-# Detect discrepancies
-discrepancies = tracker.detect_discrepancies(
-    context_key='task_123',
-    intuitive_assessment={'know': 0.7, 'do': 0.6}
-)
-```
-
----
-
-## Logging API
-
-### ReflexLogger
-
-Temporal separation via JSON logging.
-
-```python
-from empirica.core.canonical import ReflexLogger
-
-logger = ReflexLogger()
-
-# Log reflex frame
-await logger.log_frame(
-    frame=reflex_frame,
-    task_id='task_123',
-    phase='uncertainty'
-)
-
-# Query frames
-frames = await logger.get_frames_by_phase('uncertainty', date='2025-10-28')
-frames = await logger.get_frames_by_task('task_123')
-```
-
----
-
-## Complete Example
-
-```python
-import asyncio
 from empirica.bootstraps import ExtendedMetacognitiveBootstrap
-from empirica.data import SessionDatabase, SessionJSONHandler
 
-async def complete_example():
-    # 1. Initialize database
-    db = SessionDatabase()
-    handler = SessionJSONHandler()
-    
-    # 2. Create session
-    session_id = db.create_session("my_ai", bootstrap_level=2, components_loaded=30)
-    
-    # 3. Bootstrap
-    bootstrap = ExtendedMetacognitiveBootstrap(level="2", ai_id="my_ai")
-    components = bootstrap.bootstrap()
-    cascade = components['canonical_cascade']
-    
-    # 4. Create cascade tracking
-    cascade_id = db.create_cascade(session_id, "Analyze auth.py", {'tracked': True})
-    
-    # 5. Run cascade
-    result = await cascade.run_epistemic_cascade(
-        task="Analyze authentication.py for security issues",
-        context={'cwd': '/project', 'urgency': 'high'}
-    )
-    
-    # 6. Complete tracking
-    db.complete_cascade(
-        cascade_id,
-        final_action=result['action'],
-        final_confidence=result['confidence'],
-        investigation_rounds=result['investigation_rounds'],
-        duration_ms=5000,
-        engagement_gate_passed=True,
-        bayesian_active=True
-    )
-    
-    # 7. Export to JSON
-    handler.export_session(db, session_id)
-    
-    # 8. Check results
-    print(f"Action: {result['action']}")
-    print(f"Confidence: {result['confidence']:.2f}")
-    
-    db.close()
-    return result
-
-asyncio.run(complete_example())
+bootstrap = ExtendedMetacognitiveBootstrap(level="2", ai_id="myai")
+components = bootstrap.bootstrap()
+cascade = components['canonical_cascade']
+assessor = components['canonical_assessor']
 ```
+
+### New Direct API (v2.0)
+```python
+from empirica.data.session_database import SessionDatabase
+from empirica.core.canonical.reflex_logger import ReflexLogger
+
+# Just create a session
+db = SessionDatabase()
+session_id = db.create_session(ai_id="myai")
+db.close()
+
+# Components available directly
+logger = ReflexLogger(session_id=session_id)
+# No bootstrap ceremony needed!
+```
+
+**Key Differences:**
+- ❌ No ExtendedMetacognitiveBootstrap
+- ❌ No component dictionary
+- ❌ No pre-loading ceremony
+- ✅ Direct imports
+- ✅ Explicit session creation
+- ✅ Lazy-loading components
 
 ---
 
 ## Error Handling
 
 ```python
-import asyncio
-from empirica.bootstraps import ExtendedMetacognitiveBootstrap
+from empirica.data.session_database import SessionDatabase
 
-async def with_errors():
-    try:
-        bootstrap = ExtendedMetacognitiveBootstrap(level="2")
-        components = bootstrap.bootstrap()
-        cascade = components['canonical_cascade']
-        
-        result = await cascade.run_epistemic_cascade(task, context)
-        return result
-        
-    except KeyError as e:
-        print(f"Component not found: {e}")
-    except AttributeError as e:
-        print(f"Attribute error (check imports): {e}")
-    except asyncio.TimeoutError:
-        print("Cascade timed out")
-    except Exception as e:
-        print(f"Unexpected error: {e}")
+try:
+    db = SessionDatabase()
+    session_id = db.create_session(ai_id="myai")
+    
+    # Your code here
+    
+    db.end_session(session_id)
+except Exception as e:
+    print(f"Error: {e}")
+finally:
+    if 'db' in locals():
+        db.close()
 ```
 
 ---
 
-## Type Hints
+## Best Practices
 
+### 1. Always Close Connections
 ```python
-from typing import Dict, List, Any, Optional
-from empirica.core.canonical import EpistemicAssessment
-from empirica.bootstraps import ExtendedMetacognitiveBootstrap
-
-async def typed_function(
-    task: str,
-    context: Dict[str, Any],
-    level: str = "2"
-) -> Dict[str, Any]:
-    bootstrap: ExtendedMetacognitiveBootstrap = ExtendedMetacognitiveBootstrap(level=level)
-    components: Dict[str, Any] = bootstrap.bootstrap()
-    
-    result: Dict[str, Any] = await components['canonical_cascade'].run_epistemic_cascade(
-        task=task,
-        context=context
-    )
-    
-    return result
+db = SessionDatabase()
+try:
+    # ... use db ...
+finally:
+    db.close()
 ```
+
+### 2. Use Context for Goal Scope
+```python
+# Bad: Guessing scope
+scope = ScopeVector(0.5, 0.5, 0.5)
+
+# Good: Thoughtful assessment
+scope = ScopeVector(
+    breadth=0.3,      # Just authentication module
+    duration=0.4,     # ~2 days work
+    coordination=0.1  # Solo work, minimal coordination
+)
+```
+
+### 3. Meaningful Reasoning
+```python
+# Bad: Generic
+reasoning="Task complete"
+
+# Good: Specific learning
+reasoning="Implemented OAuth2 flow. Learned that refresh token rotation prevents token theft attacks. Initially uncertain about token storage, now confident SQLite with encryption is sufficient for MVP."
+```
+
+### 4. Track Epistemic Growth
+```python
+# Calculate learning delta
+know_growth = postflight["know"] - preflight["know"]
+uncertainty_reduction = preflight["uncertainty"] - postflight["uncertainty"]
+
+if know_growth > 0.2 and uncertainty_reduction > 0.2:
+    print("✅ Significant learning occurred")
+```
+
+---
+
+## API Summary Table
+
+| Module | Class/Function | Purpose |
+|--------|---------------|---------|
+| `session_database` | `SessionDatabase` | Create/manage sessions |
+| `reflex_logger` | `ReflexLogger` | Log CASCADE assessments |
+| `canonical` | `CanonicalEpistemicAssessor` | Generate assessment prompts |
+| `goals.repository` | `GoalRepository` | Manage goals/subtasks |
+| `handoff` | `EpistemicHandoffReportGenerator` | Create handoff reports |
+| `git_enhanced_reflex_logger` | `GitEnhancedReflexLogger` | Git notes checkpoints |
+| `bayesian_guardian` | `BayesianGuardian` | Track belief evolution |
 
 ---
 
 ## Next Steps
 
-- **Cascade Flow:** [06_CASCADE_FLOW.md](06_CASCADE_FLOW.md)
-- **Custom Plugins:** [14_CUSTOM_PLUGINS.md](14_CUSTOM_PLUGINS.md)
-- **Troubleshooting:** [21_TROUBLESHOOTING.md](21_TROUBLESHOOTING.md)
+- **[Basic Usage](03_BASIC_USAGE.md)** - Getting started guide
+- **[CASCADE Flow](06_CASCADE_FLOW.md)** - Workflow details
+- **[Session Management](12_SESSION_DATABASE.md)** - Advanced features
+- **[CLI Reference](19_API_REFERENCE.md)** - Command-line usage
 
----
-
-**Complete API reference for direct Python usage!** 📚
-
-
----
-
-**Note:** Empirica uses goals (with vectorial scope and subtasks) and git notes (checkpoints, goals, handoffs) for automatic session continuity and cross-AI coordination. See [Storage Architecture](../architecture/STORAGE_ARCHITECTURE_COMPLETE.md) and [Cross-AI Coordination](26_CROSS_AI_COORDINATION.md).

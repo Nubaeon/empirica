@@ -446,24 +446,54 @@ class GitEnhancedReflexLogger:
     
     def _save_checkpoint_to_sqlite(self, checkpoint: Dict[str, Any]):
         """
-        Save checkpoint to SQLite (fallback storage).
-        
-        Note: Actual implementation would integrate with SessionDatabase.
-        For Phase 1.5, we store as JSON file alongside reflex logs.
+        Save checkpoint to SQLite reflexes table (proper integration).
+
+        This method writes to the reflexes table in SessionDatabase,
+        making the assessment queryable by statusline and other systems.
+
+        Args:
+            checkpoint: Compressed checkpoint dictionary containing:
+                - session_id, phase, round, timestamp
+                - vectors (all 13 epistemic dimensions)
+                - metadata (task, decision, etc.)
         """
-        # Create checkpoint directory
-        checkpoint_dir = self.base_log_dir / "checkpoints" / self.session_id
-        checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Save as timestamped JSON file
-        timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
-        filename = f"checkpoint_{checkpoint['phase']}_{timestamp}.json"
-        filepath = checkpoint_dir / filename
-        
-        with open(filepath, 'w') as f:
-            json.dump(checkpoint, f, indent=2)
-        
-        logger.debug(f"Checkpoint saved to SQLite fallback: {filepath}")
+        try:
+            from empirica.data.session_database import SessionDatabase
+
+            # Extract data from checkpoint
+            session_id = checkpoint.get('session_id')
+            phase = checkpoint.get('phase')
+            round_num = checkpoint.get('round', 1)
+            vectors = checkpoint.get('vectors', {})
+
+            if not session_id or not phase:
+                logger.error(f"Cannot save checkpoint: missing session_id or phase")
+                return
+
+            # Initialize database
+            db = SessionDatabase()
+
+            try:
+                # Store vectors in reflexes table using proper API
+                db.store_vectors(
+                    session_id=session_id,
+                    phase=phase,
+                    vectors=vectors,
+                    cascade_id=checkpoint.get('meta', {}).get('cascade_id'),
+                    round_num=round_num
+                )
+
+                logger.debug(
+                    f"Checkpoint saved to SQLite reflexes table: "
+                    f"session={session_id}, phase={phase}, round={round_num}"
+                )
+
+            finally:
+                db.close()
+
+        except Exception as e:
+            logger.error(f"Failed to save checkpoint to SQLite: {e}", exc_info=True)
+            # Continue anyway - don't fail the whole operation if SQLite has issues
     
     def _git_add_note(self, checkpoint: Dict[str, Any]) -> Optional[str]:
         """

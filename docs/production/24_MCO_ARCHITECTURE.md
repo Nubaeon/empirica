@@ -2,6 +2,8 @@
 
 **Meta-Agent Configuration Object - Dynamic Configuration System**
 
+**Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
+
 ---
 
 ## Overview

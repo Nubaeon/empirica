@@ -277,7 +277,7 @@ def validate_email(email: str) -> bool:
         
         # Verify MCP tools would work with same workflow
         mcp_bootstrap = await call_tool(
-            "bootstrap_session",
+            "session_create",
             {"ai_id": ai_id, "session_type": "test"}
         )
         

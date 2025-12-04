@@ -164,8 +164,7 @@ print("4️⃣ VERIFYING BOOTSTRAP INTEGRATION")
 print("-" * 80)
 
 try:
-    from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
-    
+        
     # Test bootstrap (minimal to avoid heavy loading)
     print("   🔄 Testing bootstrap initialization...")
     bootstrap = OptimalMetacognitiveBootstrap(ai_id="verification_test", level="minimal")

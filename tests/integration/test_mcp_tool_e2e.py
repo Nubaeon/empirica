@@ -30,10 +30,10 @@ class TestBootstrapGoalSubtaskFlow:
             return await list_tools()
         
         tools = asyncio.run(_get_tools())
-        bootstrap_tool = next((t for t in tools if t.name == 'bootstrap_session'), None)
-        assert bootstrap_tool is not None
-        
-        bootstrap_schema = bootstrap_tool.inputSchema
+        session_create_tool = next((t for t in tools if t.name == 'session_create'), None)
+        assert session_create_tool is not None
+
+        bootstrap_schema = session_create_tool.inputSchema
         assert 'ai_id' in bootstrap_schema['required'], "ai_id should be required"
         assert bootstrap_schema['properties']['ai_id']['type'] == 'string'
         assert 'bootstrap_level' in bootstrap_schema['properties'], "bootstrap_level should exist"
@@ -83,7 +83,7 @@ class TestBootstrapGoalSubtaskFlow:
         
         # Test UUID types
         uuid_params = [
-            ('bootstrap_session', 'ai_id'),  # Should accept string (we'll generate UUID)
+            ('session_create', 'ai_id'),  # Should accept string (we'll generate UUID)
             ('create_goal', 'session_id'),  # Should accept string UUID
             ('add_subtask', 'goal_id'),  # Should accept string UUID
             ('complete_subtask', 'task_id'),  # Should accept string UUID

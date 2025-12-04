@@ -6,10 +6,11 @@ Organizes CLI command handlers by semantic function for maintainability.
 
 # Import all command handlers
 from .bootstrap_commands import (
-    handle_bootstrap_command, handle_bootstrap_system_command, handle_onboard_command,
+    handle_bootstrap_system_command,
     handle_profile_list_command, handle_profile_show_command, 
     handle_profile_create_command, handle_profile_set_default_command
 )
+from .onboard import handle_onboard_command
 from .cascade_commands import (
     handle_preflight_command,
     handle_postflight_command,

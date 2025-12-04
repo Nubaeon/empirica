@@ -1,5 +1,7 @@
 # Session Continuity System
 
+**Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
+
 ## Overview
 
 The Session Continuity system enables AI agents (especially Claude) to maintain context and learning across session restarts. Instead of starting fresh each time, the AI can load previous session data, understand past decisions, and build on previous work.

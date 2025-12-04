@@ -97,8 +97,7 @@ def handle_bootstrap_command(args):
                 
         except ImportError:
             # Fallback to local bootstrap if MCP server not available
-            from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
-            
+                        
             bootstrap = OptimalMetacognitiveBootstrap(
                 ai_id='empirica_cli',
                 level=bootstrap_level
@@ -138,8 +137,7 @@ def handle_bootstrap_command(args):
 def handle_bootstrap_system_command(args):
     """Handle system-level bootstrap command (advanced)"""
     try:
-        from empirica.bootstraps.extended_metacognitive_bootstrap import ExtendedMetacognitiveBootstrap
-        
+                
         print("🚀 Running extended metacognitive system bootstrap...")
         
         start_time = time.time()

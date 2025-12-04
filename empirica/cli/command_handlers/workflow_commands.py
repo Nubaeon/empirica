@@ -56,7 +56,7 @@ def handle_preflight_submit_command(args):
                 }
             )
 
-            # ALSO create DATABASE records for statusline integration
+            # JUST create CASCADE record for historical tracking (this remains)
             db = SessionDatabase()
             cascade_id = str(uuid.uuid4())
             now = time.time()
@@ -67,38 +67,6 @@ def handle_preflight_submit_command(args):
                 (cascade_id, session_id, task, started_at)
                 VALUES (?, ?, ?, ?)
             """, (cascade_id, session_id, "PREFLIGHT assessment", now))
-
-            # Calculate overall confidence from vectors
-            tier0_keys = ['know', 'do', 'context']
-            tier0_values = [vectors.get(k, 0.5) for k in tier0_keys]
-            overall_confidence = sum(tier0_values) / len(tier0_values) if tier0_values else 0.5
-
-            # Create epistemic assessment record
-            db.conn.execute("""
-                INSERT INTO epistemic_assessments
-                (assessment_id, cascade_id, phase, engagement, know, do, context, clarity,
-                 coherence, signal, density, state, change, completion, impact, uncertainty,
-                 overall_confidence, recommended_action, assessed_at)
-                VALUES (?, ?, 'PREFLIGHT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                str(uuid.uuid4()), cascade_id,
-                vectors.get('engagement', 0.5),
-                vectors.get('know', 0.5),
-                vectors.get('do', 0.5),
-                vectors.get('context', 0.5),
-                vectors.get('clarity', 0.5),
-                vectors.get('coherence', 0.5),
-                vectors.get('signal', 0.5),
-                vectors.get('density', 0.5),
-                vectors.get('state', 0.5),
-                vectors.get('change', 0.5),
-                vectors.get('completion', 0.5),
-                vectors.get('impact', 0.5),
-                vectors.get('uncertainty', 0.5),
-                overall_confidence,
-                'continue',
-                now
-            ))
 
             db.conn.commit()
             db.close()

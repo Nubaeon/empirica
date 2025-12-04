@@ -22,9 +22,9 @@ class TestMCPWorkflow:
     async def test_complete_workflow_bootstrap_to_postflight(self):
         """Test: bootstrap → preflight → submit → postflight → calibration"""
         
-        # Step 1: Bootstrap session
+        # Step 1: Create session
         bootstrap_result = await call_tool(
-            "bootstrap_session",
+            "session_create",
             {"ai_id": "test_mcp_integration", "session_type": "workflow"}
         )
         
@@ -36,7 +36,7 @@ class TestMCPWorkflow:
         assert "session_id" in bootstrap_data
         
         session_id = bootstrap_data["session_id"]
-        print(f"\n✅ Step 1: Session bootstrapped: {session_id}")
+        print(f"\n✅ Step 1: Session created: {session_id}")
         
         # Step 2: Execute preflight
         preflight_result = await call_tool(
@@ -175,7 +175,7 @@ class TestMCPWorkflow:
         
         # Create session
         bootstrap_result = await call_tool(
-            "bootstrap_session",
+            "session_create",
             {"ai_id": "test_continuity"}
         )
         
@@ -200,9 +200,9 @@ class TestMCPWorkflow:
     async def test_epistemic_state_query(self):
         """Test: Query current epistemic state"""
         
-        # Bootstrap session
+        # Create session
         bootstrap_result = await call_tool(
-            "bootstrap_session",
+            "session_create",
             {"ai_id": "test_epistemic_state"}
         )
         session_id = json.loads(bootstrap_result[0].text)["session_id"]
@@ -231,9 +231,9 @@ class TestMCPWorkflow:
     async def test_investigation_recommendation(self):
         """Test: System recommends investigation when uncertainty is high"""
         
-        # Bootstrap
+        # Create session
         bootstrap_result = await call_tool(
-            "bootstrap_session",
+            "session_create",
             {"ai_id": "test_investigation"}
         )
         session_id = json.loads(bootstrap_result[0].text)["session_id"]

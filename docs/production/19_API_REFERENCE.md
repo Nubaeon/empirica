@@ -2,52 +2,48 @@
 
 **Empirica v2.0 - Complete Method Signatures**
 
+**Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
+
 ---
 
 ## Core Classes
 
-### ExtendedMetacognitiveBootstrap
+### SessionDatabase
 
 ```python
-class ExtendedMetacognitiveBootstrap:
-    def __init__(
-        self,
-        ai_id: str = "empirica_ai",
-        level: str = "2"
-    ) -> None
+class SessionDatabase:
+    def __init__(self, db_path: Optional[str] = None) -> None
 ```
 
 **Parameters:**
-- `ai_id` (str): AI identifier for logging
-- `level` (str): Bootstrap level "0"-"4"
+- `db_path` (Optional[str]): Path to SQLite database
 
 **Methods:**
 
-#### bootstrap()
+#### create_session()
 ```python
-def bootstrap(self) -> Dict[str, Any]
+def create_session(
+    self,
+    ai_id: str,
+    bootstrap_level: int = 1,
+    components_loaded: int = 6
+) -> str
 ```
-Load components based on initialization level.
+Create new Empirica session.
 
-**Returns:** dict[str, component] - Loaded components
+**Returns:** str - Session UUID
 
 ---
 
-### CanonicalEpistemicCascade
+### CanonicalEpistemicAssessor
 
 ```python
-class CanonicalEpistemicCascade:
+class CanonicalEpistemicAssessor:
     def __init__(
         self,
-        action_confidence_threshold: float = 0.70,
-        max_investigation_rounds: int = 3,
-        agent_id: str = "cascade",
-        tmux_extension = None,
-        enable_bayesian: bool = True,
-        enable_drift_monitor: bool = True,
-        investigation_plugins: Optional[Dict[str, InvestigationPlugin]] = None,
-        enable_action_hooks: bool = True,
-        auto_start_dashboard: bool = False,
+        session_id: str,
+        confidence_threshold: float = 0.70,
+        max_investigation_rounds: int = 3
         enable_perspective_caching: bool = True,
         cache_ttl: int = 300,
         enable_session_db: bool = True

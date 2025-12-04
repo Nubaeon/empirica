@@ -13,7 +13,6 @@ empirica_root = Path(__file__).parent.parent
 sys.path.insert(0, str(empirica_root / 'empirica'))
 sys.path.insert(0, str(empirica_root))
 
-from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
 
 
 class EmpericaWebsiteBuilder:

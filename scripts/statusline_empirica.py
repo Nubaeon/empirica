@@ -101,13 +101,12 @@ def get_latest_vectors(db: SessionDatabase, session_id: str) -> dict:
     """Get the most recent epistemic vectors for a session."""
     cursor = db.conn.cursor()
     cursor.execute("""
-        SELECT ea.phase, ea.engagement, ea.know, ea.do, ea.context,
-               ea.clarity, ea.coherence, ea.signal, ea.density,
-               ea.state, ea.change, ea.completion, ea.impact, ea.uncertainty
-        FROM epistemic_assessments ea
-        JOIN cascades c ON ea.cascade_id = c.cascade_id
-        WHERE c.session_id = ?
-        ORDER BY ea.assessed_at DESC
+        SELECT phase, engagement, know, do, context,
+               clarity, coherence, signal, density,
+               state, change, completion, impact, uncertainty
+        FROM reflexes
+        WHERE session_id = ?
+        ORDER BY timestamp DESC
         LIMIT 1
     """, (session_id,))
     row = cursor.fetchone()
@@ -139,26 +138,24 @@ def calculate_deltas(db: SessionDatabase, session_id: str) -> dict:
 
     # Get PREFLIGHT vectors
     cursor.execute("""
-        SELECT ea.engagement, ea.know, ea.do, ea.context,
-               ea.clarity, ea.coherence, ea.signal, ea.density,
-               ea.state, ea.change, ea.completion, ea.impact, ea.uncertainty
-        FROM epistemic_assessments ea
-        JOIN cascades c ON ea.cascade_id = c.cascade_id
-        WHERE c.session_id = ? AND ea.phase = 'PREFLIGHT'
-        ORDER BY ea.assessed_at ASC
+        SELECT engagement, know, do, context,
+               clarity, coherence, signal, density,
+               state, change, completion, impact, uncertainty
+        FROM reflexes
+        WHERE session_id = ? AND phase = 'PREFLIGHT'
+        ORDER BY timestamp ASC
         LIMIT 1
     """, (session_id,))
     preflight_row = cursor.fetchone()
 
     # Get latest vectors
     cursor.execute("""
-        SELECT ea.engagement, ea.know, ea.do, ea.context,
-               ea.clarity, ea.coherence, ea.signal, ea.density,
-               ea.state, ea.change, ea.completion, ea.impact, ea.uncertainty
-        FROM epistemic_assessments ea
-        JOIN cascades c ON ea.cascade_id = c.cascade_id
-        WHERE c.session_id = ?
-        ORDER BY ea.assessed_at DESC
+        SELECT engagement, know, do, context,
+               clarity, coherence, signal, density,
+               state, change, completion, impact, uncertainty
+        FROM reflexes
+        WHERE session_id = ?
+        ORDER BY timestamp DESC
         LIMIT 1
     """, (session_id,))
     latest_row = cursor.fetchone()
@@ -361,11 +358,10 @@ def calculate_cognitive_load(db: SessionDatabase, session_id: str, current_vecto
 
         # Get recent DENSITY values to detect trend
         cursor.execute("""
-            SELECT ea.density, ea.assessed_at
-            FROM epistemic_assessments ea
-            JOIN cascades c ON ea.cascade_id = c.cascade_id
-            WHERE c.session_id = ?
-            ORDER BY ea.assessed_at DESC
+            SELECT density, timestamp
+            FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC
             LIMIT 5
         """, (session_id,))
 

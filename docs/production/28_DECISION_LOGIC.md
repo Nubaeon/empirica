@@ -1,8 +1,10 @@
 # 28. Epistemic Decision Logic
 
 **Version:** 2.0  
-**Date:** 2025-11-30  
+**Date:** 2025-12-04  
 **Status:** Production Ready
+
+**Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
 
 ---
 

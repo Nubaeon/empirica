@@ -6,9 +6,9 @@ from mcp_local.empirica_mcp_server import call_tool
 from mcp import types
 
 @pytest.mark.asyncio
-async def test_bootstrap_session():
-    """bootstrap_session tool works"""
-    result = await call_tool("bootstrap_session", {"ai_id": "test_agent"})
+async def test_session_create():
+    """session_create tool works"""
+    result = await call_tool("session_create", {"ai_id": "test_agent"})
     assert isinstance(result, list)
     assert len(result) == 1
     content = result[0]
@@ -22,8 +22,8 @@ async def test_bootstrap_session():
 @pytest.mark.asyncio
 async def test_execute_preflight():
     """execute_preflight returns meta-prompt"""
-    # This tool requires a session_id, so we'll call bootstrap_session first
-    bootstrap_result = await call_tool("bootstrap_session", {"ai_id": "test_agent"})
+    # This tool requires a session_id, so we'll call session_create first
+    bootstrap_result = await call_tool("session_create", {"ai_id": "test_agent"})
     session_id = json.loads(bootstrap_result[0].text)["session_id"]
 
     result = await call_tool("execute_preflight", {"session_id": session_id, "prompt": "Test prompt"})

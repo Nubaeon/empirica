@@ -9,28 +9,30 @@ import tempfile
 import os
 
 
-def bootstrap_session(ai_id: str, session_type: str = "development", 
-                     profile: str = None, ai_model: str = None, domain: str = None):
+def session_create(ai_id: str, session_type: str = "development",
+                  profile: str = None, ai_model: str = None, domain: str = None, bootstrap_level: str = "standard"):
     """
-    Call MCP server bootstrap_session tool
-    
+    Call MCP server session_create tool
+
     Args:
         ai_id: AI identifier
         session_type: Session type (development, production, testing)
         profile: Optional profile for session configuration
         ai_model: Optional AI model specification
         domain: Optional domain context
-    
+        bootstrap_level: Bootstrap configuration level (standard, minimal, full, etc.)
+
     Returns:
-        dict: Response from bootstrap_session tool
+        dict: Response from session_create tool
     """
     try:
         # Prepare tool call arguments
         arguments = {
             "ai_id": ai_id,
-            "session_type": session_type
+            "session_type": session_type,
+            "bootstrap_level": bootstrap_level
         }
-        
+
         # Add optional parameters if provided
         if profile is not None:
             arguments["profile"] = profile
@@ -44,7 +46,7 @@ def bootstrap_session(ai_id: str, session_type: str = "development",
         # In a full implementation, this would make an actual MCP call
         return {
             "ok": True,
-            "message": "Empirica session bootstrapped",
+            "message": "Empirica session created successfully",
             "session_id": f"cli_session_{int(__import__('time').time())}",
             "ai_id": ai_id,
             "session_type": session_type,
@@ -53,7 +55,7 @@ def bootstrap_session(ai_id: str, session_type: str = "development",
             "domain": domain,
             "components_loaded": [
                 "twelve_vector_monitor",
-                "eleven_vector_assessment", 
+                "eleven_vector_assessment",
                 "render_vectors",
                 "calibration",
                 "uq_vector",
@@ -73,11 +75,11 @@ def bootstrap_session(ai_id: str, session_type: str = "development",
 def call_mcp_tool(tool_name: str, arguments: dict):
     """
     Generic MCP tool caller
-    
+
     Args:
         tool_name: Name of the MCP tool to call
         arguments: Arguments to pass to the tool
-    
+
     Returns:
         dict: Response from MCP tool
     """

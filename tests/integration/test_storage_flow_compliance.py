@@ -26,15 +26,15 @@ class TestStorageFlowCompliance:
     def test_session_id(self):
         """Create a test session and return its ID"""
         result = subprocess.run(
-            ["empirica", "bootstrap", "--ai-id", "storage-flow-test", "--level", "complete"],
+            ["empirica", "session-create", "--ai-id", "storage-flow-test", "--bootstrap-level", "2"],
             capture_output=True,
             text=True
         )
-        
+
         # Extract session ID from output
         output = result.stdout
         if result.returncode != 0:
-            pytest.fail(f"Bootstrap failed: {result.stderr}")
+            pytest.fail(f"Session create failed: {result.stderr}")
         
         # Parse JSON output to get session_id
         try:

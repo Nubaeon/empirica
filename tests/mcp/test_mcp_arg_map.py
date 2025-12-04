@@ -22,11 +22,11 @@ class TestArgMapTranslations:
             return await list_tools()
         
         tools = asyncio.run(_get_tools())
-        bootstrap_tool = next((t for t in tools if t.name == 'bootstrap_session'), None)
-        assert bootstrap_tool is not None
-        
+        session_create_tool = next((t for t in tools if t.name == 'session_create'), None)
+        assert session_create_tool is not None
+
         # Check that bootstrap_level parameter exists in MCP schema
-        schema = bootstrap_tool.inputSchema
+        schema = session_create_tool.inputSchema
         assert 'bootstrap_level' in schema['properties'], "bootstrap_level should exist in MCP schema"
         
         # Verify the mapping would work (this is tested implicitly via CLI parsing)
@@ -151,15 +151,15 @@ class TestSpecialMappings:
     """Test special parameter mappings that deviate from standard patterns"""
     
     def test_bootstrap_level_special_mapping(self):
-        """bootstrap_level has special mapping to --level (not --bootstrap-level)"""
+        """bootstrap_level has special mapping to --bootstrap-level (not --level)"""
         async def _get_tools():
             return await list_tools()
         
         tools = asyncio.run(_get_tools())
-        bootstrap_tool = next((t for t in tools if t.name == 'bootstrap_session'), None)
-        assert bootstrap_tool is not None
-        
-        schema = bootstrap_tool.inputSchema
+        session_create_tool = next((t for t in tools if t.name == 'session_create'), None)
+        assert session_create_tool is not None
+
+        schema = session_create_tool.inputSchema
         assert 'bootstrap_level' in schema['properties'], "bootstrap_level should exist"
     
     def test_remaining_unknowns_special_mapping(self):

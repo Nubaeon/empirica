@@ -2,6 +2,8 @@
 
 **Empirica v2.0 - Data Architecture & Temporal Separation**
 
+**Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
+
 ---
 
 ## Overview

@@ -1,0 +1,221 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "last_updated": "2025-12-04",
+    "description": "Canonical AI registry for Empirica multi-AI coordination",
+    "purpose": "Single source of truth for AI identities, system prompts, and MCO configurations"
+  },
+  "agents": {
+    "claude-code": {
+      "name": "Claude Code",
+      "provider": "Anthropic",
+      "model": "Claude Haiku 4.5",
+      "role": "Implementation Lead",
+      "description": "Generalist metacognitive agent specializing in code implementation, execution, and git operations",
+      "system_prompt_path": "/home/yogapad/.claude/CLAUDE.md",
+      "mco_configuration": {
+        "model_profile": "claude_haiku",
+        "persona": "implementer",
+        "cascade_style": "implementation"
+      },
+      "capabilities": {
+        "reasoning_depth": 0.60,
+        "code_generation": 0.65,
+        "speed_vs_accuracy": 0.20,
+        "specializations": ["implementation", "quick_iteration", "code_execution"]
+      },
+      "bias_corrections": {
+        "knowledge": -0.05,
+        "uncertainty": 0.10,
+        "confidence": -0.05
+      },
+      "investigation_budget": 5,
+      "canonical": true,
+      "active": true
+    },
+    "claude-sonnet": {
+      "name": "Claude Sonnet",
+      "provider": "Anthropic",
+      "model": "Claude Sonnet 3.5",
+      "role": "High-Reasoning Architect",
+      "description": "High-reasoning specialist for design validation, architecture exploration, and research",
+      "system_prompt_path": "/home/yogapad/.sonnet/SONNET.md",
+      "mco_configuration": {
+        "model_profile": "claude_sonnet",
+        "persona": "researcher",
+        "cascade_style": "exploratory"
+      },
+      "capabilities": {
+        "reasoning_depth": 0.85,
+        "code_generation": 0.80,
+        "creative_thinking": 0.75,
+        "specializations": ["design", "research", "architecture", "reasoning"]
+      },
+      "bias_corrections": {
+        "knowledge": -0.05,
+        "uncertainty": 0.10,
+        "confidence": -0.02
+      },
+      "investigation_budget": 10,
+      "canonical": true,
+      "active": true
+    },
+    "qwen-code": {
+      "name": "Qwen Code",
+      "provider": "Alibaba",
+      "model": "Qwen",
+      "role": "Testing & Quality Specialist",
+      "description": "Code-specialized agent for testing, validation, integration testing, and quality assurance",
+      "system_prompt_path": "/home/yogapad/.qwen/QWEN.md",
+      "mco_configuration": {
+        "model_profile": "code_specialist",
+        "persona": "reviewer",
+        "cascade_style": "rigorous"
+      },
+      "capabilities": {
+        "code_generation": 0.95,
+        "testing": 0.90,
+        "reasoning_depth": 0.70,
+        "specializations": ["testing", "validation", "quality_assurance", "code_review"]
+      },
+      "bias_corrections": {
+        "knowledge": -0.06,
+        "uncertainty": 0.08,
+        "confidence": 0.00
+      },
+      "investigation_budget": 8,
+      "canonical": true,
+      "active": true
+    }
+  },
+  "model_profiles": {
+    "claude_haiku": {
+      "name": "Claude Haiku Family",
+      "description": "Fast, efficient general-purpose model with moderate reasoning",
+      "file_reference": "empirica/config/mco/model_profiles.yaml:83-117"
+    },
+    "claude_sonnet": {
+      "name": "Claude Sonnet Family",
+      "description": "High-reasoning general-purpose model with strong capabilities",
+      "file_reference": "empirica/config/mco/model_profiles.yaml:35-82"
+    },
+    "code_specialist": {
+      "name": "Code Specialist Models",
+      "description": "Specialized in code generation and analysis",
+      "file_reference": "empirica/config/mco/model_profiles.yaml:194-225"
+    }
+  },
+  "personas": {
+    "implementer": {
+      "name": "Task Implementer",
+      "description": "AI specialized in implementing clear requirements efficiently",
+      "investigation_max_rounds": 5,
+      "file_reference": "empirica/config/mco/personas.yaml:77-109"
+    },
+    "researcher": {
+      "name": "Research Explorer",
+      "description": "AI specialized in exploration, research, and learning new domains",
+      "investigation_max_rounds": 10,
+      "file_reference": "empirica/config/mco/personas.yaml:37-73"
+    },
+    "reviewer": {
+      "name": "Quality Reviewer",
+      "description": "AI specialized in reviewing, validating, and ensuring quality",
+      "investigation_max_rounds": 8,
+      "file_reference": "empirica/config/mco/personas.yaml:113-145"
+    }
+  },
+  "cascade_styles": {
+    "implementation": {
+      "name": "Implementation Pattern",
+      "pattern": "PREFLIGHT → [CHECK: 1-3 cycles] → ACT → POSTFLIGHT",
+      "investigation_budget": "Moderate",
+      "validation_gates": "Strict"
+    },
+    "exploratory": {
+      "name": "Exploratory Pattern",
+      "pattern": "PREFLIGHT → [CHECK: 1-5 cycles] → ACT → POSTFLIGHT",
+      "investigation_budget": "Generous",
+      "validation_gates": "Moderate"
+    },
+    "rigorous": {
+      "name": "Rigorous Pattern",
+      "pattern": "PREFLIGHT → [CHECK: 1-3 cycles] → ACT → POSTFLIGHT",
+      "investigation_budget": "Thorough",
+      "validation_gates": "Strict"
+    }
+  },
+  "protocols": {
+    "standard": {
+      "name": "Standard Protocol",
+      "session_storage": "SQLite reflexes table",
+      "checkpoints": "Git notes (97.5% token reduction)",
+      "handoffs": "Epistemic handoff reports (98.8% reduction)",
+      "atomicity": "All 3 layers write together"
+    }
+  },
+  "sessions": {
+    "table": "reflexes",
+    "required_columns": [
+      "session_id",
+      "ai_id",
+      "phase",
+      "engagement",
+      "know",
+      "do",
+      "context",
+      "clarity",
+      "coherence",
+      "signal",
+      "density",
+      "state",
+      "change",
+      "completion",
+      "impact",
+      "uncertainty",
+      "assessed_at"
+    ],
+    "query_pattern": "SELECT * FROM reflexes WHERE session_id = ? AND ai_id = ?"
+  },
+  "multi_ai_coordination": {
+    "statusline_configuration": {
+      "display_mode": "per_ai_id",
+      "environment_variable": "EMPIRICA_AI_ID",
+      "fallback_mechanism": "Try system prompt → try env var → return 'unknown'",
+      "example_commands": {
+        "claude_code": "EMPIRICA_AI_ID=claude-code python scripts/statusline_empirica.py",
+        "claude_sonnet": "EMPIRICA_AI_ID=claude-sonnet python scripts/statusline_empirica.py",
+        "qwen_code": "EMPIRICA_AI_ID=qwen-code python scripts/statusline_empirica.py"
+      }
+    },
+    "session_isolation": {
+      "description": "Each AI maintains separate epistemic state",
+      "implementation": "Filter sessions by ai_id in all queries",
+      "learning_curves": "Per-AI learning tracking",
+      "calibration": "Per-model bias corrections applied"
+    },
+    "handoff_behavior": {
+      "description": "One AI can discover and resume another AI's goals",
+      "mechanism": "discover_goals(from_ai_id) → resume_goal(goal_id, ai_id)",
+      "tokens_saved": "98.8% reduction via epistemic handoff reports"
+    }
+  },
+  "deprecated_patterns": {
+    "bootstrap_ceremony": "❌ Sessions are instant, no pre-loading needed",
+    "cascade_metadata_table": "❌ Use reflexes table instead",
+    "epistemic_assessments_table": "❌ Use reflexes table only",
+    "reflex_logger_py": "❌ Use GitEnhancedReflexLogger",
+    "direct_database_writes": "❌ Always use GitEnhancedReflexLogger",
+    "12_vector_system": "❌ Use 13-vector canonical only",
+    "heuristic_assessments": "❌ Only LLM self-assessment allowed",
+    "bootstrap_session_api": "❌ Use session-create command/API"
+  },
+  "quick_reference": {
+    "create_session": "empirica session-create --ai-id <AI_ID>",
+    "preflight": "empirica preflight --session-id <SESSION_ID> --prompt '...'",
+    "check": "empirica check --session-id <SESSION_ID> --confidence 0.75",
+    "postflight": "empirica postflight --session-id <SESSION_ID> --task-summary '...'",
+    "statusline": "EMPIRICA_AI_ID=<AI_ID> python scripts/statusline_empirica.py",
+    "checkpoint": "empirica checkpoint-load latest:active:<AI_ID>"
+  }
+}

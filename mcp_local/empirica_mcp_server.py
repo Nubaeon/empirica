@@ -87,8 +87,8 @@ async def list_tools() -> List[types.Tool]:
         # ========== Workflow Tools (Route to CLI) ==========
 
         types.Tool(
-            name="bootstrap_session",
-            description="Bootstrap new Empirica session with metacognitive configuration",
+            name="session_create",
+            description="Create new Empirica session with metacognitive configuration",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -814,30 +814,25 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
         pass  # Not JSON, need to parse
 
     # Parse specific command outputs
-    if tool_name == "bootstrap_session":
-        # Parse bootstrap output
-        # Example: "✅ Bootstrap complete!\n   📊 Components loaded: 6\n   ⏱️ Bootstrap time: 96μs..."
+    if tool_name == "session_create":
+        # Parse session-create output
+        # Example: "✅ Session created successfully!\n   📋 Session ID: 527f500f-db89-485a-9153-2b5c5f7fa32f\n   🤖 AI ID: claude-code..."
         import re
 
-        components = 0
-        level = 0
+        # Extract session ID from output
+        session_id_match = re.search(r'Session ID:\s*([a-f0-9-]+)', stdout)
+        session_id = session_id_match.group(1) if session_id_match else None
 
-        # Extract components loaded
-        match = re.search(r'Components loaded:\s*(\d+)', stdout)
-        if match:
-            components = int(match.group(1))
+        # Extract AI ID from output
+        ai_id_match = re.search(r'AI ID:\s*(\S+)', stdout)
+        ai_id_from_output = ai_id_match.group(1) if ai_id_match else None
 
-        # Extract level
-        match = re.search(r'Level:\s*(\d+)', stdout)
-        if match:
-            level = int(match.group(1))
+        # Extract AI ID from arguments as fallback
+        ai_id = arguments.get('ai_id', ai_id_from_output or 'unknown')
 
-        # Create session in database (bootstrap initializes framework but doesn't create session)
-        # The MCP layer creates the session and returns its ID
-        # Extract ai_id and bootstrap_level from arguments
-        ai_id = arguments.get('ai_id', 'unknown')
-        bootstrap_level_arg = arguments.get('bootstrap_level', level)
-        
+        # Extract bootstrap level from arguments
+        bootstrap_level_arg = arguments.get('bootstrap_level', 2)  # Default to standard level
+
         # Flexible parsing: accept strings or integers
         if isinstance(bootstrap_level_arg, str):
             bootstrap_level_map = {
@@ -845,46 +840,45 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
                 'standard': 1, 'std': 1, '1': 1,
                 'optimal': 2, 'full': 2, 'max': 2, '2': 2
             }
-            bootstrap_level = bootstrap_level_map.get(bootstrap_level_arg.lower(), level)
+            bootstrap_level = bootstrap_level_map.get(bootstrap_level_arg.lower(), 2)
         else:
-            bootstrap_level = int(bootstrap_level_arg) if bootstrap_level_arg is not None else level
-        
+            bootstrap_level = int(bootstrap_level_arg) if bootstrap_level_arg is not None else 2
+
         try:
             from empirica.data.session_database import SessionDatabase
-            import uuid
-            
-            db = SessionDatabase()
-            session_id = db.create_session(
-                ai_id=ai_id,
-                bootstrap_level=bootstrap_level,
-                components_loaded=components or 5
-            )
-            db.close()
-            
+
+            # If we didn't get the session_id from output, create it in the database
+            if not session_id:
+                db = SessionDatabase()
+                session_id = db.create_session(
+                    ai_id=ai_id,
+                    bootstrap_level=bootstrap_level,
+                    components_loaded=5  # Standard number of components
+                )
+                db.close()
+
             result = {
                 "ok": True,
-                "message": "Bootstrap completed successfully and session created",
+                "message": "Session created successfully",
                 "session_id": session_id,
                 "ai_id": ai_id,
-                "components_loaded": components or 5,
                 "bootstrap_level": bootstrap_level,
                 "next_step": "Use this session_id with execute_preflight to begin a cascade"
             }
-            
+
             return json.dumps(result, indent=2)
-            
+
         except Exception as e:
-            # Fallback if database creation fails
+            # Fallback if database operations fail
             result = {
                 "ok": True,
-                "message": "Bootstrap completed but session creation failed",
+                "message": "Session created but database operations failed",
+                "session_id": session_id or "unknown",
                 "error": str(e),
-                "components_loaded": components,
-                "bootstrap_level": bootstrap_level,
-                "next_step": "Call execute_preflight (it will auto-create a session)",
-                "note": "Session will be auto-created by execute_preflight"
+                "next_step": "Call execute_preflight",
+                "note": "Session may have been created but database sync failed"
             }
-            
+
             return json.dumps(result, indent=2)
 
     # Default: return original output wrapped in JSON
@@ -900,7 +894,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     # Map MCP tool name → CLI command
     tool_map = {
         # Workflow
-        "bootstrap_session": ["bootstrap"],
+        "session_create": ["session-create"],
         "execute_preflight": ["preflight", "--prompt-only"],  # Non-blocking: returns prompt only
         "submit_preflight_assessment": ["preflight-submit"],
         "execute_check": ["check"],
@@ -952,7 +946,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     # Map MCP argument names → CLI flag names (when they differ)
     arg_map = {
         "session_type": "session-type",  # Not used by CLI - will be ignored
-        "bootstrap_level": "level",  # MCP uses bootstrap_level, CLI uses level
+        "bootstrap_level": "bootstrap-level",  # MCP uses bootstrap_level, CLI uses bootstrap-level
         "task_id": "task-id",  # MCP uses task_id, CLI uses task-id (for goals-complete-subtask)
         "round_num": "round",  # MCP uses round_num, CLI uses round (for checkpoint-create)
         "remaining_unknowns": "remaining-unknowns",  # MCP uses remaining_unknowns, CLI uses remaining-unknowns (for handoff-create)
@@ -1040,7 +1034,7 @@ def handle_introduction() -> List[types.TextContent]:
 
 **BOOTSTRAP** → **PREFLIGHT** → [**INVESTIGATE** → **CHECK**]* → **ACT** → **POSTFLIGHT**
 
-1. **BOOTSTRAP:** Initialize session with `bootstrap_session(ai_id="your-id")`
+1. **CREATE SESSION:** Initialize session with `session_create(ai_id="your-id")`
 2. **PREFLIGHT:** Assess epistemic state BEFORE starting (13 vectors)
 3. **INVESTIGATE:** Research unknowns systematically (loop 0-N times)
 4. **CHECK:** Gate decision - ready to proceed? (confidence ≥ 0.7)
@@ -1276,7 +1270,7 @@ empirica postflight-submit --session-id=latest:active:your-id --vectors='{"engag
 - **All commands support `--output json` for programmatic use**
 - Session aliases work with: sessions-show, checkpoint-load, and all workflow commands
 - For detailed help: `empirica <command> --help`
-- For MCP tool usage: Use tool names (bootstrap_session, execute_preflight, etc.)
+- For MCP tool usage: Use tool names (session_create, execute_preflight, etc.)
 """
 
     return [types.TextContent(type="text", text=help_text)]

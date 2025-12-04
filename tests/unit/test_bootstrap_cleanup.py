@@ -124,8 +124,7 @@ class TestBootstrapImports:
     def test_optimal_bootstrap_imports(self):
         """optimal_metacognitive_bootstrap.py imports without errors"""
         try:
-            from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
-            # Should import successfully
+                        # Should import successfully
             assert OptimalMetacognitiveBootstrap is not None
         except ImportError as e:
             pytest.fail(f"OptimalMetacognitiveBootstrap import failed: {e}")
@@ -137,8 +136,7 @@ class TestBootstrapImports:
     def test_extended_bootstrap_imports(self):
         """extended_metacognitive_bootstrap.py imports without errors"""
         try:
-            from empirica.bootstraps.extended_metacognitive_bootstrap import ExtendedMetacognitiveBootstrap
-            # Should import successfully
+                        # Should import successfully
             assert ExtendedMetacognitiveBootstrap is not None
         except ImportError as e:
             pytest.fail(f"ExtendedMetacognitiveBootstrap import failed: {e}")

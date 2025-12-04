@@ -2,13 +2,15 @@
 
 **Empirica v2.0 - Deploying to Production**
 
+**Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
+
 ---
 
 ## Pre-Deployment Checklist
 
 - [ ] Python 3.8+ installed
 - [ ] All dependencies tested (`pip install -r requirements.txt`)
-- [ ] Bootstrap level selected (recommend: 2)
+- [ ] Session creation tested
 - [ ] Configuration validated
 - [ ] Tests passing
 - [ ] Documentation reviewed
@@ -21,7 +23,6 @@
 
 ```bash
 # .env file
-EMPIRICA_BOOTSTRAP_LEVEL=2
 EMPIRICA_CONFIDENCE_THRESHOLD=0.75
 EMPIRICA_MAX_INVESTIGATION_ROUNDS=3
 EMPIRICA_DB_PATH=/var/lib/empirica/sessions.db
@@ -37,17 +38,19 @@ OPENAI_API_KEY=your_key_here
 
 ```python
 import os
-from empirica.bootstraps import ExtendedMetacognitiveBootstrap
-from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
+from empirica.data.session_database import SessionDatabase
+from empirica.assessment.canonical_assessor import CanonicalEpistemicAssessor
 
-bootstrap_level = os.getenv('EMPIRICA_BOOTSTRAP_LEVEL', '2')
 confidence = float(os.getenv('EMPIRICA_CONFIDENCE_THRESHOLD', '0.70'))
 db_path = os.getenv('EMPIRICA_DB_PATH', '.empirica/sessions/sessions.db')
 
-bootstrap = ExtendedMetacognitiveBootstrap(level=bootstrap_level)
-components = bootstrap.bootstrap()
+# Create session
+db = SessionDatabase()
+session_id = db.create_session(ai_id="production_ai")
+db.close()
 
-cascade = CanonicalEpistemicCascade(
+# Use canonical assessor
+assessor = CanonicalEpistemicAssessor(session_id=session_id)
     action_confidence_threshold=confidence,
     enable_action_hooks=False,  # Disable tmux in production
     enable_session_db=True

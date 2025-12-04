@@ -2,6 +2,8 @@
 
 **Empirica v2.0 - Common Issues and Solutions**
 
+**Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
+
 ---
 
 ## Quick Diagnosis
@@ -14,25 +16,25 @@ import sys
 print(f"Python version: {sys.version}")
 
 try:
-    from empirica.bootstraps import ExtendedMetacognitiveBootstrap
+    from empirica.data.session_database import SessionDatabase
     print("✅ Empirica imports work")
 except ImportError as e:
     print(f"❌ Import error: {e}")
 
 try:
-    bootstrap = ExtendedMetacognitiveBootstrap(level="0")
-    components = bootstrap.bootstrap()
-    print(f"✅ Bootstrap works ({len(components)} components)")
-except Exception as e:
-    print(f"❌ Bootstrap error: {e}")
-
-try:
-    from empirica.data import SessionDatabase
     db = SessionDatabase()
-    print(f"✅ Database works: {db.db_path}")
+    session_id = db.create_session(ai_id="test")
+    print(f"✅ Session creation works: {session_id}")
     db.close()
 except Exception as e:
-    print(f"❌ Database error: {e}")
+    print(f"❌ Session creation error: {e}")
+
+try:
+    from empirica.core.reflexes.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+    logger = GitEnhancedReflexLogger(session_id=session_id)
+    print(f"✅ Reflex logger works")
+except Exception as e:
+    print(f"❌ Reflex logger error: {e}")
 PYEOF
 ```
 

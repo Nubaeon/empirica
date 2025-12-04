@@ -206,7 +206,7 @@ def handle_mcp_list_tools_command(args):
         # Session management
         print("\n🔄 Session Management:")
         session_tools = [
-            ("bootstrap_session", "Initialize new session"),
+            ("session_create", "Initialize new session"),
             ("resume_previous_session", "Load previous context"),
             ("get_epistemic_state", "Query current vectors"),
             ("get_session_summary", "Full session history"),

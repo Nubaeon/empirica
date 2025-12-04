@@ -1,8 +1,10 @@
 # 15. Configuration Guide
 
 **Version:** 2.0  
-**Date:** 2025-10-29  
+**Date:** 2025-12-04  
 **Status:** Production Ready
+
+**Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
 
 ---
 

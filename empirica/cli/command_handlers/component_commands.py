@@ -9,8 +9,7 @@ from ..cli_utils import print_component_status, handle_cli_error, format_compone
 def handle_list_command(args):
     """Handle list components command"""
     try:
-        from empirica.bootstraps.extended_metacognitive_bootstrap import ExtendedMetacognitiveBootstrap
-        
+                
         print("📋 Listing Empirica semantic components...")
         
         # Get component registry
@@ -72,8 +71,7 @@ def handle_list_command(args):
 def handle_explain_command(args):
     """Handle explain component command"""
     try:
-        from empirica.bootstraps.extended_metacognitive_bootstrap import ExtendedMetacognitiveBootstrap
-        
+                
         component_name = args.component
         print(f"📖 Explaining component: {component_name}")
         
@@ -141,8 +139,7 @@ def handle_explain_command(args):
 def handle_demo_command(args):
     """Handle demo component command"""
     try:
-        from empirica.bootstraps.extended_metacognitive_bootstrap import ExtendedMetacognitiveBootstrap
-        
+                
         component_name = getattr(args, 'component', 'random')
         print(f"🎭 Running demo for component: {component_name}")
         

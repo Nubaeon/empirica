@@ -10,7 +10,6 @@ from .bootstrap import (
     OptimalMetacognitiveBootstrap,
     ExtendedMetacognitiveBootstrap
 )
-from .onboarding_wizard import EmpericaOnboardingWizard
 
 __all__ = [
     'bootstrap_session',

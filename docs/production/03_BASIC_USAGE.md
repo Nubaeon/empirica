@@ -2,6 +2,8 @@
 
 **Empirica v2.0 - Getting Started**
 
+**Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
+
 ---
 
 ## Quick Start - Create a Session

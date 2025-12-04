@@ -582,6 +582,9 @@ def _add_profile_parsers(subparsers):
 def _add_user_interface_parsers(subparsers):
     """Add user interface commands for human terminal users"""
     
+    # Onboard command - interactive intro to Empirica
+    onboard_parser = subparsers.add_parser('onboard', help='Interactive introduction to Empirica')
+    
     # Ask command - simple question answering
     ask_parser = subparsers.add_parser('ask', help='Ask a question (simple query interface for human users)')
     ask_parser.add_argument('query', help='Question to ask')
@@ -728,6 +731,7 @@ def main(args=None):
             'handoff-query': handle_handoff_query_command,
             
             # User interface commands (for human users)
+            'onboard': handle_onboard_command,
             'ask': handle_ask_command,
             'chat': handle_chat_command,
         }
