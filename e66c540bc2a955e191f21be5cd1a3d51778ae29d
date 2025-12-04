@@ -1,0 +1,29 @@
+{
+  "goal_id": "719d9a6e-1571-41b3-a982-0fd282a97741",
+  "session_id": "291e0f6d-5361-4412-ad21-bd0162881446",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-04T14:09:25.758598+00:00",
+  "goal_data": {
+    "objective": "Test metacognitive statusline integration",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Statusline displays real data",
+      "CHECK command persists assessments"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-04T14:09:25.758612+00:00",
+      "action": "created"
+    }
+  ]
+}
