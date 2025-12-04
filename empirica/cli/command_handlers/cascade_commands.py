@@ -11,6 +11,7 @@ import uuid
 import hashlib
 from datetime import datetime
 from ..cli_utils import print_component_status, handle_cli_error, format_uncertainty_output, parse_json_safely, print_header
+from empirica.cli.command_handlers.decision_utils import get_recommendation_from_vectors
 
 # Set up logging for cascade commands
 logger = logging.getLogger(__name__)
@@ -231,26 +232,38 @@ def handle_preflight_command(args):
                 logger.warning("\n⚠️  Cannot complete preflight in --quiet mode without --assessment-json")
                 return
         
-        # Store preflight in session database for postflight comparison
+        # Store preflight assessment in reflexes table (unified storage)
+        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+
+        logger_instance = GitEnhancedReflexLogger(
+            session_id=session_id,
+            enable_git_notes=True
+        )
+
+        checkpoint_id = logger_instance.add_checkpoint(
+            phase="PREFLIGHT",
+            round_num=1,
+            vectors=vectors,
+            metadata={
+                "task": prompt,
+                "recommendation": recommendation['action'] if isinstance(recommendation, dict) else recommendation
+            }
+        )
+
+        # Create cascade record for audit trail
         from empirica.data.session_database import SessionDatabase
         db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
         try:
             db.create_session(ai_id=ai_id, bootstrap_level=1, components_loaded=5, user_id=None)
         except:
             pass  # Session might already exist
-        
+
         cascade_id = db.create_cascade(
             session_id=session_id,
             task=f"PREFLIGHT: {prompt}",
             context={"phase": "preflight", "prompt": prompt}
         )
-        
-        db.conn.execute("""
-            INSERT INTO cascade_metadata (cascade_id, metadata_key, metadata_value)
-            VALUES (?, ?, ?)
-        """, (cascade_id, "preflight_vectors", json.dumps(vectors)))
-        
-        db.conn.commit()
+
         db.close()
         
         # Automatic git checkpoint creation (Phase 1: Git Automation)
@@ -802,44 +815,16 @@ def _interpret_score(score, category):
         return "(very low)"
 
 
+
+
 def _get_recommendation(vectors):
-    """Get recommendation based on epistemic vectors"""
-    know = vectors.get('know', 0.5)
-    do = vectors.get('do', 0.5)
-    context = vectors.get('context', 0.5)
-    uncertainty = vectors.get('uncertainty', 0.5)
-    
-    avg_foundation = (know + do + context) / 3.0
-    
-    warnings = []
-    
-    if know < 0.5:
-        warnings.append("Low domain knowledge - consider research/investigation")
-    if do < 0.5:
-        warnings.append("Low task capability - proceed with caution or seek guidance")
-    if context < 0.5:
-        warnings.append("Insufficient context - gather more information")
-    if uncertainty > 0.7:
-        warnings.append("High uncertainty - investigation strongly recommended")
-    
-    if avg_foundation >= 0.7 and uncertainty < 0.5:
-        return {
-            "action": "proceed",
-            "message": "Proceed with confidence",
-            "warnings": warnings
-        }
-    elif avg_foundation >= 0.5:
-        return {
-            "action": "proceed_cautiously",
-            "message": "Proceed with moderate supervision",
-            "warnings": warnings
-        }
-    else:
-        return {
-            "action": "investigate",
-            "message": "Investigation recommended before proceeding",
-            "warnings": warnings
-        }
+    """
+    Get recommendation based on epistemic vectors.
+
+    Delegates to centralized decision_utils.get_recommendation_from_vectors()
+    for single source of truth.
+    """
+    return get_recommendation_from_vectors(vectors)
 
 
 def _calculate_vector_delta(preflight, postflight):

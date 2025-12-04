@@ -147,17 +147,19 @@ def handle_preflight_submit_command(args):
 
 
 def handle_check_command(args):
-    """Handle check command - creates CASCADE and epistemic assessment"""
+    """Handle check command - creates unified storage assessment with real vectors"""
     try:
         import time
         import uuid
-        from empirica.data.session_database import SessionDatabase
+        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+        from empirica.cli.command_handlers.decision_utils import calculate_decision
 
         # Parse arguments
         session_id = args.session_id
         findings = parse_json_safely(args.findings) if isinstance(args.findings, str) else args.findings
         unknowns = parse_json_safely(args.unknowns) if isinstance(args.unknowns, str) else args.unknowns
         confidence = args.confidence
+        cycle = getattr(args, 'cycle', 1)
         verbose = getattr(args, 'verbose', False)
 
         # Validate inputs
@@ -168,44 +170,58 @@ def handle_check_command(args):
         if not 0.0 <= confidence <= 1.0:
             raise ValueError("Confidence must be between 0.0 and 1.0")
 
-        # Get or create CASCADE for this check
-        db = SessionDatabase()
+        # Extract actual vectors from args or infer from confidence
+        if hasattr(args, 'vectors') and args.vectors:
+            vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
+        else:
+            # If no vectors provided, infer from confidence
+            uncertainty = 1.0 - confidence
+            vectors = {
+                'engagement': 0.75,
+                'know': confidence,
+                'do': confidence,
+                'context': confidence * 0.9,
+                'clarity': confidence * 0.95,
+                'coherence': confidence * 0.92,
+                'signal': confidence * 0.88,
+                'density': confidence * 0.85,
+                'state': confidence,
+                'change': confidence * 0.80,
+                'completion': confidence * 0.70,
+                'impact': confidence * 0.75,
+                'uncertainty': uncertainty
+            }
 
-        # Create CASCADE record if it doesn't exist
-        cascade_id = str(uuid.uuid4())
-        now = time.time()
+        # Use unified storage via GitEnhancedReflexLogger
+        logger_instance = GitEnhancedReflexLogger(
+            session_id=session_id,
+            enable_git_notes=True
+        )
 
-        db.conn.execute("""
-            INSERT INTO cascades
-            (cascade_id, session_id, task, started_at)
-            VALUES (?, ?, ?, ?)
-        """, (cascade_id, session_id, f"CHECK assessment - {len(findings)} findings", now))
+        decision = calculate_decision(confidence)
 
-        # Calculate overall confidence and determine decision
-        uncertainty = 1.0 - confidence
-        recommended_action = "proceed" if confidence >= 0.7 else "investigate" if confidence <= 0.3 else "proceed_with_caution"
-
-        # Create epistemic assessment record
-        db.conn.execute("""
-            INSERT INTO epistemic_assessments
-            (assessment_id, cascade_id, phase, engagement, know, do, context, clarity,
-             coherence, signal, density, state, change, completion, impact, uncertainty,
-             overall_confidence, recommended_action, assessed_at)
-            VALUES (?, ?, 'CHECK', 0.75, 0.7, 0.75, 0.75, 0.75, 0.75, 0.75, 0.5, 0.5, 0.3, 0.5, ?, ?,
-                    ?, ?)
-        """, (str(uuid.uuid4()), cascade_id, uncertainty, confidence, recommended_action, now))
-
-        db.conn.commit()
+        checkpoint_id = logger_instance.add_checkpoint(
+            phase="CHECK",
+            round_num=cycle,
+            vectors=vectors,
+            metadata={
+                "findings_count": len(findings),
+                "unknowns_count": len(unknowns),
+                "confidence": confidence,
+                "decision": decision
+            }
+        )
 
         result = {
             "ok": True,
             "session_id": session_id,
-            "cascade_id": cascade_id,
+            "checkpoint_id": checkpoint_id,
             "findings_count": len(findings),
             "unknowns_count": len(unknowns),
             "confidence": confidence,
-            "decision": "proceed" if confidence >= 0.7 else "investigate" if confidence <= 0.3 else "proceed_with_caution",
-            "timestamp": "2024-01-01T12:00:00Z"
+            "decision": decision,
+            "cycle": cycle,
+            "timestamp": time.time()
         }
 
         # Add findings and unknowns to result
@@ -217,11 +233,12 @@ def handle_check_command(args):
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(result, indent=2))
         else:
-            print("✅ Check assessment created and stored")
+            print("✅ CHECK assessment created and stored")
             print(f"   Session: {session_id[:8]}...")
-            print(f"   Cascade: {cascade_id[:8]}...")
+            print(f"   Cycle: {cycle}")
             print(f"   Confidence: {confidence:.2f}")
-            print(f"   Decision: {result['decision'].upper()}")
+            print(f"   Decision: {decision.upper()}")
+            print(f"   Storage: SQLite + Git Notes + JSON")
             print(f"   Findings: {len(findings)} analyzed")
             print(f"   Unknowns: {len(unknowns)} remaining")
 
@@ -239,7 +256,7 @@ def handle_check_command(args):
                     print(f"     ... and {len(unknowns) - 5} more")
 
         return result
-        
+
     except Exception as e:
         handle_cli_error(e, "Check assessment", getattr(args, 'verbose', False))
 
@@ -484,7 +501,7 @@ def handle_postflight_submit_command(args):
                 logger.debug(f"Delta calculation failed: {e}")
                 # Delta calculation is optional
 
-            # Add checkpoint - this writes to ALL 3 storage layers
+            # Add checkpoint - this writes to ALL 3 storage layers atomically
             checkpoint_id = logger_instance.add_checkpoint(
                 phase="POSTFLIGHT",
                 round_num=1,
@@ -497,53 +514,6 @@ def handle_postflight_submit_command(args):
                     "deltas": deltas
                 }
             )
-
-            # ALSO create DATABASE records for statusline integration
-            db = SessionDatabase()
-            cascade_id = str(uuid.uuid4())
-            now = time.time()
-
-            # Create CASCADE record
-            db.conn.execute("""
-                INSERT INTO cascades
-                (cascade_id, session_id, task, started_at, completed_at)
-                VALUES (?, ?, ?, ?, ?)
-            """, (cascade_id, session_id, "POSTFLIGHT assessment", now, now))
-
-            # Calculate overall confidence from vectors
-            tier0_keys = ['know', 'do', 'context']
-            tier0_values = [vectors.get(k, 0.5) for k in tier0_keys]
-            overall_confidence = sum(tier0_values) / len(tier0_values) if tier0_values else 0.5
-
-            # Create epistemic assessment record
-            db.conn.execute("""
-                INSERT INTO epistemic_assessments
-                (assessment_id, cascade_id, phase, engagement, know, do, context, clarity,
-                 coherence, signal, density, state, change, completion, impact, uncertainty,
-                 overall_confidence, recommended_action, assessed_at)
-                VALUES (?, ?, 'POSTFLIGHT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                str(uuid.uuid4()), cascade_id,
-                vectors.get('engagement', 0.5),
-                vectors.get('know', 0.5),
-                vectors.get('do', 0.5),
-                vectors.get('context', 0.5),
-                vectors.get('clarity', 0.5),
-                vectors.get('coherence', 0.5),
-                vectors.get('signal', 0.5),
-                vectors.get('density', 0.5),
-                vectors.get('state', 0.5),
-                vectors.get('change', 0.5),
-                vectors.get('completion', 0.5),
-                vectors.get('impact', 0.5),
-                vectors.get('uncertainty', 0.5),
-                overall_confidence,
-                'complete',
-                now
-            ))
-
-            db.conn.commit()
-            db.close()
 
             result = {
                 "ok": True,
