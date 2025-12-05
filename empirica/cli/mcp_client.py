@@ -9,18 +9,17 @@ import tempfile
 import os
 
 
-def session_create(ai_id: str, session_type: str = "development",
-                  profile: str = None, ai_model: str = None, domain: str = None, bootstrap_level: str = "standard"):
+def session_create(ai_id: str, bootstrap_level: str = "standard",
+                  profile: str = None, ai_model: str = None, domain: str = None):
     """
     Call MCP server session_create tool
 
     Args:
         ai_id: AI identifier
-        session_type: Session type (development, production, testing)
-        profile: Optional profile for session configuration
-        ai_model: Optional AI model specification
-        domain: Optional domain context
         bootstrap_level: Bootstrap configuration level (standard, minimal, full, etc.)
+        profile: Optional profile for session configuration (unused in current implementation)
+        ai_model: Optional AI model specification (unused in current implementation)
+        domain: Optional domain context (unused in current implementation)
 
     Returns:
         dict: Response from session_create tool
@@ -29,7 +28,6 @@ def session_create(ai_id: str, session_type: str = "development",
         # Prepare tool call arguments
         arguments = {
             "ai_id": ai_id,
-            "session_type": session_type,
             "bootstrap_level": bootstrap_level
         }
 
