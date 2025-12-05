@@ -386,9 +386,18 @@ def calculate_progress_velocity(db: SessionDatabase, session_id: str) -> dict:
         }
 
 
-def calculate_cognitive_load(db: SessionDatabase, session_id: str, current_vectors: dict) -> dict:
+def calculate_cognitive_load(db: SessionDatabase, session_id: str, current_vectors: dict, ai_id: str = None) -> dict:
     """
-    Calculate cognitive load based on DENSITY trajectory and time since last checkpoint.
+    Calculate cognitive load based on DENSITY trajectory and feedback loop config.
+
+    Uses actual DENSITY epistemic vector measurement via feedback_loops.yaml config,
+    NOT heuristics. Falls back to sensible defaults if config unavailable.
+
+    Args:
+        db: SessionDatabase instance
+        session_id: Session identifier
+        current_vectors: Current epistemic vectors dict
+        ai_id: AI agent identifier (used to load agent-specific thresholds)
 
     Returns:
         {
@@ -396,10 +405,41 @@ def calculate_cognitive_load(db: SessionDatabase, session_id: str, current_vecto
             'density': float,            # Current density value
             'density_trend': str,        # 'increasing', 'stable', 'decreasing'
             'time_since_checkpoint': float,  # Hours since last checkpoint
-            'checkpoint_recommended': bool   # Should checkpoint soon?
+            'checkpoint_recommended': bool,  # Should checkpoint soon?
+            'ai_id': str,                # Agent this assessment is for
+            'config_source': str         # 'feedback_loops' or 'defaults'
         }
     """
     try:
+        # Try to load feedback loops config for agent-specific thresholds
+        try:
+            from empirica.cli.command_handlers.decision_utils import evaluate_cognitive_load as evaluate_load_from_config
+            load_assessment = evaluate_load_from_config(
+                current_vectors.get('density', 0.5) if current_vectors else 0.5,
+                ai_id=ai_id
+            )
+            config_source = 'feedback_loops'
+            load_level = load_assessment['level']
+            checkpoint_recommended = load_assessment['checkpoint_recommended']
+        except Exception as e:
+            # Fallback: use defaults if config loading fails
+            config_source = 'defaults'
+            current_density = current_vectors.get('density', 0.5) if current_vectors else 0.5
+
+            # Default thresholds (from feedback_loops.yaml global defaults)
+            if current_density > 0.9:
+                load_level = 'overwhelmed'
+                checkpoint_recommended = True
+            elif current_density > 0.75:
+                load_level = 'high'
+                checkpoint_recommended = True
+            elif current_density > 0.6:
+                load_level = 'sustainable'
+                checkpoint_recommended = False
+            else:
+                load_level = 'sustainable'
+                checkpoint_recommended = False
+
         cursor = db.conn.cursor()
 
         # Get recent DENSITY values to detect trend
@@ -419,13 +459,15 @@ def calculate_cognitive_load(db: SessionDatabase, session_id: str, current_vecto
                 'density': 0.0,
                 'density_trend': 'unknown',
                 'time_since_checkpoint': 0.0,
-                'checkpoint_recommended': False
+                'checkpoint_recommended': False,
+                'ai_id': ai_id,
+                'config_source': config_source
             }
 
-        # Current density
+        # Current density (use provided vectors or latest from DB)
         current_density = current_vectors.get('density', rows[0][0]) if current_vectors else rows[0][0]
 
-        # Density trend analysis
+        # Density trend analysis (3-point trajectory)
         if len(rows) >= 3:
             recent_densities = [row[0] for row in rows[:3]]
             if recent_densities[0] > recent_densities[-1] * 1.2:
@@ -437,36 +479,19 @@ def calculate_cognitive_load(db: SessionDatabase, session_id: str, current_vecto
         else:
             density_trend = 'stable'
 
-        # Time since last checkpoint (simplified - just use time since first assessment)
-        # TODO: Query actual git checkpoints when available
+        # Time since last checkpoint (uses latest assessment time as proxy)
         import time
         latest_assessment_time = rows[0][1]
         time_since_checkpoint = (time.time() - latest_assessment_time) / 3600.0  # hours
-
-        # Determine load level
-        if current_density > 0.9:
-            load_level = 'overwhelmed'
-            checkpoint_recommended = True
-        elif current_density > 0.7:
-            if time_since_checkpoint > 2.0:  # High density for >2 hours
-                load_level = 'overwhelmed'
-                checkpoint_recommended = True
-            else:
-                load_level = 'high'
-                checkpoint_recommended = time_since_checkpoint > 1.5
-        elif current_density > 0.6:
-            load_level = 'high'
-            checkpoint_recommended = time_since_checkpoint > 3.0
-        else:
-            load_level = 'sustainable'
-            checkpoint_recommended = False
 
         return {
             'load_level': load_level,
             'density': current_density,
             'density_trend': density_trend,
             'time_since_checkpoint': time_since_checkpoint,
-            'checkpoint_recommended': checkpoint_recommended
+            'checkpoint_recommended': checkpoint_recommended,
+            'ai_id': ai_id,
+            'config_source': config_source
         }
 
     except Exception as e:
@@ -475,7 +500,9 @@ def calculate_cognitive_load(db: SessionDatabase, session_id: str, current_vecto
             'density': 0.0,
             'density_trend': 'unknown',
             'time_since_checkpoint': 0.0,
-            'checkpoint_recommended': False
+            'checkpoint_recommended': False,
+            'ai_id': ai_id,
+            'config_source': 'error'
         }
 
 
@@ -895,7 +922,8 @@ def main():
         velocity_data = calculate_progress_velocity(db, session_id)
 
         # Calculate cognitive load (Tier 1 metacognitive signal)
-        cognitive_load = calculate_cognitive_load(db, session_id, vectors)
+        # Pass ai_id for agent-specific feedback loop thresholds
+        cognitive_load = calculate_cognitive_load(db, session_id, vectors, ai_id=ai_id)
 
         # Calculate scope stability (Tier 1 metacognitive signal)
         scope_stability = calculate_scope_stability(db, session_id)

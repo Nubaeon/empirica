@@ -1,0 +1,493 @@
+# =============================================================================
+# EMPIRICA FEEDBACK LOOPS CONFIGURATION
+# =============================================================================
+#
+# Purpose: Define how each AI agent responds to statusline cognitive warnings
+# Usage: Loaded by feedback loop processor, determines workflow actions
+#
+# Architecture: Part of MCO (Meta-Agent Configuration Object)
+#   - Personas (epistemic priors): config/mco/personas.yaml
+#   - CASCADE styles (thresholds): config/mco/cascade_styles.yaml
+#   - Protocols (schema): config/mco/protocols.yaml
+#   - Model profiles (bias): config/mco/model_profiles.yaml
+#   - Feedback loops (this file): config/mco/feedback_loops.yaml
+#
+# Warning Types Monitored:
+#   - COGNITIVE_LOAD: DENSITY vector high, may be overwhelmed
+#   - DRIFT: Epistemic vectors show inconsistent patterns
+#   - SCOPE_STABILITY: Breadth/depth/coordination changing unexpectedly
+#   - UNCERTAINTY_FLUX: Uncertainty oscillating rather than converging
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2025-12-05"
+  author: "Empirica Framework"
+  description: "Configurable feedback loops for multi-AI coordination"
+
+# =============================================================================
+# FEEDBACK LOOP DEFINITIONS
+# =============================================================================
+
+feedback_loops:
+
+  # ---------------------------------------------------------------------------
+  # GLOBAL DEFAULT (Applied to All Agents)
+  # ---------------------------------------------------------------------------
+  global_default:
+    description: "Default feedback behavior for all agents"
+
+    # Warning Listeners (who acts on warnings)
+    listeners:
+      human: true                  # Statusline shown to human
+      ai_automatic: false           # AI doesn't auto-respond
+      ai_manual: false              # AI requires explicit instruction
+
+    # Warning Response Mapping
+    warning_responses:
+      COGNITIVE_LOAD:
+        action: "warn_only"         # Show in statusline, no automatic action
+        severity: "high"
+        human_guidance: "Consider taking a checkpoint or stepping back to reassess"
+
+      DRIFT:
+        action: "warn_only"
+        severity: "warning"
+        human_guidance: "Epistemic state inconsistent - verify assessments are honest"
+
+      SCOPE_STABILITY:
+        action: "warn_only"
+        severity: "info"
+        human_guidance: "Task scope changing - may need to re-baseline"
+
+      UNCERTAINTY_FLUX:
+        action: "warn_only"
+        severity: "info"
+        human_guidance: "Uncertainty oscillating - investigate systematically"
+
+  # ---------------------------------------------------------------------------
+  # CLAUDE-CODE (Implementer, Haiku Model)
+  # ---------------------------------------------------------------------------
+  claude-code:
+    description: "Implementation-focused, speed-biased model"
+
+    # Inherits from global_default
+    parent: "global_default"
+
+    # Override: Who acts on cognitive load warnings
+    listeners:
+      human: true                  # Statusline visible to human
+      ai_automatic: true            # Claude Code listens to DENSITY warnings
+      ai_manual: false
+
+    # Cognitive Load Response Configuration
+    cognitive_load_response:
+      enabled: true
+
+      # DENSITY vector thresholds for action
+      thresholds:
+        sustainable: 0.60          # DENSITY ≤ 0.60 = sustainable
+        high: 0.75                 # DENSITY > 0.75 = high load
+        overwhelmed: 0.90          # DENSITY > 0.90 = overwhelmed
+
+      # Actions to take at each level
+      actions:
+        sustainable:
+          description: "Normal operation"
+          checkpoint_recommended: false
+          workflow_impact: "none"
+
+        high:
+          description: "High cognitive load detected"
+          checkpoint_recommended: true
+          checkpoint_when: "after_current_phase"
+          workflow_impact: "pause_act_phase_for_reassessment"
+          auto_actions:
+            - action: "suggest_checkpoint"
+              message: "DENSITY > 0.75: Consider checkpointing current progress"
+            - action: "highlight_in_statusline"
+              severity: "high"
+
+        overwhelmed:
+          description: "Cognitive overload - stop execution"
+          checkpoint_recommended: true
+          checkpoint_when: "immediately"
+          workflow_impact: "halt_act_phase"
+          auto_actions:
+            - action: "create_emergency_checkpoint"
+              phase: "ACT_PAUSE"
+              preserve_state: true
+            - action: "highlight_in_statusline"
+              severity: "critical"
+              message: "DENSITY > 0.90: COGNITIVE OVERLOAD - Halting ACT phase"
+
+    # Drift Response Configuration
+    drift_response:
+      enabled: true
+
+      # Pattern Recognition
+      patterns:
+        TRUE_DRIFT:
+          action: "warn_human"
+          severity: "high"
+          message: "Genuine epistemic shift detected - recalibrate vectors"
+
+        LEARNING:
+          action: "note_progress"
+          severity: "info"
+          message: "Expected learning progression - continue monitoring"
+
+        OSCILLATION:
+          action: "warn_human"
+          severity: "warning"
+          message: "Uncertainty or competence oscillating - investigate cause"
+
+        CALIBRATION_DRIFT:
+          action: "flag_assessment"
+          severity: "high"
+          message: "Assessment calibration drift - vector accuracy suspect"
+
+    # Scope Stability Response
+    scope_stability_response:
+      enabled: true
+
+      thresholds:
+        stable: 0.10               # < 0.10 delta = stable scope
+        shifting: 0.20             # 0.10-0.20 = moderate shift
+        unstable: 0.30             # > 0.30 = major shift
+
+      actions:
+        stable:
+          description: "Scope steady"
+          action: "none"
+
+        shifting:
+          description: "Scope changing moderately"
+          action: "monitor"
+          checkpoint_recommended: true
+          checkpoint_when: "end_of_phase"
+
+        unstable:
+          description: "Scope unstable - task changed significantly"
+          action: "warn_human"
+          checkpoint_recommended: true
+          checkpoint_when: "immediately"
+          suggest_new_baseline: true
+          message: "Task scope changed significantly (>0.30 delta)"
+
+    # Configuration for how claude-code processes warnings
+    workflow_integration:
+      checkpoint_auto_trigger: true
+      checkpoint_storage: "git_enhanced"  # Use GitEnhancedReflexLogger
+      decision_gate_impact: true          # Affect CHECK phase decisions
+      act_phase_pause: true               # Can pause ACT for reassessment
+      awareness_mode: "transparent"       # Show all warnings in statusline
+
+  # ---------------------------------------------------------------------------
+  # CLAUDE-SONNET (Architect, High-Reasoning Model)
+  # ---------------------------------------------------------------------------
+  claude-sonnet:
+    description: "High-reasoning architect, thorough validation"
+
+    parent: "global_default"
+
+    listeners:
+      human: true
+      ai_automatic: true           # Sonnet also responds to warnings
+      ai_manual: false
+
+    cognitive_load_response:
+      enabled: true
+
+      thresholds:
+        sustainable: 0.60
+        high: 0.70                 # Stricter threshold (rigorous profile)
+        overwhelmed: 0.85          # Lower overwhelm threshold
+
+      actions:
+        high:
+          checkpoint_recommended: true
+          checkpoint_when: "after_current_phase"
+          workflow_impact: "validate_all_assumptions"
+          auto_actions:
+            - action: "deep_review"
+              message: "DENSITY > 0.70: Validate all architectural assumptions"
+
+        overwhelmed:
+          checkpoint_recommended: true
+          checkpoint_when: "immediately"
+          workflow_impact: "full_reset_investigation"
+          auto_actions:
+            - action: "create_detailed_checkpoint"
+              include_reasoning: true
+
+    drift_response:
+      enabled: true
+      patterns:
+        CALIBRATION_DRIFT:
+          action: "halt_and_review"
+          severity: "critical"
+          message: "Assessment accuracy suspect - full recalibration needed"
+
+    scope_stability_response:
+      enabled: true
+      actions:
+        unstable:
+          action: "comprehensive_reassessment"
+          suggest_new_cascade: true
+          message: "Scope instability - consider restarting CASCADE"
+
+    workflow_integration:
+      checkpoint_auto_trigger: true
+      decision_gate_impact: true
+      act_phase_pause: true
+      awareness_mode: "analytical"  # Show reasoning with warnings
+
+  # ---------------------------------------------------------------------------
+  # QWEN-CODE (Testing Specialist, Balanced Model)
+  # ---------------------------------------------------------------------------
+  qwen-code:
+    description: "Testing specialist, coverage-focused"
+
+    parent: "global_default"
+
+    listeners:
+      human: true
+      ai_automatic: false          # Qwen doesn't auto-respond (manual)
+      ai_manual: true              # Responds to explicit instructions
+
+    cognitive_load_response:
+      enabled: false               # Qwen gets warnings but doesn't act
+
+      actions:
+        high:
+          action: "warn_only"
+          message: "DENSITY > 0.75: Consider checkpoint"
+
+        overwhelmed:
+          action: "warn_strongly"
+          message: "DENSITY > 0.90: Recommend stopping testing cycle"
+
+    drift_response:
+      enabled: false
+      note: "Qwen responds to manual instruction for drift investigation"
+
+    scope_stability_response:
+      enabled: false
+      note: "Qwen gets alerts but requires human direction"
+
+    workflow_integration:
+      checkpoint_auto_trigger: false
+      decision_gate_impact: false
+      act_phase_pause: false
+      awareness_mode: "monitor"    # Show warnings, no auto-action
+
+  # ---------------------------------------------------------------------------
+  # CUSTOM: HUMAN-ONLY MODE (For Testing)
+  # ---------------------------------------------------------------------------
+  human_only:
+    description: "All warnings shown, no AI auto-response"
+
+    parent: "global_default"
+
+    listeners:
+      human: true
+      ai_automatic: false
+      ai_manual: false
+
+    workflow_integration:
+      checkpoint_auto_trigger: false
+      decision_gate_impact: false
+      act_phase_pause: false
+      awareness_mode: "referential"  # Statusline for humans only
+
+  # ---------------------------------------------------------------------------
+  # CUSTOM: FULL-AUTO MODE (For High-Confidence Agents)
+  # ---------------------------------------------------------------------------
+  full_autonomy:
+    description: "AI fully autonomous, responds to all warnings"
+
+    parent: "claude-code"
+
+    listeners:
+      human: true
+      ai_automatic: true
+      ai_manual: false
+
+    cognitive_load_response:
+      enabled: true
+      actions:
+        high:
+          auto_actions:
+            - action: "suggest_checkpoint"
+            - action: "increase_investigation_cycles"
+              cycles: 2
+            - action: "lower_confidence_gate"
+              adjustment: -0.05
+
+        overwhelmed:
+          auto_actions:
+            - action: "create_emergency_checkpoint"
+            - action: "reduce_task_scope"
+              reduction: "chunk_into_subtasks"
+
+    drift_response:
+      enabled: true
+      patterns:
+        OSCILLATION:
+          action: "auto_recalibrate"
+          method: "previous_checkpoint_comparison"
+
+        TRUE_DRIFT:
+          action: "update_mental_model"
+          preserve_history: true
+
+    workflow_integration:
+      checkpoint_auto_trigger: true
+      decision_gate_impact: true
+      act_phase_pause: true
+      awareness_mode: "fully_adaptive"
+
+# =============================================================================
+# WARNING CLASSIFICATION & SEVERITY
+# =============================================================================
+
+warning_taxonomy:
+
+  COGNITIVE_LOAD:
+    description: "AI's DENSITY vector indicates cognitive overload"
+    source: "DENSITY epistemic vector"
+    severity_levels:
+      sustainable: "info"    # All good
+      high: "warning"        # Pay attention
+      overwhelmed: "critical" # Stop and reassess
+    human_action: "Consider letting AI take a checkpoint"
+    ai_action: "Can auto-trigger checkpoint if enabled"
+
+  DRIFT:
+    description: "Epistemic vectors show inconsistent patterns"
+    source: "Mirror Drift Monitor comparing checkpoints"
+    severity_levels:
+      learning: "info"           # Expected learning progression
+      oscillation: "warning"     # Uncertainty bouncing around
+      true_drift: "high"         # Genuine shift in competence
+      calibration_drift: "critical" # Assessment accuracy suspect
+    human_action: "Review assessment logic if calibration_drift"
+    ai_action: "Can recalibrate if true_drift detected"
+
+  SCOPE_STABILITY:
+    description: "Task scope (breadth/depth/coordination) changing unexpectedly"
+    source: "Scope stability monitor"
+    severity_levels:
+      stable: "none"
+      shifting: "info"
+      unstable: "high"
+    human_action: "Consider new PREFLIGHT if scope changed significantly"
+    ai_action: "Can auto-checkpoint and suggest new baseline"
+
+  UNCERTAINTY_FLUX:
+    description: "UNCERTAINTY vector oscillating rather than converging"
+    source: "Uncertainty trend analysis over last 5 assessments"
+    severity_levels:
+      converging: "none"
+      stable_high: "info"
+      oscillating: "warning"
+      spiraling: "critical"
+    human_action: "Verify systematic investigation is happening"
+    ai_action: "Can adjust investigation approach if enabled"
+
+# =============================================================================
+# CHECKPOINT BEHAVIOR (How Warnings Trigger Checkpoints)
+# =============================================================================
+
+checkpoint_triggers:
+
+  cognitive_load_high:
+    condition: "DENSITY > 0.75 for 2+ consecutive assessments"
+    action: "Suggest checkpoint after current phase"
+    storage: "git_enhanced_reflex_logger"
+    metadata:
+      trigger_type: "cognitive_load"
+      density_value: "captured_in_checkpoint"
+
+  cognitive_load_overwhelmed:
+    condition: "DENSITY > 0.90"
+    action: "Create emergency checkpoint immediately"
+    storage: "git_enhanced_reflex_logger"
+    phase: "ACT_PAUSE"
+    metadata:
+      trigger_type: "emergency"
+      preserve_all_state: true
+
+  true_drift_detected:
+    condition: "Mirror Drift Monitor detects TRUE_DRIFT pattern"
+    action: "Create checkpoint with drift analysis"
+    storage: "git_enhanced_reflex_logger"
+    metadata:
+      trigger_type: "drift_analysis"
+      drift_pattern: "true_drift"
+
+  scope_unstable:
+    condition: "Scope delta > 0.30 between consecutive assessments"
+    action: "Create checkpoint and suggest PREFLIGHT restart"
+    storage: "git_enhanced_reflex_logger"
+    metadata:
+      trigger_type: "scope_change"
+      previous_scope: "captured_in_checkpoint"
+      new_scope: "captured_in_checkpoint"
+
+# =============================================================================
+# DECISION GATE INTEGRATION (How Warnings Affect CHECK Phase)
+# =============================================================================
+
+decision_gate_impact:
+
+  cognitive_load_high:
+    decision_impact: "proceed_with_caution"
+    confidence_adjustment: -0.10  # Lower confidence gate
+    message: "High cognitive load - CHECK gate raised to 0.75+ confidence"
+
+  cognitive_load_overwhelmed:
+    decision_impact: "recommend_investigate"
+    confidence_adjustment: -0.20  # Much higher gate
+    message: "Cognitive overload - Recommend returning to INVESTIGATE phase"
+
+  true_drift:
+    decision_impact: "verify_assumptions"
+    message: "Epistemic drift detected - Revalidate all assumptions before proceeding"
+
+  scope_unstable:
+    decision_impact: "recommend_new_cascade"
+    message: "Scope changed significantly - Consider new PREFLIGHT assessment"
+
+# =============================================================================
+# EXAMPLE: HOW TO USE THESE CONFIGS
+# =============================================================================
+#
+# Example 1: Claude Code with Cognitive Load Auto-Response
+#   - AI ID: "claude-code"
+#   - Loads: feedback_loops["claude-code"]
+#   - DENSITY reaches 0.85 during ACT phase
+#   - Actions:
+#     1. Statusline shows [empirica:claude-code] ⚠️ HIGH COGNITIVE LOAD
+#     2. GitEnhancedReflexLogger.auto_checkpoint() triggered
+#     3. CHECK phase confidence gate raised to 0.75
+#     4. ACT phase paused for reassessment
+#
+# Example 2: Sonnet with Strict Thresholds
+#   - AI ID: "claude-sonnet"
+#   - Loads: feedback_loops["claude-sonnet"]
+#   - DENSITY reaches 0.72
+#   - Actions:
+#     1. Statusline shows warning at DENSITY > 0.70
+#     2. Sonnet automatically validates all architectural assumptions
+#     3. Checkpoint recommended after current phase
+#
+# Example 3: Qwen with Human-Only Warnings
+#   - AI ID: "qwen-code"
+#   - Loads: feedback_loops["qwen-code"]
+#   - DENSITY reaches 0.85
+#   - Actions:
+#     1. Statusline shows warning
+#     2. No auto-response (ai_automatic: false)
+#     3. Qwen awaits human instruction on next steps
+#
