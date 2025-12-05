@@ -16,13 +16,14 @@ Copy the prompt from this file and paste it into your AI's system prompt field. 
 
 ## Files in This Directory
 
-### Active (v2.0)
+### Active (v4.0)
 
 1. **CANONICAL_SYSTEM_PROMPT.md** ⭐
    - Single source of truth
    - Works for all AI models
-   - ~850 tokens
+   - ~1200 tokens (added goal/subtask tracking)
    - Use this for everything
+   - **NEW:** Goal tree tracking for decision quality + continuity + audit
 
 2. **CUSTOMIZATION_GUIDE.md**
    - When to customize (rare cases)
