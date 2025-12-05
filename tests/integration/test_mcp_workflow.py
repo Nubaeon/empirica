@@ -25,7 +25,7 @@ class TestMCPWorkflow:
         # Step 1: Create session
         bootstrap_result = await call_tool(
             "session_create",
-            {"ai_id": "test_mcp_integration", "session_type": "workflow"}
+            {"ai_id": "test_mcp_integration"}
         )
         
         assert isinstance(bootstrap_result, list)
@@ -125,19 +125,20 @@ class TestMCPWorkflow:
             {
                 "session_id": session_id,
                 "vectors": postflight_vectors,
-                "changes_noticed": "Learned domain specifics, improved execution confidence"
+                "reasoning": "Learned domain specifics, improved execution confidence"
             }
         )
         
         final_data = json.loads(final_result[0].text)
         assert final_data["ok"] is True
-        assert "delta" in final_data
-        assert "calibration" in final_data
+        # The deltas field should be present (though may be empty if no preflight to compare)
+        assert "deltas" in final_data
+        assert "calibration_accuracy" in final_data
         
         print(f"✅ Step 5: Postflight assessment submitted")
-        
+
         # Step 7: Verify delta calculation
-        delta = final_data["delta"]
+        deltas = final_data["deltas"]
         assert delta["know"] == pytest.approx(0.15, abs=0.01)
         assert delta["do"] == pytest.approx(0.15, abs=0.01)
         assert delta["context"] == pytest.approx(0.30, abs=0.01)

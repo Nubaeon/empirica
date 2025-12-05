@@ -669,12 +669,6 @@ def main(args=None):
             
             # Config commands (consolidated: 5 commands → 1)
             'config': handle_config_command,  # Handles --init, --validate, KEY, KEY VALUE
-
-            # Profile commands
-            'profile-list': handle_profile_list_command,
-            'profile-show': handle_profile_show_command,
-            'profile-create': handle_profile_create_command,
-            'profile-set-default': handle_profile_set_default_command,
             
             # Monitor commands (consolidated: 4 commands → 1)
             'monitor': handle_monitor_command,  # Handles --export, --reset, --cost
