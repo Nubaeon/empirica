@@ -266,82 +266,32 @@ class EpistemicHandoffReportGenerator:
         return report
 
     def _get_preflight_assessment(self, session_id: str) -> Optional[Dict]:
-        """Fetch PREFLIGHT assessment from database"""
+        """Fetch PREFLIGHT assessment from database (now uses reflexes table)"""
         try:
-            cursor = self.db.conn.cursor()
-            cursor.execute("""
-                SELECT * FROM preflight_assessments
-                WHERE session_id = ?
-                ORDER BY assessed_at DESC
-                LIMIT 1
-            """, (session_id,))
-            
-            row = cursor.fetchone()
-            if not row:
+            vectors_data = self.db.get_latest_vectors(session_id, phase="PREFLIGHT")
+            if not vectors_data:
                 return None
             
-            # Build vectors dict from columns
-            vectors = {
-                'know': row['know'],
-                'do': row['do'],
-                'context': row['context'],
-                'clarity': row['clarity'],
-                'coherence': row['coherence'],
-                'signal': row['signal'],
-                'density': row['density'],
-                'state': row['state'],
-                'change': row['change'],
-                'completion': row['completion'],
-                'impact': row['impact'],
-                'engagement': row['engagement'],
-                'uncertainty': row['uncertainty']
-            }
-            
             return {
-                'vectors': vectors,
-                'reasoning': row['initial_uncertainty_notes'] if row['initial_uncertainty_notes'] else '',
-                'timestamp': row['assessed_at']
+                'vectors': vectors_data.get('vectors', {}),
+                'reasoning': vectors_data.get('reasoning', ''),
+                'timestamp': vectors_data.get('timestamp')
             }
         except Exception as e:
             logger.warning(f"Failed to fetch PREFLIGHT: {e}")
             return None
     
     def _get_postflight_assessment(self, session_id: str) -> Optional[Dict]:
-        """Fetch POSTFLIGHT assessment from database"""
+        """Fetch POSTFLIGHT assessment from database (now uses reflexes table)"""
         try:
-            cursor = self.db.conn.cursor()
-            cursor.execute("""
-                SELECT * FROM postflight_assessments
-                WHERE session_id = ?
-                ORDER BY assessed_at DESC
-                LIMIT 1
-            """, (session_id,))
-            
-            row = cursor.fetchone()
-            if not row:
+            vectors_data = self.db.get_latest_vectors(session_id, phase="POSTFLIGHT")
+            if not vectors_data:
                 return None
             
-            # Build vectors dict from columns
-            vectors = {
-                'know': row['know'],
-                'do': row['do'],
-                'context': row['context'],
-                'clarity': row['clarity'],
-                'coherence': row['coherence'],
-                'signal': row['signal'],
-                'density': row['density'],
-                'state': row['state'],
-                'change': row['change'],
-                'completion': row['completion'],
-                'impact': row['impact'],
-                'engagement': row['engagement'],
-                'uncertainty': row['uncertainty']
-            }
-            
             return {
-                'vectors': vectors,
-                'reasoning': row['learning_notes'] if row['learning_notes'] else '',
-                'timestamp': row['assessed_at']
+                'vectors': vectors_data.get('vectors', {}),
+                'reasoning': vectors_data.get('reasoning', ''),
+                'timestamp': vectors_data.get('timestamp')
             }
         except Exception as e:
             logger.warning(f"Failed to fetch POSTFLIGHT: {e}")
@@ -394,19 +344,12 @@ class EpistemicHandoffReportGenerator:
         # PRIMARY: Use AI's genuine self-assessment from POSTFLIGHT
         # This is what the AI actually believed about their calibration during introspection
         try:
-            cursor = self.db.conn.cursor()
-            cursor.execute("""
-                SELECT calibration_accuracy, postflight_actual_confidence, learning_notes
-                FROM postflight_assessments
-                WHERE session_id = ?
-                ORDER BY assessed_at DESC
-                LIMIT 1
-            """, (session_id,))
-            
-            row = cursor.fetchone()
-            if row and row['calibration_accuracy']:
-                genuine_status = row['calibration_accuracy']
-                genuine_reasoning = row['learning_notes'] if row['learning_notes'] else 'Genuine self-assessment from POSTFLIGHT'
+            vectors_data = self.db.get_latest_vectors(session_id, phase="POSTFLIGHT")
+            if vectors_data:
+                metadata = vectors_data.get('metadata', {})
+                if metadata.get('calibration_accuracy'):
+                    genuine_status = metadata['calibration_accuracy']
+                    genuine_reasoning = vectors_data.get('reasoning', 'Genuine self-assessment from POSTFLIGHT')
                 
                 # Run heuristic validation for cross-check
                 heuristic_result = self._heuristic_calibration_check(deltas)

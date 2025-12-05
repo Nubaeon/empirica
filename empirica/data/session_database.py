@@ -153,77 +153,10 @@ class SessionDatabase:
         except sqlite3.OperationalError:
             pass  # Column already exists
         
-        # Migration: Add reflex_log_path to existing tables (for databases created before this update)
-        try:
-            cursor.execute("ALTER TABLE epistemic_assessments ADD COLUMN reflex_log_path TEXT")
-            logger.info("✓ Migration: Added reflex_log_path column to epistemic_assessments")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-        
-        try:
-            cursor.execute("ALTER TABLE preflight_assessments ADD COLUMN reflex_log_path TEXT")
-            logger.info("✓ Migration: Added reflex_log_path column to preflight_assessments")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-        
-        try:
-            cursor.execute("ALTER TABLE postflight_assessments ADD COLUMN reflex_log_path TEXT")
-            logger.info("✓ Migration: Added reflex_log_path column to postflight_assessments")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-        
-        # Table 3: epistemic_assessments
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS epistemic_assessments (
-                assessment_id TEXT PRIMARY KEY,
-                cascade_id TEXT NOT NULL,
-                phase TEXT NOT NULL,
-                
-                engagement REAL NOT NULL,
-                engagement_gate_passed BOOLEAN,
-                
-                know REAL NOT NULL,
-                know_rationale TEXT,
-                do REAL NOT NULL,
-                do_rationale TEXT,
-                context REAL NOT NULL,
-                context_rationale TEXT,
-                foundation_confidence REAL,
-                
-                clarity REAL NOT NULL,
-                clarity_rationale TEXT,
-                coherence REAL NOT NULL,
-                coherence_rationale TEXT,
-                signal REAL NOT NULL,
-                signal_rationale TEXT,
-                density REAL NOT NULL,
-                density_rationale TEXT,
-                comprehension_confidence REAL,
-                
-                state REAL NOT NULL,
-                state_rationale TEXT,
-                change REAL NOT NULL,
-                change_rationale TEXT,
-                completion REAL NOT NULL,
-                completion_rationale TEXT,
-                impact REAL NOT NULL,
-                impact_rationale TEXT,
-                execution_confidence REAL,
-                
-                uncertainty REAL NOT NULL,
-                uncertainty_rationale TEXT,
-                uncertainty_evidence TEXT,
-                
-                overall_confidence REAL NOT NULL,
-                recommended_action TEXT NOT NULL,
-                
-                reflex_log_path TEXT,  -- Link to reflex frame JSON file
-                
-                assessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                
-                FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id)
-            )
-        """)
+        # Note: Deprecated tables (epistemic_assessments, preflight_assessments, 
+        # postflight_assessments, check_phase_assessments) have been removed.
+        # All epistemic data is now stored in the unified reflexes table.
+        # Migration happens automatically in _migrate_legacy_tables_to_reflexes()
         
         # Table 4: divergence_tracking
         cursor.execute("""
@@ -323,93 +256,6 @@ class SessionDatabase:
             )
         """)
         
-        # Table 8: preflight_assessments (NEW 13-Vector System v2.0)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS preflight_assessments (
-                assessment_id TEXT PRIMARY KEY,
-                session_id TEXT NOT NULL,
-                cascade_id TEXT,
-                prompt_summary TEXT NOT NULL,
-                
-                engagement REAL NOT NULL,
-                know REAL NOT NULL,
-                do REAL NOT NULL,
-                context REAL NOT NULL,
-                clarity REAL NOT NULL,
-                coherence REAL NOT NULL,
-                signal REAL NOT NULL,
-                density REAL NOT NULL,
-                state REAL NOT NULL,
-                change REAL NOT NULL,
-                completion REAL NOT NULL,
-                impact REAL NOT NULL,
-                uncertainty REAL NOT NULL,
-                
-                initial_uncertainty_notes TEXT,
-                vectors_json TEXT,
-                reflex_log_path TEXT,
-                assessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                
-                FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id)
-            )
-        """)
-        
-        # Table 9: check_phase_assessments (Enhanced Cascade Workflow v1.1)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS check_phase_assessments (
-                check_id TEXT PRIMARY KEY,
-                session_id TEXT NOT NULL,
-                cascade_id TEXT,
-                investigation_cycle INTEGER NOT NULL,
-                
-                confidence REAL NOT NULL,
-                decision TEXT NOT NULL,
-                gaps_identified TEXT,
-                next_investigation_targets TEXT,
-                self_assessment_notes TEXT,
-                
-                assessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                
-                FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id)
-            )
-        """)
-        
-        # Table 10: postflight_assessments (NEW 13-Vector System v2.0)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS postflight_assessments (
-                assessment_id TEXT PRIMARY KEY,
-                session_id TEXT NOT NULL,
-                cascade_id TEXT,
-                task_summary TEXT NOT NULL,
-                
-                engagement REAL NOT NULL,
-                know REAL NOT NULL,
-                do REAL NOT NULL,
-                context REAL NOT NULL,
-                clarity REAL NOT NULL,
-                coherence REAL NOT NULL,
-                signal REAL NOT NULL,
-                density REAL NOT NULL,
-                state REAL NOT NULL,
-                change REAL NOT NULL,
-                completion REAL NOT NULL,
-                impact REAL NOT NULL,
-                uncertainty REAL NOT NULL,
-                
-                postflight_actual_confidence REAL NOT NULL,
-                calibration_accuracy TEXT NOT NULL,
-                learning_notes TEXT,
-                vectors_json TEXT,
-                reflex_log_path TEXT,
-                
-                assessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                
-                FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id)
-            )
-        """)
         
         # Table 11: cascade_metadata (Enhanced Cascade Workflow - MCP Integration)
         cursor.execute("""
@@ -534,7 +380,6 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_time)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_cascades_session ON cascades(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_cascades_confidence ON cascades(final_confidence)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_assessments_cascade ON epistemic_assessments(cascade_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_divergence_cascade ON divergence_tracking(cascade_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_beliefs_cascade ON bayesian_beliefs(cascade_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tools_cascade ON investigation_tools(cascade_id)")
@@ -547,6 +392,120 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_reflexes_phase ON reflexes(phase)")
 
         self.conn.commit()
+        
+        # Migrate legacy tables to reflexes (automatic one-time migration)
+        self._migrate_legacy_tables_to_reflexes()
+    
+    def _migrate_legacy_tables_to_reflexes(self):
+        """
+        Migrate data from deprecated tables to reflexes table, then drop old tables.
+        
+        This runs automatically on database initialization. It's idempotent - safe to run multiple times.
+        
+        Migration mapping:
+        - preflight_assessments → reflexes (phase='PREFLIGHT')
+        - postflight_assessments → reflexes (phase='POSTFLIGHT')
+        - check_phase_assessments → reflexes (phase='CHECK')
+        - epistemic_assessments → (unused, just drop)
+        """
+        cursor = self.conn.cursor()
+        
+        try:
+            # Check if old tables exist
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='preflight_assessments'")
+            if not cursor.fetchone():
+                logger.debug("✓ Legacy tables already migrated or don't exist")
+                return  # Already migrated
+            
+            logger.info("🔄 Migrating legacy epistemic tables to reflexes...")
+            
+            # Migrate preflight_assessments → reflexes
+            cursor.execute("""
+                INSERT INTO reflexes (session_id, cascade_id, phase, round, timestamp,
+                                    engagement, know, do, context, clarity, coherence, signal, density,
+                                    state, change, completion, impact, uncertainty, reflex_data, reasoning)
+                SELECT session_id, cascade_id, 'PREFLIGHT', 1, 
+                       CAST(strftime('%s', assessed_at) AS REAL),
+                       engagement, know, do, context, clarity, coherence, signal, density,
+                       state, change, completion, impact, uncertainty, 
+                       vectors_json, initial_uncertainty_notes
+                FROM preflight_assessments
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM reflexes r
+                    WHERE r.session_id = preflight_assessments.session_id
+                    AND r.phase = 'PREFLIGHT'
+                    AND r.cascade_id IS preflight_assessments.cascade_id
+                )
+            """)
+            preflight_count = cursor.rowcount
+            logger.info(f"  ✓ Migrated {preflight_count} preflight assessments")
+            
+            # Migrate postflight_assessments → reflexes
+            cursor.execute("""
+                INSERT INTO reflexes (session_id, cascade_id, phase, round, timestamp,
+                                    engagement, know, do, context, clarity, coherence, signal, density,
+                                    state, change, completion, impact, uncertainty, reflex_data, reasoning)
+                SELECT session_id, cascade_id, 'POSTFLIGHT', 1,
+                       CAST(strftime('%s', assessed_at) AS REAL),
+                       engagement, know, do, context, clarity, coherence, signal, density,
+                       state, change, completion, impact, uncertainty,
+                       json_object('calibration_accuracy', calibration_accuracy, 
+                                   'postflight_confidence', postflight_actual_confidence),
+                       learning_notes
+                FROM postflight_assessments
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM reflexes r
+                    WHERE r.session_id = postflight_assessments.session_id
+                    AND r.phase = 'POSTFLIGHT'
+                    AND r.cascade_id IS postflight_assessments.cascade_id
+                )
+            """)
+            postflight_count = cursor.rowcount
+            logger.info(f"  ✓ Migrated {postflight_count} postflight assessments")
+            
+            # Migrate check_phase_assessments → reflexes (confidence → uncertainty conversion)
+            cursor.execute("""
+                INSERT INTO reflexes (session_id, cascade_id, phase, round, timestamp,
+                                    uncertainty, reflex_data, reasoning)
+                SELECT session_id, cascade_id, 'CHECK', investigation_cycle,
+                       CAST(strftime('%s', assessed_at) AS REAL),
+                       (1.0 - confidence),
+                       json_object('decision', decision, 
+                                   'gaps_identified', gaps_identified,
+                                   'next_investigation_targets', next_investigation_targets,
+                                   'confidence', confidence),
+                       self_assessment_notes
+                FROM check_phase_assessments
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM reflexes r
+                    WHERE r.session_id = check_phase_assessments.session_id
+                    AND r.phase = 'CHECK'
+                    AND r.cascade_id IS check_phase_assessments.cascade_id
+                    AND r.round = check_phase_assessments.investigation_cycle
+                )
+            """)
+            check_count = cursor.rowcount
+            logger.info(f"  ✓ Migrated {check_count} check phase assessments")
+            
+            self.conn.commit()
+            
+            # Drop old tables (no longer needed)
+            logger.info("  🗑️  Dropping deprecated tables...")
+            cursor.execute("DROP TABLE IF EXISTS epistemic_assessments")
+            cursor.execute("DROP TABLE IF EXISTS preflight_assessments")
+            cursor.execute("DROP TABLE IF EXISTS postflight_assessments")
+            cursor.execute("DROP TABLE IF EXISTS check_phase_assessments")
+            
+            self.conn.commit()
+            logger.info("✅ Migration complete: All data moved to reflexes table")
+            
+        except sqlite3.OperationalError as e:
+            # Table doesn't exist or already migrated - this is fine
+            logger.debug(f"Migration check: {e} (this is expected if tables don't exist)")
+        except Exception as e:
+            logger.error(f"⚠️  Migration failed: {e}")
+            # Don't raise - allow database to continue working
+            # Old tables will remain if migration fails
     
     def create_session(self, ai_id: str, bootstrap_level: int = 0, components_loaded: int = 0, 
                       user_id: Optional[str] = None) -> str:
@@ -656,51 +615,61 @@ class SessionDatabase:
     
     def log_epistemic_assessment(self, cascade_id: str, assessment: Any, 
                                 phase: str):
-        """Store 13D epistemic assessment (12 vectors + UNCERTAINTY)"""
+        """
+        DEPRECATED: Use store_vectors() instead.
+        
+        This method is kept for backward compatibility with canonical structures.
+        """
         if not CANONICAL_AVAILABLE:
             logger.warning("[DB] Canonical structures not available, skipping epistemic assessment")
             return
         
+        # Extract vectors from assessment object
+        vectors = {
+            'engagement': assessment.engagement.score,
+            'know': assessment.know.score,
+            'do': assessment.do.score,
+            'context': assessment.context.score,
+            'clarity': assessment.clarity.score,
+            'coherence': assessment.coherence.score,
+            'signal': assessment.signal.score,
+            'density': assessment.density.score,
+            'state': assessment.state.score,
+            'change': assessment.change.score,
+            'completion': assessment.completion.score,
+            'impact': assessment.impact.score,
+            'uncertainty': assessment.uncertainty.score
+        }
+        
+        # Build metadata from rationales
+        metadata = {
+            'assessment_id': assessment.assessment_id,
+            'engagement_gate_passed': assessment.engagement_gate_passed,
+            'foundation_confidence': assessment.foundation_confidence,
+            'comprehension_confidence': assessment.comprehension_confidence,
+            'execution_confidence': assessment.execution_confidence,
+            'overall_confidence': assessment.overall_confidence,
+            'recommended_action': assessment.recommended_action.value
+        }
+        
+        # Get session_id from cascade
         cursor = self.conn.cursor()
+        cursor.execute("SELECT session_id FROM cascades WHERE cascade_id = ?", (cascade_id,))
+        row = cursor.fetchone()
+        if not row:
+            logger.error(f"Cascade {cascade_id} not found")
+            return
         
-        cursor.execute("""
-            INSERT INTO epistemic_assessments (
-                assessment_id, cascade_id, phase,
-                engagement, engagement_gate_passed,
-                know, know_rationale, do, do_rationale, context, context_rationale,
-                foundation_confidence,
-                clarity, clarity_rationale, coherence, coherence_rationale,
-                signal, signal_rationale, density, density_rationale,
-                comprehension_confidence,
-                state, state_rationale, change, change_rationale,
-                completion, completion_rationale, impact, impact_rationale,
-                execution_confidence,
-                uncertainty, uncertainty_rationale, uncertainty_evidence,
-                overall_confidence, recommended_action
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            assessment.assessment_id, cascade_id, phase,
-            assessment.engagement.score, assessment.engagement_gate_passed,
-            assessment.know.score, assessment.know.rationale,
-            assessment.do.score, assessment.do.rationale,
-            assessment.context.score, assessment.context.rationale,
-            assessment.foundation_confidence,
-            assessment.clarity.score, assessment.clarity.rationale,
-            assessment.coherence.score, assessment.coherence.rationale,
-            assessment.signal.score, assessment.signal.rationale,
-            assessment.density.score, assessment.density.rationale,
-            assessment.comprehension_confidence,
-            assessment.state.score, assessment.state.rationale,
-            assessment.change.score, assessment.change.rationale,
-            assessment.completion.score, assessment.completion.rationale,
-            assessment.impact.score, assessment.impact.rationale,
-            assessment.execution_confidence,
-            assessment.uncertainty.score, assessment.uncertainty.rationale,
-            assessment.uncertainty.evidence if hasattr(assessment.uncertainty, 'evidence') else None,
-            assessment.overall_confidence, assessment.recommended_action.value
-        ))
+        session_id = row[0]
         
-        self.conn.commit()
+        # Store using reflexes table
+        self.store_vectors(
+            session_id=session_id,
+            phase=phase.upper(),
+            vectors=vectors,
+            cascade_id=cascade_id,
+            metadata=metadata
+        )
     
     def log_divergence(self, cascade_id: str, turn_number: int, delegate: str, trustee: str,
                       divergence_score: float, divergence_reason: str,
@@ -789,74 +758,39 @@ class SessionDatabase:
         return [dict(row) for row in cursor.fetchall()]
     
     def get_cascade_assessments(self, cascade_id: str) -> List[Dict]:
-        """Get all assessments for a cascade"""
+        """
+        DEPRECATED: Use reflexes table queries instead.
+        
+        Get all assessments for a cascade from reflexes table.
+        """
         cursor = self.conn.cursor()
         cursor.execute("""
-            SELECT * FROM epistemic_assessments WHERE cascade_id = ? ORDER BY assessed_at
+            SELECT * FROM reflexes WHERE cascade_id = ? ORDER BY timestamp
         """, (cascade_id,))
         return [dict(row) for row in cursor.fetchall()]
     
     def log_preflight_assessment(self, session_id: str, cascade_id: Optional[str],
                                  prompt_summary: str, vectors: Dict[str, float],
                                  uncertainty_notes: str = "") -> str:
-        """Store preflight epistemic assessment (NEW 13-vector system)
-        
-        Vectors: engagement, know, do, context, clarity, coherence, signal, density,
-                 state, change, completion, impact, uncertainty
         """
-        assessment_id = str(uuid.uuid4())
+        DEPRECATED: Use store_vectors() instead.
         
-        cursor = self.conn.cursor()
+        This method redirects to store_vectors() for backward compatibility.
+        """
+        # Store metadata in reflex_data
+        metadata = {
+            "prompt_summary": prompt_summary,
+            "uncertainty_notes": uncertainty_notes
+        }
         
-        # Store in new format with JSON for flexibility
-        cursor.execute("""
-            INSERT INTO preflight_assessments (
-                assessment_id, session_id, cascade_id, prompt_summary,
-                engagement, know, do, context,
-                clarity, coherence, signal, density,
-                state, change, completion, impact,
-                uncertainty,
-                initial_uncertainty_notes,
-                vectors_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            assessment_id, session_id, cascade_id, prompt_summary,
-            float(vectors.get('engagement', 0.5)) if not isinstance(vectors.get('engagement', 0.5), dict) else 0.5,
-            float(vectors.get('know', 0.5)) if not isinstance(vectors.get('know', 0.5), dict) else 0.5,
-            float(vectors.get('do', 0.5)) if not isinstance(vectors.get('do', 0.5), dict) else 0.5,
-            float(vectors.get('context', 0.5)) if not isinstance(vectors.get('context', 0.5), dict) else 0.5,
-            float(vectors.get('clarity', 0.5)) if not isinstance(vectors.get('clarity', 0.5), dict) else 0.5,
-            float(vectors.get('coherence', 0.5)) if not isinstance(vectors.get('coherence', 0.5), dict) else 0.5,
-            float(vectors.get('signal', 0.5)) if not isinstance(vectors.get('signal', 0.5), dict) else 0.5,
-            float(vectors.get('density', 0.5)) if not isinstance(vectors.get('density', 0.5), dict) else 0.5,
-            float(vectors.get('state', 0.5)) if not isinstance(vectors.get('state', 0.5), dict) else 0.5,
-            float(vectors.get('change', 0.5)) if not isinstance(vectors.get('change', 0.5), dict) else 0.5,
-            float(vectors.get('completion', 0.5)) if not isinstance(vectors.get('completion', 0.5), dict) else 0.5,
-            float(vectors.get('impact', 0.5)) if not isinstance(vectors.get('impact', 0.5), dict) else 0.5,
-            float(vectors.get('uncertainty', 0.5)) if not isinstance(vectors.get('uncertainty', 0.5), dict) else 0.5,
-            uncertainty_notes,
-            json.dumps(vectors)
-        ))
-        
-        self.conn.commit()
-        
-        # Export to reflex logs for dashboard visualization
-        try:
-            self._export_to_reflex_logs(
-                session_id=session_id,
-                phase="preflight",
-                assessment_data={
-                    "assessment_id": assessment_id,
-                    "cascade_id": cascade_id,
-                    "vectors": vectors,
-                    "prompt_summary": prompt_summary,
-                    "uncertainty_notes": uncertainty_notes
-                }
-            )
-        except Exception:
-            pass  # Silent fail - not critical
-        
-        return assessment_id
+        return self.store_vectors(
+            session_id=session_id,
+            phase="PREFLIGHT",
+            vectors=vectors,
+            cascade_id=cascade_id,
+            metadata=metadata,
+            reasoning=uncertainty_notes
+        )
     
     def log_check_phase_assessment(self, session_id: str, cascade_id: Optional[str],
                                    investigation_cycle: int, confidence: float,
@@ -866,112 +800,60 @@ class SessionDatabase:
                                    vectors: Optional[Dict[str, float]] = None,
                                    findings: Optional[List[str]] = None,
                                    remaining_unknowns: Optional[List[str]] = None) -> str:
-        """Store check phase self-assessment with NEW 13-vector system support
-        
-        Args:
-            findings: List of investigation findings (e.g., ["Found bug in auth.py:45", "JWT expires in 1h"])
-            remaining_unknowns: List of remaining unknowns (e.g., ["Token refresh mechanism unclear"])
         """
-        check_id = str(uuid.uuid4())
+        DEPRECATED: Use store_vectors() instead.
         
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO check_phase_assessments (
-                check_id, session_id, cascade_id, investigation_cycle,
-                confidence, decision, gaps_identified, next_investigation_targets,
-                self_assessment_notes, findings, remaining_unknowns
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            check_id, session_id, cascade_id, investigation_cycle,
-            confidence, decision, json.dumps(gaps), json.dumps(next_targets), notes,
-            json.dumps(findings) if findings else None,
-            json.dumps(remaining_unknowns) if remaining_unknowns else None
-        ))
+        This method redirects to store_vectors() for backward compatibility.
+        """
+        # Store CHECK-specific data in metadata
+        metadata = {
+            "decision": decision,
+            "confidence": confidence,
+            "gaps_identified": gaps,
+            "next_investigation_targets": next_targets,
+            "findings": findings,
+            "remaining_unknowns": remaining_unknowns
+        }
         
-        self.conn.commit()
+        # If vectors provided, use them; otherwise create minimal vector with uncertainty
+        if not vectors:
+            vectors = {"uncertainty": 1.0 - confidence}
         
-        # Export to reflex logs for dashboard visualization
-        if vectors:
-            try:
-                self._export_to_reflex_logs(
-                    session_id=session_id,
-                    phase="check",
-                    assessment_data={
-                        "assessment_id": check_id,
-                        "cascade_id": cascade_id,
-                        "vectors": vectors,
-                        "task_summary": f"CHECK cycle {investigation_cycle}: {decision}",
-                        "confidence": confidence,
-                        "decision": decision,
-                        "gaps_identified": gaps,
-                        "next_targets": next_targets,
-                        "notes": notes
-                    }
-                )
-            except Exception:
-                pass  # Silent fail - not critical
-        
-        return check_id
+        return self.store_vectors(
+            session_id=session_id,
+            phase="CHECK",
+            vectors=vectors,
+            cascade_id=cascade_id,
+            round_num=investigation_cycle,
+            metadata=metadata,
+            reasoning=notes
+        )
     
     def log_postflight_assessment(self, session_id: str, cascade_id: Optional[str],
                                   task_summary: str, vectors: Dict[str, float],
                                   postflight_confidence: float,
                                   calibration_accuracy: str,
                                   learning_notes: str = "") -> str:
-        """Store postflight epistemic assessment with calibration validation (NEW 13-vector system)"""
-        assessment_id = str(uuid.uuid4())
+        """
+        DEPRECATED: Use store_vectors() instead.
         
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO postflight_assessments (
-                assessment_id, session_id, cascade_id, task_summary,
-                engagement, know, do, context,
-                clarity, coherence, signal, density,
-                state, change, completion, impact,
-                uncertainty,
-                postflight_actual_confidence, calibration_accuracy, learning_notes,
-                vectors_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            assessment_id, session_id, cascade_id, task_summary,
-            vectors.get('engagement', 0.5),
-            vectors.get('know', 0.5),
-            vectors.get('do', 0.5),
-            vectors.get('context', 0.5),
-            vectors.get('clarity', 0.5),
-            vectors.get('coherence', 0.5),
-            vectors.get('signal', 0.5),
-            vectors.get('density', 0.5),
-            vectors.get('state', 0.5),
-            vectors.get('change', 0.5),
-            vectors.get('completion', 0.5),
-            vectors.get('impact', 0.5),
-            vectors.get('uncertainty', 0.5),
-            postflight_confidence, calibration_accuracy, learning_notes,
-            json.dumps(vectors)
-        ))
+        This method redirects to store_vectors() for backward compatibility.
+        """
+        # Store postflight-specific data in metadata
+        metadata = {
+            "task_summary": task_summary,
+            "postflight_confidence": postflight_confidence,
+            "calibration_accuracy": calibration_accuracy
+        }
         
-        self.conn.commit()
-        
-        # Export to reflex logs for dashboard visualization
-        try:
-            self._export_to_reflex_logs(
-                session_id=session_id,
-                phase="postflight",
-                assessment_data={
-                    "assessment_id": assessment_id,
-                    "cascade_id": cascade_id,
-                    "vectors": vectors,
-                    "task_summary": task_summary,
-                    "postflight_confidence": postflight_confidence,
-                    "calibration_accuracy": calibration_accuracy,
-                    "learning_notes": learning_notes
-                }
-            )
-        except Exception:
-            pass  # Silent fail - not critical
-        
-        return assessment_id
+        return self.store_vectors(
+            session_id=session_id,
+            phase="POSTFLIGHT",
+            vectors=vectors,
+            cascade_id=cascade_id,
+            metadata=metadata,
+            reasoning=learning_notes
+        )
     
     def log_investigation_round(
         self,
@@ -1172,38 +1054,89 @@ class SessionDatabase:
         return "proceed"
     
     def get_preflight_assessment(self, session_id: str) -> Optional[Dict]:
-        """Get most recent preflight assessment for session"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT * FROM preflight_assessments 
-            WHERE session_id = ? 
-            ORDER BY assessed_at DESC 
-            LIMIT 1
-        """, (session_id,))
-        row = cursor.fetchone()
-        return dict(row) if row else None
+        """
+        DEPRECATED: Use get_latest_vectors(session_id, phase='PREFLIGHT') instead.
+        
+        This method redirects to reflexes table for backward compatibility.
+        """
+        return self.get_latest_vectors(session_id, phase="PREFLIGHT")
     
     def get_check_phase_assessments(self, session_id: str) -> List[Dict]:
-        """Get all check phase assessments for session"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT * FROM check_phase_assessments 
-            WHERE session_id = ? 
-            ORDER BY assessed_at
-        """, (session_id,))
-        return [dict(row) for row in cursor.fetchall()]
+        """
+        DEPRECATED: Use get_vectors_by_phase(session_id, phase='CHECK') instead.
+        
+        This method redirects to reflexes table for backward compatibility.
+        """
+        return self.get_vectors_by_phase(session_id, phase="CHECK")
     
     def get_postflight_assessment(self, session_id: str) -> Optional[Dict]:
-        """Get most recent postflight assessment for session"""
+        """
+        DEPRECATED: Use get_latest_vectors(session_id, phase='POSTFLIGHT') instead.
+        
+        This method redirects to reflexes table for backward compatibility.
+        """
+        return self.get_latest_vectors(session_id, phase="POSTFLIGHT")
+    
+    def get_preflight_vectors(self, session_id: str) -> Optional[Dict]:
+        """Get latest PREFLIGHT vectors for session (convenience method)"""
+        return self.get_latest_vectors(session_id, phase="PREFLIGHT")
+    
+    def get_check_vectors(self, session_id: str, cycle: Optional[int] = None) -> List[Dict]:
+        """Get CHECK phase vectors, optionally filtered by cycle"""
+        vectors = self.get_vectors_by_phase(session_id, phase="CHECK")
+        if cycle is not None:
+            return [v for v in vectors if v.get('round') == cycle]
+        return vectors
+    
+    def get_postflight_vectors(self, session_id: str) -> Optional[Dict]:
+        """Get latest POSTFLIGHT vectors for session (convenience method)"""
+        return self.get_latest_vectors(session_id, phase="POSTFLIGHT")
+    
+    def get_vectors_by_phase(self, session_id: str, phase: str) -> List[Dict]:
+        """Get all vectors for a specific phase"""
         cursor = self.conn.cursor()
         cursor.execute("""
-            SELECT * FROM postflight_assessments 
-            WHERE session_id = ? 
-            ORDER BY assessed_at DESC 
-            LIMIT 1
-        """, (session_id,))
-        row = cursor.fetchone()
-        return dict(row) if row else None
+            SELECT * FROM reflexes 
+            WHERE session_id = ? AND phase = ? 
+            ORDER BY timestamp ASC
+        """, (session_id, phase))
+        
+        results = []
+        for row in cursor.fetchall():
+            row_dict = dict(row)
+            # Build vectors dict from columns
+            vectors = {
+                'engagement': row_dict.get('engagement'),
+                'know': row_dict.get('know'),
+                'do': row_dict.get('do'),
+                'context': row_dict.get('context'),
+                'clarity': row_dict.get('clarity'),
+                'coherence': row_dict.get('coherence'),
+                'signal': row_dict.get('signal'),
+                'density': row_dict.get('density'),
+                'state': row_dict.get('state'),
+                'change': row_dict.get('change'),
+                'completion': row_dict.get('completion'),
+                'impact': row_dict.get('impact'),
+                'uncertainty': row_dict.get('uncertainty')
+            }
+            # Remove None values
+            vectors = {k: v for k, v in vectors.items() if v is not None}
+            
+            result = {
+                'session_id': row_dict['session_id'],
+                'cascade_id': row_dict.get('cascade_id'),
+                'phase': row_dict['phase'],
+                'round': row_dict.get('round', 1),
+                'timestamp': row_dict['timestamp'],
+                'vectors': vectors,
+                'metadata': json.loads(row_dict['reflex_data']) if row_dict.get('reflex_data') else {},
+                'reasoning': row_dict.get('reasoning'),
+                'evidence': row_dict.get('evidence')
+            }
+            results.append(result)
+        
+        return results
     
     def store_epistemic_delta(self, cascade_id: str, delta: Dict[str, float]):
         """
@@ -1507,7 +1440,7 @@ class SessionDatabase:
         
         return None
     
-    def store_vectors(self, session_id: str, phase: str, vectors: Dict[str, float], cascade_id: Optional[str] = None, round_num: int = 1):
+    def store_vectors(self, session_id: str, phase: str, vectors: Dict[str, float], cascade_id: Optional[str] = None, round_num: int = 1, metadata: Optional[Dict] = None, reasoning: Optional[str] = None):
         """
         Store epistemic vectors in the reflexes table
 
@@ -1532,7 +1465,7 @@ class SessionDatabase:
             value = vectors.get(name, 0.5)  # Default to 0.5 if not provided
             vector_values.append(value if isinstance(value, (int, float)) else 0.5)
 
-        # Create a reflex data entry
+        # Create a reflex data entry with optional metadata
         reflex_data = {
             'session_id': session_id,
             'phase': phase,
@@ -1540,6 +1473,10 @@ class SessionDatabase:
             'vectors': vectors,
             'timestamp': time.time()
         }
+        
+        # Merge in any additional metadata if provided
+        if metadata:
+            reflex_data.update(metadata)
 
         cursor.execute("""
             INSERT INTO reflexes (
@@ -1547,17 +1484,18 @@ class SessionDatabase:
                 engagement, know, do, context,
                 clarity, coherence, signal, density,
                 state, change, completion, impact, uncertainty,
-                reflex_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                reflex_data, reasoning
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             session_id, cascade_id, phase, round_num, time.time(),
             *vector_values,  # Unpack the 13 vector values
-            json.dumps(reflex_data)
+            json.dumps(reflex_data),
+            reasoning
         ))
 
         self.conn.commit()
 
-    def get_latest_vectors(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict[str, float]]:
+    def get_latest_vectors(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict]:
         """
         Get the latest epistemic vectors for a session from the reflexes table
 
@@ -1566,7 +1504,7 @@ class SessionDatabase:
             phase: Optional phase filter
 
         Returns:
-            Dictionary of vectors or None if not found
+            Dictionary with vectors, metadata, timestamp, etc. or None if not found
         """
         cursor = self.conn.cursor()
 
@@ -1586,18 +1524,30 @@ class SessionDatabase:
         result = cursor.fetchone()
 
         if result:
+            row_dict = dict(result)
+            
             # Extract the 13 vector values from the result
             vectors = {}
             for vector_name in ['engagement', 'know', 'do', 'context',
                                'clarity', 'coherence', 'signal', 'density',
                                'state', 'change', 'completion', 'impact', 'uncertainty']:
-                if vector_name in result.keys():
-                    value = result[vector_name]
+                if vector_name in row_dict:
+                    value = row_dict[vector_name]
                     if value is not None:
                         vectors[vector_name] = float(value)
-                    else:
-                        vectors[vector_name] = 0.5  # Default value if null
-            return vectors
+            
+            # Return full data structure
+            return {
+                'session_id': row_dict['session_id'],
+                'cascade_id': row_dict.get('cascade_id'),
+                'phase': row_dict['phase'],
+                'round': row_dict.get('round', 1),
+                'timestamp': row_dict['timestamp'],
+                'vectors': vectors,
+                'metadata': json.loads(row_dict['reflex_data']) if row_dict.get('reflex_data') else {},
+                'reasoning': row_dict.get('reasoning'),
+                'evidence': row_dict.get('evidence')
+            }
 
         return None
 
