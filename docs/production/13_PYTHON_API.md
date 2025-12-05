@@ -474,6 +474,316 @@ For sessions, use `session-create` command.
 
 ---
 
+## Goal and Subtask Management
+
+**New in v4.0:** Track investigation progress with structured goal trees.
+
+Goals and subtasks provide **decision quality, continuity, and audit trails** for complex investigations. They're **optional** - use them when uncertainty is high or work spans multiple sessions.
+
+### Purpose
+
+- **Decision Quality:** CHECK phase can query `query_unknowns_summary()` to inform readiness decisions
+- **Continuity:** Next AI knows exactly what was investigated (findings/unknowns/dead_ends)
+- **Audit Trail:** Complete investigation path visible for review
+
+### When to Use
+
+- ✅ **Complex investigations** - Multiple unknowns, non-trivial scope
+- ✅ **Multi-session work** - Need to hand off investigation state
+- ✅ **CHECK decisions** - Need structured unknowns list to decide readiness
+- ⚠️ **Simple tasks** - Skip for straightforward implementations
+
+### The 7 Methods
+
+```python
+from empirica.data.session_database import SessionDatabase
+
+db = SessionDatabase()
+
+# 1. Create a goal with scope assessment
+goal_id = db.create_goal(
+    session_id=session_id,
+    objective="Understand OAuth2 authentication flow",
+    scope_breadth=0.6,      # 0.0-1.0 (0=single file, 1=entire codebase)
+    scope_duration=0.4,     # 0.0-1.0 (0=minutes, 1=months)
+    scope_coordination=0.3  # 0.0-1.0 (0=solo, 1=heavy multi-agent)
+)
+
+# 2. Create subtasks for investigation
+subtask_id = db.create_subtask(
+    goal_id=goal_id,
+    description="Map OAuth2 endpoints and flow",
+    importance='high'  # 'critical' | 'high' | 'medium' | 'low'
+)
+
+# 3. Log what you discovered
+db.update_subtask_findings(subtask_id, [
+    "Auth endpoint: /oauth/authorize",
+    "Token endpoint: /oauth/token",
+    "PKCE required for public clients",
+    "Refresh tokens enabled"
+])
+
+# 4. Log what remains unclear (for CHECK decisions)
+db.update_subtask_unknowns(subtask_id, [
+    "Does MFA affect refresh token behavior?",
+    "Best practice for token storage in mobile?",
+    "Rate limiting on token endpoint?"
+])
+
+# 5. Log paths explored but blocked
+db.update_subtask_dead_ends(subtask_id, [
+    "JWT extension blocked by security policy",
+    "Custom OAuth provider - API docs incomplete"
+])
+
+# 6. Get complete goal tree (for review/handoff)
+goal_tree = db.get_goal_tree(session_id)
+# Returns: List[Dict] with nested subtasks + findings/unknowns/dead_ends
+
+# 7. Query unknowns summary (for CHECK decisions)
+unknowns_summary = db.query_unknowns_summary(session_id)
+# Returns: {'total_unknowns': int, 'unknowns_by_goal': [...]}
+```
+
+### Complete Example: OAuth2 Investigation
+
+**Scenario:** You need to implement OAuth2 authentication but don't fully understand the flow.
+
+```python
+from empirica.data.session_database import SessionDatabase
+
+db = SessionDatabase()
+session_id = db.create_session(ai_id="oauth_investigation")
+
+# 1. Create goal after PREFLIGHT assessment
+goal_id = db.create_goal(
+    session_id=session_id,
+    objective="Understand OAuth2 authentication flow",
+    scope_breadth=0.6,  # Touches auth/, api/, and config/
+    scope_duration=0.4,  # Few hours
+    scope_coordination=0.3  # Mostly solo, some docs review
+)
+
+# 2. Break down investigation
+endpoint_task = db.create_subtask(goal_id, "Map OAuth2 endpoints", 'high')
+flow_task = db.create_subtask(goal_id, "Understand authorization code flow", 'critical')
+security_task = db.create_subtask(goal_id, "Review security requirements", 'high')
+
+# 3. Do investigation work...
+# As you discover things, log them:
+
+db.update_subtask_findings(endpoint_task, [
+    "Auth endpoint: /oauth/authorize with state param",
+    "Token endpoint: /oauth/token with grant_type",
+    "PKCE required (code_challenge)",
+    "Refresh endpoint: /oauth/refresh"
+])
+
+db.update_subtask_unknowns(endpoint_task, [
+    "Token expiration times not documented",
+    "MFA impact on flow unclear"
+])
+
+db.update_subtask_findings(flow_task, [
+    "Authorization code → exchange for access token",
+    "State parameter prevents CSRF",
+    "PKCE prevents auth code interception"
+])
+
+db.update_subtask_unknowns(flow_task, [
+    "How to handle expired refresh tokens?"
+])
+
+db.update_subtask_dead_ends(security_task, [
+    "Tried JWT - blocked by security policy (must use opaque tokens)"
+])
+
+# 4. At CHECK phase decision point:
+unknowns = db.query_unknowns_summary(session_id)
+print(f"Total unknowns: {unknowns['total_unknowns']}")
+# Output: Total unknowns: 3
+
+# Decision logic:
+# - If unknowns are blockers → investigate more
+# - If unknowns are low-impact → proceed to implementation
+
+# 5. After implementation (POSTFLIGHT):
+goal_tree = db.get_goal_tree(session_id)
+# Include in handoff report for next AI
+
+db.close()
+```
+
+### Integration with CHECK Phase
+
+Goals/subtasks inform CHECK decisions but are separate from CASCADE phases:
+
+```python
+# CHECK phase uses unknowns to decide readiness
+unknowns = db.query_unknowns_summary(session_id)
+
+if unknowns['total_unknowns'] == 0:
+    decision = "PROCEED"  # High confidence, no unknowns
+elif unknowns['total_unknowns'] <= 2 and confidence >= 0.75:
+    decision = "PROCEED"  # Few unknowns, high confidence
+else:
+    decision = "INVESTIGATE"  # Too many unknowns or low confidence
+```
+
+### Before vs After Goal Tracking
+
+**Without Goals:**
+```python
+# PREFLIGHT: "I don't fully understand OAuth2"
+# [Do some investigation]
+# CHECK: "I think I understand enough?" (no evidence)
+# ACT: [Implement, might miss things]
+# POSTFLIGHT: "Learned some things, not sure what"
+```
+
+**With Goals:**
+```python
+# PREFLIGHT: "I don't fully understand OAuth2" (uncertainty: 0.6)
+# Create goal + subtasks
+# [Do structured investigation]
+# Update findings: [4 discoveries]
+# Update unknowns: [2 remaining questions]
+# CHECK: query_unknowns_summary() → 2 unknowns, both low-impact → PROCEED
+# ACT: [Implement with confidence]
+# POSTFLIGHT: get_goal_tree() → Complete investigation record in handoff
+```
+
+### API Reference
+
+#### create_goal()
+```python
+goal_id = db.create_goal(
+    session_id: str,
+    objective: str,
+    scope_breadth: float = None,      # 0.0-1.0
+    scope_duration: float = None,     # 0.0-1.0
+    scope_coordination: float = None  # 0.0-1.0
+) -> str  # Returns goal_id (UUID)
+```
+
+#### create_subtask()
+```python
+subtask_id = db.create_subtask(
+    goal_id: str,
+    description: str,
+    importance: str = 'medium'  # 'critical'|'high'|'medium'|'low'
+) -> str  # Returns subtask_id (UUID)
+```
+
+#### update_subtask_findings()
+```python
+db.update_subtask_findings(
+    subtask_id: str,
+    findings: List[str]  # JSON stored internally
+) -> None
+```
+
+#### update_subtask_unknowns()
+```python
+db.update_subtask_unknowns(
+    subtask_id: str,
+    unknowns: List[str]  # Used for CHECK decisions
+) -> None
+```
+
+#### update_subtask_dead_ends()
+```python
+db.update_subtask_dead_ends(
+    subtask_id: str,
+    dead_ends: List[str]  # "Attempted X - blocked by Y"
+) -> None
+```
+
+#### get_goal_tree()
+```python
+goal_tree = db.get_goal_tree(
+    session_id: str
+) -> List[Dict]  # Nested: goals → subtasks → findings/unknowns/dead_ends
+```
+
+**Returns:**
+```python
+[
+    {
+        'goal_id': 'uuid',
+        'objective': 'Understand OAuth2 flow',
+        'status': 'in_progress',  # 'in_progress'|'complete'|'blocked'
+        'scope_breadth': 0.6,
+        'scope_duration': 0.4,
+        'scope_coordination': 0.3,
+        'subtasks': [
+            {
+                'subtask_id': 'uuid',
+                'description': 'Map endpoints',
+                'importance': 'high',
+                'status': 'complete',
+                'findings': ["Auth endpoint: /oauth/authorize", ...],
+                'unknowns': ["Token expiration?", ...],
+                'dead_ends': ["Tried JWT - blocked", ...]
+            }
+        ]
+    }
+]
+```
+
+#### query_unknowns_summary()
+```python
+summary = db.query_unknowns_summary(
+    session_id: str
+) -> Dict
+```
+
+**Returns:**
+```python
+{
+    'total_unknowns': 3,
+    'unknowns_by_goal': [
+        {
+            'goal_id': 'uuid',
+            'objective': 'Understand OAuth2 flow',
+            'unknown_count': 3
+        }
+    ]
+}
+```
+
+### Best Practices
+
+1. **Create goals DURING work, not before** - Goals emerge from investigation
+2. **Update incrementally** - Add findings/unknowns as you discover them
+3. **Use CHECK with unknowns** - Query before deciding to proceed
+4. **Include in handoffs** - Call `get_goal_tree()` in POSTFLIGHT
+5. **Don't over-structure** - Simple tasks don't need goals
+
+### Three Separate Concerns
+
+**Understand the distinction:**
+
+1. **CASCADE phases (epistemic checkpoints)**
+   - PREFLIGHT/CHECK/POSTFLIGHT
+   - Self-assessment at key decision points
+   - Stored in `reflexes` table
+
+2. **Goals/subtasks (investigation logging)**
+   - Created and updated DURING work
+   - Track findings/unknowns/dead_ends
+   - Stored in `goals` and `subtasks` tables
+   - **Separate from CASCADE but informs CHECK decisions**
+
+3. **Implicit reasoning (natural work)**
+   - The actual investigation and implementation
+   - Not explicitly logged (unless you choose to)
+
+**They interact but are not nested:** You run PREFLIGHT, then create goals, then investigate (updating subtasks), then run CHECK (querying unknowns), then proceed.
+
+---
+
 ## Error Handling
 
 ```python

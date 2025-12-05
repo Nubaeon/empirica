@@ -220,6 +220,157 @@ db.create_session(ai_id="myai", bootstrap_level=2)
 
 ---
 
+## Using Goal Tracking for Complex Tasks
+
+**New in v4.0:** For complex investigations with high uncertainty, use goal tracking to improve decision quality and continuity.
+
+### When to Use Goals
+
+- ✅ **High uncertainty** - Don't fully understand the task
+- ✅ **Multi-session work** - Need to hand off investigation state
+- ✅ **Complex investigations** - Multiple unknowns to track
+- ⚠️ **Simple tasks** - Skip for straightforward work
+
+### Step-by-Step Example: OAuth2 Implementation
+
+```python
+from empirica.data.session_database import SessionDatabase
+from empirica.core.canonical import ReflexLogger
+
+# 1. Create session
+db = SessionDatabase()
+session_id = db.create_session(ai_id="oauth_task")
+
+# 2. Run PREFLIGHT - Assess initial state
+logger = ReflexLogger(session_id=session_id)
+# (AI performs self-assessment)
+# Result: uncertainty = 0.6 (high), know = 0.4 (low)
+# Decision: Need investigation before implementation
+
+# 3. Create goal to track investigation
+goal_id = db.create_goal(
+    session_id=session_id,
+    objective="Understand OAuth2 authentication flow",
+    scope_breadth=0.6,      # Touches multiple modules
+    scope_duration=0.4,     # Few hours
+    scope_coordination=0.3  # Mostly solo
+)
+
+# 4. Create subtask for investigation
+subtask_id = db.create_subtask(
+    goal_id=goal_id,
+    description="Map OAuth2 endpoints and authorization flow",
+    importance='critical'
+)
+
+# 5. Do investigation work
+# Read docs, examine code, test endpoints...
+
+# 6. Update findings as you discover them
+db.update_subtask_findings(subtask_id, [
+    "Auth endpoint: /oauth/authorize with state param",
+    "Token endpoint: /oauth/token (POST only)",
+    "PKCE required for public clients",
+    "Refresh tokens enabled with 30-day expiry"
+])
+
+# 7. Update unknowns (what's still unclear)
+db.update_subtask_unknowns(subtask_id, [
+    "How does MFA affect the refresh flow?",
+    "Best practice for mobile token storage?"
+])
+
+# 8. Decide: Ready to implement?
+unknowns_summary = db.query_unknowns_summary(session_id)
+print(f"Unknowns remaining: {unknowns_summary['total_unknowns']}")
+# Output: Unknowns remaining: 2
+
+# 9. Evaluate unknowns for CHECK decision
+# - "MFA refresh" - Edge case, low impact, can handle later
+# - "Mobile storage" - Out of scope for backend implementation
+# Decision: These unknowns are NOT blockers
+
+# 10. Run CHECK with high confidence
+# (AI performs self-assessment with evidence)
+# confidence = 0.8, unknowns = 2 (non-blocking) → PROCEED
+
+# 11. Do implementation
+# Implement OAuth2 with findings from investigation...
+
+# 12. Run POSTFLIGHT
+# (AI performs self-assessment, measures learning)
+
+# 13. Include goal tree in handoff
+goal_tree = db.get_goal_tree(session_id)
+# Next AI session can see exactly what was investigated
+# findings: [4 discoveries]
+# unknowns: [2 remaining questions with context]
+# dead_ends: [paths explored but blocked]
+
+db.close()
+```
+
+### Benefits Demonstrated
+
+**Decision Quality:**
+- CHECK decision informed by structured unknowns list
+- Evidence-based readiness: "2 unknowns, both low-impact → PROCEED"
+- Avoids premature implementation
+
+**Continuity:**
+- Next AI knows: What was found, what's unclear, what failed
+- No duplicate investigation
+- Can pick up exactly where you left off
+
+**Audit Trail:**
+- Complete investigation path visible
+- Findings, unknowns, and dead_ends all recorded
+- Reviewable decision-making process
+
+### Without vs With Goal Tracking
+
+**Without Goals (Implicit Investigation):**
+```
+PREFLIGHT → [investigate somehow] → CHECK (unclear evidence) → ACT
+Result: Uncertainty about readiness, no handoff record
+```
+
+**With Goals (Structured Investigation):**
+```
+PREFLIGHT → Create goal/subtasks → [investigate + log] → 
+CHECK (query unknowns) → Evidence-based decision → ACT → 
+POSTFLIGHT (goal tree in handoff)
+Result: Clear readiness evidence, complete handoff record
+```
+
+### Integration with CASCADE Workflow
+
+**Understand the relationship:**
+
+1. **PREFLIGHT** - Assess initial uncertainty
+   - High uncertainty? → Create goal to track investigation
+
+2. **Investigation** (between PREFLIGHT and CHECK)
+   - Create subtasks as needed
+   - Update findings/unknowns incrementally
+   - NOT a formal CASCADE phase - just natural work
+
+3. **CHECK** - Explicit readiness gate
+   - Query `query_unknowns_summary()`
+   - Evaluate: Are unknowns blockers?
+   - Evidence-based decision: PROCEED or INVESTIGATE_MORE
+
+4. **ACT** - Do the implementation
+   - Can reference findings from goal tree
+
+5. **POSTFLIGHT** - Reflect on learning
+   - Include `get_goal_tree()` in handoff report
+   - Next session has complete investigation record
+
+**Key Point:** Goals are created and updated DURING work, not as a separate pre-planning phase.
+
+---
+
 ## Next Steps
 
 - **[CASCADE Flow](06_CASCADE_FLOW.md)** - Detailed workflow explanation

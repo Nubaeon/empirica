@@ -123,13 +123,17 @@ Result: Genuine epistemic measurement, not pattern matching
 2. **sessions** - Session metadata
 3. **cascades** - Cascade executions
 
+**Investigation & Decision Quality (v4.0):**
+4. **goals** - 🆕 Goal tracking with scope vectors
+5. **subtasks** - 🆕 Investigation tracking (findings/unknowns/dead_ends)
+
 **Tracking & Analysis:**
-4. **divergence_tracking** - Calibration tracking
-5. **drift_monitoring** - Behavioral integrity
-6. **bayesian_beliefs** - Evidence-based belief tracking
-7. **investigation_tools** - Tool usage
-8. **cascade_metadata** - Cascade key-value data
-9. **epistemic_snapshots** - Point-in-time states
+6. **divergence_tracking** - Calibration tracking
+7. **drift_monitoring** - Behavioral integrity
+8. **bayesian_beliefs** - Evidence-based belief tracking
+9. **investigation_tools** - Tool usage
+10. **cascade_metadata** - Cascade key-value data
+11. **epistemic_snapshots** - Point-in-time states
 
 **Migration Note:** The old tables (`epistemic_assessments`, `preflight_assessments`, 
 `check_phase_assessments`, `postflight_assessments`) have been unified into the `reflexes` 
@@ -309,7 +313,189 @@ cursor.execute("""
 
 ---
 
-### ~~Table 4: preflight_assessments~~ (DEPRECATED)
+### Table 4: goals 🆕
+
+**Purpose:** Track investigation goals with scope assessment (v4.0)
+
+```sql
+CREATE TABLE goals (
+    goal_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    objective TEXT NOT NULL,
+    status TEXT DEFAULT 'in_progress',  -- 'in_progress' | 'complete' | 'blocked'
+    
+    -- Scope vectors (0.0-1.0)
+    scope_breadth REAL,      -- How wide (0=single file, 1=entire codebase)
+    scope_duration REAL,     -- How long (0=minutes, 1=months)
+    scope_coordination REAL, -- Multi-agent (0=solo, 1=heavy coordination)
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+);
+```
+
+**Purpose:** Goals enable **decision quality, continuity, and audit trails** for complex investigations.
+
+**When to Use:**
+- High uncertainty investigations
+- Multi-session work requiring handoff
+- CHECK phase decision-making support
+
+**Scope Vectors Explained:**
+
+| Vector | 0.0 | 0.5 | 1.0 |
+|--------|-----|-----|-----|
+| **breadth** | Single file | Few modules | Entire codebase |
+| **duration** | Minutes | Hours | Months |
+| **coordination** | Solo work | Some coordination | Heavy multi-agent |
+
+**Example Usage:**
+
+```python
+# Create goal with scope assessment
+goal_id = db.create_goal(
+    session_id=session_id,
+    objective="Understand OAuth2 authentication flow",
+    scope_breadth=0.6,      # Touches auth/, api/, config/
+    scope_duration=0.4,     # Few hours
+    scope_coordination=0.3  # Mostly solo, some docs
+)
+
+# Query goals for session
+cursor.execute("""
+    SELECT * FROM goals 
+    WHERE session_id = ? AND status = 'in_progress'
+""", (session_id,))
+```
+
+---
+
+### Table 5: subtasks 🆕
+
+**Purpose:** Track investigation progress with findings/unknowns/dead_ends (v4.0)
+
+```sql
+CREATE TABLE subtasks (
+    subtask_id TEXT PRIMARY KEY,
+    goal_id TEXT NOT NULL,
+    description TEXT NOT NULL,
+    importance TEXT DEFAULT 'medium',  -- 'critical' | 'high' | 'medium' | 'low'
+    status TEXT DEFAULT 'not_started', -- 'not_started' | 'in_progress' | 'complete'
+    
+    -- Investigation tracking (JSON arrays of strings)
+    findings TEXT,   -- JSON: ["Finding 1", "Finding 2", ...]
+    unknowns TEXT,   -- JSON: ["Unknown 1", "Unknown 2", ...]
+    dead_ends TEXT,  -- JSON: ["Attempted X - blocked by Y", ...]
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    
+    FOREIGN KEY (goal_id) REFERENCES goals(goal_id)
+);
+```
+
+**Investigation Tracking Fields:**
+
+1. **findings** - What you discovered
+   - Example: `["Auth endpoint: /oauth/authorize", "PKCE required"]`
+   - Used for: Documentation, handoff, implementation reference
+
+2. **unknowns** - What remains unclear (for CHECK decisions)
+   - Example: `["Token expiration times?", "MFA impact on refresh?"]`
+   - Used for: CHECK phase decision-making via `query_unknowns_summary()`
+
+3. **dead_ends** - Paths explored but blocked
+   - Example: `["JWT extension blocked by security policy"]`
+   - Used for: Avoiding duplicate work, audit trail
+
+**Example Usage:**
+
+```python
+# Create subtask
+subtask_id = db.create_subtask(
+    goal_id=goal_id,
+    description="Map OAuth2 endpoints and flow",
+    importance='high'
+)
+
+# Log discoveries
+db.update_subtask_findings(subtask_id, [
+    "Auth endpoint: /oauth/authorize",
+    "Token endpoint: /oauth/token",
+    "PKCE required"
+])
+
+# Log remaining questions (for CHECK)
+db.update_subtask_unknowns(subtask_id, [
+    "Token expiration times not documented",
+    "MFA impact on refresh unclear"
+])
+
+# Log blocked paths
+db.update_subtask_dead_ends(subtask_id, [
+    "Tried JWT - blocked by security policy"
+])
+
+# Query for CHECK decision
+unknowns = db.query_unknowns_summary(session_id)
+print(f"Total unknowns: {unknowns['total_unknowns']}")
+# Decision: If unknowns are blockers → investigate more
+#           If unknowns are low-impact → proceed
+```
+
+**Get Complete Goal Tree:**
+
+```python
+# Get all goals with nested subtasks
+goal_tree = db.get_goal_tree(session_id)
+
+# Returns:
+[
+    {
+        'goal_id': 'uuid',
+        'objective': 'Understand OAuth2 flow',
+        'status': 'in_progress',
+        'scope_breadth': 0.6,
+        'scope_duration': 0.4,
+        'scope_coordination': 0.3,
+        'subtasks': [
+            {
+                'subtask_id': 'uuid',
+                'description': 'Map endpoints',
+                'importance': 'high',
+                'status': 'complete',
+                'findings': [...],
+                'unknowns': [...],
+                'dead_ends': [...]
+            }
+        ]
+    }
+]
+```
+
+**Integration with CHECK Phase:**
+
+```sql
+-- Query unknowns for CHECK decision
+SELECT 
+    g.objective,
+    COUNT(CASE WHEN s.unknowns != '[]' THEN 1 END) as unknown_count
+FROM goals g
+LEFT JOIN subtasks s ON g.goal_id = s.goal_id
+WHERE g.session_id = ? AND g.status = 'in_progress'
+GROUP BY g.goal_id;
+```
+
+**Use Cases:**
+- **Decision Quality:** CHECK queries unknowns to inform readiness
+- **Continuity:** Next AI sees findings/unknowns/dead_ends
+- **Audit Trail:** Complete investigation path visible
+
+---
+
+### ~~Table 6: preflight_assessments~~ (DEPRECATED)
 
 **⚠️ DEPRECATED:** This table has been replaced by `reflexes` (phase='PREFLIGHT').
 
@@ -824,17 +1010,50 @@ print(f"Taking over from session: {handoff_context['session_metadata']}")
 
 ## Performance Considerations
 
+### Indexes
+
+All tables have appropriate indexes for common queries:
+
+**Session Management:**
+- `idx_sessions_ai` - Sessions by AI ID
+- `idx_sessions_start` - Time-based session queries
+- `idx_cascades_session` - Cascades by session
+- `idx_cascades_confidence` - Confidence-based queries
+
+**Epistemic Data:**
+- `idx_reflexes_session` - Reflexes by session
+- `idx_reflexes_phase` - Phase-based queries (PREFLIGHT/CHECK/POSTFLIGHT)
+
+**Goals & Subtasks (v4.0):**
+- `idx_goals_session` - Goals by session
+- `idx_goals_status` - Filter by goal status (in_progress/complete/blocked)
+- `idx_subtasks_goal` - Subtasks by goal
+- `idx_subtasks_status` - Filter by subtask status
+
+**Tracking & Analysis:**
+- `idx_divergence_cascade` - Divergence by cascade
+- `idx_beliefs_cascade` - Beliefs by cascade
+- `idx_tools_cascade` - Tool usage by cascade
+- `idx_cascade_metadata_lookup` - Metadata key-value lookups
+- `idx_snapshots_session` - Snapshots by session
+- `idx_snapshots_ai` - Snapshots by AI
+- `idx_snapshots_cascade` - Snapshots by cascade
+- `idx_snapshots_created` - Time-based snapshot queries
+
+---
+
 ### Database Size
 
 **Typical sizes:**
 - 1,000 cascades: ~5-10 MB
 - 10,000 cascades: ~50-100 MB
 - Reflex logs: ~2-5 KB per assessment
+- Goals/subtasks: ~1-3 KB per goal (v4.0)
 
 **Optimization:**
 - SQLite auto-vacuums
-- Indexes on foreign keys
-- Efficient queries
+- Indexes on foreign keys and common queries
+- Efficient queries with appropriate indexes
 
 ### Cleanup Strategy
 
