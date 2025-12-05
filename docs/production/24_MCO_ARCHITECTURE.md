@@ -130,19 +130,25 @@ recommendations = get_scope_recommendations(
 MCO configuration is loaded automatically during bootstrap.
 
 ```python
-from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
+# ❌ DEPRECATED - Bootstrap classes removed (bootstrap reserved for system prompts)
+# from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
 
-# Bootstrap with MCO
-bootstrap = OptimalMetacognitiveBootstrap(
+# ✅ CORRECT - Use session-create with MCO configuration
+from empirica.data.session_database import SessionDatabase
+
+# Create session with MCO settings
+db = SessionDatabase()
+session_id = db.create_session(
     ai_id="my-ai",
-    bootstrap_level=2,
-    persona="implementer",  # Optional: auto-selected if not specified
-    model_profile="gpt4"    # Optional: auto-detected if not specified
+    bootstrap_level=2  # Full metacognitive tracking
 )
 
-components = bootstrap.bootstrap()
+# MCO configuration can be applied via:
+# 1. CLI: empirica session-create --ai-id my-ai --bootstrap-level 2
+# 2. Configuration files in empirica/config/mco/
+# 3. Direct API calls with persona and model profile settings
 
-# MCO configuration is now active
+db.close()
 # Thresholds, personas, and scope recommendations are loaded
 ```
 

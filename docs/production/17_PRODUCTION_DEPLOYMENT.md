@@ -135,16 +135,22 @@ spec:
 ```python
 # lambda_handler.py
 import asyncio
-from empirica.bootstraps import ExtendedMetacognitiveBootstrap
+from empirica.data.session_database import SessionDatabase
+from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
 
 # Initialize once (cold start)
-bootstrap = ExtendedMetacognitiveBootstrap(level="2")
-components = bootstrap.bootstrap()
-cascade = components['canonical_cascade']
+db = SessionDatabase()
+cascade = CanonicalEpistemicCascade(
+    action_confidence_threshold=0.70,
+    max_investigation_rounds=3
+)
 
 def lambda_handler(event, context):
     task = event['task']
     cascade_context = event.get('context', {})
+    
+    # Create session for this invocation
+    session_id = db.create_session(ai_id="lambda", bootstrap_level=1)
     
     result = asyncio.run(
         cascade.run_epistemic_cascade(task, cascade_context)
@@ -160,24 +166,38 @@ def lambda_handler(event, context):
 
 ## Performance Optimization
 
-### 1. Bootstrap Level Selection
+### 1. Session Bootstrap Level Selection
 
-```python
-# Development: Level 2 (30 components, full features)
-bootstrap = ExtendedMetacognitiveBootstrap(level="2")
+```bash
+# Create sessions with appropriate bootstrap levels
 
-# Production: Level 2 (recommended)
-bootstrap = ExtendedMetacognitiveBootstrap(level="2")
+# Development: Level 2 (full metacognitive tracking)
+empirica session-create --ai-id myai --bootstrap-level 2
 
-# High-performance: Level 1 (25 components, faster but no parallel reasoning)
-# Note: Level 1 has limitations, use with caution
-bootstrap = ExtendedMetacognitiveBootstrap(level="1")
+# Production: Level 1 (recommended - standard tracking)
+empirica session-create --ai-id myai --bootstrap-level 1
 
-# Minimal testing: Level 0 (14 components, fastest)
-bootstrap = ExtendedMetacognitiveBootstrap(level="0")
+# Minimal: Level 0 (minimal logging, fastest)
+empirica session-create --ai-id myai --bootstrap-level 0
 ```
 
-**Recommendation:** Use **Level 2** for production (0.17s bootstrap, full features).
+```python
+# Or via Python API
+from empirica.data.session_database import SessionDatabase
+
+db = SessionDatabase()
+
+# Production (recommended)
+session_id = db.create_session(ai_id="myai", bootstrap_level=1)
+
+# Development
+session_id = db.create_session(ai_id="myai", bootstrap_level=2)
+
+# Minimal
+session_id = db.create_session(ai_id="myai", bootstrap_level=0)
+```
+
+**Recommendation:** Use **Level 1** for production (standard tracking, good performance).
 
 ### 2. Investigation Limits
 
@@ -448,9 +468,8 @@ finally:
 import os
 import asyncio
 import logging
-from empirica.bootstraps import ExtendedMetacognitiveBootstrap
 from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
-from empirica.data import SessionDatabase
+from empirica.data.session_database import SessionDatabase
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -458,7 +477,7 @@ logger = logging.getLogger('empirica')
 
 # Load config
 CONFIG = {
-    'bootstrap_level': os.getenv('EMPIRICA_BOOTSTRAP_LEVEL', '2'),
+    'bootstrap_level': int(os.getenv('EMPIRICA_BOOTSTRAP_LEVEL', '1')),
     'confidence_threshold': float(os.getenv('EMPIRICA_CONFIDENCE_THRESHOLD', '0.70')),
     'max_rounds': int(os.getenv('EMPIRICA_MAX_ROUNDS', '3')),
     'db_path': os.getenv('EMPIRICA_DB_PATH', '.empirica/sessions/sessions.db')
@@ -466,8 +485,6 @@ CONFIG = {
 
 # Initialize (once)
 logger.info("Initializing Empirica...")
-bootstrap = ExtendedMetacognitiveBootstrap(level=CONFIG['bootstrap_level'])
-components = bootstrap.bootstrap()
 
 cascade = CanonicalEpistemicCascade(
     action_confidence_threshold=CONFIG['confidence_threshold'],
@@ -478,11 +495,17 @@ cascade = CanonicalEpistemicCascade(
 
 db = SessionDatabase(CONFIG['db_path'])
 
-async def process_task(task: str, context: dict) -> dict:
+async def process_task(task: str, context: dict, ai_id: str = "production") -> dict:
     """Process task with Empirica"""
     logger.info(f"Processing task: {task[:50]}...")
     
     try:
+        # Create session for this task
+        session_id = db.create_session(
+            ai_id=ai_id,
+            bootstrap_level=CONFIG['bootstrap_level']
+        )
+        
         result = await cascade.run_epistemic_cascade(task, context)
         logger.info(f"Task completed: {result['action']}, confidence: {result['confidence']:.2f}")
         return result

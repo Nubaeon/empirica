@@ -182,7 +182,7 @@ This documentation follows these principles:
   - `preflight_assessor.py` - Pre-work baseline assessment
   - `postflight_assessor.py` - Post-work validation assessment
   - `cascade_workflow_orchestrator.py` - 7-phase coordination
-- ✅ **Database Schema** - Dedicated `preflight_assessments` and `postflight_assessments` tables
+- ✅ **Database Schema** - Unified `reflexes` table for all epistemic vectors (PREFLIGHT, CHECK, POSTFLIGHT)
 - ✅ **Updated MCP Server** - New workflow tools integrated
 
 ### Documentation Updates (v2.1):

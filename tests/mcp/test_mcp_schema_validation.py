@@ -66,16 +66,23 @@ def test_parameter_types_are_valid():
     for tool in tools:
         schema = tool.inputSchema
         properties = schema['properties']
-        
+
         for param_name, param_def in properties.items():
             assert 'type' in param_def, f"{tool.name}.{param_name}: missing type field"
-            assert param_def['type'] in valid_types, f"{tool.name}.{param_name}: invalid type '{param_def['type']}'"
-            
-            # If type is array, validate items exist
-            if param_def['type'] == 'array':
-                assert 'items' in param_def, f"{tool.name}.{param_name}: array type must have 'items' field"
-                assert 'type' in param_def['items'], f"{tool.name}.{param_name}: array items must specify type"
-                assert param_def['items']['type'] in valid_types, f"{tool.name}.{param_name}: array item type invalid"
+            # Handle both single types and arrays of types
+            param_type = param_def['type']
+            if isinstance(param_type, list):
+                # If it's a list of types, each type in the list must be valid
+                for t in param_type:
+                    assert t in valid_types, f"{tool.name}.{param_name}: invalid type '{t}' in list '{param_type}'"
+            else:
+                assert param_type in valid_types, f"{tool.name}.{param_name}: invalid type '{param_type}'"
+
+                # If type is array, validate items exist
+                if param_type == 'array':
+                    assert 'items' in param_def, f"{tool.name}.{param_name}: array type must have 'items' field"
+                    assert 'type' in param_def['items'], f"{tool.name}.{param_name}: array items must specify type"
+                    assert param_def['items']['type'] in valid_types, f"{tool.name}.{param_name}: array item type invalid"
 
 
 def test_enum_parameters_have_values():

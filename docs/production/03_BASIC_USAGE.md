@@ -43,7 +43,7 @@ print(f"Session created: {session_id}")
 ## Your First CASCADE Workflow
 
 ```python
-from empirica.core.canonical.reflex_logger import ReflexLogger
+from empirica.core.canonical import ReflexLogger
 
 # Create session
 from empirica.data.session_database import SessionDatabase
@@ -231,8 +231,9 @@ db.create_session(ai_id="myai", bootstrap_level=2)
 
 ## Migration from v1.x
 
-### Old (v1.x):
+### Old (v1.x - DEPRECATED):
 ```python
+# ❌ DEPRECATED - Bootstrap classes removed
 from empirica.bootstraps import ExtendedMetacognitiveBootstrap
 
 bootstrap = ExtendedMetacognitiveBootstrap(level="2")
@@ -241,22 +242,33 @@ cascade = components['canonical_cascade']
 ```
 
 ### New (v2.0):
+```bash
+# Use CLI for session creation
+empirica session-create --ai-id myai --bootstrap-level 1
+
+# Or via Python:
+```
+
 ```python
 from empirica.data.session_database import SessionDatabase
 
 # Just create a session
 db = SessionDatabase()
-session_id = db.create_session(ai_id="myai")
+session_id = db.create_session(ai_id="myai", bootstrap_level=1)
 db.close()
 
 # Components load on-demand, no pre-loading needed
 ```
 
 **Key Changes:**
-- ❌ No ExtendedMetacognitiveBootstrap class
+- ❌ No ExtendedMetacognitiveBootstrap class (REMOVED - bootstrap reserved for system prompts)
 - ❌ No component pre-loading
-- ❌ No bootstrap command
-- ✅ Explicit session creation
+- ❌ No bootstrap command for sessions
+- ✅ Use `empirica session-create` CLI command
+- ✅ Or use `SessionDatabase.create_session()` directly
 - ✅ Lazy-loading components
 - ✅ Cleaner API
+
+**Note:** "Bootstrap" is now reserved exclusively for dynamic system prompt generation. 
+For session creation, use `session-create` command or `SessionDatabase.create_session()`.
 

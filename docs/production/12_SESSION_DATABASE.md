@@ -114,20 +114,26 @@ Result: Genuine epistemic measurement, not pattern matching
 
 ## Session Database Schema
 
-### 12 Tables Overview
+### Core Tables Overview
 
-1. **sessions** - Session metadata
-2. **cascades** - Cascade executions
-3. **epistemic_assessments** - Full assessments
+**Epistemic Data (Unified):**
+1. **reflexes** - 🆕 Unified epistemic vectors (PREFLIGHT, CHECK, POSTFLIGHT)
+
+**Session Management:**
+2. **sessions** - Session metadata
+3. **cascades** - Cascade executions
+
+**Tracking & Analysis:**
 4. **divergence_tracking** - Calibration tracking
 5. **drift_monitoring** - Behavioral integrity
 6. **bayesian_beliefs** - Evidence-based belief tracking
 7. **investigation_tools** - Tool usage
-8. **preflight_assessments** - Pre-task assessments
-9. **check_phase_assessments** - Mid-task checks
-10. **postflight_assessments** - Post-task reassessments
-11. **cascade_metadata** - Cascade key-value data
-12. **epistemic_snapshots** - Point-in-time states
+8. **cascade_metadata** - Cascade key-value data
+9. **epistemic_snapshots** - Point-in-time states
+
+**Migration Note:** The old tables (`epistemic_assessments`, `preflight_assessments`, 
+`check_phase_assessments`, `postflight_assessments`) have been unified into the `reflexes` 
+table. Data migration happens automatically on first database access.
 
 ---
 
@@ -194,72 +200,122 @@ CREATE TABLE cascades (
 
 ---
 
-### Table 3: epistemic_assessments
+### Table 3: reflexes 🆕
 
-**Purpose:** Store complete 13-vector assessments
+**Purpose:** Unified storage for all epistemic vectors across CASCADE phases
 
 ```sql
-CREATE TABLE epistemic_assessments (
-    assessment_id TEXT PRIMARY KEY,
-    cascade_id TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-
-    -- 12 vectors (each has score + rationale)
+CREATE TABLE reflexes (
+    reflex_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    cascade_id TEXT,
+    
+    -- Phase tracking
+    phase TEXT NOT NULL,  -- 'PREFLIGHT', 'CHECK', 'POSTFLIGHT'
+    round INTEGER DEFAULT 1,  -- For multiple CHECKs
+    timestamp REAL NOT NULL,
+    
+    -- 13 Epistemic Vectors (0.0 - 1.0)
     -- GATE
-    engagement_score REAL,
-    engagement_rationale TEXT,
-
+    engagement REAL,
+    
     -- FOUNDATION (35%)
-    know_score REAL,
-    know_rationale TEXT,
-    do_score REAL,
-    do_rationale TEXT,
-    context_score REAL,
-    context_rationale TEXT,
-
+    know REAL,
+    do REAL,
+    context REAL,
+    
     -- COMPREHENSION (25%)
-    clarity_score REAL,
-    clarity_rationale TEXT,
-    coherence_score REAL,
-    coherence_rationale TEXT,
-    signal_score REAL,
-    signal_rationale TEXT,
-    density_score REAL,
-    density_rationale TEXT,
-
+    clarity REAL,
+    coherence REAL,
+    signal REAL,
+    density REAL,
+    
     -- EXECUTION (25%)
-    state_score REAL,
-    state_rationale TEXT,
-    change_score REAL,
-    change_rationale TEXT,
-    completion_score REAL,
-    completion_rationale TEXT,
-    impact_score REAL,
-    impact_rationale TEXT,
-
-    -- META (explicit tracking)
-    uncertainty_score REAL,
-    uncertainty_rationale TEXT,
-
-    -- Calculated
-    overall_confidence REAL,
-    recommended_action TEXT,
-
+    state REAL,
+    change REAL,
+    completion REAL,
+    impact REAL,
+    
+    -- META (explicit uncertainty)
+    uncertainty REAL,
+    
+    -- Additional data
+    reflex_data TEXT,  -- JSON metadata (phase-specific)
+    reasoning TEXT,    -- Natural language notes
+    evidence TEXT,     -- Supporting evidence
+    
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id),
     FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id)
 );
 ```
 
-**Queryable by:**
-- Vector scores
-- Confidence levels
-- Recommended actions
-- Time ranges
+**Key Features:**
+- ✅ **Unified storage** - All phases in one table
+- ✅ **Phase filtering** - Query by PREFLIGHT, CHECK, POSTFLIGHT
+- ✅ **Round tracking** - Multiple CHECK phases per cascade
+- ✅ **Metadata storage** - JSON field for phase-specific data
+- ✅ **Automatic migration** - Old data migrated transparently
+
+**Query Examples:**
+
+```python
+# Get latest PREFLIGHT vectors
+db.get_latest_vectors(session_id, phase="PREFLIGHT")
+
+# Get all CHECK phases
+db.get_vectors_by_phase(session_id, phase="CHECK")
+
+# Get POSTFLIGHT
+db.get_latest_vectors(session_id, phase="POSTFLIGHT")
+
+# Raw SQL query by phase
+cursor.execute("""
+    SELECT * FROM reflexes 
+    WHERE session_id = ? AND phase = 'PREFLIGHT'
+    ORDER BY timestamp DESC LIMIT 1
+""", (session_id,))
+```
+
+**Phase-Specific Metadata (stored in reflex_data JSON):**
+
+**PREFLIGHT:**
+```json
+{
+  "prompt_summary": "Implement user authentication",
+  "uncertainty_notes": "Unclear about JWT vs session tokens"
+}
+```
+
+**CHECK:**
+```json
+{
+  "decision": "investigate",
+  "confidence": 0.75,
+  "gaps_identified": ["Token refresh mechanism unclear"],
+  "next_investigation_targets": ["Research JWT refresh tokens"],
+  "findings": ["Found auth.py handles login", "JWT library installed"],
+  "remaining_unknowns": ["Token expiration handling"]
+}
+```
+
+**POSTFLIGHT:**
+```json
+{
+  "task_summary": "Implemented JWT authentication with refresh",
+  "postflight_confidence": 0.9,
+  "calibration_accuracy": "well-calibrated"
+}
+```
 
 ---
 
-### Table 4: preflight_assessments
+### ~~Table 4: preflight_assessments~~ (DEPRECATED)
 
-**Purpose:** Pre-task epistemic state
+**⚠️ DEPRECATED:** This table has been replaced by `reflexes` (phase='PREFLIGHT').
+
+**Migration:** Data automatically migrated to `reflexes` on first database access.
+
+**Old Purpose:** Pre-task epistemic state
 
 ```sql
 CREATE TABLE preflight_assessments (
@@ -278,38 +334,27 @@ CREATE TABLE preflight_assessments (
 
 ---
 
-### Table 5: postflight_assessments
+### ~~Table 5: postflight_assessments~~ (DEPRECATED)
 
-**Purpose:** Post-task reassessment + calibration
+**⚠️ DEPRECATED:** This table has been replaced by `reflexes` (phase='POSTFLIGHT').
 
-```sql
-CREATE TABLE postflight_assessments (
-    postflight_id TEXT PRIMARY KEY,
-    cascade_id TEXT NOT NULL,
-    assessment_id TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL,
+**Migration:** Data automatically migrated to `reflexes` on first database access.
 
-    -- Calibration
-    preflight_confidence REAL,
-    postflight_confidence REAL,
-    delta_confidence REAL,
-
-    calibration_status TEXT,  -- 'well_calibrated', 'overconfident', 'underconfident'
-    learning_outcome TEXT,     -- 'significant', 'moderate', 'minimal', 'negative'
-
-    FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id),
-    FOREIGN KEY (assessment_id) REFERENCES epistemic_assessments(assessment_id)
-);
-```
-
-**Enables:**
-- Calibration tracking
-- Learning delta measurement
-- Prediction accuracy
+**Old Purpose:** Post-task reassessment + calibration
 
 ---
 
-### Table 6: bayesian_beliefs
+### ~~Table 6: check_phase_assessments~~ (DEPRECATED)
+
+**⚠️ DEPRECATED:** This table has been replaced by `reflexes` (phase='CHECK').
+
+**Migration:** Data automatically migrated to `reflexes` on first database access.
+
+**Old Purpose:** Mid-task confidence checks
+
+---
+
+### Table 7: bayesian_beliefs
 
 **Purpose:** Evidence-based belief tracking
 
@@ -628,30 +673,37 @@ cursor.execute("""
 """)
 ```
 
-**Calibration analysis:**
+**Calibration analysis (using reflexes table):**
 ```python
+# Compare PREFLIGHT vs POSTFLIGHT vectors for learning deltas
 cursor.execute("""
     SELECT
-        pf.preflight_confidence,
-        po.postflight_confidence,
-        po.delta_confidence,
-        po.calibration_status
-    FROM postflight_assessments po
-    JOIN preflight_assessments pf ON po.cascade_id = pf.cascade_id
-    WHERE po.calibration_status = 'overconfident'
+        pre.session_id,
+        pre.cascade_id,
+        pre.uncertainty as preflight_uncertainty,
+        post.uncertainty as postflight_uncertainty,
+        (pre.uncertainty - post.uncertainty) as uncertainty_reduction,
+        json_extract(post.reflex_data, '$.calibration_accuracy') as calibration_status
+    FROM reflexes pre
+    JOIN reflexes post ON pre.cascade_id = post.cascade_id
+    WHERE pre.phase = 'PREFLIGHT' 
+      AND post.phase = 'POSTFLIGHT'
+      AND json_extract(post.reflex_data, '$.calibration_accuracy') = 'overconfident'
 """)
 ```
 
-**Vector trend analysis:**
+**Vector trend analysis (using reflexes table):**
 ```python
 cursor.execute("""
     SELECT
-        DATE(created_at) as date,
-        AVG(know_score) as avg_know,
-        AVG(do_score) as avg_do,
-        AVG(context_score) as avg_context
-    FROM epistemic_assessments
-    GROUP BY DATE(created_at)
+        DATE(timestamp, 'unixepoch') as date,
+        AVG(know) as avg_know,
+        AVG(do) as avg_do,
+        AVG(context) as avg_context,
+        AVG(uncertainty) as avg_uncertainty
+    FROM reflexes
+    WHERE phase = 'PREFLIGHT'
+    GROUP BY DATE(timestamp, 'unixepoch')
     ORDER BY date
 """)
 ```

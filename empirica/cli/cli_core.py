@@ -34,10 +34,10 @@ Examples:
     
     # Create subcommands
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
-    
-    # Bootstrap commands
-    _add_bootstrap_parsers(subparsers)
-    
+
+    # Session commands (use session-create for session initialization)
+    _add_session_parsers(subparsers)
+
     # Assessment commands
     _add_assessment_parsers(subparsers)
     
@@ -68,9 +68,6 @@ Examples:
     # MCP commands - REMOVED (no longer needed)
     # _add_mcp_parsers(subparsers)
 
-    # Session commands
-    _add_session_parsers(subparsers)
-    
     # Action commands (INVESTIGATE and ACT tracking)
     _add_action_parsers(subparsers)
     
@@ -82,10 +79,6 @@ Examples:
     
     return parser
 
-
-def _add_bootstrap_parsers(subparsers):
-    """Add bootstrap command parsers"""
-    # Main bootstrap command (consolidates bootstrap, bootstrap-system, onboard)
 
 def _add_assessment_parsers(subparsers):
     """Add assessment command parsers"""

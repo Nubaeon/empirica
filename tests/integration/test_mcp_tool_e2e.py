@@ -46,7 +46,9 @@ class TestBootstrapGoalSubtaskFlow:
         assert 'session_id' in goal_schema['required'], "session_id should be required"
         assert 'objective' in goal_schema['required'], "objective should be required"
         assert 'scope' in goal_schema['properties'], "scope should exist"
-        assert 'enum' in goal_schema['properties']['scope'], "scope should be enum"
+        # scope is an object, not an enum
+        assert goal_schema['properties']['scope']['type'] == 'object', "scope should be object type"
+        assert 'properties' in goal_schema['properties']['scope'], "scope should have nested properties"
         assert goal_schema['properties']['success_criteria']['type'] == 'array', "success_criteria should be array"
         
         # Test 3: Add subtask parameters are correct
@@ -268,13 +270,13 @@ class TestIntegrationConsistency:
         
         tools = asyncio.run(_get_tools())
         
-        # Test 1: Goal scope enum consistency
+        # Test 1: Goal scope structure consistency
         create_goal_tool = next((t for t in tools if t.name == 'create_goal'), None)
         if create_goal_tool:
-            scope_enum = create_goal_tool.inputSchema['properties']['scope']['enum']
-            expected_scope = ['task_specific', 'session_scoped', 'project_wide']
-            assert set(scope_enum) == set(expected_scope), \
-                f"create_goal scope should be {expected_scope}"
+            scope_properties = create_goal_tool.inputSchema['properties']['scope']['properties']
+            required_scope_fields = ['breadth', 'duration', 'coordination']
+            for field in required_scope_fields:
+                assert field in scope_properties, f"Scope should have {field} property"
         
         # Test 2: Subtask importance enum consistency
         add_subtask_tool = next((t for t in tools if t.name == 'add_subtask'), None)

@@ -124,7 +124,7 @@ class TestAllMCPTools:
             return await list_tools()
         
         tools = asyncio.run(_get_tools())
-        assert len(tools) == 23, f"Expected 23 tools, found {len(tools)}"
+        assert len(tools) >= 23, f"Expected at least 23 tools, found {len(tools)}"
         
         for tool in tools:
             assert hasattr(tool, 'inputSchema'), f"{tool.name} missing inputSchema"

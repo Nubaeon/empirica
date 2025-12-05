@@ -30,7 +30,7 @@ except Exception as e:
     print(f"❌ Session creation error: {e}")
 
 try:
-    from empirica.core.reflexes.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+    from empirica.core.canonical import GitEnhancedReflexLogger
     logger = GitEnhancedReflexLogger(session_id=session_id)
     print(f"✅ Reflex logger works")
 except Exception as e:
@@ -88,16 +88,23 @@ pip install watchdog psutil numpy
 
 **Error:** `AttributeError: 'NoneType' object has no attribute 'generate_response'`
 
-**Cause:** Level 1 doesn't load parallel reasoning
+**Cause:** Wrong bootstrap level for required features
 
-**Solution:** Use level 2 (default)
-```python
-# ❌ BAD
-bootstrap = ExtendedMetacognitiveBootstrap(level="1")
+**Solution:** Use appropriate bootstrap level
+```bash
+# ❌ DEPRECATED - Bootstrap classes removed
+# bootstrap = ExtendedMetacognitiveBootstrap(level="1")
 
-# ✅ GOOD
-bootstrap = ExtendedMetacognitiveBootstrap(level="2")  # Default
+# ✅ CORRECT - Use session-create with appropriate level
+empirica session-create --ai-id myai --bootstrap-level 1  # Standard (recommended)
+empirica session-create --ai-id myai --bootstrap-level 2  # Full tracking
+
+# Or via Python:
+db = SessionDatabase()
+session_id = db.create_session(ai_id="myai", bootstrap_level=1)
 ```
+
+**Note:** "Bootstrap" now refers only to system prompts. Use `session-create` for sessions.
 
 ### Issue 5: Component Not Found
 
@@ -220,28 +227,34 @@ preflight = db.get_preflight_assessment('6f86708e')
 preflight = db.get_preflight_assessment('6f86708e-3c3d-4252-a73c-f3ce3daf1aa3')
 ```
 
-### Issue 11: "No such column: session_id" Error
+### Issue 11: "No such column" or "No such table" Error
 
-**Error:** `sqlite3.OperationalError: no such column: session_id`
+**Error:** `sqlite3.OperationalError: no such column/table`
 
-**Cause:** Querying wrong table with `session_id`
+**Cause:** Using deprecated table names or columns
 
-**Solution:** Use correct tables
+**Solution:** Use the unified `reflexes` table
 ```python
-# ❌ WRONG - epistemic_assessments has no session_id
+# ❌ WRONG - Old deprecated tables
 db.conn.execute("SELECT * FROM epistemic_assessments WHERE session_id=?", (sid,))
+db.conn.execute("SELECT * FROM preflight_assessments WHERE session_id=?", (sid,))
 
-# ✅ CORRECT - use tables with session_id
-db.get_preflight_assessment(session_id)  # Uses preflight_assessments table
-db.get_postflight_assessment(session_id)  # Uses postflight_assessments table
+# ✅ CORRECT - Use reflexes table with phase filtering
+db.get_latest_vectors(session_id, phase="PREFLIGHT")  # Latest PREFLIGHT
+db.get_latest_vectors(session_id, phase="POSTFLIGHT")  # Latest POSTFLIGHT
+db.get_vectors_by_phase(session_id, phase="CHECK")  # All CHECK phases
 
-# OR join through cascades
+# Raw SQL with reflexes table
 cursor.execute("""
-    SELECT ea.* FROM epistemic_assessments ea
-    JOIN cascades c ON ea.cascade_id = c.cascade_id
-    WHERE c.session_id = ?
+    SELECT * FROM reflexes
+    WHERE session_id = ? AND phase = 'PREFLIGHT'
+    ORDER BY timestamp DESC LIMIT 1
 """, (session_id,))
 ```
+
+**Migration Note:** Old tables (`epistemic_assessments`, `preflight_assessments`, 
+`postflight_assessments`, `check_phase_assessments`) were unified into `reflexes` table.
+Data migration happens automatically on first database access.
 
 **Reference:** See `DATABASE_SESSION_QUERY_FINDINGS.md` for full schema details
 

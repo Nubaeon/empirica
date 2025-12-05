@@ -15,7 +15,6 @@ from empirica.data.session_database import SessionDatabase
 
 # Core assessment & logging
 from empirica.core.canonical import CanonicalEpistemicAssessor, ReflexLogger
-from empirica.core.canonical.reflex_logger import ReflexLogger
 
 # Goal management
 from empirica.core.goals.repository import GoalRepository
@@ -429,8 +428,9 @@ beliefs = guardian.get_beliefs_for_context("oauth_security")
 
 ## Migration from v1.x
 
-### Old Bootstrap Pattern (v1.x)
+### Old Bootstrap Pattern (v1.x - DEPRECATED)
 ```python
+# ❌ DEPRECATED - Bootstrap classes removed (bootstrap reserved for system prompts)
 from empirica.bootstraps import ExtendedMetacognitiveBootstrap
 
 bootstrap = ExtendedMetacognitiveBootstrap(level="2", ai_id="myai")
@@ -440,13 +440,20 @@ assessor = components['canonical_assessor']
 ```
 
 ### New Direct API (v2.0)
+```bash
+# Use CLI for session creation
+empirica session-create --ai-id myai --bootstrap-level 1
+
+# Or via Python:
+```
+
 ```python
 from empirica.data.session_database import SessionDatabase
-from empirica.core.canonical.reflex_logger import ReflexLogger
+from empirica.core.canonical import ReflexLogger
 
 # Just create a session
 db = SessionDatabase()
-session_id = db.create_session(ai_id="myai")
+session_id = db.create_session(ai_id="myai", bootstrap_level=1)
 db.close()
 
 # Components available directly
@@ -455,12 +462,16 @@ logger = ReflexLogger(session_id=session_id)
 ```
 
 **Key Differences:**
-- ❌ No ExtendedMetacognitiveBootstrap
+- ❌ No ExtendedMetacognitiveBootstrap (REMOVED - bootstrap reserved for system prompts)
 - ❌ No component dictionary
 - ❌ No pre-loading ceremony
+- ✅ Use `empirica session-create` CLI command
+- ✅ Or use `SessionDatabase.create_session()` directly
 - ✅ Direct imports
-- ✅ Explicit session creation
 - ✅ Lazy-loading components
+
+**Note:** "Bootstrap" now refers only to dynamic system prompt generation.
+For sessions, use `session-create` command.
 
 ---
 
