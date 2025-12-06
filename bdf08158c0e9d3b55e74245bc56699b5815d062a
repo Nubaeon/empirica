@@ -1,0 +1,30 @@
+{
+  "goal_id": "3d2b9ac3-8ae4-4d1c-b922-d944303f6a38",
+  "session_id": "496a4dce-78a9-45a6-a07e-68a4448e7b1c",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-06T15:54:00.311849+00:00",
+  "goal_data": {
+    "objective": "Understand OAuth2 implementation requirements for secure token management",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "OAuth2 flow documented",
+      "Security requirements identified",
+      "Token management strategy defined"
+    ],
+    "estimated_complexity": 0.65,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-06T15:54:00.311864+00:00",
+      "action": "created"
+    }
+  ]
+}
