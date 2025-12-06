@@ -178,73 +178,257 @@ empirica session-create --ai-id myai
 
 ---
 
-### Priority 3: docs/production/00_COMPLETE_SUMMARY.md
+### Priority 3: docs/production/00_COMPLETE_SUMMARY.md → 00_DOCUMENTATION_MAP.md
 
-**File:** `docs/production/00_COMPLETE_SUMMARY.md`  
-**Current Issues:**
-- ❌ References "v2.0" throughout
-- ❌ Shows old bootstrap workflow
-- ❌ No mention of goals/subtasks (v4.0)
-- ❌ Database section references old tables
-- ❌ Missing unified reflexes table
+**Decision:** Replace with pointer/map doc instead of duplication
 
-**What to Fix:**
-1. **Update to v4.0** throughout
-2. **Rewrite bootstrap section** - Show session-create
-3. **Add goals/subtasks section** - New v4.0 feature
-4. **Update database section** - Reflexes table unified
-5. **Update workflow examples** - Use current API
-6. **Add CHECK phase** - Show optional mid-work gate
-7. **Three separate concerns** - Clarify CASCADE/goals/implicit
+**Rationale:**
+- CANONICAL_SYSTEM_PROMPT.md is single source of truth
+- Avoid duplicating architecture info
+- Keep docs DRY (Don't Repeat Yourself)
+- Make navigation easier
+
+**What to Do:**
+1. **Rename:** `00_COMPLETE_SUMMARY.md` → `00_DOCUMENTATION_MAP.md`
+2. **New approach:** Navigation guide pointing to authoritative sources
+3. **Keep:** Examples, quick references that belong in one place
+4. **Link to:** Detailed docs for deep dives
 
 **Target Structure:**
 ```markdown
-# Empirica Production System - v4.0 Complete Summary
+# Empirica v4.0 - Complete Documentation Map
 
-## What's New in v4.0
-- Goal/subtask tracking (decision quality + continuity + audit)
-- Unified reflexes table (all epistemic data)
-- CHECK phase clarified (optional decision gate)
-- Three separate concerns explained
+## Quick Reference
 
-## Architecture Overview
-[Based on canonical prompt sections]
+### Getting Started
+- **For AI Agents:** `docs/01_a_AI_AGENT_START.md` - Agent-focused introduction
+- **For Developers:** `docs/COMPLETE_INSTALLATION_GUIDE.md` - Setup and installation
+- **Quick Start:** `docs/03_CLI_QUICKSTART.md` - 5-minute quick start
 
-### Session Creation (v4.0)
-empirica session-create --ai-id myai
-[No bootstrap ceremony]
+### One-Minute Overview
+```bash
+# 1. Create session
+empirica session-create --ai-id myai --output json
+
+# 2. Run PREFLIGHT (assess baseline)
+empirica preflight --session-id <ID> --prompt "Your task"
+
+# 3. Do your work (implicit reasoning: THINK, INVESTIGATE, PLAN, ACT)
+
+# 4. Run POSTFLIGHT (measure learning)
+empirica postflight --session-id <ID> --task-summary "Completed"
+```
+
+## Core Concepts
+
+### Understanding Empirica
+→ **What is Empirica?** See: `docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md` (Section I-II)
+- Epistemic self-awareness framework
+- Tracks knowledge vs. uncertainty
+- Measures learning systematically
+
+### CASCADE Workflow (PREFLIGHT/CHECK/POSTFLIGHT)
+→ **Complete guide:** `docs/production/06_CASCADE_FLOW.md`
+- **PREFLIGHT** - Baseline epistemic assessment
+- **CHECK** - Optional mid-work decision gate (0-N times)
+- **POSTFLIGHT** - Final assessment, measure learning delta
+
+### Goal/Subtask Tracking (NEW in v4.0)
+→ **Complete guide:** `docs/guides/GOAL_TREE_USAGE_GUIDE.md`
+- Decision Quality: Unknowns inform CHECK decisions
+- Continuity: Goal tree included in handoff
+- Audit Trail: Complete investigation path visible
+- When to use: Complex tasks, high uncertainty, multi-session work
 
 ### 13 Epistemic Vectors
-[Table with all 13 vectors]
+→ **Complete reference:** `docs/production/05_EPISTEMIC_VECTORS.md`
 
-### CASCADE Workflow
-PREFLIGHT → [work] → CHECK (optional) → [work] → POSTFLIGHT
-[Explain each phase]
+**Quick list:**
+- **Foundation (Gate ≥0.6):** engagement, know, do, context
+- **Comprehension:** clarity, coherence, signal, density
+- **Execution:** state, change, completion, impact
+- **Meta:** uncertainty (explicit doubt)
 
-### Goals/Subtasks (NEW v4.0)
-- When to use: Complex investigations, high uncertainty
-- create_goal(), create_subtask(), update_*()
-- Integration with CHECK: query_unknowns_summary()
-[Link to detailed guide]
+### Three Separate Concerns (v4.0 Architecture)
+1. **CASCADE Phases** - Epistemic checkpoints (PREFLIGHT/CHECK/POSTFLIGHT)
+2. **Goals/Subtasks** - Investigation logging (optional, during work)
+3. **Implicit Reasoning** - Natural work (THINK, INVESTIGATE, PLAN, ACT, EXPLORE, REFLECT)
+
+→ **Full explanation:** `docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md` (Sections IV, VI)
+
+## API & Implementation
+
+### Python API
+→ **Full reference:** `docs/production/13_PYTHON_API.md`
+
+**Session Management:**
+```python
+from empirica.data.session_database import SessionDatabase
+db = SessionDatabase()
+session_id = db.create_session(ai_id="myai")
+```
+
+**Goal/Subtask Operations (NEW v4.0):**
+```python
+goal_id = db.create_goal(session_id, objective, scope={...})
+subtask_id = db.create_subtask(goal_id, description)
+db.update_subtask_findings(subtask_id, [...])
+db.update_subtask_unknowns(subtask_id, [...])
+summary = db.query_unknowns_summary(session_id)  # For CHECK decisions
+```
+
+### CLI Commands
+→ **All commands:** Run `empirica --help`
+
+**Essential commands:**
+```bash
+empirica session-create --ai-id myai              # Create session
+empirica preflight --session-id <ID> --prompt    # PREFLIGHT assessment
+empirica check --session-id <ID> --confidence     # CHECK gate
+empirica postflight --session-id <ID>             # POSTFLIGHT assessment
+empirica goals-create --session-id <ID>           # Create goal (v4.0)
+empirica goals-list <ID>                          # List goals
+```
+
+### MCP Tools
+→ **All MCP tools:** See `docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md` (Section XV)
+
+**Essential tools for MCP usage:**
+- Session: `session_create`, `get_session_summary`, `get_epistemic_state`
+- CASCADE: `execute_preflight`, `submit_preflight_assessment`, `execute_check`, `submit_check_assessment`, `execute_postflight`, `submit_postflight_assessment`
+- Goals: `create_goal`, `add_subtask`, `complete_subtask`
+- Continuity: `create_handoff_report`, `query_handoff_reports`
+
+## Database & Storage
+
+### Schema
+→ **Complete schema:** `docs/production/12_SESSION_DATABASE.md`
+
+**Key tables:**
+- **reflexes** - All CASCADE assessments (PREFLIGHT, CHECK, POSTFLIGHT)
+- **goals** - Investigation goals with scope vectors (NEW v4.0)
+- **subtasks** - Investigation items with findings/unknowns/dead_ends (NEW v4.0)
 
 ### Storage Architecture
-- Reflexes table (unified in v4.0)
-- Git notes (checkpoints)
-- Handoff reports
+→ **Full details:** `docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md` (Section III)
 
-### Three Separate Concerns
-1. CASCADE phases (epistemic checkpoints)
-2. Goals/subtasks (investigation logging)
-3. Implicit reasoning (natural work)
+**Three-layer atomic writes:**
+1. SQLite database (reflexes, goals, subtasks tables)
+2. Git notes (checkpoints, handoffs - 97.5% token reduction)
+3. JSON logs (full audit trail)
 
-## Complete API Reference
-[Link to detailed docs]
+## Detailed Guides
 
-## Workflow Examples
-[OAuth2 example with goals]
+| Topic | Location | For |
+|-------|----------|-----|
+| CASCADE Workflow | `production/06_CASCADE_FLOW.md` | Understanding phases, using CHECK gates |
+| Goal Tracking | `guides/GOAL_TREE_USAGE_GUIDE.md` | Complex investigations, high uncertainty |
+| Basic Usage | `production/03_BASIC_USAGE.md` | Getting started, simple examples |
+| Database | `production/12_SESSION_DATABASE.md` | Schema details, data model |
+| Python API | `production/13_PYTHON_API.md` | Complete API reference |
+| Vectors | `production/05_EPISTEMIC_VECTORS.md` | Understanding all 13 vectors |
 
-## Database Schema
-[Reflexes table + goals + subtasks]
+## Working Examples
+
+### Example: OAuth2 Implementation Investigation
+
+**Scenario:** Research OAuth2 implementation requirements before coding
+
+**Steps:**
+```bash
+# 1. Create session
+session_id=$(empirica session-create --ai-id oauth-researcher --output json | jq -r .session_id)
+
+# 2. PREFLIGHT: Assess baseline uncertainty
+empirica preflight --session-id $session_id --prompt "Understand OAuth2 implementation"
+# Submit: know=0.6, uncertainty=0.5, context=0.55
+
+# 3. Create investigation goal
+empirica goals-create --session-id $session_id \
+  --objective "Understand OAuth2 implementation requirements" \
+  --complexity 0.65
+
+# 4. Investigate (implicit work phase)
+# - Create subtasks: "Map endpoints", "Research PKCE", etc.
+# - Log findings as discovered
+# - Update unknowns: "Token rotation interval?", "Storage best practice?"
+
+# 5. CHECK: Query unknowns to assess readiness
+# unknowns_summary → 2 unknowns remain (manageable)
+# confidence=0.75 → proceed with implementation
+empirica check --session-id $session_id --confidence 0.75
+
+# 6. POSTFLIGHT: Measure learning
+empirica postflight --session-id $session_id --task-summary "OAuth2 requirements documented"
+# Submit: know=0.85 (+0.25 learned), uncertainty=0.25 (-0.25 resolved)
+```
+
+**Result:** Goal tree in handoff shows what was investigated, what was learned, what remains unclear
+
+## FAQ & Common Questions
+
+**Q: Do I have to use goals/subtasks?**
+A: No, they're optional. Use for complex investigations or high uncertainty. PREFLIGHT/CHECK/POSTFLIGHT work standalone.
+
+**Q: What's the difference between CASCADE and goals?**
+A: CASCADE = epistemic checkpoints (when you formally assess). Goals = investigation logging (optional, during work). They're separate but can interact (CHECK queries unknowns from goals).
+
+**Q: What's "bootstrap" vs "session-create"?**
+A: Bootstrap = system prompts (AI instructions). session-create = command to create a session. Don't confuse them.
+
+**Q: How do I know if I'm ready for CHECK?**
+A: Query unknowns_summary(). If unknowns ≤2 and confidence ≥0.75, ready. Otherwise, investigate more.
+
+**Q: Can I resume a previous session?**
+A: Yes. Handoff reports preserve goal tree + learnings. Next AI loads handoff and continues.
+
+→ **More FAQs:** `docs/production/22_FAQ.md`
+
+## Architecture Diagram
+
+```
+SESSION CREATION (instant, no ceremony)
+    ↓
+PREFLIGHT → Baseline epistemic assessment (13 vectors)
+    ↓
+[WORK PHASE - Implicit reasoning states: THINK, INVESTIGATE, PLAN, ACT, EXPLORE, REFLECT]
+    ├─ (OPTIONAL) Create goal → Create subtasks → Log findings/unknowns
+    ├─ (0-N TIMES) CHECK gate → Query unknowns → Decide readiness
+    └─ Refine investigation based on CHECK decision
+    ↓
+POSTFLIGHT → Final assessment (13 vectors, measure PREFLIGHT→POSTFLIGHT delta)
+    ↓
+HANDOFF REPORT → Goal tree + learnings + next session context
+    ↓
+(NEXT SESSION) Load handoff → Resume with complete investigation history
+```
+
+## Next Steps
+
+### For New Users
+1. Read: "One-Minute Overview" above
+2. Read: `docs/01_a_AI_AGENT_START.md`
+3. Try: `empirica session-create --ai-id myai` → `empirica preflight ...`
+
+### For Developers
+1. Read: `docs/COMPLETE_INSTALLATION_GUIDE.md`
+2. Read: `docs/production/13_PYTHON_API.md`
+3. Try: Create session via Python API
+
+### For Understanding Everything
+- Start: This file (navigation)
+- Deep dive: `docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md` (v4.0)
+- Details: Linked guides above
+
+## Source of Truth
+
+**All information in this map references:**
+- `docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md` - v4.0 canonical
+- `empirica/data/session_database.py` - Implementation code
+- Detailed guides in `docs/production/` and `docs/guides/`
+
+**Last updated:** 2025-12-06
+**Version:** v4.0
 ```
 
 ---
@@ -373,14 +557,19 @@ db.close()
 4. Refresh structure
 **Estimated:** 20-30 minutes
 
-### Phase 3: docs/production/00_COMPLETE_SUMMARY.md
-1. Update to v4.0 throughout
-2. Rewrite architecture section
-3. Add goals/subtasks section
-4. Update workflow examples
-5. Update database section
-6. Add CHECK phase explanation
-**Estimated:** 1-2 hours
+### Phase 3: docs/production/00_DOCUMENTATION_MAP.md (NEW)
+**Decision:** Create new navigation guide instead of duplicating architecture
+1. Create 00_DOCUMENTATION_MAP.md from scratch
+2. Build comprehensive navigation structure
+3. Include quick reference + one-minute overview
+4. Add FAQ section
+5. Include working examples (OAuth2)
+6. Architecture diagram
+7. Link all detailed docs appropriately
+**Estimated:** 1-1.5 hours
+
+**What NOT to do:** Don't keep/update 00_COMPLETE_SUMMARY.md
+**Rationale:** Avoid duplication; CANONICAL_SYSTEM_PROMPT.md is source of truth
 
 ---
 
@@ -423,31 +612,48 @@ db.close()
 
 ## Next Session Plan
 
-### Step 1: Update README.md (30 min)
-- Version badge
-- Remove bootstrap
-- Add goals
-- Update quick start
+### Step 1: Update README.md (45 min)
+- Version badge → v4.0
+- Remove bootstrap references
+- Add goals/subtasks feature
+- Update quick start section
+- Verify all links work
 
-### Step 2: Update docs/README.md (20 min)
-- Verify links
-- Add new guides
-- Update structure
+### Step 2: Update docs/README.md (30 min)
+- Verify all links exist
+- Add new guides (CASCADE, Goals)
+- Update structure if needed
+- Ensure consistent v4.0 version
 
-### Step 3: Rewrite 00_COMPLETE_SUMMARY.md (1-2 hours)
-- v4.0 architecture
-- Goals/subtasks section
-- Updated examples
-- Database section
-- CHECK phase
+### Step 3: Create 00_DOCUMENTATION_MAP.md (1-1.5 hours)
+- Create from scratch (don't duplicate CANONICAL_SYSTEM_PROMPT.md)
+- Quick reference section
+- One-minute overview (4 commands)
+- Core concepts with links
+- API reference section
+- Working examples (OAuth2 end-to-end)
+- FAQ section
+- Architecture diagram
+- Next steps
 
 ### Step 4: Verify Consistency (15 min)
-- Check all version refs
-- Check all commands
-- Check all links
-- Cross-reference canonical prompt
+- Check all version refs = v4.0
+- Check all commands exist and work
+- Check all links are valid
+- Cross-reference against canonical prompt
+- Verify examples run without errors
 
-**Total Time:** ~2-3 hours
+### Step 5: Wait for Qwen's Testing (parallel, 2-3 hours)
+- Qwen tests full workflow
+- Documents any issues found
+- May reveal doc gaps
+
+### Step 6: Integrate Qwen's Findings (20-30 min)
+- Add clarifications based on testing
+- Fix any command examples that failed
+- Update FAQ with issues discovered
+
+**Total Time:** 2.5-3 hours (before Qwen testing) + 30 min (after Qwen)
 
 ---
 
@@ -475,10 +681,31 @@ db.close()
 
 ---
 
-**Status:** Ready for next session  
-**Priority:** High (users see outdated info in overviews)  
-**Complexity:** Medium (content exists, needs consolidation)  
-**Time:** 2-3 hours estimated  
+**Status:** Ready for next session (Sonnet to execute)
+**Priority:** High (users see outdated info in overviews)
+**Complexity:** Medium (content exists, needs consolidation + curation)
+**Time:** 2.5-3 hours (plus 30 min after Qwen testing)
+**Timing:** Can start in parallel with Qwen's testing (no dependency)
+
+---
+
+## Integration with Qwen's Testing
+
+**Dependency:** None (docs work can proceed in parallel)
+
+**Expected improvements from Qwen's findings:**
+- Examples validated to actually work
+- CLI commands verified as accurate
+- Parameter names confirmed
+- Error scenarios documented
+- FAQ enhanced with common issues
+
+**Timeline:**
+1. Sonnet: Start docs overhaul (2.5-3 hours)
+2. Qwen: Start testing (parallel, 2-3 hours)
+3. Both complete ~same time
+4. Sonnet: 20-30 min to integrate Qwen's findings
+5. Final: Comprehensive, tested, accurate docs + verified tools
 
 ---
 
@@ -486,3 +713,4 @@ db.close()
 - Canonical prompt: `docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md`
 - Current detailed docs: `docs/production/`
 - New guides: `docs/production/06_CASCADE_FLOW.md`, `docs/guides/GOAL_TREE_USAGE_GUIDE.md`
+- Qwen testing plan: `/tmp/QWEN_WORKFLOW_TEST_SPEC.md`
