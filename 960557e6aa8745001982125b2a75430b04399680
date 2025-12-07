@@ -1,0 +1,30 @@
+{
+  "goal_id": "49c72567-9001-4589-934a-b268ae4646bf",
+  "session_id": "33c3d4cb-0ba0-409c-ba5c-f8bfd5bee258",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-07T16:11:57.113494+00:00",
+  "goal_data": {
+    "objective": "Validate all Empirica CLI and MCP tools",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All CLI commands execute without errors",
+      "MCP tools return valid responses",
+      "CASCADE workflow completes end-to-end"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-07T16:11:57.113506+00:00",
+      "action": "created"
+    }
+  ]
+}
