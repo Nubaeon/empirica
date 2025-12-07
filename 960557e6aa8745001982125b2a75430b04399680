@@ -1,0 +1,29 @@
+{
+  "goal_id": "8fddbeb9-adb4-40bd-a2b7-1f3b2abab943",
+  "session_id": "33c3d4cb-0ba0-409c-ba5c-f8bfd5bee258",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-07T16:23:21.046965+00:00",
+  "goal_data": {
+    "objective": "Test JSON array input",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Criterion 1",
+      "Criterion 2"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-07T16:23:21.046978+00:00",
+      "action": "created"
+    }
+  ]
+}
