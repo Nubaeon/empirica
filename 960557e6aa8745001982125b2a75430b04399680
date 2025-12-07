@@ -1,0 +1,28 @@
+{
+  "goal_id": "dbd89cad-ad6a-437e-b7f7-675a3842b207",
+  "session_id": "33c3d4cb-0ba0-409c-ba5c-f8bfd5bee258",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-07T16:23:20.862106+00:00",
+  "goal_data": {
+    "objective": "Test string auto-conversion",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Complete the validation"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-07T16:23:20.862120+00:00",
+      "action": "created"
+    }
+  ]
+}
