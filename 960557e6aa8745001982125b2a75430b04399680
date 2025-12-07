@@ -1,0 +1,28 @@
+{
+  "goal_id": "83edec89-21dc-4799-9b36-65d9f77fe0dd",
+  "session_id": "33c3d4cb-0ba0-409c-ba5c-f8bfd5bee258",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-07T16:24:35.982428+00:00",
+  "goal_data": {
+    "objective": "Test final improvements",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Everything works smoothly"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-07T16:24:35.982448+00:00",
+      "action": "created"
+    }
+  ]
+}
