@@ -1,0 +1,32 @@
+{
+  "goal_id": "8a796e3f-f5c9-4a0e-99aa-2461d9168edc",
+  "session_id": "95b90aa9-b9ac-4e7b-9876-cceab0ac5182",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-08T11:43:26.230060+00:00",
+  "goal_data": {
+    "objective": "Systematic audit of Empirica documentation to identify and remove inconsistencies, legacy content, conflicts, and outdated information while maintaining completeness",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All documentation conflicts resolved",
+      "Legacy/deprecated content removed or marked",
+      "No version inconsistencies",
+      "Cross-references validated",
+      "Terminology standardized"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-08T11:43:26.230078+00:00",
+      "action": "created"
+    }
+  ]
+}
