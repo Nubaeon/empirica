@@ -1,0 +1,31 @@
+{
+  "goal_id": "a01259cc-4ec3-4cf1-bd48-33a1838827a4",
+  "session_id": "30f66c66-f4c8-4857-94f7-fc091c85d40d",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-08T13:26:07.186994+00:00",
+  "goal_data": {
+    "objective": "Investigate and document where flexible handoff system (PREFLIGHT\u2192CHECK, PREFLIGHT\u2192POSTFLIGHT, planning-only) should be referenced across Empirica documentation",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All docs mentioning handoffs identified",
+      "Cross-reference locations mapped",
+      "Gaps and conflicts documented",
+      "Implementation priority assessed"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-08T13:26:07.187007+00:00",
+      "action": "created"
+    }
+  ]
+}
