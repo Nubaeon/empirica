@@ -146,6 +146,8 @@ empirica postflight-submit \
 - UNCERTAINTY decrease = ambiguity resolved
 - Well-calibrated = predicted learning matched actual
 
+**Session Continuity:** After POSTFLIGHT, create handoff report for next session. Empirica supports three handoff types (investigation, complete, planning) for flexible multi-agent workflows. See `docs/guides/FLEXIBLE_HANDOFF_GUIDE.md` for patterns.
+
 ---
 
 ## IV. IMPLICIT REASONING STATES (AI Internal Process vs CASCADE)
@@ -373,6 +375,38 @@ handoff = generator.generate_handoff_report(
 
 **Storage:** Git notes at `refs/notes/empirica/handoff/{session_id}`
 **Benefit:** ~238 tokens vs ~20,000 baseline = 98.8% reduction
+
+### Flexible Handoff Types (v4.0 - Multi-AI Coordination)
+
+**3 handoff types** for different workflows:
+
+1. **Investigation Handoff** (PREFLIGHT→CHECK)
+   - Use case: Investigation specialist → Execution specialist
+   - Pattern: High uncertainty investigation, pass findings/unknowns at CHECK gate
+   - When: After investigation complete but before execution starts
+   - Example: "Mapped OAuth2 flow, ready for implementation"
+
+2. **Complete Handoff** (PREFLIGHT→POSTFLIGHT)
+   - Use case: Full task completion with learning measurement
+   - Pattern: Complete CASCADE workflow, measure calibration
+   - When: Task fully complete, want to measure learning accuracy
+   - Example: "Implemented and tested OAuth2, learned refresh token patterns"
+
+3. **Planning Handoff** (No CASCADE)
+   - Use case: Documentation/planning work without epistemic assessment
+   - Pattern: No PREFLIGHT/POSTFLIGHT, just findings/unknowns/next steps
+   - When: Planning phase, architecture decisions, documentation
+   - Example: "Planned OAuth2 approach, chose PKCE flow, ready to start"
+
+**Auto-detection:** System detects type based on CASCADE phases present.
+
+**Query handoff:**
+```bash
+empirica handoff-query --session-id <ID> --output json
+# Returns: handoff_type, key_findings, remaining_unknowns, epistemic_deltas
+```
+
+**See:** `docs/guides/FLEXIBLE_HANDOFF_GUIDE.md` for complete workflows
 
 ---
 
@@ -618,7 +652,7 @@ result = edit_with_confidence(
 - `checkpoint-create --session-id <ID> --phase "..." --vectors {...}`
 - `checkpoint-load --session-id <ID>`
 - `checkpoint-list --session-id <ID>`
-- `handoff-create --session-id <ID> --task-summary "..." --key-findings [...]`
+- `handoff-create --session-id <ID> --task-summary "..." --key-findings '["Finding 1", "Finding 2"]' --remaining-unknowns '["Unknown 1"]' --next-session-context "..."`
 - `handoff-query --ai-id <ID> --limit 5`
 
 ### Utilities

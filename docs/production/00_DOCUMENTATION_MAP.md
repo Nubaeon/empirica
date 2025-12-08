@@ -337,7 +337,7 @@ empirica subtask-add --goal-id <ID> --description "..." --importance high
 empirica subtask-complete --subtask-id <ID> --evidence "..."
 
 # Continuity & Checkpoints
-empirica handoff-create --session-id <ID> --task-summary "..." --key-findings "..."
+empirica handoff-create --session-id <ID> --task-summary "..." --key-findings '["Finding 1", "Finding 2"]' --remaining-unknowns '["Unknown 1"]' --next-session-context "..."
 empirica handoff-query --ai-id myagent --limit 5
 empirica sessions-resume <SESSION_ID>
 empirica checkpoint-create --session-id <ID> --phase preflight
@@ -574,9 +574,9 @@ empirica postflight --session-id $session_id --task-summary "OAuth2 implementati
 # 9. Create handoff for next session
 empirica handoff-create --session-id $session_id \
   --task-summary "OAuth2 basic flow implemented" \
-  --key-findings "PKCE required, endpoints documented" \
-  --remaining-unknowns "Token rotation not finalized" \
-  --next-session-context "Next: implement refresh token rotation"
+  --key-findings '["PKCE required for security", "Endpoints documented in spec"]' \
+  --remaining-unknowns '["Token rotation interval not finalized", "Refresh token storage approach TBD"]' \
+  --next-session-context "Next: implement refresh token rotation with secure storage"
 ```
 
 **Result:** Goal tree in handoff shows:
