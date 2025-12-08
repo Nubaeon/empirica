@@ -1,1 +1,3 @@
 INVESTIGATE: {"type": "investigate", "findings": ["test finding 1", "test finding 2"], "evidence": {}, "timestamp": "2025-12-08T18:10:47.439606"}
+
+INVESTIGATE: {"type": "investigate", "findings": ["CASCADE workflow: PREFLIGHT \u2192 CHECK \u2192 POSTFLIGHT pattern with 13 vectors", "13 vectors: engagement, know, do, context, clarity, coherence, signal, density, state, change, completion, impact, uncertainty", "Goals/subtasks track findings, unknowns, dead_ends during investigation", "CHECK phase uses unknowns_summary() for evidence-based decisions"], "evidence": {"source_file": "cascade_workflow.md", "reference_section": "CASCADE Flow", "confidence_impact": "high"}, "timestamp": "2025-12-08T18:15:45.874637"}
