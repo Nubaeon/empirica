@@ -1,0 +1,31 @@
+{
+  "goal_id": "7ca30029-53a4-4944-844a-d50997e0b5d5",
+  "session_id": "28d879d1-4d95-40f5-ba8e-2b3231f84d0d",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-08T14:44:56.397574+00:00",
+  "goal_data": {
+    "objective": "Update Empirica chat interface with v4.0 features: CHECK phase, simple 5-vector mode, investigation pattern, and minimal continuation template",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "README.md updated with CHECK phase",
+      "SKILL_GUIDE.md updated with simple mode",
+      "Continuation template created",
+      "All examples added and tested"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-08T14:44:56.397588+00:00",
+      "action": "created"
+    }
+  ]
+}
