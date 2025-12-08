@@ -1,0 +1,31 @@
+{
+  "goal_id": "4b9da45b-687e-4cc4-8e1b-94a4efe208be",
+  "session_id": "d49d8540-acb5-4183-941b-44f9e945aba2",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-08T17:52:46.547589+00:00",
+  "goal_data": {
+    "objective": "Create missing website pages adhering to docs/codebase accuracy",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Pages match actual Empirica features",
+      "Content validated against docs/",
+      "Design consistent with homepage",
+      "All links functional"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-08T17:52:46.547607+00:00",
+      "action": "created"
+    }
+  ]
+}
