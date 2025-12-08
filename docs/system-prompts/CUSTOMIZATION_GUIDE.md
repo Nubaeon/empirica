@@ -49,7 +49,7 @@ Example:
 ## IV. TOOLS & PATTERNS
 
 ### Available MCP Tools (Limited):
-- **Session:** `bootstrap_session`, `get_epistemic_state`
+- **Session:** `create_session`, `get_epistemic_state`
 - **CASCADE:** `execute_preflight`, `execute_postflight`
 - **Note:** Git integration unavailable in this environment
 
@@ -213,7 +213,7 @@ cp docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md my_custom_prompt.md
 ## IV. TOOLS & PATTERNS
 
 ### Available MCP Tools (Air-Gapped):
-- **Session:** `bootstrap_session` (SQLite only)
+- **Session:** `create_session` (SQLite only)
 - **CASCADE:** `execute_preflight`, `execute_postflight`
 - **Note:** No git integration, no cross-AI discovery
 

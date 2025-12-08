@@ -291,18 +291,30 @@ def handle_sessions_show_command(args):
                 print(f"     Duration: {c_duration:.1f}s")
             
             if args.verbose:
-                # Get metadata
+                # Get metadata from unified reflexes table instead of legacy cascade_metadata
                 cursor.execute("""
-                    SELECT metadata_key, metadata_value
-                    FROM cascade_metadata
+                    SELECT phase, reflex_data
+                    FROM reflexes
                     WHERE cascade_id = ?
                 """, (cascade_id,))
-                
-                metadata = cursor.fetchall()
-                
-                if metadata:
+
+                reflex_entries = cursor.fetchall()
+
+                if reflex_entries:
                     print(f"     Metadata:")
-                    for key, value in metadata:
+                    for phase, reflex_data in reflex_entries:
+                        try:
+                            data = json.loads(reflex_data)
+                            # Extract meaningful info from reflex_data
+                            if 'vectors' in data:
+                                vectors = data['vectors']
+                                for key, value in vectors.items():
+                                    if key in ['know', 'do', 'context', 'clarity', 'coherence', 'signal', 'density', 'state', 'change', 'completion', 'impact', 'engagement', 'uncertainty']:
+                                        print(f"       {key}: {value}")
+                            if 'reasoning' in data:
+                                print(f"       reasoning: {data['reasoning'][:100]}...")
+                        except json.JSONDecodeError:
+                            print(f"       phase: {phase}, raw_data: {reflex_data[:100]}...")
                         if key in ['preflight_vectors', 'postflight_vectors']:
                             try:
                                 vectors = json.loads(value)
@@ -387,19 +399,21 @@ def handle_sessions_export_command(args):
                 "metadata": {}
             }
             
-            # Get metadata
+            # Get metadata from unified reflexes table instead of legacy cascade_metadata
             cursor.execute("""
-                SELECT metadata_key, metadata_value
-                FROM cascade_metadata
+                SELECT phase, reflex_data
+                FROM reflexes
                 WHERE cascade_id = ?
             """, (cascade_id,))
-            
-            metadata = cursor.fetchall()
-            for key, value in metadata:
+
+            reflex_entries = cursor.fetchall()
+            for phase, reflex_data in reflex_entries:
                 try:
-                    cascade_data["metadata"][key] = json.loads(value)
-                except:
-                    cascade_data["metadata"][key] = value
+                    reflex_dict = json.loads(reflex_data)
+                    # Add reflex data to metadata, using phase as a differentiator
+                    cascade_data["metadata"][f"{phase.lower()}_reflex"] = reflex_dict
+                except json.JSONDecodeError:
+                    cascade_data["metadata"][f"{phase.lower()}_reflex"] = reflex_data
             
             export_data["cascades"].append(cascade_data)
         

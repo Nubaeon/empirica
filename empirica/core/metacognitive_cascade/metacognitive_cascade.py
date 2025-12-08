@@ -1302,27 +1302,30 @@ class CanonicalEpistemicCascade:
             phase_str = phase.value if hasattr(phase, 'value') else str(phase)
             phase_key = f"{phase_str}_vectors"
             
-            # Get most recent assessment for this session/phase
+            # Get most recent assessment for this session/phase from unified reflexes table
             cursor = self.session_db.conn.cursor()
             cursor.execute("""
-                SELECT cm.metadata_value, c.cascade_id
-                FROM cascade_metadata cm
-                JOIN cascades c ON cm.cascade_id = c.cascade_id
-                WHERE cm.metadata_key = ?
-                AND c.session_id = ?
-                ORDER BY c.started_at DESC
+                SELECT reflex_data
+                FROM reflexes
+                WHERE session_id = ?
+                AND phase = ?
+                ORDER BY timestamp DESC
                 LIMIT 1
-            """, (phase_key, task_id))
-            
+            """, (task_id, phase_str.upper()))
+
             result = cursor.fetchone()
-            
+
             if result:
-                vectors_json, cascade_id = result
-                vectors = json.loads(vectors_json)
-                
+                reflex_data_str = result[0]
+                reflex_data = json.loads(reflex_data_str) if reflex_data_str else {}
+                # Vectors are stored in reflex_data['vectors'] according to schema
+                vectors = reflex_data.get('vectors', {})
+                # For cascade_id, we'll use the reflex entry's cascade_id if available
+                cascade_id = reflex_data.get('cascade_id', 'unknown')
+
                 # Parse vectors dict into EpistemicAssessmentSchema
                 return self._parse_vectors_to_assessment(vectors, task_id, phase)
-            
+
             return None
             
         except Exception as e:

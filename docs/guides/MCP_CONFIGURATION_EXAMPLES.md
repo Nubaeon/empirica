@@ -326,7 +326,7 @@ console.log(result);
 
 ### Session Management (5 tools)
 
-6. **`bootstrap_session`** - Initialize new session
+6. **`create_session`** - Initialize new session
 7. **`resume_previous_session`** - Load previous session context
 8. **`get_epistemic_state`** - Query current vectors
 9. **`get_session_summary`** - Full session history
@@ -540,7 +540,7 @@ python3 /path/to/empirica/mcp_local/empirica_mcp_server.py --help
 - ✅ Generic Python MCP Client
 - ✅ Generic TypeScript/JavaScript MCP Client
 
-**Tools Available:** 19 (15 core + 4 optional modality switcher)
+**Tools Available:** 19 (15 core + 4 optional modality switcher - EXPERIMENTAL)
 
 **Ready to Use:** Copy configuration, update paths, restart IDE
 

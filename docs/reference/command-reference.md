@@ -1,8 +1,8 @@
 # Empirica - Quick Reference Card
 
-**Status:** ✅ Production Ready
-**Version:** 1.0.0
-**Last Updated:** 2025-11-05
+**Status:** ✅ Production Ready (Quick Reference Card)
+**Version:** Empirica v4.0
+**Complete Reference:** See `CLI_COMMANDS_COMPLETE.md` for all 49 commands
 **Focus:** Single-AI Epistemic Tracking (Worker AI)
 
 ---
@@ -21,63 +21,68 @@ Empirica is a **production-ready epistemic tracking system** for AI workers. It 
 
 ## Quick Start
 
-### 1. Bootstrap the System
+### 1. Create Session
 
 ```bash
-# Minimal bootstrap (core only)
-python3 -m empirica.cli bootstrap --level 0
-
-# Standard bootstrap (recommended)
-python3 -m empirica.cli bootstrap --level 1
-
-# Extended bootstrap (full system)
-python3 -m empirica.cli bootstrap-system --level 3
+# Create session
+empirica session-create --ai-id myai
 ```
 
-Bootstrap levels:
-- `0` / `minimal` - Core metacognition (~0.03s)
-- `1` / `standard` - + Cascade workflow (~0.04s) ⭐ DEFAULT
-- `2` / `extended` - + Calibration (~0.12s)
-- `3` - + Advanced components (~0.15s)
-- `4` / `complete` - Everything (~0.20s)
+All sessions use unified storage with automatic component loading.
 
-### 2. Run a Cascade (CLI)
+### 2. Run CASCADE Workflow (CLI)
 
 ```bash
-# Basic cascade
-python3 -m empirica.cli cascade "Should I refactor this code?"
+# PREFLIGHT assessment
+empirica preflight "Implement OAuth2 flow" --prompt-only
 
-# With modality switching (route to best AI)
-python3 -m empirica.cli cascade "Analyze this codebase" --strategy epistemic
+# After genuine self-assessment
+empirica preflight-submit --session-id <ID> --vectors '{...}' --reasoning "..."
 
-# Force specific adapter
-python3 -m empirica.cli cascade "What is 2+2?" --adapter qwen
+# CHECK phase (decision gate)
+empirica check --session-id <ID> --findings '[...]' --unknowns '[...]' --confidence 0.85
 
-# With epistemic context levels
-python3 -m empirica.cli cascade "Continue investigation" --context-level standard
+# POSTFLIGHT assessment
+empirica postflight <ID> --prompt-only
+
+# Complete workflow
+empirica workflow "Task description"
 ```
 
-### 3. Run a Cascade (Python)
+### 3. Run CASCADE Workflow (Python)
 
 ```python
-# ❌ DEPRECATED - Bootstrap classes removed (bootstrap reserved for system prompts)
-# from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
-
-# ✅ Use session-create CLI or SessionDatabase
 from empirica.data.session_database import SessionDatabase
 
 # Create session
 db = SessionDatabase()
-session_id = db.create_session(ai_id='myai', bootstrap_level=1)
-db.close()
+session_id = db.create_session(ai_id='myai')
 
-# Or via CLI:
-# empirica session-create --ai-id myai --bootstrap-level 1
+# PREFLIGHT
+db.log_preflight_assessment(
+    session_id=session_id,
+    vectors={'engagement': 0.8, 'know': 0.6, ...},
+    reasoning="Starting with moderate knowledge..."
+)
 
-# Run cascade
-from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
-cascade = CanonicalEpistemicCascade()
-result = await cascade.run_epistemic_cascade(
+# CHECK
+db.log_check_phase_assessment(
+    session_id=session_id,
+    vectors={...},
+    decision='proceed',
+    findings=[...],
+    unknowns=[...],
+    confidence_to_proceed=0.85
+)
+
+# POSTFLIGHT
+db.log_postflight_assessment(
+    session_id=session_id,
+    vectors={'engagement': 0.9, 'know': 0.85, ...},
+    reasoning="Successfully completed..."
+)
+
+db.close(
     task="Refactor the authentication module",
     context={'cwd': '/path/to/project'}
 )

@@ -17,7 +17,7 @@ MAGENTA='\033[0;35m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DB_PATH="$REPO_ROOT/.empirica/sessions/sessions.db"
 
 if [ ! -f "$DB_PATH" ]; then

@@ -1,0 +1,78 @@
+---
+import navConfig from '../data/navigation.json';
+
+const { pathname } = Astro.url;
+---
+
+<nav class="bg-blue-950 shadow-sm border-b border-blue-900 sticky top-[73px] z-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="flex space-x-8 overflow-x-auto md:overflow-visible py-4 items-center">
+            {navConfig.navigation.map(item => (
+                item.children ? (
+                    <div class="relative group">
+                        <button class="nav-link flex items-center space-x-1">
+                            <span set:html={item.icon} />
+                            <span>{item.label}</span>
+                            <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <!-- Dropdown Menu -->
+                        <div
+                            class="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50">
+                            <div class="py-2">
+                                {item.children.map(child => (
+                                    <a href={child.url}
+                                        class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center">
+                                        <span class="mr-2">{child.icon}</span>
+                                        {child.label}
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <a href={item.url} class={`nav-link flex items-center ${pathname === item.url ? 'nav-active' : ''}`}>
+                        <span set:html={item.icon} />
+                        <span>{item.label}</span>
+                    </a>
+                )
+            ))}
+
+            <!-- Search Box -->
+            <div class="relative ml-auto">
+                <input type="text" placeholder="Search..." id="search-input"
+                    class="bg-white/10 border border-white/20 rounded-lg px-4 py-2 pl-10 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48" />
+                <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div id="mobile-menu" class="md:hidden hidden bg-blue-950 border-t border-blue-900">
+        <div class="px-6 py-4 space-y-3">
+            {navConfig.navigation.map(item => (
+                item.children ? (
+                    <div class="space-y-2">
+                        <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider pl-2">{item.label}</div>
+                        {item.children.map(child => (
+                            <a href={child.url} class="mobile-nav-link pl-6 border-l border-slate-700">{child.label}</a>
+                        ))}
+                    </div>
+                ) : (
+                    <a href={item.url} class="mobile-nav-link">{item.label}</a>
+                )
+            ))}
+        </div>
+    </div>
+</nav>
+
+<style>
+    .mobile-nav-link {
+        @apply block px-4 py-2 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors rounded-lg;
+    }
+</style>

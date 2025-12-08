@@ -506,7 +506,7 @@ mcp_local/
 ### MCP Server Tools (22 total):
 
 **Session Management:**
-- `bootstrap_session` - Initialize new session
+- `create_session` - Initialize new session (replaces bootstrap_session)
 - `resume_previous_session` - Resume prior session
 - `get_session_summary` - Get session details
 - `get_epistemic_state` - Query current epistemic vectors
@@ -533,17 +533,15 @@ mcp_local/
 - `query_ai` - AI-to-AI communication
 - `generate_goals` - Goal generation
 - `create_cascade` - Create new cascade
-- `bootstrap_session` - Bootstrap with profile support (NEW parameter)
 
 **Profile Integration Point:**
 ```python
-# Future MCP tool usage:
-bootstrap_session(
+# MCP tool usage:
+create_session(
     ai_id="claude_agent",
-    session_type="testing",
-    profile="high_reasoning_collaborative",  # NEW
-    ai_model="claude-sonnet",                # NEW
-    domain="research"                        # NEW
+    profile="high_reasoning_collaborative",  # Optional
+    ai_model="claude-sonnet",                # Optional
+    domain="research"                        # Optional
 )
 ```
 

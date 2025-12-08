@@ -17,7 +17,7 @@ WHITE='\033[1;37m'
 MAGENTA='\033[0;35m'
 NC='\033[0m'
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DB_PATH="$REPO_ROOT/.empirica/sessions/sessions.db"
 
 if [ ! -f "$DB_PATH" ]; then
@@ -25,9 +25,9 @@ if [ ! -f "$DB_PATH" ]; then
 fi
 
 # SECTION 1: HEADER
-echo -e "${CYAN}════════════════════════════════════════════════════════════════${NC}"
-echo -e "${CYAN}EMPIRICA UNIFIED DASHBOARD - YOUR SINGLE SOURCE OF TRUTH${NC}"
-echo -e "${CYAN}════════════════════════════════════════════════════════════════${NC}"
+printf "${CYAN}%s${NC}\n" "════════════════════════════════════════════════════════════════"
+printf "${CYAN}%s${NC}\n" "EMPIRICA UNIFIED DASHBOARD - YOUR SINGLE SOURCE OF TRUTH"
+printf "${CYAN}%s${NC}\n" "════════════════════════════════════════════════════════════════"
 echo ""
 
 # System metrics
@@ -41,9 +41,9 @@ COMPLETION_PCT=$((COMPLETED * 100 / TOTAL))
 
 echo -e "${WHITE}System Status: ${GREEN}✅ OPERATIONAL${NC}"
 echo ""
-echo "📊 Sessions:      ${YELLOW}$TOTAL${NC} total | ${GREEN}$COMPLETED${NC} completed ($COMPLETION_PCT%) | ${MAGENTA}$ACTIVE${NC} active"
-echo "🎯 Goals:         ${YELLOW}$GOALS${NC} tracked"
-echo "📈 Learning Data: ${CYAN}$METRICS${NC} epistemic vectors"
+echo -e "📊 Sessions:      ${YELLOW}$TOTAL${NC} total | ${GREEN}$COMPLETED${NC} completed ($COMPLETION_PCT%) | ${MAGENTA}$ACTIVE${NC} active"
+echo -e "🎯 Goals:         ${YELLOW}$GOALS${NC} tracked"
+echo -e "📈 Learning Data: ${CYAN}$METRICS${NC} epistemic vectors"
 echo ""
 
 # SECTION 2: TOP PERFORMERS
@@ -125,17 +125,17 @@ LEARNING=$(sqlite3 "$DB_PATH" "SELECT COUNT(DISTINCT ai_id) FROM reflexes WHERE 
 STUCK=$(sqlite3 "$DB_PATH" "SELECT COUNT(DISTINCT ai_id) FROM sessions;" 2>/dev/null || echo "0")
 
 echo "System Health:"
-echo "  ${GREEN}✓${NC} $LEARNING AIs showing measurable learning"
-echo "  ${YELLOW}⚠${NC} Monitor $STUCK active AIs"
+echo -e "  ${GREEN}✓${NC} $LEARNING AIs showing measurable learning"
+echo -e "  ${YELLOW}⚠${NC} Monitor $STUCK active AIs"
 echo ""
 
 echo "Next Steps:"
-echo "  • Run: ${CYAN}./status.sh${NC} for detailed system view"
-echo "  • Run: ${CYAN}./leaderboard.sh${NC} for performance metrics"
+echo -e "  • Run: ${CYAN}./status.sh${NC} for detailed system view"
+echo -e "  • Run: ${CYAN}./leaderboard.sh${NC} for performance metrics"
 echo ""
 
 # FOOTER
-echo -e "${CYAN}════════════════════════════════════════════════════════════════${NC}"
+printf "${CYAN}%s${NC}\n" "════════════════════════════════════════════════════════════════"
 echo "Last Updated: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "Database: $DB_PATH"
 echo ""
@@ -144,4 +144,4 @@ echo "  ✓ System state at a glance"
 echo "  ✓ Decision guidance (who's learning, who's stuck)"
 echo "  ✓ Tracking other AIs working in parallel"
 echo "  ✓ Quick health check"
-echo -e "${CYAN}════════════════════════════════════════════════════════════════${NC}"
+printf "${CYAN}%s${NC}\n" "════════════════════════════════════════════════════════════════"

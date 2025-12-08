@@ -18,7 +18,7 @@ MAGENTA='\033[0;35m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DB_PATH="$REPO_ROOT/.empirica/sessions/sessions.db"
 
 if [ ! -f "$DB_PATH" ]; then
@@ -39,8 +39,8 @@ CRITICAL=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM subtasks WHERE importance='c
 HIGH=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM subtasks WHERE importance='high' AND status='pending';" 2>/dev/null || echo "0")
 
 echo -e "${WHITE}SYSTEM SNAPSHOT${NC}"
-echo "Sessions: ${YELLOW}$TOTAL${NC} total | ${MAGENTA}$ACTIVE${NC} active"
-echo "Priority work: ${RED}$CRITICAL${NC} critical | ${YELLOW}$HIGH${NC} high pending"
+echo -e "Sessions: ${YELLOW}$TOTAL${NC} total | ${MAGENTA}$ACTIVE${NC} active"
+echo -e "Priority work: ${RED}$CRITICAL${NC} critical | ${YELLOW}$HIGH${NC} high pending"
 echo ""
 
 # WHAT EACH AI IS DOING RIGHT NOW
@@ -133,7 +133,7 @@ echo -e "${CYAN}═════════════════════�
 echo "Last Updated: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "For more details:"
-echo "  • Run: ${CYAN}./empirica-goals-dashboard.sh${NC} for full goal breakdown"
-echo "  • Run: ${CYAN}./leaderboard.sh${NC} for detailed performance metrics"
-echo "  • Run: ${CYAN}git log --format=%(trailers) -5${NC} to see epistemic data"
+echo -e "  • Run: ${CYAN}./empirica-goals-dashboard.sh${NC} for full goal breakdown"
+echo -e "  • Run: ${CYAN}./leaderboard.sh${NC} for detailed performance metrics"
+echo -e "  • Run: ${CYAN}git log --format=%(trailers) -5${NC} to see epistemic data"
 echo -e "${CYAN}════════════════════════════════════════════════════════════════${NC}"

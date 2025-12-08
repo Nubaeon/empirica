@@ -1,31 +1,42 @@
 # API Reference
 
-**Empirica v4.0 - Complete Method Signatures**
+**Empirica v4.0 - Python API Reference**
+
+**📖 For Complete API Documentation:** See `docs/production/19_API_REFERENCE_COMPLETE.md` (52 SessionDatabase methods, all signatures)
 
 **Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
 
 ---
 
-## Core Classes
+## Quick Links
+
+- **Complete Python API:** `docs/production/19_API_REFERENCE_COMPLETE.md` (comprehensive method signatures)
+- **Complete CLI Reference:** `docs/reference/CLI_COMMANDS_COMPLETE.md` (all 49 commands)
+- **Storage Architecture:** `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`
+
+---
+
+## Core Classes Summary
 
 ### SessionDatabase
 
+**Location:** `empirica/data/session_database.py`
+
 ```python
-class SessionDatabase:
-    def __init__(self, db_path: Optional[str] = None) -> None
+from empirica.data.session_database import SessionDatabase
+
+db = SessionDatabase()  # Uses .empirica/sessions/sessions.db
+session_id = db.create_session(ai_id="myai")
 ```
 
-**Parameters:**
-- `db_path` (Optional[str]): Path to SQLite database
-
-**Methods:**
+**Key Methods (52 total, see complete docs for all):**
 
 #### create_session()
 ```python
 def create_session(
     self,
     ai_id: str,
-    bootstrap_level: int = 1,  # LEGACY: No behavioral effect in v4.0
+    bootstrap_level: int = 1,
     components_loaded: int = 6
 ) -> str
 ```
@@ -33,7 +44,7 @@ Create new Empirica session.
 
 **Returns:** str - Session UUID
 
-**Note:** `bootstrap_level` parameter exists for backward compatibility but has no effect in v4.0. All sessions use unified storage and lazy component loading.
+All sessions use unified storage with automatic component loading.
 
 ---
 
@@ -186,7 +197,7 @@ class SessionDatabase:
 def create_session(
     self,
     ai_id: str,
-    bootstrap_level: int,  # LEGACY: No effect in v4.0
+    bootstrap_level: int,
     components_loaded: int,
     user_id: Optional[str] = None
 ) -> str

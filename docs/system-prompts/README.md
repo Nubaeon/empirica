@@ -1,6 +1,6 @@
 # System Prompts - README
 
-**Unified system prompt architecture for Empirica v2.0**
+**Unified system prompt architecture for Empirica v4.0**
 
 ---
 
@@ -21,19 +21,13 @@ Copy the prompt from this file and paste it into your AI's system prompt field. 
 1. **CANONICAL_SYSTEM_PROMPT.md** ⭐
    - Single source of truth
    - Works for all AI models
-   - ~1200 tokens (added goal/subtask tracking)
+   - ~1200 tokens (includes goal/subtask tracking)
    - Use this for everything
-   - **NEW:** Goal tree tracking for decision quality + continuity + audit
 
 2. **CUSTOMIZATION_GUIDE.md**
    - When to customize (rare cases)
    - How to customize safely
    - Examples and validation checklist
-
-3. **MIGRATION_GUIDE.md**
-   - Migrating from old/deprecated prompts
-   - What changed in v2.0
-   - Common migration issues
 
 ### Reference
 
@@ -72,44 +66,38 @@ All other prompts moved to `archive/system-prompts-deprecated/`:
 
 **Why?**
 - Single source of truth (easier maintenance)
-- v2.0 features (MCO, Decision Logic, ScopeVector, Drift Monitor)
+- Latest features (MCO, Decision Logic, ScopeVector, Drift Monitor)
 - Model-agnostic (works for all AIs)
 - Actively maintained
 
 ---
 
-## What's New in v2.0
+## Key Features
 
-### Architecture Changes
+### Architecture
 
-1. **Session Structure Clarification**
-   - **Session-level**: BOOTSTRAP (once per session)
-   - **Goal-level**: PREFLIGHT → CASCADE → POSTFLIGHT
-   - **CASCADE**: Implicit work (investigate → plan → act) with explicit CHECK gates
-   - **Calibration**: PREFLIGHT and POSTFLIGHT deltas measure learning; CHECK provides intermediate points for retrospective analysis
+1. **CASCADE Workflow**
+   - PREFLIGHT → (CHECK) → POSTFLIGHT
+   - Explicit epistemic self-assessment
+   - CHECK phase as decision gate
 
-2. **MCO Architecture**
-   - 5 YAML configs (personas, cascade_styles, goal_scopes, model_profiles, protocols)
+2. **Goals & Subtasks**
+   - ScopeVector dimensions (breadth, duration, coordination)
+   - Track findings, unknowns, dead ends
+   - Decision quality + continuity
+
+3. **MCO (Multi-Agent Coordination)**
    - 6 personas (researcher, implementer, reviewer, coordinator, learner, expert)
-   - Dynamic configuration loading
+   - Dynamic configuration via YAML
 
-3. **Decision Logic**
-   - Automatic comprehension + foundation checks
-   - Three outcomes: CREATE_GOAL, INVESTIGATE_FIRST, ASK_CLARIFICATION
+4. **Git Integration**
+   - 85% token reduction (checkpoints)
+   - 90% token reduction (handoffs)
+   - Cross-AI discovery
 
-4. **ScopeVector Goals**
-   - 3D numeric dimensions (breadth, duration, coordination)
-   - Replaces categorical enums
-
-5. **Git Integration**
-   - ~85% token reduction (checkpoints)
-   - ~90% token reduction (handoffs)
-   - Cross-AI discovery via git notes
-
-6. **Drift Monitor**
+5. **Drift Monitor**
    - Automatic at CHECK phase
-   - Compares to last 5 checkpoints
-   - Flags drops >0.2, critical if >0.5
+   - Flags epistemic drops >0.2
 
 ---
 
@@ -146,7 +134,7 @@ docs/system-prompts/
 ### Q: What happened to the old prompts?
 **A:** Moved to `archive/system-prompts-deprecated/` for reference.
 
-### Q: How do I update to v2.0?
+### Q: How do I update to the latest version?
 **A:** Replace your current prompt with `CANONICAL_SYSTEM_PROMPT.md`.
 
 ### Q: Where are the MCP tool details?
@@ -164,6 +152,4 @@ docs/system-prompts/
 
 ---
 
-**Last Updated:** 2025-11-30  
-**Version:** 2.0  
-**Maintainer:** Empirica Core Team
+**Version:** Empirica v4.0

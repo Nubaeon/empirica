@@ -32,6 +32,12 @@ def handle_handoff_create_command(args):
         # Parse JSON arrays
         key_findings = json.loads(args.key_findings) if isinstance(args.key_findings, str) else args.key_findings
         remaining_unknowns = json.loads(args.remaining_unknowns) if args.remaining_unknowns and isinstance(args.remaining_unknowns, str) else (args.remaining_unknowns or [])
+        
+        # Auto-convert strings to single-item arrays for better UX
+        if isinstance(key_findings, str):
+            key_findings = [key_findings]
+        if isinstance(remaining_unknowns, str):
+            remaining_unknowns = [remaining_unknowns]
         artifacts = json.loads(args.artifacts) if args.artifacts and isinstance(args.artifacts, str) else (args.artifacts or [])
 
         next_session_context = args.next_session_context

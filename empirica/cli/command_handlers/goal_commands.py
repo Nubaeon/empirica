@@ -39,7 +39,22 @@ def handle_goals_create_command(args):
             duration=float(args.scope_duration) if hasattr(args, 'scope_duration') and args.scope_duration else 0.2,
             coordination=float(args.scope_coordination) if hasattr(args, 'scope_coordination') and args.scope_coordination else 0.1
         )
-        success_criteria_list = parse_json_safely(args.success_criteria) if args.success_criteria else []
+        # Handle success_criteria - accept string or JSON array
+        if args.success_criteria:
+            # Try to parse as JSON, but if it fails, treat as plain string
+            if args.success_criteria.strip().startswith('['):
+                # Looks like JSON array
+                success_criteria_list = parse_json_safely(args.success_criteria)
+            else:
+                # Plain string - treat as single criterion
+                success_criteria_list = [args.success_criteria]
+        else:
+            success_criteria_list = []
+        
+        # Final safety check - convert string to array if needed
+        if isinstance(success_criteria_list, str):
+            success_criteria_list = [success_criteria_list]
+        
         estimated_complexity = getattr(args, 'estimated_complexity', None)
         constraints = parse_json_safely(args.constraints) if args.constraints else None
         metadata = parse_json_safely(args.metadata) if args.metadata else None
@@ -318,11 +333,15 @@ def handle_goals_progress_command(args):
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(result, indent=2))
         else:
-            print("✅ Goal progress retrieved")
-            print(f"   Goal: {goal_id[:8]}...")
-            print(f"   Completion: {result['completion_percentage']:.1f}%")
-            print(f"   Progress: {result['completed_subtasks']}/{result['total_subtasks']} subtasks")
-            print(f"   Remaining: {result['remaining_subtasks']} subtasks")
+            if result.get('ok'):
+                print("✅ Goal progress retrieved")
+                print(f"   Goal: {goal_id[:8]}...")
+                print(f"   Completion: {result['completion_percentage']:.1f}%")
+                print(f"   Progress: {result['completed_subtasks']}/{result['total_subtasks']} subtasks")
+                print(f"   Remaining: {result['remaining_subtasks']} subtasks")
+            else:
+                print(f"❌ {result.get('message', 'Error retrieving goal progress')}")
+                print(f"   Goal ID: {goal_id}")
         
         goal_repo.close()
         return result

@@ -288,18 +288,7 @@ class SessionDatabase:
         """)
         
         
-        # Table 11: cascade_metadata (Enhanced Cascade Workflow - MCP Integration)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS cascade_metadata (
-                metadata_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                cascade_id TEXT NOT NULL,
-                metadata_key TEXT NOT NULL,
-                metadata_value TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-                FOREIGN KEY (cascade_id) REFERENCES cascades(cascade_id)
-            )
-        """)
+        # Note: cascade_metadata table removed - all CASCADE data now in unified reflexes table
         
         # Table 12: investigation_logs (NEW - investigation phase tracking)
         cursor.execute("""
@@ -452,7 +441,7 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_divergence_cascade ON divergence_tracking(cascade_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_beliefs_cascade ON bayesian_beliefs(cascade_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tools_cascade ON investigation_tools(cascade_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_cascade_metadata_lookup ON cascade_metadata(cascade_id, metadata_key)")
+        # Index for reflexes table (replaces old cascade_metadata index)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_session ON epistemic_snapshots(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_ai ON epistemic_snapshots(ai_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_cascade ON epistemic_snapshots(cascade_id)")
@@ -1362,22 +1351,29 @@ class SessionDatabase:
         # Get cascades
         cascades = self.get_session_cascades(session_id)
         
-        # Get PREFLIGHT/POSTFLIGHT from cascade_metadata
+        # Get PREFLIGHT/POSTFLIGHT from unified reflexes table instead of legacy cascade_metadata
         cursor.execute("""
-            SELECT cm.metadata_key, cm.metadata_value, c.cascade_id, c.task
-            FROM cascade_metadata cm
-            JOIN cascades c ON cm.cascade_id = c.cascade_id
-            WHERE c.session_id = ?
-            AND cm.metadata_key IN ('preflight_vectors', 'postflight_vectors')
-            ORDER BY c.started_at
+            SELECT phase, json_extract(reflex_data, '$.vectors'), cascade_id, timestamp
+            FROM reflexes
+            WHERE session_id = ?
+            AND phase IN ('PREFLIGHT', 'POSTFLIGHT')
+            ORDER BY timestamp
         """, (session_id,))
-        
+
         assessments = {}
         cascade_tasks = {}
         for row in cursor.fetchall():
-            key, value, cascade_id, task = row
-            assessments[key] = json.loads(value)
-            cascade_tasks[cascade_id] = task
+            phase, vectors_json, cascade_id, timestamp = row
+            if vectors_json:
+                # Convert phase to the expected key format
+                key = f"{phase.lower()}_vectors"
+                assessments[key] = json.loads(vectors_json)
+                # We don't have the task from reflexes, so we'll get it from cascades
+                cascade_cursor = self.conn.cursor()
+                cascade_cursor.execute("SELECT task FROM cascades WHERE cascade_id = ?", (cascade_id,))
+                cascade_row = cascade_cursor.fetchone()
+                if cascade_row:
+                    cascade_tasks[cascade_id] = cascade_row[0]
         
         # Get investigation tools used (if detailed)
         tools_used = []

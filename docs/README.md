@@ -1,231 +1,104 @@
 # Empirica Documentation
 
-**Version:** 4.0  
-**Source of Truth:** `system-prompts/CANONICAL_SYSTEM_PROMPT.md`  
-**Status:** Production Ready
+**Start here:** [01_START_HERE.md](01_START_HERE.md) - Complete overview and guide
 
 ---
 
-## 🚀 Getting Started (Start Here!)
+## Quick Start (5 minutes)
 
-**🤖 AI Agent (via MCP)?** → [**MCP Quick Start**](01_b_MCP_AI_START.md) - Discovered via IDE tools  
-**🤖 AI Agent (learning)?** → [**AI Agent Quick Start**](01_a_AI_AGENT_START.md) - Complete introduction  
-**👤 Human Developer?** → [**Installation**](02_INSTALLATION.md) → [**CLI Quick Start**](03_CLI_QUICKSTART.md)  
-**👤 Getting AI to use Empirica?** → [**📋 Prompt Templates**](system-prompts/README.md) - Copy-paste prompts for your AI  
-**Want comprehensive overview?** → [**Start Here**](00_START_HERE.md) - 5-minute system overview
+Choose your path:
 
-**Complete learning path:** [🎓 Onboarding Guide](ONBOARDING_GUIDE.md)
-
-**Choose your interface:**
-- [💻 CLI Quick Start](03_CLI_QUICKSTART.md) - Terminal commands
-- [🔌 MCP Quick Start](04_MCP_QUICKSTART.md) - IDE integration
-- [🏗️ Architecture](05_ARCHITECTURE.md) - System overview
-
-**Need help?**
-- [🔧 Troubleshooting](06_TROUBLESHOOTING.md) - Common issues & solutions
+1. **[CLI Quick Start](02_QUICKSTART_CLI.md)** - Command-line interface (AI agents, developers)
+2. **[MCP Quick Start](03_QUICKSTART_MCP.md)** - Model Context Protocol (Claude Desktop, etc.)
 
 ---
 
-## 📚 Documentation Included
+## Essential Guides
 
-**This production documentation includes:**
-- ✅ Getting started guides (9 essential docs)
-- ✅ Skills guide for AI agents (Claude Skills format)
-- ✅ Complete production reference (21 comprehensive guides)
-- ✅ Architecture overview and system design
-- ✅ Practical guides, tutorials, and examples
-- ✅ Technical API reference
-
-**Not included** (development-only docs, available in empirica-dev):
-- Design specifications (phase_0/)
-- Development session history (sessions/)
-- Internal architecture decisions
-
-**Total documentation:** ~60 guides covering all Phase 0 features
+- **[Installation Guide](04_INSTALLATION.md)** - Install on any platform (PyPI, Homebrew, Docker)
+- **[Dashboards](05_DASHBOARDS.md)** - Monitor sessions, goals, and learning
+- **[Troubleshooting](06_TROUBLESHOOTING.md)** - Common issues and solutions
 
 ---
 
-## 📚 Documentation Structure
+## Deep Dive Documentation
+
+For comprehensive documentation, see:
+
+- **[production/](production/)** - Complete production documentation
+  - [00_DOCUMENTATION_MAP.md](production/00_DOCUMENTATION_MAP.md) - Navigation guide
+  - [03_BASIC_USAGE.md](production/03_BASIC_USAGE.md) - Detailed usage
+  - [05_EPISTEMIC_VECTORS.md](production/05_EPISTEMIC_VECTORS.md) - 13 vectors explained
+  - [06_CASCADE_FLOW.md](production/06_CASCADE_FLOW.md) - PREFLIGHT → CHECK → POSTFLIGHT
+  - [13_PYTHON_API.md](production/13_PYTHON_API.md) - Python API guide
+  - [19_API_REFERENCE.md](production/19_API_REFERENCE.md) - API overview
+  - [19_API_REFERENCE_COMPLETE.md](production/19_API_REFERENCE_COMPLETE.md) - **Complete Python API (52 methods)** ⭐
+  - ... and 25+ more comprehensive guides
+- **[reference/](reference/)** - Commands & reference
+  - [CLI_COMMANDS_COMPLETE.md](reference/CLI_COMMANDS_COMPLETE.md) - **All 49 CLI commands** ⭐
+  - [command-reference.md](reference/command-reference.md) - Quick reference card
+  - [CHANGELOG.md](reference/CHANGELOG.md) - Version history
+
+---
+
+## For Developers
+
+- **[architecture/](architecture/)** - System architecture and design
+- **[guides/](guides/)** - Workflow guides and examples
+- **[reference/](reference/)** - Command reference and changelog
+- **[system-prompts/](system-prompts/)** - AI system prompt configuration
+
+---
+
+## Learning Path
 
 ### For AI Agents
-**[skills/SKILL.md](skills/SKILL.md)** - Functional Self-Awareness Guide (Claude Skills format)
-- Functional self-awareness framework
-- 13-vector epistemic measurement
-- Practical workflows & exercises
-- NO HEURISTICS principle
-- Evidence-based assessment
-- Calibration validation
+1. Read [01_START_HERE.md](01_START_HERE.md)
+2. Follow [02_QUICKSTART_CLI.md](02_QUICKSTART_CLI.md)
+3. Create your first session and run CASCADE workflow
+4. Explore [production/06_CASCADE_FLOW.md](production/06_CASCADE_FLOW.md) for details
 
-### Core Guides
-- **[production/](production/)** - 21 comprehensive production guides
-  - Complete API reference
-  - Epistemic vector details
-  - CASCADE workflow
-  - System architecture
-  - Tuning and configuration
+### For Developers
+1. Read [01_START_HERE.md](01_START_HERE.md)
+2. Install via [04_INSTALLATION.md](04_INSTALLATION.md)
+3. Review [production/19_API_REFERENCE_COMPLETE.md](production/19_API_REFERENCE_COMPLETE.md) - **Complete Python API**
+4. Check [reference/CLI_COMMANDS_COMPLETE.md](reference/CLI_COMMANDS_COMPLETE.md) - **All 49 CLI commands**
 
-### Practical Guides
-- **[guides/](guides/)** - Quick starts and tutorials
-  - [TRY_EMPIRICA_NOW.md](guides/TRY_EMPIRICA_NOW.md) - Hands-on demo
-  - [examples/mcp_configs/](guides/examples/mcp_configs/) - MCP configurations
-
-### Reference
-- **[reference/](reference/)** - Technical reference
-  - API documentation
-  - Architecture maps
-  - Quick references
-
-### System Design
-- **[architecture/](architecture/)** - System architecture
-  - EMPIRICA_SYSTEM_OVERVIEW.md
-  - Component design
-  - Data flows
-
-### Research & Advanced
-- **[research/](research/)** - Advanced topics
-  - RECURSIVE_EPISTEMIC_REFINEMENT.md
-  - Cognitive benchmarking
-- **[phase_0/](phase_0/)** - Phase 0 specifications
-  - EMPIRICA_SINGLE_AI_FOCUS.md
-  - Design decisions
+### For Teams
+1. Read [01_START_HERE.md](01_START_HERE.md)
+2. Set up [05_DASHBOARDS.md](05_DASHBOARDS.md) for monitoring
+3. Review [production/26_CROSS_AI_COORDINATION.md](production/26_CROSS_AI_COORDINATION.md)
+4. Configure [system-prompts/](system-prompts/) for your team
 
 ---
 
-## 📖 Quick Reference
+## Documentation Structure
 
-### The Epistemic Vector System
-
-**Quick Start: 4 Essential Vectors**
-For most tasks, focus on these core measurements:
-- **KNOW** (0.0-1.0): Do I understand this domain?
-- **DO** (0.0-1.0): Can I execute this task?
-- **CONTEXT** (0.0-1.0): Do I have enough information?
-- **UNCERTAINTY** (0.0-1.0): How uncertain am I? (meta-epistemic)
-
-**Add for Clarity: 5th Vector**
-- **CLARITY** (0.0-1.0): Do I understand what's being asked? (useful for unclear requests)
-
-**Complete System: 13 Vectors Total**
-The full system measures 12 operational vectors + 1 meta-epistemic vector (UNCERTAINTY):
-- **Gate**: ENGAGEMENT (must be ≥0.60)
-- **Foundation**: KNOW, DO, CONTEXT
-- **Comprehension**: CLARITY, COHERENCE, SIGNAL, DENSITY  
-- **Execution**: STATE, CHANGE, COMPLETION, IMPACT
-- **Meta-Epistemic**: UNCERTAINTY (tracks uncertainty about the assessment itself)
-
-See [docs/production/05_EPISTEMIC_VECTORS.md](production/05_EPISTEMIC_VECTORS.md) for complete details.
-
-### Common Commands
-```bash
-# Create session
-empirica session-create --ai-id myagent --output json
-
-# CASCADE workflow
-empirica preflight --session-id <ID> --prompt "task"
-empirica check --session-id <ID> --confidence 0.75
-empirica postflight --session-id <ID> --task-summary "completed"
-
-# Goals/subtasks (v4.0)
-empirica goals-create --session-id <ID> --objective "..."
-empirica goals-list <ID>
-
-# MCP server
-empirica mcp-start
-empirica mcp-list-tools
-
-# Session management
-empirica sessions-list
+```
+docs/
+├── 01_START_HERE.md              ← Start here!
+├── 02_QUICKSTART_CLI.md          ← 5 min CLI guide
+├── 03_QUICKSTART_MCP.md          ← 5 min MCP guide
+├── 04_INSTALLATION.md            ← Install guide
+├── 05_DASHBOARDS.md              ← Dashboard usage
+├── 06_TROUBLESHOOTING.md         ← Common issues
+├── README.md                     ← This file
+│
+├── production/                   ← Deep dive (28 docs)
+│   ├── 00_DOCUMENTATION_MAP.md   ← Navigation
+│   ├── 03_BASIC_USAGE.md
+│   ├── 05_EPISTEMIC_VECTORS.md
+│   ├── 06_CASCADE_FLOW.md
+│   ├── 13_PYTHON_API.md
+│   ├── 19_API_REFERENCE.md
+│   └── ... (22 more)
+│
+├── architecture/                 ← System design (6 docs)
+├── guides/                       ← Workflows (11 docs)
+├── reference/                    ← Commands & changelog (4 docs)
+└── system-prompts/               ← AI prompts (4 docs)
 ```
 
-### Key Concepts
-- **Epistemic Self-Awareness** - Know what you know vs what you're guessing
-- **CASCADE Workflow** - PREFLIGHT → [CHECK]* → POSTFLIGHT (epistemic checkpoints)
-- **Goals/Subtasks (v4.0)** - Investigation logging for complex tasks
-- **13-Vector Assessment** - Comprehensive epistemic measurement (KNOW, DO, CONTEXT, UNCERTAINTY, etc.)
-- **Three Separate Concerns** - CASCADE phases, goal tracking, implicit reasoning
-- **Unified Reflexes Table** - All epistemic data in one place (v4.0 architecture)
-
 ---
 
-## 🗂️ Full Documentation Index
-
-### Getting Started
-- [01_a_AI_AGENT_START.md](01_a_AI_AGENT_START.md) - AI agents: complete intro
-- [01_b_MCP_AI_START.md](01_b_MCP_AI_START.md) - AI agents: MCP quick start
-- [00_START_HERE.md](00_START_HERE.md) - System overview
-- [02_INSTALLATION.md](02_INSTALLATION.md) - Setup
-- [03_CLI_QUICKSTART.md](03_CLI_QUICKSTART.md) - CLI basics
-- [04_MCP_QUICKSTART.md](04_MCP_QUICKSTART.md) - MCP basics
-- [05_ARCHITECTURE.md](05_ARCHITECTURE.md) - System overview
-- [06_TROUBLESHOOTING.md](06_TROUBLESHOOTING.md) - Problem solving
-
-### Core Documentation (v4.0)
-- [production/00_DOCUMENTATION_MAP.md](production/00_DOCUMENTATION_MAP.md) - Complete navigation map (NEW)
-- [production/06_CASCADE_FLOW.md](production/06_CASCADE_FLOW.md) - CASCADE workflow guide (NEW)
-- [guides/GOAL_TREE_USAGE_GUIDE.md](guides/GOAL_TREE_USAGE_GUIDE.md) - Goal tracking guide (NEW v4.0)
-- [production/12_SESSION_DATABASE.md](production/12_SESSION_DATABASE.md) - Database schema with goals/subtasks
-- [production/13_PYTHON_API.md](production/13_PYTHON_API.md) - Complete Python API reference
-
-### Comprehensive Guides
-- [ONBOARDING_GUIDE.md](ONBOARDING_GUIDE.md) - Complete learning path
-- [skills/SKILL.md](skills/SKILL.md) - AI agent guide
-- [production/README.md](production/README.md) - 21 production guides
-
-### Integration & Examples
-- [guides/TRY_EMPIRICA_NOW.md](guides/TRY_EMPIRICA_NOW.md) - Hands-on demo
-- [guides/examples/mcp_configs/](guides/examples/mcp_configs/) - MCP configs
-
-### Advanced
-- [research/RECURSIVE_EPISTEMIC_REFINEMENT.md](research/RECURSIVE_EPISTEMIC_REFINEMENT.md) - Advanced patterns
-- [phase_0/EMPIRICA_SINGLE_AI_FOCUS.md](phase_0/EMPIRICA_SINGLE_AI_FOCUS.md) - Design philosophy
-
----
-
-## 🎯 By Use Case
-
-### "I want to learn Empirica"
-→ [ONBOARDING_GUIDE.md](ONBOARDING_GUIDE.md)
-
-### "I'm an AI agent, how do I use this?"
-→ [01_b_MCP_AI_START.md](01_b_MCP_AI_START.md) (MCP tools in IDE)  
-→ [01_a_AI_AGENT_START.md](01_a_AI_AGENT_START.md) (Complete introduction)  
-→ [skills/SKILL.md](skills/SKILL.md) (Full reference)
-
-### "How do I install it?"
-→ [02_INSTALLATION.md](02_INSTALLATION.md)
-
-### "How do I use the CLI?"
-→ [03_CLI_QUICKSTART.md](03_CLI_QUICKSTART.md)
-
-### "How do I integrate with my IDE?"
-→ [04_MCP_QUICKSTART.md](04_MCP_QUICKSTART.md)
-
-### "What's the architecture?"
-→ [05_ARCHITECTURE.md](05_ARCHITECTURE.md)
-
-### "Something's broken!"
-→ [06_TROUBLESHOOTING.md](06_TROUBLESHOOTING.md)
-
-### "I need the complete reference"
-→ [production/README.md](production/README.md)
-
----
-
-## 📊 Documentation Status
-
-**Status:** ✅ Phase 0 Documentation Complete
-
-**Coverage:**
-- ✅ Getting started guides (7 docs)
-- ✅ Skills guide for AI agents
-- ✅ CLI & MCP quick starts
-- ✅ Installation & troubleshooting
-- ✅ Production documentation (21 guides)
-- ✅ Architecture overview
-- ✅ Phase 0 specifications
-
-**Note:** Phase 1+ features (multi-AI routing, Cognitive Vault) are in [_experimental/](_experimental/) and not part of Phase 0 MVP.
-
----
-
-**Start here:** [00_START_HERE.md](00_START_HERE.md) → Get up and running in 5 minutes!
+**Need help?** Start with [01_START_HERE.md](01_START_HERE.md) or jump to [06_TROUBLESHOOTING.md](06_TROUBLESHOOTING.md)

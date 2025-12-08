@@ -50,12 +50,12 @@
 - `get_epistemic_state` - Query current session vectors
 - `get_calibration_report` - Check calibration accuracy
 - `get_session_summary` - Complete session summary
-- `bootstrap_session` - Initialize new session
+- `create_session` - Initialize new session
 - `resume_previous_session` - Load previous session context
 - `query_bayesian_beliefs` - Belief state tracking
 - `check_drift_monitor` - Behavioral integrity monitoring
 - `query_goal_orchestrator` - Task hierarchy and progress
-- `modality_route_query` - Route queries through modality switcher
+- `modality_route_query` - Route queries through modality switcher (EXPERIMENTAL)
 - `modality_list_adapters` - List available AI adapters
 - `modality_adapter_health` - Check adapter health
 - `modality_decision_assist` - Get routing recommendations

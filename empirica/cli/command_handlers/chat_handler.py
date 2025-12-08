@@ -95,7 +95,7 @@ def handle_chat_command(args):
             conversation_history = _load_chat_session(session_id)
             if not conversation_history:
                 print("⚠️  Starting new session instead.")
-                session_id = f"chat_{uuid.uuid4().hex[:8]}"
+                session_id = f"chat_{uuid.uuid4().hex}"  # Full UUID for unique identification
                 conversation_history = []
         elif session_id:
             # Check if session exists
@@ -103,7 +103,7 @@ def handle_chat_command(args):
             if not conversation_history:
                 conversation_history = []
         else:
-            session_id = f"chat_{uuid.uuid4().hex[:8]}"
+            session_id = f"chat_{uuid.uuid4().hex}"  # Full UUID for unique identification
             conversation_history = []
         
         adapter = getattr(args, 'adapter', None)

@@ -45,7 +45,7 @@ def handle_ask_command(args):
         switcher = ModalitySwitcher()
         
         # Session tracking (optional)
-        session_id = getattr(args, 'session', None) or str(uuid.uuid4())[:8]
+        session_id = getattr(args, 'session', None) or str(uuid.uuid4())  # Full UUID
         
         if getattr(args, 'verbose', False):
             print(f"🔍 Routing query...")

@@ -1,14 +1,13 @@
 # 18. Monitoring & Logging
 
-**Version:** 2.0  
-**Date:** 2025-10-29  
+**Version:** Empirica v4.0  
 **Status:** Production Ready
 
 ---
 
 ## Overview
 
-Empirica v2.0 provides comprehensive monitoring and logging across **3 output formats**: SQLite database, JSON sessions, and Reflex frames. This guide covers log locations, monitoring strategies, querying patterns, and production best practices.
+Empirica provides comprehensive monitoring and logging across **3 output formats**: SQLite database, JSON sessions, and Reflex frames. This guide covers log locations, monitoring strategies, querying patterns, and production best practices.
 
 ---
 

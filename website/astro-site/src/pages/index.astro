@@ -1,0 +1,78 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Navigation from '../components/Navigation.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout 
+    title="Home" 
+    description="The meta-framework for AI self-awareness through epistemic humility."
+    isHomepage={true}
+>
+    <Header slot="header" />
+    <Navigation slot="navigation" />
+
+    <!-- Hero Section -->
+    <div class="relative overflow-hidden pt-24 pb-32">
+        <div class="max-w-7xl mx-auto px-6 text-center relative z-10">
+            <div class="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm mb-8">
+                <span class="flex h-2 w-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
+                Epistemic Self-Awareness for AI
+            </div>
+            <h1 class="text-6xl md:text-8xl font-bold tracking-tight mb-8 text-white">
+                We Gave AI a Mirror.<br/>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">Now It Can See Itself Think.</span>
+            </h1>
+            <p class="text-xl text-slate-300 max-w-2xl mx-auto mb-12">
+                <a href="/MAKING_GIT_SEXY_AGAIN" class="font-semibold text-white hover:text-indigo-300 transition-colors">Making Git Sexy Again Through Metacognition.</a><br/>
+                Empirica is the foundation infrastructure for epistemic self-aware AI — agents that genuinely know what they know.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center gap-6">
+                <a href="/mcp-integration" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-lg font-semibold transition-all hover:scale-105 shadow-lg shadow-indigo-500/25 flex items-center justify-center">
+                    Try with MCP
+                </a>
+                <a href="/developers/cli-interface" class="glass-panel hover:bg-white/10 text-white px-8 py-4 rounded-lg font-semibold transition-all flex items-center justify-center">
+                    Install CLI
+                </a>
+            </div>
+        </div>
+        
+        <!-- Background Glow -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+            <div class="absolute top-20 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute top-40 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+        </div>
+    </div>
+
+    <!-- Content Section -->
+    <div class="max-w-6xl mx-auto px-6 pb-20">
+        <div class="prose prose-invert prose-lg max-w-none">
+            <div class="glass-card p-8 rounded-2xl mb-8">
+                <h2 class="text-3xl font-bold text-indigo-400 mb-4">What is Empirica?</h2>
+                <p class="text-lg text-slate-300 leading-relaxed">
+                    Empirica is a metacognitive framework that enables AI agents to track their own epistemic state—what they know, what they can do, and how uncertain they are—throughout any task.
+                </p>
+            </div>
+
+            <div class="bento-grid">
+                <div class="glass-card p-6 rounded-xl glow-effect">
+                    <h3 class="text-xl font-bold text-indigo-400 mb-3">📊 Epistemic Self-Assessment</h3>
+                    <p class="text-slate-300">Track 13 epistemic vectors: knowledge, capability, context, clarity, and uncertainty.</p>
+                </div>
+
+                <div class="glass-card p-6 rounded-xl glow-effect">
+                    <h3 class="text-xl font-bold text-indigo-400 mb-3">🎯 CASCADE Workflow</h3>
+                    <p class="text-slate-300">Structured PREFLIGHT → investigate → CHECK → ACT → POSTFLIGHT phases.</p>
+                </div>
+
+                <div class="glass-card p-6 rounded-xl glow-effect">
+                    <h3 class="text-xl font-bold text-indigo-400 mb-3">🔄 Memory Compression</h3>
+                    <p class="text-slate-300">98.8% token reduction via epistemic handoff reports and git checkpoints.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <Footer slot="footer" />
+</BaseLayout>

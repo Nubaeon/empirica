@@ -374,26 +374,26 @@ empirica session-create \
   --domain healthcare
 ```
 
-### MCP Bootstrap
+### MCP Session Creation
 
 ```python
-from empirica.cli.mcp_client import bootstrap_session
+# Via MCP tool: create_session
 
 # Explicit profile
-result = bootstrap_session(
+result = create_session(
     ai_id='claude',
     profile='high_reasoning'
 )
 
 # Profile + domain
-result = bootstrap_session(
+result = create_session(
     ai_id='minimax',
     profile='autonomous',
     domain='testing'
 )
 
 # Full specification
-result = bootstrap_session(
+result = create_session(
     ai_id='medical-assistant',
     profile='critical',
     ai_model='claude-opus',

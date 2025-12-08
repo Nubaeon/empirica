@@ -84,7 +84,7 @@ def handle_preflight_command(args):
         import asyncio
         
         prompt = args.prompt
-        session_id = args.session_id or str(uuid.uuid4())[:8]
+        session_id = args.session_id or str(uuid.uuid4())  # Full UUID, no truncation
         ai_id = getattr(args, 'ai_id', 'empirica_cli')
         
         # Execute preflight assessment
@@ -560,18 +560,23 @@ def handle_postflight_command(args):
         try:
             cursor = db.conn.cursor()
             cursor.execute("""
-                SELECT cm.metadata_value
-                FROM cascade_metadata cm
-                JOIN cascades c ON cm.cascade_id = c.cascade_id
-                WHERE cm.metadata_key = 'preflight_vectors'
-                AND c.session_id = ?
-                ORDER BY c.started_at DESC
+                SELECT reflex_data
+                FROM reflexes
+                WHERE session_id = ?
+                AND phase = 'PREFLIGHT'
+                ORDER BY timestamp DESC
                 LIMIT 1
             """, (session_id,))
             
             result = cursor.fetchone()
             if result:
-                preflight_vectors = json.loads(result[0])
+                reflex_entry = json.loads(result[0])
+                # The vectors are in reflex_data['vectors'] according to the schema
+                if 'vectors' in reflex_entry:
+                    preflight_vectors = reflex_entry['vectors']
+                else:
+                    # If vectors are directly in reflex_data, use as-is
+                    preflight_vectors = reflex_entry
                 delta = _calculate_vector_delta(preflight_vectors, postflight_vectors)
                 calibration = _assess_calibration(preflight_vectors, postflight_vectors)
         except Exception as e:
@@ -699,7 +704,7 @@ def handle_workflow_command(args):
         print_header("🔄 Full Workflow")
         
         prompt = args.prompt
-        session_id = str(uuid.uuid4())[:8]
+        session_id = str(uuid.uuid4())  # Full UUID, no truncation
         
         print(f"📋 Task: {prompt}")
         print(f"🆔 Session ID: {session_id}\n")

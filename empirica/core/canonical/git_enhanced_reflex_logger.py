@@ -480,12 +480,17 @@ class GitEnhancedReflexLogger:
 
             try:
                 # Store vectors in reflexes table using proper API
+                # Pass metadata so findings/unknowns are stored in reflex_data
+                metadata_dict = checkpoint.get('meta', {})
+                
                 db.store_vectors(
                     session_id=session_id,
                     phase=phase,
                     vectors=vectors,
-                    cascade_id=checkpoint.get('meta', {}).get('cascade_id'),
-                    round_num=round_num
+                    cascade_id=metadata_dict.get('cascade_id'),
+                    round_num=round_num,
+                    metadata=metadata_dict,
+                    reasoning=metadata_dict.get('reasoning')
                 )
 
                 logger.debug(

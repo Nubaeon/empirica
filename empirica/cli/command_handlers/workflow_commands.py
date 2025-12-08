@@ -130,6 +130,12 @@ def handle_check_command(args):
         cycle = getattr(args, 'cycle', 1)
         verbose = getattr(args, 'verbose', False)
 
+        # Auto-convert strings to single-item arrays for better UX
+        if isinstance(findings, str):
+            findings = [findings]
+        if isinstance(unknowns, str):
+            unknowns = [unknowns]
+
         # Validate inputs
         if not isinstance(findings, list):
             raise ValueError("Findings must be a list")
@@ -173,6 +179,8 @@ def handle_check_command(args):
             round_num=cycle,
             vectors=vectors,
             metadata={
+                "findings": findings,
+                "unknowns": unknowns,
                 "findings_count": len(findings),
                 "unknowns_count": len(unknowns),
                 "confidence": confidence,

@@ -135,12 +135,20 @@ def handle_sessions_show_command(args):
         from empirica.data.session_database import SessionDatabase
         from empirica.utils.session_resolver import resolve_session_id
 
+        # Support both positional and named argument for session ID
+        session_id_arg = args.session_id or getattr(args, 'session_id_named', None)
+        if not session_id_arg:
+            print("\n❌ Session ID required")
+            print("💡 Usage: empirica sessions-show <session-id>")
+            print("💡 Or: empirica sessions-show --session-id <session-id>")
+            return
+
         # Resolve session alias to UUID
         try:
-            session_id = resolve_session_id(args.session_id)
+            session_id = resolve_session_id(session_id_arg)
         except ValueError as e:
             print(f"\n❌ {str(e)}")
-            print(f"💡 Provided: {args.session_id}")
+            print(f"💡 Provided: {session_id_arg}")
             print(f"💡 List sessions with: empirica sessions-list")
             return
 
@@ -152,8 +160,8 @@ def handle_sessions_show_command(args):
         summary = db.get_session_summary(session_id, detail_level="detailed")
         
         if not summary:
-            logger.warning(f"Session not found: {args.session_id}")
-            print(f"\n❌ Session not found: {args.session_id}")
+            logger.warning(f"Session not found: {session_id_arg}")
+            print(f"\n❌ Session not found: {session_id_arg}")
             print(f"💡 List sessions with: empirica sessions list")
             db.close()
             return
@@ -260,7 +268,7 @@ def handle_sessions_show_command(args):
                 print(f"   • {tool['tool']}: {tool['count']} times")
         
         # Export hint
-        print(f"\n💡 Export to JSON: empirica sessions export {args.session_id}")
+        print(f"\n💡 Export to JSON: empirica sessions export {session_id_arg}")
         
         db.close()
         
@@ -274,12 +282,20 @@ def handle_sessions_export_command(args):
         from empirica.data.session_database import SessionDatabase
         from empirica.utils.session_resolver import resolve_session_id
 
+        # Support both positional and named argument for session ID
+        session_id_arg = args.session_id or getattr(args, 'session_id_named', None)
+        if not session_id_arg:
+            print("\n❌ Session ID required")
+            print("💡 Usage: empirica sessions-export <session-id>")
+            print("💡 Or: empirica sessions-export --session-id <session-id>")
+            return
+
         # Resolve session alias to UUID
         try:
-            session_id = resolve_session_id(args.session_id)
+            session_id = resolve_session_id(session_id_arg)
         except ValueError as e:
             print(f"\n❌ {str(e)}")
-            print(f"💡 Provided: {args.session_id}")
+            print(f"💡 Provided: {session_id_arg}")
             return
 
         print_header(f"📦 Exporting Session: {session_id[:8]}")
@@ -290,8 +306,8 @@ def handle_sessions_export_command(args):
         summary = db.get_session_summary(session_id, detail_level="full")
         
         if not summary:
-            logger.warning(f"Session not found for export: {args.session_id}")
-            print(f"\n❌ Session not found: {args.session_id}")
+            logger.warning(f"Session not found for export: {session_id_arg}")
+            print(f"\n❌ Session not found: {session_id_arg}")
             db.close()
             return
         
@@ -299,7 +315,7 @@ def handle_sessions_export_command(args):
         if args.output:
             output_file = args.output
         else:
-            output_file = f"session_{args.session_id[:8]}.json"
+            output_file = f"session_{session_id_arg[:8]}.json"
         
         # Write to file
         with open(output_file, 'w') as f:

@@ -467,6 +467,40 @@ async def list_tools() -> List[types.Tool]:
                 "required": ["session_id"]
             }
         ),
+
+        # ========== Edit Guard (Metacognitive Edit Verification) ==========
+
+        types.Tool(
+            name="edit_with_confidence",
+            description="Edit file with metacognitive confidence assessment. Prevents 80% of edit failures by assessing epistemic state (context freshness, whitespace confidence, pattern uniqueness, truncation risk) BEFORE attempting edit. Automatically selects optimal strategy: atomic_edit (high confidence), bash_fallback (medium), or re_read_first (low). Returns success status, strategy used, confidence score, and reasoning.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to file to edit"
+                    },
+                    "old_str": {
+                        "type": "string",
+                        "description": "String to replace (exact match required)"
+                    },
+                    "new_str": {
+                        "type": "string",
+                        "description": "Replacement string"
+                    },
+                    "context_source": {
+                        "type": "string",
+                        "description": "How recently was file read? 'view_output' (just read this turn), 'fresh_read' (1-2 turns ago), 'memory' (stale/never read). Default: memory",
+                        "enum": ["view_output", "fresh_read", "memory"]
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "Optional: Session ID for logging calibration data to reflexes"
+                    }
+                },
+                "required": ["file_path", "old_str", "new_str"]
+            }
+        ),
     ]
 
     return tools
@@ -498,6 +532,8 @@ async def call_tool(name: str, arguments: dict) -> List[types.TextContent]:
             return await handle_create_goal_direct(arguments)
         elif name == "get_calibration_report":
             return await handle_get_calibration_report(arguments)
+        elif name == "edit_with_confidence":
+            return await handle_edit_with_confidence(arguments)
 
         # Category 3: All other tools (route to CLI)
         else:
@@ -762,6 +798,110 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
                 "ok": False,
                 "error": str(e),
                 "tool": "get_calibration_report"
+            }, indent=2)
+        )]
+
+async def handle_edit_with_confidence(arguments: dict) -> List[types.TextContent]:
+    """
+    Handle edit_with_confidence - metacognitive edit verification.
+    
+    Assesses epistemic confidence BEFORE attempting edit, then executes
+    using optimal strategy: atomic_edit, bash_fallback, or re_read_first.
+    
+    Returns success status, strategy used, confidence score, and reasoning.
+    """
+    try:
+        from empirica.components.edit_verification import EditConfidenceAssessor, EditStrategyExecutor
+        
+        # Extract arguments
+        file_path = arguments.get("file_path")
+        old_str = arguments.get("old_str")
+        new_str = arguments.get("new_str")
+        context_source = arguments.get("context_source", "memory")
+        session_id = arguments.get("session_id")
+        
+        # Validate required arguments
+        if not all([file_path, old_str is not None, new_str is not None]):
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "ok": False,
+                    "error": "Missing required arguments: file_path, old_str, new_str",
+                    "received": {k: v for k, v in arguments.items() if k in ["file_path", "old_str", "new_str"]}
+                }, indent=2)
+            )]
+        
+        # Initialize components
+        assessor = EditConfidenceAssessor()
+        executor = EditStrategyExecutor()
+        
+        # Step 1: Assess epistemic confidence
+        assessment = assessor.assess(
+            file_path=file_path,
+            old_str=old_str,
+            context_source=context_source
+        )
+        
+        # Step 2: Get recommended strategy
+        strategy, reasoning = assessor.recommend_strategy(assessment)
+        
+        # Step 3: Execute with chosen strategy
+        result = await executor.execute_strategy(
+            strategy=strategy,
+            file_path=file_path,
+            old_str=old_str,
+            new_str=new_str,
+            assessment=assessment
+        )
+        
+        # Step 4: Log for calibration tracking (if session_id provided)
+        if session_id and result.get("success"):
+            try:
+                from empirica.data.session_database import SessionDatabase
+                db = SessionDatabase()
+                
+                # Log to reflexes for calibration tracking
+                db.log_reflex(
+                    session_id=session_id,
+                    cascade_id=None,
+                    phase="edit_verification",
+                    vectors=assessment,
+                    reasoning=f"Edit confidence: {assessment['overall']:.2f}, Strategy: {strategy}, Success: {result['success']}"
+                )
+                db.close()
+            except Exception as log_error:
+                # Don't fail edit if logging fails
+                logger.warning(f"Failed to log edit verification to reflexes: {log_error}")
+        
+        # Return structured result
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "ok": result.get("success", False),
+                "strategy": strategy,
+                "reasoning": reasoning,
+                "assessment": {
+                    "overall_confidence": assessment["overall"],
+                    "context": assessment["context"],
+                    "uncertainty": assessment["uncertainty"],
+                    "signal": assessment["signal"],
+                    "clarity": assessment["clarity"]
+                },
+                "result": result.get("message", ""),
+                "changes_made": result.get("changes_made", False),
+                "file_path": file_path
+            }, indent=2)
+        )]
+        
+    except Exception as e:
+        import traceback
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "ok": False,
+                "error": str(e),
+                "tool": "edit_with_confidence",
+                "traceback": traceback.format_exc()
             }, indent=2)
         )]
 

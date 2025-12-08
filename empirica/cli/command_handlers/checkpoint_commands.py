@@ -265,10 +265,13 @@ def handle_checkpoint_list_command(args):
             print(f"Found {len(checkpoints)} checkpoint(s) for session: {session_id}\n")
             
             for i, cp in enumerate(checkpoints, 1):
-                print(f"{i}. {cp['checkpoint_id']}")
+                # Checkpoint identifier from phase + round + timestamp
+                cp_id = f"{cp['phase']}-R{cp['round']} ({cp['timestamp'][:19]})"
+                print(f"{i}. {cp_id}")
                 print(f"   Phase: {cp['phase']}, Round: {cp['round']}")
                 print(f"   Created: {cp['timestamp']}")
                 print(f"   Vectors: {len(cp.get('vectors', {}))} loaded")
+                print(f"   Token count: ~{cp.get('token_count', 'unknown')} tokens")
                 print()
         
     except Exception as e:

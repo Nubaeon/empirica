@@ -56,10 +56,10 @@ Creates new session, returns session_id (UUID).
 
 **Parameters:**
 - `ai_id` (str): AI identifier for tracking
-- `bootstrap_level` (int): **LEGACY** - Exists for backward compatibility, has no behavioral effect in v4.0
+- `bootstrap_level` (int): Component loading level (default: 1)
 - `components_loaded` (int): Informational component count
 
-**Note:** In v4.0, all sessions use lazy component loading and unified storage. The `bootstrap_level` parameter is retained for API compatibility but does not affect behavior.
+All sessions use unified storage with automatic component loading.
 
 #### `get_session(session_id) -> dict`
 Returns session metadata.
@@ -421,13 +421,10 @@ beliefs = guardian.get_beliefs_for_context("oauth_security")
 
 ### Old Bootstrap Pattern (v1.x - DEPRECATED)
 ```python
-# ❌ DEPRECATED - Bootstrap classes removed (bootstrap reserved for system prompts)
+# ❌ DEPRECATED - Direct component instantiation removed
 from empirica.bootstraps import ExtendedMetacognitiveBootstrap
 
-bootstrap = ExtendedMetacognitiveBootstrap(level="2", ai_id="myai")
-components = bootstrap.bootstrap()
-cascade = components['canonical_cascade']
-assessor = components['canonical_assessor']
+# This no longer works - use CLI or MCP
 ```
 
 ### New Direct API (v2.0)

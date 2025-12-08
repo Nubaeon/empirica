@@ -1,0 +1,143 @@
+{
+  "internal_links": {
+    "home": "/index.html",
+    "epistemics": "/epistemics.html",
+    "features": "/features.html",
+    "use_cases": "/use-cases.html",
+    "cli_interface": "/developers/cli-interface.html",
+    "mcp_integration": "/mcp-integration.html",
+    "skills": "/skills.html",
+    "system_prompts": "/developers/system-prompts.html",
+    "architecture": "/developers/architecture.html",
+    "collaboration": "/developers/collaboration.html",
+    "ai_vs_agent": "/ai-vs-agent.html",
+    "components": "/developers/components.html",
+    "getting_started": "/getting-started.html",
+    "api_reference": "/developers/api-reference.html",
+    "examples": "/examples.html",
+    "faqs": "/faqs.html",
+    "contact": "/contact.html",
+    "docs": "/docs.html"
+  },
+  "external_links": {
+    "github_repo": "https://github.com/Nubaeon/semantic-self-aware-kit",
+    "github_empirica": "https://github.com/empirica-ai",
+    "discord_community": "https://discord.gg/collaborative-ai",
+    "contact_email": "mailto:nubaeon@proton.me"
+  },
+  "navigation": [
+    {
+      "label": "Learn",
+      "url": "/epistemics.html",
+      "icon": "<svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'></path></svg>",
+      "children": [
+        {
+          "label": "Epistemics Guide",
+          "url": "/epistemics.html",
+          "icon": "📘"
+        },
+        {
+          "label": "Features",
+          "url": "/features.html",
+          "icon": "✨"
+        },
+        {
+          "label": "Use Cases",
+          "url": "/use-cases.html",
+          "icon": "🚀"
+        },
+        {
+          "label": "Skills",
+          "url": "/skills.html",
+          "icon": "⚡"
+        },
+        {
+          "label": "System Prompts",
+          "url": "/developers/system-prompts.html",
+          "icon": "💬"
+        },
+        {
+          "label": "Making Git Sexy",
+          "url": "/MAKING_GIT_SEXY_AGAIN.html",
+          "icon": "🔥"
+        }
+      ]
+    },
+    {
+      "label": "Platform",
+      "url": "/developers/architecture.html",
+      "icon": "<svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path></svg>",
+      "children": [
+        {
+          "label": "Architecture",
+          "url": "/developers/architecture.html",
+          "icon": "🏛️"
+        },
+        {
+          "label": "Components",
+          "url": "/developers/components.html",
+          "icon": "🧩"
+        },
+        {
+          "label": "MCP Integration",
+          "url": "/mcp-integration.html",
+          "icon": "🔌"
+        },
+        {
+          "label": "Collaboration",
+          "url": "/developers/collaboration.html",
+          "icon": "🤝"
+        },
+        {
+          "label": "AI vs Agent",
+          "url": "/ai-vs-agent.html",
+          "icon": "🤖"
+        }
+      ]
+    },
+    {
+      "label": "Developers",
+      "url": "/getting-started.html",
+      "icon": "<svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4'></path></svg>",
+      "children": [
+        {
+          "label": "Getting Started",
+          "url": "/getting-started.html",
+          "icon": "🏁"
+        },
+        {
+          "label": "API Reference",
+          "url": "/developers/api-reference.html",
+          "icon": "📜"
+        },
+        {
+          "label": "Examples",
+          "url": "/examples.html",
+          "icon": "💡"
+        },
+        {
+          "label": "Documentation",
+          "url": "/docs.html",
+          "icon": "📚"
+        }
+      ]
+    },
+    {
+      "label": "Support",
+      "url": "/faqs.html",
+      "icon": "<svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'></path></svg>",
+      "children": [
+        {
+          "label": "FAQs",
+          "url": "/faqs.html",
+          "icon": "🤔"
+        }
+      ]
+    },
+    {
+      "label": "Contact Us",
+      "url": "/contact.html",
+      "icon": "<svg class='w-4 h-4 mr-1 text-slate-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path></svg>"
+    }
+  ]
+}

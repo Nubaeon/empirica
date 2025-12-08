@@ -154,7 +154,10 @@ def _add_cascade_parsers(subparsers):
     check_parser = subparsers.add_parser('check', help='Execute epistemic check assessment')
     check_parser.add_argument('--session-id', required=True, help='Session ID')
     check_parser.add_argument('--findings', required=True, help='Investigation findings as JSON array')
-    check_parser.add_argument('--unknowns', required=True, help='Remaining unknowns as JSON array')
+    # Create mutually exclusive group for unknowns (accept either name)
+    unknowns_group = check_parser.add_mutually_exclusive_group(required=True)
+    unknowns_group.add_argument('--unknowns', dest='unknowns', help='Remaining unknowns as JSON array')
+    unknowns_group.add_argument('--remaining-unknowns', dest='unknowns', help='Alias for --unknowns')
     check_parser.add_argument('--confidence', type=float, required=True, help='Confidence score (0.0-1.0)')
     check_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     check_parser.add_argument('--verbose', action='store_true', help='Show detailed analysis')
@@ -276,13 +279,15 @@ def _add_session_parsers(subparsers):
     
     # Sessions show command
     sessions_show_parser = subparsers.add_parser('sessions-show', help='Show detailed session info')
-    sessions_show_parser.add_argument('session_id', help='Session ID or alias (latest, latest:active, latest:<ai_id>, latest:active:<ai_id>)')
+    sessions_show_parser.add_argument('session_id', nargs='?', help='Session ID or alias (latest, latest:active, latest:<ai_id>, latest:active:<ai_id>)')
+    sessions_show_parser.add_argument('--session-id', dest='session_id_named', help='Session ID (alternative to positional argument)')
     sessions_show_parser.add_argument('--verbose', action='store_true', help='Show all vectors and cascades')
     sessions_show_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
 
     # Sessions export command
     sessions_export_parser = subparsers.add_parser('sessions-export', help='Export session to JSON')
-    sessions_export_parser.add_argument('session_id', help='Session ID or alias (latest, latest:active, latest:<ai_id>)')
+    sessions_export_parser.add_argument('session_id', nargs='?', help='Session ID or alias (latest, latest:active, latest:<ai_id>)')
+    sessions_export_parser.add_argument('--session-id', dest='session_id_named', help='Session ID (alternative to positional argument)')
     sessions_export_parser.add_argument('--output', '-o', help='Output file path (default: session_<id>.json)')
     
     # Session end command
@@ -438,8 +443,11 @@ def _add_checkpoint_parsers(subparsers):
     )
     handoff_create_parser.add_argument('--session-id', required=True, help='Session UUID')
     handoff_create_parser.add_argument('--task-summary', required=True, help='What was accomplished (2-3 sentences)')
+    handoff_create_parser.add_argument('--summary', dest='task_summary', help='Alias for --task-summary')
     handoff_create_parser.add_argument('--key-findings', required=True, help='JSON array of findings')
+    handoff_create_parser.add_argument('--findings', dest='key_findings', help='Alias for --key-findings')
     handoff_create_parser.add_argument('--remaining-unknowns', help='JSON array of unknowns (optional)')
+    handoff_create_parser.add_argument('--unknowns', dest='remaining_unknowns', help='Alias for --remaining-unknowns')
     handoff_create_parser.add_argument('--next-session-context', required=True, help='Critical context for next session')
     handoff_create_parser.add_argument('--artifacts', help='JSON array of files created (optional)')
     handoff_create_parser.add_argument('--planning-only', action='store_true', help='Create planning handoff (no CASCADE workflow required) instead of epistemic handoff')

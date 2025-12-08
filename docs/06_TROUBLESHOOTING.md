@@ -147,23 +147,24 @@ python3 /path/to/empirica/mcp_local/empirica_mcp_server.py --help
 
 ### MCP server won't start
 
-**Symptoms:** `empirica mcp-start` fails or server not running
+**Note:** MCP server lifecycle is managed automatically by your IDE (Claude Desktop, Cursor, etc.). There are no CLI commands for starting/stopping the MCP server.
 
-**Solutions:**
-```bash
-# Check status
-empirica mcp-status
+**If MCP tools aren't working:**
 
-# View logs
-cat ~/.empirica/mcp_server.log
+1. **Check IDE MCP configuration:**
+   - Claude Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+   - Cursor: Check IDE settings for MCP servers
 
-# Check if port in use
-lsof -i :PORT  # If using TCP
+2. **View server logs:**
+   ```bash
+   # Check IDE-specific log location
+   # Claude Desktop logs: ~/Library/Logs/Claude/
+   # Cursor logs: Check IDE settings
+   ```
 
-# Restart fresh
-empirica mcp-stop
-empirica mcp-start
-```
+3. **Restart IDE:**
+   - Completely quit and reopen your IDE
+   - MCP server will restart automatically
 
 ### Tools fail with errors
 
@@ -196,11 +197,11 @@ tail -f ~/.empirica/mcp_server.log
 
 **Solutions:**
 ```bash
-# Check for running processes
+# Check for running CLI processes
 ps aux | grep empirica
 
-# Stop MCP server
-empirica mcp-stop
+# Restart your IDE (MCP server managed by IDE)
+# The IDE will restart the MCP server automatically
 
 # Wait a moment and retry
 sleep 2

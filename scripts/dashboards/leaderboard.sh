@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Paths
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DB_PATH="$REPO_ROOT/.empirica/sessions/sessions.db"
 DB_PATH_FALLBACK="$HOME/.empirica/sessions/sessions.db"
 

@@ -134,13 +134,12 @@ empirica sessions-show --session-id $SESSION_ID
 ## MCP Tool Usage (Recommended for AI Agents)
 
 ```python
-# MCP tools handle session creation automatically
+# MCP tools handle session creation
 from empirica import mcp_client
 
-# Bootstrap creates session in one call
-result = mcp_client.bootstrap_session(
-    ai_id="myai",
-    bootstrap_level=1
+# Create session in one call
+result = mcp_client.create_session(
+    ai_id="myai"
 )
 session_id = result['session_id']
 
@@ -376,18 +375,16 @@ Result: Clear readiness evidence, complete handoff record
 
 ### Old (v1.x - DEPRECATED):
 ```python
-# ❌ DEPRECATED - Bootstrap classes removed
+# ❌ DEPRECATED - Direct component instantiation removed
 from empirica.bootstraps import ExtendedMetacognitiveBootstrap
 
-bootstrap = ExtendedMetacognitiveBootstrap(level="2")
-components = bootstrap.bootstrap()
-cascade = components['canonical_cascade']
+# This no longer works - use CLI or MCP
 ```
 
 ### New (v2.0):
 ```bash
 # Use CLI for session creation
-empirica session-create --ai-id myai --bootstrap-level 1
+empirica session-create --ai-id myai
 
 # Or via Python:
 ```

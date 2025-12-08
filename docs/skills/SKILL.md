@@ -100,7 +100,7 @@ Empirica provides 4 interfaces. Choose based on your workflow:
 ```
 
 **What you get:**
-- **21 MCP tools** (17 core + 4 optional modality switcher)
+- **21 MCP tools** (17 core + 4 optional modality switcher - EXPERIMENTAL)
 - **Automatic workflow**: IDE triggers preflight/postflight at natural breakpoints
 - **Session continuity**: Tracks across multiple tasks
 - **Tool Integration**: `query_ai`, `execute_cli_command` for advanced workflows
@@ -1485,9 +1485,8 @@ empirica onboard
 empirica preflight "task"  # Interactive - prompts for self-assessment
 empirica postflight <session> --summary "done"
 
-# MCP server
-empirica mcp-start
-empirica mcp-list-tools
+# MCP server managed by IDE automatically
+# No CLI commands needed - configure in IDE settings
 
 # Session management
 empirica sessions-list

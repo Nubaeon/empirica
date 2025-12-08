@@ -106,13 +106,16 @@ session_id = db.create_session(ai_id="myai")
 
 **Error:** `KeyError: 'canonical_cascade'` or similar component errors
 
-**Solution:** Use direct imports instead of bootstrap
+**Solution:** Use CLI or MCP for session creation
 ```python
-# ❌ OLD - Bootstrap classes removed
-# bootstrap = ExtendedMetacognitiveBootstrap(level="2")
-# components = bootstrap.bootstrap()
+# ❌ OLD - Direct component instantiation removed
+# This pattern no longer works
 
-# ✅ NEW - Direct imports
+# ✅ NEW - Use CLI or MCP
+# CLI: empirica session-create --ai-id myai
+# MCP: create_session(ai_id="myai")
+
+# Then use direct imports if needed
 from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
 from empirica.core.canonical import CanonicalEpistemicAssessor
 

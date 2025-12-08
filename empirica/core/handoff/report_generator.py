@@ -364,8 +364,7 @@ class EpistemicHandoffReportGenerator:
                     'status': genuine_status,
                     'reasoning': genuine_reasoning,
                     'source': 'introspection',
-                    'heuristic_validation': mismatch_note,
-                    'actual_confidence': row['postflight_actual_confidence']
+                    'heuristic_validation': mismatch_note
                 }
         
         except Exception as e:
