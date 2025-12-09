@@ -1,0 +1,34 @@
+{
+  "goal_id": "8b7962bc-a138-4b81-97ec-9ae3a8ae5402",
+  "session_id": "49f4486e-c475-401b-bb09-f6a7c83e034c",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-09T18:49:05.987767+00:00",
+  "goal_data": {
+    "objective": "Design and implement project-level tracking system for Empirica that links sessions/goals/subtasks across multiple repos, provides epistemic handoffs at project level, computes full learning deltas, and enables context bootstrap with epistemic breadcrumbs",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.7,
+      "coordination": 0.5
+    },
+    "success_criteria": [
+      "Projects table schema designed",
+      "Project-level handoff structure defined",
+      "Cross-repo session linking implemented",
+      "Learning delta aggregation working",
+      "Epistemic breadcrumbs bootstrap mechanism",
+      "CLI commands: project-create, project-checkpoint, project-handoff",
+      "Tested with real empirica/empirica-chat/empirica-dev workflow"
+    ],
+    "estimated_complexity": 0.75,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-09T18:49:05.987782+00:00",
+      "action": "created"
+    }
+  ]
+}
