@@ -1,0 +1,31 @@
+{
+  "goal_id": "b7b40e18-00d5-445c-b5b0-c7d32d644a03",
+  "session_id": "35b7b739-a62e-4d17-8d29-b7c800ad1f28",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-09T13:11:11.566727+00:00",
+  "goal_data": {
+    "objective": "Fix website navigation: Update navigation.json to wire new pages into dropdowns, verify all links work",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All 5 new pages linked in navigation.json",
+      "Dropdown menus show new pages",
+      "All links tested and working",
+      "No 404 errors on navigation"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-09T13:11:11.566744+00:00",
+      "action": "created"
+    }
+  ]
+}
