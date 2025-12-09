@@ -1,0 +1,32 @@
+{
+  "goal_id": "c64dbb89-2626-49f3-a520-e9c64f79af64",
+  "session_id": "d49d8540-acb5-4183-941b-44f9e945aba2",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-09T18:10:41.573671+00:00",
+  "goal_data": {
+    "objective": "Fix website pages to match index.astro design system + validate ALL links work",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All pages use BaseLayout.astro + glassmorphic design",
+      "All navbar links resolve correctly",
+      "Pages match index.astro styling",
+      "SVG diagrams properly colored",
+      "Content accurate to docs/codebase"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-09T18:10:41.573691+00:00",
+      "action": "created"
+    }
+  ]
+}
