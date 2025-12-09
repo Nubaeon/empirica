@@ -1,0 +1,31 @@
+{
+  "goal_id": "5f3c8c86-1923-4609-baf7-fd64825d16f1",
+  "session_id": "d49d8540-acb5-4183-941b-44f9e945aba2",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-09T18:12:49.657468+00:00",
+  "goal_data": {
+    "objective": "Refine website content accuracy: reduce hype, validate integration-hub.md, update SVG color schemes",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Token reduction claims match canonical docs (85%/90%+)",
+      "integration-hub.md validated against actual API/CLI/MCP",
+      "3 SVG diagrams updated with consistent color scheme",
+      "All content claims verifiable in docs/codebase"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-09T18:12:49.657478+00:00",
+      "action": "created"
+    }
+  ]
+}
