@@ -1,0 +1,32 @@
+{
+  "goal_id": "13dc4f2a-e30c-460e-a982-b6dd31502338",
+  "session_id": "3247538d-f8a0-4715-8b90-80141669b0e1",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-09T13:55:49.612504+00:00",
+  "goal_data": {
+    "objective": "Implement mistakes tracking system and update system prompts based on EPISTEMIC_CONTINUITY_LEARNINGS.md",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.6,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "mistakes_made table added to database schema",
+      "empirica mistake-log CLI command functional",
+      "System prompt updated with Session Continuity Protocol",
+      "System prompt updated with Web Project Protocol",
+      "All tests pass"
+    ],
+    "estimated_complexity": 0.65,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-09T13:55:49.612517+00:00",
+      "action": "created"
+    }
+  ]
+}
