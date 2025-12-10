@@ -23,14 +23,41 @@ def _load_skill_sources(root: str) -> List[Dict]:
 
 def handle_skill_suggest_command(args):
     try:
+        import yaml  # type: ignore
         root = os.getcwd()
-        sources = _load_skill_sources(root)
-        # Minimal heuristic: return all listed skills now; future: filter by task/uncertainty
         task = getattr(args, 'task', '')
+
+        # First: check local project_skills/*.yaml
+        local_skills = []
+        skills_dir = os.path.join(root, 'project_skills')
+        if os.path.exists(skills_dir):
+            for filename in os.listdir(skills_dir):
+                if filename.endswith(('.yaml', '.yml')):
+                    try:
+                        with open(os.path.join(skills_dir, filename), 'r', encoding='utf-8') as f:
+                            skill = yaml.safe_load(f)
+                            if skill:
+                                local_skills.append({
+                                    'name': skill.get('title', skill.get('id', filename)),
+                                    'id': skill.get('id', filename.replace('.yaml', '').replace('.yml', '')),
+                                    'source': 'local',
+                                    'tags': skill.get('tags', []),
+                                    'location': 'project_skills'
+                                })
+                    except Exception:
+                        pass
+
+        # Second: get available online sources (candidates to fetch)
+        online_sources = _load_skill_sources(root)
+
+        # Combine: local first (already fetched), then online candidates
         result = {
             'ok': True,
             'task': task,
-            'suggestions': sources,
+            'suggestions': {
+                'local': local_skills,
+                'available_to_fetch': online_sources
+            },
         }
         print(json.dumps(result, indent=2))
         return result
