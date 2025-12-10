@@ -584,6 +584,35 @@ def handle_postflight_submit_command(args):
             if deltas:
                 print(f"   Learning deltas: {len(deltas)} vectors changed")
 
+            # Show project context for next session
+            try:
+                db = SessionDatabase()
+                # Get session and project info
+                cursor = db.conn.cursor()
+                cursor.execute("""
+                    SELECT project_id FROM sessions WHERE session_id = ?
+                """, (session_id,))
+                row = cursor.fetchone()
+                if row and row['project_id']:
+                    project_id = row['project_id']
+                    breadcrumbs = db.bootstrap_project_breadcrumbs(project_id, mode="session_start")
+                    db.close()
+
+                    if "error" not in breadcrumbs:
+                        print(f"\n📚 Project Context (for next session):")
+                        if breadcrumbs.get('findings'):
+                            print(f"   Recent findings recorded: {len(breadcrumbs['findings'])}")
+                        if breadcrumbs.get('unknowns'):
+                            unresolved = [u for u in breadcrumbs['unknowns'] if not u['is_resolved']]
+                            if unresolved:
+                                print(f"   Unresolved unknowns: {len(unresolved)}")
+                        if breadcrumbs.get('available_skills'):
+                            print(f"   Available skills: {len(breadcrumbs['available_skills'])}")
+                else:
+                    db.close()
+            except Exception:
+                pass
+
         return result
 
     except Exception as e:
