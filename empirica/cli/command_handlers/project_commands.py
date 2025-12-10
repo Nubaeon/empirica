@@ -257,6 +257,13 @@ def handle_project_bootstrap_command(args):
                     print(f"      Tags: {tags}")
                 print()
 
+            if breadcrumbs.get('semantic_docs'):
+                print(f"📖 Core Documentation:")
+                for i, doc in enumerate(breadcrumbs['semantic_docs'][:3], 1):
+                    print(f"   {i}. {doc['title']}")
+                    print(f"      Path: {doc['path']}")
+                print()
+
         return {"breadcrumbs": breadcrumbs}
 
     except Exception as e:

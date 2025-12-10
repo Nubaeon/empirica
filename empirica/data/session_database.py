@@ -2829,6 +2829,26 @@ class SessionDatabase:
             except Exception:
                 pass
 
+        # Load semantic index docs (for quick reference to core documentation)
+        semantic_docs = []
+        semantic_index_path = os.path.join(project_root, 'docs', 'SEMANTIC_INDEX.yaml')
+        if os.path.exists(semantic_index_path):
+            try:
+                semantic_index = yaml.safe_load(open(semantic_index_path, 'r', encoding='utf-8')) or {}
+                index = semantic_index.get('index', {}) or {}
+                # Include top 5 most relevant docs (core-concept tagged ones)
+                for doc_path, meta in list(index.items())[:5]:
+                    tags = meta.get('tags', [])
+                    if 'core-concept' in tags or not semantic_docs:  # Prioritize core concepts, but include all if no core ones
+                        semantic_docs.append({
+                            'path': doc_path,
+                            'title': meta.get('title', doc_path),
+                            'tags': tags,
+                            'source': 'semantic-index'
+                        })
+            except Exception:
+                pass
+
         # Build breadcrumbs
         handoff_data = json.loads(latest_handoff['handoff_data']) if latest_handoff else {}
         
@@ -2886,6 +2906,7 @@ class SessionDatabase:
                 for g in incomplete_goals
             ],
             "available_skills": available_skills,
+            "semantic_docs": semantic_docs,
             "mode": mode
         }
         
