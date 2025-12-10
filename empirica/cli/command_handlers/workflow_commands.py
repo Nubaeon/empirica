@@ -608,6 +608,20 @@ def handle_postflight_submit_command(args):
                                 print(f"   Unresolved unknowns: {len(unresolved)}")
                         if breadcrumbs.get('available_skills'):
                             print(f"   Available skills: {len(breadcrumbs['available_skills'])}")
+
+                    # Show documentation requirements
+                    try:
+                        from empirica.core.docs.doc_planner import compute_doc_plan
+                        doc_plan = compute_doc_plan(project_id, session_id=session_id)
+                        if doc_plan and doc_plan.get('suggested_updates'):
+                            print(f"\n📄 Documentation Requirements:")
+                            print(f"   Completeness: {doc_plan['doc_completeness_score']}/1.0")
+                            print(f"   Suggested updates:")
+                            for update in doc_plan['suggested_updates'][:3]:
+                                print(f"     • {update['doc_path']}")
+                                print(f"       Reason: {update['reason']}")
+                    except Exception:
+                        pass
                 else:
                     db.close()
             except Exception:
