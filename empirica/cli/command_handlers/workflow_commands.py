@@ -283,7 +283,35 @@ def handle_check_submit_command(args):
                     "cycle": cycle
                 }
             )
-            
+
+            # AUTO-CHECKPOINT: Create git checkpoint if uncertainty > 0.5 (risky decision)
+            # This preserves context if AI needs to investigate further
+            auto_checkpoint_created = False
+            if uncertainty > 0.5:
+                try:
+                    import subprocess
+                    subprocess.run(
+                        [
+                            "empirica", "checkpoint-create",
+                            "--session-id", session_id,
+                            "--phase", "CHECK",
+                            "--round", str(cycle),
+                            "--metadata", json.dumps({
+                                "auto_checkpoint": True,
+                                "reason": "risky_decision",
+                                "uncertainty": uncertainty,
+                                "decision": decision,
+                                "gaps": gaps
+                            })
+                        ],
+                        capture_output=True,
+                        timeout=10
+                    )
+                    auto_checkpoint_created = True
+                except Exception as e:
+                    # Auto-checkpoint failure is not fatal, but log it
+                    logger.warning(f"Auto-checkpoint after CHECK (uncertainty > 0.5) failed (non-fatal): {e}")
+
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -292,6 +320,7 @@ def handle_check_submit_command(args):
                 "cycle": cycle,
                 "vectors_count": len(vectors),
                 "reasoning": reasoning,
+                "auto_checkpoint_created": auto_checkpoint_created,
                 "persisted": True,
                 "storage_layers": {
                     "sqlite": True,
@@ -491,6 +520,28 @@ def handle_postflight_submit_command(args):
                 }
             )
 
+            # AUTO-CHECKPOINT: Create git checkpoint after POSTFLIGHT (wired in, not optional)
+            # This ensures learning is always preserved for next AI session
+            try:
+                import subprocess
+                subprocess.run(
+                    [
+                        "empirica", "checkpoint-create",
+                        "--session-id", session_id,
+                        "--phase", "POSTFLIGHT",
+                        "--metadata", json.dumps({
+                            "auto_checkpoint": True,
+                            "learning_delta": deltas,
+                            "calibration": calibration_accuracy
+                        })
+                    ],
+                    capture_output=True,
+                    timeout=10
+                )
+            except Exception as e:
+                # Auto-checkpoint failure is not fatal, but log it
+                logger.warning(f"Auto-checkpoint after POSTFLIGHT failed (non-fatal): {e}")
+
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -501,6 +552,7 @@ def handle_postflight_submit_command(args):
                 "postflight_confidence": postflight_confidence,
                 "calibration_accuracy": calibration_accuracy,
                 "deltas": deltas,
+                "auto_checkpoint_created": True,
                 "persisted": True,
                 "storage_layers": {
                     "sqlite": True,

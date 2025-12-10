@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" style="max-width: 100%; height: auto;">
+  <defs>
+    <style>
+      .cascade-bg { fill: #f8fafc; }
+      .cascade-phase { fill: #3b82f6; stroke: #1e40af; stroke-width: 2; }
+      .cascade-phase-text { fill: white; font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: 600; }
+      .cascade-arrow { stroke: #64748b; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .cascade-git { fill: #f97316; stroke: #c2410c; stroke-width: 2; }
+      .cascade-git-text { fill: white; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; }
+      .cascade-detail { fill: #64748b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; }
+      .cascade-data { fill: #f1f5f9; stroke: #cbd5e1; stroke-width: 1; }
+      .cascade-data-text { fill: #1e293b; font-family: 'Consolas', 'Monaco', monospace; font-size: 11px; }
+      .cascade-title { fill: #1e293b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 20px; font-weight: 700; }
+      .cascade-connector { stroke: #3b82f6; stroke-width: 3; fill: none; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#64748b" />
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect class="cascade-bg" width="800" height="600" rx="8"/>
+  
+  <!-- Title -->
+  <text class="cascade-title" x="400" y="35" text-anchor="middle">Single AI Session - CASCADE Flow</text>
+  
+  <!-- Left side: CASCADE phases -->
+  <g id="cascade-phases">
+    <!-- PREFLIGHT -->
+    <rect class="cascade-phase" x="50" y="70" width="140" height="50" rx="8"/>
+    <text class="cascade-phase-text" x="120" y="100" text-anchor="middle">PREFLIGHT</text>
+    
+    <!-- INVESTIGATE -->
+    <rect class="cascade-phase" x="50" y="150" width="140" height="50" rx="8"/>
+    <text class="cascade-phase-text" x="120" y="180" text-anchor="middle">INVESTIGATE</text>
+    
+    <!-- CHECK -->
+    <rect class="cascade-phase" x="50" y="230" width="140" height="50" rx="8"/>
+    <text class="cascade-phase-text" x="120" y="260" text-anchor="middle">CHECK</text>
+    
+    <!-- ACT -->
+    <rect class="cascade-phase" x="50" y="310" width="140" height="50" rx="8"/>
+    <text class="cascade-phase-text" x="120" y="340" text-anchor="middle">ACT</text>
+    
+    <!-- POSTFLIGHT -->
+    <rect class="cascade-phase" x="50" y="390" width="140" height="50" rx="8"/>
+    <text class="cascade-phase-text" x="120" y="420" text-anchor="middle">POSTFLIGHT</text>
+  </g>
+  
+  <!-- Connector line -->
+  <line class="cascade-connector" x1="190" y1="95" x2="190" y2="415"/>
+  
+  <!-- Right side: Git operations -->
+  <g id="git-operations">
+    <!-- Git commit (initial) -->
+    <rect class="cascade-git" x="240" y="70" width="320" height="50" rx="8"/>
+    <text class="cascade-git-text" x="400" y="92" text-anchor="middle">git commit</text>
+    <text class="cascade-detail" x="400" y="110" text-anchor="middle">(initial state in notes)</text>
+    
+    <!-- Git branch -->
+    <rect class="cascade-git" x="240" y="150" width="320" height="50" rx="8"/>
+    <text class="cascade-git-text" x="400" y="172" text-anchor="middle">git branch feature/auth</text>
+    <text class="cascade-detail" x="400" y="190" text-anchor="middle">(exploration committed incrementally)</text>
+    
+    <!-- Git merge -->
+    <rect class="cascade-git" x="240" y="230" width="320" height="50" rx="8"/>
+    <text class="cascade-git-text" x="400" y="252" text-anchor="middle">git merge</text>
+    <text class="cascade-detail" x="400" y="270" text-anchor="middle">(validation passed)</text>
+    
+    <!-- Git commit (final) -->
+    <rect class="cascade-git" x="240" y="310" width="320" height="50" rx="8"/>
+    <text class="cascade-git-text" x="400" y="332" text-anchor="middle">git commit</text>
+    <text class="cascade-detail" x="400" y="350" text-anchor="middle">(code changes + final state)</text>
+    
+    <!-- Learning delta -->
+    <rect class="cascade-git" x="240" y="390" width="320" height="50" rx="8"/>
+    <text class="cascade-git-text" x="400" y="412" text-anchor="middle">learning delta computed</text>
+    <text class="cascade-detail" x="400" y="430" text-anchor="middle">(stored in git notes)</text>
+  </g>
+  
+  <!-- Arrows from phases to git ops -->
+  <line class="cascade-arrow" x1="190" y1="95" x2="235" y2="95"/>
+  <line class="cascade-arrow" x1="190" y1="175" x2="235" y2="175"/>
+  <line class="cascade-arrow" x1="190" y1="255" x2="235" y2="255"/>
+  <line class="cascade-arrow" x1="190" y1="335" x2="235" y2="335"/>
+  <line class="cascade-arrow" x1="190" y1="415" x2="235" y2="415"/>
+  
+  <!-- Bottom: Git stores section -->
+  <rect class="cascade-data" x="50" y="470" width="700" height="110" rx="8"/>
+  <text class="cascade-phase-text" x="60" y="490" style="fill: #1e293b;">Git Stores:</text>
+  
+  <text class="cascade-data-text" x="70" y="510">• Initial uncertainty: KNOW: 0.4, DO: 0.5</text>
+  <text class="cascade-data-text" x="70" y="530">• Investigation paths: OAuth2, JWT, bcrypt</text>
+  <text class="cascade-data-text" x="70" y="550">• Final confidence: KNOW: 0.85, DO: 0.9</text>
+  <text class="cascade-data-text" x="70" y="570" style="font-weight: 600; fill: #16a34a;">• Learning delta: +0.45 KNOW, +0.4 DO</text>
+</svg>
