@@ -1,0 +1,33 @@
+{
+  "goal_id": "70d83332-be8e-4552-b841-93a67f3d4600",
+  "session_id": "5720c635-5189-4625-82be-9762c6d470ee",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-10T12:56:44.739712+00:00",
+  "goal_data": {
+    "objective": "Create semantic documentation index (SEMANTIC_INDEX.yaml) with tags for 10-15 key Empirica docs to enable fast discovery and prepare for Qdrant embeddings",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "SEMANTIC_INDEX.yaml created in docs/",
+      "10-15 key docs tagged with semantic metadata",
+      "Consistent tag vocabulary designed",
+      "Tags include: tags, concepts, questions, use_cases, related",
+      "Added as reference doc to Empirica project",
+      "Tested: Can find docs by semantic query"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-10T12:56:44.739724+00:00",
+      "action": "created"
+    }
+  ]
+}
