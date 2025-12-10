@@ -88,37 +88,15 @@ def handle_project_embed_command(args):
             mem_items.append({'id': mid, 'text': text, 'type': 'mistake'})
             mid += 1
 
-        # Load skills from project_skills folder
-        skills_dir = os.path.join(root, 'project_skills')
-        if os.path.exists(skills_dir):
-            import yaml  # type: ignore
-            for filename in os.listdir(skills_dir):
-                if filename.endswith('.yaml') or filename.endswith('.yml'):
-                    skill_path = os.path.join(skills_dir, filename)
-                    try:
-                        with open(skill_path, 'r', encoding='utf-8') as f:
-                            skill = yaml.safe_load(f)
-                            if skill:
-                                skill_text = f"Skill: {skill.get('title', skill.get('id', filename))}\nTags: {', '.join(skill.get('tags', []))}\n{skill.get('summary', '')}"
-                                mem_items.append({
-                                    'id': mid,
-                                    'text': skill_text,
-                                    'type': 'skill',
-                                    'metadata': {
-                                        'skill_id': skill.get('id', filename),
-                                        'tags': skill.get('tags', [])
-                                    }
-                                })
-                                mid += 1
-                    except Exception:
-                        pass
-
         upsert_memory(project_id, mem_items)
 
         if getattr(args, 'output', 'default') == 'json':
             print(json.dumps({'ok': True, 'docs': len(docs_to_upsert), 'memory': len(mem_items)}, indent=2))
         else:
             print(f"✅ Embedded docs: {len(docs_to_upsert)} | memory items: {len(mem_items)}")
+
+        # Note: Skills are structured metadata (project_skills/*.yaml), not vectors
+        # They are referenced by project-bootstrap via tags and id lookup, not semantic search
         return {'docs': len(docs_to_upsert), 'memory': len(mem_items)}
     except Exception as e:
         handle_cli_error(e, "Project embed", getattr(args, 'verbose', False))
