@@ -52,7 +52,10 @@ Examples:
     
     # Component commands
     _add_component_parsers(subparsers)
-    
+
+    # Skill commands
+    _add_skill_parsers(subparsers)
+
     # Utility commands
     _add_utility_parsers(subparsers)
     
@@ -112,10 +115,11 @@ def _add_cascade_parsers(subparsers):
     preflight_parser.add_argument('--assessment-json', help='Genuine AI self-assessment JSON (required for genuine assessment)')
     preflight_parser.add_argument('--sentinel-assess', action='store_true', help='Route to Sentinel assessment system (future feature)')
     preflight_parser.add_argument('--json', action='store_const', const='json', dest='output_format', help='Output as JSON (deprecated, use --output json)')
-    preflight_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    preflight_parser.add_argument('--compact', action='store_true', help='Output as single-line key=value')
-    preflight_parser.add_argument('--kv', action='store_true', help='Output as multi-line key=value')
-    preflight_parser.add_argument('--verbose', action='store_true', help='Show detailed assessment')
+    preflight_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for programmatic use; --output human for inspection)')
+    preflight_parser.add_argument('--sentinel', action='store_true', help='Route to Sentinel for interactive decision-making (future: Sentinel assessment routing)')
+    preflight_parser.add_argument('--compact', action='store_true', help='Output as single-line key=value (human format only)')
+    preflight_parser.add_argument('--kv', action='store_true', help='Output as multi-line key=value (human format only)')
+    preflight_parser.add_argument('--verbose', action='store_true', help='Show detailed assessment (human format only)')
     preflight_parser.add_argument('--quiet', action='store_true', help='Quiet mode (requires --assessment-json)')
     
     # Postflight command
@@ -129,9 +133,10 @@ def _add_cascade_parsers(subparsers):
     postflight_parser.add_argument('--assessment-json', help='Genuine AI self-assessment JSON (required for genuine assessment)')
     postflight_parser.add_argument('--sentinel-assess', action='store_true', help='Route to Sentinel assessment system (future feature)')
     postflight_parser.add_argument('--json', action='store_const', const='json', dest='output_format', help='Output as JSON (deprecated, use --output json)')
-    postflight_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    postflight_parser.add_argument('--compact', action='store_true', help='Output as single-line key=value')
-    postflight_parser.add_argument('--kv', action='store_true', help='Output as multi-line key=value')
+    postflight_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for programmatic use; --output human for inspection)')
+    postflight_parser.add_argument('--sentinel', action='store_true', help='Route to Sentinel for interactive decision-making (future: Sentinel assessment routing)')
+    postflight_parser.add_argument('--compact', action='store_true', help='Output as single-line key=value (human format only)')
+    postflight_parser.add_argument('--kv', action='store_true', help='Output as multi-line key=value (human format only)')
     postflight_parser.add_argument('--verbose', action='store_true', help='Show detailed delta analysis')
     postflight_parser.add_argument('--quiet', action='store_true', help='Quiet mode (requires --assessment-json)')
     
@@ -194,6 +199,42 @@ def _add_investigation_parsers(subparsers):
 
     # REMOVED: analyze command - use investigate --type=comprehensive instead
 
+    # ========== Epistemic Branching Commands (CASCADE 2.0) ==========
+
+    # investigate-create-branch command
+    create_branch_parser = subparsers.add_parser(
+        'investigate-create-branch',
+        help='Create parallel investigation branch (epistemic auto-merge)'
+    )
+    create_branch_parser.add_argument('--session-id', required=True, help='Session ID')
+    create_branch_parser.add_argument('--investigation-path', required=True, help='What is being investigated (e.g., oauth2)')
+    create_branch_parser.add_argument('--description', help='Description of investigation')
+    create_branch_parser.add_argument('--preflight-vectors', help='Epistemic vectors at branch start (JSON)')
+    create_branch_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+    create_branch_parser.add_argument('--verbose', action='store_true', help='Verbose output')
+
+    # investigate-checkpoint-branch command
+    checkpoint_branch_parser = subparsers.add_parser(
+        'investigate-checkpoint-branch',
+        help='Checkpoint branch after investigation'
+    )
+    checkpoint_branch_parser.add_argument('--branch-id', required=True, help='Branch ID')
+    checkpoint_branch_parser.add_argument('--postflight-vectors', required=True, help='Epistemic vectors after investigation (JSON)')
+    checkpoint_branch_parser.add_argument('--tokens-spent', help='Tokens spent in investigation')
+    checkpoint_branch_parser.add_argument('--time-spent', help='Time spent in investigation (minutes)')
+    checkpoint_branch_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+    checkpoint_branch_parser.add_argument('--verbose', action='store_true', help='Verbose output')
+
+    # investigate-merge-branches command
+    merge_branches_parser = subparsers.add_parser(
+        'investigate-merge-branches',
+        help='Auto-merge best branch based on epistemic scores'
+    )
+    merge_branches_parser.add_argument('--session-id', required=True, help='Session ID')
+    merge_branches_parser.add_argument('--round', help='Investigation round number')
+    merge_branches_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+    merge_branches_parser.add_argument('--verbose', action='store_true', help='Verbose output')
+
 
 def _add_performance_parsers(subparsers):
     """Add performance command parsers"""
@@ -216,6 +257,27 @@ def _add_component_parsers(subparsers):
     # List components command
     # Explain component command
     # Demo component command
+
+
+def _add_skill_parsers(subparsers):
+    """Add skill management command parsers"""
+    # Skill suggest command
+    skill_suggest_parser = subparsers.add_parser('skill-suggest', help='Suggest skills for a task')
+    skill_suggest_parser.add_argument('--task', help='Task description to suggest skills for')
+    skill_suggest_parser.add_argument('--project-id', help='Project ID for context-aware suggestions')
+    skill_suggest_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
+    skill_suggest_parser.add_argument('--verbose', action='store_true', help='Show detailed suggestions')
+
+    # Skill fetch command
+    skill_fetch_parser = subparsers.add_parser('skill-fetch', help='Fetch and normalize a skill')
+    skill_fetch_parser.add_argument('--name', required=True, help='Skill name')
+    skill_fetch_parser.add_argument('--url', help='URL to fetch skill from (markdown)')
+    skill_fetch_parser.add_argument('--file', help='Local .skill archive file to load')
+    skill_fetch_parser.add_argument('--tags', help='Comma-separated tags for the skill')
+    skill_fetch_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
+    skill_fetch_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+
+
 def _add_utility_parsers(subparsers):
     """Add utility command parsers"""
     # Feedback command
@@ -527,6 +589,39 @@ def _add_checkpoint_parsers(subparsers):
     )
     project_bootstrap_parser.add_argument('--project-id', required=True, help='Project UUID')
     project_bootstrap_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+
+    # Project semantic search command (Qdrant-backed)
+    project_search_parser = subparsers.add_parser(
+        'project-search',
+        help='Semantic search for relevant docs/memory by task description'
+    )
+
+    # Project embed (build vectors) command
+    project_embed_parser = subparsers.add_parser(
+        'project-embed',
+        help='Embed project docs & memory into Qdrant for semantic search'
+    )
+    project_embed_parser.add_argument('--project-id', required=True, help='Project UUID')
+    project_embed_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+
+    # Documentation completeness check
+    doc_check_parser = subparsers.add_parser(
+        'doc-check',
+        help='Compute documentation completeness and suggest updates'
+    )
+    doc_check_parser.add_argument('--project-id', required=True, help='Project UUID')
+    doc_check_parser.add_argument('--session-id', help='Optional session UUID for context')
+    doc_check_parser.add_argument('--goal-id', help='Optional goal UUID for context')
+    doc_check_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+
+    # NOTE: skill-suggest and skill-fetch are NOT YET IMPLEMENTED
+    # Placeholder parsers removed to avoid confusion (use project-bootstrap instead)
+    # TODO: Implement skill discovery and fetching in Phase 4
+    project_search_parser.add_argument('--project-id', required=True, help='Project UUID')
+    project_search_parser.add_argument('--task', required=True, help='Task description to search for')
+    project_search_parser.add_argument('--type', choices=['all', 'docs', 'memory'], default='all', help='Result type (default: all)')
+    project_search_parser.add_argument('--limit', type=int, default=5, help='Number of results to return (default: 5)')
+    project_search_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Finding log command
     finding_log_parser = subparsers.add_parser(
@@ -676,26 +771,9 @@ def _add_checkpoint_parsers(subparsers):
 def _add_profile_parsers(subparsers):
     """Add profile management command parsers"""
     # Profile list command
-    profile_list_parser = subparsers.add_parser('profile-list', help='List available profiles')
-    profile_list_parser.add_argument('--verbose', action='store_true', help='Show detailed profile information')
-    
-    # Profile show command
-    profile_show_parser = subparsers.add_parser('profile-show', help='Show profile details')
-    profile_show_parser.add_argument('profile_name', help='Profile name to show details for')
-    profile_show_parser.add_argument('--verbose', action='store_true', help='Show all configuration details')
-    
-    # Profile create command
-    profile_create_parser = subparsers.add_parser('profile-create', help='Create new profile')
-    profile_create_parser.add_argument('profile_name', help='Name of the new profile')
-    profile_create_parser.add_argument('--ai-model', help='Default AI model for this profile')
-    profile_create_parser.add_argument('--domain', help='Default domain context')
-    profile_create_parser.add_argument('--description', help='Profile description')
-    profile_create_parser.add_argument('--verbose', action='store_true', help='Show creation details')
-    
-    # Profile set-default command
-    profile_default_parser = subparsers.add_parser('profile-set-default', help='Set default profile')
-    profile_default_parser.add_argument('profile_name', help='Profile name to set as default')
-    profile_default_parser.add_argument('--verbose', action='store_true', help='Show update details')
+    # NOTE: Profile commands are NOT YET IMPLEMENTED
+    # profile-list, profile-show, profile-create, profile-set-default removed to avoid confusion
+    # TODO: Implement profile management in Phase 4
 
 
 def _add_user_interface_parsers(subparsers):
@@ -781,6 +859,9 @@ def main(args=None):
             
             # Investigation commands (consolidated: analyze removed)
             'investigate': handle_investigate_command,  # Now handles --type=comprehensive
+            'investigate-create-branch': handle_investigate_create_branch_command,
+            'investigate-checkpoint-branch': handle_investigate_checkpoint_branch_command,
+            'investigate-merge-branches': handle_investigate_merge_branches_command,
 
             # Performance commands (consolidated: benchmark removed)
             'performance': handle_performance_command,  # Now handles --benchmark
@@ -853,11 +934,18 @@ def main(args=None):
             'project-handoff': handle_project_handoff_command,
             'project-list': handle_project_list_command,
             'project-bootstrap': handle_project_bootstrap_command,
+            'project-search': handle_project_search_command,
+            'project-embed': handle_project_embed_command,
+            'doc-check': handle_doc_check_command,
             'finding-log': handle_finding_log_command,
             'unknown-log': handle_unknown_log_command,
             'deadend-log': handle_deadend_log_command,
             'refdoc-add': handle_refdoc_add_command,
             
+            # Skill management commands
+            'skill-suggest': handle_skill_suggest_command,
+            'skill-fetch': handle_skill_fetch_command,
+
             # User interface commands (for human users)
             'onboard': handle_onboard_command,
             'ask': handle_ask_command,
