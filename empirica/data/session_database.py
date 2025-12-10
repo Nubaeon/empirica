@@ -2727,16 +2727,23 @@ class SessionDatabase:
         row = cursor.fetchone()
         return dict(row) if row else None
     
-    def bootstrap_project_breadcrumbs(self, project_id: str, mode: str = "session_start") -> Dict:
+    def bootstrap_project_breadcrumbs(self, project_id: str, mode: str = "session_start", project_root: str = None) -> Dict:
         """
         Generate epistemic breadcrumbs for starting a new session on existing project.
-        
+
         Args:
             project_id: Project identifier
             mode: "session_start" (fast, recent items) or "live" (complete, all items)
-        
-        Returns quick context: findings, unknowns, dead_ends, mistakes, decisions, incomplete work.
+            project_root: Optional path to project root (defaults to cwd)
+
+        Returns quick context: findings, unknowns, dead_ends, mistakes, decisions, incomplete work, suggested skills.
         """
+        import os
+        import yaml
+
+        if project_root is None:
+            project_root = os.getcwd()
+
         project = self.get_project(project_id)
         if not project:
             return {"error": "Project not found"}
@@ -2798,7 +2805,30 @@ class SessionDatabase:
             ORDER BY g.created_timestamp DESC
         """, (project_id,))
         incomplete_goals = [dict(row) for row in cursor.fetchall()]
-        
+
+        # Load available skills from project_skills/*.yaml
+        available_skills = []
+        skills_dir = os.path.join(project_root, 'project_skills')
+        if os.path.exists(skills_dir):
+            try:
+                for filename in os.listdir(skills_dir):
+                    if filename.endswith(('.yaml', '.yml')):
+                        skill_path = os.path.join(skills_dir, filename)
+                        try:
+                            with open(skill_path, 'r', encoding='utf-8') as f:
+                                skill = yaml.safe_load(f)
+                                if skill:
+                                    available_skills.append({
+                                        'id': skill.get('id', filename.replace('.yaml', '').replace('.yml', '')),
+                                        'title': skill.get('title', filename),
+                                        'tags': skill.get('tags', []),
+                                        'source': 'local'
+                                    })
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
         # Build breadcrumbs
         handoff_data = json.loads(latest_handoff['handoff_data']) if latest_handoff else {}
         
@@ -2855,6 +2885,7 @@ class SessionDatabase:
                 }
                 for g in incomplete_goals
             ],
+            "available_skills": available_skills,
             "mode": mode
         }
         

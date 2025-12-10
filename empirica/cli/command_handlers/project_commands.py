@@ -249,6 +249,14 @@ def handle_project_bootstrap_command(args):
                     print(f"   {i}. {w['goal']} ({w['progress']})")
                 print()
 
+            if breadcrumbs.get('available_skills'):
+                print(f"🛠️  Available Skills:")
+                for i, skill in enumerate(breadcrumbs['available_skills'], 1):
+                    tags = ', '.join(skill.get('tags', [])) if skill.get('tags') else 'no tags'
+                    print(f"   {i}. {skill['title']} ({skill['id']})")
+                    print(f"      Tags: {tags}")
+                print()
+
         return {"breadcrumbs": breadcrumbs}
 
     except Exception as e:
