@@ -509,3 +509,95 @@ They work together:
 - `03_BASIC_USAGE.md` - Complete workflow example
 - `13_PYTHON_API.md` - API reference for all methods
 - `12_SESSION_DATABASE.md` - Database schema details
+
+---
+
+## Pure Self-Assessment Design (v0.9.1+)
+
+**Philosophy:** Genuine self-assessment requires removing cognitive biases.
+
+### POSTFLIGHT Without Anchoring
+
+**Problem (pre-v0.9.1):** MCP `execute_postflight` showed PREFLIGHT baseline vectors to AI during assessment
+- **Risk:** Anchoring bias - AI adjusts assessment based on remembered baseline
+- **Result:** Not genuine reflection ("I was 0.5 on know, so I should be higher now")
+
+**Solution (v0.9.1+):** Removed `preflight_baseline.vectors` from MCP response
+- **AI receives:** Task summary, CHECK history, contextual info
+- **AI does NOT see:** PREFLIGHT vector values
+- **System calculates:** Deltas objectively after AI submits current state
+
+**Benefits:**
+1. **True pure self-assessment** - AI assesses current state genuinely
+2. **Confabulation detection** - System can detect when AI claims high but deltas show low
+3. **Memory gap detection** - Can identify when AI forgot what they learned
+4. **Epistemic trust** - Framework works for all AIs, not just self-aware ones
+
+**MCP Flow:**
+```python
+# 1. AI calls execute_postflight
+response = execute_postflight(session_id, task_summary)
+# Returns: session_context (NO baseline vectors), check_history
+
+# 2. AI performs genuine self-assessment
+current_state = {
+    'know': 0.85,  # Assessed WITHOUT seeing PREFLIGHT baseline
+    'do': 0.9,
+    'uncertainty': 0.15
+}
+
+# 3. AI submits current state
+submit_postflight_assessment(session_id, vectors=current_state, reasoning="...")
+
+# 4. System calculates deltas objectively
+# PREFLIGHT (0.4) → POSTFLIGHT (0.85) = +0.45 delta
+# AI never saw 0.4, assessed 0.85 genuinely
+```
+
+This builds epistemic trust - not just for you, but for everyone using Empirica.
+
+---
+
+## Removed Features (v0.9.1)
+
+### Memory Gap Detection (Removed)
+
+**What it was:** Detection of within-session vector decreases (PREFLIGHT → POSTFLIGHT)
+
+**Why removed:**
+1. **Conceptual error:** Within-session decreases are NOT memory gaps
+2. **What they actually are:** Calibration corrections
+   - "I thought I knew X, but I don't" (scope discovery)
+   - Task more complex than initially assessed
+   - Honest re-assessment after investigation
+
+**Example of false positive:**
+```
+PREFLIGHT: know=0.8 (overconfident)
+Work: Discover OAuth2 is more complex than expected
+POSTFLIGHT: know=0.5 (corrected assessment)
+Old system: ⚠️ "Memory gap detected!" (WRONG)
+Reality: Calibration correction (CORRECT)
+```
+
+**True memory gaps require:**
+- Cross-session comparison (previous POSTFLIGHT → current PREFLIGHT)
+- Forced session restart before context fills
+- Using handoff-query/project-bootstrap to measure retention
+- Example: Session 1 POSTFLIGHT know=0.9 → 7 days later → Session 2 PREFLIGHT know=0.4
+
+**Special case - Uncertainty:**
+- Uncertainty is **inverse** (decrease = good, increase = bad)
+- Uncertainty decrease = learning, NOT memory loss
+- Example: uncertainty 0.6 → 0.2 = learned significantly
+
+### What Remains
+
+**Still detected:**
+- Calibration issues (know↑ but do↓ - claimed learning but no capability)
+- Completion/uncertainty mismatches (complete=1.0 but uncertainty=0.8)
+- Large epistemic deltas (for analysis, not warnings)
+
+---
+
+**Updated:** 2025-12-11 (v0.9.1)

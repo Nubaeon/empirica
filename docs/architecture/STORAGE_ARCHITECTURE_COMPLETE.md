@@ -863,3 +863,48 @@ def get_calibration_report(session_id: str) -> Dict:
 ---
 
 **This is the complete storage architecture.** All three layers serve different purposes and can be queried independently based on dashboard needs.
+
+---
+
+## Troubleshooting
+
+### Git Notes Not Being Created
+
+**Symptom:** `storage_layers.git_notes = false` in output, or error: `"there was a problem with the editor"`
+
+**Root Cause:** Git subprocess command missing `-F -` flag to read from stdin
+
+**Fixed in:** v0.9.1 (commit daff2801)
+
+**Details:**
+The `GitEnhancedReflexLogger` uses `subprocess.run()` with `input=` parameter to pass note content via stdin (avoiding "Argument list too long" errors with large payloads). Git requires the `-F -` flag to explicitly read from stdin rather than opening an editor.
+
+**Solution Applied:**
+```python
+# Before (failed):
+subprocess.run(["git", "notes", "--ref", note_ref, "add", "-f", "HEAD"], 
+               input=checkpoint_json, text=True)
+
+# After (works):
+subprocess.run(["git", "notes", "--ref", note_ref, "add", "-f", "-F", "-", "HEAD"],
+               input=checkpoint_json, text=True)
+```
+
+**Verification:**
+```bash
+# Check if git notes are being created
+git notes --ref empirica/session/<SESSION_ID>/PREFLIGHT/1 show HEAD
+
+# Should display JSON checkpoint data
+```
+
+If you're running an older version (< 0.9.1), update to get the fix.
+
+### All Three Storage Layers
+
+The system uses atomic writes with graceful degradation:
+1. **SQLite** - Always succeeds (source of truth)
+2. **Git Notes** - Best effort (fails gracefully if no git repo)
+3. **JSON Logs** - Always succeeds (audit trail)
+
+If git notes fail, you never lose data - SQLite and JSON continue working.

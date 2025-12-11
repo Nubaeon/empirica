@@ -15,6 +15,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.1] - 2025-12-11 - Critical Bug Fixes
+
+### Fixed
+- **Git notes creation failure** (commit daff2801)
+  - Problem: Git notes failing with "error: there was a problem with the editor"
+  - Root cause: Missing `-F -` flag in subprocess commands
+  - Solution: Added `-F -` to tell git to read from stdin
+  - Impact: All 3 storage layers (SQLite + Git Notes + JSON) now working correctly
+  - Files: `empirica/core/canonical/git_enhanced_reflex_logger.py` (lines 613, 698)
+
+- **Memory gap false positives** (commits 7e39c2e8, 5fa2fbe5, 2a625277)
+  - Problem 1: Uncertainty decrease incorrectly flagged as memory loss
+  - Reality: Uncertainty decrease = learning, not forgetting (inverse vector)
+  - Problem 2: Within-session PREFLIGHT→POSTFLIGHT decreases flagged as "memory gaps"
+  - Reality: These are calibration corrections ("I thought I knew, but I don't"), not memory compression
+  - Solution: Removed false memory gap detection entirely
+  - Note: True memory gap detection requires cross-session comparison (previous POSTFLIGHT → current PREFLIGHT)
+  - Files: `empirica/cli/command_handlers/workflow_commands.py`
+
+- **POSTFLIGHT anchoring bias** (commit cb0c15d7)
+  - Problem: `execute_postflight` MCP tool showed PREFLIGHT baseline vectors to AI during assessment
+  - Risk: Anchoring bias - AI adjusts assessment based on remembered baseline instead of genuine reflection
+  - Solution: Removed `preflight_baseline.vectors` from MCP response, kept contextual info only
+  - Impact: True pure self-assessment - AI assesses current state without bias, system calculates deltas objectively
+  - Philosophy: Genuine self-assessment requires removing cognitive biases
+  - Files: `mcp_local/empirica_mcp_server.py`
+
+### Added
+- **Artifacts tracking in project-bootstrap** (commit 652db142)
+  - Feature: `project-bootstrap` now surfaces recently modified files from handoff reports
+  - Returns: `recent_artifacts` with last 10 sessions' file modifications
+  - Use case: Systematic documentation auditing - compare modified files vs reference docs vs git history
+  - Files: `empirica/data/session_database.py`, `empirica/cli/command_handlers/project_commands.py`
+
+---
+
 ## [0.9.0] - 2025-11-01 - Phase 3 Complete
 
 ### Added - CLI Integration
