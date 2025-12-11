@@ -499,7 +499,6 @@ def handle_postflight_submit_command(args):
             # PURE POSTFLIGHT: Calculate deltas from previous checkpoint (system-driven)
             # AI assesses CURRENT state only, system calculates growth independently
             deltas = {}
-            memory_gaps = []
             calibration_issues = []
             
             try:
@@ -584,7 +583,6 @@ def handle_postflight_submit_command(args):
                     "postflight_confidence": postflight_confidence,
                     "calibration_accuracy": calibration_accuracy,
                     "deltas": deltas,
-                    "memory_gaps": memory_gaps,
                     "calibration_issues": calibration_issues
                 }
             )
@@ -621,8 +619,6 @@ def handle_postflight_submit_command(args):
                 "postflight_confidence": postflight_confidence,
                 "calibration_accuracy": calibration_accuracy,
                 "deltas": deltas,
-                "memory_gaps_detected": len(memory_gaps),
-                "memory_gaps": memory_gaps if memory_gaps else None,
                 "calibration_issues_detected": len(calibration_issues),
                 "calibration_issues": calibration_issues if calibration_issues else None,
                 "auto_checkpoint_created": True,
