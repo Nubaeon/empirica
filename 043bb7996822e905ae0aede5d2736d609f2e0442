@@ -1,0 +1,31 @@
+{
+  "goal_id": "d12bcde4-f387-41ac-8ed3-cb360d7ad408",
+  "session_id": "c4557f4b-02c1-4d60-87f5-902ee804b487",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-11T12:05:12.739965+00:00",
+  "goal_data": {
+    "objective": "Modularize session_database.py into domain repositories using composition pattern",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.5,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Reduce session_database.py from 3220 to <500 lines",
+      "Extract all 6 domain repositories (Goals, Branches, Breadcrumbs, Projects, Epistemic, Sessions)",
+      "Zero breaking changes - all 81 import sites work unchanged",
+      "All integration tests pass"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-11T12:05:12.739980+00:00",
+      "action": "created"
+    }
+  ]
+}
