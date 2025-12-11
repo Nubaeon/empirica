@@ -2467,11 +2467,9 @@ class SessionDatabase:
                         "total_in_code": integrity["cli_commands"]["total_commands"],
                         "total_in_docs": integrity["cli_commands"]["documented_commands"],
                         "integrity_score": integrity["cli_commands"]["integrity_score"],
-                        "missing_implementations": len(integrity["missing_code_details"]),
-                        "missing_documentation": len(integrity["missing_docs_details"])
-                    },
-                    "missing_code": integrity["missing_code_details"][:10],  # Top 10
-                    "missing_docs": integrity["missing_docs_details"][:10]
+                        "missing_implementations": integrity["missing_code_details"],  # Full list
+                        "missing_documentation": integrity["missing_docs_details"]  # Full list
+                    }
                 }
             except Exception as e:
                 breadcrumbs["integrity_analysis"] = {"error": str(e)}
