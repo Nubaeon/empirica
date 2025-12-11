@@ -496,19 +496,68 @@ def handle_postflight_submit_command(args):
             else:
                 calibration_accuracy = "poor"
 
-            # Try to calculate deltas from previous checkpoint
+            # PURE POSTFLIGHT: Calculate deltas from previous checkpoint (system-driven)
+            # AI assesses CURRENT state only, system calculates growth independently
             deltas = {}
+            memory_gaps = []
+            calibration_issues = []
+            
             try:
                 # Get preflight checkpoint from git notes for delta calculation
                 preflight_checkpoint = logger_instance.get_last_checkpoint(phase="PREFLIGHT")
                 if preflight_checkpoint and 'vectors' in preflight_checkpoint:
                     preflight_vectors = preflight_checkpoint['vectors']
 
+                    # Calculate deltas (system calculates growth, not AI's claimed growth)
                     for key in vectors:
                         if key in preflight_vectors:
                             pre_val = preflight_vectors.get(key, 0.5)
                             post_val = vectors.get(key, 0.5)
-                            deltas[key] = round(post_val - pre_val, 3)
+                            delta = post_val - pre_val
+                            deltas[key] = round(delta, 3)
+                            
+                            # MEMORY GAP DETECTION: Identify unexpected changes
+                            # Large decreases suggest memory loss or context drift
+                            if delta < -0.3:
+                                memory_gaps.append({
+                                    "vector": key,
+                                    "preflight": pre_val,
+                                    "postflight": post_val,
+                                    "delta": delta,
+                                    "severity": "high",
+                                    "possible_cause": "Memory gap: significant decrease in epistemic state"
+                                })
+                            elif delta < -0.15:
+                                memory_gaps.append({
+                                    "vector": key,
+                                    "preflight": pre_val,
+                                    "postflight": post_val,
+                                    "delta": delta,
+                                    "severity": "medium",
+                                    "possible_cause": "Context drift or session discontinuity"
+                                })
+                            
+                            # CALIBRATION ISSUE DETECTION: Identify mismatches
+                            # If KNOW increased but DO decreased, might indicate learning without practice
+                            if key == "know" and delta > 0.2:
+                                do_delta = deltas.get("do", 0)
+                                if do_delta < -0.1:
+                                    calibration_issues.append({
+                                        "pattern": "know_up_do_down",
+                                        "description": "Knowledge increased but capability decreased - possible theoretical learning without application"
+                                    })
+                            
+                            # If completion high but uncertainty also high, misalignment
+                            if key == "completion" and post_val > 0.8:
+                                uncertainty_post = vectors.get("uncertainty", 0.5)
+                                if uncertainty_post > 0.5:
+                                    calibration_issues.append({
+                                        "pattern": "completion_high_uncertainty_high",
+                                        "description": "High completion with high uncertainty - possible overconfidence or incomplete self-assessment"
+                                    })
+                else:
+                    logger.warning("No PREFLIGHT checkpoint found - cannot calculate deltas or detect memory gaps")
+                    
             except Exception as e:
                 logger.debug(f"Delta calculation failed: {e}")
                 # Delta calculation is optional
@@ -523,7 +572,9 @@ def handle_postflight_submit_command(args):
                     "task_summary": reasoning or "Task completed",
                     "postflight_confidence": postflight_confidence,
                     "calibration_accuracy": calibration_accuracy,
-                    "deltas": deltas
+                    "deltas": deltas,
+                    "memory_gaps": memory_gaps,
+                    "calibration_issues": calibration_issues
                 }
             )
 
@@ -559,6 +610,10 @@ def handle_postflight_submit_command(args):
                 "postflight_confidence": postflight_confidence,
                 "calibration_accuracy": calibration_accuracy,
                 "deltas": deltas,
+                "memory_gaps_detected": len(memory_gaps),
+                "memory_gaps": memory_gaps if memory_gaps else None,
+                "calibration_issues_detected": len(calibration_issues),
+                "calibration_issues": calibration_issues if calibration_issues else None,
                 "auto_checkpoint_created": True,
                 "persisted": True,
                 "storage_layers": {
@@ -590,6 +645,22 @@ def handle_postflight_submit_command(args):
                 print(f"   Reasoning: {reasoning[:80]}...")
             if deltas:
                 print(f"   Learning deltas: {len(deltas)} vectors changed")
+            
+            # MEMORY GAP WARNINGS (help AI self-correct)
+            if memory_gaps:
+                print(f"\n⚠️  Memory gaps detected: {len(memory_gaps)}")
+                for gap in memory_gaps[:3]:  # Show top 3
+                    print(f"   • {gap['vector']}: {gap['preflight']:.2f} → {gap['postflight']:.2f} (Δ {gap['delta']:.2f})")
+                    print(f"     {gap['possible_cause']}")
+                if len(memory_gaps) > 3:
+                    print(f"   ... and {len(memory_gaps) - 3} more gaps")
+                print(f"\n💡 Consider: Review session context or load checkpoint to restore epistemic state")
+            
+            # CALIBRATION ISSUE WARNINGS
+            if calibration_issues:
+                print(f"\n⚠️  Calibration issues detected: {len(calibration_issues)}")
+                for issue in calibration_issues:
+                    print(f"   • {issue['pattern']}: {issue['description']}")
 
             # Show project context for next session
             try:

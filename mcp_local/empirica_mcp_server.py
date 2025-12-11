@@ -159,25 +159,25 @@ async def list_tools() -> List[types.Tool]:
 
         types.Tool(
             name="execute_postflight",
-            description="Execute POSTFLIGHT assessment after task completion. Returns self-assessment prompt as JSON (non-blocking). AI performs genuine self-assessment and calls submit_postflight_assessment with vectors.",
+            description="Execute POSTFLIGHT assessment after session/task completion. Returns context about full session (PREFLIGHT baseline + CHECK history + task summary). AI should perform PURE self-assessment of CURRENT epistemic state (not delta claims). System automatically calculates deltas and detects memory gaps. Call submit_postflight_assessment with current-state vectors only.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "session_id": {"type": "string", "description": "Session ID or alias (e.g., 'latest:active:ai-id')"},
-                    "task_summary": {"type": "string", "description": "Summary of completed task"}
+                    "task_summary": {"type": "string", "description": "Summary of ALL work completed in session (not just last task)"}
                 },
-                "required": ["session_id"]
+                "required": ["session_id", "task_summary"]
             }
         ),
 
         types.Tool(
             name="submit_postflight_assessment",
-            description="Submit POSTFLIGHT self-assessment scores for calibration",
+            description="Submit POSTFLIGHT pure self-assessment. Rate your CURRENT epistemic state across all 13 vectors (0.0-1.0). Do NOT reference PREFLIGHT or claim deltas - just honestly assess where you are NOW. System automatically calculates learning deltas, detects memory gaps, and flags calibration issues.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "session_id": {"type": "string", "description": "Session UUID"},
-                    "vectors": {"type": "object", "description": "Epistemic vectors as JSON object with 13 keys"},
+                    "vectors": {"type": "object", "description": "CURRENT epistemic state: 13 vectors (engagement, know, do, context, clarity, coherence, signal, density, state, change, completion, impact, uncertainty). Rate 0.0-1.0 based on current state only."},
                     "reasoning": {"type": "string", "description": "Description of what changed from PREFLIGHT (unified with preflight-submit, both use reasoning)"}
                 },
                 "required": ["session_id", "vectors"]
