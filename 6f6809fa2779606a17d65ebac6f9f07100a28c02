@@ -1,0 +1,32 @@
+{
+  "goal_id": "d780c11c-ec44-4892-a2f6-98c97f8bace3",
+  "session_id": "69a70657-18c6-4b10-9269-3b9f7a5bd901",
+  "ai_id": "empirica_mcp",
+  "created_at": "2025-12-11T07:51:38.011500+00:00",
+  "goal_data": {
+    "objective": "MCP + CLI comprehensive test of Empirica commands and flags",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.5,
+      "coordination": 0.6
+    },
+    "success_criteria": [
+      "All MCP tools exercised without errors",
+      "CLI commands run with --output json where applicable",
+      "Project bootstrap shows breadcrumbs"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {
+      "track": "QA"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2025-12-11T07:51:38.011516+00:00",
+      "action": "created"
+    }
+  ]
+}
