@@ -541,31 +541,12 @@ def handle_postflight_submit_command(args):
                             delta = post_val - pre_val
                             deltas[key] = round(delta, 3)
                             
-                            # MEMORY GAP DETECTION: Identify unexpected changes
-                            # Large decreases suggest memory loss or context drift
-                            # EXCEPTION: Uncertainty decrease is GOOD (learning/progress), not a memory gap
-                            if key == "uncertainty":
-                                # Uncertainty decrease = learning, not memory loss
-                                # Skip memory gap detection for this vector
-                                pass
-                            elif delta < -0.3:
-                                memory_gaps.append({
-                                    "vector": key,
-                                    "preflight": pre_val,
-                                    "postflight": post_val,
-                                    "delta": delta,
-                                    "severity": "high",
-                                    "possible_cause": "Memory gap: significant decrease in epistemic state"
-                                })
-                            elif delta < -0.15:
-                                memory_gaps.append({
-                                    "vector": key,
-                                    "preflight": pre_val,
-                                    "postflight": post_val,
-                                    "delta": delta,
-                                    "severity": "medium",
-                                    "possible_cause": "Context drift or session discontinuity"
-                                })
+                            # Note: Within-session vector decreases removed
+                            # (PREFLIGHT→POSTFLIGHT decreases are calibration corrections, not memory gaps)
+                            # True memory gap detection requires cross-session comparison:
+                            # Previous session POSTFLIGHT → Current session PREFLIGHT
+                            # This requires forced session restart before context fills and using
+                            # handoff-query/project-bootstrap to measure retention
                             
                             # CALIBRATION ISSUE DETECTION: Identify mismatches
                             # If KNOW increased but DO decreased, might indicate learning without practice
@@ -676,15 +657,8 @@ def handle_postflight_submit_command(args):
             if deltas:
                 print(f"   Learning deltas: {len(deltas)} vectors changed")
             
-            # MEMORY GAP WARNINGS (help AI self-correct)
-            if memory_gaps:
-                print(f"\n⚠️  Memory gaps detected: {len(memory_gaps)}")
-                for gap in memory_gaps[:3]:  # Show top 3
-                    print(f"   • {gap['vector']}: {gap['preflight']:.2f} → {gap['postflight']:.2f} (Δ {gap['delta']:.2f})")
-                    print(f"     {gap['possible_cause']}")
-                if len(memory_gaps) > 3:
-                    print(f"   ... and {len(memory_gaps) - 3} more gaps")
-                print(f"\n💡 Consider: Review session context or load checkpoint to restore epistemic state")
+            # Note: Within-session "memory gap" warnings removed
+            # (False positives - decreases are usually calibration corrections, not memory loss)
             
             # CALIBRATION ISSUE WARNINGS
             if calibration_issues:
