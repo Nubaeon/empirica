@@ -1,0 +1,32 @@
+{
+  "goal_id": "80e690f5-d5ee-49a5-a558-7a727bc91d83",
+  "session_id": "c18ed41d-8b88-4c98-80d4-c30edb5c4bc1",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-11T08:50:55.011523+00:00",
+  "goal_data": {
+    "objective": "Thoroughly investigate git notes architecture to determine if implementation matches design, understand pointer/reference system between SQLite and git notes, and identify any gaps",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "SVG architecture diagrams reviewed",
+      "Code paths traced completely",
+      "Git notes creation mechanism understood",
+      "Pointer system identified if exists",
+      "Gaps documented with evidence"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-11T08:50:55.011545+00:00",
+      "action": "created"
+    }
+  ]
+}
