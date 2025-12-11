@@ -63,6 +63,14 @@ class SessionDatabase:
         self.conn.row_factory = sqlite3.Row  # Return rows as dicts
 
         self._create_tables()
+
+        # Initialize domain repositories (sharing same connection)
+        from empirica.data.repositories import GoalRepository, BranchRepository, BreadcrumbRepository, ProjectRepository
+        self.goals = GoalRepository(self.conn)
+        self.branches = BranchRepository(self.conn)
+        self.breadcrumbs = BreadcrumbRepository(self.conn)
+        self.projects = ProjectRepository(self.conn)
+
         logger.info(f"📊 Session Database initialized: {self.db_path}")
 
     @staticmethod
@@ -2016,7 +2024,7 @@ class SessionDatabase:
 
     def create_goal(self, session_id: str, objective: str, scope_breadth: float = None,
                    scope_duration: float = None, scope_coordination: float = None) -> str:
-        """Create a new goal for this session
+        """Create a new goal for this session (delegates to GoalRepository)
 
         Args:
             session_id: Session UUID
@@ -2028,26 +2036,11 @@ class SessionDatabase:
         Returns:
             goal_id (UUID string)
         """
-        goal_id = str(uuid.uuid4())
-        cursor = self.conn.cursor()
-
-        # Build scope JSON from individual vectors
-        scope_data = {
-            'breadth': scope_breadth,
-            'duration': scope_duration,
-            'coordination': scope_coordination
-        }
-
-        cursor.execute("""
-            INSERT INTO goals (id, session_id, objective, scope, status, created_timestamp, is_completed, goal_data)
-            VALUES (?, ?, ?, ?, 'in_progress', ?, 0, ?)
-        """, (goal_id, session_id, objective, json.dumps(scope_data), time.time(), json.dumps({})))
-
-        self.conn.commit()
-        return goal_id
+        return self.goals.create_goal(session_id, objective, scope_breadth,
+                                      scope_duration, scope_coordination)
 
     def create_subtask(self, goal_id: str, description: str, importance: str = 'medium') -> str:
-        """Create a subtask within a goal
+        """Create a subtask within a goal (delegates to GoalRepository)
 
         Args:
             goal_id: Parent goal UUID
@@ -2057,114 +2050,43 @@ class SessionDatabase:
         Returns:
             subtask_id (UUID string)
         """
-        subtask_id = str(uuid.uuid4())
-        cursor = self.conn.cursor()
-
-        # Build subtask_data JSON with investigation tracking
-        subtask_data = {
-            'findings': [],
-            'unknowns': [],
-            'dead_ends': []
-        }
-
-        cursor.execute("""
-            INSERT INTO subtasks (id, goal_id, description, epistemic_importance, status, created_timestamp, subtask_data)
-            VALUES (?, ?, ?, ?, 'pending', ?, ?)
-        """, (subtask_id, goal_id, description, importance, time.time(), json.dumps(subtask_data)))
-
-        self.conn.commit()
-        return subtask_id
+        return self.goals.create_subtask(goal_id, description, importance)
 
     def update_subtask_findings(self, subtask_id: str, findings: List[str]):
-        """Update findings for a subtask
+        """Update findings for a subtask (delegates to GoalRepository)
 
         Args:
             subtask_id: Subtask UUID
             findings: List of finding strings
         """
-        cursor = self.conn.cursor()
-        
-        # Get current subtask_data
-        cursor.execute("SELECT subtask_data FROM subtasks WHERE id = ?", (subtask_id,))
-        row = cursor.fetchone()
-        if not row:
-            raise ValueError(f"Subtask {subtask_id} not found")
-        
-        subtask_data = json.loads(row[0])
-        subtask_data['findings'] = findings
-        
-        cursor.execute("""
-            UPDATE subtasks SET subtask_data = ? WHERE id = ?
-        """, (json.dumps(subtask_data), subtask_id))
-
-        self.conn.commit()
+        return self.goals.update_subtask_findings(subtask_id, findings)
 
     def update_subtask_unknowns(self, subtask_id: str, unknowns: List[str]):
-        """Update unknowns for a subtask
+        """Update unknowns for a subtask (delegates to GoalRepository)
 
         Args:
             subtask_id: Subtask UUID
             unknowns: List of unknown strings
         """
-        cursor = self.conn.cursor()
-        
-        # Get current subtask_data
-        cursor.execute("SELECT subtask_data FROM subtasks WHERE id = ?", (subtask_id,))
-        row = cursor.fetchone()
-        if not row:
-            raise ValueError(f"Subtask {subtask_id} not found")
-        
-        subtask_data = json.loads(row[0])
-        subtask_data['unknowns'] = unknowns
-        
-        cursor.execute("""
-            UPDATE subtasks SET subtask_data = ? WHERE id = ?
-        """, (json.dumps(subtask_data), subtask_id))
-
-        self.conn.commit()
+        return self.goals.update_subtask_unknowns(subtask_id, unknowns)
 
     def update_subtask_dead_ends(self, subtask_id: str, dead_ends: List[str]):
-        """Update dead ends for a subtask
+        """Update dead ends for a subtask (delegates to GoalRepository)
 
         Args:
             subtask_id: Subtask UUID
             dead_ends: List of dead end strings (e.g., "Attempted X - blocked by Y")
         """
-        cursor = self.conn.cursor()
-        
-        # Get current subtask_data
-        cursor.execute("SELECT subtask_data FROM subtasks WHERE id = ?", (subtask_id,))
-        row = cursor.fetchone()
-        if not row:
-            raise ValueError(f"Subtask {subtask_id} not found")
-        
-        subtask_data = json.loads(row[0])
-        subtask_data['dead_ends'] = dead_ends
-        
-        cursor.execute("""
-            UPDATE subtasks SET subtask_data = ? WHERE id = ?
-        """, (json.dumps(subtask_data), subtask_id))
-
-        self.conn.commit()
+        return self.goals.update_subtask_dead_ends(subtask_id, dead_ends)
 
     def complete_subtask(self, subtask_id: str, evidence: str):
-        """Mark subtask as completed with evidence
+        """Mark subtask as completed with evidence (delegates to GoalRepository)
 
         Args:
             subtask_id: Subtask UUID
             evidence: Evidence of completion (e.g., "Documented in design doc", "PR merged")
         """
-        cursor = self.conn.cursor()
-        
-        cursor.execute("""
-            UPDATE subtasks 
-            SET status = 'completed', 
-                completion_evidence = ?,
-                completed_timestamp = ?
-            WHERE id = ?
-        """, (evidence, time.time(), subtask_id))
-        
-        self.conn.commit()
+        return self.goals.complete_subtask(subtask_id, evidence)
 
     def get_all_sessions(self, ai_id: Optional[str] = None, limit: int = 50) -> List[Dict]:
         """List all sessions, optionally filtered by ai_id
@@ -2195,7 +2117,7 @@ class SessionDatabase:
         return [dict(row) for row in cursor.fetchall()]
 
     def get_goal_tree(self, session_id: str) -> List[Dict]:
-        """Get complete goal tree for a session
+        """Get complete goal tree for a session (delegates to GoalRepository)
 
         Returns list of goals with nested subtasks
 
@@ -2205,52 +2127,10 @@ class SessionDatabase:
         Returns:
             List of goal dicts, each with 'subtasks' list
         """
-        cursor = self.conn.cursor()
-
-        cursor.execute("""
-            SELECT id, objective, status, scope, estimated_complexity
-            FROM goals WHERE session_id = ? ORDER BY created_timestamp
-        """, (session_id,))
-
-        goals = []
-        for row in cursor.fetchall():
-            goal_id = row[0]
-            scope_data = json.loads(row[3]) if row[3] else {}
-
-            # Get subtasks for this goal
-            cursor.execute("""
-                SELECT id, description, epistemic_importance, status, subtask_data
-                FROM subtasks WHERE goal_id = ? ORDER BY created_timestamp
-            """, (goal_id,))
-
-            subtasks = []
-            for sub_row in cursor.fetchall():
-                subtask_data = json.loads(sub_row[4]) if sub_row[4] else {}
-                subtasks.append({
-                    'subtask_id': sub_row[0],
-                    'description': sub_row[1],
-                    'importance': sub_row[2],
-                    'status': sub_row[3],
-                    'findings': subtask_data.get('findings', []),
-                    'unknowns': subtask_data.get('unknowns', []),
-                    'dead_ends': subtask_data.get('dead_ends', [])
-                })
-
-            goals.append({
-                'goal_id': goal_id,
-                'objective': row[1],
-                'status': row[2],
-                'scope_breadth': scope_data.get('breadth'),
-                'scope_duration': scope_data.get('duration'),
-                'scope_coordination': scope_data.get('coordination'),
-                'estimated_complexity': row[4],
-                'subtasks': subtasks
-            })
-
-        return goals
+        return self.goals.get_goal_tree(session_id)
 
     def query_unknowns_summary(self, session_id: str) -> Dict:
-        """Get summary of all unknowns in a session (for CHECK decisions)
+        """Get summary of all unknowns in a session (delegates to GoalRepository)
 
         Args:
             session_id: Session UUID
@@ -2258,45 +2138,13 @@ class SessionDatabase:
         Returns:
             Dict with total_unknowns count and breakdown by goal
         """
-        cursor = self.conn.cursor()
-
-        cursor.execute("""
-            SELECT g.id, g.objective, s.id, s.subtask_data
-            FROM goals g
-            LEFT JOIN subtasks s ON g.id = s.goal_id
-            WHERE g.session_id = ? AND g.status = 'in_progress'
-        """, (session_id,))
-
-        total_unknowns = 0
-        unknowns_by_goal = {}
-
-        for row in cursor.fetchall():
-            goal_id, objective, subtask_id, subtask_data_json = row
-            
-            if goal_id not in unknowns_by_goal:
-                unknowns_by_goal[goal_id] = {
-                    'goal_id': goal_id,
-                    'objective': objective,
-                    'unknown_count': 0
-                }
-            
-            if subtask_data_json:
-                subtask_data = json.loads(subtask_data_json)
-                unknowns = subtask_data.get('unknowns', [])
-                unknowns_count = len([u for u in unknowns if u])  # Count non-empty unknowns
-                unknowns_by_goal[goal_id]['unknown_count'] += unknowns_count
-                total_unknowns += unknowns_count
-
-        return {
-            'total_unknowns': total_unknowns,
-            'unknowns_by_goal': list(unknowns_by_goal.values())
-        }
+        return self.goals.query_unknowns_summary(session_id)
 
     # ========== Investigation Branches (Epistemic Auto-Merge) ==========
 
     def create_branch(self, session_id: str, branch_name: str, investigation_path: str,
                      git_branch_name: str, preflight_vectors: Dict) -> str:
-        """Create a new investigation branch
+        """Create a new investigation branch (delegates to BranchRepository)
 
         Args:
             session_id: Session UUID
@@ -2308,26 +2156,12 @@ class SessionDatabase:
         Returns:
             Branch ID
         """
-        import uuid
-        import time
-        branch_id = str(uuid.uuid4())
-        now = time.time()
-
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO investigation_branches
-            (id, session_id, branch_name, investigation_path, git_branch_name,
-             preflight_vectors, created_timestamp, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
-        """, (branch_id, session_id, branch_name, investigation_path, git_branch_name,
-              json.dumps(preflight_vectors), now))
-
-        self.conn.commit()
-        return branch_id
+        return self.branches.create_branch(session_id, branch_name, investigation_path,
+                                           git_branch_name, preflight_vectors)
 
     def checkpoint_branch(self, branch_id: str, postflight_vectors: Dict,
                          tokens_spent: int, time_spent_minutes: int) -> bool:
-        """Checkpoint a branch after investigation
+        """Checkpoint a branch after investigation (delegates to BranchRepository)
 
         Args:
             branch_id: Branch ID
@@ -2338,22 +2172,11 @@ class SessionDatabase:
         Returns:
             Success boolean
         """
-        import time
-        now = time.time()
-
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            UPDATE investigation_branches
-            SET postflight_vectors = ?, tokens_spent = ?, time_spent_minutes = ?,
-                checkpoint_timestamp = ?
-            WHERE id = ?
-        """, (json.dumps(postflight_vectors), tokens_spent, time_spent_minutes, now, branch_id))
-
-        self.conn.commit()
-        return True
+        return self.branches.checkpoint_branch(branch_id, postflight_vectors,
+                                               tokens_spent, time_spent_minutes)
 
     def calculate_branch_merge_score(self, branch_id: str) -> Dict:
-        """Calculate epistemic merge score for a branch
+        """Calculate epistemic merge score for a branch (delegates to BranchRepository)
 
         Score = (learning_delta × quality × confidence) / cost_penalty
         Where: confidence = 1 - uncertainty (uncertainty is a DAMPENER)
@@ -2361,132 +2184,15 @@ class SessionDatabase:
         Returns:
             Dict with merge_score, quality, and rationale
         """
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT preflight_vectors, postflight_vectors, tokens_spent
-            FROM investigation_branches WHERE id = ?
-        """, (branch_id,))
-
-        row = cursor.fetchone()
-        if not row or not row[1]:  # No postflight data yet
-            return {"merge_score": 0, "quality": 0, "rationale": "No postflight data"}
-
-        preflight = json.loads(row[0])
-        postflight = json.loads(row[1])
-        tokens_spent = row[2] or 0
-
-        # 1. Calculate learning delta
-        key_vectors = ['know', 'do', 'context', 'clarity', 'signal']
-        learning_deltas = []
-        for key in key_vectors:
-            pre_val = preflight.get(key, 0.5)
-            post_val = postflight.get(key, 0.5)
-            learning_deltas.append(post_val - pre_val)
-        learning_delta = sum(learning_deltas) / len(key_vectors)
-
-        # 2. Calculate quality
-        coherence = postflight.get('coherence', 0.5)
-        clarity = postflight.get('clarity', 0.5)
-        density = postflight.get('density', 0.5)
-        quality = (coherence + clarity + (1 - density)) / 3
-
-        # 3. Calculate confidence (1 - uncertainty, CRITICAL DAMPENER)
-        uncertainty = postflight.get('uncertainty', 0.5)
-        confidence = 1.0 - uncertainty
-
-        # 4. Calculate cost penalty
-        cost_penalty = max(1.0, tokens_spent / 2000.0)
-
-        # 5. Calculate final merge score
-        merge_score = (learning_delta * quality * confidence) / cost_penalty
-
-        return {
-            "merge_score": round(merge_score, 4),
-            "quality": round(quality, 4),
-            "learning_delta": round(learning_delta, 4),
-            "confidence": round(confidence, 4),
-            "uncertainty_dampener": round(uncertainty, 4)
-        }
+        return self.branches.calculate_branch_merge_score(branch_id)
 
     def merge_branches(self, session_id: str, investigation_round: int = 1) -> Dict:
-        """Auto-merge best branch based on epistemic scores
+        """Auto-merge best branch based on epistemic scores (delegates to BranchRepository)
 
         Returns:
             Dict with winning_branch_id, merge_decision_id, rationale
         """
-        import uuid
-        import time
-
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, branch_name, investigation_path
-            FROM investigation_branches
-            WHERE session_id = ? AND status = 'active'
-        """, (session_id,))
-
-        branches = cursor.fetchall()
-        if not branches:
-            return {"error": "No active branches to merge"}
-
-        # Calculate scores for all branches
-        branch_scores = []
-        for branch_id, branch_name, investigation_path in branches:
-            score_data = self.calculate_branch_merge_score(branch_id)
-            if score_data.get('merge_score', 0) > 0:
-                branch_scores.append({
-                    'branch_id': branch_id,
-                    'branch_name': branch_name,
-                    'investigation_path': investigation_path,
-                    'score': score_data['merge_score'],
-                    'quality': score_data['quality'],
-                    'confidence': score_data['confidence'],
-                    'uncertainty': score_data['uncertainty_dampener']
-                })
-
-        if not branch_scores:
-            return {"error": "No branches with valid epistemic data"}
-
-        # Select winner (highest score)
-        winner = max(branch_scores, key=lambda x: x['score'])
-
-        # Mark winner in database
-        cursor.execute("""
-            UPDATE investigation_branches
-            SET is_winner = TRUE, status = 'merged', merged_timestamp = ?
-            WHERE id = ?
-        """, (time.time(), winner['branch_id']))
-
-        # Record merge decision
-        decision_id = str(uuid.uuid4())
-        other_branches = [b['branch_name'] for b in branch_scores if b['branch_id'] != winner['branch_id']]
-        rationale = (
-            f"Selected {winner['investigation_path']}: "
-            f"score={winner['score']:.4f}, "
-            f"quality={winner['quality']:.4f}, "
-            f"confidence={winner['confidence']:.4f} "
-            f"({len(other_branches)} other paths evaluated)"
-        )
-
-        cursor.execute("""
-            INSERT INTO merge_decisions
-            (id, session_id, investigation_round, winning_branch_id, winning_branch_name,
-             winning_score, other_branches, decision_rationale, auto_merged, created_timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)
-        """, (decision_id, session_id, investigation_round, winner['branch_id'],
-              winner['branch_name'], winner['score'], json.dumps(other_branches),
-              rationale, time.time()))
-
-        self.conn.commit()
-
-        return {
-            "success": True,
-            "winning_branch_id": winner['branch_id'],
-            "winning_branch_name": winner['branch_name'],
-            "winning_score": round(winner['score'], 4),
-            "merge_decision_id": decision_id,
-            "other_branches": other_branches,
-            "rationale": rationale
-        }
+        return self.branches.merge_branches(session_id, investigation_round)
 
     def create_project(
         self,
@@ -2727,7 +2433,7 @@ class SessionDatabase:
         row = cursor.fetchone()
         return dict(row) if row else None
     
-    def bootstrap_project_breadcrumbs(self, project_id: str, mode: str = "session_start", project_root: str = None) -> Dict:
+    def bootstrap_project_breadcrumbs(self, project_id: str, mode: str = "session_start", project_root: str = None, check_integrity: bool = False) -> Dict:
         """
         Generate epistemic breadcrumbs for starting a new session on existing project.
 
@@ -2735,6 +2441,7 @@ class SessionDatabase:
             project_id: Project identifier
             mode: "session_start" (fast, recent items) or "live" (complete, all items)
             project_root: Optional path to project root (defaults to cwd)
+            check_integrity: If True, analyze doc-code integrity (adds ~2s)
 
         Returns quick context: findings, unknowns, dead_ends, mistakes, decisions, incomplete work, suggested skills.
         """
@@ -2936,6 +2643,26 @@ class SessionDatabase:
             "mode": mode
         }
         
+        # Optional: Doc-Code Integrity Analysis
+        if check_integrity:
+            try:
+                from empirica.utils.doc_code_integrity import DocCodeIntegrityAnalyzer
+                analyzer = DocCodeIntegrityAnalyzer(project_root)
+                integrity = analyzer.get_detailed_gaps()
+                breadcrumbs["integrity_analysis"] = {
+                    "cli_commands": {
+                        "total_in_code": integrity["cli_commands"]["total_commands"],
+                        "total_in_docs": integrity["cli_commands"]["documented_commands"],
+                        "integrity_score": integrity["cli_commands"]["integrity_score"],
+                        "missing_implementations": len(integrity["missing_code_details"]),
+                        "missing_documentation": len(integrity["missing_docs_details"])
+                    },
+                    "missing_code": integrity["missing_code_details"][:10],  # Top 10
+                    "missing_docs": integrity["missing_docs_details"][:10]
+                }
+            except Exception as e:
+                breadcrumbs["integrity_analysis"] = {"error": str(e)}
+        
         return breadcrumbs
 
     def log_finding(
@@ -3005,16 +2732,8 @@ class SessionDatabase:
         return unknown_id
     
     def resolve_unknown(self, unknown_id: str, resolved_by: str):
-        """Mark an unknown as resolved"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            UPDATE project_unknowns 
-            SET is_resolved = TRUE, resolved_by = ?, resolved_timestamp = ?
-            WHERE id = ?
-        """, (resolved_by, time.time(), unknown_id))
-        
-        self.conn.commit()
-        logger.info(f"✅ Unknown resolved: {unknown_id[:8]}...")
+        """Mark an unknown as resolved (delegates to BreadcrumbRepository)"""
+        return self.breadcrumbs.resolve_unknown(unknown_id, resolved_by)
     
     def log_dead_end(
         self,
@@ -3025,31 +2744,9 @@ class SessionDatabase:
         goal_id: Optional[str] = None,
         subtask_id: Optional[str] = None
     ) -> str:
-        """Log a project dead end (what didn't work)"""
-        dead_end_id = str(uuid.uuid4())
-        
-        dead_end_data = {
-            "approach": approach,
-            "why_failed": why_failed,
-            "goal_id": goal_id,
-            "subtask_id": subtask_id
-        }
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO project_dead_ends (
-                id, project_id, session_id, goal_id, subtask_id,
-                approach, why_failed, created_timestamp, dead_end_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            dead_end_id, project_id, session_id, goal_id, subtask_id,
-            approach, why_failed, time.time(), json.dumps(dead_end_data)
-        ))
-        
-        self.conn.commit()
-        logger.info(f"💀 Dead end logged: {approach[:50]}...")
-        
-        return dead_end_id
+        """Log a project dead end (delegates to BreadcrumbRepository)"""
+        return self.breadcrumbs.log_dead_end(project_id, session_id, approach,
+                                             why_failed, goal_id, subtask_id)
     
     def add_reference_doc(
         self,
@@ -3058,75 +2755,24 @@ class SessionDatabase:
         doc_type: Optional[str] = None,
         description: Optional[str] = None
     ) -> str:
-        """Add a reference document to project"""
-        doc_id = str(uuid.uuid4())
-        
-        doc_data = {
-            "doc_path": doc_path,
-            "doc_type": doc_type,
-            "description": description
-        }
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO project_reference_docs (
-                id, project_id, doc_path, doc_type, description,
-                created_timestamp, doc_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            doc_id, project_id, doc_path, doc_type, description,
-            time.time(), json.dumps(doc_data)
-        ))
-        
-        self.conn.commit()
-        logger.info(f"📄 Reference doc added: {doc_path}")
-        
-        return doc_id
+        """Add a reference document to project (delegates to BreadcrumbRepository)"""
+        return self.breadcrumbs.add_reference_doc(project_id, doc_path, doc_type, description)
     
     def get_project_findings(self, project_id: str, limit: Optional[int] = None) -> List[Dict]:
-        """Get all findings for a project"""
-        cursor = self.conn.cursor()
-        query = "SELECT * FROM project_findings WHERE project_id = ? ORDER BY created_timestamp DESC"
-        if limit:
-            query += f" LIMIT {limit}"
-        cursor.execute(query, (project_id,))
-        return [dict(row) for row in cursor.fetchall()]
+        """Get all findings for a project (delegates to BreadcrumbRepository)"""
+        return self.breadcrumbs.get_project_findings(project_id, limit)
     
     def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None) -> List[Dict]:
-        """Get unknowns for a project (optionally filter by resolved status)"""
-        cursor = self.conn.cursor()
-        if resolved is None:
-            cursor.execute("""
-                SELECT * FROM project_unknowns 
-                WHERE project_id = ? 
-                ORDER BY created_timestamp DESC
-            """, (project_id,))
-        else:
-            cursor.execute("""
-                SELECT * FROM project_unknowns 
-                WHERE project_id = ? AND is_resolved = ?
-                ORDER BY created_timestamp DESC
-            """, (project_id, resolved))
-        return [dict(row) for row in cursor.fetchall()]
+        """Get unknowns for a project (delegates to BreadcrumbRepository)"""
+        return self.breadcrumbs.get_project_unknowns(project_id, resolved)
     
     def get_project_dead_ends(self, project_id: str, limit: Optional[int] = None) -> List[Dict]:
-        """Get all dead ends for a project"""
-        cursor = self.conn.cursor()
-        query = "SELECT * FROM project_dead_ends WHERE project_id = ? ORDER BY created_timestamp DESC"
-        if limit:
-            query += f" LIMIT {limit}"
-        cursor.execute(query, (project_id,))
-        return [dict(row) for row in cursor.fetchall()]
+        """Get all dead ends for a project (delegates to BreadcrumbRepository)"""
+        return self.breadcrumbs.get_project_dead_ends(project_id, limit)
     
     def get_project_reference_docs(self, project_id: str) -> List[Dict]:
-        """Get all reference docs for a project"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT * FROM project_reference_docs 
-            WHERE project_id = ? 
-            ORDER BY created_timestamp DESC
-        """, (project_id,))
-        return [dict(row) for row in cursor.fetchall()]
+        """Get all reference docs for a project (delegates to BreadcrumbRepository)"""
+        return self.breadcrumbs.get_project_reference_docs(project_id)
 
     def log_mistake(
         self,
@@ -3138,9 +2784,8 @@ class SessionDatabase:
         prevention: Optional[str] = None,
         goal_id: Optional[str] = None
     ) -> str:
-        """
-        Log a mistake for learning and future prevention.
-        
+        """Log a mistake for learning (delegates to BreadcrumbRepository)
+
         Args:
             session_id: Session identifier
             mistake: What was done wrong
@@ -3149,39 +2794,12 @@ class SessionDatabase:
             root_cause_vector: Epistemic vector that caused the mistake (e.g., "KNOW", "CONTEXT")
             prevention: How to prevent this mistake in the future
             goal_id: Optional goal identifier this mistake relates to
-            
+
         Returns:
             mistake_id: UUID string
         """
-        self._validate_session_id(session_id)
-        mistake_id = str(uuid.uuid4())
-        
-        # Build mistake_data JSON
-        mistake_data = {
-            "mistake": mistake,
-            "why_wrong": why_wrong,
-            "cost_estimate": cost_estimate,
-            "root_cause_vector": root_cause_vector,
-            "prevention": prevention
-        }
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO mistakes_made (
-                id, session_id, goal_id, mistake, why_wrong,
-                cost_estimate, root_cause_vector, prevention,
-                created_timestamp, mistake_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            mistake_id, session_id, goal_id, mistake, why_wrong,
-            cost_estimate, root_cause_vector, prevention,
-            time.time(), json.dumps(mistake_data)
-        ))
-        
-        self.conn.commit()
-        logger.info(f"📝 Mistake logged: {mistake[:50]}...")
-        
-        return mistake_id
+        return self.breadcrumbs.log_mistake(session_id, mistake, why_wrong,
+                                           cost_estimate, root_cause_vector, prevention, goal_id)
     
     def get_mistakes(
         self,
@@ -3189,48 +2807,17 @@ class SessionDatabase:
         goal_id: Optional[str] = None,
         limit: int = 10
     ) -> List[Dict]:
-        """
-        Retrieve logged mistakes.
-        
+        """Retrieve logged mistakes (delegates to BreadcrumbRepository)
+
         Args:
             session_id: Optional filter by session
             goal_id: Optional filter by goal
             limit: Maximum number of results
-            
+
         Returns:
             List of mistake dictionaries
         """
-        cursor = self.conn.cursor()
-        
-        if session_id and goal_id:
-            cursor.execute("""
-                SELECT * FROM mistakes_made
-                WHERE session_id = ? AND goal_id = ?
-                ORDER BY created_timestamp DESC
-                LIMIT ?
-            """, (session_id, goal_id, limit))
-        elif session_id:
-            cursor.execute("""
-                SELECT * FROM mistakes_made
-                WHERE session_id = ?
-                ORDER BY created_timestamp DESC
-                LIMIT ?
-            """, (session_id, limit))
-        elif goal_id:
-            cursor.execute("""
-                SELECT * FROM mistakes_made
-                WHERE goal_id = ?
-                ORDER BY created_timestamp DESC
-                LIMIT ?
-            """, (goal_id, limit))
-        else:
-            cursor.execute("""
-                SELECT * FROM mistakes_made
-                ORDER BY created_timestamp DESC
-                LIMIT ?
-            """, (limit,))
-        
-        return [dict(row) for row in cursor.fetchall()]
+        return self.breadcrumbs.get_mistakes(session_id, goal_id, limit)
 
     def close(self):
         """Close database connection"""

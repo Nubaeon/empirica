@@ -169,9 +169,10 @@ def handle_project_bootstrap_command(args):
         from empirica.data.session_database import SessionDatabase
 
         project_id = args.project_id
+        check_integrity = getattr(args, 'check_integrity', False)
         
         db = SessionDatabase()
-        breadcrumbs = db.bootstrap_project_breadcrumbs(project_id)
+        breadcrumbs = db.bootstrap_project_breadcrumbs(project_id, check_integrity=check_integrity)
         db.close()
 
         if "error" in breadcrumbs:
@@ -274,6 +275,29 @@ def handle_project_bootstrap_command(args):
                 for i, doc in enumerate(breadcrumbs['semantic_docs'][:3], 1):
                     print(f"   {i}. {doc['title']}")
                     print(f"      Path: {doc['path']}")
+                print()
+            
+            if breadcrumbs.get('integrity_analysis'):
+                print(f"🔍 Doc-Code Integrity Analysis:")
+                integrity = breadcrumbs['integrity_analysis']
+                
+                if 'error' in integrity:
+                    print(f"   ⚠️  Analysis failed: {integrity['error']}")
+                else:
+                    cli = integrity['cli_commands']
+                    print(f"   Score: {cli['integrity_score']:.1%} ({cli['total_in_code']} code, {cli['total_in_docs']} docs)")
+                    
+                    if integrity.get('missing_code'):
+                        print(f"\n   🔴 Missing Implementations ({cli['missing_implementations']} total):")
+                        for item in integrity['missing_code'][:5]:
+                            print(f"      • empirica {item['command']} (severity: {item['severity']})")
+                            if item['mentioned_in']:
+                                print(f"        Mentioned in: {item['mentioned_in'][0]['file']}")
+                    
+                    if integrity.get('missing_docs'):
+                        print(f"\n   📝 Missing Documentation ({cli['missing_documentation']} total):")
+                        for item in integrity['missing_docs'][:5]:
+                            print(f"      • empirica {item['command']}")
                 print()
 
         return {"breadcrumbs": breadcrumbs}

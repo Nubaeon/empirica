@@ -577,6 +577,7 @@ def _add_checkpoint_parsers(subparsers):
         help='Show epistemic breadcrumbs for project'
     )
     project_bootstrap_parser.add_argument('--project-id', required=True, help='Project UUID')
+    project_bootstrap_parser.add_argument('--check-integrity', action='store_true', help='Analyze doc-code integrity (adds ~2s)')
     project_bootstrap_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
     # Project semantic search command (Qdrant-backed)
