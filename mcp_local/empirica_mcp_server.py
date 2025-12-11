@@ -654,6 +654,8 @@ async def call_tool(name: str, arguments: dict) -> List[types.TextContent]:
         # Category 2: Direct Python handlers (AI-centric, no CLI conversion)
         elif name == "create_goal":
             return await handle_create_goal_direct(arguments)
+        elif name == "execute_postflight":
+            return await handle_execute_postflight_direct(arguments)
         elif name == "get_calibration_report":
             return await handle_get_calibration_report(arguments)
         elif name == "edit_with_confidence":
@@ -800,6 +802,117 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
                 "error": str(e),
                 "tool": "create_goal",
                 "suggestion": "Check scope format: {\"breadth\": 0.7, \"duration\": 0.3, \"coordination\": 0.8}"
+            }, indent=2)
+        )]
+
+async def handle_execute_postflight_direct(arguments: dict) -> List[types.TextContent]:
+    """Handle execute_postflight - returns session context for pure self-assessment
+    
+    Returns PREFLIGHT baseline, CHECK history, and task summary.
+    AI should assess CURRENT state only (not deltas).
+    System calculates deltas and detects memory gaps automatically.
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        
+        session_id = arguments.get("session_id")
+        task_summary = arguments.get("task_summary", "Session work completed")
+        
+        if not session_id:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({"ok": False, "error": "session_id required"}, indent=2)
+            )]
+        
+        # Resolve session alias if needed
+        session_id = resolve_session_id(session_id)
+        
+        # Query reflexes for session context
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+        
+        # Get PREFLIGHT baseline
+        cursor.execute("""
+            SELECT engagement, know, do, context, clarity, coherence, signal, density,
+                   state, change, completion, impact, uncertainty, reasoning, timestamp
+            FROM reflexes
+            WHERE session_id = ? AND phase = 'PREFLIGHT'
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
+        preflight = cursor.fetchone()
+        
+        # Get CHECK assessments (intermediate states)
+        cursor.execute("""
+            SELECT engagement, know, do, context, clarity, coherence, signal, density,
+                   state, change, completion, impact, uncertainty, metadata, timestamp
+            FROM reflexes
+            WHERE session_id = ? AND phase = 'CHECK'
+            ORDER BY timestamp ASC
+        """, (session_id,))
+        checks = cursor.fetchall()
+        
+        db.close()
+        
+        if not preflight:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "ok": False,
+                    "error": "No PREFLIGHT assessment found for this session",
+                    "session_id": session_id,
+                    "suggestion": "Cannot run POSTFLIGHT without PREFLIGHT baseline"
+                }, indent=2)
+            )]
+        
+        # Build context for AI
+        vector_names = ["engagement", "know", "do", "context", "clarity", "coherence", 
+                       "signal", "density", "state", "change", "completion", "impact", "uncertainty"]
+        
+        preflight_vectors = {name: preflight[i] for i, name in enumerate(vector_names)}
+        preflight_reasoning = preflight[13]
+        preflight_timestamp = preflight[14]
+        
+        # Parse CHECK history
+        check_history = []
+        for check_row in checks:
+            check_vectors = {name: check_row[i] for i, name in enumerate(vector_names)}
+            check_metadata = json.loads(check_row[13]) if check_row[13] else {}
+            check_history.append({
+                "timestamp": check_row[14],
+                "vectors": check_vectors,
+                "decision": check_metadata.get("decision", "unknown"),
+                "confidence": check_metadata.get("confidence", 0.5),
+                "findings_count": check_metadata.get("findings_count", 0),
+                "unknowns_count": check_metadata.get("unknowns_count", 0)
+            })
+        
+        # Build response
+        result = {
+            "ok": True,
+            "session_id": session_id,
+            "phase": "POSTFLIGHT",
+            "task_summary": task_summary,
+            "instructions": "Perform PURE self-assessment: Rate your CURRENT epistemic state across all 13 vectors (0.0-1.0). Do NOT reference PREFLIGHT or claim deltas - just honestly assess where you are NOW. System will automatically calculate learning deltas and detect memory gaps.",
+            "preflight_baseline": {
+                "vectors": preflight_vectors,
+                "reasoning": preflight_reasoning,
+                "timestamp": preflight_timestamp
+            },
+            "check_history": check_history,
+            "check_count": len(check_history),
+            "next_step": "Call submit_postflight_assessment with your CURRENT epistemic state vectors",
+            "reminder": "Rate CURRENT state only. System calculates growth independently to ensure honest calibration."
+        }
+        
+        return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
+        
+    except Exception as e:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "ok": False,
+                "error": str(e),
+                "tool": "execute_postflight"
             }, indent=2)
         )]
 
@@ -1163,7 +1276,8 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "submit_preflight_assessment": ["preflight-submit"],
         "execute_check": ["check"],
         "submit_check_assessment": ["check-submit"],
-        "execute_postflight": ["postflight", "--prompt-only"],  # Non-blocking: returns prompt only
+        # Note: execute_postflight doesn't map to CLI - it returns context programmatically
+        # AI should call submit_postflight_assessment directly after reviewing context
         "submit_postflight_assessment": ["postflight-submit"],
 
         # Goals
