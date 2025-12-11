@@ -159,7 +159,7 @@ async def list_tools() -> List[types.Tool]:
 
         types.Tool(
             name="execute_postflight",
-            description="Execute POSTFLIGHT assessment after session/task completion. Returns context about full session (PREFLIGHT baseline + CHECK history + task summary). AI should perform PURE self-assessment of CURRENT epistemic state (not delta claims). System automatically calculates deltas and detects memory gaps. Call submit_postflight_assessment with current-state vectors only.",
+            description="Execute POSTFLIGHT pure self-assessment after task completion. Returns session context (WITHOUT baseline vectors to prevent anchoring). AI assesses CURRENT state genuinely; system calculates deltas objectively and detects confabulation. Call submit_postflight_assessment with current-state vectors only.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -886,22 +886,22 @@ async def handle_execute_postflight_direct(arguments: dict) -> List[types.TextCo
                 "unknowns_count": check_metadata.get("unknowns_count", 0)
             })
         
-        # Build response
+        # Build response - PURE SELF-ASSESSMENT (no baseline vectors to prevent anchoring)
         result = {
             "ok": True,
             "session_id": session_id,
             "phase": "POSTFLIGHT",
             "task_summary": task_summary,
-            "instructions": "Perform PURE self-assessment: Rate your CURRENT epistemic state across all 13 vectors (0.0-1.0). Do NOT reference PREFLIGHT or claim deltas - just honestly assess where you are NOW. System will automatically calculate learning deltas and detect memory gaps.",
-            "preflight_baseline": {
-                "vectors": preflight_vectors,
-                "reasoning": preflight_reasoning,
-                "timestamp": preflight_timestamp
+            "instructions": "Perform PURE self-assessment: Rate your CURRENT epistemic state across all 13 vectors (0.0-1.0). Do NOT reference PREFLIGHT or try to estimate deltas - assess genuinely what you know/can do RIGHT NOW. System will calculate learning deltas and calibration objectively after submission.",
+            "session_context": {
+                "preflight_timestamp": preflight_timestamp,
+                "preflight_reasoning": preflight_reasoning,
+                "check_cycles_completed": len(check_history)
             },
             "check_history": check_history,
             "check_count": len(check_history),
             "next_step": "Call submit_postflight_assessment with your CURRENT epistemic state vectors",
-            "reminder": "Rate CURRENT state only. System calculates growth independently to ensure honest calibration."
+            "reminder": "Rate CURRENT state genuinely. Do not anchor on remembered baseline. System calculates growth independently to ensure honest calibration and detect confabulation."
         }
         
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
