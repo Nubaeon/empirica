@@ -1,0 +1,28 @@
+{
+  "goal_id": "a7e0fa71-0b15-4445-982d-1319315a1882",
+  "session_id": "8d0efa1f-66b0-40b0-9508-ed0808877fc9",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-12T12:25:32.277869+00:00",
+  "goal_data": {
+    "objective": "Understand and complete AI reasoning middleware based on session 92ed7948 work",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.5,
+      "coordination": 0.4
+    },
+    "success_criteria": [
+      "Understand middleware purpose and architecture, identify incomplete work, verify functionality, determine next steps"
+    ],
+    "estimated_complexity": 0.75,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-12T12:25:32.277881+00:00",
+      "action": "created"
+    }
+  ]
+}
