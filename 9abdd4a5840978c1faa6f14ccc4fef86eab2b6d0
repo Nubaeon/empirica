@@ -1,0 +1,32 @@
+{
+  "goal_id": "c88d8e71-ca5e-492b-806b-d04c6a3f43d3",
+  "session_id": "LATEST",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-12T20:41:51.112937+00:00",
+  "goal_data": {
+    "objective": "Systematically convert 15 MD documentation files to Astro HTML pages matching navigation.json structure",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "All 15 MD files converted to Astro pages",
+      "All navigation.json URLs work correctly",
+      "Dark theme consistency maintained across all pages",
+      "Internal links updated and validated",
+      "Build succeeds without errors"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-12T20:41:51.112950+00:00",
+      "action": "created"
+    }
+  ]
+}
