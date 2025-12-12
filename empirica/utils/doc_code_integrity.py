@@ -205,3 +205,21 @@ def analyze_project_integrity(project_root: Optional[str] = None) -> Dict:
     """
     analyzer = DocCodeIntegrityAnalyzer(project_root)
     return analyzer.get_detailed_gaps()
+
+
+def analyze_complete_integrity(project_root: Optional[str] = None) -> Dict:
+    """
+    Run complete integrity analysis including deprecation and superfluity
+    
+    Returns comprehensive integrity report
+    """
+    analyzer = DocCodeIntegrityAnalyzer(project_root)
+    
+    basic_analysis = analyzer.get_detailed_gaps()
+    
+    # Add deprecation analysis (placeholder for now - will implement fully)
+    basic_analysis["deprecated"] = []
+    
+    # Add superfluity analysis (placeholder for now - will implement fully)  
+    basic_analysis["superfluous"] = []
+    
