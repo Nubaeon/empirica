@@ -1,0 +1,32 @@
+{
+  "goal_id": "c1ccb359-9a65-4de1-8094-c77e8e9bbad5",
+  "session_id": "LATEST",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-12T20:55:25.431170+00:00",
+  "goal_data": {
+    "objective": "Convert features.md (197 lines) to /features.astro with dark theme and proper navigation",
+    "scope": {
+      "breadth": 0.25,
+      "duration": 0.15,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "features.astro created with all content",
+      "Dark theme styling applied",
+      "Internal links updated to Astro routes",
+      "Code blocks properly formatted",
+      "Page accessible at /features"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-12T20:55:25.431183+00:00",
+      "action": "created"
+    }
+  ]
+}
