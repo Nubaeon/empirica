@@ -1,0 +1,28 @@
+{
+  "goal_id": "49c7c116-6680-4c79-8f27-b5312eb21259",
+  "session_id": "4299420e-b7f7-43ca-932d-95652501bc68",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-12T12:50:15.338249+00:00",
+  "goal_data": {
+    "objective": "Update MCO documentation to reflect all actual MCO config objects, then design ask-before-investigate mechanism based on uncertainty thresholds",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "MCO docs accurate with all 8 config files documented, ask-before-investigate design with threshold configuration"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-12T12:50:15.338262+00:00",
+      "action": "created"
+    }
+  ]
+}
