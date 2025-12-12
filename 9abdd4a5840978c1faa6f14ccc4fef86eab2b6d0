@@ -1,0 +1,28 @@
+{
+  "goal_id": "2b232d4a-0297-43ed-863a-4a5d3f30a94f",
+  "session_id": "6b3749fd-0202-4a4e-837c-fba29c1b0cba",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-12T11:58:19.593984+00:00",
+  "goal_data": {
+    "objective": "Resolve duplicate 'empirica' projects and establish clear workspace-to-project mapping rules",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Single canonical 'empirica' project for this workspace, clear documentation of project mapping rules, no broken session associations"
+    ],
+    "estimated_complexity": 0.65,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-12T11:58:19.593998+00:00",
+      "action": "created"
+    }
+  ]
+}
