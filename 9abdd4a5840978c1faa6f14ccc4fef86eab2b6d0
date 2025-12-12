@@ -1,0 +1,33 @@
+{
+  "goal_id": "7b360839-bb0f-4415-9428-ae6760cf0fb4",
+  "session_id": "LATEST",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-12T20:45:34.354270+00:00",
+  "goal_data": {
+    "objective": "Convert epistemics.md (608 lines) to /epistemics.astro with dark theme and proper navigation",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "epistemics.astro created with all content",
+      "Dark theme styling applied consistently",
+      "All internal links updated",
+      "Code blocks properly formatted",
+      "Tables responsive and styled",
+      "Page accessible at /epistemics"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-12T20:45:34.354292+00:00",
+      "action": "created"
+    }
+  ]
+}
