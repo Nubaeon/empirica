@@ -1,0 +1,28 @@
+{
+  "goal_id": "fbe2610c-f637-4e27-8119-da38b739d034",
+  "session_id": "c3174883-172b-4a2b-a760-917a7082d2cd",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-12T12:10:33.363570+00:00",
+  "goal_data": {
+    "objective": "Fix system prompt inconsistencies and identify broken functionality across config.yml, MINIMALIST, and CANONICAL prompts",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "All three prompts consistent with actual implementation, no outdated instructions, broken functionality surfaced, config.yml updated for RovoDev users"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-12T12:10:33.363589+00:00",
+      "action": "created"
+    }
+  ]
+}
