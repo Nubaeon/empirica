@@ -1,0 +1,28 @@
+{
+  "goal_id": "0c688a47-0eab-4520-b2a6-53ebaf1a9a62",
+  "session_id": "b1fbee00-8bf0-4fd4-beaa-665252797607",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-12T13:02:11.332919+00:00",
+  "goal_data": {
+    "objective": "Implement Phase 2 (relationship analysis) and Phase 3 (implementation gaps) for reasoning middleware",
+    "scope": {
+      "breadth": 0.65,
+      "duration": 0.5,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Both methods implemented following Phase 1 patterns, tested on deprecated/phantom issues, production-ready quality"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-12T13:02:11.332936+00:00",
+      "action": "created"
+    }
+  ]
+}
