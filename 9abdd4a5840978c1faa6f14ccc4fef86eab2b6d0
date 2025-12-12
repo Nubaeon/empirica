@@ -1,0 +1,28 @@
+{
+  "goal_id": "09d07b20-7d94-4bd5-b97b-5731b694a6ea",
+  "session_id": "ebf6614d-a524-4acc-8fd4-4bfa6ca7c97d",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-12T12:19:21.137568+00:00",
+  "goal_data": {
+    "objective": "Verify CASCADE storage compliance and fix documentation inconsistencies",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "All CASCADE phases proven to persist to 3 layers, phases verified as REQUIRED not optional, storage docs updated to remove ACT phase"
+    ],
+    "estimated_complexity": 0.65,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-12T12:19:21.137586+00:00",
+      "action": "created"
+    }
+  ]
+}
