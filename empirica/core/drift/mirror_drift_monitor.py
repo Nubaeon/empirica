@@ -19,11 +19,13 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DriftReport:
-    """Result of drift detection"""
+    """Result of drift detection with pattern-aware analysis"""
     drift_detected: bool
     severity: str  # 'none' | 'low' | 'medium' | 'high' | 'critical'
     recommended_action: str  # 'continue' | 'monitor_closely' | 'investigate' | 'stop_and_reassess'
     drifted_vectors: List[Dict[str, Any]]
+    pattern: Optional[str] = None  # 'TRUE_DRIFT' | 'LEARNING' | 'SCOPE_DRIFT' | None
+    pattern_confidence: float = 0.0  # Confidence in pattern classification (0.0-1.0)
     baseline_timestamp: Optional[float] = None
     checkpoints_analyzed: int = 0
     reason: Optional[str] = None
@@ -213,15 +215,18 @@ class MirrorDriftMonitor:
                 checkpoints_analyzed=len(baseline)
             )
         
-        # Drift detected
+        # Drift detected - classify pattern
         overall_severity = self._classify_overall_severity(max_drift, len(drifted_vectors))
         recommended_action = self._recommend_action(overall_severity)
-        
+        pattern, pattern_confidence = self._classify_drift_pattern(current_vectors, baseline)
+
         return DriftReport(
             drift_detected=True,
             severity=overall_severity,
             recommended_action=recommended_action,
             drifted_vectors=drifted_vectors,
+            pattern=pattern,
+            pattern_confidence=pattern_confidence,
             checkpoints_analyzed=len(baseline)
         )
     
@@ -299,13 +304,79 @@ class MirrorDriftMonitor:
         logger.warning(
             f"   Drifted vectors: {len(report.drifted_vectors)}"
         )
-        
+
         for vec in report.drifted_vectors:
             logger.warning(
                 f"   • {vec['vector']}: {vec['baseline']:.2f} → {vec['current']:.2f} "
                 f"(drift: {vec['drift']:.2f}, severity: {vec['severity']})"
             )
-        
+
+        if report.pattern:
+            logger.warning(
+                f"   Pattern: {report.pattern} (confidence: {report.pattern_confidence:.2f})"
+            )
+
         logger.warning(
             f"   Recommended action: {report.recommended_action.upper()}"
         )
+
+    def _classify_drift_pattern(
+        self,
+        current: Dict[str, float],
+        baseline: Dict[str, float]
+    ) -> tuple[Optional[str], float]:
+        """
+        Classify drift pattern using real epistemic vector relationships.
+
+        Patterns:
+        - TRUE_DRIFT: Memory loss (KNOW↓ + CLARITY↓ + CONTEXT↓)
+        - LEARNING: Discovering complexity (KNOW↓ + CLARITY↑)
+        - SCOPE_DRIFT: Task expansion (KNOW↓ + scope indicators↑)
+
+        Returns:
+            (pattern_name, confidence_score)
+        """
+        # Calculate deltas for key vectors
+        know_delta = current.get('know', 0.5) - baseline.get('know', 0.5)
+        clarity_delta = current.get('clarity', 0.5) - baseline.get('clarity', 0.5)
+        context_delta = current.get('context', 0.5) - baseline.get('context', 0.5)
+        coherence_delta = current.get('coherence', 0.5) - baseline.get('coherence', 0.5)
+        uncertainty_delta = current.get('uncertainty', 0.5) - baseline.get('uncertainty', 0.5)
+
+        # Scope indicators: completion, impact, state
+        completion_delta = current.get('completion', 0.5) - baseline.get('completion', 0.5)
+        impact_delta = current.get('impact', 0.5) - baseline.get('impact', 0.5)
+
+        # Pattern 1: TRUE_DRIFT - Correlated drops in foundational vectors
+        # KNOW↓ + CLARITY↓ + CONTEXT↓ = memory loss
+        if know_delta < -0.15 and clarity_delta < -0.15 and context_delta < -0.15:
+            # All three declining together = strong signal of memory corruption
+            correlation_strength = abs(know_delta + clarity_delta + context_delta) / 3.0
+            confidence = min(correlation_strength * 2.0, 1.0)  # Scale to 0-1
+            return ('TRUE_DRIFT', confidence)
+
+        # Pattern 2: LEARNING - Knowledge drop with clarity increase
+        # KNOW↓ + CLARITY↑ = discovering complexity (healthy!)
+        if know_delta < -0.15 and clarity_delta > 0.10:
+            # Inverse correlation = discovering ignorance
+            pattern_strength = abs(know_delta) + clarity_delta
+            confidence = min(pattern_strength / 0.5, 1.0)  # Normalize
+            return ('LEARNING', confidence)
+
+        # Pattern 3: SCOPE_DRIFT - Knowledge drop with scope expansion
+        # KNOW↓ + (COMPLETION↓ or IMPACT↑ or UNCERTAINTY↑) = task expanding
+        scope_expansion_signals = 0
+        if completion_delta < -0.10:  # Work seems less complete
+            scope_expansion_signals += 1
+        if impact_delta > 0.15:  # Impact assessment increased
+            scope_expansion_signals += 1
+        if uncertainty_delta > 0.15:  # More unknowns appearing
+            scope_expansion_signals += 1
+
+        if know_delta < -0.15 and scope_expansion_signals >= 2:
+            # Multiple scope indicators + knowledge drop = scope creep
+            confidence = min((abs(know_delta) + scope_expansion_signals * 0.15) / 0.6, 1.0)
+            return ('SCOPE_DRIFT', confidence)
+
+        # No clear pattern detected
+        return (None, 0.0)

@@ -450,6 +450,8 @@ def handle_check_drift_command(args):
                 'severity': report.severity,
                 'recommended_action': report.recommended_action,
                 'drifted_vectors': report.drifted_vectors,
+                'pattern': report.pattern,
+                'pattern_confidence': report.pattern_confidence,
                 'checkpoints_analyzed': report.checkpoints_analyzed,
                 'reason': report.reason
             }
@@ -465,15 +467,32 @@ def handle_check_drift_command(args):
                 if report.reason:
                     print(f"   Reason: {report.reason}")
             else:
-                severity_emoji = {
-                    'low': '⚠️ ',
-                    'medium': '⚠️ ',
-                    'high': '🚨',
-                    'critical': '🛑'
-                }.get(report.severity, '⚠️ ')
+                # Pattern-aware display
+                if report.pattern == 'TRUE_DRIFT':
+                    print(f"\n🔴 TRUE DRIFT DETECTED (Memory Loss)")
+                    print(f"   Pattern: KNOW↓ + CLARITY↓ + CONTEXT↓")
+                    print(f"   Confidence: {report.pattern_confidence:.2f}")
+                    print(f"   ⚠️  CHECK BREADCRUMBS - Possible context loss")
+                elif report.pattern == 'LEARNING':
+                    print(f"\n✅ LEARNING PATTERN (Discovering Complexity)")
+                    print(f"   Pattern: KNOW↓ + CLARITY↑")
+                    print(f"   Confidence: {report.pattern_confidence:.2f}")
+                    print(f"   ℹ️  This is healthy - discovering what you don't know")
+                elif report.pattern == 'SCOPE_DRIFT':
+                    print(f"\n⚠️  SCOPE DRIFT DETECTED (Task Expansion)")
+                    print(f"   Pattern: KNOW↓ + scope indicators↑")
+                    print(f"   Confidence: {report.pattern_confidence:.2f}")
+                    print(f"   💡 Consider running PREFLIGHT on expanded scope")
+                else:
+                    severity_emoji = {
+                        'low': '⚠️ ',
+                        'medium': '⚠️ ',
+                        'high': '🚨',
+                        'critical': '🛑'
+                    }.get(report.severity, '⚠️ ')
+                    print(f"\n{severity_emoji} DRIFT DETECTED")
 
-                print(f"\n{severity_emoji} DRIFT DETECTED")
-                print(f"   Severity: {report.severity.upper()}")
+                print(f"\n   Severity: {report.severity.upper()}")
                 print(f"   Recommended Action: {report.recommended_action.replace('_', ' ').upper()}")
                 print(f"   Checkpoints Analyzed: {report.checkpoints_analyzed}")
 

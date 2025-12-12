@@ -610,7 +610,7 @@ def calculate_scope_stability(db: SessionDatabase, session_id: str) -> dict:
 
 def classify_drift_pattern(drift_status: dict, vectors: dict, deltas: dict) -> tuple:
     """
-    Classify drift pattern using multi-vector analysis.
+    Classify drift pattern using MirrorDriftMonitor's real epistemic calculations.
 
     Returns: (warning_type, value, severity, context)
     """
@@ -621,36 +621,43 @@ def classify_drift_pattern(drift_status: dict, vectors: dict, deltas: dict) -> t
     if not drifted:
         return None
 
-    worst = max(drifted, key=lambda x: x.get('drop', 0))
-    drop_amount = worst.get('drop', 0)
+    worst = max(drifted, key=lambda x: x.get('drift', x.get('drop', 0)))
+    drop_amount = worst.get('drift', worst.get('drop', 0))
     vector_name = worst.get('vector', 'UNKNOWN')
 
-    # Multi-vector pattern analysis
-    clarity_delta = deltas.get('clarity', 0)
-    context_delta = deltas.get('context', 0)
-    know_delta = deltas.get('know', 0)
+    # Use MirrorDriftMonitor's pattern classification for real epistemic analysis
+    if DRIFT_AVAILABLE and deltas:
+        try:
+            from empirica.core.drift.mirror_drift_monitor import MirrorDriftMonitor
 
-    # Pattern 1: TRUE DRIFT (memory loss)
-    # KNOW↓ + CLARITY↓ + CONTEXT↓ = all declining together
-    if vector_name == 'know' and clarity_delta < -0.1 and context_delta < -0.1:
-        return ('TRUE_DRIFT', drop_amount, 'critical', 'memory_loss')
+            # Reconstruct current and baseline vectors from deltas
+            # Current = baseline + delta
+            current = {}
+            baseline = {}
 
-    # Pattern 2: LEARNING ABOUT IGNORANCE (healthy!)
-    # KNOW↓ but CLARITY↑ = discovering complexity
-    if vector_name == 'know' and clarity_delta > 0.1:
-        return ('LEARNING', drop_amount, 'info', 'discovering_complexity')
+            for key in ['engagement', 'know', 'do', 'context', 'clarity', 'coherence',
+                       'signal', 'density', 'state', 'change', 'completion', 'impact', 'uncertainty']:
+                delta = deltas.get(key, 0)
+                # Use current vector value as baseline if available, else neutral 0.5
+                baseline[key] = vectors.get(key, 0.5) - delta
+                current[key] = vectors.get(key, 0.5)
 
-    # Pattern 3: SCOPE CREEP (warning)
-    # KNOW↓ + CONTEXT↓ but not critical
-    if vector_name == 'know' and context_delta < -0.1:
-        return ('SCOPE_DRIFT', drop_amount, 'warning', 'expanding_scope')
+            # Classify pattern using real epistemic calculations
+            monitor = MirrorDriftMonitor()
+            pattern, confidence = monitor._classify_drift_pattern(current, baseline)
 
-    # Pattern 4: CONTEXT LOSS (drift)
-    # CONTEXT↓ or CLARITY↓ significantly
-    if vector_name in ['context', 'clarity'] and drop_amount > 0.3:
-        return ('TRUE_DRIFT', drop_amount, 'critical', 'context_loss')
+            if pattern == 'TRUE_DRIFT' and confidence > 0.6:
+                return ('TRUE_DRIFT', drop_amount, 'critical', 'memory_loss')
+            elif pattern == 'LEARNING' and confidence > 0.5:
+                return ('LEARNING', drop_amount, 'info', 'discovering_complexity')
+            elif pattern == 'SCOPE_DRIFT' and confidence > 0.5:
+                return ('SCOPE_DRIFT', drop_amount, 'warning', 'expanding_scope')
 
-    # Default: Generic drift
+        except Exception:
+            # Fall through to generic drift if pattern detection fails
+            pass
+
+    # Fallback: Generic drift
     return ('DRIFT', drop_amount, 'high', 'unknown_pattern')
 
 
