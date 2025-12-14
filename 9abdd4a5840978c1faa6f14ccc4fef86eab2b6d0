@@ -1,0 +1,28 @@
+{
+  "goal_id": "a2ebfce3-ec88-453a-820d-56038120c0cb",
+  "session_id": "d5e6b646-fd3b-4645-8664-dabb310c994c",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-14T14:42:06.534794+00:00",
+  "goal_data": {
+    "objective": "Implement Empirica session recording for CASCADE workflow",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.5,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Evidence export functional"
+    ],
+    "estimated_complexity": 0.55,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-14T14:42:06.534807+00:00",
+      "action": "created"
+    }
+  ]
+}
