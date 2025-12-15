@@ -1,0 +1,31 @@
+{
+  "goal_id": "9990e1be-66f2-459e-963e-66bc67b751e0",
+  "session_id": "8f343a8e-f1b3-44ba-8f8b-53a5cc3dd6ee",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-15T20:51:41.611396+00:00",
+  "goal_data": {
+    "objective": "Investigate and document Axion Labs enterprise gen-AI architecture",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Architecture components identified",
+      "Training methodology documented",
+      "Governance approach understood",
+      "Comparison with Empirica patterns"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-15T20:51:41.611414+00:00",
+      "action": "created"
+    }
+  ]
+}
