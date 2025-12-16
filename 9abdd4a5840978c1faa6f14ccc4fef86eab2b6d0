@@ -1,0 +1,30 @@
+{
+  "goal_id": "d016dcdd-93ea-421c-b005-98c378a7cde4",
+  "session_id": "47ca44c4-6cb4-4337-abc8-d54fada340d1",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-16T11:41:57.366227+00:00",
+  "goal_data": {
+    "objective": "Migrate REST API to GraphQL",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.7
+    },
+    "success_criteria": [
+      "All endpoints migrated",
+      "Tests passing",
+      "Performance maintained"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-16T11:41:57.366244+00:00",
+      "action": "created"
+    }
+  ]
+}
