@@ -1,0 +1,32 @@
+{
+  "goal_id": "d79fe3be-2080-4c89-bd19-5a0820f9b2aa",
+  "session_id": "bc9f14e4-04a7-4e92-b9a1-7ae9e90249ce",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-16T13:45:28.056911+00:00",
+  "goal_data": {
+    "objective": "Implement BEADS-Git bridge (goals-claim and goals-complete commands)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "goals-claim command creates branches and links BEADS",
+      "goals-complete command merges branches and closes BEADS issues",
+      "Branch mapping file implemented",
+      "Commands integrate with existing CLI",
+      "Tests pass"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-16T13:45:28.056925+00:00",
+      "action": "created"
+    }
+  ]
+}
