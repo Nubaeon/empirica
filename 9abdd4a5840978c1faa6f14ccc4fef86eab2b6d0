@@ -1,0 +1,33 @@
+{
+  "goal_id": "7f9b9f43-3c4e-4cfd-9b5d-924862fb2579",
+  "session_id": "08613290-4fdc-4262-8fa0-ec35c2fb297a",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-16T19:31:39.057272+00:00",
+  "goal_data": {
+    "objective": "Complete documentation regeneration from codebase - eliminate legacy cruft",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "CLI extractor script working",
+      "CLI reference generated from code",
+      "Python API reference generated",
+      "DB schema documented",
+      "Old docs archived to v3",
+      "Integrity score 95%+"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-16T19:31:39.057287+00:00",
+      "action": "created"
+    }
+  ]
+}
