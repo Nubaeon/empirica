@@ -4,7 +4,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>empirica</id>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <title>Empirica - Epistemic Self-Assessment Framework</title>
     <authors>Empirica Team</authors>
     <owners>Empirica Team</owners>
@@ -25,15 +25,18 @@ Perfect for AI agents that need genuine metacognitive awareness and calibration.
     </description>
     <summary>Epistemic self-assessment framework for AI agents with CASCADE workflow</summary>
     <releaseNotes>
+Release 1.0.1 (Patch):
+- Fixed SEMANTIC_INDEX.yaml v2.0 with correct documentation paths
+- Moved Docker documentation to proper location (.docker/)
+- Updated README with all installation methods
+- Published empirica-mcp v1.0.0 to PyPI
+
 Release 1.0.0 (Stable):
 - MCO (Model-Centric Operations) system with persona support
 - Complete CASCADE workflow (PREFLIGHT/CHECK/POSTFLIGHT)
 - Unified storage via GitEnhancedReflexLogger
 - Project bootstrap with uncertainty-driven context loading
 - Session management with 97.5% token reduction
-- Multi-AI coordination with epistemic handoffs
-- MCP server for Claude Desktop integration
-- Comprehensive production documentation
     </releaseNotes>
     <tags>ai llm epistemic metacognition self-assessment calibration python cli</tags>
     <dependencies>
