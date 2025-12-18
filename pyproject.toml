@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "empirica"
-version = "1.0.0-beta"
+version = "1.0.0"
 description = "Genuine AI epistemic self-assessment framework - Universal interface for single AI tracking"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "LGPL-3.0-or-later OR MIT"
+license = "MIT"
 authors = [
     {name = "Empirica Team"}
 ]
