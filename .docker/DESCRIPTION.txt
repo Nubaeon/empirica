@@ -1,0 +1,14 @@
+Epistemic self-assessment framework for AI agents. Enables honest uncertainty tracking, focused investigation, and genuine learning measurement through the CASCADE workflow (PREFLIGHT → CHECK → POSTFLIGHT).
+
+Key Features:
+• 13-vector epistemic state tracking
+• 97.5% token reduction via checkpoint loading  
+• Multi-AI coordination with epistemic handoffs
+• Git-integrated session management
+• MCP server support for Claude Desktop
+
+Perfect for AI agents that need genuine metacognitive awareness and calibration.
+
+PyPI: https://pypi.org/project/empirica/
+GitHub: https://github.com/Nubaeon/empirica
+Docs: https://github.com/Nubaeon/empirica/tree/main/docs

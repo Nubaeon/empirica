@@ -1,400 +1,444 @@
 # Empirica Semantic Documentation Index
-# Version: 1.0
-# Generated: 2025-12-10
-# Purpose: Enable fast semantic documentation discovery and prepare for Qdrant embeddings
+# Version: 2.0
+# Generated: 2025-12-18
+# Purpose: Enable fast semantic documentation discovery for project-bootstrap
+# Note: This indexes EMPIRICA'S documentation (for dogfooding). Other projects
+#       create their own SEMANTIC_INDEX.yaml to index THEIR project docs.
 
-version: "1.0"
-generated: "2025-12-10T00:00:00Z"
-description: "Semantic index for Empirica documentation with tags, concepts, questions, and use cases"
+version: "2.0"
+generated: "2025-12-18T00:00:00Z"
+description: "Semantic index for Empirica's own documentation with tags, concepts, questions, and use cases"
 
 # Tag Vocabulary Guidelines:
-# - tags: Broad categorization (e.g., vectors, session, project)
+# - tags: Broad categorization (e.g., vectors, session, project, core-concept)
 # - concepts: Specific technical concepts (e.g., preflight, breadcrumbs, epistemic-memory)
 # - questions: Common user questions this doc answers
 # - use_cases: Practical scenarios where this doc is relevant
-# - related: Related doc numbers (e.g., [06, 23, 30])
+# - related: Related doc IDs for cross-referencing
 
 index:
 
-  # Core Concepts (Most Fundamental)
-  
-  "production/05_EPISTEMIC_VECTORS.md":
-    title: "Epistemic Vectors"
-    tags: [vectors, assessment, know, do, uncertainty, core-concept]
-    concepts: 
+  # ============================================================================
+  # CORE CONCEPTS (Priority Loading - Tagged "core-concept")
+  # ============================================================================
+
+  "01_START_HERE.md":
+    title: "Start Here - Empirica Introduction"
+    tags: [getting-started, core-concept, entry-point, overview]
+    concepts:
+      - empirica-introduction
+      - why-empirica
+      - core-philosophy
+      - epistemic-transparency
+      - honest-uncertainty
+    questions:
+      - "What is Empirica?"
+      - "Why should I use Empirica?"
+      - "How does Empirica work?"
+      - "Where do I start with Empirica?"
+    use_cases:
+      - first-time-users
+      - onboarding
+      - concept-introduction
+      - decision-making
+    related: ["05", "CASCADE", "SIMPLE"]
+
+  "05_EPISTEMIC_VECTORS_EXPLAINED.md":
+    title: "Epistemic Vectors Explained"
+    tags: [vectors, assessment, core-concept, metacognition]
+    concepts:
       - 13-vectors
-      - self-assessment
-      - preflight
-      - postflight
-      - calibration
-      - know-vs-do
+      - tier-0-foundation
+      - tier-1-comprehension
+      - tier-2-execution
+      - know-do-context
       - uncertainty-tracking
+      - epistemic-self-assessment
+      - preflight-postflight
     questions:
       - "What are epistemic vectors?"
-      - "How do I assess KNOW vs DO?"
+      - "How do I assess KNOW vs DO vs CONTEXT?"
       - "What does UNCERTAINTY measure?"
       - "How to interpret vector values?"
       - "What are the 13 epistemic vectors?"
+      - "How do tiers work?"
     use_cases:
       - assessment
       - calibration
       - learning-measurement
       - metacognition
       - confidence-tracking
-    related: ["06", "23", "30"]
-    
-  "production/06_CASCADE_FLOW.md":
-    title: "CASCADE Flow"
-    tags: [cascade, workflow, preflight, check, postflight, core-concept]
+    related: ["CASCADE", "CANONICAL_PROMPT", "SYSTEM_OVERVIEW"]
+
+  "CASCADE_WORKFLOW.md":
+    title: "CASCADE Workflow"
+    tags: [cascade, workflow, core-concept, phases]
     concepts:
       - cascade-phases
       - preflight-assessment
       - check-gate
       - postflight-measurement
-      - act-phase
-      - think-phase
-      - plan-phase
+      - think-investigate-plan-act-explore-reflect
+      - epistemic-checkpoints
+      - decision-gates
     questions:
       - "What is CASCADE?"
       - "When do I run PREFLIGHT?"
       - "What is CHECK phase for?"
       - "How to measure learning with POSTFLIGHT?"
       - "What are the CASCADE phases?"
+      - "How does CHECK gate work?"
     use_cases:
       - workflow
       - task-execution
       - learning-measurement
       - uncertainty-management
       - systematic-work
-    related: ["05", "07", "23"]
+    related: ["05", "CANONICAL_PROMPT", "SIMPLE"]
 
-  # Project & Session Management
-  
-  "production/23_SESSION_CONTINUITY.md":
-    title: "Session Continuity"
-    tags: [session, continuity, handoff, resume, multi-session]
+  "EMPIRICA_EXPLAINED_SIMPLE.md":
+    title: "Empirica Explained Simply"
+    tags: [explanation, core-concept, simple, overview]
     concepts:
-      - handoff-reports
-      - session-resume
-      - context-preservation
-      - epistemic-continuity
-      - session-linking
+      - simple-explanation
+      - core-ideas
+      - quick-understanding
+      - practical-benefits
     questions:
-      - "How to resume work from previous session?"
-      - "What are handoff reports?"
-      - "How to prevent context loss?"
-      - "How to link sessions together?"
+      - "Can you explain Empirica simply?"
+      - "What's the main idea behind Empirica?"
+      - "How does Empirica help me?"
     use_cases:
-      - multi-session-work
-      - context-loss-prevention
-      - work-resumption
-      - team-handoff
-    related: ["30", "12", "26"]
-    
-  "guides/PROJECT_LEVEL_TRACKING.md":
-    title: "Project-Level Tracking"
-    tags: [project, multi-repo, bootstrap, breadcrumbs, epistemic-memory, long-term]
-    concepts:
-      - project-creation
-      - findings
-      - unknowns
-      - dead-ends
-      - breadcrumbs
-      - session-linking
-      - learning-deltas
-      - reference-docs
-      - epistemic-memory
-    questions:
-      - "How to create a project?"
-      - "What are breadcrumbs?"
-      - "How to track multi-repo work?"
-      - "How to bootstrap project context?"
-      - "How to log findings and unknowns?"
-      - "What is epistemic memory?"
-    use_cases:
-      - multi-repo-projects
-      - long-term-development
-      - team-onboarding
-      - context-bootstrap
-      - knowledge-preservation
-      - cross-session-learning
-    related: ["23", "12", "26", "05"]
+      - quick-introduction
+      - simple-explanation
+      - concept-clarity
+      - elevator-pitch
+    related: ["01", "05", "CASCADE"]
 
-  # Collaboration & Conduct
-  
-  "guides/EPISTEMIC_CONDUCT.md":
-    title: "Epistemic Conduct"
-    tags: [conduct, accountability, challenge, bias, uncertainty, collaboration]
+  "system-prompts/CANONICAL_SYSTEM_PROMPT.md":
+    title: "Canonical System Prompt (Complete Reference)"
+    tags: [system-prompt, core-concept, reference, complete, ai-usage]
     concepts:
-      - bidirectional-accountability
-      - challenge-triggers
-      - self-correction
-      - overconfidence-detection
-      - epistemic-honesty
-      - bias-acknowledgment
+      - complete-system-prompt
+      - ai-instructions
+      - mco-configuration
+      - cascade-workflow-complete
+      - session-management
+      - project-bootstrap-usage
+      - decision-logic
+      - multi-ai-coordination
     questions:
-      - "How to challenge AI assumptions?"
-      - "What is epistemic conduct?"
-      - "How to admit uncertainty properly?"
-      - "How to avoid overconfidence?"
-      - "What is bidirectional accountability?"
+      - "What's the complete system prompt?"
+      - "How should AIs use Empirica?"
+      - "What are all the commands?"
+      - "How does MCO work?"
+      - "How to do project bootstrap?"
     use_cases:
-      - ai-human-collaboration
-      - bias-detection
-      - overconfidence-prevention
-      - quality-control
-      - epistemic-discipline
-    related: ["05", "06"]
+      - ai-integration
+      - complete-reference
+      - system-configuration
+      - advanced-usage
+      - multi-ai-teams
+    related: ["05", "CASCADE", "MCP_INSTALL"]
 
-  # Database & Storage
-  
-  "production/12_SESSION_DATABASE.md":
-    title: "Session Database"
-    tags: [database, storage, sqlite, schema, sessions, goals]
+  # ============================================================================
+  # GETTING STARTED & INSTALLATION
+  # ============================================================================
+
+  "04_INSTALLATION.md":
+    title: "Installation Guide"
+    tags: [installation, setup, getting-started, pypi, docker, homebrew]
     concepts:
-      - database-schema
-      - sessions-table
-      - goals-table
-      - subtasks-table
-      - reflexes-table
-      - projects-table
-      - sqlite
-      - 3-layer-storage
+      - installation-methods
+      - pypi-install
+      - docker-install
+      - homebrew-install
+      - chocolatey-install
+      - requirements
     questions:
-      - "What is the database schema?"
-      - "Where are sessions stored?"
-      - "How are goals linked to sessions?"
-      - "What is the reflexes table?"
-      - "How is project data stored?"
+      - "How do I install Empirica?"
+      - "What are the installation options?"
+      - "What are the system requirements?"
+      - "How to install on macOS/Linux/Windows?"
     use_cases:
-      - data-storage
-      - query-patterns
-      - schema-understanding
-      - database-extension
-    related: ["30", "23", "13"]
+      - installation
+      - setup
+      - first-time-install
+      - deployment
+    related: ["01", "FIRST_SETUP", "MCP_INSTALL"]
 
-  # Getting Started
-  
-  "production/03_BASIC_USAGE.md":
-    title: "Basic Usage"
-    tags: [getting-started, cli, basic, quickstart, tutorial]
+  "guides/FIRST_TIME_SETUP.md":
+    title: "First-Time Setup Guide"
+    tags: [setup, getting-started, configuration, privacy]
     concepts:
+      - first-time-setup
+      - data-isolation
+      - privacy-configuration
+      - initial-configuration
       - session-creation
-      - basic-workflow
-      - cli-commands
-      - first-steps
     questions:
-      - "How do I get started with Empirica?"
-      - "How to create a session?"
-      - "What are the basic CLI commands?"
-      - "How to run PREFLIGHT?"
+      - "How do I set up Empirica for the first time?"
+      - "How is data isolated?"
+      - "What privacy controls exist?"
+      - "How to configure Empirica?"
     use_cases:
-      - onboarding
-      - first-time-users
-      - quick-start
-      - basic-workflow
-    related: ["05", "06", "13"]
+      - first-time-setup
+      - privacy-setup
+      - configuration
+      - data-isolation
+    related: ["04", "01", "MCP_INSTALL"]
 
-  # Investigation & Learning
-  
-  "production/07_INVESTIGATION_SYSTEM.md":
-    title: "Investigation System"
-    tags: [investigation, learning, unknowns, uncertainty, research]
-    concepts:
-      - investigation-workflow
-      - uncertainty-reduction
-      - findings-tracking
-      - unknowns-resolution
-      - epistemic-exploration
-    questions:
-      - "How to investigate unknowns?"
-      - "When should I investigate vs proceed?"
-      - "How to track investigation findings?"
-      - "What is the investigation workflow?"
-    use_cases:
-      - high-uncertainty-tasks
-      - research
-      - learning-exploration
-      - unknown-resolution
-    related: ["05", "06", "30"]
-
-  # API & Integration
-  
-  "production/13_PYTHON_API.md":
-    title: "Python API"
-    tags: [api, python, integration, programmatic, development]
-    concepts:
-      - python-api
-      - sessiondatabase-class
-      - programmatic-access
-      - api-methods
-    questions:
-      - "How to use Empirica from Python?"
-      - "What is the SessionDatabase API?"
-      - "How to create sessions programmatically?"
-      - "How to query epistemic data from Python?"
-    use_cases:
-      - programmatic-access
-      - python-integration
-      - custom-tools
-      - api-development
-    related: ["12", "30", "14"]
-
-  "guides/MCP_CONFIGURATION_EXAMPLES.md":
-    title: "MCP Configuration Examples"
-    tags: [mcp, integration, claude, cline, configuration]
+  "guides/MCP_INSTALLATION.md":
+    title: "MCP Installation & Integration"
+    tags: [mcp, installation, claude, integration, setup]
     concepts:
       - mcp-protocol
+      - claude-desktop-integration
+      - mcp-server-setup
       - tool-configuration
-      - claude-desktop
-      - cline-integration
+      - empirica-mcp-package
     questions:
-      - "How to configure Empirica for Claude Desktop?"
-      - "How to set up MCP tools?"
+      - "How to install Empirica MCP?"
+      - "How to integrate with Claude Desktop?"
       - "What is MCP?"
-      - "How to integrate with Cline?"
+      - "How to configure MCP tools?"
     use_cases:
       - mcp-setup
       - claude-integration
-      - tool-configuration
-      - cross-platform
-    related: ["03", "13"]
+      - tool-integration
+      - ai-assistant-setup
+    related: ["04", "CANONICAL_PROMPT", "CLAUDE_DESKTOP"]
 
-  # Goals & Task Management
-  
-  "guides/GOAL_TREE_USAGE_GUIDE.md":
-    title: "Goal Tree Usage"
-    tags: [goals, subtasks, planning, task-management, organization]
+  # ============================================================================
+  # ARCHITECTURE (Deep Understanding)
+  # ============================================================================
+
+  "architecture/EMPIRICA_SYSTEM_OVERVIEW.md":
+    title: "Empirica System Overview"
+    tags: [architecture, overview, system-design, components]
     concepts:
-      - goal-creation
-      - subtask-tracking
-      - goal-trees
-      - completion-tracking
-      - task-hierarchy
+      - system-architecture
+      - component-overview
+      - layer-structure
+      - storage-layer
+      - cli-layer
+      - mcp-layer
+      - reasoning-middleware
     questions:
-      - "How to create goals?"
-      - "How to add subtasks?"
-      - "How to track goal progress?"
-      - "What is a goal tree?"
+      - "How is Empirica architected?"
+      - "What are the main components?"
+      - "How do the layers interact?"
+      - "What's the system design?"
     use_cases:
-      - task-planning
-      - complex-projects
-      - progress-tracking
-      - work-organization
-    related: ["30", "23", "12"]
+      - architecture-understanding
+      - system-design
+      - component-relationships
+      - deep-dive
+    related: ["STORAGE_ARCH", "DOC_CODE_INTEL", "VISUAL_GUIDE"]
 
-  # Configuration & Customization
-  
-  "production/15_CONFIGURATION.md":
-    title: "Configuration"
-    tags: [configuration, settings, customization, thresholds, profiles]
+  "architecture/STORAGE_ARCHITECTURE_COMPLETE.md":
+    title: "Storage Architecture (Complete)"
+    tags: [architecture, storage, database, git-notes, three-layer]
     concepts:
-      - configuration-files
-      - threshold-tuning
-      - profile-settings
-      - mco-config
-      - yaml-configuration
+      - three-layer-storage
+      - sqlite-database
+      - git-notes-checkpoints
+      - json-files
+      - atomic-writes
+      - reflex-logger
+      - storage-patterns
     questions:
-      - "How to configure Empirica?"
-      - "How to tune thresholds?"
-      - "Where are configuration files?"
-      - "How to customize settings?"
+      - "How does Empirica store data?"
+      - "What is the three-layer storage?"
+      - "How do git notes work?"
+      - "How to ensure atomic writes?"
+      - "What's the storage architecture?"
     use_cases:
-      - customization
-      - threshold-tuning
-      - profile-management
-      - system-configuration
-    related: ["16", "14", "10"]
+      - storage-understanding
+      - data-persistence
+      - architecture-deep-dive
+      - troubleshooting-storage
+    related: ["SYSTEM_OVERVIEW", "DOC_CODE_INTEL"]
 
-  "production/10_PLUGIN_SYSTEM.md":
-    title: "Plugin System"
-    tags: [plugins, extensions, customization, modality-switcher]
+  "architecture/DOC_CODE_INTELLIGENCE.md":
+    title: "Doc-Code Bidirectional Intelligence"
+    tags: [architecture, documentation, code-sync, automation]
     concepts:
-      - plugin-architecture
-      - custom-plugins
-      - plugin-development
-      - extensibility
+      - doc-code-sync
+      - bidirectional-intelligence
+      - automatic-updates
+      - schema-generation
+      - documentation-automation
+      - drift-detection
     questions:
-      - "How to create plugins?"
-      - "What is the plugin system?"
-      - "How to extend Empirica?"
-      - "What plugins are available?"
+      - "How do docs stay in sync with code?"
+      - "What is bidirectional doc-code intelligence?"
+      - "How are docs auto-updated?"
+      - "How does drift detection work?"
     use_cases:
-      - extensibility
-      - custom-features
-      - plugin-development
-      - system-extension
-    related: ["14", "15"]
+      - documentation-maintenance
+      - code-documentation-sync
+      - automation-understanding
+      - architecture-patterns
+    related: ["SYSTEM_OVERVIEW", "STORAGE_ARCH"]
 
-  # Troubleshooting & Help
-  
-  "production/21_TROUBLESHOOTING.md":
-    title: "Troubleshooting"
-    tags: [troubleshooting, debugging, errors, problems, help]
+  "architecture/EMPIRICA_VISUAL_GUIDE.md":
+    title: "Empirica Visual Architecture Guide"
+    tags: [architecture, visual, diagrams, overview]
+    concepts:
+      - visual-architecture
+      - component-diagrams
+      - flow-diagrams
+      - system-visualization
+    questions:
+      - "Can I see a visual architecture?"
+      - "What are the system diagrams?"
+      - "How does data flow through Empirica?"
+    use_cases:
+      - visual-learning
+      - architecture-overview
+      - system-understanding
+      - presentations
+    related: ["SYSTEM_OVERVIEW", "STORAGE_ARCH"]
+
+  # ============================================================================
+  # INTEGRATIONS
+  # ============================================================================
+
+  "integrations/BEADS_GOALS_READY_GUIDE.md":
+    title: "BEADS Integration Guide"
+    tags: [beads, integration, goals, task-management, rust]
+    concepts:
+      - beads-integration
+      - task-tracking
+      - goal-synchronization
+      - dependency-management
+      - git-friendly-tracking
+    questions:
+      - "How to integrate BEADS with Empirica?"
+      - "What is BEADS?"
+      - "How do goals sync with BEADS?"
+      - "How to use BEADS for task tracking?"
+    use_cases:
+      - task-management
+      - beads-integration
+      - goal-tracking
+      - dependency-management
+    related: ["SYSTEM_OVERVIEW", "CANONICAL_PROMPT"]
+
+  # ============================================================================
+  # TROUBLESHOOTING & HELP
+  # ============================================================================
+
+  "06_TROUBLESHOOTING.md":
+    title: "Troubleshooting Guide"
+    tags: [troubleshooting, debugging, errors, help, problems]
     concepts:
       - error-resolution
       - common-issues
       - debugging-tips
       - problem-solving
+      - support
     questions:
       - "Why isn't my session working?"
       - "How to fix database errors?"
       - "What does this error mean?"
-      - "How to debug issues?"
+      - "How to debug Empirica issues?"
+      - "Common problems and solutions?"
     use_cases:
       - error-resolution
       - debugging
       - problem-solving
       - support
-    related: ["22", "03", "12"]
+      - troubleshooting
+    related: ["01", "04", "FIRST_SETUP"]
 
-  "production/22_FAQ.md":
-    title: "FAQ"
-    tags: [faq, questions, answers, help, reference]
+  # ============================================================================
+  # SYSTEM PROMPTS (AI Integration)
+  # ============================================================================
+
+  "system-prompts/MINIMALIST_SYSTEM_PROMPT.md":
+    title: "Minimalist System Prompt"
+    tags: [system-prompt, minimalist, quick-reference, ai-usage]
     concepts:
-      - frequently-asked-questions
-      - quick-answers
-      - common-questions
+      - minimalist-prompt
+      - essential-commands
+      - quick-reference
+      - streamlined-usage
     questions:
-      - "What is Empirica?"
-      - "Why use Empirica?"
-      - "How is Empirica different from X?"
-      - "Common questions about Empirica"
+      - "What's the minimal system prompt?"
+      - "Quick reference for AI usage?"
+      - "Essential Empirica commands?"
     use_cases:
       - quick-reference
-      - concept-clarification
-      - feature-comparison
-    related: ["03", "05", "30"]
+      - minimal-integration
+      - essential-usage
+    related: ["CANONICAL_PROMPT", "01"]
 
-# Statistics
-total_docs_indexed: 15
-categories:
-  core_concepts: 2
-  project_management: 2
-  collaboration: 1
-  database: 1
-  getting_started: 1
-  investigation: 1
-  api: 2
-  task_management: 1
-  configuration: 2
-  troubleshooting: 2
+  "system-prompts/CLAUDE_DESKTOP.md":
+    title: "Claude Desktop Integration"
+    tags: [claude, mcp, integration, system-prompt]
+    concepts:
+      - claude-desktop
+      - mcp-integration
+      - tool-configuration
+    questions:
+      - "How to use Empirica with Claude Desktop?"
+      - "Claude Desktop configuration?"
+    use_cases:
+      - claude-integration
+      - desktop-setup
+    related: ["MCP_INSTALL", "CANONICAL_PROMPT"]
 
-# Usage Examples:
-# 
+# ============================================================================
+# STATISTICS & METADATA
+# ============================================================================
+
+total_docs_indexed: 16
+last_updated: "2025-12-18"
+coverage:
+  core_concepts: 5
+  getting_started: 3
+  architecture: 4
+  integrations: 1
+  troubleshooting: 1
+  system_prompts: 2
+
+# ============================================================================
+# USAGE EXAMPLES
+# ============================================================================
+#
 # Query by tag:
-#   docs = query_by_tag("bootstrap")  → Returns: PROJECT_LEVEL_TRACKING.md
-#   docs = query_by_tag("vectors")    → Returns: EPISTEMIC_VECTORS.md
+#   docs = query_by_tag("core-concept")  → Returns top 5 priority docs
+#   docs = query_by_tag("installation")  → Returns installation guides
 #
 # Query by question:
-#   docs = query_by_question("How to create a project?") → Returns: PROJECT_LEVEL_TRACKING.md
-#   docs = query_by_question("What are epistemic vectors?") → Returns: EPISTEMIC_VECTORS.md
+#   docs = query_by_question("What is Empirica?") → Returns 01_START_HERE.md
+#   docs = query_by_question("How to install?") → Returns 04_INSTALLATION.md
 #
 # Query by use case:
-#   docs = query_by_use_case("multi-repo-projects") → Returns: PROJECT_LEVEL_TRACKING.md
-#   docs = query_by_use_case("onboarding") → Returns: BASIC_USAGE.md, PROJECT_LEVEL_TRACKING.md
+#   docs = query_by_use_case("onboarding") → Returns START_HERE, INSTALLATION
+#   docs = query_by_use_case("architecture-understanding") → Returns architecture docs
+#
+# Project Bootstrap Loading:
+#   When running: empirica project-bootstrap --project-id <ID>
+#   Automatically loads top 5 docs (prioritizes "core-concept" tagged ones)
+#   Result: Fast context loading (~800 tokens) with most relevant docs
 
-# Future Enhancements:
-# - Phase 2: Embed each doc in Qdrant using these tags as metadata
-# - Phase 3: Uncertainty-driven queries (high uncertainty → load docs with matching tags)
-# - Phase 4: Cross-project semantic search
+# ============================================================================
+# NOTES FOR DEVELOPERS
+# ============================================================================
+#
+# This semantic index is for EMPIRICA'S OWN DOCUMENTATION (dogfooding).
+#
+# Other projects using Empirica should create their own SEMANTIC_INDEX.yaml
+# in their docs/ directory to index THEIR project's documentation.
+#
+# Example for a game project:
+#   docs/SEMANTIC_INDEX.yaml would index:
+#   - game-design.md
+#   - api-reference.md
+#   - architecture-decisions.md
+#   - etc.
+#
+# The project-bootstrap command loads from: {project_root}/docs/SEMANTIC_INDEX.yaml
