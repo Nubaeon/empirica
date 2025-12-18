@@ -1,0 +1,28 @@
+{
+  "goal_id": "deae1ec4-5e6c-4012-aef8-674240723692",
+  "session_id": "bf159b16-2bba-488c-aef4-1f72a2716279",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-18T13:13:14.531572+00:00",
+  "goal_data": {
+    "objective": "Fix doc-code integrity: Remove phantom command documentation",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Phantom commands < 20"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-18T13:13:14.531586+00:00",
+      "action": "created"
+    }
+  ]
+}
