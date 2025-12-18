@@ -1,0 +1,16 @@
+{
+  "total_matches": 128474,
+  "match_breakdown": {
+    "exact": 205,
+    "fuzzy": 196,
+    "structural": 1,
+    "semantic": 128072
+  },
+  "total_gaps": 2901,
+  "gap_breakdown": {
+    "code_orphan": 616,
+    "doc_orphan": 1385,
+    "stale_example": 900
+  },
+  "code_coverage": 88.05620287868403
+}

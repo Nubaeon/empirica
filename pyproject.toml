@@ -36,10 +36,14 @@ dependencies = [
     # Configuration and file handling
     "pyyaml>=6.0",              # Required for config/profile loading
     "aiofiles>=23.0",
+    "jsonschema>=4.0",          # Required for config validation
     
     # HTTP and networking
     "httpx>=0.24",
     "requests>=2.31.0",         # Required for API adapters
+    
+    # Security and cryptography
+    "cryptography>=41.0",       # Required for AI identity and checkpoint signing
     
     # MCP integration (critical for MCP server)
     "mcp>=1.0.0",
@@ -53,6 +57,31 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# API and Dashboard features
+api = [
+    "flask>=3.0",
+    "flask-cors>=4.0",
+    "fastapi>=0.104",
+    "uvicorn>=0.24",
+]
+
+# Vector search features
+vector = [
+    "qdrant-client>=1.7",
+]
+
+# Vision/OCR features (experimental)
+vision = [
+    "pytesseract>=0.3",
+    "pillow>=10.0",
+    "opencv-contrib-python>=4.8",
+]
+
+# All optional features
+all = [
+    "empirica[api,vector,vision]",
+]
+
 test = [
     "pytest>=7.4",
     "pytest-asyncio>=0.21",

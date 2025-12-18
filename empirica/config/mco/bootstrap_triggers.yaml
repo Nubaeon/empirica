@@ -1,0 +1,205 @@
+# Bootstrap Triggers Configuration
+# When and how to load project breadcrumbs based on epistemic uncertainty
+
+version: "1.0"
+created: "2025-12-12"
+status: "active"
+
+# ============================================================================
+# TIMING: When to trigger bootstrap
+# ============================================================================
+
+timing:
+  session_start:
+    trigger: "always"
+    when: "After session-create, BEFORE PREFLIGHT"
+    rationale: "PREFLIGHT assesses KNOW - bootstrap provides context to assess accurately"
+    mode: "session_start"  # Fast breadcrumbs (~800 tokens)
+    
+  check_phase:
+    trigger: "never"  # Don't reload full bootstrap
+    alternative: "query_unknowns_summary()"
+    rationale: "Bootstrap breadcrumbs don't change during work - targeted query more efficient"
+    token_cost: "~50 tokens vs ~800 for full reload"
+    
+  postflight:
+    trigger: "never"
+    rationale: "Work complete - bootstrap not needed"
+
+
+# ============================================================================
+# DEPTH: How much context to load (uncertainty-driven)
+# ============================================================================
+
+depth_by_uncertainty:
+  high:
+    threshold: ">0.7"
+    mode: "live"  # Complete breadcrumbs
+    docs_loaded: 5
+    findings_limit: 20
+    unknowns_filter: "all"
+    dead_ends_limit: 10
+    mistakes_limit: 10
+    token_cost: "~4500 tokens"
+    use_case: "New domain - need extensive context to assess KNOW accurately"
+    example: "Migrating to unfamiliar framework, investigating complex bug"
+    
+  medium:
+    threshold: "0.5-0.7"
+    mode: "session_start"  # Recent items only
+    docs_loaded: 3
+    findings_limit: 10
+    unknowns_filter: "unresolved_only"
+    dead_ends_limit: 5
+    mistakes_limit: 5
+    token_cost: "~2700 tokens"
+    use_case: "Some baseline knowledge - need guidance on specifics"
+    example: "Familiar framework but new feature, continuing work with gaps"
+    
+  low:
+    threshold: "<0.5"
+    mode: "minimal"  # Findings only
+    docs_loaded: 2
+    findings_limit: 5
+    unknowns_filter: "none"
+    dead_ends_limit: 2
+    mistakes_limit: 3
+    token_cost: "~1800 tokens"
+    use_case: "High baseline knowledge - trust existing expertise"
+    example: "Routine maintenance, simple bug fix in familiar code"
+
+
+# ============================================================================
+# INTEGRATION: How bootstrap informs PREFLIGHT
+# ============================================================================
+
+preflight_integration:
+  know_vector:
+    informed_by: "findings (recent discoveries increase KNOW)"
+    example: "If findings show 'OAuth2 flow mapped', KNOW for auth task increases"
+    
+  uncertainty_vector:
+    informed_by: "unknowns (unresolved unknowns increase UNCERTAINTY)"
+    example: "If unknowns show 'Token refresh timing unclear', UNCERTAINTY increases"
+    
+  context_vector:
+    informed_by: "reference_docs + semantic_docs"
+    example: "If reference docs exist for task domain, CONTEXT increases"
+    
+  do_vector:
+    informed_by: "incomplete_work (partially complete goals indicate partial DO)"
+    example: "If goal 50% complete, DO for that domain is moderate"
+
+
+# ============================================================================
+# SKILLS INJECTION: Load full skill content (not just metadata)
+# ============================================================================
+
+skills_injection:
+  current_state:
+    problem: "Bootstrap returns skill metadata (id, title, tags) but not full content (summary, steps, gotchas)"
+    impact: "AI doesn't see skill knowledge - can't leverage it"
+    
+  fix_required:
+    location: "empirica/data/session_database.py::bootstrap_project_breadcrumbs()"
+    change: "Load full skill YAML content, not just metadata"
+    
+  format:
+    metadata_only:  # Current (broken)
+      id: "astro-web-dev"
+      title: "Astro Web Dev"
+      tags: ["web", "astro", "frontend"]
+      source: "local"
+      
+    full_content:  # Required
+      id: "astro-web-dev"
+      title: "Astro Web Dev"
+      tags: ["web", "astro", "frontend"]
+      summary: "Full README content from skill"
+      steps: ["Step 1", "Step 2", ...]
+      gotchas: ["Gotcha 1", "Gotcha 2", ...]
+      references: ["Ref 1", "Ref 2", ...]
+      source: "local"
+      
+  token_cost:
+    metadata_only: "~50 tokens per skill"
+    full_content: "~200-500 tokens per skill"
+    recommendation: "Load full content for skills matching task tags (targeted injection)"
+
+
+# ============================================================================
+# TOKEN BUDGET: Optimization strategy
+# ============================================================================
+
+token_budget:
+  session_start:
+    max_budget: 5000  # Conservative limit
+    allocation:
+      breadcrumbs: "800-4500 (uncertainty-driven)"
+      skills: "200-1000 (tag-matched only)"
+      semantic_docs: "100-500 (top 3-5 docs)"
+      mco_configs: "200-400 (workflow-specific)"
+      buffer: "500 (safety margin)"
+      
+  optimization_strategies:
+    - strategy: "Tag-based skill filtering"
+      description: "Only inject skills whose tags match task domain"
+      example: "Task mentions 'Astro' → inject astro-web-dev skill only"
+      savings: "~80% (inject 1-2 skills vs all 5)"
+      
+    - strategy: "Uncertainty-driven depth"
+      description: "High uncertainty → more context; low → less"
+      savings: "~50% for routine tasks (1800 vs 4500 tokens)"
+      
+    - strategy: "Targeted unknowns query at CHECK"
+      description: "Don't reload full bootstrap - query specific unknowns"
+      savings: "~94% (50 vs 800 tokens)"
+
+
+# ============================================================================
+# WORKFLOW EXAMPLES
+# ============================================================================
+
+examples:
+  new_domain_investigation:
+    uncertainty: 0.8  # High - unfamiliar domain
+    bootstrap_depth: "live"
+    skills_injected: "All matching tags"
+    token_cost: "~4500 breadcrumbs + ~1000 skills = ~5500"
+    rationale: "Need extensive context to assess KNOW accurately"
+    
+  continuation_work:
+    uncertainty: 0.6  # Medium - familiar but gaps exist
+    bootstrap_depth: "session_start"
+    skills_injected: "Primary skill only"
+    token_cost: "~2700 breadcrumbs + ~300 skills = ~3000"
+    rationale: "Some baseline, need guidance on specifics"
+    
+  routine_maintenance:
+    uncertainty: 0.3  # Low - high baseline knowledge
+    bootstrap_depth: "minimal"
+    skills_injected: "None (trust existing expertise)"
+    token_cost: "~1800 breadcrumbs + 0 skills = ~1800"
+    rationale: "Routine work, don't waste tokens"
+
+
+# ============================================================================
+# IMPLEMENTATION CHECKLIST
+# ============================================================================
+
+implementation:
+  phase_1_complete:
+    - "✅ Bootstrap returns skill metadata"
+    - "✅ Uncertainty-driven depth logic exists"
+    - "✅ Token cost tracking"
+    
+  phase_2_required:
+    - "❌ Load full skill content (not just metadata)"
+    - "❌ Tag-based skill filtering"
+    - "❌ Inject skills into system prompt/context"
+    - "❌ MCP tool: project-bootstrap should return skills in 'context_to_inject' field"
+    
+  phase_3_planned:
+    - "⏳ Qdrant semantic search for skill matching"
+    - "⏳ Learning-based skill recommendation (which skills helped most?)"
+    - "⏳ Dynamic skill loading (load during CHECK if new domain encountered)"

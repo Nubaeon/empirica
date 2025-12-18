@@ -55,8 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - CLI Integration
 - **CLI Commands:**
-  - `empirica cascade` - Smart query routing with 5 strategies
-  - `empirica decision` - Interactive epistemic decision workflow
+  - `empirica workflow` - Full PREFLIGHT→CHECK→POSTFLIGHT workflow
+  - `empirica check` - Interactive epistemic gate workflow
   - `empirica monitor` - Usage tracking dashboard
   - `empirica config` - Configuration management (init/show/validate)
 

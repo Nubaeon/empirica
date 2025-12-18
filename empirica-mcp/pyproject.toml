@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "empirica-mcp"
+version = "1.0.0-beta"
+description = "MCP server for Empirica epistemic framework"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "LGPL-3.0-or-later OR MIT"
+authors = [
+    {name = "Empirica Team"},
+]
+keywords = ["mcp", "empirica", "epistemic", "ai", "metacognition"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "empirica>=1.0.0-beta",  # Main package
+    "mcp>=1.0.0",            # MCP SDK
+]
+
+[project.urls]
+Homepage = "https://github.com/Nubaeon/empirica"
+Documentation = "https://github.com/Nubaeon/empirica/tree/main/docs"
+Repository = "https://github.com/Nubaeon/empirica"
+Issues = "https://github.com/Nubaeon/empirica/issues"
+
+[project.scripts]
+empirica-mcp = "empirica_mcp.server:main"
+
+[tool.setuptools]
+packages = ["empirica_mcp"]

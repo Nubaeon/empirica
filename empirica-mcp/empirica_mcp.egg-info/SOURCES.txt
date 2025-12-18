@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+empirica_mcp/server.py
+empirica_mcp.egg-info/PKG-INFO
+empirica_mcp.egg-info/SOURCES.txt
+empirica_mcp.egg-info/dependency_links.txt
+empirica_mcp.egg-info/entry_points.txt
+empirica_mcp.egg-info/requires.txt
+empirica_mcp.egg-info/top_level.txt

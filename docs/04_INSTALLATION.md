@@ -1,371 +1,324 @@
-# Complete Empirica Installation Guide
+# Installation Guide
 
-This guide covers all installation methods and integration options for Empirica.
-
-**Quick Navigation:**
-- [Package Installation](#package-installation) (Python package via PyPI, Homebrew, Chocolatey, Docker)
-- [System Prompt Installation](#system-prompt-installation) (For AI CLI tools like Claude Code, Gemini CLI)
-- [MCP Server Installation](#mcp-server-installation) (For IDEs and AI interfaces)
+**Time:** 5-10 minutes  
+**Prerequisites:** Python 3.8+, git
 
 ---
 
-## Package Installation
+## Quick Install
 
-Choose your preferred package manager:
-
-### Option 1: PyPI (Python Package Index)
-
-**Requirements:** Python 3.11+
-
+### 1. Install via pip
 ```bash
 pip install empirica
-empirica --version
-empirica session-create --ai-id myagent --level extended
 ```
 
-**Verify installation:**
+### 2. Verify installation
 ```bash
 empirica --help
-python -c "from empirica.core.schemas.epistemic_assessment import EpistemicAssessment"
 ```
+
+You should see the list of available commands.
+
+### 3. Create your first session
+```bash
+empirica session-create --ai-id myai
+
+# Output shows session_id and auto-detected project
+```
+
+**That's it!** You're ready to use Empirica.
 
 ---
 
-### Option 2: Homebrew (macOS/Linux)
+## Installation Options
 
+### Option 1: PyPI (Recommended)
 ```bash
-# After Homebrew tap is published
-brew tap empirica/tap
-brew install empirica
+# Latest stable release
+pip install empirica
 
-# Verify
-empirica session-create --help
+# Specific version
+pip install empirica==1.0.0
+
+# Upgrade to latest
+pip install --upgrade empirica
 ```
 
-**Or install directly from formula:**
+### Option 2: From Source
 ```bash
-brew install --build-from-source ./packaging/homebrew/empirica.rb
-```
-
----
-
-### Option 3: Chocolatey (Windows)
-
-```powershell
-# After Chocolatey package is published
-choco install empirica
-
-# Verify
-empirica session-create --help
-```
-
----
-
-### Option 4: Docker
-
-```bash
-# Pull image (after publishing to Docker Hub)
-docker pull soulentheo/empirica:latest
-
-# Run CLI
-docker run -it --rm soulentheo/empirica:latest bootstrap --help
-
-# With persistent data
-docker run -v $(pwd)/.empirica:/data/.empirica soulentheo/empirica:latest bootstrap --ai-id docker-agent
-```
-
-**Using Docker Compose:**
-```bash
-# Start MCP server
-docker-compose up -d mcp-server
-
-# Run CLI commands
-docker-compose run cli bootstrap --ai-id myagent
-```
-
----
-
-### Option 5: From Source (Development)
-
-```bash
-git clone https://github.com/nubaeon/empirica.git
+# Clone repository
+git clone https://github.com/YourOrg/empirica.git
 cd empirica
+
+# Install in development mode
 pip install -e .
-empirica session-create --ai-id dev-agent
+
+# Or install normally
+pip install .
+```
+
+### Option 3: With extras
+```bash
+# Install with vision support
+pip install empirica[vision]
+
+# Install with all extras
+pip install empirica[all]
 ```
 
 ---
 
-## System Prompt Installation
+## Configuration
 
-Install Empirica system prompts for AI CLI tools. This configures the AI agent to use Empirica methodology.
+### Optional: API Keys
 
-### Platform 1: Claude Code (formerly Claude Dev)
-
-**Location:** `.clinerules` in project root
+If you plan to use external integrations (future features), create a credentials file:
 
 ```bash
-# Option A: Automated
-empirica install-prompt claude-code --project-dir /path/to/your/project
-
-# Option B: Manual
-cat docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md >> /path/to/project/.clinerules
+mkdir -p ~/.empirica
+cat > ~/.empirica/credentials.yaml << EOF
+# Optional: For future integrations
+openai_api_key: "your-key-here"
+EOF
 ```
 
-**Verify:**
-```bash
-cat .clinerules | grep "EMPIRICA AGENT"
-```
+**Note:** This is optional. Empirica works without any API keys for core functionality.
 
----
+### Optional: Git Configuration
 
-### Platform 2: Google Gemini Code Assist
-
-**Location:** `.gemini/system_instructions.md`
+For checkpoint and handoff features:
 
 ```bash
-mkdir -p .gemini
-cp docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md .gemini/system_instructions.md
+# Ensure git is configured
+git config --global user.name "Your Name"
+git config --global user.email "your@email.com"
 ```
 
 ---
 
-### Platform 3: Roo Cline
+## Directory Structure
 
-**Location:** `.clinerules`
+After installation, Empirica creates directories on first use:
 
+```
+~/.empirica/                    # User data directory
+├── empirica.db                 # SQLite database
+├── sessions/                   # Session data
+├── projects/                   # Project tracking
+└── credentials.yaml            # API keys (optional)
+
+<your-repo>/.empirica/          # Project-specific data
+├── sessions/                   # Local session cache
+└── slides/                     # Vision assessments (if using vision)
+```
+
+**Note:** `.empirica/` directories are gitignored by default.
+
+---
+
+## Verification
+
+### Test Basic Workflow
 ```bash
-cp docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md .clinerules
+# 1. Create session
+SESSION_ID=$(empirica session-create --ai-id test --output json | jq -r .session_id)
+
+# 2. List sessions
+empirica sessions-list
+
+# 3. Show session
+empirica sessions-show --session-id $SESSION_ID
+
+# 4. Clean up (optional)
+# Sessions are stored in SQLite, safe to leave them
+```
+
+### Check Command Groups
+```bash
+# Session commands
+empirica sessions-list
+empirica sessions-resume --ai-id test
+
+# Project commands
+empirica project-list
+
+# Goal commands
+empirica goals-list
+
+# All working? You're good to go! ✓
 ```
 
 ---
 
-### Platform 4: Cursor
+## Troubleshooting
 
-**Location:** `.cursorrules`
-
+### Import Error
 ```bash
-cp docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md .cursorrules
+# Error: ModuleNotFoundError: No module named 'empirica'
+# Solution: Ensure pip installed to correct Python environment
+
+python --version      # Check Python version (3.8+ required)
+which python          # Check Python path
+pip show empirica     # Verify installation
+```
+
+### Database Error
+```bash
+# Error: sqlite3.OperationalError: unable to open database
+# Solution: Check directory permissions
+
+ls -la ~/.empirica/
+chmod 755 ~/.empirica/
+```
+
+### Git Notes Error
+```bash
+# Error: fatal: refs/empirica/checkpoints does not exist
+# Solution: Create first checkpoint to initialize git notes
+
+empirica checkpoint-create --session-id <SESSION_ID>
+```
+
+### Command Not Found
+```bash
+# Error: empirica: command not found
+# Solution: Add pip bin directory to PATH
+
+# Find where pip installs binaries
+pip show empirica | grep Location
+
+# Add to PATH (bash)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Add to PATH (zsh)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
 ---
 
-### Platform 5: Windsurf (Codeium)
+## Platform-Specific Notes
 
-**Location:** `.windsurfrules`
-
+### Linux
 ```bash
-cp docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md .windsurfrules
-```
+# Install system dependencies
+sudo apt-get update
+sudo apt-get install python3-pip python3-dev git
 
----
-
-### Generic Installation (Any Platform)
-
-If your AI CLI tool supports custom system prompts:
-
-1. Locate the system prompt configuration file (often `.clinerules`, `.ai-rules`, or similar)
-2. Copy or append `docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md`
-3. Restart the AI tool
-
-**Template command:**
-```bash
-cp docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md /path/to/your/.ai-config-file
-```
-
----
-
-## MCP Server Installation
-
-Install the Empirica MCP (Model Context Protocol) server for IDE integration.
-
-### Supported Platforms
-
-- Claude Desktop
-- Claude Code (VS Code extension)
-- Cline (VS Code extension)
-- Continue.dev
-- Zed Editor
-- IDX (Google)
-- Cursor
-- Windsurf
-- Goose (Block)
-
----
-
-### Configuration File Locations
-
-Each platform requires a specific configuration file:
-
-| Platform | Config File Location |
-|----------|---------------------|
-| **Claude Desktop** | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)<br>`%APPDATA%/Claude/claude_desktop_config.json` (Windows)<br>`~/.config/Claude/claude_desktop_config.json` (Linux) |
-| **Claude Code (VS Code)** | `.vscode/settings.json` or workspace settings |
-| **Cline** | `.vscode/settings.json` under `cline.mcpServers` |
-| **Continue.dev** | `~/.continue/config.json` |
-| **Zed Editor** | `~/.config/zed/settings.json` |
-| **IDX (Google)** | `.idx/mcp_settings.json` |
-| **Cursor** | MCP support via Continue.dev integration |
-| **Windsurf** | `~/.codeium/windsurf/mcp_settings.json` |
-| **Goose (Block)** | `~/.config/goose/config.yaml` |
-
----
-
-### Installation Steps
-
-#### 1. Install Empirica Package
-
-```bash
+# Install Empirica
 pip install empirica
 ```
 
-#### 2. Locate Your Platform's Config File
-
-See table above for your platform's configuration file location.
-
-#### 3. Add MCP Server Configuration
-
-Example for **Claude Desktop** (`claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "empirica": {
-      "command": "python",
-      "args": ["-m", "mcp_local.empirica_mcp_server"],
-      "env": {
-        "EMPIRICA_HOME": "${HOME}/.empirica"
-      }
-    }
-  }
-}
-```
-
-Example for **Continue.dev** (`~/.continue/config.json`):
-
-```json
-{
-  "mcpServers": [
-    {
-      "name": "empirica",
-      "command": "python",
-      "args": ["-m", "mcp_local.empirica_mcp_server"],
-      "env": {
-        "EMPIRICA_HOME": "${HOME}/.empirica"
-      }
-    }
-  ]
-}
-```
-
-#### 4. Restart Your IDE/Tool
-
-After adding the configuration, restart the IDE or AI tool to load the MCP server.
-
-#### 5. Verify MCP Server
-
-Check if Empirica tools are available:
-- Claude Desktop: Look for Empirica tools in the tool picker
-- Continue.dev: Check MCP status in Continue panel
-- VS Code extensions: Check the MCP server status indicator
-
----
-
-### Troubleshooting MCP Installation
-
-**MCP server not starting:**
+### macOS
 ```bash
-# Test manually
-python -m mcp_local.empirica_mcp_server
+# Install via Homebrew (if needed)
+brew install python git
 
-# Check if empirica is installed
-pip show empirica
-
-# Check Python path
-which python
+# Install Empirica
+pip3 install empirica
 ```
 
-**Permission errors:**
-```bash
-# Ensure EMPIRICA_HOME directory exists
-mkdir -p ~/.empirica
-chmod 755 ~/.empirica
-```
+### Windows
+```powershell
+# Install Python from python.org (3.8+)
+# Install git from git-scm.com
 
-**IDE not detecting MCP server:**
-- Restart the IDE completely
-- Check IDE logs for MCP connection errors
-- Verify JSON syntax in config file
-- Ensure Python path is correct in config
+# Install Empirica
+pip install empirica
 
----
-
-## Advanced Configuration
-
-### Custom Database Location
-
-```bash
-export EMPIRICA_HOME=/custom/path/.empirica
-empirica session-create --ai-id myagent
-```
-
-### Multi-Profile Setup
-
-```bash
-# Development profile
-empirica session-create --ai-id dev-agent --profile development
-
-# Production profile  
-empirica session-create --ai-id prod-agent --profile production
-```
-
-### Integration with Git
-
-Empirica automatically uses git for checkpoints and handoff reports:
-
-```bash
-cd your-project
-git init
-empirica session-create --ai-id myagent
-# Checkpoints are stored in git notes
+# Note: Use PowerShell or Git Bash for best experience
 ```
 
 ---
 
-## Verification Checklist
+## Development Installation
 
-After installation, verify everything works:
+For contributors or advanced users:
 
-- [ ] CLI responds: `empirica --version`
-- [ ] Bootstrap works: `empirica session-create --ai-id test --level minimal`
-- [ ] Database created: `ls ~/.empirica/sessions.db`
-- [ ] System prompt loaded (if applicable): Check `.clinerules` or equivalent
-- [ ] MCP server connects (if applicable): Check IDE tool picker
-- [ ] Git integration works: `empirica goals list`
+```bash
+# Clone repository
+git clone https://github.com/YourOrg/empirica.git
+cd empirica
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or
+venv\Scripts\activate     # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install in development mode
+pip install -e .
+
+# Run tests
+pytest tests/
+
+# Build documentation
+cd docs
+make html
+```
+
+---
+
+## Optional Components
+
+### Vision System (for slide assessment)
+```bash
+# Install vision extras
+pip install empirica[vision]
+
+# System dependencies
+sudo apt-get install tesseract-ocr  # Linux
+brew install tesseract              # macOS
+
+# Test
+python -m empirica.vision.slide_processor --help
+```
+
+### MCP Server (for Claude Desktop)
+```bash
+# Already included in main install
+# Configure in Claude Desktop settings
+
+# See: 03_QUICKSTART_MCP.md
+```
+
+---
+
+## Uninstallation
+
+```bash
+# Uninstall package
+pip uninstall empirica
+
+# Remove user data (optional)
+rm -rf ~/.empirica/
+
+# Remove project data (optional)
+# From each project directory:
+rm -rf .empirica/
+```
 
 ---
 
 ## Next Steps
 
-1. **Quick Start:** Run `empirica session-create --ai-id myagent --level extended`
-2. **Read Methodology:** See `docs/production/00_DOCUMENTATION_MAP.md`
-3. **Try CASCADE Workflow:** See `docs/production/03_BASIC_USAGE.md`
-4. **Join Community:** (Add community links when available)
+- **Try the CLI:** [02_QUICKSTART_CLI.md](02_QUICKSTART_CLI.md)
+- **Try MCP integration:** [03_QUICKSTART_MCP.md](03_QUICKSTART_MCP.md)
+- **Learn the concepts:** [EMPIRICA_EXPLAINED_SIMPLE.md](EMPIRICA_EXPLAINED_SIMPLE.md)
+- **See all commands:** [reference/CLI_COMMANDS_COMPLETE.md](reference/CLI_COMMANDS_COMPLETE.md)
 
 ---
 
 ## Getting Help
 
-- **Documentation:** `docs/production/`
-- **Troubleshooting:** `docs/06_TROUBLESHOOTING.md`
-- **Issues:** GitHub Issues
-- **Questions:** (Add discussion forum link)
+- **Issues:** Check [06_TROUBLESHOOTING.md](06_TROUBLESHOOTING.md)
+- **Documentation:** Browse `docs/` directory
+- **Source code:** See [reference/CANONICAL_DIRECTORY_STRUCTURE.md](reference/CANONICAL_DIRECTORY_STRUCTURE.md)
 
 ---
 
-**Installation complete!** 🎉 Start your first session:
-
-```bash
-empirica session-create --ai-id myagent --level extended
-empirica goals create --objective "Learn Empirica" --scope project_wide
-```
+**Installation complete!** Start with `empirica session-create --ai-id myai` and follow the [CLI Quick Start](02_QUICKSTART_CLI.md).

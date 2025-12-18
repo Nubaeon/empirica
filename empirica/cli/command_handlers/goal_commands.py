@@ -22,51 +22,123 @@ logger = logging.getLogger(__name__)
 
 
 def handle_goals_create_command(args):
-    """Handle goals-create command"""
+    """Handle goals-create command - AI-first with legacy flag support"""
     try:
         from empirica.core.goals.repository import GoalRepository
         from empirica.core.tasks.repository import TaskRepository
         from empirica.core.goals.types import Goal, ScopeVector, SuccessCriterion
         import uuid
-        
-        # Parse arguments
-        session_id = args.session_id
-        objective = args.objective
-        
-        # Parse scope vector from CLI args
-        scope = ScopeVector(
-            breadth=float(args.scope_breadth) if hasattr(args, 'scope_breadth') and args.scope_breadth else 0.3,
-            duration=float(args.scope_duration) if hasattr(args, 'scope_duration') and args.scope_duration else 0.2,
-            coordination=float(args.scope_coordination) if hasattr(args, 'scope_coordination') and args.scope_coordination else 0.1
-        )
-        # Handle success_criteria - accept string or JSON array
-        if args.success_criteria:
-            # Try to parse as JSON, but if it fails, treat as plain string
-            if args.success_criteria.strip().startswith('['):
-                # Looks like JSON array
-                success_criteria_list = parse_json_safely(args.success_criteria)
+        import os
+
+        # AI-FIRST MODE: Check if config file provided as positional argument
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            # Read config from file or stdin
+            if args.config == '-':
+                # Read from stdin
+                import sys
+                config_data = parse_json_safely(sys.stdin.read())
             else:
-                # Plain string - treat as single criterion
-                success_criteria_list = [args.success_criteria]
+                # Read from file
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        # Extract parameters from config or fall back to legacy flags
+        if config_data:
+            # AI-FIRST MODE: Use config file
+            session_id = config_data.get('session_id')
+            objective = config_data.get('objective')
+
+            # Validate required fields in config
+            if not session_id or not objective:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Config file must include 'session_id' and 'objective' fields",
+                    "received": {"session_id": bool(session_id), "objective": bool(objective)}
+                }))
+                sys.exit(1)
+
+            # Parse scope from config (nested or flat)
+            scope_config = config_data.get('scope', {})
+            if isinstance(scope_config, dict):
+                scope_breadth = scope_config.get('breadth', 0.3)
+                scope_duration = scope_config.get('duration', 0.2)
+                scope_coordination = scope_config.get('coordination', 0.1)
+            else:
+                scope_breadth = 0.3
+                scope_duration = 0.2
+                scope_coordination = 0.1
+
+            success_criteria_list = config_data.get('success_criteria', [])
+            estimated_complexity = config_data.get('estimated_complexity')
+            constraints = config_data.get('constraints')
+            metadata = config_data.get('metadata')
+            output_format = 'json'  # AI-first always uses JSON output
+
         else:
+            # LEGACY MODE: Use CLI flags
+            session_id = args.session_id
+            objective = args.objective
+
+            # Validate required fields for legacy mode
+            if not session_id or not objective:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Legacy mode requires --session-id and --objective flags",
+                    "hint": "For AI-first mode, use: empirica goals-create config.json"
+                }))
+                sys.exit(1)
+            scope_breadth = float(args.scope_breadth) if hasattr(args, 'scope_breadth') and args.scope_breadth else 0.3
+            scope_duration = float(args.scope_duration) if hasattr(args, 'scope_duration') and args.scope_duration else 0.2
+            scope_coordination = float(args.scope_coordination) if hasattr(args, 'scope_coordination') and args.scope_coordination else 0.1
+            estimated_complexity = getattr(args, 'estimated_complexity', None)
+            constraints = parse_json_safely(args.constraints) if args.constraints else None
+            metadata = parse_json_safely(args.metadata) if args.metadata else None
+            output_format = getattr(args, 'output', 'json')  # Default to JSON (AI-first)
+
+            # LEGACY: Handle success_criteria from flags (file, stdin, or inline)
             success_criteria_list = []
-        
-        # Final safety check - convert string to array if needed
-        if isinstance(success_criteria_list, str):
-            success_criteria_list = [success_criteria_list]
-        
-        estimated_complexity = getattr(args, 'estimated_complexity', None)
-        constraints = parse_json_safely(args.constraints) if args.constraints else None
-        metadata = parse_json_safely(args.metadata) if args.metadata else None
+            if hasattr(args, 'success_criteria_file') and args.success_criteria_file:
+                if not os.path.exists(args.success_criteria_file):
+                    print(f"❌ Error: File not found: {args.success_criteria_file}", file=sys.stderr)
+                    sys.exit(1)
+                with open(args.success_criteria_file, 'r') as f:
+                    success_criteria_list = parse_json_safely(f.read())
+            elif hasattr(args, 'success_criteria') and args.success_criteria:
+                if args.success_criteria == '-':
+                    import sys
+                    success_criteria_list = parse_json_safely(sys.stdin.read())
+                elif args.success_criteria.strip().startswith('['):
+                    success_criteria_list = parse_json_safely(args.success_criteria)
+                else:
+                    success_criteria_list = [args.success_criteria]
+
+            # Safety check
+            if isinstance(success_criteria_list, str):
+                success_criteria_list = [success_criteria_list]
+
+        # Build scope vector (works for both modes)
+        scope = ScopeVector(
+            breadth=scope_breadth,
+            duration=scope_duration,
+            coordination=scope_coordination
+        )
         
         # Validate success criteria
         if not success_criteria_list:
-            output_format = getattr(args, 'output', 'default')
-            error_msg = "At least one success criterion is required. Use --success-criteria '[\"criterion 1\", \"criterion 2\"]'"
+            error_msg = "At least one success criterion is required"
             if output_format == 'json':
-                print(json.dumps({"ok": False, "error": error_msg}, indent=2))
+                print(json.dumps({
+                    "ok": False,
+                    "error": error_msg,
+                    "hint": "Use config file with 'success_criteria' array or --success-criteria flag"
+                }))
             else:
                 print(f"❌ {error_msg}")
+                print(f"   Hint: Use config file with 'success_criteria' array or --success-criteria flag")
             sys.exit(1)
         
         # Use the actual Goal repository
@@ -106,6 +178,48 @@ def handle_goals_create_command(args):
         success = goal_repo.save_goal(goal, session_id)
         
         if success:
+            # BEADS Integration (Optional): Create linked issue tracker item
+            beads_issue_id = None
+            use_beads = getattr(args, 'use_beads', False) or (config_data and config_data.get('use_beads', False))
+            
+            if use_beads:
+                try:
+                    from empirica.integrations.beads import BeadsAdapter
+                    beads = BeadsAdapter()
+                    
+                    if beads.is_available():
+                        # Map scope to BEADS priority (1=high, 2=medium, 3=low)
+                        priority = 1 if scope_breadth > 0.7 else (2 if scope_breadth > 0.3 else 3)
+                        
+                        # Determine issue type based on scope
+                        issue_type = "epic" if scope_breadth > 0.7 else "feature"
+                        
+                        # Create BEADS issue
+                        beads_issue_id = beads.create_issue(
+                            title=objective,
+                            description=f"Empirica Goal {goal.id[:8]}\nScope: breadth={scope_breadth:.2f}, duration={scope_duration:.2f}",
+                            priority=priority,
+                            issue_type=issue_type,
+                            labels=["empirica"]
+                        )
+                        
+                        if beads_issue_id:
+                            # Update goal with BEADS link
+                            from empirica.data.session_database import SessionDatabase
+                            temp_db = SessionDatabase()
+                            temp_db.conn.execute(
+                                "UPDATE goals SET beads_issue_id = ? WHERE id = ?",
+                                (beads_issue_id, goal.id)
+                            )
+                            temp_db.conn.commit()
+                            temp_db.close()
+                            logger.info(f"Linked goal {goal.id[:8]} to BEADS issue {beads_issue_id}")
+                    else:
+                        logger.warning("BEADS integration requested but bd CLI not available")
+                except Exception as e:
+                    logger.warning(f"BEADS integration failed: {e}")
+                    # Continue without BEADS - it's optional
+            
             result = {
                 "ok": True,
                 "goal_id": goal.id,
@@ -113,7 +227,8 @@ def handle_goals_create_command(args):
                 "message": "Goal created successfully",
                 "objective": objective,
                 "scope": scope.to_dict(),
-                "timestamp": goal.created_timestamp
+                "timestamp": goal.created_timestamp,
+                "beads_issue_id": beads_issue_id  # Include BEADS link in response
             }
             
             # Store goal in git notes for cross-AI discovery (Phase 1: Git Automation)
@@ -151,16 +266,20 @@ def handle_goals_create_command(args):
                 "scope": scope.to_dict()
             }
         
-        # Format output
-        if hasattr(args, 'output') and args.output == 'json':
+        # Format output (AI-first = JSON by default)
+        if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
-            print("✅ Goal created successfully")
-            print(f"   Goal ID: {result['goal_id']}")
-            print(f"   Objective: {objective[:80]}...")
-            print(f"   Scope: {scope}")
-            if estimated_complexity:
-                print(f"   Complexity: {estimated_complexity:.2f}")
+            # Human-readable output (legacy)
+            if result['ok']:
+                print("✅ Goal created successfully")
+                print(f"   Goal ID: {result['goal_id']}")
+                print(f"   Objective: {objective[:80]}..." if len(objective) > 80 else f"   Objective: {objective}")
+                print(f"   Scope: breadth={scope.breadth}, duration={scope.duration}, coordination={scope.coordination}")
+                if estimated_complexity:
+                    print(f"   Complexity: {estimated_complexity:.2f}")
+            else:
+                print(f"❌ {result.get('message', 'Failed to create goal')}")
         
         goal_repo.close()
         return result
@@ -199,6 +318,69 @@ def handle_goals_add_subtask_command(args):
         success = task_repo.save_subtask(subtask)
         
         if success:
+            # BEADS Integration (Optional): Create child issue with dependency
+            beads_subtask_id = None
+            use_beads = getattr(args, 'use_beads', False)
+            
+            if use_beads:
+                try:
+                    from empirica.integrations.beads import BeadsAdapter
+                    from empirica.data.session_database import SessionDatabase
+                    
+                    # Get parent goal's BEADS ID
+                    db = SessionDatabase()
+                    cursor = db.conn.execute(
+                        "SELECT beads_issue_id FROM goals WHERE id = ?",
+                        (goal_id,)
+                    )
+                    row = cursor.fetchone()
+                    parent_beads_id = row[0] if row and row[0] else None
+                    
+                    if parent_beads_id:
+                        beads = BeadsAdapter()
+                        if beads.is_available():
+                            # Map importance to BEADS priority
+                            priority_map = {
+                                EpistemicImportance.CRITICAL: 1,
+                                EpistemicImportance.HIGH: 1,
+                                EpistemicImportance.MEDIUM: 2,
+                                EpistemicImportance.LOW: 3
+                            }
+                            priority = priority_map.get(importance, 2)
+                            
+                            # Create BEADS child issue (gets hierarchical ID like bd-a1b2.1)
+                            beads_subtask_id = beads.create_issue(
+                                title=description,
+                                description=f"Empirica Subtask {subtask.id[:8]}\nParent Goal: {goal_id[:8]}",
+                                priority=priority,
+                                issue_type="task",
+                                labels=["empirica", "subtask"]
+                            )
+                            
+                            if beads_subtask_id:
+                                # Add dependency: subtask blocks parent
+                                beads.add_dependency(
+                                    child_id=beads_subtask_id,
+                                    parent_id=parent_beads_id,
+                                    dep_type='blocks'
+                                )
+                                
+                                # Store BEADS link in subtask_data
+                                db.conn.execute("""
+                                    UPDATE subtasks 
+                                    SET subtask_data = json_set(subtask_data, '$.beads_issue_id', ?)
+                                    WHERE id = ?
+                                """, (beads_subtask_id, subtask.id))
+                                db.conn.commit()
+                                logger.info(f"Linked subtask {subtask.id[:8]} to BEADS issue {beads_subtask_id}")
+                    else:
+                        logger.warning("Parent goal has no BEADS issue - cannot create linked subtask")
+                    
+                    db.close()
+                except Exception as e:
+                    logger.warning(f"BEADS subtask integration failed: {e}")
+                    # Continue without BEADS - it's optional
+            
             result = {
                 "ok": True,
                 "task_id": subtask.id,
@@ -207,7 +389,8 @@ def handle_goals_add_subtask_command(args):
                 "description": description,
                 "importance": importance.value,
                 "status": subtask.status.value,
-                "timestamp": subtask.created_timestamp
+                "timestamp": subtask.created_timestamp,
+                "beads_issue_id": beads_subtask_id  # Include BEADS link
             }
         else:
             result = {

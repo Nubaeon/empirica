@@ -66,6 +66,35 @@ class ProjectRepository(BaseRepository):
         cursor = self._execute("SELECT * FROM projects WHERE id = ?", (project_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
+    
+    def get_project_by_name(self, name: str) -> Optional[Dict]:
+        """Get project data by name (case-insensitive)"""
+        cursor = self._execute("SELECT * FROM projects WHERE LOWER(name) = LOWER(?)", (name,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    
+    def resolve_project_id(self, project_id_or_name: str) -> Optional[str]:
+        """
+        Resolve project identifier to UUID.
+        Accepts either UUID or project name.
+        
+        Args:
+            project_id_or_name: UUID or project name
+            
+        Returns:
+            Project UUID if found, None otherwise
+        """
+        # Try as UUID first
+        project = self.get_project(project_id_or_name)
+        if project:
+            return project['id']
+        
+        # Try as name
+        project = self.get_project_by_name(project_id_or_name)
+        if project:
+            return project['id']
+        
+        return None
 
     def link_session_to_project(self, session_id: str, project_id: str):
         """Link a session to a project"""

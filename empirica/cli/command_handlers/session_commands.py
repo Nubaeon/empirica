@@ -276,6 +276,83 @@ def handle_sessions_show_command(args):
         handle_cli_error(e, "Showing session details", getattr(args, 'verbose', False))
 
 
+def handle_session_snapshot_command(args):
+    """Handle session-snapshot command - show where you left off"""
+    from empirica.data.session_database import SessionDatabase
+    from empirica.utils.session_resolver import resolve_session_id
+    import json
+    
+    # Resolve session ID (supports aliases)
+    session_id = resolve_session_id(args.session_id)
+    
+    db = SessionDatabase()
+    snapshot = db.get_session_snapshot(session_id)
+    db.close()
+    
+    if not snapshot:
+        print(f"❌ Session not found: {args.session_id}")
+        return 1
+    
+    if args.output == 'json':
+        print(json.dumps(snapshot, indent=2))
+        return 0
+    
+    # Human-readable output
+    print(f"\n📸 Session Snapshot: {session_id[:8]}...")
+    print(f"   AI: {snapshot['ai_id']}")
+    if snapshot.get('subject'):
+        print(f"   Subject: {snapshot['subject']}")
+    
+    # Git state
+    git = snapshot['git_state']
+    if 'error' not in git:
+        print(f"\n🔀 Git State:")
+        print(f"   Branch: {git['branch']}")
+        print(f"   Commit: {git['commit']}")
+        print(f"   Diff: {git['diff_stat']}")
+        if git.get('last_5_commits'):
+            print(f"   Recent commits:")
+            for commit in git['last_5_commits'][:3]:
+                print(f"      {commit}")
+    
+    # Epistemic trajectory
+    trajectory = snapshot['epistemic_trajectory']
+    if trajectory:
+        print(f"\n🧠 Epistemic Trajectory:")
+        if 'preflight' in trajectory:
+            pre = trajectory['preflight']
+            print(f"   PREFLIGHT: know={pre.get('know', 0):.2f}, uncertainty={pre.get('uncertainty', 0):.2f}")
+        if 'check_gates' in trajectory:
+            print(f"   CHECK gates: {len(trajectory['check_gates'])} decision points")
+        if 'postflight' in trajectory:
+            post = trajectory['postflight']
+            print(f"   POSTFLIGHT: know={post.get('know', 0):.2f}, uncertainty={post.get('uncertainty', 0):.2f}")
+    
+    # Learning delta
+    delta = snapshot.get('learning_delta', {})
+    if delta:
+        print(f"\n📈 Learning Delta:")
+        significant = {k: v for k, v in delta.items() if abs(v) >= 0.1}
+        for key, value in sorted(significant.items(), key=lambda x: abs(x[1]), reverse=True)[:5]:
+            sign = '+' if value > 0 else ''
+            print(f"   {key}: {sign}{value:.3f}")
+    
+    # Active goals
+    goals = snapshot.get('active_goals', [])
+    if goals:
+        print(f"\n🎯 Active Goals ({len(goals)}):")
+        for goal in goals[:3]:
+            print(f"   - {goal['objective']} ({goal['progress']})")
+    
+    # Sources
+    sources = snapshot.get('sources_referenced', [])
+    if sources:
+        print(f"\n📚 Sources Referenced ({len(sources)}):")
+        for src in sources[:5]:
+            print(f"   - {src['title']} ({src['type']}, confidence={src['confidence']:.2f})")
+    
+    return 0
+
 def handle_sessions_export_command(args):
     """Export session data to JSON file"""
     try:

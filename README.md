@@ -1,203 +1,306 @@
-# 🧠 Empirica - Honest AI Through Genuine Self-Awareness
+# 🧠 Empirica - Honest AI Through Epistemic Self-Awareness
 
-> AI agents that know what they know—and what they don't
+> **AI agents that know what they know—and what they don't**
 
-[![Status](https://img.shields.io/badge/status-production-green)]()
-[![Version](https://img.shields.io/badge/version-4.0-blue)]()
+[![Version](https://img.shields.io/badge/version-4.1-blue)]()
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-LGPL--3.0%20OR%20MIT-green)]()
 
 ## What is Empirica?
 
-**Empirica enables AI agents to genuinely know what they know—and what they don't.**
+**Empirica enables AI agents to genuinely assess their knowledge and uncertainty.**
 
-Instead of false confidence and hallucinations, Empirica gives agents:
-- **Honest uncertainty**: "I don't know" becomes a valid response
-- **Focused investigation**: Spend time where knowledge is weakest
-- **Genuine learning**: Track what you learned, not just what you did
-- **Calibrated confidence**: Get better at knowing what you know over time
+Instead of false confidence and hallucinations, Empirica provides:
+- ✅ **Honest uncertainty tracking**: "I don't know" becomes a measured response
+- ✅ **Focused investigation**: Direct effort where knowledge gaps exist
+- ✅ **Genuine learning measurement**: Track what you learned, not just what you did
+- ✅ **Session continuity**: Resume work across sessions without losing context
+- ✅ **Multi-agent coordination**: Share epistemic state across AI teams
 
-This produces AI you can trust—not because it's always right, but because **it knows when it might be wrong**.
-
-**Learn more:** [Why Empirica?](WHY_EMPIRICA.md) | [Documentation Map](docs/production/00_DOCUMENTATION_MAP.md)
+**Result:** AI you can trust—not because it's always right, but because **it knows when it might be wrong**.
 
 ---
 
-## 🚀 Installation
+## 🚀 Quick Start
 
-Choose your preferred method:
+### Installation
 
-### PyPI (Recommended)
 ```bash
+# Core installation
 pip install empirica
-empirica session-create --ai-id myagent
+
+# With API/dashboard features
+pip install empirica[api]
+
+# With vector search
+pip install empirica[vector]
+
+# Everything
+pip install empirica[all]
 ```
 
-### Homebrew (macOS/Linux)
+**🆕 First-time user?** → [First-Time Setup Guide](https://github.com/empirical-ai/empirica/blob/main/docs/guides/FIRST_TIME_SETUP.md) *(explains data isolation & privacy)*
+
+### Your First Session
+
 ```bash
-brew tap empirica/tap
-brew install empirica
+# AI-first JSON mode (recommended for AI agents)
+echo '{"ai_id": "myagent", "session_type": "development"}' | empirica session-create -
+
+# Legacy CLI (still supported)
+empirica session-create --ai-id myagent --output json
 ```
 
-### Chocolatey (Windows)
-```powershell
-choco install empirica
+**Output:**
+```json
+{
+  "ok": true,
+  "session_id": "abc-123-...",
+  "project_id": "xyz-789-...",
+  "message": "Session created successfully"
+}
 ```
-
-### Docker
-```bash
-docker pull soulentheo/empirica:latest
-docker run -v $(pwd)/.empirica:/data/.empirica soulentheo/empirica:latest session-create --ai-id myagent
-```
-
-**Advanced installation:** System prompts, MCP server, and more → [Complete Installation Guide](docs/COMPLETE_INSTALLATION_GUIDE.md)
 
 ---
 
-## How It Works
+## 🎯 Core Workflow: CASCADE
 
-**Unified Storage Architecture** - Write once, query everywhere:
+Empirica uses **CASCADE** - a metacognitive workflow with explicit epistemic phases:
 
+```bash
+# 1. PREFLIGHT: Assess what you know BEFORE starting
+cat > preflight.json <<EOF
+{
+  "session_id": "abc-123",
+  "vectors": {
+    "engagement": 0.8,
+    "foundation": {"know": 0.6, "do": 0.7, "context": 0.5},
+    "comprehension": {"clarity": 0.7, "coherence": 0.8, "signal": 0.6, "density": 0.7},
+    "execution": {"state": 0.5, "change": 0.4, "completion": 0.3, "impact": 0.5},
+    "uncertainty": 0.4
+  },
+  "reasoning": "Starting with moderate knowledge of OAuth2..."
+}
+EOF
+cat preflight.json | empirica preflight-submit -
+
+# 2. WORK: Do your actual implementation
+#    Use CHECK gates as needed for decision points
+
+# 3. POSTFLIGHT: Measure what you ACTUALLY learned
+cat > postflight.json <<EOF
+{
+  "session_id": "abc-123",
+  "vectors": {
+    "engagement": 0.9,
+    "foundation": {"know": 0.85, "do": 0.9, "context": 0.8},
+    "comprehension": {"clarity": 0.9, "coherence": 0.9, "signal": 0.85, "density": 0.8},
+    "execution": {"state": 0.9, "change": 0.85, "completion": 1.0, "impact": 0.8},
+    "uncertainty": 0.15
+  },
+  "reasoning": "Successfully implemented OAuth2, learned token refresh patterns"
+}
+EOF
+cat postflight.json | empirica postflight-submit -
 ```
-Epistemic Event (PREFLIGHT/CHECK/POSTFLIGHT)
-         ↓
-  3-Layer Atomic Write
-         ↓
-    ┌────┼────┐
-    │    │    │
-SQLite  Git  JSON
- (query)(share)(audit)
-    │    │    │
-    └────┼────┘
-         ↓
-  Dashboards, Statuslines, Leaderboards
-```
 
-**Key Insight:** Metacognitive states stored in git become queryable, shareable, and traceable. Enables real-time dashboards, cross-AI coordination, and complete session history.
-
-**→ See:** [`docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`](docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md)
+**Result:** Quantified learning (know: +0.25, uncertainty: -0.25)
 
 ---
 
-## ✨ What Can Empirica Do?
+## ✨ Key Features
 
-### 📊 13-Vector Epistemic Assessment
-Track your knowledge state across 13 dimensions:
-- **Foundation**: What you KNOW, can DO, and understand about CONTEXT
-- **Comprehension**: CLARITY, COHERENCE, SIGNAL quality, cognitive DENSITY
-- **Execution**: Current STATE, CHANGE tracking, COMPLETION progress, downstream IMPACT
-- **Meta**: Task ENGAGEMENT and overall UNCERTAINTY
+### 📊 Epistemic Self-Assessment (13 Vectors)
 
-**Result:** Know exactly where your knowledge gaps are.
+Track knowledge across 3 tiers:
+- **Tier 0 (Foundation):** engagement, know, do, context
+- **Tier 1 (Comprehension):** clarity, coherence, signal, density
+- **Tier 2 (Execution):** state, change, completion, impact
+- **Meta:** uncertainty (explicit tracking)
 
-### 🔄 CASCADE Workflow
-Epistemic checkpoints for measurable learning:
-1. **PREFLIGHT** - Assess what you know before starting (13 vectors)
-2. **Work Phase** - Do your actual work (implicit reasoning: THINK, INVESTIGATE, PLAN, ACT)
-3. **CHECK** (optional, 0-N times) - Decision gate: ready to proceed or investigate more?
-4. **POSTFLIGHT** - Measure what you learned (compare with PREFLIGHT)
+### 🎯 Goal-Driven Task Management
 
-**Result:** Measurable learning deltas and evidence-based decisions.
+```bash
+# Create goals with epistemic scope
+echo '{
+  "session_id": "abc-123",
+  "objective": "Implement OAuth2 authentication",
+  "scope": {
+    "breadth": 0.6,
+    "duration": 0.4,
+    "coordination": 0.3
+  },
+  "success_criteria": ["Auth works", "Tests pass"],
+  "estimated_complexity": 0.65
+}' | empirica goals-create -
+```
 
-### 🗄️ Triple Storage for Session Continuity
-- **Git Notes** - 97.5% token reduction (46 vs 1,821 tokens)
-- **SQLite Database** - Full audit trail with queryable state
-- **Handoff Reports** - 98% token reduction (~400 vs 20,000 tokens)
+**Integrates with BEADS** (issue tracking) for dependency-aware workflows.
 
-**Result:** Resume work across days/weeks without context loss.
+### 🔄 Session Continuity
 
-### 🎯 Goal/Subtask Tracking (NEW v4.0)
-- Investigation tracking for complex tasks
-- Log findings, unknowns, and dead ends incrementally
-- Decision quality: unknowns inform CHECK decisions
-- Continuity: complete investigation history in handoffs
-- Use when: high uncertainty, multi-session work, complex investigations
+```bash
+# Load project context dynamically (~800 tokens)
+empirica project-bootstrap --project-id <PROJECT_ID>
+```
 
-**Result:** Better decisions through systematic investigation logging.
+**Shows:**
+- Recent findings (what was learned)
+- Open unknowns (what's unclear)
+- Dead ends (what didn't work)
+- Reference docs & skills
 
 ### 🤝 Multi-Agent Coordination
-- Create and share goals across AI agents
-- Track task completion with evidence
-- Transfer epistemic state efficiently
-- Collaborate without duplicating work
 
-**Result:** Multiple agents can work on the same project coherently.
-
-### 🔗 MCP Server Integration
-21 tools for Claude Desktop, VS Code extensions (Cline, Continue.dev), and more.
-
-**Result:** Use Empirica directly from your IDE.
-
----
-
-## 💡 Quick Start
-
+**Share epistemic state via git notes:**
 ```bash
-# Install
-pip install empirica
+# Push your epistemic checkpoints
+git push origin refs/notes/empirica/*
 
-# Create your first session
-empirica session-create --ai-id myagent --output json
-
-# Run PREFLIGHT assessment
-empirica preflight --session-id <SESSION_ID> --prompt "Your task description"
-
-# View all commands
-empirica --help
+# Pull team member's state
+git fetch origin refs/notes/empirica/*:refs/notes/empirica/*
 ```
 
-**Note:** "Bootstrap" refers to system prompts (AI instructions), not session creation. Use `session-create` for sessions.
-
-**Next steps:**
-- **AI Agents**: Read [`docs/01_a_AI_AGENT_START.md`](docs/01_a_AI_AGENT_START.md) - 10-minute interactive guide
-- **Developers**: See [`docs/COMPLETE_INSTALLATION_GUIDE.md`](docs/COMPLETE_INSTALLATION_GUIDE.md) for MCP server, system prompts, Python API
-- **Complete Guide**: [`docs/production/00_DOCUMENTATION_MAP.md`](docs/production/00_DOCUMENTATION_MAP.md) - Navigation to all docs
-- **CASCADE Workflow**: [`docs/production/06_CASCADE_FLOW.md`](docs/production/06_CASCADE_FLOW.md) - Understanding PREFLIGHT/CHECK/POSTFLIGHT
-- **Goal Tracking**: [`docs/guides/GOAL_TREE_USAGE_GUIDE.md`](docs/guides/GOAL_TREE_USAGE_GUIDE.md) - Investigation logging (v4.0)
+**Privacy:** You control what gets shared!
 
 ---
 
-## 🌐 Learn More
+## 📦 Optional Integrations
 
-- **[Why Empirica?](WHY_EMPIRICA.md)** - Philosophy and the Mirror Principle
-- **[Distribution Guide](DISTRIBUTION_README.md)** - Publishing and packaging details
-- **[Complete Installation](docs/COMPLETE_INSTALLATION_GUIDE.md)** - All platforms and integrations
-- **[Full Documentation](docs/production/)** - Comprehensive guides and API reference
-- **Website** - (Coming soon with interactive demos)
+### BEADS Issue Tracking
+
+**Install BEADS** (separate Rust project):
+```bash
+cargo install beads
+```
+
+**Features:**
+- Dependency-aware task tracking
+- Git-friendly (JSONL format)
+- AI-optimized JSON output
+- Auto-links with Empirica goals
+
+**Learn more:** [BEADS Integration Guide](https://github.com/empirical-ai/empirica/blob/main/docs/integrations/BEADS_GOALS_READY_GUIDE.md)
+
+### Vector Search (Qdrant)
+
+```bash
+pip install empirica[vector]
+
+# Start Qdrant
+docker run -p 6333:6333 qdrant/qdrant
+
+# Embed docs
+empirica project-embed --project-id <PROJECT_ID>
+
+# Search
+empirica project-search --project-id <PROJECT_ID> --task "oauth2"
+```
+
+### API & Dashboard
+
+```bash
+pip install empirica[api]
+
+# Start monitoring dashboard
+empirica monitor
+```
 
 ---
 
-## 👥 Who Uses Empirica?
+## 📚 Documentation
 
-**🤖 AI Agents** - Primary users (Claude, GPT, Gemini, Qwen, etc.)  
-**👤 Developers** - Building in critical domains (healthcare, finance, research)  
-**🏢 Teams** - Requiring AI transparency and audit trails
+### Getting Started
+- 📖 [First-Time Setup](https://github.com/empirical-ai/empirica/blob/main/docs/guides/FIRST_TIME_SETUP.md) - Data isolation & privacy
+- 🚀 [Empirica Explained Simply](https://github.com/empirical-ai/empirica/blob/main/docs/EMPIRICA_EXPLAINED_SIMPLE.md) - Core concepts
+- 📘 [System Prompt (v4.1)](https://github.com/empirical-ai/empirica/blob/main/.github/copilot-instructions.md) - AI-first JSON reference
 
-⚠️ **Note:** Empirica requires genuine epistemic engagement. It's not a quick wrapper—it's a methodology for honest AI
+### Guides
+- 🎯 [CASCADE Workflow](https://github.com/empirical-ai/empirica/blob/main/docs/CASCADE_WORKFLOW.md)
+- 📊 [Epistemic Vectors](https://github.com/empirical-ai/empirica/blob/main/docs/archive/v3/production/05_EPISTEMIC_VECTORS.md)
+- 🎯 [Goal Tree Usage](https://github.com/empirical-ai/empirica/blob/main/docs/guides/GOAL_TREE_USAGE_GUIDE.md)
+- 🤝 [Multi-Agent Teams](https://github.com/empirical-ai/empirica/blob/main/docs/archive/v3/production/26_CROSS_AI_COORDINATION.md)
+
+### Reference
+- 📋 [CLI Commands](https://github.com/empirical-ai/empirica/blob/main/docs/reference/CLI_COMMANDS_COMPLETE.md)
+- 🗄️ [Database Schema](https://github.com/empirical-ai/empirica/blob/main/docs/reference/DATABASE_SCHEMA_GENERATED.md)
+- 🐍 [Python API](https://github.com/empirical-ai/empirica/blob/main/docs/reference/PYTHON_API_GENERATED.md)
+- ⚙️ [Configuration](https://github.com/empirical-ai/empirica/blob/main/docs/reference/CONFIGURATION_REFERENCE.md)
 
 ---
 
-## 📄 License
+## 🔒 Privacy & Data Isolation
 
-Dual-licensed under **LGPL-3.0-or-later** OR **MIT** - Choose the license that works for your project.
+**Your data is isolated per-repo:**
+- ✅ `.empirica/` - Local SQLite database (gitignored)
+- ✅ `.git/refs/notes/empirica/*` - Epistemic checkpoints (local by default)
+- ✅ `.beads/` - BEADS database (gitignored)
 
-See [LICENSE](LICENSE) for details.
+**Each user gets a clean slate** - no inherited data from other users or projects.
 
 ---
 
-## 🤝 Contributing
+## 🛠️ Development
+
+### Running Tests
+
+```bash
+# Core tests
+pytest tests/
+
+# Integration tests
+pytest tests/integration/
+
+# MCP tests
+pytest tests/mcp/
+```
+
+### Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
-## 📬 Support
+## 📊 System Requirements
 
-- **Issues**: [GitHub Issues](https://github.com/nubaeon/empirica/issues)
-- **Documentation**: [`docs/`](docs/)
-- **Questions**: (Discussion forum coming soon)
+- **Python:** 3.11+
+- **Git:** Required for epistemic checkpoints
+- **Optional:** Docker (for Qdrant), Rust/Cargo (for BEADS)
 
 ---
 
-**Made with ❤️ for honest AI**
+## 🎓 Learn More
 
+### Research & Concepts
+- [Why Empirica?](https://github.com/empirical-ai/empirica/blob/main/WHY_EMPIRICA.md)
+- [Epistemic Architecture](https://github.com/empirical-ai/empirica/blob/main/docs/architecture/EMPIRICA_COMPLETE_ARCHITECTURE.md)
+- [Visual Guide](https://github.com/empirical-ai/empirica/blob/main/docs/architecture/EMPIRICA_VISUAL_GUIDE.md)
+
+### Use Cases
+- Research & Development
+- Multi-Agent Teams
+- Long-Running Projects
+- Training Data Generation
+- Epistemic Audit Trails
+
+---
+
+## 📞 Support
+
+- **Issues:** [GitHub Issues](https://github.com/empirical-ai/empirica/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/empirical-ai/empirica/discussions)
+- **Documentation:** [docs/](https://github.com/empirical-ai/empirica/tree/main/docs)
+
+---
+
+## 📜 License
+
+Dual-licensed under:
+- **LGPL-3.0** (for open source use)
+- **MIT** (for commercial/proprietary use)
+
+See [LICENSE](LICENSE) for details.
+
+---
+
+**Built with genuine epistemic transparency** 🧠✨

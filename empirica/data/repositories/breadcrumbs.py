@@ -101,7 +101,8 @@ class BreadcrumbRepository(BaseRepository):
         approach: str,
         why_failed: str,
         goal_id: Optional[str] = None,
-        subtask_id: Optional[str] = None
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None
     ) -> str:
         """Log a project dead end (what didn't work)"""
         dead_end_id = str(uuid.uuid4())
@@ -116,11 +117,11 @@ class BreadcrumbRepository(BaseRepository):
         self._execute("""
             INSERT INTO project_dead_ends (
                 id, project_id, session_id, goal_id, subtask_id,
-                approach, why_failed, created_timestamp, dead_end_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                approach, why_failed, created_timestamp, dead_end_data, subject
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             dead_end_id, project_id, session_id, goal_id, subtask_id,
-            approach, why_failed, time.time(), json.dumps(dead_end_data)
+            approach, why_failed, time.time(), json.dumps(dead_end_data), subject
         ))
 
         self.commit()
@@ -159,36 +160,60 @@ class BreadcrumbRepository(BaseRepository):
 
         return doc_id
 
-    def get_project_findings(self, project_id: str, limit: Optional[int] = None) -> List[Dict]:
-        """Get all findings for a project"""
-        query = "SELECT * FROM project_findings WHERE project_id = ? ORDER BY created_timestamp DESC"
-        if limit:
-            query += f" LIMIT {limit}"
-        cursor = self._execute(query, (project_id,))
-        return [dict(row) for row in cursor.fetchall()]
-
-    def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None) -> List[Dict]:
-        """Get unknowns for a project (optionally filter by resolved status)"""
-        if resolved is None:
-            cursor = self._execute("""
-                SELECT * FROM project_unknowns
-                WHERE project_id = ?
-                ORDER BY created_timestamp DESC
-            """, (project_id,))
+    def get_project_findings(self, project_id: str, limit: Optional[int] = None, subject: Optional[str] = None) -> List[Dict]:
+        """Get all findings for a project, optionally filtered by subject"""
+        if subject:
+            query = "SELECT * FROM project_findings WHERE project_id = ? AND subject = ? ORDER BY created_timestamp DESC"
+            params = (project_id, subject)
         else:
-            cursor = self._execute("""
-                SELECT * FROM project_unknowns
-                WHERE project_id = ? AND is_resolved = ?
-                ORDER BY created_timestamp DESC
-            """, (project_id, resolved))
-        return [dict(row) for row in cursor.fetchall()]
-
-    def get_project_dead_ends(self, project_id: str, limit: Optional[int] = None) -> List[Dict]:
-        """Get all dead ends for a project"""
-        query = "SELECT * FROM project_dead_ends WHERE project_id = ? ORDER BY created_timestamp DESC"
+            query = "SELECT * FROM project_findings WHERE project_id = ? ORDER BY created_timestamp DESC"
+            params = (project_id,)
         if limit:
             query += f" LIMIT {limit}"
-        cursor = self._execute(query, (project_id,))
+        cursor = self._execute(query, params)
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None, subject: Optional[str] = None) -> List[Dict]:
+        """Get unknowns for a project (optionally filter by resolved status and subject)"""
+        if subject:
+            if resolved is None:
+                cursor = self._execute("""
+                    SELECT * FROM project_unknowns
+                    WHERE project_id = ? AND subject = ?
+                    ORDER BY created_timestamp DESC
+                """, (project_id, subject))
+            else:
+                cursor = self._execute("""
+                    SELECT * FROM project_unknowns
+                    WHERE project_id = ? AND subject = ? AND is_resolved = ?
+                    ORDER BY created_timestamp DESC
+                """, (project_id, subject, resolved))
+        else:
+            if resolved is None:
+                cursor = self._execute("""
+                    SELECT * FROM project_unknowns
+                    WHERE project_id = ?
+                    ORDER BY created_timestamp DESC
+                """, (project_id,))
+            else:
+                cursor = self._execute("""
+                    SELECT * FROM project_unknowns
+                    WHERE project_id = ? AND is_resolved = ?
+                    ORDER BY created_timestamp DESC
+                """, (project_id, resolved))
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_project_dead_ends(self, project_id: str, limit: Optional[int] = None, subject: Optional[str] = None) -> List[Dict]:
+        """Get all dead ends for a project, optionally filtered by subject"""
+        if subject:
+            query = "SELECT * FROM project_dead_ends WHERE project_id = ? AND subject = ? ORDER BY created_timestamp DESC"
+            params = (project_id, subject)
+        else:
+            query = "SELECT * FROM project_dead_ends WHERE project_id = ? ORDER BY created_timestamp DESC"
+            params = (project_id,)
+        if limit:
+            query += f" LIMIT {limit}"
+        cursor = self._execute(query, params)
         return [dict(row) for row in cursor.fetchall()]
 
     def get_project_reference_docs(self, project_id: str) -> List[Dict]:

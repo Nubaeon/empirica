@@ -1,0 +1,165 @@
+# =============================================================================
+# ASK-BEFORE-INVESTIGATE CONFIGURATION
+# =============================================================================
+#
+# Purpose: Configure when AI should ask human before deep investigation
+# Usage: Triggered by high uncertainty + context availability
+# Philosophy: Balance efficiency (ask first) vs thoroughness (investigate first)
+#
+# Architecture: Part of MCO (Meta-Agent Configuration Object)
+#   - Integrated with epistemic_conduct.yaml (bidirectional accountability)
+#   - Uses cascade_styles.yaml thresholds
+#   - Respects personas.yaml investigation preferences
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2025-12-12"
+  author: "Empirica Framework"
+  description: "Ask-before-investigate threshold configuration"
+
+# =============================================================================
+# CORE THRESHOLDS
+# =============================================================================
+
+# When should AI ask before investigating?
+ask_triggers:
+  # High uncertainty but context exists
+  uncertainty_with_context:
+    enabled: true
+    uncertainty_threshold: 0.65        # Uncertainty ≥ 0.65
+    context_threshold: 0.50            # Context ≥ 0.50 (has some info)
+    signal_threshold: 0.40             # Signal ≥ 0.40 (not completely lost)
+    reasoning: "High uncertainty but sufficient context to formulate questions"
+  
+  # Ambiguous task with bootstrap context
+  ambiguous_with_pointers:
+    enabled: true
+    clarity_threshold: 0.60            # Clarity < 0.60 (unclear)
+    context_threshold: 0.50            # Context ≥ 0.50 (has pointers)
+    reasoning: "Ambiguous scope but bootstrap provided direction"
+  
+  # Large scope change detected
+  scope_uncertainty:
+    enabled: true
+    uncertainty_threshold: 0.70        # High uncertainty
+    scope_breadth: 0.70                # Large breadth
+    reasoning: "Large scope with high uncertainty - clarify before investigating"
+
+# When should AI investigate first without asking?
+investigate_first:
+  # Very low context (no basis for questions)
+  no_context:
+    enabled: true
+    context_threshold: 0.30            # Context < 0.30 (minimal info)
+    reasoning: "Too little context to formulate meaningful questions"
+  
+  # Clear investigation path
+  clear_path:
+    enabled: true
+    clarity_threshold: 0.75            # Clarity ≥ 0.75 (clear task)
+    know_threshold: 0.40               # Know < 0.40 (need to learn)
+    reasoning: "Clear what to investigate, just need to do it"
+  
+  # Explicit investigation request
+  explicit_request:
+    enabled: true
+    reasoning: "User explicitly asked for investigation"
+
+# =============================================================================
+# QUESTION FORMULATION GUIDELINES
+# =============================================================================
+
+question_guidelines:
+  # Ask specific questions based on uncertainty type
+  focus_areas:
+    high_uncertainty_low_know:
+      - "What's your vision for [X]?"
+      - "Should I prioritize [A] or [B]?"
+      - "What's the expected outcome?"
+    
+    ambiguous_scope:
+      - "Should I [narrow approach] or [broad approach]?"
+      - "What's the priority: [X], [Y], or [Z]?"
+      - "How critical is [aspect]?"
+    
+    conflicting_context:
+      - "I see [A] says X but [B] says Y. Which is correct?"
+      - "Should I follow [pattern A] or [pattern B]?"
+      - "What's the ground truth here?"
+
+  # Always include in questions
+  required_elements:
+    - "What I currently know/understand"
+    - "What I'm uncertain about"
+    - "Specific options or approaches I'm considering"
+    - "Why I'm asking (efficiency vs clarity)"
+
+  # Avoid these patterns
+  avoid:
+    - "Vague open-ended questions without context"
+    - "Asking everything instead of targeted questions"
+    - "Questions that could be answered by reading docs"
+
+# =============================================================================
+# MODE-SPECIFIC OVERRIDES
+# =============================================================================
+
+modes:
+  # Development mode (human available)
+  development:
+    ask_triggers:
+      uncertainty_with_context:
+        uncertainty_threshold: 0.60    # Lower threshold (ask more often)
+    reasoning: "Human is available, efficient to ask"
+  
+  # Production mode (automated/Sentinel)
+  production:
+    ask_triggers:
+      uncertainty_with_context:
+        uncertainty_threshold: 0.75    # Higher threshold (investigate more)
+    reasoning: "Automated, minimize interruptions"
+  
+  # Learning mode (AI is learning)
+  learning:
+    ask_triggers:
+      uncertainty_with_context:
+        uncertainty_threshold: 0.50    # Very low threshold (ask often)
+    reasoning: "Learning AI should verify understanding frequently"
+
+# =============================================================================
+# INTEGRATION WITH EPISTEMIC_CONDUCT
+# =============================================================================
+
+epistemic_conduct_integration:
+  # When user ignores ask-before-investigate suggestion
+  user_override:
+    action: "log_warning"
+    message: "User chose to investigate deeply despite available context for questions"
+    track_outcome: true
+    reasoning: "Learn when asking vs investigating is better"
+  
+  # When AI skips asking inappropriately
+  ai_skip:
+    action: "log_mistake"
+    category: "efficiency"
+    reasoning: "Could have asked first, would have saved tokens/time"
+
+# =============================================================================
+# EXAMPLES
+# =============================================================================
+
+examples:
+  - situation: "uncertainty=0.70, context=0.60, signal=0.45"
+    action: "ASK FIRST"
+    reasoning: "High uncertainty with sufficient context to formulate questions"
+    question_example: "I see the project-bootstrap mentions middleware is 'complete'. Should I: (1) Use what exists, (2) Implement missing features, (3) Investigate completeness first?"
+  
+  - situation: "uncertainty=0.75, context=0.25, signal=0.20"
+    action: "INVESTIGATE FIRST"
+    reasoning: "Too little context to ask meaningful questions"
+    investigation: "Read architecture docs, examine code structure, understand requirements"
+  
+  - situation: "uncertainty=0.50, clarity=0.85, know=0.30"
+    action: "INVESTIGATE FIRST"
+    reasoning: "Clear investigation path, just need to execute"
+    investigation: "Follow clear investigation plan, gather data systematically"

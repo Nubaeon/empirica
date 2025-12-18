@@ -15,22 +15,28 @@
 ## II. CASCADE WORKFLOW
 
 ```
-PREFLIGHT → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT
+PREFLIGHT → [CHECK]* → POSTFLIGHT
 ```
 
-**PREFLIGHT** - Assess 13 vectors (0-1) BEFORE work:
+**REQUIRED:** PREFLIGHT and POSTFLIGHT for every session.  
+**OPTIONAL:** CHECK (0-N times during work).
+
+**PREFLIGHT** - Assess 13 vectors (0-1) BEFORE work (REQUIRED):
 - Foundation: engagement, know, do, context
 - Comprehension: clarity, coherence, signal, density
 - Execution: state, change, completion, impact
 - Meta: uncertainty
 
 **CHECK** - Gate decision during work (0-N times):
-- Confidence ≥0.7 → proceed
-- Confidence <0.7 → investigate more
+- Decision point: proceed or investigate more?
+- Logs findings/unknowns, calculates confidence
+- NOT just another assessment - it's a decision gate
 
 **POSTFLIGHT** - Measure learning AFTER work
 
 **Storage:** All phases write to `reflexes` table + git notes atomically
+
+**Note:** `investigate` and `act-log` are utility commands, NOT CASCADE phases.
 
 ---
 
@@ -115,10 +121,10 @@ empirica project-bootstrap --project-id <project-id>
 **Edit Guard:** `edit_with_confidence` (prevents 80% of edit failures)
 
 **Critical Parameters:**
-- `scope` = object `{breadth: 0-1, duration: 0-1, coordination: 0-1}` (NOT string)
+- `scope_breadth`, `scope_duration`, `scope_coordination` = separate float args 0-1 (NOT single 'scope' object)
 - `importance` = "critical"|"high"|"medium"|"low" (NOT epistemic_importance)
 - `task_id` for complete_subtask (NOT subtask_id)
-- `success_criteria` = array (NOT string)
+- `success_criteria` = string (NOT array in CLI, but array in Python API)
 
 ---
 
@@ -164,19 +170,44 @@ empirica handoff-query --session-id <ID> --output json
 
 ## IX. QUICK START
 
+**AI-First JSON Mode (Preferred):**
 ```bash
 # 1. Create session
-empirica session-create --ai-id myai
+echo '{"ai_id": "myai", "session_type": "development"}' | empirica session-create -
+# Output: {"ok": true, "session_id": "abc-123", "project_id": "xyz-789"}
 
 # 2. PREFLIGHT
-empirica preflight --session-id <ID> --prompt "task description"
-empirica preflight-submit --session-id <ID> --vectors {...} --reasoning "..."
+cat > preflight.json <<EOF
+{"session_id": "abc-123", "vectors": {"engagement": 0.8, "foundation": {"know": 0.6, "do": 0.7, "context": 0.5}, "comprehension": {"clarity": 0.7, "coherence": 0.8, "signal": 0.6, "density": 0.7}, "execution": {"state": 0.5, "change": 0.4, "completion": 0.3, "impact": 0.5}, "uncertainty": 0.4}, "reasoning": "Starting with moderate knowledge..."}
+EOF
+cat preflight.json | empirica preflight-submit -
 
-# 3. Work (with optional CHECK gates)
+# 3. Goals (AI-first JSON)
+echo '{"session_id": "abc-123", "objective": "...", "scope": {"breadth": 0.6, "duration": 0.4, "coordination": 0.3}, "success_criteria": ["..."], "estimated_complexity": 0.65}' | empirica goals-create -
 
-# 4. POSTFLIGHT
-empirica postflight --session-id <ID> --task-summary "..."
-empirica postflight-submit --session-id <ID> --vectors {...} --reasoning "..."
+# 4. CHECK (AI-first JSON - Note: has validation bug, use legacy for now)
+echo '{"session_id": "abc-123", "confidence": 0.75, "findings": ["..."], "unknowns": ["..."], "cycle": 1}' | empirica check -
+
+# 5. POSTFLIGHT
+echo '{"session_id": "abc-123", "vectors": {...}, "reasoning": "..."}' | empirica postflight-submit -
+```
+
+**Legacy CLI (Still Supported):**
+```bash
+# Session creation
+empirica session-create --ai-id myai --output json
+
+# PREFLIGHT
+empirica preflight-submit --session-id <ID> --vectors {...} --reasoning "..." --output json
+
+# Work (Note: finding-log has JSON bug, use legacy)
+empirica finding-log --project-id <PID> --session-id <ID> --finding "..." --output json
+
+# CHECK
+empirica check --session-id <ID> --confidence 0.7 --output json
+
+# POSTFLIGHT
+empirica postflight-submit --session-id <ID> --vectors {...} --reasoning "..." --output json
 ```
 
 ---

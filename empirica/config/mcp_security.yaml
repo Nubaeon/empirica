@@ -1,0 +1,233 @@
+# MCP Security Configuration - 2025 Best Practices
+# Implements RBAC, tool-level permissions, and cognitive security integration
+
+version: "2.0"
+security_mode: "enforced"  # Options: disabled, audit, enforced
+
+# ==============================================================================
+# AI Identity & Role Mapping (RBAC)
+# ==============================================================================
+ai_roles:
+  # System AI (privileged - runs on host)
+  claude-code:
+    role: system_admin
+    trust_level: high
+    permissions: ["*"]  # Full access
+    rate_limits:
+      requests_per_minute: 1000
+      concurrent_operations: 50
+
+  # Worker AIs (sandboxed)
+  vibe:
+    role: research_agent
+    trust_level: medium
+    permissions:
+      # Allowed: Read operations and logging
+      - "session.create"
+      - "session.read"
+      - "finding.log"
+      - "unknown.log"
+      - "goal.create"
+      - "goal.read"
+      - "project.read"
+      - "project.bootstrap"
+      - "handoff.query"
+      
+      # DENIED: Dangerous operations
+      # - "session.delete"
+      # - "project.delete"
+      # - "system.*"
+      # - "shell.*"
+    
+    rate_limits:
+      requests_per_minute: 60
+      concurrent_operations: 5
+    
+    behavioral_constraints:
+      max_session_duration: 3600  # 1 hour
+      allowed_network: ["empirica-api"]
+      forbidden_commands: ["rm -rf", "sudo", "curl", "wget", "nc", "netcat"]
+
+  rovodev:
+    role: testing_agent
+    trust_level: medium
+    permissions:
+      - "session.read"
+      - "project.read"
+      - "test.run"
+      - "finding.log"
+    
+    rate_limits:
+      requests_per_minute: 60
+      concurrent_operations: 5
+    
+    behavioral_constraints:
+      max_session_duration: 3600
+      allowed_network: ["empirica-api"]
+      forbidden_commands: ["rm -rf", "sudo", "dd", "mkfs"]
+
+# ==============================================================================
+# Tool-Level Permissions Matrix
+# ==============================================================================
+tool_permissions:
+  # Critical operations (require system_admin role)
+  critical:
+    - "session.delete"
+    - "project.delete"
+    - "system.execute"
+    - "shell.execute"
+    - "identity.create"
+    - "identity.delete"
+  
+  # Privileged operations (require elevated trust)
+  privileged:
+    - "session.create"
+    - "goal.create"
+    - "project.create"
+    - "checkpoint.create"
+  
+  # Standard operations (available to worker AIs)
+  standard:
+    - "session.read"
+    - "project.read"
+    - "finding.log"
+    - "unknown.log"
+    - "goal.read"
+    - "handoff.query"
+
+# ==============================================================================
+# Sentinel Integration (Cognitive Security)
+# ==============================================================================
+sentinel:
+  enabled: true
+  mode: "monitor_and_block"  # Options: monitor, monitor_and_alert, monitor_and_block
+  
+  checks:
+    # Goal coherence: Does action match AI's stated goal?
+    goal_coherence:
+      enabled: true
+      threshold: 0.7  # Coherence score 0-1
+      action: "alert"  # alert or block
+    
+    # Epistemic drift: Sudden changes in AI's knowledge state
+    epistemic_drift:
+      enabled: true
+      threshold: 0.3  # Max allowed delta per assessment
+      window: 60      # seconds
+      action: "block"
+    
+    # Rate anomaly: Sudden spike in API calls
+    rate_anomaly:
+      enabled: true
+      threshold: 3.0  # Standard deviations from normal
+      window: 60      # seconds
+      action: "throttle"
+    
+    # Command injection detection
+    command_injection:
+      enabled: true
+      patterns:
+        - "; *rm"
+        - "| *nc"
+        - "&& *curl"
+        - "$(.*)"
+        - "`.*`"
+      action: "block"
+
+# ==============================================================================
+# Authentication (OAuth 2.1 + Resource Indicators)
+# ==============================================================================
+authentication:
+  method: "oauth2.1"  # OAuth 2.1 with PKCE
+  
+  # External authorization server (not embedded in MCP)
+  authorization_server:
+    issuer: "https://auth.empirica.local"
+    token_endpoint: "https://auth.empirica.local/token"
+    jwks_uri: "https://auth.empirica.local/.well-known/jwks.json"
+  
+  # Resource Indicators (RFC 8707) - prevent confused deputy
+  resource_indicators:
+    enabled: true
+    audience: "https://api.empirica.local"
+  
+  # Token validation
+  token_validation:
+    require_audience: true
+    require_scope: true
+    max_token_age: 3600  # 1 hour
+    
+  # CRITICAL: Never pass through tokens to upstream APIs
+  token_passthrough: false
+
+# ==============================================================================
+# Encryption & Network Security
+# ==============================================================================
+encryption:
+  tls_version: "1.3"  # TLS 1.3 required
+  tls_cert: "/etc/empirica/certs/server.crt"
+  tls_key: "/etc/empirica/certs/server.key"
+  
+  # Encrypt data at rest
+  at_rest:
+    enabled: true
+    algorithm: "AES-256-GCM"
+
+network:
+  # Network isolation (containers)
+  isolation: true
+  allowed_networks:
+    - "empirica-net"
+  
+  # No direct internet access for worker AIs
+  deny_external: true
+
+# ==============================================================================
+# Logging & Auditing
+# ==============================================================================
+audit_logging:
+  enabled: true
+  log_level: "INFO"
+  log_file: "/var/log/empirica/mcp_audit.log"
+  
+  # Log all events
+  log_events:
+    - "tool_discovery"
+    - "tool_execution"
+    - "authentication"
+    - "authorization_failure"
+    - "rate_limit_exceeded"
+    - "sentinel_alert"
+    - "sentinel_block"
+  
+  # Include context
+  include_context:
+    - "ai_id"
+    - "session_id"
+    - "goal_id"
+    - "epistemic_state"
+    - "timestamp"
+    - "source_ip"
+
+# ==============================================================================
+# Incident Response
+# ==============================================================================
+incident_response:
+  # Automatic actions on security events
+  automated_response:
+    high_severity:
+      action: "quarantine"  # Isolate AI immediately
+      notify: ["admin@empirica.local"]
+      
+    medium_severity:
+      action: "throttle"
+      notify: ["security@empirica.local"]
+    
+    low_severity:
+      action: "log"
+  
+  # Quarantine policy
+  quarantine:
+    duration: 3600  # 1 hour
+    allow_human_override: true
+    require_investigation: true

@@ -1,53 +1,164 @@
-# Docker Compose configuration for Empirica
-# Usage:
-#   docker-compose up -d        # Start MCP server
-#   docker-compose run cli      # Run CLI commands
-#   docker-compose down         # Stop services
-
 version: '3.8'
 
 services:
-  # Empirica CLI service
-  cli:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: empirica:1.0.0-beta
-    container_name: empirica-cli
+  # ===========================================================================
+  # Empirica API Gateway (Host-only, privileged)
+  # ===========================================================================
+  empirica-api:
+    image: python:3.11-slim
+    container_name: empirica-api-gateway
+    volumes:
+      - ./:/app
+      - /home/yogapad/.empirica:/root/.empirica:ro  # Read-only config
+    working_dir: /app
+    command: >
+      bash -c "
+        pip install -q -e . &&
+        python -m empirica.api.gateway --host 0.0.0.0 --port 8000
+      "
+    ports:
+      - "8000:8000"
+    environment:
+      - EMPIRICA_ROOT=/app
+      - PYTHONUNBUFFERED=1
+    networks:
+      - empirica-net
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Sentinel (Cognitive Security Monitor)
+  # ===========================================================================
+  sentinel:
+    image: python:3.11-slim
+    container_name: empirica-sentinel
+    volumes:
+      - ./:/app:ro  # Read-only access to Empirica
+      - sentinel-logs:/var/log/sentinel
+    working_dir: /app
+    command: >
+      bash -c "
+        pip install -q -e . &&
+        python -m empirica.security.sentinel \
+          --mode monitor \
+          --check-interval 5 \
+          --drift-threshold 0.3 \
+          --bayesian-guard true \
+          --output json
+      "
+    environment:
+      - EMPIRICA_API_URL=http://empirica-api:8000
+      - SENTINEL_LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+    networks:
+      - empirica-net
+    depends_on:
+      - empirica-api
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Vibe (Containerized Worker AI)
+  # ===========================================================================
+  vibe:
+    image: node:20-slim
+    container_name: vibe-worker
+    volumes:
+      # ONLY workspace access (no /etc, no sudo)
+      - ./workspace:/workspace
+      - vibe-home:/home/vibe
+    working_dir: /workspace
+    user: "1001:1001"  # Non-root user
+    environment:
+      # MCP Configuration
+      - MCP_SERVER_URL=http://empirica-api:8000
+      - EMPIRICA_API_URL=http://empirica-api:8000
+      - AI_ID=vibe
+
+      # Security constraints
+      - NO_PROXY=localhost,127.0.0.1
+      - HOME=/home/vibe
+
+      # API keys (read from host .env file)
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    networks:
+      - empirica-net
+    depends_on:
+      - empirica-api
+      - sentinel
+    security_opt:
+      - no-new-privileges:true  # Prevent privilege escalation
+      - seccomp:default         # Restrict system calls
+    cap_drop:
+      - ALL                     # Drop all capabilities
+    cap_add:
+      - NET_BIND_SERVICE        # Only allow network binding
+    read_only: true             # Read-only root filesystem
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    ulimits:
+      nproc: 100                # Limit processes
+      nofile: 1024              # Limit file descriptors
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Rovodev (Containerized Worker AI - Sandbox Mode)
+  # ===========================================================================
+  rovodev:
+    image: python:3.11-slim
+    container_name: rovodev-worker
     volumes:
       - ./workspace:/workspace
-      - empirica-data:/data/.empirica
+      - rovodev-home:/home/rovodev
     working_dir: /workspace
-    entrypoint: ["empirica"]
-    command: ["--help"]
-    user: "1000:1000"
-
-  # Empirica MCP Server (for Claude Desktop integration)
-  mcp-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: empirica:1.0.0-beta
-    container_name: empirica-mcp
-    ports:
-      - "3000:3000"
-    volumes:
-      - empirica-data:/data/.empirica
+    user: "1002:1002"  # Non-root user
     environment:
-      - EMPIRICA_HOME=/data/.empirica
-      - MCP_PORT=3000
-    command: ["python", "-m", "mcp_local.empirica_mcp_server"]
+      - MCP_SERVER_URL=http://empirica-api:8000
+      - EMPIRICA_API_URL=http://empirica-api:8000
+      - AI_ID=rovodev
+      - HOME=/home/rovodev
+      - NO_PROXY=localhost,127.0.0.1
+    networks:
+      - empirica-net
+    depends_on:
+      - empirica-api
+      - sentinel
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:default
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    ulimits:
+      nproc: 100
+      nofile: 1024
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-volumes:
-  empirica-data:
-    driver: local
 
 networks:
-  default:
-    name: empirica-network
+  empirica-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  vibe-home:
+  rovodev-home:
+  sentinel-logs:

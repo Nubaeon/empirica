@@ -1,584 +1,547 @@
 # Troubleshooting Guide
 
-Common issues and solutions for Empirica.
+**Common issues and solutions for Empirica**
 
 ---
 
 ## Installation Issues
 
-### `command not found: empirica`
-
-**Symptoms:** Running `empirica` shows "command not found"
-
-**Cause:** Installation directory not in PATH
-
-**Solutions:**
+### Problem: Command not found
 ```bash
-# Option 1: Add to PATH
+empirica: command not found
+```
+
+**Cause:** Pip binaries not in PATH
+
+**Solution:**
+```bash
+# Find pip install location
+pip show empirica | grep Location
+
+# Add to PATH (bash)
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 
-# Option 2: Use python module
-python3 -m empirica.cli --help
-
-# Option 3: Reinstall
-pip install -e . --user
+# Add to PATH (zsh)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
-### Import errors: `ModuleNotFoundError`
-
-**Symptoms:** `ImportError: No module named 'empirica'`
-
-**Cause:** Package not installed or wrong Python environment
-
-**Solutions:**
-```bash
-# Check installation
-pip list | grep empirica
-
-# Reinstall
-cd /path/to/empirica
-pip install -e .
-
-# Or use virtual environment
-python3 -m venv venv
-source venv/bin/activate
-pip install -e .
+### Problem: Module not found
+```python
+ModuleNotFoundError: No module named 'empirica'
 ```
 
-### Permission denied errors
+**Cause:** Wrong Python environment or installation failed
 
-**Symptoms:** Cannot write to `.empirica/` directory
-
-**Solutions:**
+**Solution:**
 ```bash
-# Fix permissions
-chmod -R u+rw ~/.empirica
+# Check Python version (3.8+ required)
+python --version
 
-# Or reinstall for user
-pip install -e . --user
-```
+# Verify installation
+pip show empirica
 
----
-
-## CLI Issues
-
-### Commands return "No such command"
-
-**Symptoms:** `empirica preflight` shows "Error: No such command"
-
-**Cause:** Old installation or corrupted files
-
-**Solutions:**
-```bash
-# Reinstall fresh
+# Reinstall if needed
 pip uninstall empirica
-pip install -e . --force-reinstall
-
-# Clear Python cache
-find . -type d -name __pycache__ -exec rm -rf {} +
-```
-
-### Preflight/postflight hang or timeout
-
-**Symptoms:** Commands never complete, just hang
-
-**Cause:** Waiting for user input in interactive mode
-
-**Solutions:**
-```bash
-# For scripts, use MCP integration for automated assessment
-# Interactive CLI requires manual self-assessment input
-empirica preflight "task"  # Shows prompt, waits for assessment
-
-# Or provide assessment JSON
-empirica preflight "task" --assessment-json '{...}'
-
-# Or use MCP server for automated workflows
-```
-
-### "Assessment failed" errors
-
-**Symptoms:** `❌ Assessment failed` message
-
-**Cause:** Invalid JSON input or missing assessment
-
-**Solutions:**
-```bash
-# Check JSON syntax
-echo '{...}' | jq .  # Validate JSON
-
-# Use interactive mode to see prompt
-empirica preflight "task"  # Interactive mode - default
-
-# Or skip to see what's expected
-empirica preflight "task" --help
-```
-
----
-
-## MCP Server Issues
-
-### MCP tools not appearing in IDE
-
-**Symptoms:** AI assistant doesn't see Empirica tools
-
-**Check 1: Verify configuration**
-```bash
-# Find config file location
-# Claude Desktop:
-cat ~/Library/Application\ Support/Claude/claude_desktop_config.json
-
-# Verify Python path
-which python3
-
-# Test server manually
-python3 /path/to/empirica/mcp_local/empirica_mcp_server.py --help
-```
-
-**Check 2: Restart IDE**
-- Close IDE completely
-- Restart to reload MCP configuration
-
-**Check 3: Check IDE logs**
-- Look for MCP connection errors
-- Verify paths are correct
-- Check Python is accessible
-
-### MCP server won't start
-
-**Note:** MCP server lifecycle is managed automatically by your IDE (Claude Desktop, Cursor, etc.). There are no CLI commands for starting/stopping the MCP server.
-
-**If MCP tools aren't working:**
-
-1. **Check IDE MCP configuration:**
-   - Claude Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
-   - Cursor: Check IDE settings for MCP servers
-
-2. **View server logs:**
-   ```bash
-   # Check IDE-specific log location
-   # Claude Desktop logs: ~/Library/Logs/Claude/
-   # Cursor logs: Check IDE settings
-   ```
-
-3. **Restart IDE:**
-   - Completely quit and reopen your IDE
-   - MCP server will restart automatically
-
-### Tools fail with errors
-
-**Symptoms:** MCP tools execute but return errors
-
-**Solutions:**
-```bash
-# Check database exists
-ls ~/.empirica/sessions/sessions.db
-
-# Create if missing
-empirica session-create
-
-# Check permissions
-chmod -R u+rw ~/.empirica
-
-# View server logs
-tail -f ~/.empirica/mcp_server.log
+pip install empirica
 ```
 
 ---
 
 ## Database Issues
 
-### "Database locked" errors
-
-**Symptoms:** `sqlite3.OperationalError: database is locked`
-
-**Cause:** Multiple processes accessing database
-
-**Solutions:**
-```bash
-# Check for running CLI processes
-ps aux | grep empirica
-
-# Restart your IDE (MCP server managed by IDE)
-# The IDE will restart the MCP server automatically
-
-# Wait a moment and retry
-sleep 2
-empirica preflight "task"
+### Problem: Database locked
+```
+sqlite3.OperationalError: database is locked
 ```
 
-### Session not found
-
-**Symptoms:** `Session <id> not found` when running postflight
-
-**Cause:** Session ID incorrect or preflight wasn't saved
-
-**Solutions:**
-```bash
-# List all sessions
-empirica sessions-list
-
-# Check session ID
-echo $SESSION  # If using variable
-
-# Verify database
-sqlite3 ~/.empirica/sessions/sessions.db "SELECT session_id FROM sessions;"
-```
-
-### Missing uncertainty vector
-
-**Symptoms:** Old sessions missing uncertainty data
-
-**Cause:** Upgrading from pre-uncertainty version
+**Cause:** Multiple processes accessing database simultaneously
 
 **Solution:**
 ```bash
-# Run migration
-empirica migrate
+# Check for running Empirica processes
+ps aux | grep empirica
 
-# Or recreate database
-mv ~/.empirica/sessions/sessions.db ~/.empirica/sessions/sessions.db.backup
-empirica session-create
+# Kill if necessary
+pkill -f empirica
+
+# Restart command
+```
+
+### Problem: Cannot open database
+```
+sqlite3.OperationalError: unable to open database file
+```
+
+**Cause:** Permission issues or missing directory
+
+**Solution:**
+```bash
+# Create directory with correct permissions
+mkdir -p ~/.empirica
+chmod 755 ~/.empirica
+
+# Check ownership
+ls -la ~/.empirica
+
+# Fix if needed
+chown -R $USER:$USER ~/.empirica
+```
+
+### Problem: Database corrupted
+```
+sqlite3.DatabaseError: database disk image is malformed
+```
+
+**Cause:** Unexpected shutdown or disk issues
+
+**Solution:**
+```bash
+# Backup current database
+cp ~/.empirica/empirica.db ~/.empirica/empirica.db.backup
+
+# Try to recover
+sqlite3 ~/.empirica/empirica.db "PRAGMA integrity_check;"
+
+# If unrecoverable, start fresh (loses history)
+rm ~/.empirica/empirica.db
+
+# Create new database
+empirica session-create --ai-id recovery
 ```
 
 ---
 
-## MCP Parameter Errors
+## Session Issues
 
-### `create_goal` parameter errors
-
-**Common Issues:**
-- `scope` parameter errors (not enum value)
-- `success_criteria` type errors (string instead of array)
-
-**Solutions:**
-```python
-# ❌ WRONG
-create_goal(scope="any text")  # Must be enum!
-create_goal(success_criteria="Tests pass")  # Must be array!
-
-# ✅ CORRECT  
-create_goal(scope="project_wide")  # enum: task_specific|session_scoped|project_wide
-create_goal(success_criteria=["Tests pass", "Docs updated"])  # Array
+### Problem: Session not found
+```
+Error: Session with ID 'xyz' not found
 ```
 
-### `add_subtask` parameter errors
+**Cause:** Invalid session ID or database issue
 
-**Common Issues:**
-- Using `epistemic_importance` instead of `importance`
-- Wrong parameter types
+**Solution:**
+```bash
+# List all sessions
+empirica sessions-list
 
-**Solutions:**
-```python
-# ❌ WRONG
-add_subtask(epistemic_importance="high")  # Wrong parameter name!
-
-# ✅ CORRECT
-add_subtask(
-    goal_id="uuid",
-    description="Write unit tests", 
-    importance="high",  # Correct parameter
-    estimated_tokens=500
-)
+# Verify session ID is correct
+# If session missing, check database:
+sqlite3 ~/.empirica/empirica.db "SELECT * FROM sessions;"
 ```
 
-### `complete_subtask` parameter errors
-
-**Common Issues:**
-- Using `subtask_id` instead of `task_id`
-
-**Solutions:**
-```python
-# ❌ WRONG
-complete_subtask(subtask_id="uuid")  # Wrong parameter name!
-
-# ✅ CORRECT
-complete_subtask(task_id="uuid", evidence="Completed task")  # Correct parameter
+### Problem: Cannot create session
+```
+Error: Failed to create session
 ```
 
-### Postflight parameter errors
+**Cause:** Database write permission or disk space issue
 
-**Common Issues:**
-- Using `changes` instead of `reasoning` 
-- Using `summary` instead of `reasoning`
+**Solution:**
+```bash
+# Check disk space
+df -h ~/.empirica
 
-**Solutions:**
-```python
-# ❌ WRONG
-submit_postflight_assessment(session_id="uuid", changes="What I learned")
-submit_postflight_assessment(session_id="uuid", summary="Task complete")
+# Check database permissions
+ls -la ~/.empirica/empirica.db
 
-# ✅ CORRECT
-submit_postflight_assessment(
-    session_id="uuid",
-    vectors={...},
-    reasoning="What I learned during this task"  # Unified parameter
-)
+# Fix permissions
+chmod 644 ~/.empirica/empirica.db
+
+# Check if directory is writable
+touch ~/.empirica/test && rm ~/.empirica/test
 ```
 
-### Parameter Type Errors
+---
 
-**Common Issues:**
-- Arrays passed as strings
-- Wrong enum values
-- Missing required parameters
+## Git Integration Issues
 
-**Quick Reference:**
-```python
-# Scope must be enum
-scope="project_wide"  # ✅ OK
-scope="invalid"       # ❌ Error
-
-# Success criteria must be array  
-success_criteria=["Test 1", "Test 2"]  # ✅ OK
-success_criteria="Test 1"              # ❌ Error
-
-# Importance must be enum
-importance="high"      # ✅ OK  
-importance="urgent"    # ❌ Error
+### Problem: Git notes not working
+```
+fatal: refs/empirica/checkpoints does not exist
 ```
 
-### Debugging MCP Parameter Errors
+**Cause:** Git notes namespace not initialized
 
-**Steps to fix:**
-1. **Check parameter names:** Use IDE autocomplete or check schemas
-2. **Validate types:** Arrays vs strings, enums vs free text
-3. **Use MCP tool guidance:** See [`docs/00_START_HERE.md`](00_START_HERE.md#mcp-tool-parameters-guide)
-4. **Test individually:** Test each parameter separately
+**Solution:**
+```bash
+# Create first checkpoint to initialize
+empirica checkpoint-create --session-id <SESSION_ID>
+
+# Or manually initialize
+git notes --ref=empirica/checkpoints add -m "init" HEAD
+```
+
+### Problem: Cannot push checkpoints
+```
+error: cannot update ref 'refs/notes/empirica/checkpoints'
+```
+
+**Cause:** Git repository not configured or no commits
+
+**Solution:**
+```bash
+# Ensure you're in a git repository
+git status
+
+# Make initial commit if needed
+git commit --allow-empty -m "Initial commit"
+
+# Create checkpoint
+empirica checkpoint-create --session-id <SESSION_ID>
+```
+
+### Problem: Git identity not configured
+```
+fatal: unable to auto-detect email address
+```
+
+**Cause:** Git user not configured
+
+**Solution:**
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your@email.com"
+```
 
 ---
 
 ## Assessment Issues
 
-### "I don't know what score to give"
+### Problem: PREFLIGHT prompt not showing
+```
+Error: Could not generate PREFLIGHT prompt
+```
 
-**This is normal!** High uncertainty is valid:
+**Cause:** Missing session data or template issue
 
+**Solution:**
+```bash
+# Verify session exists
+empirica sessions-show --session-id <SESSION_ID>
+
+# Try with verbose output
+empirica --verbose preflight --session-id <SESSION_ID>
+
+# Check for core module issues
+python -c "from empirica.core.canonical import CanonicalEpistemicAssessor; print('OK')"
+```
+
+### Problem: Invalid vector values
+```
+Error: Vector 'know' must be between 0.0 and 1.0
+```
+
+**Cause:** Incorrect value format in JSON input
+
+**Solution:**
 ```json
 {
-  "uncertainty": {
-    "score": 0.8,
-    "rationale": "I'm very uncertain about this assessment - many unknowns"
+  "vectors": {
+    "engagement": 0.8,
+    "foundation": {
+      "know": 0.7,    // Must be 0.0-1.0
+      "do": 0.6,
+      "context": 0.5
+    }
   }
 }
 ```
 
-**Remember:** Be honest. Uncertainty is NOT failure.
+---
 
-### Getting different scores each time
+## Project Issues
 
-**This is expected!** Context changes:
-- More information → higher CONTEXT score
-- After research → higher KNOW score
-- Better requirements → higher CLARITY score
+### Problem: Project not found
+```
+Error: Project with ID 'xyz' not found
+```
 
-**Not a bug:** Scores should change as your state changes.
+**Cause:** Invalid project ID or not in git repository
 
-### "System says I'm overconfident"
+**Solution:**
+```bash
+# List all projects
+empirica project-list
 
-**What it means:** Your preflight predictions didn't match postflight reality
+# Create new project if needed
+empirica project-create --name "My Project"
 
-**Example:**
-- Preflight: KNOW=0.8 (thought I knew a lot)
-- Postflight: KNOW=0.6 (realized gaps)
-- Status: Overconfident ⚠️
+# Project auto-detection requires git
+git remote -v  # Check git remotes
+```
 
-**How to improve:**
-- Be more honest in preflight
-- Acknowledge unknowns
-- Increase UNCERTAINTY when appropriate
+### Problem: Project bootstrap shows nothing
+```
+Warning: No breadcrumbs found for project
+```
 
-**This is valuable feedback!** Calibration improves over time.
+**Cause:** No findings/unknowns logged yet
+
+**Solution:**
+```bash
+# Log some findings
+empirica finding-log --project-id <PROJECT_ID> \
+    --finding "Initial exploration complete"
+
+# Bootstrap again
+empirica project-bootstrap --project-id <PROJECT_ID>
+```
 
 ---
 
-## Configuration Issues
+## Goal Issues
 
-### `.empirica/` directory not created
-
-**Symptoms:** Directory missing after installation
-
-**Solutions:**
-```bash
-# Create manually
-mkdir -p ~/.empirica/sessions
-
-# Or run onboarding
-empirica onboard
-
-# Or run bootstrap
-empirica session-create
+### Problem: Cannot create goal
+```
+Error: Failed to create goal
 ```
 
-### Credentials file errors
+**Cause:** Missing required fields or session issue
 
-**Symptoms:** Cannot read `credentials.yaml`
-
-**Solutions:**
+**Solution:**
 ```bash
-# Check if file exists
-ls ~/.empirica/credentials.yaml
+# Verify session exists
+empirica sessions-show --session-id <SESSION_ID>
 
-# Copy template
-cp .empirica/credentials.yaml.template ~/.empirica/credentials.yaml
+# Use JSON mode for clarity
+cat > goal.json << EOF
+{
+  "session_id": "<SESSION_ID>",
+  "objective": "Clear objective description",
+  "scope": {
+    "breadth": 0.5,
+    "duration": 0.5,
+    "coordination": 0.3
+  }
+}
+EOF
 
-# Edit if needed (only for Phase 1+ features)
-nano ~/.empirica/credentials.yaml
+echo "$(cat goal.json)" | empirica goals-create -
+```
+
+### Problem: Subtask not completing
+```
+Error: Cannot complete subtask
+```
+
+**Cause:** Invalid task ID or dependency issues
+
+**Solution:**
+```bash
+# List all subtasks for goal
+empirica goals-get-subtasks --goal-id <GOAL_ID>
+
+# Verify task ID is correct
+# Check dependencies are completed first
+```
+
+---
+
+## BEADS Integration Issues
+
+### Problem: Cannot discover goals
+```
+Error: No goals found
+```
+
+**Cause:** No goals published to git notes or wrong remote
+
+**Solution:**
+```bash
+# Check git notes
+git notes --ref=empirica/goals list
+
+# Fetch from remote
+git fetch origin refs/notes/empirica/goals:refs/notes/empirica/goals
+
+# Try discovery again
+empirica goals-discover
+```
+
+### Problem: Cannot claim goal
+```
+Error: Goal already claimed
+```
+
+**Cause:** Another agent already claimed this goal
+
+**Solution:**
+```bash
+# Check goal status
+empirica goals-list
+
+# Find unclaimed goals
+empirica goals-ready
+
+# Or resume an existing goal
+empirica goals-resume --goal-id <GOAL_ID> --ai-id myai
 ```
 
 ---
 
 ## Performance Issues
 
-### Slow preflight/postflight
+### Problem: Commands are slow
+```
+(Taking >10 seconds to respond)
+```
 
-**Symptoms:** Commands take >5 seconds
+**Cause:** Database size or git repository size
 
-**Causes & Solutions:**
-
-**Large database:**
+**Solution:**
 ```bash
 # Check database size
-du -h ~/.empirica/sessions/sessions.db
+ls -lh ~/.empirica/empirica.db
 
-# Archive old sessions (future feature)
-# For now, backup and recreate:
-mv ~/.empirica/sessions/sessions.db ~/.empirica/sessions/sessions.db.old
-empirica session-create
-```
+# Vacuum database to optimize
+sqlite3 ~/.empirica/empirica.db "VACUUM;"
 
-**Many reflex logs:**
-```bash
-# Check log size
-du -sh .empirica_reflex_logs/
-
-# Archive old logs
-tar -czf logs_backup.tar.gz .empirica_reflex_logs/
-rm -rf .empirica_reflex_logs/cascade/2024-*
+# Clean old sessions (optional)
+empirica sessions-list --output json | \
+    jq -r '.sessions[] | select(.last_activity < "2024-01-01") | .id' | \
+    xargs -I {} empirica sessions-delete --session-id {}
 ```
 
 ---
 
-## Platform-Specific Issues
+## Output Issues
 
-### Windows: Path issues
-
-**Symptoms:** Can't find files, wrong slashes
-
-**Solutions:**
-```bash
-# Use forward slashes in configs
-"args": ["/path/to/empirica/mcp_local/empirica_mcp_server.py"]
-# NOT: "\\path\\to\\..."
-
-# Use WSL for better compatibility
-wsl -d Ubuntu
+### Problem: JSON output malformed
+```
+Error parsing JSON response
 ```
 
-### macOS: Code signing issues
+**Cause:** Mixed stdout/stderr or encoding issue
 
-**Symptoms:** "cannot be opened because the developer cannot be verified"
-
-**Solutions:**
+**Solution:**
 ```bash
-# Allow in System Preferences > Security
-# Or remove quarantine
-xattr -d com.apple.quarantine /path/to/empirica
-```
+# Redirect stderr
+empirica sessions-list --output json 2>/dev/null
 
-### Linux: SQLite issues
+# Use jq for validation
+empirica sessions-list --output json | jq .
 
-**Symptoms:** SQLite not found
-
-**Solutions:**
-```bash
-# Install SQLite (usually included)
-sudo apt-get install sqlite3 libsqlite3-dev  # Debian/Ubuntu
-sudo yum install sqlite sqlite-devel  # RHEL/CentOS
+# Check for binary output issues
+empirica sessions-list --output json | cat -v
 ```
 
 ---
 
-## Getting Help
+## Getting More Help
 
-### Still stuck?
-
-**1. Check logs:**
+### Enable Verbose Mode
 ```bash
-# CLI/Python errors
-empirica --help
-
-# MCP server logs
-cat ~/.empirica/mcp_server.log
-
-# Session database
-sqlite3 ~/.empirica/sessions/sessions.db ".tables"
+empirica --verbose <command>
 ```
 
-**2. Verify installation:**
+### Check Logs
 ```bash
-# Check version
-empirica --version
+# View session logs (if logging enabled)
+ls -la ~/.empirica/sessions/
 
-# Test imports
-python3 -c "from empirica.core.canonical import CanonicalEpistemicAssessor; print('OK')"
-
-# List commands
-empirica --help
+# Check system logs
+journalctl | grep empirica  # Linux systemd
+tail -f /var/log/syslog     # Linux syslog
 ```
 
-**3. Check documentation:**
-- Installation: [`docs/02_INSTALLATION.md`](02_INSTALLATION.md)
-- CLI guide: [`docs/03_CLI_QUICKSTART.md`](03_CLI_QUICKSTART.md)
-- MCP guide: [`docs/04_MCP_QUICKSTART.md`](04_MCP_QUICKSTART.md)
-- Architecture: [`docs/05_ARCHITECTURE.md`](05_ARCHITECTURE.md)
+### Diagnostic Information
+```bash
+# Gather debug info
+echo "Empirica version:"
+pip show empirica | grep Version
 
-**4. File an issue:**
-- Include: Error message, command run, OS version
-- Include: `empirica --version` output
-- Include: Relevant logs
+echo "Python version:"
+python --version
 
----
+echo "Git version:"
+git --version
 
-## Common Misunderstandings
+echo "Database info:"
+ls -lh ~/.empirica/empirica.db
 
-### "Why do my scores keep changing?"
+echo "Session count:"
+empirica sessions-list --output json | jq '.sessions_count'
 
-✅ **Expected!** Your epistemic state changes with context.
+echo "Project count:"
+empirica project-list --output json | jq '.projects_count'
+```
 
-### "High uncertainty means I'm failing?"
+### Reset Everything (Last Resort)
+```bash
+# Backup first!
+tar -czf empirica-backup-$(date +%Y%m%d).tar.gz ~/.empirica/
 
-❌ **No!** High uncertainty when appropriate is GOOD metacognition.
+# Remove all data
+rm -rf ~/.empirica/
 
-### "Should I try to get perfect scores?"
+# Remove project data
+rm -rf .empirica/
 
-❌ **No!** Goal is ACCURATE scores, not high scores. Be honest!
+# Reinstall
+pip uninstall empirica
+pip install empirica
 
-### "Calibration says 'overconfident' - am I broken?"
-
-❌ **No!** This is valuable feedback. Adjust future assessments.
-
-### "Do I need API keys to use Empirica?"
-
-❌ **No!** Phase 0 works entirely locally. API keys only needed for:
-- Modality Switcher (Phase 1+, optional)
-- Custom integrations
-
----
-
-## Quick Fixes Checklist
-
-Try these in order:
-
-1. ☐ **Restart:** Close IDE/terminal, reopen
-2. ☐ **Reinstall:** `pip install -e . --force-reinstall`
-3. ☐ **Clear cache:** `find . -name __pycache__ -exec rm -rf {} +`
-4. ☐ **Check logs:** View error messages
-5. ☐ **Verify installation:** `empirica --version`
-6. ☐ **Check docs:** Review relevant guide
-7. ☐ **File issue:** If still stuck
+# Start fresh
+empirica session-create --ai-id myai
+```
 
 ---
 
-**Most issues resolve with:** Reinstall + restart! 🔄
+## Still Having Issues?
+
+1. **Check documentation:** Browse other docs in `docs/` directory
+2. **Verify ground truth:** See [reference/CANONICAL_DIRECTORY_STRUCTURE.md](reference/CANONICAL_DIRECTORY_STRUCTURE.md)
+3. **Check the code:** Empirica is open source - look at the implementation
+4. **Ask specific questions:** Use `empirica ask "your question"` (if implemented)
+
+---
+
+## Common Gotchas
+
+### 1. Session IDs are UUIDs
+```bash
+# Wrong: Using short IDs
+empirica sessions-show --session-id abc
+
+# Right: Full UUID
+empirica sessions-show --session-id abc123-456-789-...
+```
+
+### 2. JSON stdin needs trailing dash
+```bash
+# Wrong:
+echo '{"ai_id": "myai"}' | empirica session-create
+
+# Right:
+echo '{"ai_id": "myai"}' | empirica session-create -
+```
+
+### 3. Git integration requires commits
+```bash
+# Checkpoints won't work in empty repo
+# Make at least one commit first
+git commit --allow-empty -m "Initial commit"
+```
+
+### 4. Project auto-detection uses git remote
+```bash
+# Ensure git remote is set
+git remote -v
+
+# If no remote, project won't auto-detect
+git remote add origin <URL>
+```
+
+### 5. Vectors must be 0.0-1.0
+```bash
+# All epistemic vectors are normalized to [0.0, 1.0]
+# 0.0 = none/minimal
+# 1.0 = complete/maximum
+```
+
+---
+
+**Most issues are:** database permissions, git configuration, or malformed input. Check those first!

@@ -1,8 +1,21 @@
 # Empirica Storage Architecture - Complete Data Flow
 
-**Version:** 2.0  
-**Date:** 2025-12-02  
+**Version:** 2.1  
+**Date:** 2025-12-12  
 **Purpose:** Document complete storage flow for dashboard/crypto-signing integration
+
+---
+
+## CASCADE Phase Requirements
+
+**REQUIRED Phases (Every Session):**
+- **PREFLIGHT** - Must assess epistemic state before starting work
+- **POSTFLIGHT** - Must measure learning after completing work
+
+**OPTIONAL Phases (0-N Times):**
+- **CHECK** - Gate decision during work (use when uncertainty is high)
+
+**Note:** ACT and INVESTIGATE are utility commands, NOT formal CASCADE phases.
 
 ---
 
@@ -11,7 +24,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    EPISTEMIC EVENT                           │
-│  (AI completes PREFLIGHT, CHECK, ACT, or POSTFLIGHT)        │
+│  (AI completes PREFLIGHT, CHECK, or POSTFLIGHT)             │
 └────────────────┬────────────────────────────────────────────┘
                  │
                  ▼
@@ -51,7 +64,7 @@ CREATE TABLE reflexes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
     cascade_id TEXT,
-    phase TEXT NOT NULL,  -- PREFLIGHT, CHECK, ACT, POSTFLIGHT
+    phase TEXT NOT NULL,  -- PREFLIGHT, CHECK, POSTFLIGHT
     round INTEGER DEFAULT 1,
     timestamp REAL NOT NULL,
     
@@ -110,7 +123,7 @@ CREATE TABLE reflexes (
 ```
 refs/notes/empirica/session/abc-123/PREFLIGHT/1
 refs/notes/empirica/session/abc-123/CHECK/1
-refs/notes/empirica/session/abc-123/ACT/1
+refs/notes/empirica/session/abc-123/CHECK/1
 refs/notes/empirica/session/abc-123/POSTFLIGHT/1
 ```
 
@@ -174,7 +187,7 @@ refs/notes/empirica/session/abc-123/POSTFLIGHT/1
         └── abc-123/
             ├── checkpoint_PREFLIGHT_20251202T110000.json
             ├── checkpoint_CHECK_20251202T113000.json
-            ├── checkpoint_ACT_20251202T120000.json
+            ├── checkpoint_CHECK_20251202T120000.json
             └── checkpoint_POSTFLIGHT_20251202T130000.json
 ```
 
@@ -273,8 +286,8 @@ git notes --ref empirica/session/abc-123/PREFLIGHT/1 \
 # Get note SHA
 NOTE_SHA=$(git rev-parse refs/notes/empirica/session/abc-123/PREFLIGHT/1)
 
-# Sign with AI identity
-empirica identity-sign --sha $NOTE_SHA --ai-id copilot
+# Sign checkpoint (identity must exist first)
+empirica checkpoint-sign --session-id abc-123
 ```
 
 **What Gets Signed:**
@@ -379,7 +392,7 @@ print(f"KNOW changed by: {diff['delta']['know']}")
 ```json
 {
   "auth_module": {
-    "phase": "ACT",
+    "phase": "CHECK",
     "vectors": {
       "know": 0.85,
       "do": 0.90,
@@ -699,7 +712,7 @@ empirica handoff-create \
 #### Resume Work (Next Session)
 ```bash
 # AI retrieves handoff
-empirica handoff-load --session-id abc123
+empirica handoff-query --ai-id myai --limit 1
 
 # Output: 300-token summary with:
 # - What was learned (epistemic deltas)

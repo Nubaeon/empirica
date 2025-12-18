@@ -161,19 +161,38 @@ empirica handoff-query --session-id <ID> --output json
 
 ## IX. QUICK START
 
+**AI-First JSON Mode (Preferred for Gemini):**
 ```bash
-# 1. Create session
-empirica session-create --ai-id myai
+# 1. Create session with JSON stdin
+echo '{"ai_id": "gemini-2.0", "session_type": "development"}' | empirica session-create -
+# Output: {"ok": true, "session_id": "abc-123", "project_id": "xyz-789"}
 
-# 2. PREFLIGHT
-empirica preflight --session-id <ID> --prompt "task description"
-empirica preflight-submit --session-id <ID> --vectors {...} --reasoning "..."
+# 2. PREFLIGHT (AI-first JSON)
+cat > preflight.json <<EOF
+{"session_id": "abc-123", "vectors": {"engagement": 0.8, "foundation": {"know": 0.6, "do": 0.7, "context": 0.5}, "comprehension": {"clarity": 0.7, "coherence": 0.8, "signal": 0.6, "density": 0.7}, "execution": {"state": 0.5, "change": 0.4, "completion": 0.3, "impact": 0.5}, "uncertainty": 0.4}, "reasoning": "Multi-modal analysis starting point"}
+EOF
+cat preflight.json | empirica preflight-submit -
 
-# 3. Work (with optional CHECK gates)
+# 3. Goals (AI-first JSON - optimal for structured multi-modal tasks)
+echo '{"session_id": "abc-123", "objective": "Visual analysis task", "scope": {"breadth": 0.6, "duration": 0.4, "coordination": 0.3}, "success_criteria": ["Analysis complete", "Findings documented"], "estimated_complexity": 0.65}' | empirica goals-create -
 
-# 4. POSTFLIGHT
-empirica postflight --session-id <ID> --task-summary "..."
-empirica postflight-submit --session-id <ID> --vectors {...} --reasoning "..."
+# 4. CHECK (use legacy CLI for now due to validation bug)
+empirica check --session-id abc-123 --confidence 0.75 --output json
+
+# 5. POSTFLIGHT (AI-first JSON)
+echo '{"session_id": "abc-123", "vectors": {...}, "reasoning": "Multi-modal insights gained"}' | empirica postflight-submit -
+```
+
+**Legacy CLI (Still Supported):**
+```bash
+# Create session
+empirica session-create --ai-id gemini-2.0 --output json
+
+# PREFLIGHT
+empirica preflight-submit --session-id <ID> --vectors {...} --reasoning "..." --output json
+
+# POSTFLIGHT
+empirica postflight-submit --session-id <ID> --vectors {...} --reasoning "..." --output json
 ```
 
 ---

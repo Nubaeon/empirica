@@ -4,6 +4,23 @@
 **Date:** 2025-12-05
 **Status:** AUTHORITATIVE - All agents must follow this
 
+## 🆕 AI-First JSON Interface (v4.1 Update)
+
+**For AI agents:** Use `.github/copilot-instructions.md` (v4.1) for the **trimmed, AI-first JSON interface**.
+- **261 lines** vs 994 lines (this document)
+- **AI-first JSON mode** examples for all major commands
+- **Session-based auto-linking** for findings/unknowns/deadends
+- **Dynamic project-bootstrap** loads context (~800 tokens)
+
+**This document (CANONICAL)** remains the comprehensive reference with full explanations, philosophy, and detailed workflows.
+
+**Key v4.1 Improvements:**
+- ✅ AI-first JSON stdin mode (preferred): `echo '{"ai_id":"myai"}' | empirica session-create -`
+- ✅ Session-based auto-linking: findings/unknowns/deadends auto-link to active goal
+- ✅ Legacy CLI still supported: `empirica session-create --ai-id myai --output json`
+
+---
+
 ## What's New in v4.0
 - ✅ Goal/subtask tracking (decision quality + continuity + audit trail)
 - ✅ Implicit reasoning states (CASCADE observes, doesn't prescribe)
@@ -77,7 +94,14 @@ session_create(ai_id="myai", bootstrap_level=1, session_type="development")
 
 **Pattern:** PREFLIGHT → [CHECK]* → POSTFLIGHT
 
-**Note:** `[CHECK]*` means zero or more CHECK gates during work. You can validate readiness multiple times before completing.
+**REQUIRED Phases:**
+- **PREFLIGHT** - Must assess epistemic state BEFORE starting work
+- **POSTFLIGHT** - Must measure learning AFTER completing work
+
+**OPTIONAL Phases:**
+- **CHECK** - Gate decision DURING work (0-N times, use when uncertainty is high)
+
+**Note:** INVESTIGATE and ACT are utility commands, NOT formal CASCADE phases.
 
 These are **formal epistemic assessments** stored in `reflexes` table:
 
@@ -784,37 +808,47 @@ result = edit_with_confidence(
 
 ## XII. CLI COMMANDS REFERENCE
 
+**AI-First Design:** All commands return JSON by default (both MCP and direct CLI). MCP tools automatically call CLI with JSON output.
+
 ### Session
-- `session-create --ai-id <ID>` - Create session
-- `sessions-list` - List all sessions
-- `sessions-show --session-id <ID>` - Show session details
+- `session-create --ai-id <ID>` - Create session (returns JSON)
+- `sessions-list` - List all sessions (returns JSON)
+- `sessions-show --session-id <ID>` - Show session details (returns JSON)
 - `sessions-resume --ai-id <ID>` - Resume latest session
 
 ### CASCADE
-- `preflight --session-id <ID> --prompt "..." --prompt-only` - Generate prompt
-- `preflight-submit --session-id <ID> --vectors {...} --reasoning "..."` - Submit
-- `check --session-id <ID> --findings [...] --unknowns [...] --confidence 0.7`
-- `check-submit --session-id <ID> --vectors {...} --decision proceed`
-- `postflight --session-id <ID> --task-summary "..."`
-- `postflight-submit --session-id <ID> --vectors {...} --reasoning "..."`
+- `preflight "task" --session-id <ID> --prompt-only` - Generate assessment prompt (returns JSON)
+- `preflight-submit --session-id <ID> --vectors {...} --reasoning "..."` - Submit assessment (returns JSON)
+- `check --session-id <ID> --findings [...] --unknowns [...] --confidence 0.7` - CHECK gate (returns JSON)
+- `check-submit --session-id <ID> --vectors {...} --decision proceed` - Submit CHECK
+- `postflight-submit --session-id <ID> --vectors {...} --reasoning "..."` - Submit POSTFLIGHT (returns JSON)
 
 ### Implicit Logging
-- `investigate-log --session-id <ID> --finding "..." --unknown "..."`
-- `act-log --session-id <ID> --action "..." --evidence "..."`
+- `investigate-log --session-id <ID> --finding "..." --unknown "..."` - Log findings
+- `act-log --session-id <ID> --action "..." --evidence "..."` - Log actions
 
-### Goals
-- `goals-create --session-id <ID> --objective "..." --success-criteria [...]`
-- `goals-add-subtask --goal-id <ID> --description "..."`
-- `goals-complete-subtask --task-id <ID> --evidence "..."`
-- `goals-list --session-id <ID>`
-- `goals-progress --goal-id <ID>`
+### Goals & Subtasks
+- `goals-create --session-id <ID> --objective "..." --scope-breadth 0.7 --scope-duration 0.4 --scope-coordination 0.3 --success-criteria '["..."]'` - Create goal
+- `goals-add-subtask --goal-id <ID> --description "..." --importance high` - Add subtask
+- `goals-complete-subtask --task-id <ID> --evidence "..."` - Complete subtask
+- `goals-get-subtasks --goal-id <ID>` - Get subtasks (returns JSON)
+- `goals-list --session-id <ID>` - List goals (returns JSON)
+- `goals-progress --goal-id <ID>` - Get progress
 
 ### Continuity
-- `checkpoint-create --session-id <ID> --phase "..." --vectors {...}`
-- `checkpoint-load --session-id <ID>`
-- `checkpoint-list --session-id <ID>`
-- `handoff-create --session-id <ID> --task-summary "..." --key-findings '["Finding 1", "Finding 2"]' --remaining-unknowns '["Unknown 1"]' --next-session-context "..."`
-- `handoff-query --ai-id <ID> --limit 5`
+- `checkpoint-create --session-id <ID> --phase PREFLIGHT --round 1` - Create checkpoint
+- `checkpoint-load --session-id <ID>` - Load checkpoint
+- `checkpoint-list --session-id <ID>` - List checkpoints
+- `handoff-create --session-id <ID> --task-summary "..." --key-findings '["..."]' --remaining-unknowns '["..."]' --next-session-context "..."` - Create handoff
+- `handoff-query --ai-id <ID> --limit 5` - Query handoffs (returns JSON)
+
+### Project (v4.1)
+- `project-create --name "..." --repos '["repo1", "repo2"]'` - Create project
+- `project-bootstrap --project-id <ID>` - Bootstrap context (returns JSON)
+- `finding-log --project-id <ID> --session-id <ID> --finding "..."` - Log finding
+- `unknown-log --project-id <ID> --session-id <ID> --unknown "..."` - Log unknown
+- `deadend-log --project-id <ID> --session-id <ID> --approach "..." --why-failed "..."` - Log dead end
+- `refdoc-add --project-id <ID> --doc-path "..." --doc-type guide` - Add reference doc
 
 ### Utilities
 - `onboard` - Interactive introduction to Empirica

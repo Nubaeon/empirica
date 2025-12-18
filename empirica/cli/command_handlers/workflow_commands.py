@@ -18,17 +18,59 @@ logger = logging.getLogger(__name__)
 
 
 def handle_preflight_submit_command(args):
-    """Handle preflight-submit command"""
+    """Handle preflight-submit command - AI-first with config file support"""
     try:
         import time
         import uuid
+        import sys
+        import os
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         from empirica.data.session_database import SessionDatabase
 
-        # Parse arguments
-        session_id = args.session_id
-        vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
-        reasoning = args.reasoning
+        # AI-FIRST MODE: Check if config file provided as positional argument
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            # Read config from file or stdin
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        # Extract parameters from config or fall back to legacy flags
+        if config_data:
+            # AI-FIRST MODE: Use config file
+            session_id = config_data.get('session_id')
+            vectors = config_data.get('vectors')
+            reasoning = config_data.get('reasoning', '')
+            output_format = 'json'  # AI-first always uses JSON output
+
+            # Validate required fields
+            if not session_id or not vectors:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Config file must include 'session_id' and 'vectors' fields",
+                    "hint": "See /tmp/preflight_config_example.json for schema"
+                }))
+                sys.exit(1)
+        else:
+            # LEGACY MODE: Use CLI flags
+            session_id = args.session_id
+            vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
+            reasoning = args.reasoning
+            output_format = getattr(args, 'output', 'json')  # Default to JSON
+
+            # Validate required fields for legacy mode
+            if not session_id or not vectors:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Legacy mode requires --session-id and --vectors flags",
+                    "hint": "For AI-first mode, use: empirica preflight-submit config.json"
+                }))
+                sys.exit(1)
 
         # Validate vectors
         if not isinstance(vectors, dict):
@@ -97,16 +139,20 @@ def handle_preflight_submit_command(args):
                 "error": str(e)
             }
 
-        # Format output based on --output flag
-        if hasattr(args, 'output') and args.output == 'json':
+        # Format output (AI-first = JSON by default)
+        if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
-            print("✅ PREFLIGHT assessment submitted successfully")
-            print(f"   Session: {session_id[:8]}...")
-            print(f"   Vectors: {len(vectors)} submitted")
-            print(f"   Storage: Database + Git Notes")
-            if reasoning:
-                print(f"   Reasoning: {reasoning[:80]}...")
+            # Human-readable output (legacy)
+            if result['ok']:
+                print("✅ PREFLIGHT assessment submitted successfully")
+                print(f"   Session: {session_id[:8]}...")
+                print(f"   Vectors: {len(vectors)} submitted")
+                print(f"   Storage: Database + Git Notes")
+                if reasoning:
+                    print(f"   Reasoning: {reasoning[:80]}...")
+            else:
+                print(f"❌ {result.get('message', 'Failed to submit PREFLIGHT assessment')}")
 
         return result
 
@@ -115,20 +161,64 @@ def handle_preflight_submit_command(args):
 
 
 def handle_check_command(args):
-    """Handle check command - creates unified storage assessment with real vectors"""
+    """Handle check command - AI-first with config file support"""
     try:
         import time
         import uuid
+        import sys
+        import os
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         from empirica.cli.command_handlers.decision_utils import calculate_decision
 
-        # Parse arguments
-        session_id = args.session_id
-        findings = parse_json_safely(args.findings) if isinstance(args.findings, str) else args.findings
-        unknowns = parse_json_safely(args.unknowns) if isinstance(args.unknowns, str) else args.unknowns
-        confidence = args.confidence
-        cycle = getattr(args, 'cycle', 1)
-        verbose = getattr(args, 'verbose', False)
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        # Extract parameters from config or fall back to legacy flags
+        if config_data:
+            # AI-FIRST MODE
+            session_id = config_data.get('session_id')
+            findings = config_data.get('findings', [])
+            unknowns = config_data.get('unknowns', [])
+            confidence = config_data.get('confidence')
+            cycle = config_data.get('cycle', 1)
+            verbose = config_data.get('verbose', False)
+            output_format = 'json'
+
+            # Validate required fields
+            if not session_id or confidence is None:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Config file must include 'session_id' and 'confidence' fields",
+                    "hint": "See /tmp/check_config_example.json for schema"
+                }))
+                sys.exit(1)
+        else:
+            # LEGACY MODE
+            session_id = args.session_id
+            findings = parse_json_safely(args.findings) if isinstance(args.findings, str) else args.findings
+            unknowns = parse_json_safely(args.unknowns) if isinstance(args.unknowns, str) else args.unknowns
+            confidence = args.confidence
+            cycle = getattr(args, 'cycle', 1)
+            verbose = getattr(args, 'verbose', False)
+            output_format = getattr(args, 'output', 'json')
+
+            # Validate required fields for legacy mode
+            if not session_id or confidence is None:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Legacy mode requires --session-id and --confidence flags",
+                    "hint": "For AI-first mode, use: empirica check config.json"
+                }))
+                sys.exit(1)
 
         # Auto-convert strings to single-item arrays for better UX (defensive parsing)
         if isinstance(findings, str):
@@ -212,31 +302,35 @@ def handle_check_command(args):
             result["findings"] = findings
             result["unknowns"] = unknowns
 
-        # Format output
-        if hasattr(args, 'output') and args.output == 'json':
+        # Format output (AI-first = JSON by default)
+        if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
-            print("✅ CHECK assessment created and stored")
-            print(f"   Session: {session_id[:8]}...")
-            print(f"   Cycle: {cycle}")
-            print(f"   Confidence: {confidence:.2f}")
-            print(f"   Decision: {decision.upper()}")
-            print(f"   Storage: SQLite + Git Notes + JSON")
-            print(f"   Findings: {len(findings)} analyzed")
-            print(f"   Unknowns: {len(unknowns)} remaining")
+            # Human-readable output (legacy)
+            if result['ok']:
+                print("✅ CHECK assessment created and stored")
+                print(f"   Session: {session_id[:8]}...")
+                print(f"   Cycle: {cycle}")
+                print(f"   Confidence: {confidence:.2f}")
+                print(f"   Decision: {decision.upper()}")
+                print(f"   Storage: SQLite + Git Notes + JSON")
+                print(f"   Findings: {len(findings)} analyzed")
+                print(f"   Unknowns: {len(unknowns)} remaining")
 
-            if verbose:
-                print("\n   Key findings:")
-                for i, finding in enumerate(findings[:5], 1):
-                    print(f"     {i}. {finding}")
-                if len(findings) > 5:
-                    print(f"     ... and {len(findings) - 5} more")
+                if verbose:
+                    print("\n   Key findings:")
+                    for i, finding in enumerate(findings[:5], 1):
+                        print(f"     {i}. {finding}")
+                    if len(findings) > 5:
+                        print(f"     ... and {len(findings) - 5} more")
 
-                print("\n   Remaining unknowns:")
-                for i, unknown in enumerate(unknowns[:5], 1):
-                    print(f"     {i}. {unknown}")
-                if len(unknowns) > 5:
-                    print(f"     ... and {len(unknowns) - 5} more")
+                    print("\n   Remaining unknowns:")
+                    for i, unknown in enumerate(unknowns[:5], 1):
+                        print(f"     {i}. {unknown}")
+                    if len(unknowns) > 5:
+                        print(f"     ... and {len(unknowns) - 5} more")
+            else:
+                print(f"❌ {result.get('message', 'Failed to create CHECK assessment')}")
 
         return result
 
@@ -456,17 +550,58 @@ def _extract_all_vectors(vectors):
     return extracted
 
 def handle_postflight_submit_command(args):
-    """Handle postflight-submit command"""
+    """Handle postflight-submit command - AI-first with config file support"""
     try:
         import time
         import uuid
+        import sys
+        import os
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         from empirica.data.session_database import SessionDatabase
 
-        # Parse arguments
-        session_id = args.session_id
-        vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
-        reasoning = args.reasoning  # Unified parameter name
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        # Extract parameters from config or fall back to legacy flags
+        if config_data:
+            # AI-FIRST MODE
+            session_id = config_data.get('session_id')
+            vectors = config_data.get('vectors')
+            reasoning = config_data.get('reasoning', '')
+            output_format = 'json'
+
+            # Validate required fields
+            if not session_id or not vectors:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Config file must include 'session_id' and 'vectors' fields",
+                    "hint": "See /tmp/postflight_config_example.json for schema"
+                }))
+                sys.exit(1)
+        else:
+            # LEGACY MODE
+            session_id = args.session_id
+            vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
+            reasoning = args.reasoning
+            output_format = getattr(args, 'output', 'json')
+
+            # Validate required fields for legacy mode
+            if not session_id or not vectors:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Legacy mode requires --session-id and --vectors flags",
+                    "hint": "For AI-first mode, use: empirica postflight-submit config.json"
+                }))
+                sys.exit(1)
 
         # Validate vectors
         if not isinstance(vectors, dict):
@@ -639,28 +774,29 @@ def handle_postflight_submit_command(args):
                 "error": str(e)
             }
 
-        # Format output
-        if hasattr(args, 'output') and args.output == 'json':
+        # Format output (AI-first = JSON by default)
+        if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
-            print("✅ POSTFLIGHT assessment submitted successfully")
-            print(f"   Session: {session_id[:8]}...")
-            print(f"   Vectors: {len(vectors)} submitted")
-            print(f"   Storage: Database + Git Notes")
-            print(f"   Calibration: {calibration_accuracy}")
-            if reasoning:
-                print(f"   Reasoning: {reasoning[:80]}...")
-            if deltas:
-                print(f"   Learning deltas: {len(deltas)} vectors changed")
-            
-            # Note: Within-session "memory gap" warnings removed
-            # (False positives - decreases are usually calibration corrections, not memory loss)
-            
-            # CALIBRATION ISSUE WARNINGS
-            if calibration_issues:
-                print(f"\n⚠️  Calibration issues detected: {len(calibration_issues)}")
-                for issue in calibration_issues:
-                    print(f"   • {issue['pattern']}: {issue['description']}")
+            # Human-readable output (legacy)
+            if result['ok']:
+                print("✅ POSTFLIGHT assessment submitted successfully")
+                print(f"   Session: {session_id[:8]}...")
+                print(f"   Vectors: {len(vectors)} submitted")
+                print(f"   Storage: Database + Git Notes")
+                print(f"   Calibration: {calibration_accuracy}")
+                if reasoning:
+                    print(f"   Reasoning: {reasoning[:80]}...")
+                if deltas:
+                    print(f"   Learning deltas: {len(deltas)} vectors changed")
+
+                # CALIBRATION ISSUE WARNINGS
+                if calibration_issues:
+                    print(f"\n⚠️  Calibration issues detected: {len(calibration_issues)}")
+                    for issue in calibration_issues:
+                        print(f"   • {issue['pattern']}: {issue['description']}")
+            else:
+                print(f"❌ {result.get('message', 'Failed to submit POSTFLIGHT assessment')}")
 
             # Show project context for next session
             try:

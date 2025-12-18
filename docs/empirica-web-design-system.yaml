@@ -1,0 +1,163 @@
+id: empirica-web-design-system
+title: Empirica Website Design System
+version: "1.0"
+repository: https://github.com/Nubaeon/empirica-web
+last_updated: "2025-12-12"
+
+# Core Design Philosophy
+philosophy: |
+  Glassmorphic dark theme with indigo/cyan accents. Clean, modern, tech-forward aesthetic 
+  emphasizing clarity and precision. Design communicates epistemic rigor through visual restraint.
+
+# Color Palette
+colors:
+  primary:
+    indigo: "#6366f1"      # Primary brand color
+    indigo_dark: "#4338ca" # Darker shade for hover states
+    cyan: "#0ea5e9"        # Secondary/accent color
+  
+  backgrounds:
+    dark: "#0f172a"        # Main background (slate-900)
+    card: "rgba(30, 41, 59, 0.7)"  # Glass card background
+    card_darker: "rgba(30, 41, 59, 0.4)"  # Lighter glass variant
+  
+  text:
+    primary: "#f8fafc"     # White/lightest slate
+    secondary: "#94a3b8"   # Muted slate
+    muted: "#64748b"       # Even more muted
+  
+  borders:
+    glass: "rgba(148, 163, 184, 0.1)"  # Glass border
+    indigo: "rgba(99, 102, 241, 0.3)"  # Indigo accent border
+
+# Typography
+typography:
+  fonts:
+    body: "'Inter', sans-serif"
+    code: "'JetBrains Mono', 'Fira Code', monospace"
+  
+  weights:
+    light: 300
+    normal: 400
+    medium: 500
+    semibold: 600
+    bold: 700
+
+# Layout Components
+components:
+  base_layout:
+    file: "src/layouts/BaseLayout.astro"
+    props:
+      - title: string
+      - description: string
+      - isHomepage: boolean (default false)
+      - pageTitle: string (optional)
+      - pageDescription: string (optional)
+      - breadcrumbs: string[] (optional)
+  
+  glass_panel:
+    description: "Heavier glassmorphic container for major sections"
+    css:
+      background: "rgba(30, 41, 59, 0.5)"
+      border: "1px solid rgba(148, 163, 184, 0.1)"
+      backdrop_filter: "blur(12px)"
+    usage: "Use for main content sections, feature cards"
+  
+  glass_card:
+    description: "Lighter glassmorphic container for nested content"
+    css:
+      background: "rgba(30, 41, 59, 0.4)"
+      border: "1px solid rgba(148, 163, 184, 0.1)"
+      backdrop_filter: "blur(8px)"
+    usage: "Use for nested cards within panels, list items"
+  
+  bento_grid:
+    description: "Responsive grid for feature showcases"
+    css:
+      display: "grid"
+      grid_template_columns: "repeat(auto-fit, minmax(300px, 1fr))"
+      gap: "1.5rem"
+    usage: "Use for features, use-cases, team members"
+
+# Tailwind Utility Patterns
+tailwind_patterns:
+  navigation:
+    classes: "flex items-center px-4 py-2 text-slate-400 hover:text-slate-50 hover:bg-white/5 rounded-lg transition-all font-medium"
+    active: "text-indigo-400 bg-indigo-500/10"
+  
+  buttons:
+    primary: "px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
+    secondary: "px-6 py-3 border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded-lg font-medium transition-colors"
+  
+  code_blocks:
+    classes: "bg-black border border-indigo-500/30 rounded-lg p-6 overflow-x-auto text-white font-mono text-sm"
+
+# Visual Effects
+effects:
+  glow:
+    description: "Animated glow effect on hover"
+    implementation: "Add .glow-effect class, uses ::before pseudo-element with gradient animation"
+  
+  backdrop_blur:
+    light: "backdrop-blur-sm"   # 4px blur
+    medium: "backdrop-blur"     # 8px blur
+    heavy: "backdrop-blur-lg"   # 16px blur
+
+# Page Structure
+page_templates:
+  homepage:
+    file: "src/pages/index.astro"
+    sections:
+      - hero: "Full-width hero with gradient background"
+      - features: "Bento grid of key features"
+      - integration: "Code examples with glass-panel"
+      - cta: "Call-to-action section"
+  
+  content_page:
+    file: "src/pages/how-it-works.astro"
+    sections:
+      - header: "Page title with breadcrumbs"
+      - content: "Glass-panel sections with bento-grid subsections"
+      - sidebar: "Optional sidebar with quick links"
+
+# Assets
+assets:
+  svgs:
+    location: "assets/diagrams/"
+    theme: "Dark background (#1a1a25) with indigo accents"
+    diagrams:
+      - cascade_workflow.svg
+      - epistemic_feedback_loop.svg
+      - epistemic_vs_git_diff.svg
+      - storage_architecture_flow.svg
+      - multi_ai_collaboration.svg
+
+# Development Workflow
+workflow:
+  astro_commands:
+    dev: "npm run dev"
+    build: "npm run build"
+    preview: "npm run preview"
+  
+  file_locations:
+    layouts: "astro-site/src/layouts/"
+    pages: "astro-site/src/pages/"
+    components: "astro-site/src/components/"
+    assets: "assets/"
+
+# Design Principles
+principles:
+  - "Glassmorphism over solid backgrounds"
+  - "Dark theme with high contrast text"
+  - "Indigo as primary, cyan as accent"
+  - "Generous whitespace for clarity"
+  - "Bento grids for feature showcases"
+  - "Consistent hover states (glow + color shift)"
+  - "Typography hierarchy: Inter body, JetBrains Mono code"
+
+# Common Patterns
+common_patterns:
+  section_container: "max-w-6xl mx-auto px-6 py-16"
+  card_hover: "hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/10 transition-all"
+  text_gradient: "bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent"
+  badge: "inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300"

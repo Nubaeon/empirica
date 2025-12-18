@@ -150,10 +150,15 @@ class MemoryGapDetector:
             gaps.append(unknowns_gap)
 
         # Gap type 3: File change unawareness
-        files_gap = self._check_file_awareness(
-            breadcrumbs.get('recent_artifacts', {}).get('files_changed', []),
-            session_context
-        )
+        # Handle recent_artifacts being either dict or list
+        recent_artifacts = breadcrumbs.get('recent_artifacts', [])
+        files_changed = []
+        if isinstance(recent_artifacts, dict):
+            files_changed = recent_artifacts.get('files_changed', [])
+        elif isinstance(recent_artifacts, list):
+            files_changed = recent_artifacts  # Assume list is file changes
+
+        files_gap = self._check_file_awareness(files_changed, session_context)
         if files_gap:
             gaps.append(files_gap)
 
@@ -220,7 +225,9 @@ class MemoryGapDetector:
         # Count unreferenced findings
         unreferenced = []
         for finding in findings:
-            if not self._referenced_in_session(finding.get('id', ''), session_context):
+            # Handle both dict and string findings
+            finding_id = finding.get('id', '') if isinstance(finding, dict) else ''
+            if not self._referenced_in_session(finding_id, session_context):
                 unreferenced.append(finding)
 
         if len(unreferenced) <= threshold:
@@ -230,16 +237,22 @@ class MemoryGapDetector:
         finding_weight = 0.05  # Each finding contributes ~0.05 to KNOW
         know_impact = len(unreferenced) * finding_weight
 
+        # Extract finding text (handle both dict and string)
+        def get_finding_text(f):
+            if isinstance(f, dict):
+                return f.get('finding', str(f))[:100]
+            return str(f)[:100]
+
         return MemoryGap(
             gap_id=f"unreferenced_findings_{len(unreferenced)}",
-            gap_type='findings',
+            gap_type='unreferenced_findings',
             content=f"{len(unreferenced)} findings from previous sessions not referenced",
             severity='high' if len(unreferenced) > 20 else 'medium',
             gap_score=min(know_impact, 0.5),
             evidence={
                 'total_findings': len(findings),
                 'unreferenced_count': len(unreferenced),
-                'sample_findings': [f['finding'][:100] for f in unreferenced[:3]]
+                'sample_findings': [get_finding_text(f) for f in unreferenced[:3]]
             },
             affects_vector='know',
             realistic_value=None,  # Calculated during enforcement
@@ -260,26 +273,37 @@ class MemoryGapDetector:
         # Find resolved but unincorporated unknowns
         resolved_unincorporated = []
         for unknown in unknowns:
-            if unknown.get('status') == 'resolved':
-                if not self._incorporated_in_session(unknown, session_context):
-                    resolved_unincorporated.append(unknown)
+            # Handle both dict and string unknowns
+            if isinstance(unknown, dict):
+                if unknown.get('status') == 'resolved':
+                    if not self._incorporated_in_session(unknown, session_context):
+                        resolved_unincorporated.append(unknown)
+            else:
+                # String unknowns - assume unresolved
+                resolved_unincorporated.append(unknown)
 
         if len(resolved_unincorporated) <= threshold:
             return None
 
         clarity_impact = len(resolved_unincorporated) * 0.03
 
+        # Extract unknown text (handle both dict and string)
+        def get_unknown_text(u):
+            if isinstance(u, dict):
+                return u.get('unknown', str(u))[:100]
+            return str(u)[:100]
+
         return MemoryGap(
             gap_id=f"unincorporated_unknowns_{len(resolved_unincorporated)}",
-            gap_type='unknowns',
+            gap_type='unincorporated_unknowns',
             content=f"{len(resolved_unincorporated)} resolved unknowns not incorporated",
             severity='medium',
             gap_score=min(clarity_impact, 0.3),
             evidence={
                 'total_unknowns': len(unknowns),
-                'resolved_count': len([u for u in unknowns if u.get('status') == 'resolved']),
+                'resolved_count': len([u for u in unknowns if isinstance(u, dict) and u.get('status') == 'resolved']),
                 'unincorporated_count': len(resolved_unincorporated),
-                'sample_unknowns': [u['unknown'][:100] for u in resolved_unincorporated[:3]]
+                'sample_unknowns': [get_unknown_text(u) for u in resolved_unincorporated[:3]]
             },
             affects_vector='clarity',
             realistic_value=None,
@@ -392,7 +416,15 @@ class MemoryGapDetector:
         signals['artifacts'] = min(0.5 + artifact_score, 1.0)
 
         # Signal 3: Git freshness
-        files_changed = len(breadcrumbs.get('recent_artifacts', {}).get('files_changed', []))
+        # Handle recent_artifacts being either dict or list
+        recent_artifacts = breadcrumbs.get('recent_artifacts', [])
+        if isinstance(recent_artifacts, dict):
+            files_changed = len(recent_artifacts.get('files_changed', []))
+        elif isinstance(recent_artifacts, list):
+            files_changed = len(recent_artifacts)
+        else:
+            files_changed = 0
+
         context_penalty = min(0.1 * (files_changed / 10), 0.3)
         signals['git_freshness'] = max(last_know - context_penalty, 0.2)
 

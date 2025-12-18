@@ -110,12 +110,11 @@ cursor = db.conn.execute("""
 # Get git note SHA
 NOTE_SHA=$(git rev-parse refs/notes/empirica/session/abc-123/PREFLIGHT/1)
 
-# Sign with AI identity
-empirica identity-sign --sha $NOTE_SHA --ai-id copilot
+# Sign checkpoint (identity must exist first)
+empirica checkpoint-sign --session-id abc-123
 
-# Store signature in git notes
-git notes --ref empirica/signatures/abc-123/PREFLIGHT/1 \
-  add -m "$SIGNATURE" HEAD
+# Signature stored automatically in git notes
+# refs/empirica/signatures/<session-id>/<phase>/<round>
 ```
 
 ---

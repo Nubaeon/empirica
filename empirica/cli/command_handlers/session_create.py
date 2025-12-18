@@ -8,22 +8,69 @@ from ..cli_utils import handle_cli_error
 
 
 def handle_session_create_command(args):
-    """Create a new session"""
+    """Create a new session - AI-first with config file support"""
     try:
         import os
         import subprocess
         from empirica.data.session_database import SessionDatabase
+        from ..cli_utils import parse_json_safely
 
-        ai_id = args.ai_id
-        user_id = getattr(args, 'user_id', None)
-        bootstrap_level = getattr(args, 'bootstrap_level', 1)
-        output_format = getattr(args, 'output', 'default')
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
 
+        # Extract parameters from config or fall back to legacy flags
+        if config_data:
+            # AI-FIRST MODE
+            ai_id = config_data.get('ai_id')
+            user_id = config_data.get('user_id')
+            bootstrap_level = config_data.get('bootstrap_level', 1)
+            output_format = 'json'
+
+            # Validate required fields
+            if not ai_id:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Config file must include 'ai_id' field",
+                    "hint": "See /tmp/session_config_example.json for schema"
+                }))
+                sys.exit(1)
+        else:
+            # LEGACY MODE
+            ai_id = args.ai_id
+            user_id = getattr(args, 'user_id', None)
+            bootstrap_level = getattr(args, 'bootstrap_level', 1)
+            output_format = getattr(args, 'output', 'json')  # Default to JSON
+
+            # Validate required fields for legacy mode
+            if not ai_id:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Legacy mode requires --ai-id flag",
+                    "hint": "For AI-first mode, use: empirica session-create config.json"
+                }))
+                sys.exit(1)
+
+        # Auto-detect subject from current directory
+        from empirica.config.project_config_loader import get_current_subject
+        subject = config_data.get('subject') if config_data else getattr(args, 'subject', None)
+        if subject is None:
+            subject = get_current_subject()  # Auto-detect from directory
+        
         db = SessionDatabase()
         session_id = db.create_session(
             ai_id=ai_id,
             bootstrap_level=bootstrap_level,
-            components_loaded=6  # Standard component count
+            components_loaded=6,  # Standard component count
+            subject=subject
         )
 
         # Try to auto-detect project from git remote URL

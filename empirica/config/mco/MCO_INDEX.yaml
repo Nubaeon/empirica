@@ -1,0 +1,326 @@
+# MCO Configuration Index v1.0
+# Semantic guide to all MCO objects and their relationships
+
+version: "1.0"
+created: "2025-12-12"
+status: "active"
+
+# ============================================================================
+# OVERVIEW
+# ============================================================================
+# MCO (Metacognitive Calibration Orchestrator) system uses YAML configs to:
+# - Define AI personas and behavior patterns
+# - Configure CASCADE workflow styles
+# - Map epistemic states to decision thresholds
+# - Establish protocols for MCP tool usage
+# - Calibrate for model-specific biases
+# - Trigger context loading based on uncertainty
+# - Enforce bidirectional accountability (AI ↔ Human)
+
+# ============================================================================
+# INDEX BY CATEGORY
+# ============================================================================
+
+categories:
+  
+  # --------------------------------------------------------------------------
+  # 1. AI BEHAVIOR & IDENTITY
+  # --------------------------------------------------------------------------
+  ai_behavior:
+    - file: personas.yaml
+      purpose: Define 6 AI personas (researcher, implementer, reviewer, coordinator, learner, expert)
+      use_when: "Session creation, goal scoping, task delegation"
+      key_concepts: ["persona-switching", "role-based-reasoning", "specialization"]
+      related: ["cascade_styles.yaml", "epistemic_conduct.yaml"]
+      
+    - file: cascade_styles.yaml
+      purpose: Configure 6 CASCADE workflow profiles (default, exploratory, rigorous, rapid, expert, novice)
+      use_when: "PREFLIGHT - select style based on task complexity and uncertainty"
+      key_concepts: ["workflow-profiles", "assessment-depth", "gate-thresholds"]
+      related: ["personas.yaml", "confidence_weights.yaml"]
+      
+    - file: epistemic_conduct.yaml
+      purpose: Bidirectional accountability - when AI challenges user, when human challenges AI
+      use_when: "Always active - enforces epistemic rigor in AI-human interaction"
+      key_concepts: ["challenge-triggers", "accountability", "transparency", "rigor"]
+      related: ["ask_before_investigate.yaml", "feedback_loops.yaml"]
+      
+    - file: ask_before_investigate.yaml
+      purpose: Thresholds for when AI should ask human vs investigate autonomously
+      use_when: "CHECK phase - before deep investigation, when uncertainty ≥0.65"
+      key_concepts: ["uncertainty-thresholds", "mode-specific-overrides", "question-formulation"]
+      related: ["epistemic_conduct.yaml", "cascade_styles.yaml"]
+
+  # --------------------------------------------------------------------------
+  # 2. EPISTEMIC ASSESSMENT & CALIBRATION
+  # --------------------------------------------------------------------------
+  epistemic_assessment:
+    - file: confidence_weights.yaml
+      purpose: Weight configurations for aggregating 13 epistemic vectors into single confidence scores
+      use_when: "PREFLIGHT, CHECK, POSTFLIGHT - when computing confidence from vectors"
+      key_concepts: ["vector-aggregation", "tier-weighting", "confidence-computation"]
+      related: ["cascade_styles.yaml", "model_profiles.yaml"]
+      
+    - file: model_profiles.yaml
+      purpose: Model-specific bias corrections (overconfidence, underconfidence patterns per LLM)
+      use_when: "After self-assessment - apply bias correction based on model being used"
+      key_concepts: ["calibration", "model-bias", "correction-factors"]
+      related: ["confidence_weights.yaml", "feedback_loops.yaml"]
+      
+    - file: feedback_loops.yaml
+      purpose: Statusline warning responses - what to do when drift/overconfidence detected
+      use_when: "Continuous monitoring - when Mirror Drift Monitor flags issues"
+      key_concepts: ["drift-detection", "warning-responses", "calibration-triggers"]
+      related: ["model_profiles.yaml", "epistemic_conduct.yaml"]
+
+  # --------------------------------------------------------------------------
+  # 3. GOAL SCOPING & WORK PLANNING
+  # --------------------------------------------------------------------------
+  goal_scoping:
+    - file: goal_scopes.yaml
+      purpose: Map epistemic vectors → scope vectors (breadth, duration, coordination)
+      use_when: "Goal creation - convert epistemic assessment to structured scope"
+      key_concepts: ["scope-mapping", "complexity-estimation", "multi-agent-coordination"]
+      related: ["protocols.yaml"]
+      includes:
+        - session_continuation: "Multi-session work protocol (mandatory handoff query)"
+        - web_project_design: "Wide-scope protocol (mandatory reference check before creating pages)"
+
+  # --------------------------------------------------------------------------
+  # 4. TOOL USAGE & PROTOCOLS
+  # --------------------------------------------------------------------------
+  protocols:
+    - file: protocols.yaml
+      purpose: Standardized schemas for MCP tool usage (CASCADE phases, goals, handoffs, mistakes)
+      use_when: "Always - ensures consistent tool parameter structure across sessions"
+      key_concepts: ["mcp-schemas", "tool-protocols", "parameter-validation"]
+      related: ["goal_scopes.yaml"]
+      includes:
+        - log_mistake: "Mistake tracking protocol (mistake, why_wrong, cost, root_cause_vector, prevention)"
+        - preflight_schema: "PREFLIGHT tool parameter structure"
+        - check_schema: "CHECK tool parameter structure"
+        - postflight_schema: "POSTFLIGHT tool parameter structure"
+
+  # --------------------------------------------------------------------------
+  # 5. BOOTSTRAP & CONTEXT LOADING
+  # --------------------------------------------------------------------------
+  bootstrap:
+    - file: bootstrap_triggers.yaml
+      purpose: When to load project breadcrumbs, depth based on uncertainty
+      use_when: "Session start - after session-create, before PREFLIGHT"
+      key_concepts: ["bootstrap-timing", "uncertainty-driven-depth", "token-budget"]
+      related: ["goal_scopes.yaml"]
+      token_costs:
+        session_start: "~800 tokens"
+        check_requery: "~50 tokens"
+        full_reload: "never (redundant)"
+
+  # --------------------------------------------------------------------------
+  # 6. DOCUMENTATION & REFERENCE
+  # --------------------------------------------------------------------------
+  documentation:
+    - file: semantic_index.yaml
+      purpose: Semantic tags for fast doc discovery (not epistemic, just metadata)
+      use_when: "Doc queries - find relevant documentation by tag/concept/question"
+      key_concepts: ["semantic-search", "doc-discovery", "reference-metadata"]
+      location: "docs/SEMANTIC_INDEX.yaml (separate from MCO configs)"
+      related: ["bootstrap_triggers.yaml"]
+
+
+# ============================================================================
+# WORKFLOW INTEGRATION MAP
+# ============================================================================
+
+workflows:
+  
+  session_start:
+    sequence:
+      - step: "1. Create session"
+        mco_used: []
+        cli: "empirica session-create --ai-id myai"
+        
+      - step: "2. Load bootstrap (if project exists)"
+        mco_used: ["bootstrap_triggers.yaml"]
+        cli: "empirica project-bootstrap --project-id <ID>"
+        notes: "Depth determined by uncertainty (see bootstrap_triggers.yaml)"
+        
+      - step: "3. Run PREFLIGHT"
+        mco_used: ["personas.yaml", "cascade_styles.yaml", "confidence_weights.yaml"]
+        cli: "empirica preflight --session-id <ID> --prompt '...'"
+        notes: "Bootstrap context informs KNOW/DO/UNCERTAINTY vectors"
+        
+      - step: "4. Apply bias correction"
+        mco_used: ["model_profiles.yaml"]
+        notes: "Adjust vectors based on LLM-specific overconfidence patterns"
+  
+  check_gate:
+    sequence:
+      - step: "1. Assess readiness"
+        mco_used: ["ask_before_investigate.yaml", "epistemic_conduct.yaml"]
+        notes: "If uncertainty ≥0.65 + context ≥0.50 → ask human first"
+        
+      - step: "2. Query unknowns"
+        cli: "empirica query-unknowns-summary --session-id <ID>"
+        notes: "Don't reload full bootstrap - query specific unknowns only"
+        
+      - step: "3. Submit CHECK"
+        mco_used: ["cascade_styles.yaml", "protocols.yaml"]
+        cli: "empirica check-submit --session-id <ID> --decision proceed"
+  
+  goal_creation:
+    sequence:
+      - step: "1. Map epistemic → scope"
+        mco_used: ["goal_scopes.yaml"]
+        notes: "KNOW/DO/UNCERTAINTY → breadth/duration/coordination"
+        
+      - step: "2. Check protocols"
+        mco_used: ["goal_scopes.yaml (session_continuation, web_project_design)"]
+        notes: "Multi-session? → Query handoff first. Web project? → Check reference"
+        
+      - step: "3. Create goal"
+        mco_used: ["protocols.yaml"]
+        cli: "empirica goals-create --session-id <ID> --objective '...'"
+  
+  drift_detection:
+    sequence:
+      - step: "1. Monitor statusline"
+        mco_used: ["feedback_loops.yaml"]
+        notes: "Mirror Drift Monitor queries reflexes table continuously"
+        
+      - step: "2. Trigger response"
+        mco_used: ["feedback_loops.yaml", "epistemic_conduct.yaml"]
+        notes: "OVERCONFIDENT → recalibrate, DRIFTING → investigate, challenge user if needed"
+
+
+# ============================================================================
+# QUERY PATTERNS
+# ============================================================================
+
+queries:
+  by_concept:
+    - concept: "bias-correction"
+      files: ["model_profiles.yaml", "confidence_weights.yaml", "feedback_loops.yaml"]
+      
+    - concept: "gate-thresholds"
+      files: ["cascade_styles.yaml", "ask_before_investigate.yaml", "goal_scopes.yaml"]
+      
+    - concept: "bidirectional-accountability"
+      files: ["epistemic_conduct.yaml", "ask_before_investigate.yaml", "feedback_loops.yaml"]
+      
+    - concept: "token-efficiency"
+      files: ["bootstrap_triggers.yaml", "semantic_index.yaml"]
+      
+    - concept: "multi-agent-coordination"
+      files: ["goal_scopes.yaml", "personas.yaml"]
+      
+    - concept: "uncertainty-thresholds"
+      files: ["ask_before_investigate.yaml", "bootstrap_triggers.yaml", "cascade_styles.yaml"]
+  
+  by_use_case:
+    - use_case: "Starting new session"
+      files: ["bootstrap_triggers.yaml", "personas.yaml", "cascade_styles.yaml"]
+      workflow: "session_start"
+      
+    - use_case: "CHECK gate decision"
+      files: ["ask_before_investigate.yaml", "cascade_styles.yaml", "epistemic_conduct.yaml"]
+      workflow: "check_gate"
+      
+    - use_case: "Creating complex goal"
+      files: ["goal_scopes.yaml", "protocols.yaml"]
+      workflow: "goal_creation"
+      
+    - use_case: "Detecting overconfidence"
+      files: ["model_profiles.yaml", "feedback_loops.yaml", "epistemic_conduct.yaml"]
+      workflow: "drift_detection"
+  
+  by_question:
+    - question: "When should AI ask vs investigate?"
+      answer_in: ["ask_before_investigate.yaml", "epistemic_conduct.yaml"]
+      
+    - question: "How deep should bootstrap context be?"
+      answer_in: ["bootstrap_triggers.yaml"]
+      
+    - question: "What persona should AI use?"
+      answer_in: ["personas.yaml", "cascade_styles.yaml"]
+      
+    - question: "How to correct for model bias?"
+      answer_in: ["model_profiles.yaml", "confidence_weights.yaml"]
+      
+    - question: "When to trigger CHECK gate?"
+      answer_in: ["cascade_styles.yaml", "ask_before_investigate.yaml"]
+
+
+# ============================================================================
+# TOKEN COSTS & EFFICIENCY
+# ============================================================================
+
+token_costs:
+  bootstrap:
+    session_start: "~800 tokens (fast breadcrumbs)"
+    live_mode: "~2000 tokens (complete breadcrumbs)"
+    check_requery: "~50 tokens (targeted unknowns only)"
+    
+  mco_configs:
+    full_load: "~1500 tokens (all 9 configs)"
+    targeted_load: "~200-400 tokens (2-3 configs for specific workflow)"
+    
+  semantic_index:
+    full_index: "~850 tokens"
+    targeted_query: "~100 tokens (specific doc references)"
+
+
+# ============================================================================
+# MAINTENANCE & VERSIONING
+# ============================================================================
+
+maintenance:
+  add_new_config:
+    steps:
+      - "1. Create config YAML in empirica/config/mco/"
+      - "2. Add entry to this index under appropriate category"
+      - "3. Update related files list"
+      - "4. Add to workflows section if it affects CASCADE/goal/bootstrap flow"
+      - "5. Update query_patterns for discoverability"
+      
+  deprecate_config:
+    steps:
+      - "1. Mark status as 'deprecated' in this index"
+      - "2. Add deprecation date and reason"
+      - "3. Reference replacement config"
+      - "4. Leave file in place for 2 versions before deletion"
+
+
+# ============================================================================
+# RELATIONSHIP MATRIX
+# ============================================================================
+
+relationships:
+  # Format: [file_A, file_B, relationship_type, description]
+  - ["personas.yaml", "cascade_styles.yaml", "informs", "Persona influences CASCADE style selection"]
+  - ["cascade_styles.yaml", "confidence_weights.yaml", "uses", "Styles use weight configs for confidence computation"]
+  - ["epistemic_conduct.yaml", "ask_before_investigate.yaml", "enforces", "Conduct rules trigger ask-first protocol"]
+  - ["bootstrap_triggers.yaml", "goal_scopes.yaml", "integrates", "Bootstrap depth informed by goal scope complexity"]
+  - ["model_profiles.yaml", "feedback_loops.yaml", "corrects", "Bias profiles trigger feedback loop adjustments"]
+  - ["protocols.yaml", "goal_scopes.yaml", "validates", "Protocols enforce scope-based requirements"]
+  - ["feedback_loops.yaml", "epistemic_conduct.yaml", "triggers", "Drift detection triggers accountability challenges"]
+
+
+# ============================================================================
+# FUTURE EXTENSIONS (Planned)
+# ============================================================================
+
+planned:
+  - name: "qdrant_bootstrap.yaml"
+    purpose: "Configure Qdrant semantic search for findings/unknowns/mistakes"
+    category: "bootstrap"
+    status: "Phase 2 (planned)"
+    
+  - name: "multi_ai_coordination.yaml"
+    purpose: "Protocols for multi-AI handoffs and goal resumption"
+    category: "goal_scoping"
+    status: "Phase 1 complete, Phase 2 planned"
+    
+  - name: "skill_matching.yaml"
+    purpose: "Match available skills to task requirements via tag similarity"
+    category: "bootstrap"
+    status: "Planned (after skill content injection fixed)"

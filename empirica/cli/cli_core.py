@@ -5,6 +5,13 @@ This module provides the main() function and argument parser setup for the
 modularized Empirica CLI, replacing the monolithic cli.py structure.
 """
 
+# Apply asyncio fixes early (before any MCP connections)
+try:
+    from empirica.cli.asyncio_fix import patch_asyncio_for_mcp
+    patch_asyncio_for_mcp()
+except Exception:
+    pass  # Don't fail if fix can't be applied
+
 import argparse
 import sys
 import time
@@ -80,6 +87,9 @@ Examples:
     # User interface commands (for human users)
     _add_user_interface_parsers(subparsers)
     
+    # Vision commands
+    _add_vision_parsers(subparsers)
+    
     return parser
 
 
@@ -130,23 +140,37 @@ def _add_cascade_parsers(subparsers):
 
     # NEW: MCP v2 Workflow Commands (Critical Priority)
     
-    # Preflight submit command
-    preflight_submit_parser = subparsers.add_parser('preflight-submit', help='Submit preflight assessment results')
-    preflight_submit_parser.add_argument('--session-id', required=True, help='Session ID')
-    preflight_submit_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict')
-    preflight_submit_parser.add_argument('--reasoning', help='Reasoning for assessment scores')
-    preflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    # Preflight submit command (AI-first with config file support)
+    preflight_submit_parser = subparsers.add_parser('preflight-submit',
+        help='Submit preflight assessment (AI-first: use config file, Legacy: use flags)')
+
+    # AI-FIRST: Positional config file argument
+    preflight_submit_parser.add_argument('config', nargs='?',
+        help='JSON config file path or "-" for stdin (AI-first mode)')
+
+    # LEGACY: Flag-based arguments (backward compatible)
+    preflight_submit_parser.add_argument('--session-id', help='Session ID (legacy)')
+    preflight_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
+    preflight_submit_parser.add_argument('--reasoning', help='Reasoning for assessment scores (legacy)')
+    preflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
     
-    # Check command
-    check_parser = subparsers.add_parser('check', help='Execute epistemic check assessment')
-    check_parser.add_argument('--session-id', required=True, help='Session ID')
-    check_parser.add_argument('--findings', required=True, help='Investigation findings as JSON array')
+    # Check command (AI-first with config file support)
+    check_parser = subparsers.add_parser('check',
+        help='Execute epistemic check (AI-first: use config file, Legacy: use flags)')
+
+    # AI-FIRST: Positional config file argument
+    check_parser.add_argument('config', nargs='?',
+        help='JSON config file path or "-" for stdin (AI-first mode)')
+
+    # LEGACY: Flag-based arguments (backward compatible)
+    check_parser.add_argument('--session-id', help='Session ID (legacy)')
+    check_parser.add_argument('--findings', help='Investigation findings as JSON array (legacy)')
     # Create mutually exclusive group for unknowns (accept either name)
-    unknowns_group = check_parser.add_mutually_exclusive_group(required=True)
-    unknowns_group.add_argument('--unknowns', dest='unknowns', help='Remaining unknowns as JSON array')
-    unknowns_group.add_argument('--remaining-unknowns', dest='unknowns', help='Alias for --unknowns')
-    check_parser.add_argument('--confidence', type=float, required=True, help='Confidence score (0.0-1.0)')
-    check_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    unknowns_group = check_parser.add_mutually_exclusive_group(required=False)
+    unknowns_group.add_argument('--unknowns', dest='unknowns', help='Remaining unknowns as JSON array (legacy)')
+    unknowns_group.add_argument('--remaining-unknowns', dest='unknowns', help='Alias for --unknowns (legacy)')
+    check_parser.add_argument('--confidence', type=float, help='Confidence score (0.0-1.0) (legacy)')
+    check_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
     check_parser.add_argument('--verbose', action='store_true', help='Show detailed analysis')
     
     # Check submit command
@@ -165,13 +189,20 @@ def _add_cascade_parsers(subparsers):
     postflight_parser.add_argument('--reasoning', help='Task summary or description of learning/changes from preflight')
     postflight_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
-    # Postflight-submit alias (backward compatibility)
-    postflight_submit_parser = subparsers.add_parser('postflight-submit', help='Alias for postflight (deprecated, use postflight)')
-    postflight_submit_parser.add_argument('--session-id', required=True, help='Session ID')
-    postflight_submit_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict')
-    postflight_submit_parser.add_argument('--reasoning', help='Description of what changed from preflight')
+    # Postflight submit command (AI-first with config file support)
+    postflight_submit_parser = subparsers.add_parser('postflight-submit',
+        help='Submit postflight assessment (AI-first: use config file, Legacy: use flags)')
+
+    # AI-FIRST: Positional config file argument
+    postflight_submit_parser.add_argument('config', nargs='?',
+        help='JSON config file path or "-" for stdin (AI-first mode)')
+
+    # LEGACY: Flag-based arguments (backward compatible)
+    postflight_submit_parser.add_argument('--session-id', help='Session ID (legacy)')
+    postflight_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
+    postflight_submit_parser.add_argument('--reasoning', help='Description of what changed from preflight (legacy)')
     postflight_submit_parser.add_argument('--changes', help='Alias for --reasoning (deprecated, use --reasoning)', dest='reasoning')
-    postflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    postflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
 
 
 def _add_investigation_parsers(subparsers):
@@ -343,6 +374,11 @@ def _add_session_parsers(subparsers):
     sessions_show_parser.add_argument('--session-id', dest='session_id_named', help='Session ID (alternative to positional argument)')
     sessions_show_parser.add_argument('--verbose', action='store_true', help='Show all vectors and cascades')
     sessions_show_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+
+    # session-snapshot command
+    session_snapshot_parser = subparsers.add_parser('session-snapshot', help='Show session snapshot (where you left off)')
+    session_snapshot_parser.add_argument('session_id', help='Session ID or alias')
+    session_snapshot_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
 
     # Sessions export command
     sessions_export_parser = subparsers.add_parser('sessions-export', help='Export session to JSON')
@@ -586,7 +622,11 @@ def _add_checkpoint_parsers(subparsers):
         help='Show epistemic breadcrumbs for project'
     )
     project_bootstrap_parser.add_argument('--project-id', required=True, help='Project UUID')
+    project_bootstrap_parser.add_argument('--subject', help='Subject/workstream to filter by (auto-detected from directory if omitted)')
     project_bootstrap_parser.add_argument('--check-integrity', action='store_true', help='Analyze doc-code integrity (adds ~2s)')
+    project_bootstrap_parser.add_argument('--context-to-inject', action='store_true', help='Generate markdown context for AI prompt injection')
+    project_bootstrap_parser.add_argument('--task-description', help='Task description for context load balancing')
+    project_bootstrap_parser.add_argument('--epistemic-state', help='Epistemic vectors from PREFLIGHT as JSON string (e.g., \'{"uncertainty":0.8,"know":0.3}\')')
     project_bootstrap_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
     # Project semantic search command (Qdrant-backed)
@@ -627,11 +667,13 @@ def _add_checkpoint_parsers(subparsers):
         'finding-log',
         help='Log a project finding (what was learned/discovered)'
     )
-    finding_log_parser.add_argument('--project-id', required=True, help='Project UUID')
-    finding_log_parser.add_argument('--session-id', required=True, help='Session UUID')
-    finding_log_parser.add_argument('--finding', required=True, help='What was learned/discovered')
+    finding_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
+    finding_log_parser.add_argument('--project-id', required=False, help='Project UUID')
+    finding_log_parser.add_argument('--session-id', required=False, help='Session UUID')
+    finding_log_parser.add_argument('--finding', required=False, help='What was learned/discovered')
     finding_log_parser.add_argument('--goal-id', help='Optional goal UUID')
     finding_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
+    finding_log_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
     finding_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Unknown log command
@@ -639,11 +681,13 @@ def _add_checkpoint_parsers(subparsers):
         'unknown-log',
         help='Log a project unknown (what\'s still unclear)'
     )
-    unknown_log_parser.add_argument('--project-id', required=True, help='Project UUID')
-    unknown_log_parser.add_argument('--session-id', required=True, help='Session UUID')
-    unknown_log_parser.add_argument('--unknown', required=True, help='What is unclear/unknown')
+    unknown_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
+    unknown_log_parser.add_argument('--project-id', required=False, help='Project UUID')
+    unknown_log_parser.add_argument('--session-id', required=False, help='Session UUID')
+    unknown_log_parser.add_argument('--unknown', required=False, help='What is unclear/unknown')
     unknown_log_parser.add_argument('--goal-id', help='Optional goal UUID')
     unknown_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
+    unknown_log_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
     unknown_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Dead end log command
@@ -651,12 +695,14 @@ def _add_checkpoint_parsers(subparsers):
         'deadend-log',
         help='Log a project dead end (what didn\'t work)'
     )
-    deadend_log_parser.add_argument('--project-id', required=True, help='Project UUID')
-    deadend_log_parser.add_argument('--session-id', required=True, help='Session UUID')
-    deadend_log_parser.add_argument('--approach', required=True, help='What approach was tried')
-    deadend_log_parser.add_argument('--why-failed', required=True, help='Why it failed')
+    deadend_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
+    deadend_log_parser.add_argument('--project-id', required=False, help='Project UUID')
+    deadend_log_parser.add_argument('--session-id', required=False, help='Session UUID')
+    deadend_log_parser.add_argument('--approach', required=False, help='What approach was tried')
+    deadend_log_parser.add_argument('--why-failed', required=False, help='Why it failed')
     deadend_log_parser.add_argument('--goal-id', help='Optional goal UUID')
     deadend_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
+    deadend_log_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
     deadend_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Reference doc add command
@@ -672,18 +718,27 @@ def _add_checkpoint_parsers(subparsers):
 
     # NEW: Goal Management Commands (MCP v2 Integration)
     
-    # Goals create command
-    goals_create_parser = subparsers.add_parser('goals-create', help='Create new goal')
-    goals_create_parser.add_argument('--session-id', required=True, help='Session ID')
-    goals_create_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier')
-    goals_create_parser.add_argument('--objective', required=True, help='Goal objective text')
+    # Goals create command (AI-first with config file support)
+    goals_create_parser = subparsers.add_parser('goals-create',
+        help='Create new goal (AI-first: use config file, Legacy: use flags)')
+
+    # AI-FIRST: Positional config file argument (optional, takes precedence)
+    goals_create_parser.add_argument('config', nargs='?',
+        help='JSON config file path or "-" for stdin (AI-first mode)')
+
+    # LEGACY: Flag-based arguments (backward compatible)
+    goals_create_parser.add_argument('--session-id', help='Session ID (legacy)')
+    goals_create_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier (legacy)')
+    goals_create_parser.add_argument('--objective', help='Goal objective text (legacy)')
     goals_create_parser.add_argument('--scope-breadth', type=float, default=0.3, help='Goal breadth (0.0-1.0, how wide the goal spans)')
     goals_create_parser.add_argument('--scope-duration', type=float, default=0.2, help='Goal duration (0.0-1.0, expected lifetime)')
     goals_create_parser.add_argument('--scope-coordination', type=float, default=0.1, help='Goal coordination (0.0-1.0, multi-agent coordination needed)')
-    goals_create_parser.add_argument('--success-criteria', help='Success criteria as JSON array')
+    goals_create_parser.add_argument('--success-criteria', help='Success criteria as JSON array (or "-" to read from stdin)')
+    goals_create_parser.add_argument('--success-criteria-file', help='Read success criteria from file (avoids shell quoting issues)')
     goals_create_parser.add_argument('--estimated-complexity', type=float, help='Complexity estimate (0.0-1.0)')
     goals_create_parser.add_argument('--constraints', help='Constraints as JSON object')
     goals_create_parser.add_argument('--metadata', help='Metadata as JSON object')
+    goals_create_parser.add_argument('--use-beads', action='store_true', help='Create BEADS issue and link to goal')
     goals_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Goals add-subtask command
@@ -693,6 +748,7 @@ def _add_checkpoint_parsers(subparsers):
     goals_add_subtask_parser.add_argument('--importance', choices=['critical', 'high', 'medium', 'low'], default='medium', help='Epistemic importance')
     goals_add_subtask_parser.add_argument('--dependencies', help='Dependencies as JSON array')
     goals_add_subtask_parser.add_argument('--estimated-tokens', type=int, help='Estimated token usage')
+    goals_add_subtask_parser.add_argument('--use-beads', action='store_true', help='Create BEADS subtask and link to goal')
     goals_add_subtask_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Goals complete-subtask command
@@ -723,6 +779,14 @@ def _add_checkpoint_parsers(subparsers):
     goals_list_parser.add_argument('--completed', action='store_true', help='Filter by completion status')
     goals_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
+    # goals-ready command (BEADS integration - Phase 1)
+    goals_ready_parser = subparsers.add_parser('goals-ready', help='Query ready work (BEADS + epistemic filtering)')
+    goals_ready_parser.add_argument('--session-id', required=True, help='Session UUID')
+    goals_ready_parser.add_argument('--min-confidence', type=float, default=0.7, help='Minimum confidence threshold (0.0-1.0)')
+    goals_ready_parser.add_argument('--max-uncertainty', type=float, default=0.3, help='Maximum uncertainty threshold (0.0-1.0)')
+    goals_ready_parser.add_argument('--min-priority', type=int, help='Minimum BEADS priority (1, 2, or 3)')
+    goals_ready_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
     # Goals-discover command (NEW: Phase 1 - Cross-AI Goal Discovery)
     goals_discover_parser = subparsers.add_parser('goals-discover', help='Discover goals from other AIs via git')
     goals_discover_parser.add_argument('--from-ai-id', help='Filter by AI creator')
@@ -734,6 +798,24 @@ def _add_checkpoint_parsers(subparsers):
     goals_resume_parser.add_argument('goal_id', help='Goal ID to resume')
     goals_resume_parser.add_argument('--ai-id', default='empirica_cli', help='Your AI identifier')
     goals_resume_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Goals-claim command (NEW: Phase 3a - Git Bridge)
+    goals_claim_parser = subparsers.add_parser('goals-claim', help='Claim goal, create git branch, link to BEADS')
+    goals_claim_parser.add_argument('--goal-id', required=True, help='Goal UUID to claim')
+    goals_claim_parser.add_argument('--create-branch', action='store_true', default=True, help='Create git branch (default: True)')
+    goals_claim_parser.add_argument('--no-branch', dest='create_branch', action='store_false', help='Skip branch creation')
+    goals_claim_parser.add_argument('--run-preflight', action='store_true', help='Run PREFLIGHT after claiming')
+    goals_claim_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Goals-complete command (NEW: Phase 3a - Git Bridge)
+    goals_complete_parser = subparsers.add_parser('goals-complete', help='Complete goal, merge branch, close BEADS issue')
+    goals_complete_parser.add_argument('--goal-id', required=True, help='Goal UUID to complete')
+    goals_complete_parser.add_argument('--run-postflight', action='store_true', help='Run POSTFLIGHT before completing')
+    goals_complete_parser.add_argument('--merge-branch', action='store_true', help='Merge git branch to main')
+    goals_complete_parser.add_argument('--delete-branch', action='store_true', help='Delete branch after merge')
+    goals_complete_parser.add_argument('--create-handoff', action='store_true', help='Create handoff report')
+    goals_complete_parser.add_argument('--reason', default='completed', help='Completion reason (for BEADS)')
+    goals_complete_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Identity commands (NEW: Phase 2 - Cryptographic Trust / EEP-1)
     identity_create_parser = subparsers.add_parser('identity-create', help='Create new AI identity with Ed25519 keypair')
@@ -759,12 +841,20 @@ def _add_checkpoint_parsers(subparsers):
     sessions_resume_parser.add_argument('--detail-level', choices=['summary', 'detailed', 'full'], default='summary', help='Detail level')
     sessions_resume_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
-    # Session create command (replaces bootstrap)
-    session_create_parser = subparsers.add_parser('session-create', help='Create new session')
-    session_create_parser.add_argument('--ai-id', required=True, help='AI agent identifier')
-    session_create_parser.add_argument('--user-id', help='User identifier')
-    session_create_parser.add_argument('--bootstrap-level', type=int, default=1, help='Bootstrap level (0-4)')
-    session_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    # Session create command (AI-first with config file support)
+    session_create_parser = subparsers.add_parser('session-create',
+        help='Create new session (AI-first: use config file, Legacy: use flags)')
+
+    # AI-FIRST: Positional config file argument
+    session_create_parser.add_argument('config', nargs='?',
+        help='JSON config file path or "-" for stdin (AI-first mode)')
+
+    # LEGACY: Flag-based arguments (backward compatible)
+    session_create_parser.add_argument('--ai-id', help='AI agent identifier (legacy)')
+    session_create_parser.add_argument('--user-id', help='User identifier (legacy)')
+    session_create_parser.add_argument('--bootstrap-level', type=int, default=1, help='Bootstrap level (0-4) (legacy)')
+    session_create_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
+    session_create_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
 
 
 def _add_profile_parsers(subparsers):
@@ -808,6 +898,11 @@ def _add_user_interface_parsers(subparsers):
     chat_parser.add_argument('--uvl-stream', action='store_true', help='Emit UVL JSON stream for visualization')
     chat_parser.add_argument('--verbose', action='store_true', help='Show routing details')
 
+
+def _add_vision_parsers(subparsers):
+    """Add vision analysis commands"""
+    from .command_handlers.vision_commands import add_vision_parsers
+    add_vision_parsers(subparsers)
 
 
 def main(args=None):
@@ -886,6 +981,7 @@ def main(args=None):
             # Session commands
             'sessions-list': handle_sessions_list_command,
             'sessions-show': handle_sessions_show_command,
+            'session-snapshot': handle_session_snapshot_command,
             'sessions-export': handle_sessions_export_command,
             # 'session-end' removed - use 'handoff-create' instead
             
@@ -900,8 +996,11 @@ def main(args=None):
             'goals-progress': handle_goals_progress_command,
             'goals-get-subtasks': handle_goals_get_subtasks_command,
             'goals-list': handle_goals_list_command,
+            'goals-ready': handle_goals_ready_command,
             'goals-discover': handle_goals_discover_command,
             'goals-resume': handle_goals_resume_command,
+            'goals-claim': handle_goals_claim_command,
+            'goals-complete': handle_goals_complete_command,
             'identity-create': handle_identity_create_command,
             'identity-list': handle_identity_list_command,
             'identity-export': handle_identity_export_command,
@@ -950,8 +1049,12 @@ def main(args=None):
             'onboard': handle_onboard_command,
             'ask': handle_ask_command,
             'chat': handle_chat_command,
+            
+            # Vision commands
+            'vision-analyze': handle_vision_analyze,
+            'vision-log': handle_vision_log,
         }
-        
+
         handler = command_map.get(parsed_args.command)
         if handler:
             handler(parsed_args)

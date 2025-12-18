@@ -102,10 +102,9 @@ def handle_preflight_command(args):
             output = {
                 "session_id": session_id,
                 "task": prompt,
-                "assessment_id": assessment_request['assessment_id'],
                 "self_assessment_prompt": assessment_request['self_assessment_prompt'],
                 "phase": "preflight",
-                "instructions": "Perform genuine self-assessment and call submit_preflight_assessment with vectors"
+                "instructions": "Perform genuine self-assessment and submit with: empirica preflight-submit --session-id <session_id> --vectors <vectors_json>"
             }
             print(json.dumps(output, indent=2))
             return

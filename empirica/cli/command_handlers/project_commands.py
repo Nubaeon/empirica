@@ -168,12 +168,37 @@ def handle_project_bootstrap_command(args):
     """Handle project-bootstrap command - show epistemic breadcrumbs"""
     try:
         from empirica.data.session_database import SessionDatabase
+        from empirica.config.project_config_loader import get_current_subject
 
         project_id = args.project_id
         check_integrity = getattr(args, 'check_integrity', False)
+        context_to_inject = getattr(args, 'context_to_inject', False)
+        task_description = getattr(args, 'task_description', None)
+        
+        # Parse epistemic_state from JSON string if provided
+        epistemic_state = None
+        epistemic_state_str = getattr(args, 'epistemic_state', None)
+        if epistemic_state_str:
+            try:
+                epistemic_state = json.loads(epistemic_state_str)
+            except json.JSONDecodeError as e:
+                print(f"❌ Invalid JSON in --epistemic-state: {e}")
+                return None
+        
+        # Auto-detect subject from current directory
+        subject = getattr(args, 'subject', None)
+        if subject is None:
+            subject = get_current_subject()  # Auto-detect from directory
         
         db = SessionDatabase()
-        breadcrumbs = db.bootstrap_project_breadcrumbs(project_id, check_integrity=check_integrity)
+        breadcrumbs = db.bootstrap_project_breadcrumbs(
+            project_id,
+            check_integrity=check_integrity,
+            context_to_inject=context_to_inject,
+            task_description=task_description,
+            epistemic_state=epistemic_state,
+            subject=subject
+        )
 
         # Optional: Detect memory gaps if session-id provided
         memory_gap_report = None
@@ -442,35 +467,109 @@ def handle_project_bootstrap_command(args):
 
 
 def handle_finding_log_command(args):
-    """Handle finding-log command"""
+    """Handle finding-log command - AI-first with config file support"""
     try:
+        import os
+        import sys
         from empirica.data.session_database import SessionDatabase
+        from empirica.cli.utils.project_resolver import resolve_project_id
+        from empirica.cli.cli_utils import parse_json_safely
 
-        project_id = args.project_id
-        session_id = args.session_id
-        finding = args.finding
-        goal_id = getattr(args, 'goal_id', None)
-        subtask_id = getattr(args, 'subtask_id', None)
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        # Extract parameters from config or fall back to legacy flags
+        if config_data:
+            # AI-FIRST MODE
+            project_id = config_data.get('project_id')
+            session_id = config_data.get('session_id')
+            finding = config_data.get('finding')
+            goal_id = config_data.get('goal_id')
+            subtask_id = config_data.get('subtask_id')
+            output_format = 'json'
+
+            # Validate required fields
+            if not project_id or not session_id or not finding:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Config file must include 'project_id', 'session_id', and 'finding' fields",
+                    "hint": "See /tmp/finding_config_example.json for schema"
+                }))
+                sys.exit(1)
+        else:
+            # LEGACY MODE
+            session_id = args.session_id
+            finding = args.finding
+            project_id = args.project_id
+            goal_id = getattr(args, 'goal_id', None)
+            subtask_id = getattr(args, 'subtask_id', None)
+            output_format = getattr(args, 'output', 'json')
+
+            # Validate required fields for legacy mode
+            if not project_id or not session_id or not finding:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Legacy mode requires --project-id, --session-id, and --finding flags",
+                    "hint": "For AI-first mode, use: empirica finding-log config.json"
+                }))
+                sys.exit(1)
+
+        # Auto-detect subject from current directory
+        from empirica.config.project_config_loader import get_current_subject
+        subject = config_data.get('subject') if config_data else getattr(args, 'subject', None)
+        if subject is None:
+            subject = get_current_subject()  # Auto-detect from directory
         
         db = SessionDatabase()
+
+        # Resolve project name to UUID
+        project_id = resolve_project_id(project_id, db)
+        
+        # SESSION-BASED AUTO-LINKING: If goal_id not provided, check for active goal in session
+        if not goal_id:
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT id FROM goals 
+                WHERE session_id = ? AND is_completed = 0 
+                ORDER BY created_timestamp DESC 
+                LIMIT 1
+            """, (session_id,))
+            active_goal = cursor.fetchone()
+            if active_goal:
+                goal_id = active_goal['id']
+                # Note: subtask_id remains None unless explicitly provided
+
         finding_id = db.log_finding(
             project_id=project_id,
             session_id=session_id,
             finding=finding,
             goal_id=goal_id,
-            subtask_id=subtask_id
+            subtask_id=subtask_id,
+            subject=subject
         )
         db.close()
 
-        if hasattr(args, 'output') and args.output == 'json':
-            result = {
-                "ok": True,
-                "finding_id": finding_id,
-                "project_id": project_id,
-                "message": "Finding logged successfully"
-            }
+        result = {
+            "ok": True,
+            "finding_id": finding_id,
+            "project_id": project_id,
+            "message": "Finding logged successfully"
+        }
+
+        # Format output (AI-first = JSON by default)
+        if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
+            # Human-readable output (legacy)
             print(f"✅ Finding logged successfully")
             print(f"   Finding ID: {finding_id}")
             print(f"   Project: {project_id[:8]}...")
@@ -483,33 +582,91 @@ def handle_finding_log_command(args):
 
 
 def handle_unknown_log_command(args):
-    """Handle unknown-log command"""
+    """Handle unknown-log command - AI-first with config file support"""
     try:
+        import os
+        import sys
         from empirica.data.session_database import SessionDatabase
+        from empirica.cli.utils.project_resolver import resolve_project_id
+        from empirica.cli.cli_utils import parse_json_safely
 
-        project_id = args.project_id
-        session_id = args.session_id
-        unknown = args.unknown
-        goal_id = getattr(args, 'goal_id', None)
-        subtask_id = getattr(args, 'subtask_id', None)
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        # Extract parameters from config or fall back to legacy flags
+        if config_data:
+            project_id = config_data.get('project_id')
+            session_id = config_data.get('session_id')
+            unknown = config_data.get('unknown')
+            goal_id = config_data.get('goal_id')
+            subtask_id = config_data.get('subtask_id')
+            output_format = 'json'
+            
+            if not project_id or not session_id or not unknown:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Config file must include 'project_id', 'session_id', and 'unknown' fields"
+                }))
+                sys.exit(1)
+        else:
+            session_id = args.session_id
+            unknown = args.unknown
+            project_id = args.project_id
+            goal_id = getattr(args, 'goal_id', None)
+            subtask_id = getattr(args, 'subtask_id', None)
+            output_format = getattr(args, 'output', 'json')
+
+        # Auto-detect subject from current directory
+        from empirica.config.project_config_loader import get_current_subject
+        subject = config_data.get('subject') if config_data else getattr(args, 'subject', None)
+        if subject is None:
+            subject = get_current_subject()  # Auto-detect from directory
         
         db = SessionDatabase()
+
+        # Resolve project name to UUID
+        project_id = resolve_project_id(project_id, db)
+        
+        # SESSION-BASED AUTO-LINKING: If goal_id not provided, check for active goal in session
+        if not goal_id:
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT id FROM goals 
+                WHERE session_id = ? AND is_completed = 0 
+                ORDER BY created_timestamp DESC 
+                LIMIT 1
+            """, (session_id,))
+            active_goal = cursor.fetchone()
+            if active_goal:
+                goal_id = active_goal['id']
+
         unknown_id = db.log_unknown(
             project_id=project_id,
             session_id=session_id,
             unknown=unknown,
             goal_id=goal_id,
-            subtask_id=subtask_id
+            subtask_id=subtask_id,
+            subject=subject
         )
         db.close()
 
-        if hasattr(args, 'output') and args.output == 'json':
-            result = {
-                "ok": True,
-                "unknown_id": unknown_id,
-                "project_id": project_id,
-                "message": "Unknown logged successfully"
-            }
+        result = {
+            "ok": True,
+            "unknown_id": unknown_id,
+            "project_id": project_id,
+            "message": "Unknown logged successfully"
+        }
+
+        if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
             print(f"✅ Unknown logged successfully")
@@ -524,35 +681,94 @@ def handle_unknown_log_command(args):
 
 
 def handle_deadend_log_command(args):
-    """Handle deadend-log command"""
+    """Handle deadend-log command - AI-first with config file support"""
     try:
+        import os
+        import sys
         from empirica.data.session_database import SessionDatabase
+        from empirica.cli.utils.project_resolver import resolve_project_id
+        from empirica.cli.cli_utils import parse_json_safely
 
-        project_id = args.project_id
-        session_id = args.session_id
-        approach = args.approach
-        why_failed = args.why_failed
-        goal_id = getattr(args, 'goal_id', None)
-        subtask_id = getattr(args, 'subtask_id', None)
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        # Extract parameters from config or fall back to legacy flags
+        if config_data:
+            project_id = config_data.get('project_id')
+            session_id = config_data.get('session_id')
+            approach = config_data.get('approach')
+            why_failed = config_data.get('why_failed')
+            goal_id = config_data.get('goal_id')
+            subtask_id = config_data.get('subtask_id')
+            output_format = 'json'
+            
+            if not project_id or not session_id or not approach or not why_failed:
+                print(json.dumps({
+                    "ok": False,
+                    "error": "Config file must include 'project_id', 'session_id', 'approach', and 'why_failed' fields"
+                }))
+                sys.exit(1)
+        else:
+            session_id = args.session_id
+            approach = args.approach
+            why_failed = args.why_failed
+            project_id = args.project_id
+            goal_id = getattr(args, 'goal_id', None)
+            subtask_id = getattr(args, 'subtask_id', None)
+            output_format = getattr(args, 'output', 'json')
+
+        # Auto-detect subject from current directory
+        from empirica.config.project_config_loader import get_current_subject
+        subject = config_data.get('subject') if config_data else getattr(args, 'subject', None)
+        if subject is None:
+            subject = get_current_subject()  # Auto-detect from directory
         
         db = SessionDatabase()
+
+        # Resolve project name to UUID
+        project_id = resolve_project_id(project_id, db)
+        
+        # SESSION-BASED AUTO-LINKING: If goal_id not provided, check for active goal in session
+        if not goal_id:
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT id FROM goals 
+                WHERE session_id = ? AND is_completed = 0 
+                ORDER BY created_timestamp DESC 
+                LIMIT 1
+            """, (session_id,))
+            active_goal = cursor.fetchone()
+            if active_goal:
+                goal_id = active_goal['id']
+
         dead_end_id = db.log_dead_end(
             project_id=project_id,
             session_id=session_id,
             approach=approach,
             why_failed=why_failed,
             goal_id=goal_id,
-            subtask_id=subtask_id
+            subtask_id=subtask_id,
+            subject=subject
         )
         db.close()
 
-        if hasattr(args, 'output') and args.output == 'json':
-            result = {
-                "ok": True,
-                "dead_end_id": dead_end_id,
-                "project_id": project_id,
-                "message": "Dead end logged successfully"
-            }
+        result = {
+            "ok": True,
+            "dead_end_id": dead_end_id,
+            "project_id": project_id,
+            "message": "Dead end logged successfully"
+        }
+
+        if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
             print(f"✅ Dead end logged successfully")
@@ -570,13 +786,17 @@ def handle_refdoc_add_command(args):
     """Handle refdoc-add command"""
     try:
         from empirica.data.session_database import SessionDatabase
+        from empirica.cli.utils.project_resolver import resolve_project_id
 
-        project_id = args.project_id
         doc_path = args.doc_path
         doc_type = getattr(args, 'doc_type', None)
         description = getattr(args, 'description', None)
-        
+
         db = SessionDatabase()
+
+        # Resolve project name to UUID
+        project_id = resolve_project_id(project_id, db)
+
         doc_id = db.add_reference_doc(
             project_id=project_id,
             doc_path=doc_path,

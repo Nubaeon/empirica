@@ -1,0 +1,150 @@
+# Vision Analysis in Empirica
+
+## Overview
+
+Empirica Core includes basic vision analysis for images and slides without requiring heavy ML dependencies.
+
+## Commands
+
+### CLI
+
+```bash
+# Analyze single image
+empirica vision-analyze --image path/to/image.png --output json
+
+# Analyze slide deck
+empirica vision-analyze --pattern "slides/*.png" --output human
+
+# Analyze and log to session
+empirica vision-analyze --pattern "slides/*.png" --session-id <UUID> --output json
+
+# Manually log visual observation
+empirica vision-log --session-id <UUID> --observation "Observed X in diagram Y"
+```
+
+### MCP Tools
+
+```python
+# vision_analyze
+{
+    "image": "slides/architecture-01.png",  # Single image
+    # OR
+    "pattern": "slides/*.png",               # Pattern matching
+    "session_id": "optional-uuid"           # Auto-log findings
+}
+
+# vision_log
+{
+    "session_id": "uuid",
+    "observation": "Visual observation text"
+}
+```
+
+## What It Does
+
+**Extracts:**
+- Image dimensions (width x height)
+- File format (PNG, JPEG, etc.)
+- File size (KB)
+- Aspect ratio
+- Presentation size detection (16:9, 4:3, 16:10)
+- Color mode (RGB, RGBA, etc.)
+
+**Does NOT:**
+- OCR / text extraction (requires tesseract)
+- Semantic analysis (requires vision models)
+- Object detection (requires ML models)
+
+## Design Philosophy
+
+**Core Empirica = Minimal Dependencies**
+
+- ✅ Works with just Pillow (universal Python imaging)
+- ✅ Fast and lightweight
+- ✅ Reliable (no ML model dependencies)
+- ✅ Plugin-ready for advanced features
+
+## Future Enhancements (Plugins)
+
+Not in core, but as separate modules:
+
+1. **empirica-vision-ocr** - Text extraction (tesseract)
+2. **empirica-vision-semantic** - Content understanding (vision models)
+3. **empirica-vision-web** - Website analysis (Playwright/Chrome DevTools)
+4. **empirica-vision-video** - Video analysis
+5. **empirica-vision-cultural** - Bias detection, pattern analysis
+
+## Example Output
+
+### JSON Format
+
+```json
+{
+  "ok": true,
+  "analyzed": 1,
+  "images": [
+    {
+      "image_path": "slides/architecture-01.png",
+      "slide_number": 1,
+      "width": 2867,
+      "height": 1600,
+      "format": "PNG",
+      "mode": "RGB",
+      "file_size_kb": 1820.89,
+      "aspect_ratio": 1.79,
+      "pixel_count": 4587200,
+      "is_presentation_size": true,
+      "notes": ""
+    }
+  ]
+}
+```
+
+### Human Format
+
+```
+📸 Vision Analysis Results
+============================================================
+
+architecture-01.png
+  Slide: #1
+  Size: 2867x1600 (PNG)
+  Aspect: 1.79 (presentation)
+  File: 1820.89 KB
+```
+
+## Integration with Sessions
+
+When `--session-id` is provided, vision-analyze automatically logs findings:
+
+```bash
+empirica vision-analyze --pattern "slides/*.png" --session-id <UUID>
+# Creates findings like: "Slide #1: Analyzed architecture-01.png: 2867x1600 PNG"
+```
+
+Later query with:
+```bash
+empirica project-bootstrap --project-id <UUID>
+# Shows findings including vision analysis
+```
+
+## Use Cases
+
+1. **Documentation Audit** - Inventory slide decks, presentations
+2. **Asset Tracking** - Track image sizes, formats for optimization
+3. **Presentation Analysis** - Identify which slides are "presentation size"
+4. **Session Context** - Log visual materials reviewed during work
+5. **Epistemic Bootstrap** - Enrich project context with visual materials
+
+## Dependencies
+
+- `pillow` - Required (Python Imaging Library)
+- `empirica` - Core framework
+
+Install: `pip install pillow`
+
+## See Also
+
+- `docs/03_QUICKSTART_CLI.md` - Basic CLI usage
+- `docs/02_QUICKSTART_MCP.md` - MCP tool usage
+- `empirica/vision/slide_processor.py` - Advanced OCR-based processor (optional)

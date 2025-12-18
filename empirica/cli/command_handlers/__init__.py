@@ -34,6 +34,9 @@ from .goal_commands import (
     handle_goals_list_command,
     handle_sessions_resume_command
 )
+from .goals_ready_command import handle_goals_ready_command
+from .goal_claim_command import handle_goals_claim_command
+from .goal_complete_command import handle_goals_complete_command
 from .goal_discovery_commands import (
     handle_goals_discover_command,
     handle_goals_resume_command
@@ -55,7 +58,7 @@ from .mcp_commands import (
     handle_mcp_test_command, handle_mcp_list_tools_command, handle_mcp_call_command
 )
 from .session_commands import (
-    handle_sessions_list_command, handle_sessions_show_command, handle_sessions_export_command,
+    handle_sessions_list_command, handle_sessions_show_command, handle_session_snapshot_command, handle_sessions_export_command,
 )
 from .session_create import handle_session_create_command
 from .checkpoint_commands import (
@@ -119,6 +122,11 @@ from .utility_commands import (
 )
 from .ask_handler import handle_ask_command
 from .chat_handler import handle_chat_command
+from .vision_commands import (
+    handle_vision_analyze,
+    handle_vision_log,
+    add_vision_parsers as _add_vision_parsers
+)
 
 # Export all handlers
 __all__ = [
@@ -153,6 +161,9 @@ __all__ = [
     'handle_goals_list_command',
     'handle_goals_discover_command',
     'handle_goals_resume_command',
+    'handle_goals_ready_command',  # BEADS integration
+    'handle_goals_claim_command',  # Phase 3a - Git bridge
+    'handle_goals_complete_command',  # Phase 3a - Git bridge
     'handle_sessions_resume_command',
     
     # NEW: Identity Management Commands (Phase 2 - EEP-1)
@@ -184,6 +195,7 @@ __all__ = [
     # Session commands
     'handle_sessions_list_command',
     'handle_sessions_show_command',
+    'handle_session_snapshot_command',
     'handle_sessions_export_command',
     
     # Checkpoint commands (Phase 2)
@@ -257,6 +269,11 @@ __all__ = [
     # User interface commands (for human users)
     'handle_ask_command',
     'handle_chat_command',
+    
+    # Vision commands
+    'handle_vision_analyze',
+    'handle_vision_log',
+    '_add_vision_parsers',
     
     # Session-end command
     # 'handle_session_end_command',  # removed - use handoff-create

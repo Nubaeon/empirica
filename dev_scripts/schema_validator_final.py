@@ -27,7 +27,7 @@ class SchemaValidator:
             alt_paths = [
                 Path(".empirica/sessions.db"),
                 Path("sessions.db"),
-                Path("empirica.db")
+                Path(".empirica/sessions/sessions.db")
             ]
             found = False
             for alt_path in alt_paths:

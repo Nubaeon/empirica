@@ -1,0 +1,2 @@
+empirica>=1.0.0-beta
+mcp>=1.0.0

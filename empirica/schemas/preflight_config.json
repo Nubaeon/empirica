@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Empirica PREFLIGHT Config Schema",
+  "description": "Configuration schema for empirica preflight-submit command",
+  "type": "object",
+  "required": ["session_id", "vectors"],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "Session UUID"
+    },
+    "vectors": {
+      "type": "object",
+      "description": "13 epistemic vectors (nested or flat format)",
+      "required": ["engagement", "uncertainty"],
+      "properties": {
+        "engagement": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Engagement level"
+        },
+        "foundation": {
+          "type": "object",
+          "required": ["know", "do", "context"],
+          "properties": {
+            "know": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "do": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "context": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+          }
+        },
+        "comprehension": {
+          "type": "object",
+          "required": ["clarity", "coherence", "signal", "density"],
+          "properties": {
+            "clarity": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "coherence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "signal": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "density": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+          }
+        },
+        "execution": {
+          "type": "object",
+          "required": ["state", "change", "completion", "impact"],
+          "properties": {
+            "state": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "change": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "completion": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "impact": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+          }
+        },
+        "uncertainty": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Epistemic uncertainty"
+        }
+      }
+    },
+    "reasoning": {
+      "type": "string",
+      "description": "Rationale for assessment scores"
+    }
+  },
+  "additionalProperties": false
+}

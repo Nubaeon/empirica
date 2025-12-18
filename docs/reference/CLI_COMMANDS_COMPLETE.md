@@ -879,72 +879,62 @@ empirica config routing.default_strategy epistemic
 
 ---
 
-### 40. `profile-list`
+### 40. `identity-create`
 
-List available profiles.
+Create Ed25519 keypair for AI identity.
 
 ```bash
-empirica profile-list
-empirica profile-list --verbose
+empirica identity-create --ai-id myai
+empirica identity-create --ai-id myai --overwrite
 ```
 
 **Options:**
-- `--verbose`: Show detailed profile information
+- `--ai-id`: AI agent identifier
+- `--overwrite`: Overwrite existing identity
+
+**Output:**
+- Public key stored in `.empirica/identities/`
+- Private key stored securely
 
 ---
 
-### 41. `profile-show`
+### 41. `identity-list`
 
-Show profile details.
+List all AI identities.
 
 ```bash
-empirica profile-show default
-empirica profile-show myprofile --verbose
+empirica identity-list
 ```
 
-**Positional:**
-- `profile_name`: Profile name to show
-
-**Options:**
-- `--verbose`: Show all configuration details
+**Output:**
+- AI identifiers with public key fingerprints
 
 ---
 
-### 42. `profile-create`
+### 42. `identity-export`
 
-Create new profile.
+Export public key for sharing.
 
 ```bash
-empirica profile-create myprofile \
-  --ai-model gpt-4 \
-  --domain security \
-  --description "Security-focused profile"
+empirica identity-export --ai-id myai
 ```
 
-**Positional:**
-- `profile_name`: Name of new profile
-
-**Options:**
-- `--ai-model`: Default AI model for profile
-- `--domain`: Default domain context
-- `--description`: Profile description
-- `--verbose`: Show creation details
+**Output:**
+- Public key in base64 format
 
 ---
 
-### 43. `profile-set-default`
+### 43. `identity-verify`
 
-Set default profile.
+Verify signed session.
 
 ```bash
-empirica profile-set-default myprofile
+empirica identity-verify --session-id <SESSION_ID>
 ```
 
-**Positional:**
-- `profile_name`: Profile name to set as default
-
-**Options:**
-- `--verbose`: Show update details
+**Output:**
+- Signature verification result
+- Signer identity
 
 ---
 

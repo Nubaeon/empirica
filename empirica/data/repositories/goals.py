@@ -17,7 +17,8 @@ class GoalRepository(BaseRepository):
     """Repository for goal and subtask management"""
 
     def create_goal(self, session_id: str, objective: str, scope_breadth: float = None,
-                   scope_duration: float = None, scope_coordination: float = None) -> str:
+                   scope_duration: float = None, scope_coordination: float = None,
+                   beads_issue_id: str = None) -> str:
         """Create a new goal for this session
 
         Args:
@@ -26,6 +27,7 @@ class GoalRepository(BaseRepository):
             scope_breadth: 0.0-1.0 (0=single file, 1=entire codebase)
             scope_duration: 0.0-1.0 (0=minutes, 1=months)
             scope_coordination: 0.0-1.0 (0=solo, 1=heavy multi-agent)
+            beads_issue_id: Optional BEADS issue ID (e.g., "bd-a1b2")
 
         Returns:
             goal_id (UUID string)
@@ -40,9 +42,9 @@ class GoalRepository(BaseRepository):
         }
 
         self._execute("""
-            INSERT INTO goals (id, session_id, objective, scope, status, created_timestamp, is_completed, goal_data)
-            VALUES (?, ?, ?, ?, 'in_progress', ?, 0, ?)
-        """, (goal_id, session_id, objective, json.dumps(scope_data), time.time(), json.dumps({})))
+            INSERT INTO goals (id, session_id, objective, scope, status, created_timestamp, is_completed, goal_data, beads_issue_id)
+            VALUES (?, ?, ?, ?, 'in_progress', ?, 0, ?, ?)
+        """, (goal_id, session_id, objective, json.dumps(scope_data), time.time(), json.dumps({}), beads_issue_id))
 
         self.commit()
         return goal_id

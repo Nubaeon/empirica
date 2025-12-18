@@ -129,19 +129,19 @@ empirica project-bootstrap --project-id <id> --check-integrity
 **Detects:** Documentation mentions features that don't exist
 
 **Method:**
-1. Parse all `.md` files for `empirica command-name` patterns
+1. Parse all `.md` files for `empirica <command>` patterns
 2. Get actual CLI commands from `empirica --help`
 3. Report: documented commands not in code
 
 **Example Finding:**
 ```json
 {
-  "command": "skill-export",
+  "command": "phantom-command",
   "mentioned_in": [
     {
-      "file": "docs/production/14_CUSTOM_PLUGINS.md",
+      "file": "docs/example.md",
       "line": 42,
-      "context": "Export skill: `empirica skill-export myskill`"
+      "context": "Example: `empirica session-create arg`"
     }
   ],
   "severity": "high"

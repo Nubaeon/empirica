@@ -369,11 +369,11 @@ Transfer epistemic snapshot (500 tokens, 95% compression)
    submit_preflight_assessment(session_id="<uuid>", vectors={...})
    
    # Via CLI
-   empirica assess "<task>"
+   empirica preflight --session-id <SESSION_ID>
    ```
 
 4. **Work through cascade:**
-   - THINK → PLAN → INVESTIGATE → CHECK → ACT
+   - INVESTIGATE → CHECK → ACT
 
 5. **Run POSTFLIGHT assessment:**
    ```python

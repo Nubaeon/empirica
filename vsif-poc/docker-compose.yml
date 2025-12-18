@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  vsif-tester:
+    build: .
+    container_name: vsif-poc-tester
+    volumes:
+      - ./evidence:/evidence
+      - ./scripts:/vsif-poc/scripts:ro
+      - ./canaries:/vsif-poc/canaries:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    network_mode: bridge

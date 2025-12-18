@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Empirica CHECK Config Schema",
+  "description": "Configuration schema for empirica check command",
+  "type": "object",
+  "required": ["session_id", "confidence"],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "Session UUID"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Confidence score (>=0.7 to proceed)"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Investigation findings",
+      "default": []
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Remaining unknowns",
+      "default": []
+    },
+    "cycle": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Investigation cycle number",
+      "default": 1
+    },
+    "verbose": {
+      "type": "boolean",
+      "description": "Include detailed findings/unknowns in output",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}
