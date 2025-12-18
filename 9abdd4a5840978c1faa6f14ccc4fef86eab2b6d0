@@ -1,0 +1,32 @@
+{
+  "goal_id": "ae80233e-91d8-4635-9ee6-64d331194531",
+  "session_id": "b4f4a721-ada9-40c9-8082-dc501313d366",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-18T12:33:55.499649+00:00",
+  "goal_data": {
+    "objective": "Implement Universal Content Improvement Engine with epistemic assessment",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.7,
+      "coordination": 0.6
+    },
+    "success_criteria": [
+      "ContentCriticEngine implemented",
+      "WebsiteProcessor working",
+      "VideoProcessor functional",
+      "Multimodal prompts generated",
+      "Verification loop complete"
+    ],
+    "estimated_complexity": 0.75,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-18T12:33:55.499666+00:00",
+      "action": "created"
+    }
+  ]
+}
