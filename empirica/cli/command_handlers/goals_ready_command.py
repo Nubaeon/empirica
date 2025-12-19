@@ -98,10 +98,11 @@ def handle_goals_ready_command(args):
             
             # Get epistemic state from latest CHECK or PREFLIGHT
             cursor = db.conn.execute("""
-                SELECT phase, vectors_json
+                SELECT phase, engagement, know, do, context, clarity, coherence, 
+                       signal, density, state, change, completion, impact, uncertainty
                 FROM reflexes
                 WHERE session_id = ?
-                ORDER BY round_num DESC, created_at DESC
+                ORDER BY timestamp DESC
                 LIMIT 1
             """, (session_id,))
             
@@ -113,9 +114,23 @@ def handle_goals_ready_command(args):
             why_not_ready = None
             
             if reflex_row:
+                # Build vectors dict from individual columns
+                vectors = {
+                    'engagement': reflex_row[1],
+                    'know': reflex_row[2],
+                    'do': reflex_row[3],
+                    'context': reflex_row[4],
+                    'clarity': reflex_row[5],
+                    'coherence': reflex_row[6],
+                    'signal': reflex_row[7],
+                    'density': reflex_row[8],
+                    'state': reflex_row[9],
+                    'change': reflex_row[10],
+                    'completion': reflex_row[11],
+                    'impact': reflex_row[12],
+                    'uncertainty': reflex_row[13]
+                }
                 phase = reflex_row[0]
-                vectors_json = reflex_row[1]
-                vectors = json.loads(vectors_json) if vectors_json else {}
                 
                 # Extract epistemic state
                 last_confidence = vectors.get('know', 0.5)

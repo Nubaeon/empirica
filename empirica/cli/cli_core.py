@@ -624,7 +624,7 @@ def _add_checkpoint_parsers(subparsers):
         'project-bootstrap',
         help='Show epistemic breadcrumbs for project'
     )
-    project_bootstrap_parser.add_argument('--project-id', required=True, help='Project UUID')
+    project_bootstrap_parser.add_argument('--project-id', required=False, help='Project UUID or name (auto-detected from git remote if omitted)')
     project_bootstrap_parser.add_argument('--subject', help='Subject/workstream to filter by (auto-detected from directory if omitted)')
     project_bootstrap_parser.add_argument('--check-integrity', action='store_true', help='Analyze doc-code integrity (adds ~2s)')
     project_bootstrap_parser.add_argument('--context-to-inject', action='store_true', help='Generate markdown context for AI prompt injection')
@@ -856,6 +856,7 @@ def _add_checkpoint_parsers(subparsers):
     session_create_parser.add_argument('--ai-id', help='AI agent identifier (legacy)')
     session_create_parser.add_argument('--user-id', help='User identifier (legacy)')
     session_create_parser.add_argument('--bootstrap-level', type=int, default=1, help='Bootstrap level (0-4) (legacy)')
+    session_create_parser.add_argument('--project-id', help='Project UUID to link session to (optional, auto-detected from git remote if omitted)')
     session_create_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
     session_create_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
 

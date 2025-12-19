@@ -169,8 +169,51 @@ def handle_project_bootstrap_command(args):
     try:
         from empirica.data.session_database import SessionDatabase
         from empirica.config.project_config_loader import get_current_subject
+        from empirica.cli.utils.project_resolver import resolve_project_id
+        import subprocess
 
-        project_id = args.project_id
+        project_id = getattr(args, 'project_id', None)
+        
+        # Auto-detect project from git remote URL if not provided
+        if not project_id:
+            try:
+                result = subprocess.run(
+                    ['git', 'remote', 'get-url', 'origin'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    git_url = result.stdout.strip()
+                    # Find project by matching repo URL
+                    db = SessionDatabase()
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT id FROM projects WHERE repos LIKE ?
+                    """, (f'%{git_url}%',))
+                    row = cursor.fetchone()
+                    if row:
+                        project_id = row['id']
+                    db.close()
+                    
+                    if not project_id:
+                        print(f"❌ Error: No project found for git remote: {git_url}")
+                        print(f"\nTip: Create a project or specify --project-id explicitly")
+                        return None
+                else:
+                    print(f"❌ Error: Not in a git repository or no remote 'origin' configured")
+                    print(f"\nTip: Run 'git remote add origin <url>' or use --project-id")
+                    return None
+            except Exception as e:
+                print(f"❌ Error auto-detecting project: {e}")
+                print(f"\nTip: Use --project-id to specify project explicitly")
+                return None
+        else:
+            # Resolve project name to UUID if needed
+            db = SessionDatabase()
+            project_id = resolve_project_id(project_id, db)
+            db.close()
+        
         check_integrity = getattr(args, 'check_integrity', False)
         context_to_inject = getattr(args, 'context_to_inject', False)
         task_description = getattr(args, 'task_description', None)
@@ -788,6 +831,8 @@ def handle_refdoc_add_command(args):
         from empirica.data.session_database import SessionDatabase
         from empirica.cli.utils.project_resolver import resolve_project_id
 
+        # Get project_id from args FIRST (bug fix: was using before assignment)
+        project_id = args.project_id
         doc_path = args.doc_path
         doc_type = getattr(args, 'doc_type', None)
         description = getattr(args, 'description', None)

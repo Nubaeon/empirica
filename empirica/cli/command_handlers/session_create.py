@@ -33,6 +33,7 @@ def handle_session_create_command(args):
             ai_id = config_data.get('ai_id')
             user_id = config_data.get('user_id')
             bootstrap_level = config_data.get('bootstrap_level', 1)
+            project_id = config_data.get('project_id')  # Optional explicit project ID
             output_format = 'json'
 
             # Validate required fields
@@ -48,6 +49,7 @@ def handle_session_create_command(args):
             ai_id = args.ai_id
             user_id = getattr(args, 'user_id', None)
             bootstrap_level = getattr(args, 'bootstrap_level', 1)
+            project_id = getattr(args, 'project_id', None)  # Optional explicit project ID
             output_format = getattr(args, 'output', 'json')  # Default to JSON
 
             # Validate required fields for legacy mode
@@ -73,28 +75,28 @@ def handle_session_create_command(args):
             subject=subject
         )
 
-        # Try to auto-detect project from git remote URL
-        project_id = None
-        try:
-            # Get git remote URL
-            result = subprocess.run(
-                ['git', 'remote', 'get-url', 'origin'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode == 0:
-                git_url = result.stdout.strip()
-                # Find project by matching repo URL
-                cursor = db.conn.cursor()
-                cursor.execute("""
-                    SELECT id FROM projects WHERE repos LIKE ?
-                """, (f'%{git_url}%',))
-                row = cursor.fetchone()
-                if row:
-                    project_id = row['id']
-        except Exception:
-            pass
+        # Try to auto-detect project from git remote URL (if not explicitly provided)
+        if not project_id:
+            try:
+                # Get git remote URL
+                result = subprocess.run(
+                    ['git', 'remote', 'get-url', 'origin'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    git_url = result.stdout.strip()
+                    # Find project by matching repo URL
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT id FROM projects WHERE repos LIKE ?
+                    """, (f'%{git_url}%',))
+                    row = cursor.fetchone()
+                    if row:
+                        project_id = row['id']
+            except Exception:
+                pass
 
         # Link session to project if found
         if project_id:
