@@ -1,0 +1,28 @@
+{
+  "goal_id": "87bcae9d-9839-46b8-8972-5eb14bc8bb61",
+  "session_id": "2827f974-1670-4096-a333-1780051291ee",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-19T11:53:08.707548+00:00",
+  "goal_data": {
+    "objective": "Test BEADS integration",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "BEADS issue created"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-19T11:53:08.707566+00:00",
+      "action": "created"
+    }
+  ]
+}
