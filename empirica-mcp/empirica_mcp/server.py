@@ -739,6 +739,7 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
         from empirica.core.goals.repository import GoalRepository
         from empirica.core.goals.types import Goal, ScopeVector, SuccessCriterion
         from empirica.core.canonical.empirica_git import GitGoalStore
+        from empirica.config.path_resolver import get_session_db_path
         import uuid
         import time
         
@@ -792,7 +793,8 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
         )
         
         # Save to database
-        goal_repo = GoalRepository()
+        # Fix: Use path_resolver to get correct database location (repo-local, not home)
+        goal_repo = GoalRepository(db_path=str(get_session_db_path()))
         success = goal_repo.save_goal(goal, session_id)
         goal_repo.close()
         
@@ -863,21 +865,23 @@ async def handle_execute_postflight_direct(arguments: dict) -> List[types.TextCo
     """
     try:
         from empirica.data.session_database import SessionDatabase
-        
+        from empirica.config.path_resolver import get_session_db_path
+
         session_id = arguments.get("session_id")
         task_summary = arguments.get("task_summary", "Session work completed")
-        
+
         if not session_id:
             return [types.TextContent(
                 type="text",
                 text=json.dumps({"ok": False, "error": "session_id required"}, indent=2)
             )]
-        
+
         # Resolve session alias if needed
         session_id = resolve_session_id(session_id)
-        
+
         # Query reflexes for session context
-        db = SessionDatabase()
+        # Fix: Use path_resolver to get correct database location (repo-local, not home)
+        db = SessionDatabase(db_path=str(get_session_db_path()))
         cursor = db.conn.cursor()
         
         # Get PREFLIGHT baseline
@@ -973,16 +977,18 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
     """
     try:
         from empirica.data.session_database import SessionDatabase
-        
+        from empirica.config.path_resolver import get_session_db_path
+
         session_id = arguments.get("session_id")
         if not session_id:
             return [types.TextContent(
                 type="text",
                 text=json.dumps({"ok": False, "error": "session_id required"}, indent=2)
             )]
-        
+
         # Query reflexes for PREFLIGHT and POSTFLIGHT
-        db = SessionDatabase()
+        # Fix: Use path_resolver to get correct database location (repo-local, not home)
+        db = SessionDatabase(db_path=str(get_session_db_path()))
         cursor = db.conn.cursor()
         
         # Get PREFLIGHT assessment
@@ -1144,7 +1150,9 @@ async def handle_edit_with_confidence(arguments: dict) -> List[types.TextContent
         if session_id and result.get("success"):
             try:
                 from empirica.data.session_database import SessionDatabase
-                db = SessionDatabase()
+                from empirica.config.path_resolver import get_session_db_path
+                # Fix: Use path_resolver to get correct database location (repo-local, not home)
+                db = SessionDatabase(db_path=str(get_session_db_path()))
                 
                 # Log to reflexes for calibration tracking
                 db.log_reflex(
@@ -1272,10 +1280,12 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
 
         try:
             from empirica.data.session_database import SessionDatabase
+            from empirica.config.path_resolver import get_session_db_path
 
             # If we didn't get the session_id from output, create it in the database
             if not session_id:
-                db = SessionDatabase()
+                # Fix: Use path_resolver to get correct database location (repo-local, not home)
+                db = SessionDatabase(db_path=str(get_session_db_path()))
                 session_id = db.create_session(
                     ai_id=ai_id,
                     bootstrap_level=bootstrap_level,
