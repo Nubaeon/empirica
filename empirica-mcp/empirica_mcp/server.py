@@ -30,6 +30,7 @@ import subprocess
 import json
 import sys
 import logging
+import shutil
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -43,9 +44,25 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp import types
 
-# Empirica CLI configuration
-EMPIRICA_ROOT = Path(__file__).parent.parent
-EMPIRICA_CLI = str(EMPIRICA_ROOT / ".venv-mcp" / "bin" / "empirica")
+# Empirica CLI configuration - use PATH for portability
+EMPIRICA_CLI = shutil.which("empirica")
+if not EMPIRICA_CLI:
+    # Fallback: try common installation locations
+    possible_paths = [
+        Path.home() / ".local" / "bin" / "empirica",
+        Path("/usr/local/bin/empirica"),
+        Path("/usr/bin/empirica"),
+    ]
+    for path in possible_paths:
+        if path.exists():
+            EMPIRICA_CLI = str(path)
+            break
+
+    if not EMPIRICA_CLI:
+        raise RuntimeError(
+            "empirica CLI not found in PATH. "
+            "Please install: pip install empirica"
+        )
 
 # Create MCP server instance
 app = Server("empirica-v2")
@@ -1192,7 +1209,7 @@ async def route_to_cli(tool_name: str, arguments: dict) -> List[types.TextConten
             cmd,
             capture_output=True,
             text=True,
-            cwd=EMPIRICA_ROOT
+            cwd=None  # Use current working directory where .empirica/ exists
         )
     )
 
