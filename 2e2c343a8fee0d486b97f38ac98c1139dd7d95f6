@@ -1,0 +1,31 @@
+{
+  "goal_id": "5d43301e-97f4-4797-9fa2-563106e03450",
+  "session_id": "649849c5-8199-43c6-abce-0426fd8cd464",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-19T11:56:50.366856+00:00",
+  "goal_data": {
+    "objective": "Investigate whether BEADS should be default integration for goals",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Clear architectural decision documented",
+      "Trade-offs analyzed",
+      "Migration path defined",
+      "Failure modes identified"
+    ],
+    "estimated_complexity": 0.65,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-19T11:56:50.366870+00:00",
+      "action": "created"
+    }
+  ]
+}
