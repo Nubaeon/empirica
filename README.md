@@ -222,7 +222,7 @@ cargo install beads
 - AI-optimized JSON output
 - Auto-links with Empirica goals
 
-**Learn more:** [BEADS Integration Guide](https://github.com/empirical-ai/empirica/blob/main/docs/integrations/BEADS_GOALS_READY_GUIDE.md)
+**Learn more:** [BEADS Integration Guide](https://github.com/Nubaeon/empirica/blob/main/docs/integrations/BEADS_GOALS_READY_GUIDE.md)
 
 ### Vector Search (Qdrant)
 
@@ -253,21 +253,21 @@ empirica monitor
 ## 📚 Documentation
 
 ### Getting Started
-- 📖 [First-Time Setup](https://github.com/empirical-ai/empirica/blob/main/docs/guides/FIRST_TIME_SETUP.md) - Data isolation & privacy
-- 🚀 [Empirica Explained Simply](https://github.com/empirical-ai/empirica/blob/main/docs/EMPIRICA_EXPLAINED_SIMPLE.md) - Core concepts
-- 📘 [System Prompt (v4.1)](https://github.com/empirical-ai/empirica/blob/main/.github/copilot-instructions.md) - AI-first JSON reference
+- 📖 [First-Time Setup](https://github.com/Nubaeon/empirica/blob/main/docs/guides/FIRST_TIME_SETUP.md) - Data isolation & privacy
+- 🚀 [Empirica Explained Simply](https://github.com/Nubaeon/empirica/blob/main/docs/EMPIRICA_EXPLAINED_SIMPLE.md) - Core concepts
+- 📘 [System Prompt (v4.1)](https://github.com/Nubaeon/empirica/blob/main/.github/copilot-instructions.md) - AI-first JSON reference
 
 ### Guides
-- 🎯 [CASCADE Workflow](https://github.com/empirical-ai/empirica/blob/main/docs/CASCADE_WORKFLOW.md)
-- 📊 [Epistemic Vectors](https://github.com/empirical-ai/empirica/blob/main/docs/archive/v3/production/05_EPISTEMIC_VECTORS.md)
-- 🎯 [Goal Tree Usage](https://github.com/empirical-ai/empirica/blob/main/docs/guides/GOAL_TREE_USAGE_GUIDE.md)
-- 🤝 [Multi-Agent Teams](https://github.com/empirical-ai/empirica/blob/main/docs/archive/v3/production/26_CROSS_AI_COORDINATION.md)
+- 🎯 [CASCADE Workflow](https://github.com/Nubaeon/empirica/blob/main/docs/CASCADE_WORKFLOW.md)
+- 📊 [Epistemic Vectors](https://github.com/Nubaeon/empirica/blob/main/docs/archive/v3/production/05_EPISTEMIC_VECTORS.md)
+- 🎯 [Goal Tree Usage](https://github.com/Nubaeon/empirica/blob/main/docs/guides/GOAL_TREE_USAGE_GUIDE.md)
+- 🤝 [Multi-Agent Teams](https://github.com/Nubaeon/empirica/blob/main/docs/archive/v3/production/26_CROSS_AI_COORDINATION.md)
 
 ### Reference
-- 📋 [CLI Commands](https://github.com/empirical-ai/empirica/blob/main/docs/reference/CLI_COMMANDS_COMPLETE.md)
-- 🗄️ [Database Schema](https://github.com/empirical-ai/empirica/blob/main/docs/reference/DATABASE_SCHEMA_GENERATED.md)
-- 🐍 [Python API](https://github.com/empirical-ai/empirica/blob/main/docs/reference/PYTHON_API_GENERATED.md)
-- ⚙️ [Configuration](https://github.com/empirical-ai/empirica/blob/main/docs/reference/CONFIGURATION_REFERENCE.md)
+- 📋 [CLI Commands](https://github.com/Nubaeon/empirica/blob/main/docs/reference/CLI_COMMANDS_COMPLETE.md)
+- 🗄️ [Database Schema](https://github.com/Nubaeon/empirica/blob/main/docs/reference/DATABASE_SCHEMA_GENERATED.md)
+- 🐍 [Python API](https://github.com/Nubaeon/empirica/blob/main/docs/reference/PYTHON_API_GENERATED.md)
+- ⚙️ [Configuration](https://github.com/Nubaeon/empirica/blob/main/docs/reference/CONFIGURATION_REFERENCE.md)
 
 ---
 
@@ -314,9 +314,9 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## 🎓 Learn More
 
 ### Research & Concepts
-- [Why Empirica?](https://github.com/empirical-ai/empirica/blob/main/WHY_EMPIRICA.md)
-- [Epistemic Architecture](https://github.com/empirical-ai/empirica/blob/main/docs/architecture/EMPIRICA_COMPLETE_ARCHITECTURE.md)
-- [Visual Guide](https://github.com/empirical-ai/empirica/blob/main/docs/architecture/EMPIRICA_VISUAL_GUIDE.md)
+- [Why Empirica?](https://github.com/Nubaeon/empirica/blob/main/WHY_EMPIRICA.md)
+- [Epistemic Architecture](https://github.com/Nubaeon/empirica/blob/main/docs/architecture/EMPIRICA_COMPLETE_ARCHITECTURE.md)
+- [Visual Guide](https://github.com/Nubaeon/empirica/blob/main/docs/architecture/EMPIRICA_VISUAL_GUIDE.md)
 
 ### Use Cases
 - Research & Development
@@ -329,9 +329,9 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📞 Support
 
-- **Issues:** [GitHub Issues](https://github.com/empirical-ai/empirica/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/empirical-ai/empirica/discussions)
-- **Documentation:** [docs/](https://github.com/empirical-ai/empirica/tree/main/docs)
+- **Issues:** [GitHub Issues](https://github.com/Nubaeon/empirica/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/Nubaeon/empirica/discussions)
+- **Documentation:** [docs/](https://github.com/Nubaeon/empirica/tree/main/docs)
 
 ---
 

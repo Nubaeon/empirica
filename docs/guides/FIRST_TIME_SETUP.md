@@ -303,7 +303,7 @@ settings:
 
 ## 📞 Need Help?
 
-- **GitHub Issues:** https://github.com/empirical-ai/empirica/issues
+- **GitHub Issues:** https://github.com/Nubaeon/empirica/issues
 - **Documentation:** `docs/`
 - **System Prompt:** `.github/copilot-instructions.md` (v4.1 AI-first JSON)
 
