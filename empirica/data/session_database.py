@@ -48,19 +48,49 @@ except ImportError:
 
 
 class SessionDatabase:
-    """Central SQLite database for all session data"""
+    """Central database for all session data (supports SQLite and PostgreSQL)"""
 
-    def __init__(self, db_path: Optional[str] = None):
-        if db_path is None:
-            # Use path resolver for consistent database location
-            from empirica.config.path_resolver import get_session_db_path
-            db_path = get_session_db_path()
+    def __init__(self, db_path: Optional[str] = None, db_type: Optional[str] = None):
+        """
+        Initialize session database with pluggable backend
 
-        self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        Args:
+            db_path: Path to database (SQLite only, ignored for PostgreSQL)
+            db_type: "sqlite" or "postgresql" (defaults to config or "sqlite")
+        """
+        # Import adapter layer
+        from empirica.data.db_adapter import DatabaseAdapter
+        from empirica.config.database_config import get_database_config
 
-        self.conn = sqlite3.connect(str(self.db_path))
-        self.conn.row_factory = sqlite3.Row  # Return rows as dicts
+        # If db_type not specified, load from config
+        if db_type is None:
+            db_config = get_database_config()
+            db_type = db_config.get("type", "sqlite")
+        else:
+            db_config = {"type": db_type}
+
+        # Create appropriate adapter
+        if db_type == "sqlite":
+            # Use provided path or default
+            if db_path is None:
+                from empirica.config.path_resolver import get_session_db_path
+                db_path = str(get_session_db_path())
+
+            self.db_path = Path(db_path)
+            self.adapter = DatabaseAdapter.create(db_type="sqlite", db_path=str(self.db_path))
+            logger.info(f"📊 Session Database initialized (SQLite): {self.db_path}")
+
+        elif db_type == "postgresql":
+            pg_config = db_config.get("postgresql", {})
+            self.adapter = DatabaseAdapter.create(db_type="postgresql", **pg_config)
+            self.db_path = None  # N/A for PostgreSQL
+            logger.info(f"📊 Session Database initialized (PostgreSQL)")
+
+        else:
+            raise ValueError(f"Unsupported database type: {db_type}")
+
+        # Expose raw connection for backward compatibility with repositories
+        self.conn = self.adapter.conn
 
         self._create_tables()
 
@@ -70,8 +100,6 @@ class SessionDatabase:
         self.branches = BranchRepository(self.conn)
         self.breadcrumbs = BreadcrumbRepository(self.conn)
         self.projects = ProjectRepository(self.conn)
-
-        logger.info(f"📊 Session Database initialized: {self.db_path}")
 
     @staticmethod
     def _validate_session_id(session_id: str) -> None:
