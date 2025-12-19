@@ -1740,5 +1740,9 @@ async def main():
             app.create_initialization_options()
         )
 
-if __name__ == "__main__":
+def run():
+    """Synchronous entry point for command-line usage"""
     asyncio.run(main())
+
+if __name__ == "__main__":
+    run()

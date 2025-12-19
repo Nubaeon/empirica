@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "empirica-mcp"
-version = "1.0.1"
+version = "1.0.2"
 description = "MCP server for Empirica epistemic framework"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -34,7 +34,7 @@ Repository = "https://github.com/Nubaeon/empirica"
 Issues = "https://github.com/Nubaeon/empirica/issues"
 
 [project.scripts]
-empirica-mcp = "empirica_mcp.server:main"
+empirica-mcp = "empirica_mcp.server:run"
 
 [tool.setuptools]
 packages = ["empirica_mcp"]
