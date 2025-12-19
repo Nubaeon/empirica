@@ -114,7 +114,7 @@ subjects:
     description: "Command-line interface and MCP integration"
     paths:
       - empirica/cli/
-      - mcp_local/
+      - empirica-mcp/
   
   # ... more subjects ...
 

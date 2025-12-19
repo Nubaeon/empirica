@@ -12,7 +12,8 @@ The Empirica MCP (Model Context Protocol) server exposes all Empirica functional
 
 **Server Details:**
 - **Name:** `empirica-v2`
-- **Location:** `mcp_local/empirica_mcp_server.py`
+- **Package:** `empirica-mcp` (PyPI)
+- **Command:** `empirica-mcp`
 - **Protocol:** MCP (Model Context Protocol)
 - **Transport:** stdio
 - **Tools:** 38 tools organized by category
@@ -37,51 +38,58 @@ The Empirica MCP (Model Context Protocol) server exposes all Empirica functional
 
 ## Setup & Configuration
 
+### Installation
+
+Install the MCP server package:
+
+```bash
+pip install empirica-mcp
+```
+
 ### MCP Server Config
 
-**For Claude Desktop/VS Code:**
+**For Claude Desktop/VS Code/Cursor/Windsurf:**
 
 ```json
 {
   "mcpServers": {
     "empirica": {
-      "command": "python",
-      "args": [
-        "/path/to/empirica/mcp_local/empirica_mcp_server.py"
-      ],
+      "command": "empirica-mcp"
+    }
+  }
+}
+```
+
+**That's it!** No paths, no environment variables needed. The MCP server automatically:
+- Finds `empirica` installation via PATH
+- Uses repo-local `./.empirica/` for data storage
+- Loads project context from git repository
+
+### Advanced Configuration
+
+**Custom data directory (optional):**
+
+```json
+{
+  "mcpServers": {
+    "empirica": {
+      "command": "empirica-mcp",
       "env": {
-        "EMPIRICA_DATA_DIR": "/path/to/.empirica",
-        "PYTHONPATH": "/path/to/empirica"
+        "EMPIRICA_DATA_DIR": "/custom/path/.empirica"
       }
     }
   }
 }
 ```
 
-**For Rovo/Other MCP Clients:**
-
-See `docs/archive/v3/guides/setup/` for specific client configs.
-
-### Starting the Server
+### Testing the Server
 
 ```bash
-# Direct invocation
-python mcp_local/empirica_mcp_server.py
+# Verify installation
+which empirica-mcp
 
-# Via MCP client (automatic)
-# Server starts when client connects
-```
-
-### Tmux Integration
-
-**Optional tmux-based server:**
-
-```bash
-# Start tmux server
-./mcp_local/start_empirica_mcp.sh
-
-# Connect from MCP client
-# Uses empirica_tmux_mcp_server.py
+# Test server directly (Ctrl+C to exit)
+empirica-mcp
 ```
 
 ---

@@ -112,12 +112,14 @@ empirica postflight <session>
 **Best for:** Terminal workflows, scripts, quick tasks
 
 ### 2. **MCP Server** (IDE Integration)
-Configure in your IDE (Claude Desktop, Cursor, Windsurf, Rovo Dev):
+Install and configure in your IDE (Claude Desktop, Cursor, Windsurf, Rovo Dev):
+```bash
+pip install empirica-mcp
+```
 ```json
 {
   "empirica": {
-    "command": "python3",
-    "args": ["/path/to/empirica/mcp_local/empirica_mcp_server.py"]
+    "command": "empirica-mcp"
   }
 }
 ```

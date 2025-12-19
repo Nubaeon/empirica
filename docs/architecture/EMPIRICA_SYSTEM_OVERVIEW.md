@@ -398,7 +398,7 @@ Transfer epistemic snapshot (500 tokens, 95% compression)
 
 **For implementation:**
 - `empirica/bootstraps/` - Bootstrap scripts
-- `mcp_local/empirica_mcp_server.py` - MCP tools
+- `empirica-mcp/empirica_mcp/server.py` - MCP server (PyPI package)
 - `empirica/cli/` - CLI commands
 
 ---

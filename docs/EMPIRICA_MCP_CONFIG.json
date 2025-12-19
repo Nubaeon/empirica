@@ -1,17 +1,8 @@
 {
   "mcpServers": {
     "empirica": {
-      "command": "env",
-      "args": [
-        "LD_LIBRARY_PATH=",
-        "/path/to/empirica/.venv-mcp/bin/python3",
-        "/path/to/empirica/mcp_local/empirica_mcp_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/path/to/empirica",
-        "EMPIRICA_ENABLE_MODALITY_SWITCHER": "false"
-      },
-      "transport": "stdio"
+      "command": "empirica-mcp",
+      "description": "Empirica epistemic self-assessment framework"
     }
   }
 }

@@ -30,7 +30,7 @@ empirica/                                  # Clean production workspace
 ├── examples/                              # Working examples
 ├── slides/                                # Presentation assets ⭐ NEW
 ├── scripts/                               # Production utility scripts
-├── mcp_local/                             # MCP server implementations
+├── empirica-mcp/                          # MCP server package (PyPI)
 ├── dev_scripts/                           # Development utilities
 ├── packaging/                             # Distribution packaging
 ├── forgejo-plugin-empirica/               # Forgejo integration (optional)
@@ -307,20 +307,21 @@ pytest tests/integration/
 
 ---
 
-## 5. MCP Server: `mcp_local/`
+## 5. MCP Server: `empirica-mcp/`
 
-**Purpose:** Model Context Protocol server implementation
+**Purpose:** Model Context Protocol server package (published to PyPI)
 
 ```
-mcp_local/
-├── empirica_mcp_server.py                 # Main MCP server
-└── tools/                                 # MCP tool implementations (if separated)
+empirica-mcp/
+├── pyproject.toml                         # Package configuration
+├── README.md                              # Installation & usage guide
+└── empirica_mcp/
+    └── server.py                          # Main MCP server implementation
 ```
 
-**Usage:**
-- Claude Desktop integration
-- Cline integration  
-- Other MCP-compatible tools
+**Installation:** `pip install empirica-mcp`
+**Usage:** Configure `"command": "empirica-mcp"` in MCP client config
+**Clients:** Claude Desktop, Cursor, Windsurf, Cline, Rovo Dev
 
 **Configuration:** `docs/EMPIRICA_MCP_CONFIG.json`
 
@@ -404,7 +405,7 @@ db.close()
 | New epistemic vector | `empirica/core/canonical/` | Update `reflex_frame.py` |
 | New investigation strategy | `empirica/investigation/` | Implement `InvestigationStrategy` |
 | New content processor | `empirica/vision/` | `video_processor.py` |
-| New MCP tool | `mcp_local/` | Add tool to server |
+| New MCP tool | `empirica-mcp/empirica_mcp/server.py` | Add tool handler to server |
 | New plugin | `empirica/plugins/` | Implement plugin interface |
 | New documentation | `docs/` | Follow numbering convention |
 
