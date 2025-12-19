@@ -20,7 +20,17 @@
 
 ## Quick Setup
 
-### Step 1: Find Your IDE Configuration File
+### Step 1: Install Empirica MCP Server
+
+Install the MCP server package:
+
+```bash
+pip install empirica-mcp
+```
+
+This also installs the core `empirica` package if you don't have it.
+
+### Step 2: Find Your IDE Configuration File
 
 **Claude Desktop:**
 - Mac: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -36,7 +46,7 @@
 **Windsurf:**
 - Windsurf settings > MCP Servers
 
-### Step 2: Add Empirica Configuration
+### Step 3: Add Empirica Configuration
 
 Add this to your IDE's MCP config:
 
@@ -44,20 +54,14 @@ Add this to your IDE's MCP config:
 {
   "mcpServers": {
     "empirica": {
-      "command": "python3",
-      "args": [
-        "/path/to/empirica/mcp_local/empirica_mcp_server.py"
-      ],
-      "description": "Empirica epistemic self-assessment framework",
-      "env": {
-        "PYTHONPATH": "/path/to/empirica"
-      }
+      "command": "empirica-mcp",
+      "description": "Empirica epistemic self-assessment framework"
     }
   }
 }
 ```
 
-**Replace `/path/to/empirica`** with your actual Empirica installation path.
+**That's it!** No paths needed - the MCP server finds `empirica` automatically from PATH.
 
 ### Step 3: Restart Your IDE
 
@@ -83,14 +87,10 @@ You should see 21 Empirica tools listed.
 Configure Empirica once for all projects:
 
 ```bash
-claude mcp add --scope user --transport stdio empirica \
-  --env PYTHONPATH=/path/to/empirica \
-  --env EMPIRICA_ENABLE_MODALITY_SWITCHER=false \
-  -- env LD_LIBRARY_PATH= /path/to/empirica/.venv-mcp/bin/python3 \
-  /path/to/empirica/mcp_local/empirica_mcp_server.py
+claude mcp add --scope user --transport stdio empirica -- empirica-mcp
 ```
 
-**Replace `/path/to/empirica`** with your actual Empirica installation path (e.g., `/home/user/empirical-ai/empirica`).
+**That's it!** The MCP server finds `empirica` automatically from PATH.
 
 **What this does:**
 - Adds Empirica to your **user-level config** (`~/.claude.json`)
@@ -114,16 +114,8 @@ Create `.mcp.json` in your project root for team collaboration:
 {
   "mcpServers": {
     "empirica": {
-      "command": "env",
-      "args": [
-        "LD_LIBRARY_PATH=",
-        "/path/to/empirica/.venv-mcp/bin/python3",
-        "/path/to/empirica/mcp_local/empirica_mcp_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/path/to/empirica",
-        "EMPIRICA_ENABLE_MODALITY_SWITCHER": "false"
-      }
+      "command": "empirica-mcp",
+      "description": "Empirica epistemic self-assessment framework"
     }
   }
 }
@@ -132,7 +124,7 @@ Create `.mcp.json` in your project root for team collaboration:
 **What this does:**
 - Creates **project-specific** configuration
 - Can be committed to git for team sharing
-- Each team member gets same setup
+- Each team member just needs to `pip install empirica-mcp`
 
 ### Verifying Claude Code Setup
 
@@ -161,20 +153,22 @@ claude mcp list
 # Should show 'empirica' listed
 ```
 
-2. Check paths are absolute (not relative):
+2. Verify empirica-mcp is installed:
 ```bash
-# Bad: ./mcp_local/empirica_mcp_server.py
-# Good: /home/user/empirical-ai/empirica/mcp_local/empirica_mcp_server.py
+which empirica-mcp
+# Should show: /path/to/bin/empirica-mcp
+
+empirica-mcp --help
+# Should show usage info
 ```
 
-3. Verify Python virtual environment:
+3. Check empirica CLI is in PATH:
 ```bash
-ls -la /path/to/empirica/.venv-mcp/bin/python3
-```
+which empirica
+# Should show: /path/to/bin/empirica
 
-4. Check server executable:
-```bash
-/path/to/empirica/.venv-mcp/bin/python3 /path/to/empirica/mcp_local/empirica_mcp_server.py --help
+empirica --version
+# Should show version number
 ```
 
 **Issue: "No MCP servers configured"**
@@ -182,6 +176,14 @@ ls -la /path/to/empirica/.venv-mcp/bin/python3
 - If using global config: Run `claude mcp add` command above
 - If using project config: Ensure `.mcp.json` is in project root (not in subdirectories)
 - Restart Claude Code after configuration
+
+**Issue: "empirica CLI not found"**
+
+The MCP server needs the `empirica` CLI in PATH:
+```bash
+pip install empirica
+which empirica  # Verify it's in PATH
+```
 
 ### Global vs Project Configuration
 
@@ -583,47 +585,66 @@ See [`docs/guides/examples/mcp_configs/`](guides/examples/mcp_configs/) for comp
 
 ### Tools Not Appearing
 
-**Check 1: Verify configuration path**
+**Check 1: Verify installation**
 ```bash
-# Check if file exists
-cat ~/.config/Claude/claude_desktop_config.json
+# Check if empirica-mcp is installed
+pip show empirica-mcp
 
-# Verify Python path
-python3 /path/to/empirica/mcp_local/empirica_mcp_server.py --help
+# Check if it's in PATH
+which empirica-mcp
+
+# Test the server
+empirica-mcp --help
 ```
 
-**Check 2: Check IDE logs**
-- Look for MCP connection errors in IDE
-- Check that Python path is correct
-- Ensure Empirica is installed
+**Check 2: Verify empirica CLI**
+```bash
+# Check if empirica is installed
+pip show empirica
 
-**Check 3: Restart IDE**
+# Check if it's in PATH
+which empirica
+
+# Test the CLI
+empirica --version
+```
+
+**Check 3: Check IDE logs**
+- Look for MCP connection errors in IDE
+- Check IDE's MCP server status
+- Ensure config is in correct location
+
+**Check 4: Restart IDE**
 - Completely quit your IDE
 - Reopen IDE
 - MCP server will restart automatically
 
 ### Server Won't Start
 
-**Issue:** Permission denied
+**Issue:** "Command not found: empirica-mcp"
 
 **Fix:**
 ```bash
-# Make server executable
-chmod +x /path/to/empirica/mcp_local/empirica_mcp_server.py
+# Install the MCP server
+pip install empirica-mcp
 
-# Or use python3 explicitly (already in config)
+# Verify it's in PATH
+which empirica-mcp
+
+# If not in PATH, add pip bin directory to PATH
+export PATH="$HOME/.local/bin:$PATH"  # Linux/macOS
 ```
 
-**Issue:** Module not found
+**Issue:** "empirica CLI not found"
 
 **Fix:**
 ```bash
-# Verify installation
-pip list | grep empirica
+# Install empirica
+pip install empirica
 
-# Reinstall if needed
-cd /path/to/empirica
-pip install -e .
+# Verify installation
+which empirica
+empirica --version
 ```
 
 ### Tools Fail to Execute
@@ -652,27 +673,37 @@ chmod -R u+rw ~/.empirica
 
 ### Environment Variables
 
+You can customize the MCP server behavior with environment variables:
+
 ```json
 {
-  "env": {
-    "PYTHONPATH": "/path/to/empirica",
-    "EMPIRICA_ENABLE_MODALITY_SWITCHER": "false",
-    "EMPIRICA_LOG_LEVEL": "INFO"
+  "mcpServers": {
+    "empirica": {
+      "command": "empirica-mcp",
+      "env": {
+        "EMPIRICA_ENABLE_MODALITY_SWITCHER": "false",
+        "EMPIRICA_LOG_LEVEL": "INFO"
+      }
+    }
   }
 }
 ```
 
 **Available variables:**
-- `PYTHONPATH` - Required: Path to Empirica
 - `EMPIRICA_ENABLE_MODALITY_SWITCHER` - Optional: Enable multi-AI routing (default: false, Phase 1+)
 - `EMPIRICA_LOG_LEVEL` - Optional: DEBUG, INFO, WARNING, ERROR
 
-### Using Virtual Environment
+### Using Specific Virtual Environment
+
+If you have empirica-mcp in a specific virtual environment:
 
 ```json
 {
-  "command": "/path/to/venv/bin/python3",
-  "args": ["/path/to/empirica/mcp_local/empirica_mcp_server.py"]
+  "mcpServers": {
+    "empirica": {
+      "command": "/path/to/venv/bin/empirica-mcp"
+    }
+  }
 }
 ```
 
