@@ -2,7 +2,7 @@
 
 > **AI agents that know what they know—and what they don't**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.0.0)
+[![Version](https://img.shields.io/badge/version-1.0.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.0.3)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)
@@ -56,13 +56,13 @@ brew install empirica
 
 ```bash
 # Pull the image
-docker pull nubaeon/empirica:1.0.0
+docker pull nubaeon/empirica:1.0.3
 
 # Run a command
-docker run -it nubaeon/empirica:1.0.0 empirica --help
+docker run -it nubaeon/empirica:1.0.3 empirica --help
 
 # Interactive session with persistent data
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.0.0 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.0.3 /bin/bash
 ```
 
 #### Chocolatey (Windows)
@@ -75,13 +75,35 @@ choco install empirica
 
 ```bash
 # Latest stable release
-pip install git+https://github.com/Nubaeon/empirica.git@v1.0.0
+pip install git+https://github.com/Nubaeon/empirica.git@v1.0.3
 
 # Development branch
 pip install git+https://github.com/Nubaeon/empirica.git@develop
 ```
 
 **🆕 First-time user?** → [Installation Guide](https://github.com/Nubaeon/empirica/blob/main/docs/production/02_INSTALLATION.md)
+
+### Initialize a New Project
+
+```bash
+# Navigate to your git repository
+cd your-project
+git init
+
+# Initialize Empirica (creates config files, optional BEADS integration)
+empirica project-init
+
+# Follow interactive prompts:
+# - Project name
+# - Enable BEADS issue tracking? (y/N)
+# - Create documentation index template? (y/N)
+```
+
+**Result:**
+- ✅ `.empirica/config.yaml` - Infrastructure settings
+- ✅ `.empirica/project.yaml` - Project metadata & BEADS config
+- ✅ `docs/SEMANTIC_INDEX.yaml` - Documentation index (optional)
+- ✅ Project registered in database
 
 ### Your First Session
 
