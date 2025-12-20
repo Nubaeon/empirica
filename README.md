@@ -349,6 +349,13 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
+## 🔗 Related Projects
+
+- **[Empirica MCP](./empirica-mcp/)** - Model Context Protocol server for Empirica integration
+- **[Empirica EPRE](https://github.com/Nubaeon/empirica-epre)** - Epistemic Pattern Recognition Engine (privacy-preserving platform integrations for Twitter, Slack, Discord, and more)
+
+---
+
 ## 📞 Support
 
 - **Issues:** [GitHub Issues](https://github.com/Nubaeon/empirica/issues)
