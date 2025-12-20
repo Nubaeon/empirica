@@ -1,0 +1,34 @@
+{
+  "goal_id": "f0d0cddc-fcf5-435e-9ff2-6b8f05366d58",
+  "session_id": "ae16acaf-d68b-479d-8615-43978427f2a4",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-20T13:19:44.478856+00:00",
+  "goal_data": {
+    "objective": "Implement memory-compact command for epistemic continuity across session boundaries",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "CLI command works: empirica memory-compact",
+      "Creates checkpoint with current epistemic state",
+      "Runs project-bootstrap and injects context",
+      "Creates continuation session with lineage",
+      "Returns compact summary + bootstrap for IDE integration",
+      "MCP tool wrapper implemented",
+      "Documentation complete with examples"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-20T13:19:44.478871+00:00",
+      "action": "created"
+    }
+  ]
+}
