@@ -1,0 +1,47 @@
+{
+  "goal_id": "8b442e92-c48f-49df-af8b-5d427347d68c",
+  "session_id": "81a9dfd3",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-20T18:09:40.794013+00:00",
+  "goal_data": {
+    "objective": "Continue Empirica documentation - Phase 2: Advanced modules and remaining gaps",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.6,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "{'description': 'Document persona module and related components', 'threshold': 1.0}",
+      "{'description': 'Document metacognitive_cascade module and investigation plugins', 'threshold': 1.0}",
+      "{'description': 'Address remaining CLI command handler documentation gaps', 'threshold': 0.8}",
+      "{'description': 'Reduce code orphan gaps by additional 30% (from ~550 to ~385)', 'threshold': 0.7}",
+      "{'description': 'Improve overall documentation coverage to 93%+', 'threshold': 0.93}"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {
+      "project": "empirica-documentation",
+      "phase": "2",
+      "type": "documentation",
+      "priority": "high",
+      "starting_gaps": 550,
+      "target_gaps": 385,
+      "starting_coverage": 90.0,
+      "target_coverage": 93.0,
+      "focus_areas": [
+        "persona",
+        "metacognitive_cascade",
+        "investigation",
+        "cli"
+      ]
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-20T18:09:40.794028+00:00",
+      "action": "created"
+    }
+  ]
+}
