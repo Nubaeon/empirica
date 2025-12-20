@@ -1,0 +1,32 @@
+{
+  "goal_id": "3ae4f346-1170-407d-8d74-ccc7fc7e2f9c",
+  "session_id": "be73ded5-ddf0-4b97-9405-9279f3bd1762",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-20T13:25:38.633520+00:00",
+  "goal_data": {
+    "objective": "Improve data linkage and update system prompts with AI-first JSON",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Finding\u2192goal linkage improved from 23% to >50%",
+      "MINIMALIST prompt updated with AI-first JSON examples",
+      "GEMINI prompt updated with AI-first JSON examples",
+      "All changes tested end-to-end",
+      "Any issues surfaced as goals/subtasks"
+    ],
+    "estimated_complexity": 0.65,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-20T13:25:38.633532+00:00",
+      "action": "created"
+    }
+  ]
+}
