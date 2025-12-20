@@ -207,12 +207,11 @@ class DatabaseHandoffStorage:
         Initialize database storage
         
         Args:
-            db_path: Path to session database (default: .empirica/sessions/sessions.db)
+            db_path: Path to session database (default: uses canonical path resolver)
         """
         if db_path is None:
-            base_dir = Path.cwd() / '.empirica' / 'sessions'
-            base_dir.mkdir(parents=True, exist_ok=True)
-            db_path = base_dir / 'sessions.db'
+            from empirica.config.path_resolver import get_session_db_path
+            db_path = get_session_db_path()
         
         self.db_path = Path(db_path)
         self.conn = sqlite3.connect(str(self.db_path))

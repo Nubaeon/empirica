@@ -364,6 +364,22 @@ async def list_tools() -> List[types.Tool]:
             }
         ),
 
+        types.Tool(
+            name="memory_compact",
+            description="Compact session for epistemic continuity across conversation boundaries. Creates checkpoint, loads bootstrap context, creates continuation session. Use when approaching context limit (e.g., >180k tokens).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID or alias to compact"},
+                    "create_continuation": {"type": "boolean", "description": "Create continuation session (default: true)"},
+                    "include_bootstrap": {"type": "boolean", "description": "Load project bootstrap context (default: true)"},
+                    "checkpoint_current": {"type": "boolean", "description": "Checkpoint current epistemic state (default: true)"},
+                    "compact_mode": {"type": "string", "enum": ["full", "minimal", "context_only"], "description": "Compaction mode: full (all features), minimal (checkpoint only), context_only (bootstrap only)"}
+                },
+                "required": ["session_id"]
+            }
+        ),
+
         # ========== Checkpoint Tools (Route to CLI) ==========
 
         types.Tool(

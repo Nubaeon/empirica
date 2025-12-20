@@ -68,25 +68,47 @@
 
 ### Session Creation (Simple, No Ceremony)
 
+**AI-First JSON Mode (Preferred):**
+```bash
+# Basic session
+echo '{"ai_id": "myai"}' | empirica session-create -
+
+# With subject (auto-detected from directory if omitted)
+echo '{"ai_id": "myai", "subject": "authentication"}' | empirica session-create -
+
+# Output: {"ok": true, "session_id": "uuid", "ai_id": "myai", "subject": "authentication", ...}
+```
+
+**Legacy CLI (Still Supported):**
+```bash
+empirica session-create --ai-id myai --subject authentication --output json
+```
+
+**Python API:**
 ```python
-# Python API
 from empirica.data.session_database import SessionDatabase
 db = SessionDatabase()
-session_id = db.create_session(ai_id="myai", bootstrap_level=1)
+session_id = db.create_session(ai_id="myai", subject="authentication")
 db.close()
+```
 
-# CLI
-empirica session-create --ai-id myai --output json
-
-# MCP
-session_create(ai_id="myai", bootstrap_level=1, session_type="development")
+**MCP Tool:**
+```python
+session_create(ai_id="myai", session_type="development", subject="authentication")
 ```
 
 **What happens:**
 - Session UUID created in SQLite
+- Auto-maps to project via git remote URL
+- Subject auto-detected from directory if not specified
 - No component pre-loading (all lazy-load on-demand)
-- No ceremony, instant creation
 - Ready for CASCADE workflow
+
+**Subjects Feature:**
+- **Purpose:** Track work by subject/workstream (e.g., "authentication", "api", "database")
+- **Auto-detection:** Uses `get_current_subject()` from `.empirica-project/PROJECT_CONFIG.yaml`
+- **Commands with subject support:** `session-create`, `finding-log`, `unknown-log`, `deadend-log`, `project-bootstrap`
+- **Filtering:** `project-bootstrap --subject authentication` shows only relevant context
 
 ---
 

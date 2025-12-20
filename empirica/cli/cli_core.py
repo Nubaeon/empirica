@@ -388,7 +388,15 @@ def _add_session_parsers(subparsers):
     sessions_export_parser.add_argument('session_id', nargs='?', help='Session ID or alias (latest, latest:active, latest:<ai_id>)')
     sessions_export_parser.add_argument('--session-id', dest='session_id_named', help='Session ID (alternative to positional argument)')
     sessions_export_parser.add_argument('--output', '-o', help='Output file path (default: session_<id>.json)')
-    
+
+    # Memory-compact command (epistemic continuity across session boundaries)
+    memory_compact_parser = subparsers.add_parser('memory-compact',
+        help='Compact session with epistemic continuity (checkpoint + bootstrap + continuation)')
+    memory_compact_parser.add_argument('config_file', nargs='?',
+        help='JSON config file (or use stdin with -)')
+    memory_compact_parser.add_argument('--output', default='json', choices=['json'],
+        help='Output format (JSON only)')
+
     # Session end command
     # session-end removed - use handoff-create instead (better parameter names, already in MCP)
 
@@ -1026,6 +1034,7 @@ def main(args=None):
             'sessions-show': handle_sessions_show_command,
             'session-snapshot': handle_session_snapshot_command,
             'sessions-export': handle_sessions_export_command,
+            'memory-compact': handle_memory_compact_command,
             # 'session-end' removed - use 'handoff-create' instead
             
             # Action commands (INVESTIGATE and ACT phase tracking)

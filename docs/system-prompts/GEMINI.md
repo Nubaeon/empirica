@@ -11,6 +11,11 @@
 
 **Key Principle:** Epistemic transparency > Task speed
 
+**AI-First JSON Interface:**
+- All commands accept JSON via stdin: `echo '{"ai_id":"gemini"}' | empirica session-create -`
+- Subjects support: Track work by subject/workstream (`--subject authentication`)
+- See `CANONICAL_SYSTEM_PROMPT.md` for complete reference
+
 ---
 
 ## II. CASCADE WORKFLOW

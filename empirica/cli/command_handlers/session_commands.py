@@ -423,3 +423,304 @@ def handle_sessions_export_command(args):
 
 
 # handle_session_end_command removed - use handoff-create instead
+
+
+def handle_memory_compact_command(args):
+    """
+    Memory-compact: Create epistemic continuity across session boundaries
+
+    Workflow:
+    1. Checkpoint current epistemic state (pre-compact)
+    2. Run project-bootstrap to load ground truth
+    3. Create continuation session with lineage
+    4. Return formatted output for IDE injection
+
+    Args from JSON stdin:
+        session_id: Session to compact (supports aliases)
+        create_continuation: bool (default: true)
+        include_bootstrap: bool (default: true)
+        checkpoint_current: bool (default: true)
+        compact_mode: "full" | "minimal" | "context_only" (default: "full")
+    """
+    try:
+        import sys
+        from empirica.data.session_database import SessionDatabase
+        from empirica.utils.session_resolver import resolve_session_id
+
+        # Read JSON config from stdin or file
+        if hasattr(args, 'config_file') and args.config_file:
+            if args.config_file == '-':
+                # Read from stdin
+                config = json.load(sys.stdin)
+            else:
+                # Read from file
+                with open(args.config_file, 'r') as f:
+                    config = json.load(f)
+        else:
+            # No argument provided, read from stdin (AI-first mode)
+            config = json.load(sys.stdin)
+
+        # Extract parameters with defaults
+        session_id_arg = config.get('session_id')
+        if not session_id_arg:
+            print(json.dumps({
+                "ok": False,
+                "error": "session_id required",
+                "hint": "Provide session_id in JSON config"
+            }))
+            return 1
+
+        create_continuation = config.get('create_continuation', True)
+        include_bootstrap = config.get('include_bootstrap', True)
+        checkpoint_current = config.get('checkpoint_current', True)
+        compact_mode = config.get('compact_mode', 'full')
+
+        # Resolve session alias to UUID
+        try:
+            session_id = resolve_session_id(session_id_arg)
+        except ValueError as e:
+            print(json.dumps({
+                "ok": False,
+                "error": str(e),
+                "provided": session_id_arg
+            }))
+            return 1
+
+        logger.info(f"Starting memory-compact for session {session_id[:8]}...")
+
+        db = SessionDatabase()
+
+        # Verify session exists
+        session_info = db.get_session(session_id)
+        if not session_info:
+            print(json.dumps({
+                "ok": False,
+                "error": f"Session not found: {session_id_arg}"
+            }))
+            db.close()
+            return 1
+
+        project_id = session_info.get('project_id')
+        ai_id = session_info.get('ai_id', 'unknown')
+
+        output = {
+            "ok": True,
+            "operation": "memory_compact",
+            "session_id": session_id,
+            "compact_mode": compact_mode
+        }
+
+        # Step 1: Checkpoint current state (pre-compact tag)
+        if checkpoint_current:
+            logger.info("Creating pre-compact checkpoint...")
+
+            # Get latest epistemic vectors from session
+            latest_vectors = db.get_latest_vectors(session_id)
+
+            if latest_vectors:
+                from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+
+                reflex_logger = GitEnhancedReflexLogger(session_id=session_id)
+                checkpoint_id = reflex_logger.add_checkpoint(
+                    phase="PRE_MEMORY_COMPACT",
+                    round_num=1,
+                    vectors=latest_vectors,
+                    metadata={"reasoning": "Pre-compact epistemic state snapshot for continuity measurement"},
+                    epistemic_tags={"memory_compact": True, "pre_compact": True}
+                )
+
+                output["pre_compact_checkpoint"] = {
+                    "checkpoint_id": checkpoint_id,
+                    "vectors": latest_vectors,
+                    "timestamp": datetime.now().isoformat()
+                }
+
+                logger.info(f"Pre-compact checkpoint created: {checkpoint_id[:8]}")
+            else:
+                logger.warning("No epistemic vectors found - skipping checkpoint")
+                output["pre_compact_checkpoint"] = None
+
+        # Step 2: Run project-bootstrap (load ground truth)
+        bootstrap_context = None
+        if include_bootstrap and project_id:
+            logger.info(f"Loading bootstrap context for project {project_id[:8]}...")
+
+            try:
+                # Call bootstrap method on database
+                bootstrap_context = db.bootstrap_project_breadcrumbs(
+                    project_id=project_id,
+                    check_integrity=False,
+                    context_to_inject=True,
+                    task_description=None,
+                    epistemic_state=None,
+                    subject=None
+                )
+
+                output["bootstrap_context"] = bootstrap_context
+                logger.info(f"Bootstrap loaded: {len(bootstrap_context.get('findings', []))} findings, "
+                           f"{len(bootstrap_context.get('unknowns', []))} unknowns, "
+                           f"{len(bootstrap_context.get('incomplete_work', []))} incomplete goals")
+
+            except Exception as e:
+                logger.error(f"Bootstrap failed: {e}")
+                output["bootstrap_context"] = {"error": str(e)}
+
+        # Step 3: Create continuation session
+        continuation_session_id = None
+        if create_continuation:
+            logger.info("Creating continuation session...")
+
+            # Create new session linked via git notes (metadata linkage for future)
+            continuation_session_id = db.create_session(
+                ai_id=ai_id,
+                bootstrap_level=1,  # Bootstrap loaded
+                subject=None
+            )
+
+            # Set project_id for continuation session
+            if project_id:
+                cursor = db.conn.cursor()
+                cursor.execute("""
+                    UPDATE sessions SET project_id = ? WHERE session_id = ?
+                """, (project_id, continuation_session_id))
+                db.conn.commit()
+
+            # Store linkage in git notes as JSON metadata
+            # TODO: Future enhancement - add parent_session_id column to sessions table
+            from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+            continuation_logger = GitEnhancedReflexLogger(session_id=continuation_session_id)
+            continuation_logger.add_checkpoint(
+                phase="SESSION_CONTINUATION",
+                round_num=1,
+                vectors=latest_vectors if latest_vectors else {},
+                metadata={
+                    "parent_session_id": session_id,
+                    "reason": "memory_compact_continuation",
+                    "compact_mode": compact_mode
+                }
+            )
+
+            output["continuation"] = {
+                "new_session_id": continuation_session_id,
+                "parent_session_id": session_id,
+                "ai_id": ai_id,
+                "lineage_depth": 1  # Could calculate actual depth
+            }
+
+            logger.info(f"Continuation session created: {continuation_session_id[:8]}")
+
+        # Step 4: Generate recommended PREFLIGHT for continuation
+        if latest_vectors:
+            # Adjust vectors for fresh session context
+            recommended_preflight = latest_vectors.copy()
+
+            # Context increases (bootstrap loaded)
+            if 'foundation' in recommended_preflight:
+                recommended_preflight['foundation']['context'] = min(
+                    recommended_preflight['foundation'].get('context', 0.5) + 0.10,
+                    1.0
+                )
+
+            # Uncertainty slightly increases (fresh session)
+            recommended_preflight['uncertainty'] = min(
+                recommended_preflight.get('uncertainty', 0.3) + 0.05,
+                1.0
+            )
+
+            # State/change/completion reset for new session
+            if 'execution' in recommended_preflight:
+                recommended_preflight['execution']['state'] = recommended_preflight['execution'].get('state', 0.5)
+                recommended_preflight['execution']['change'] = 0.20  # Fresh start
+                recommended_preflight['execution']['completion'] = 0.15  # Just beginning
+
+            output["recommended_preflight"] = recommended_preflight
+            output["calibration_notes"] = (
+                "CONTEXT +0.10 (bootstrap loaded), "
+                "UNCERTAINTY +0.05 (fresh session), "
+                "CHANGE/COMPLETION reset for continuation"
+            )
+
+        # Step 5: Format for IDE injection
+        if compact_mode == "full":
+            output["ide_injection"] = format_ide_injection(
+                session_id=session_id,
+                continuation_session_id=continuation_session_id,
+                bootstrap_context=bootstrap_context,
+                pre_compact_vectors=latest_vectors
+            )
+
+        db.close()
+
+        # Output JSON
+        print(json.dumps(output, indent=2, default=str))
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Memory compact", getattr(args, 'verbose', False))
+        return 1
+
+
+def format_ide_injection(session_id, continuation_session_id, bootstrap_context, pre_compact_vectors):
+    """
+    Format bootstrap context for IDE injection into conversation summary
+
+    Returns markdown-formatted context for the IDE to inject after summarization.
+    """
+    lines = []
+
+    lines.append("## Empirica Context (Loaded from Ground Truth)")
+    lines.append("")
+    lines.append("**Session Continuity:**")
+    lines.append(f"- Continuing from session: `{session_id}`")
+    if continuation_session_id:
+        lines.append(f"- New session: `{continuation_session_id}`")
+
+    if pre_compact_vectors:
+        know = pre_compact_vectors.get('foundation', {}).get('know', 0)
+        uncertainty = pre_compact_vectors.get('uncertainty', 0)
+        lines.append(f"- Pre-compact epistemic state: know={know:.2f}, uncertainty={uncertainty:.2f}")
+
+    lines.append("")
+
+    # Recent findings
+    if bootstrap_context and 'findings' in bootstrap_context:
+        findings = bootstrap_context['findings']
+        if findings:
+            lines.append(f"**Recent Findings ({len(findings)} total):**")
+            for i, finding in enumerate(findings[:10], 1):
+                finding_text = finding if isinstance(finding, str) else finding.get('finding_text', str(finding))
+                lines.append(f"{i}. {finding_text[:100]}...")
+            lines.append("")
+
+    # Unresolved unknowns
+    if bootstrap_context and 'unknowns' in bootstrap_context:
+        unknowns = bootstrap_context['unknowns']
+        if unknowns:
+            lines.append(f"**Unresolved Unknowns ({len(unknowns)} total):**")
+            for i, unknown in enumerate(unknowns[:10], 1):
+                unknown_text = unknown if isinstance(unknown, str) else unknown.get('unknown', str(unknown))
+                lines.append(f"{i}. {unknown_text[:100]}...")
+            lines.append("")
+
+    # Incomplete goals
+    if bootstrap_context and 'incomplete_work' in bootstrap_context:
+        goals = bootstrap_context['incomplete_work']
+        if goals:
+            lines.append(f"**Incomplete Goals ({len(goals)} in-progress):**")
+            for i, goal in enumerate(goals[:5], 1):
+                objective = goal.get('goal', goal.get('objective', str(goal)))
+                progress = goal.get('progress', '?/?')
+                lines.append(f"{i}. {objective[:70]} - {progress}")
+            lines.append("")
+
+    # Recommended PREFLIGHT
+    if pre_compact_vectors:
+        lines.append("**Recommended PREFLIGHT:**")
+        know = pre_compact_vectors.get('foundation', {}).get('know', 0)
+        context = min(pre_compact_vectors.get('foundation', {}).get('context', 0.5) + 0.10, 1.0)
+        uncertainty = min(pre_compact_vectors.get('uncertainty', 0.3) + 0.05, 1.0)
+        lines.append(f"- engagement={pre_compact_vectors.get('engagement', 0.85):.2f}")
+        lines.append(f"- know={know:.2f}, context={context:.2f}")
+        lines.append(f"- uncertainty={uncertainty:.2f}")
+
+    return "\n".join(lines)
