@@ -1,0 +1,31 @@
+{
+  "goal_id": "21610e8e-3a4e-496d-b38a-5b6461241ecc",
+  "session_id": "b3139518-3b96-4c6b-984b-d8320a519a07",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-20T10:49:12.576837+00:00",
+  "goal_data": {
+    "objective": "Implement epistemic_importance field for goals based on context vector and scope",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "epistemic_importance field added to goals table",
+      "New goals automatically scored at creation",
+      "goals-ready filters by importance >= 0.6",
+      "goals-list supports --sort-by importance"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-20T10:49:12.576849+00:00",
+      "action": "created"
+    }
+  ]
+}
