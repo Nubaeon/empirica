@@ -1,0 +1,40 @@
+{
+  "goal_id": "ac48c59b-76de-47db-943c-3f557d270435",
+  "session_id": "81a9dfd3",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-20T17:52:39.135152+00:00",
+  "goal_data": {
+    "objective": "Complete Empirica documentation by addressing 616 code orphan gaps",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.7,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "{'description': 'Document all core modules (goals, persona, metacognitive_cascade)', 'threshold': 1.0}",
+      "{'description': 'Reduce code orphan gaps by 80% (from 616 to ~123)', 'threshold': 0.8}",
+      "{'description': 'Achieve 95%+ overall documentation coverage', 'threshold': 0.95}",
+      "{'description': 'Create user-friendly guide for session/goal workflow', 'threshold': 1.0}",
+      "{'description': 'All new documentation includes working examples', 'threshold': 1.0}"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {
+      "project": "empirica-documentation",
+      "type": "documentation",
+      "priority": "high",
+      "current_gaps": 616,
+      "target_gaps": 123,
+      "current_coverage": 88.06,
+      "target_coverage": 95.0
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-20T17:52:39.135166+00:00",
+      "action": "created"
+    }
+  ]
+}
