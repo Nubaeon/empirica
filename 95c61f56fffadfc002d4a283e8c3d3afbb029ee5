@@ -1,0 +1,31 @@
+{
+  "goal_id": "783407d2-293d-4917-8cde-bc4a1bcf9f82",
+  "session_id": "b3139518-3b96-4c6b-984b-d8320a519a07",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-20T13:32:56.649283+00:00",
+  "goal_data": {
+    "objective": "Investigate why jq fails with Empirica JSON output and document proper JSON parsing patterns",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Root cause of jq parse errors identified",
+      "Test cases for jq compatibility documented",
+      "Decision: support jq or recommend alternatives",
+      "Update documentation with findings"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-20T13:32:56.649295+00:00",
+      "action": "created"
+    }
+  ]
+}
