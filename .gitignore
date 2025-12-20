@@ -67,3 +67,11 @@ test_goals_session
 build/
 dist/
 *.egg-info/
+
+# Internal business docs (live in empirica-internal repo)
+DEV_ARTIFACTS_LOCATION.md
+vsif-poc/
+docs/MARKET_OPPORTUNITIES.md
+docs/MARKET_STRATEGY.md
+docs/WHY_BLUE_OCEAN.md
+docs/MEETINGS_ADAPTER_DESIGN.md
