@@ -764,6 +764,20 @@ class SessionDatabase:
             )
         """)
 
+        # Table 28: token_savings (Token Efficiency Tracking)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS token_savings (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                saving_type TEXT NOT NULL,
+                tokens_saved INTEGER NOT NULL,
+                evidence TEXT,
+                logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+            )
+        """)
+
         # Create indexes for performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_ai ON sessions(ai_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_time)")
@@ -815,6 +829,10 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_merge_decisions_session ON merge_decisions(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_merge_decisions_round ON merge_decisions(investigation_round)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_merge_decisions_winning_branch ON merge_decisions(winning_branch_id)")
+
+        # Indexes for token_savings
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_savings_session ON token_savings(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_savings_type ON token_savings(saving_type)")
 
         self.conn.commit()
         
@@ -3209,8 +3227,74 @@ class SessionDatabase:
         """
         return self.breadcrumbs.get_mistakes(session_id, goal_id, limit)
 
+    def log_token_saving(
+        self,
+        session_id: str,
+        saving_type: str,
+        tokens_saved: int,
+        evidence: str
+    ) -> str:
+        """Log a token saving event
+        
+        Args:
+            session_id: Session identifier
+            saving_type: Type of saving ('doc_awareness', 'finding_reuse', 'mistake_prevention', 'handoff_efficiency')
+            tokens_saved: Estimated tokens saved
+            evidence: What was avoided/reused
+            
+        Returns:
+            saving_id: UUID string
+        """
+        saving_id = str(uuid.uuid4())
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO token_savings (
+                id, session_id, saving_type, tokens_saved, evidence
+            ) VALUES (?, ?, ?, ?, ?)
+        """, (saving_id, session_id, saving_type, tokens_saved, evidence))
+        
+        self.conn.commit()
+        logger.info(f"💰 Token saving logged: {tokens_saved} tokens ({saving_type})")
+        
+        return saving_id
+
+    def get_session_token_savings(self, session_id: str) -> Dict:
+        """Get token savings summary for a session
+        
+        Args:
+            session_id: Session identifier
+            
+        Returns:
+            Dictionary with total_tokens_saved, cost_saved_usd, and breakdown by type
+        """
+        cursor = self.conn.cursor()
+        
+        cursor.execute("""
+            SELECT saving_type, SUM(tokens_saved) as total, COUNT(*) as count
+            FROM token_savings
+            WHERE session_id = ?
+            GROUP BY saving_type
+        """, (session_id,))
+        
+        breakdown = {}
+        total = 0
+        for row in cursor.fetchall():
+            saving_type = row[0]
+            tokens = row[1]
+            count = row[2]
+            breakdown[saving_type] = {'tokens': tokens, 'count': count}
+            total += tokens
+        
+        return {
+            'total_tokens_saved': total,
+            'cost_saved_usd': round(total * 0.00003, 4),
+            'breakdown': breakdown
+        }
+
     def close(self):
         """Close database connection"""
+        self.conn.commit()
         self.conn.close()
 
 

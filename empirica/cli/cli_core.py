@@ -17,6 +17,7 @@ import sys
 import time
 from .cli_utils import handle_cli_error, print_header
 from .command_handlers import *
+from .command_handlers.utility_commands import handle_log_token_saving, handle_efficiency_report
 
 
 def create_argument_parser():
@@ -312,6 +313,25 @@ def _add_utility_parsers(subparsers):
     
     # Calibration command
     # UVL command
+    # Token savings commands
+    from empirica.cli.command_handlers.utility_commands import handle_log_token_saving, handle_efficiency_report
+    
+    log_token_saving_parser = subparsers.add_parser('log-token-saving', help='Log a token saving event')
+    log_token_saving_parser.add_argument('--session-id', required=True, help='Session ID')
+    log_token_saving_parser.add_argument('--type', required=True,
+        choices=['doc_awareness', 'finding_reuse', 'mistake_prevention', 'handoff_efficiency'],
+        help='Type of token saving')
+    log_token_saving_parser.add_argument('--tokens', type=int, required=True, help='Tokens saved')
+    log_token_saving_parser.add_argument('--evidence', required=True, help='What was avoided/reused')
+    log_token_saving_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+    log_token_saving_parser.set_defaults(func=handle_log_token_saving)
+    
+    efficiency_report_parser = subparsers.add_parser('efficiency-report', help='Show token efficiency report')
+    efficiency_report_parser.add_argument('--session-id', required=True, help='Session ID')
+    efficiency_report_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+    efficiency_report_parser.set_defaults(func=handle_efficiency_report)
+
+
 def _add_config_parsers(subparsers):
     """Add configuration command parsers"""
     # Unified config command (consolidates config-init, config-show, config-validate, config-get, config-set)
@@ -476,22 +496,6 @@ def _add_checkpoint_parsers(subparsers):
     checkpoint_diff_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Efficiency report command
-    efficiency_report_parser = subparsers.add_parser(
-        'efficiency-report',
-        help='Generate token efficiency report (Phase 1.5/2.0)'
-    )
-    efficiency_report_parser.add_argument('--session-id', required=True, help='Session ID')
-    efficiency_report_parser.add_argument(
-        '--format',
-        choices=['json', 'markdown', 'csv'],
-        default='markdown',
-        help='Report format'
-    )
-    efficiency_report_parser.add_argument('--output', '-o', help='Save to file (optional)')
-
-    # Checkpoint Signing Commands (Phase 2 - Crypto)
-    
-    # Checkpoint sign command
     checkpoint_sign_parser = subparsers.add_parser(
         'checkpoint-sign',
         help='Sign checkpoint with AI identity (Phase 2 - Crypto)'
@@ -1026,6 +1030,7 @@ def main(args=None):
             'sessions-show': handle_sessions_show_command,
             'session-snapshot': handle_session_snapshot_command,
             'sessions-export': handle_sessions_export_command,
+            'log-token-saving': handle_log_token_saving,
             # 'session-end' removed - use 'handoff-create' instead
             
             # Action commands (INVESTIGATE and ACT phase tracking)
