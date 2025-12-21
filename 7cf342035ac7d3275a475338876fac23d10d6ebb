@@ -1,0 +1,31 @@
+{
+  "goal_id": "c0cfa41d-3b4c-4a33-b03e-40950b3afd71",
+  "session_id": "7ed8d6fa-d857-4d64-9af3-53406d2f483f",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-21T14:31:50.278811+00:00",
+  "goal_data": {
+    "objective": "Complete website documentation integration",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Python API documentation page completed with essential content",
+      "Database schema page integrated and accessible",
+      "All integrations pages show proper content",
+      "Website builds and runs without errors"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-21T14:31:50.278827+00:00",
+      "action": "created"
+    }
+  ]
+}
