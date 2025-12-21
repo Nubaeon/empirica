@@ -1,0 +1,31 @@
+{
+  "goal_id": "86c8d419-2faf-4e4d-aa40-c1aac6dec166",
+  "session_id": "b3139518-3b96-4c6b-984b-d8320a519a07",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-21T10:30:08.765274+00:00",
+  "goal_data": {
+    "objective": "Fix project-agnostic bootstrap - ensure empirica-web and other projects get proper context (skills, refdocs, goals)",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Identify why bootstrap fails for empirica-web project ID",
+      "Add refdocs loading from PROJECT_CONFIG.yaml or project_reference_docs table",
+      "Test bootstrap works for both Empirica and empirica-web projects",
+      "Document expected PROJECT_CONFIG.yaml structure"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-21T10:30:08.765286+00:00",
+      "action": "created"
+    }
+  ]
+}
