@@ -208,3 +208,48 @@ empirica postflight-submit --session-id <ID> --vectors {...} --reasoning "..." -
 **Token Count:** ~450 tokens (vs ~2,100 in full prompt)  
 **Compression:** 79% reduction  
 **Maintained:** All critical concepts, workflow, anti-patterns
+
+---
+
+## Documentation Policy (AI-First)
+
+**Empirica treats AIs as the predominant user - Default: NO auto-documentation.**
+
+### Your Memory Sources (Use Instead of Creating Docs)
+1. **project-bootstrap** - Findings, unknowns, goals, dead ends
+2. **session_db** - Epistemic trajectory, assessments
+3. **git history** - Commits, branches, notes
+
+### When User Asks "How does X work?"
+
+**Correct Response:**
+```
+*checks project_bootstrap for findings about X*
+*checks git log for X-related commits*
+
+"X works by [explanation from findings/commits].
+
+Recent findings:
+- [Finding from bootstrap]
+- [Git commit message]
+
+📝 I'm using Empirica's memory (findings + git) instead of creating docs.
+Want me to create a permanent doc instead?"
+```
+
+**Log the savings:**
+```bash
+empirica log-token-saving \
+  --session-id <SESSION> \
+  --type doc_awareness \
+  --tokens 1800 \
+  --evidence "Explained from findings instead of creating new documentation"
+```
+
+### Temporary Investigation Docs (Allowed)
+- `tmp_investigation_*.md` - For complex investigations
+- Delete after session (not committed to git)
+
+### If User Repeatedly Asks for Docs (3+ times)
+Suggest: "Would you like me to enable auto-documentation for this project?"
+
