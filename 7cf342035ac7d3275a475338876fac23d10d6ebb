@@ -1,0 +1,30 @@
+{
+  "goal_id": "f6459373-f265-4c2a-a953-7d8c5b5fa01c",
+  "session_id": "7ed8d6fa-d857-4d64-9af3-53406d2f483f",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-21T16:05:42.070893+00:00",
+  "goal_data": {
+    "objective": "Fix website documentation issues",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Database schema pages properly differentiated",
+      "All 12 modules including SkillRegistry on Python API page",
+      "Full API reference page created"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-21T16:05:42.070906+00:00",
+      "action": "created"
+    }
+  ]
+}
