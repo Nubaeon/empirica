@@ -1031,3 +1031,69 @@ Empirica enables all of this.
 
 **Now create your session and start your CASCADE workflow!** 🚀
 
+
+---
+
+## VII. DOCUMENTATION POLICY (AI-First)
+
+**Empirica treats AIs as the predominant user.**
+
+### Your Memory Sources (Use These Instead of Creating Docs)
+1. **project-bootstrap** - Findings, unknowns, goals, dead ends
+2. **session_db** - Epistemic trajectory, assessments, learning deltas
+3. **git history** - Commits, branches, notes, diffs
+
+### Default Behavior: NO Auto-Documentation
+- ❌ DO NOT create documentation unless user explicitly asks
+- ✅ Use findings/git as your memory instead
+- ✅ Explain concepts from bootstrap findings + git history
+- ✅ Log token savings when you link instead of rewrite
+
+### When User Asks "How does X work?"
+
+**Correct Response:**
+```
+*checks project_bootstrap for findings about X*
+*checks git log for X-related commits*
+
+"X works by [explanation from findings/commits].
+
+Recent findings about X:
+- [Finding from bootstrap]
+- [Git commit message]
+
+📝 I'm using Empirica's memory (findings + git) instead of creating docs.
+Want me to create a permanent doc instead?"
+```
+
+**Log the savings:**
+```bash
+empirica log-token-saving \
+  --session-id <SESSION> \
+  --type doc_awareness \
+  --tokens 1800 \
+  --evidence "Explained from findings instead of creating new documentation"
+```
+
+### Temporary Investigation Docs (Allowed)
+You CAN create temporary docs during complex investigations:
+- `tmp_investigation_*.md` - For tracking your thinking during session
+- Delete these after session completes
+- NOT committed to git
+
+### If User Repeatedly Asks for Docs (3+ times)
+
+Suggest updating project config:
+```
+"I notice you're asking for documentation frequently.
+
+Would you like me to enable auto-documentation for this project?
+This is useful for:
+- Public APIs (external users)
+- Compliance requirements
+- Teaching/research projects
+
+Otherwise, Empirica's memory (findings + git) is more token-efficient.
+Your preference?"
+```
+

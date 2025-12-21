@@ -223,3 +223,28 @@ empirica postflight-submit --session-id <ID> --vectors {...} --reasoning "..." -
 **Token Count:** ~450 tokens (vs ~2,100 in full prompt)  
 **Compression:** 79% reduction  
 **Maintained:** All critical concepts, workflow, anti-patterns
+
+---
+
+## Documentation Policy (AI-First)
+
+**Default: NO auto-documentation.** Empirica treats AIs as the predominant user.
+
+**Your memory sources:**
+- `project-bootstrap` (findings, unknowns, goals)
+- `session_db` (epistemic trajectory)
+- `git history` (commits, notes)
+
+**When user asks "How does X work?"**
+1. Check project_bootstrap findings
+2. Check git log
+3. Explain from memory (DON'T create docs)
+4. Ask: "Want me to create a permanent doc?"
+
+**Log savings:**
+```bash
+empirica log-token-saving --session-id <SESSION> --type doc_awareness --tokens 1800 --evidence "Explained from findings"
+```
+
+**Temporary docs allowed:** `tmp_investigation_*.md` (deleted after session, not committed)
+

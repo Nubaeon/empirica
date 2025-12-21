@@ -1,0 +1,33 @@
+{
+  "session_id": "81a9dfd3",
+  "task": "Starting Phase 2 of Empirica documentation. Focus on advanced modules: persona, metacognitive_cascade, investigation plugins.",
+  "vectors": {
+    "engagement": {
+      "score": 0.85,
+      "rationale": "Actively collaborating on documentation strategy",
+      "evidence": "Discussing specific modules and creating structured plans"
+    },
+    "foundation": {
+      "know": {"score": 0.85, "rationale": "Strong knowledge of core modules, moderate on advanced", "evidence": "Phase 1 completion"},
+      "do": {"score": 0.8, "rationale": "Confident in documentation process", "evidence": "Established templates"},
+      "context": {"score": 0.8, "rationale": "Good understanding of gaps", "evidence": "Gap analysis completed"}
+    },
+    "comprehension": {
+      "clarity": {"score": 0.8, "rationale": "Clear task definition", "evidence": "Defined subtasks"},
+      "coherence": {"score": 0.85, "rationale": "Coherent with Phase 1", "evidence": "Following established patterns"},
+      "signal": {"score": 0.8, "rationale": "Clear priorities", "evidence": "Gap analysis focus"},
+      "density": {"score": 0.5, "rationale": "Moderate load", "evidence": "Known process, unknown modules"}
+    },
+    "execution": {
+      "state": {"score": 0.8, "rationale": "Good environment mapping", "evidence": "Understand architecture"},
+      "change": {"score": 0.75, "rationale": "Confident in tracking", "evidence": "Using goals system"},
+      "completion": {"score": 0.8, "rationale": "Clear criteria", "evidence": "Established success metrics"},
+      "impact": {"score": 0.7, "rationale": "Understand impact", "evidence": "Targeting coverage improvements"}
+    },
+    "uncertainty": {
+      "score": 0.3,
+      "rationale": "Moderate uncertainty about advanced modules",
+      "evidence": "Need to explore internals"
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+    "session_id": "81a9dfd3",
+    "objective": "Continue Empirica documentation - Phase 2: Advanced modules and remaining gaps",
+    "scope": {
+        "breadth": 0.7,
+        "duration": 0.6,
+        "coordination": 0.2
+    },
+    "estimated_complexity": 0.7,
+    "success_criteria": [
+        {
+            "description": "Document persona module and related components",
+            "threshold": 1.0
+        },
+        {
+            "description": "Document metacognitive_cascade module and investigation plugins",
+            "threshold": 1.0
+        },
+        {
+            "description": "Address remaining CLI command handler documentation gaps",
+            "threshold": 0.8
+        },
+        {
+            "description": "Reduce code orphan gaps by additional 30% (from ~550 to ~385)",
+            "threshold": 0.7
+        },
+        {
+            "description": "Improve overall documentation coverage to 93%+",
+            "threshold": 0.93
+        }
+    ],
+    "subtasks": [
+        {
+            "id": "doc-persona-module",
+            "description": "Document empirica.core.persona module and components",
+            "priority": "high",
+            "estimated_effort": 0.3
+        },
+        {
+            "id": "doc-metacognitive-cascade",
+            "description": "Document empirica.core.metacognitive_cascade module",
+            "priority": "high",
+            "estimated_effort": 0.3
+        },
+        {
+            "id": "doc-investigation-plugins",
+            "description": "Document investigation plugins and advanced features",
+            "priority": "medium",
+            "estimated_effort": 0.2
+        },
+        {
+            "id": "doc-remaining-cli-handlers",
+            "description": "Document remaining CLI command handlers with gaps",
+            "priority": "medium",
+            "estimated_effort": 0.2
+        }
+    ],
+    "metadata": {
+        "project": "empirica-documentation",
+        "phase": "2",
+        "type": "documentation",
+        "priority": "high",
+        "starting_gaps": 550,
+        "target_gaps": 385,
+        "starting_coverage": 90.0,
+        "target_coverage": 93.0,
+        "focus_areas": ["persona", "metacognitive_cascade", "investigation", "cli"]
+    }
+}

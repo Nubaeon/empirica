@@ -48,19 +48,49 @@ except ImportError:
 
 
 class SessionDatabase:
-    """Central SQLite database for all session data"""
+    """Central database for all session data (supports SQLite and PostgreSQL)"""
 
-    def __init__(self, db_path: Optional[str] = None):
-        if db_path is None:
-            # Use path resolver for consistent database location
-            from empirica.config.path_resolver import get_session_db_path
-            db_path = get_session_db_path()
+    def __init__(self, db_path: Optional[str] = None, db_type: Optional[str] = None):
+        """
+        Initialize session database with pluggable backend
 
-        self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        Args:
+            db_path: Path to database (SQLite only, ignored for PostgreSQL)
+            db_type: "sqlite" or "postgresql" (defaults to config or "sqlite")
+        """
+        # Import adapter layer
+        from empirica.data.db_adapter import DatabaseAdapter
+        from empirica.config.database_config import get_database_config
 
-        self.conn = sqlite3.connect(str(self.db_path))
-        self.conn.row_factory = sqlite3.Row  # Return rows as dicts
+        # If db_type not specified, load from config
+        if db_type is None:
+            db_config = get_database_config()
+            db_type = db_config.get("type", "sqlite")
+        else:
+            db_config = {"type": db_type}
+
+        # Create appropriate adapter
+        if db_type == "sqlite":
+            # Use provided path or default
+            if db_path is None:
+                from empirica.config.path_resolver import get_session_db_path
+                db_path = str(get_session_db_path())
+
+            self.db_path = Path(db_path)
+            self.adapter = DatabaseAdapter.create(db_type="sqlite", db_path=str(self.db_path))
+            logger.info(f"📊 Session Database initialized (SQLite): {self.db_path}")
+
+        elif db_type == "postgresql":
+            pg_config = db_config.get("postgresql", {})
+            self.adapter = DatabaseAdapter.create(db_type="postgresql", **pg_config)
+            self.db_path = None  # N/A for PostgreSQL
+            logger.info(f"📊 Session Database initialized (PostgreSQL)")
+
+        else:
+            raise ValueError(f"Unsupported database type: {db_type}")
+
+        # Expose raw connection for backward compatibility with repositories
+        self.conn = self.adapter.conn
 
         self._create_tables()
 
@@ -70,8 +100,6 @@ class SessionDatabase:
         self.branches = BranchRepository(self.conn)
         self.breadcrumbs = BreadcrumbRepository(self.conn)
         self.projects = ProjectRepository(self.conn)
-
-        logger.info(f"📊 Session Database initialized: {self.db_path}")
 
     @staticmethod
     def _validate_session_id(session_id: str) -> None:
@@ -736,6 +764,20 @@ class SessionDatabase:
             )
         """)
 
+        # Table 28: token_savings (Token Efficiency Tracking)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS token_savings (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                saving_type TEXT NOT NULL,
+                tokens_saved INTEGER NOT NULL,
+                evidence TEXT,
+                logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+            )
+        """)
+
         # Create indexes for performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_ai ON sessions(ai_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_time)")
@@ -787,6 +829,10 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_merge_decisions_session ON merge_decisions(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_merge_decisions_round ON merge_decisions(investigation_round)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_merge_decisions_winning_branch ON merge_decisions(winning_branch_id)")
+
+        # Indexes for token_savings
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_savings_session ON token_savings(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_savings_type ON token_savings(saving_type)")
 
         self.conn.commit()
         
@@ -3200,8 +3246,74 @@ class SessionDatabase:
         """
         return self.breadcrumbs.get_mistakes(session_id, goal_id, limit)
 
+    def log_token_saving(
+        self,
+        session_id: str,
+        saving_type: str,
+        tokens_saved: int,
+        evidence: str
+    ) -> str:
+        """Log a token saving event
+        
+        Args:
+            session_id: Session identifier
+            saving_type: Type of saving ('doc_awareness', 'finding_reuse', 'mistake_prevention', 'handoff_efficiency')
+            tokens_saved: Estimated tokens saved
+            evidence: What was avoided/reused
+            
+        Returns:
+            saving_id: UUID string
+        """
+        saving_id = str(uuid.uuid4())
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO token_savings (
+                id, session_id, saving_type, tokens_saved, evidence
+            ) VALUES (?, ?, ?, ?, ?)
+        """, (saving_id, session_id, saving_type, tokens_saved, evidence))
+        
+        self.conn.commit()
+        logger.info(f"💰 Token saving logged: {tokens_saved} tokens ({saving_type})")
+        
+        return saving_id
+
+    def get_session_token_savings(self, session_id: str) -> Dict:
+        """Get token savings summary for a session
+        
+        Args:
+            session_id: Session identifier
+            
+        Returns:
+            Dictionary with total_tokens_saved, cost_saved_usd, and breakdown by type
+        """
+        cursor = self.conn.cursor()
+        
+        cursor.execute("""
+            SELECT saving_type, SUM(tokens_saved) as total, COUNT(*) as count
+            FROM token_savings
+            WHERE session_id = ?
+            GROUP BY saving_type
+        """, (session_id,))
+        
+        breakdown = {}
+        total = 0
+        for row in cursor.fetchall():
+            saving_type = row[0]
+            tokens = row[1]
+            count = row[2]
+            breakdown[saving_type] = {'tokens': tokens, 'count': count}
+            total += tokens
+        
+        return {
+            'total_tokens_saved': total,
+            'cost_saved_usd': round(total * 0.00003, 4),
+            'breakdown': breakdown
+        }
+
     def close(self):
         """Close database connection"""
+        self.conn.commit()
         self.conn.close()
 
 

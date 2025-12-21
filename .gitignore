@@ -76,4 +76,8 @@ docs/MARKET_OPPORTUNITIES.md
 docs/MARKET_STRATEGY.md
 docs/WHY_BLUE_OCEAN.md
 docs/MEETINGS_ADAPTER_DESIGN.md
-empirica-epre/
+
+# Temporary AI investigation docs (not committed)
+tmp_investigation_*
+docs/tmp_*
+*_investigation_*.md

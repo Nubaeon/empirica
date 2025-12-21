@@ -430,3 +430,56 @@ def handle_sessions_export_command(args):
         
     except Exception as e:
         handle_cli_error(e, "Exporting session", getattr(args, 'verbose', False))
+
+def handle_log_token_saving(args):
+    """Log a token saving event"""
+    from empirica.data.session_database import SessionDatabase
+    
+    db = SessionDatabase()
+    
+    saving_id = db.log_token_saving(
+        session_id=args.session_id,
+        saving_type=args.type,
+        tokens_saved=args.tokens,
+        evidence=args.evidence
+    )
+    
+    db.close()
+    
+    if args.output == 'json':
+        print(json.dumps({
+            'ok': True,
+            'saving_id': saving_id,
+            'tokens_saved': args.tokens,
+            'type': args.type
+        }))
+    else:
+        print(f"✅ Token saving logged: {args.tokens} tokens saved ({args.type})")
+
+
+def handle_efficiency_report(args):
+    """Show token efficiency report for session"""
+    from empirica.data.session_database import SessionDatabase
+    
+    db = SessionDatabase()
+    savings = db.get_session_token_savings(args.session_id)
+    
+    if args.output == 'json':
+        print(json.dumps(savings, indent=2))
+    else:
+        print("\n📊 Token Efficiency Report")
+        print("━" * 60)
+        print(f"✅ Tokens Saved This Session:     {savings['total_tokens_saved']:,} tokens")
+        print(f"💰 Cost Saved:                    ${savings['cost_saved_usd']:.4f} USD")
+        
+        if savings['breakdown']:
+            print("\nBreakdown:")
+            for saving_type, data in savings['breakdown'].items():
+                type_label = saving_type.replace('_', ' ').title()
+                print(f"  {type_label:.<30} {data['tokens']:,} tokens ({data['count']}x)")
+        else:
+            print("\n  (No token savings logged yet)")
+        
+        print("━" * 60)
+    
+    db.close()

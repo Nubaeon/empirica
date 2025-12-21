@@ -1,0 +1,60 @@
+# Empirica Database Configuration Examples
+
+# ==========================================
+# SQLite (Default - Recommended for most users)
+# ==========================================
+database:
+  type: sqlite
+  sqlite:
+    path: ./.empirica/sessions/sessions.db  # Repo-local (default)
+
+# ==========================================
+# PostgreSQL (Enterprise/Multi-Agent)
+# ==========================================
+# database:
+#   type: postgresql
+#   postgresql:
+#     host: localhost
+#     port: 5432
+#     database: empirica
+#     user: empirica
+#     password: ${POSTGRES_PASSWORD}  # Reads from environment variable
+
+# ==========================================
+# Supabase (Managed PostgreSQL)
+# ==========================================
+# database:
+#   type: postgresql
+#   postgresql:
+#     host: db.xxxxxxxxxxxxx.supabase.co
+#     port: 5432
+#     database: postgres
+#     user: postgres
+#     password: ${SUPABASE_PASSWORD}
+#     sslmode: require  # Supabase requires SSL
+
+# ==========================================
+# Docker PostgreSQL (Local Development)
+# ==========================================
+# database:
+#   type: postgresql
+#   postgresql:
+#     host: localhost
+#     port: 5432
+#     database: empirica
+#     user: empirica
+#     password: empirica
+
+# ==========================================
+# Environment Variable Override
+# ==========================================
+# You can also configure via environment variables (no config file needed):
+#
+#   export EMPIRICA_DB_TYPE=postgresql
+#   export EMPIRICA_DB_HOST=localhost
+#   export EMPIRICA_DB_PORT=5432
+#   export EMPIRICA_DB_NAME=empirica
+#   export EMPIRICA_DB_USER=empirica
+#   export EMPIRICA_DB_PASSWORD=secret
+#
+# Environment variables take precedence over config.yaml
