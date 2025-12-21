@@ -101,6 +101,28 @@ class SessionDatabase:
         self.breadcrumbs = BreadcrumbRepository(self.conn)
         self.projects = ProjectRepository(self.conn)
 
+        # Core repositories need special handling to avoid circular dependency
+        # We'll initialize them lazily when first accessed
+        self._tasks = None
+        self._core_goals = None
+        self._tasks_db_path = str(self.db_path) if self.db_path else None
+
+    @property
+    def tasks(self):
+        """Lazy-load TaskRepository to avoid circular dependency"""
+        if self._tasks is None:
+            from empirica.core.tasks.repository import TaskRepository
+            self._tasks = TaskRepository(db_path=self._tasks_db_path)
+        return self._tasks
+
+    @property
+    def core_goals(self):
+        """Lazy-load core GoalRepository for query methods"""
+        if self._core_goals is None:
+            from empirica.core.goals.repository import GoalRepository as CoreGoalRepository
+            self._core_goals = CoreGoalRepository()
+        return self._core_goals
+
     @staticmethod
     def _validate_session_id(session_id: str) -> None:
         """
@@ -2393,6 +2415,77 @@ class SessionDatabase:
         """
         return self.goals.query_unknowns_summary(session_id)
 
+    def query_goals(self, session_id: Optional[str] = None, is_completed: Optional[bool] = None) -> List:
+        """Query goals with optional filters (delegates to core GoalsRepository)
+
+        Args:
+            session_id: Optional session UUID to filter by
+            is_completed: Optional completion status filter (True/False/None for all)
+
+        Returns:
+            List of Goal objects matching filters
+        """
+        return self.core_goals.query_goals(
+            session_id=session_id,
+            is_completed=is_completed
+        )
+
+    def query_subtasks(self, goal_id: Optional[str] = None, status: Optional[str] = None) -> List:
+        """Query subtasks with optional filters (delegates to TaskRepository)
+
+        Args:
+            goal_id: Optional goal UUID to filter by
+            status: Optional status filter (string like 'pending', 'completed')
+
+        Returns:
+            List of SubTask objects matching filters
+        """
+        # Convert status string to TaskStatus enum if provided
+        task_status = None
+        if status:
+            from empirica.core.tasks.types import TaskStatus
+            try:
+                task_status = TaskStatus(status)
+            except ValueError:
+                pass  # Invalid status, ignore
+
+        return self.tasks.query_subtasks(
+            goal_id=goal_id,
+            status=task_status
+        )
+
+    def get_goal_subtasks(self, goal_id: str) -> List:
+        """Get all subtasks for a specific goal (delegates to TaskRepository)
+
+        Args:
+            goal_id: Goal UUID
+
+        Returns:
+            List of SubTask objects for this goal
+        """
+        return self.tasks.get_goal_subtasks(goal_id)
+
+    def query_goal_progress(self, goal_id: str) -> Dict:
+        """Get goal completion statistics
+
+        Args:
+            goal_id: Goal UUID
+
+        Returns:
+            Dict with total, completed, remaining counts and percentage
+        """
+        subtasks = self.tasks.get_goal_subtasks(goal_id)
+        total = len(subtasks)
+        completed = sum(1 for st in subtasks if st.status.value == "completed")
+
+        return {
+            "goal_id": goal_id,
+            "total": total,
+            "completed": completed,
+            "remaining": total - completed,
+            "percentage": round((completed / total * 100), 1) if total > 0 else 0.0
+        }
+
     # ========== Investigation Branches (Epistemic Auto-Merge) ==========
 
     def create_branch(self, session_id: str, branch_name: str, investigation_path: str,
@@ -3312,7 +3405,11 @@ class SessionDatabase:
         }
 
     def close(self):
-        """Close database connection"""
+        """Close database connection and all repositories"""
+        if hasattr(self, '_tasks') and self._tasks is not None:
+            self._tasks.close()
+        if hasattr(self, '_core_goals') and self._core_goals is not None:
+            self._core_goals.close()
         self.conn.commit()
         self.conn.close()
 
