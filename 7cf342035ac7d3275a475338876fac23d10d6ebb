@@ -1,0 +1,31 @@
+{
+  "goal_id": "6f5b48c2-9440-4105-ba4d-59befc9c4acf",
+  "session_id": "7ed8d6fa-d857-4d64-9af3-53406d2f483f",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-21T16:12:16.348875+00:00",
+  "goal_data": {
+    "objective": "Implement CLI-BEADS Todo Integration",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.6,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Direct mapping between CLI todos and BEADS subtasks",
+      "Automatic BEADS issue creation from todos",
+      "Two-way synchronization system",
+      "Conflict resolution mechanism"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-21T16:12:16.348888+00:00",
+      "action": "created"
+    }
+  ]
+}
