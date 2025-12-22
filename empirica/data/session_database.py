@@ -3404,6 +3404,112 @@ class SessionDatabase:
             'breakdown': breakdown
         }
 
+    def get_workspace_overview(self) -> Dict[str, Any]:
+        """
+        Get epistemic overview of all projects in workspace.
+        
+        Returns:
+            Dictionary with:
+            - total_projects: int
+            - projects: List of project dicts with epistemic health
+            - workspace_stats: Aggregate statistics
+        """
+        cursor = self.conn.cursor()
+        
+        # Get all projects with their latest epistemic state
+        cursor.execute("""
+            SELECT 
+                p.id,
+                p.name,
+                p.description,
+                p.status,
+                p.total_sessions,
+                p.last_activity_timestamp,
+                -- Get latest epistemic vectors from most recent session reflex
+                (SELECT r.know FROM reflexes r
+                 JOIN sessions s ON s.session_id = r.session_id
+                 WHERE s.project_id = p.id
+                 ORDER BY r.timestamp DESC LIMIT 1) as latest_know,
+                (SELECT r.uncertainty FROM reflexes r
+                 JOIN sessions s ON s.session_id = r.session_id
+                 WHERE s.project_id = p.id
+                 ORDER BY r.timestamp DESC LIMIT 1) as latest_uncertainty,
+                -- Counts
+                (SELECT COUNT(*) FROM project_findings WHERE project_id = p.id) as findings_count,
+                (SELECT COUNT(*) FROM project_unknowns WHERE project_id = p.id AND is_resolved = 0) as unknowns_count,
+                (SELECT COUNT(*) FROM project_dead_ends WHERE project_id = p.id) as dead_ends_count
+            FROM projects p
+            ORDER BY p.last_activity_timestamp DESC
+        """)
+        
+        projects = []
+        for row in cursor.fetchall():
+            project = {
+                'project_id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'status': row[3],
+                'total_sessions': row[4],
+                'last_activity': row[5],
+                'epistemic_state': {
+                    'know': row[6] if row[6] is not None else 0.5,
+                    'uncertainty': row[7] if row[7] is not None else 0.5
+                },
+                'findings_count': row[8],
+                'unknowns_count': row[9],
+                'dead_ends_count': row[10]
+            }
+            
+            # Calculate health metrics
+            if project['total_sessions'] > 0:
+                dead_end_ratio = project['dead_ends_count'] / project['total_sessions']
+                project['dead_end_ratio'] = dead_end_ratio
+                
+                # Health score (0-1): weighted by knowledge and uncertainty
+                know = project['epistemic_state']['know']
+                uncertainty = project['epistemic_state']['uncertainty']
+                health = (know * 0.6) + ((1 - uncertainty) * 0.4) - (dead_end_ratio * 0.2)
+                project['health_score'] = max(0.0, min(1.0, health))
+            else:
+                project['dead_end_ratio'] = 0.0
+                project['health_score'] = 0.5
+            
+            projects.append(project)
+        
+        # Get workspace-level stats
+        workspace_stats = self._get_workspace_stats()
+        
+        return {
+            'total_projects': len(projects),
+            'projects': projects,
+            'workspace_stats': workspace_stats
+        }
+    
+    def _get_workspace_stats(self) -> Dict[str, Any]:
+        """Get workspace-level aggregated statistics"""
+        cursor = self.conn.cursor()
+        
+        cursor.execute("""
+            SELECT 
+                COUNT(DISTINCT p.id) as total_projects,
+                COUNT(DISTINCT s.session_id) as total_sessions,
+                COUNT(DISTINCT CASE WHEN s.end_time IS NULL THEN s.session_id END) as active_sessions,
+                AVG(CASE WHEN r.know IS NOT NULL THEN r.know END) as avg_know,
+                AVG(CASE WHEN r.uncertainty IS NOT NULL THEN r.uncertainty END) as avg_uncertainty
+            FROM projects p
+            LEFT JOIN sessions s ON s.project_id = p.id
+            LEFT JOIN reflexes r ON r.session_id = s.session_id
+        """)
+        
+        row = cursor.fetchone()
+        return {
+            'total_projects': row[0] or 0,
+            'total_sessions': row[1] or 0,
+            'active_sessions': row[2] or 0,
+            'avg_know': round(row[3], 2) if row[3] else 0.5,
+            'avg_uncertainty': round(row[4], 2) if row[4] else 0.5
+        }
+
     def close(self):
         """Close database connection and all repositories"""
         if hasattr(self, '_tasks') and self._tasks is not None:

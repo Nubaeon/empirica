@@ -649,6 +649,22 @@ def _add_checkpoint_parsers(subparsers):
     project_bootstrap_parser.add_argument('--epistemic-state', help='Epistemic vectors from PREFLIGHT as JSON string (e.g., \'{"uncertainty":0.8,"know":0.3}\')')
     project_bootstrap_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
+    # Workspace overview command
+    workspace_overview_parser = subparsers.add_parser(
+        'workspace-overview',
+        help='Show epistemic health overview of all projects in workspace'
+    )
+    workspace_overview_parser.add_argument('--output', choices=['dashboard', 'json'], default='dashboard', help='Output format')
+    workspace_overview_parser.add_argument('--sort-by', choices=['activity', 'knowledge', 'uncertainty', 'name'], default='activity', help='Sort projects by')
+    workspace_overview_parser.add_argument('--filter', choices=['active', 'inactive', 'complete'], help='Filter projects by status')
+
+    # Workspace map command
+    workspace_map_parser = subparsers.add_parser(
+        'workspace-map',
+        help='Discover git repositories in parent directory and show epistemic health'
+    )
+    workspace_map_parser.add_argument('--output', choices=['dashboard', 'json'], default='dashboard', help='Output format')
+
     # Project semantic search command (Qdrant-backed)
     project_search_parser = subparsers.add_parser(
         'project-search',
@@ -1082,6 +1098,8 @@ def main(args=None):
             'project-handoff': handle_project_handoff_command,
             'project-list': handle_project_list_command,
             'project-bootstrap': handle_project_bootstrap_command,
+            'workspace-overview': handle_workspace_overview_command,
+            'workspace-map': handle_workspace_map_command,
             'project-search': handle_project_search_command,
             'project-embed': handle_project_embed_command,
             'doc-check': handle_doc_check_command,
