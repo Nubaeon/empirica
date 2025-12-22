@@ -598,22 +598,67 @@ def handle_goals_list_command(args):
         if session_id:
             goals = goal_repo.get_session_goals(session_id)
         else:
-            # For now, require session ID - prevents overwhelming results
+            # Show helpful reminder with preview of recent goals
+            from empirica.data.session_database import SessionDatabase
+            preview_db = SessionDatabase()
+            cursor = preview_db.conn.cursor()
+            
+            # Get 5 most recent goals across all sessions
+            cursor.execute("""
+                SELECT g.id, g.objective, g.created_timestamp, g.session_id,
+                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
+                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed') as completed_subtasks
+                FROM goals g
+                ORDER BY g.created_timestamp DESC
+                LIMIT 5
+            """)
+            
+            preview_goals = []
+            for row in cursor.fetchall():
+                total = row[4] or 0
+                completed = row[5] or 0
+                completion_pct = (completed / total * 100) if total > 0 else 0.0
+                
+                preview_goals.append({
+                    "goal_id": row[0],
+                    "objective": row[1][:80] + "..." if len(row[1]) > 80 else row[1],
+                    "created_at": row[2],
+                    "session_id": row[3],
+                    "completion_percentage": completion_pct,
+                    "subtasks": f"{completed}/{total}"
+                })
+            
+            preview_db.close()
+            
             result = {
                 "ok": False,
                 "session_id": None,
-                "goals_count": 0,
-                "goals": [],
-                "message": "Session ID required for goals list. Use: goals-list --session-id <id>",
+                "message": "Session ID required for full goals list",
+                "hint": "Create a session: empirica session-create --ai-id <YOUR_AI_ID>",
+                "hint2": "Then query goals: empirica goals-list --session-id <SESSION_ID>",
+                "recent_goals_preview": preview_goals,
+                "preview_count": len(preview_goals),
+                "preview_note": "Showing last 5 goals across all sessions as preview",
                 "timestamp": time.time()
             }
             
             if hasattr(args, 'output') and args.output == 'json':
                 print(json.dumps(result, indent=2))
             else:
-                print("❌ Session ID required")
-                print("   Usage: goals-list --session-id <session_id>")
-                print("   Use 'sessions-list' to find session IDs")
+                print("⚠️  Session ID required for full goals list")
+                print()
+                print("📋 Quick Start:")
+                print("   1. Create session: empirica session-create --ai-id <YOUR_AI_ID>")
+                print("   2. List goals: empirica goals-list --session-id <SESSION_ID>")
+                print()
+                if preview_goals:
+                    print(f"🔍 Recent Goals Preview (last {len(preview_goals)}):")
+                    for i, goal in enumerate(preview_goals, 1):
+                        status_emoji = "✅" if goal['completion_percentage'] == 100.0 else "⏳"
+                        print(f"   {status_emoji} {i}. {goal['objective']}")
+                        print(f"      ID: {goal['goal_id'][:8]}... | Session: {goal['session_id'][:8]}... | Progress: {goal['subtasks']}")
+                else:
+                    print("   (No goals found in database)")
             
             goal_repo.close()
             return result
