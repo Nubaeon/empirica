@@ -5,6 +5,29 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2025-12-22
+
+### Added
+- **Improved goals-list UX** - Shows helpful preview of 5 most recent goals when no session ID provided
+- Preview includes goal ID, objective, session ID, completion percentage, and progress
+- Better guidance for creating sessions and querying goals properly
+
+### Changed
+- **goals-list** command now provides more helpful error messages and previews instead of failing silently
+- Goal/subtask query workflow improved with contextual hints
+
+### Fixed
+- Goal completion command now uses correct repository methods
+- Project embed command properly handles goal/subtask metadata
+
+### Refactored
+- Moved `forgejo-plugin-empirica/` (125MB) to separate `empirica-dashboards` repo
+- Moved `slides/` (72MB) to separate `empirica-web` repo  
+- Moved `archive/` folder to `empirica-web` repo
+- Reduced main package size by ~200MB for cleaner distribution
+
+---
+
 ## [1.0.3] - 2025-12-19
 
 ### Added
