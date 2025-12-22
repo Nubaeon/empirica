@@ -1,0 +1,28 @@
+{
+  "goal_id": "7d898ae7-f09f-4918-9ca1-5466f7da4bbd",
+  "session_id": "4ad3c5ca-730c-4067-a5aa-08bb6cf41685",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-22T23:05:46.794046+00:00",
+  "goal_data": {
+    "objective": "Test Investigation Commands",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Document branching/merging"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-22T23:05:46.794060+00:00",
+      "action": "created"
+    }
+  ]
+}
