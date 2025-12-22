@@ -4,6 +4,7 @@ MANIFEST.in
 README.md
 pyproject.toml
 docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md
+docs/system-prompts/CLAUDE.md
 docs/system-prompts/CLAUDE_DESKTOP.md
 docs/system-prompts/COPILOT_INSTRUCTIONS.md
 docs/system-prompts/CUSTOMIZATION_GUIDE.md
@@ -85,6 +86,7 @@ empirica/components/edit_verification/strategy_executor.py
 empirica/config/__init__.py
 empirica/config/ai_registry.json
 empirica/config/credentials_loader.py
+empirica/config/database_config.py
 empirica/config/goal_scope_loader.py
 empirica/config/investigation_profiles.yaml
 empirica/config/mcp_security.yaml
@@ -185,6 +187,7 @@ empirica/dashboard/__init__.py
 empirica/dashboard/cascade_monitor.py
 empirica/dashboard/snapshot_monitor.py
 empirica/data/__init__.py
+empirica/data/db_adapter.py
 empirica/data/session_database.py
 empirica/data/session_json_handler.py
 empirica/data/repositories/__init__.py
