@@ -30,7 +30,7 @@ def handle_goals_complete_command(args):
         
         # Validate goal exists
         goal_repo = GoalRepository()
-        goal = goal_repo.get_by_id(goal_id)
+        goal = goal_repo.get_goal(goal_id)
         
         if not goal:
             result = {
@@ -43,17 +43,17 @@ def handle_goals_complete_command(args):
         # Get BEADS issue ID and session info
         db = SessionDatabase()
         cursor = db.conn.execute(
-            "SELECT beads_issue_id FROM goals WHERE id = ?",
+            "SELECT beads_issue_id, session_id FROM goals WHERE id = ?",
             (goal_id,)
         )
         row = cursor.fetchone()
         beads_issue_id = row[0] if row and row[0] else None
-        db.close()
+        session_id = row[1] if row and row[1] else None
         
         result = {
             "ok": True,
             "goal_id": goal_id,
-            "session_id": goal.session_id,
+            "session_id": session_id,
             "beads_issue_id": beads_issue_id
         }
         
