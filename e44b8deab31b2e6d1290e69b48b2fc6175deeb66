@@ -1,0 +1,28 @@
+{
+  "goal_id": "e1a7bc26-0581-4714-a401-f641cfdd3475",
+  "session_id": "4ad3c5ca-730c-4067-a5aa-08bb6cf41685",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-22T23:03:03.834104+00:00",
+  "goal_data": {
+    "objective": "Comprehensive CLI command testing and documentation",
+    "scope": {
+      "breadth": 0.9,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Create reference documentation"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-22T23:03:03.834118+00:00",
+      "action": "created"
+    }
+  ]
+}
