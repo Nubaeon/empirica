@@ -21,7 +21,7 @@ except Exception:  # pragma: no cover
 
 class EmbeddingsProvider:
     def __init__(self) -> None:
-        self.provider = os.getenv("EMPIRICA_EMBEDDINGS_PROVIDER", "openai").lower()
+        self.provider = os.getenv("EMPIRICA_EMBEDDINGS_PROVIDER", "local").lower()
         self.model = os.getenv("EMPIRICA_EMBEDDINGS_MODEL", "text-embedding-3-small")
         self._client = None
         if self.provider == "openai":

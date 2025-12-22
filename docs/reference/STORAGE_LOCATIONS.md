@@ -271,4 +271,30 @@ def project_db():
 
 ---
 
+## Troubleshooting
+
+### Git Notes Not Being Created (Fixed in v0.9.1)
+
+**Symptom:** `storage_layers.git_notes = false` in CASCADE command output
+
+**Root Cause:** Git subprocess command missing `-F -` flag to read from stdin
+
+**Fixed in:** v0.9.1 (commit daff2801, 2025-12-11)
+
+**Solution:** Updated `GitEnhancedReflexLogger` to use `-F -` flag in git notes commands.
+
+**Verification:**
+```bash
+# Check if git notes are being created
+git notes --ref empirica/session/<SESSION_ID>/PREFLIGHT/1 show HEAD
+
+# Should display JSON checkpoint data
+```
+
+**See Also:**
+- Full technical details: `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md` (Troubleshooting section)
+- Bug fix changelog: `docs/reference/CHANGELOG.md` (v0.9.1)
+
+---
+
 **📌 Remember:** Config is global, data is project-local!

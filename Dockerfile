@@ -20,11 +20,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
-COPY dist/empirica-1.0.2-py3-none-any.whl /tmp/
+COPY dist/empirica-1.0.3-py3-none-any.whl /tmp/
 
 # Install Empirica
-RUN pip install --no-cache-dir /tmp/empirica-1.0.2-py3-none-any.whl \
-    && rm /tmp/empirica-1.0.2-py3-none-any.whl
+RUN pip install --no-cache-dir /tmp/empirica-1.0.3-py3-none-any.whl \
+    && rm /tmp/empirica-1.0.3-py3-none-any.whl
 
 # Create directory for user data
 RUN mkdir -p /data/.empirica

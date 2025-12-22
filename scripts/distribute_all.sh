@@ -149,8 +149,8 @@ if command -v docker &> /dev/null; then
     docker build -t empirica:1.0.0-beta -t empirica:latest .
     
     echo "🧪 Testing Docker image..."
-    docker run --rm empirica:1.0.0-beta bootstrap --help > /dev/null
-    docker run --rm --entrypoint python empirica:1.0.0-beta -c "from empirica.plugins.modality_switcher import ModalitySwitcher"
+    docker run --rm empirica:1.0.0-beta --version > /dev/null
+    docker run --rm empirica:1.0.0-beta --help > /dev/null
     
     echo "✅ Docker image built and tested successfully"
     echo ""

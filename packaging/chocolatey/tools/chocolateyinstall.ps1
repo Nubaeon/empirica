@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 $packageName = 'empirica'
 $packageVersion = '1.0.1'
 $url = "https://files.pythonhosted.org/packages/source/e/empirica/empirica-$packageVersion.tar.gz"
-$checksum = '43e22ff9c6cdda053e7171b470445237981e00099e231410076d04f0483635f5'
+$checksum = 'a1cd3e9c7a670a1233dcb6e9875832cf92c16da5e8cbf2cbc2c89771e5a2029f'
 $checksumType = 'sha256'
 
 Write-Host "Installing Empirica $packageVersion..." -ForegroundColor Cyan

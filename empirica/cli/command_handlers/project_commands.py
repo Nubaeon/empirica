@@ -214,7 +214,7 @@ def handle_project_bootstrap_command(args):
             project_id = resolve_project_id(project_id, db)
             db.close()
         
-        check_integrity = getattr(args, 'check_integrity', False)
+        check_integrity = False  # Disabled: naive parser has false positives. Use pattern matcher instead.
         context_to_inject = getattr(args, 'context_to_inject', False)
         task_description = getattr(args, 'task_description', None)
         

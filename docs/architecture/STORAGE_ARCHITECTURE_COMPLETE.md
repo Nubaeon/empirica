@@ -650,7 +650,7 @@ Enable **session continuity** without transferring full context (98% compression
 ### Dual Storage Strategy
 ```
 1. Git Notes (distributed):  .git/notes/empirica/handoff/<session-id>/
-2. SQLite (fast queries):    .empirica/sessions/handoffs.db
+2. SQLite (fast queries):    .empirica/sessions/sessions.db
 ```
 
 ### Handoff Data Structure
@@ -705,7 +705,7 @@ empirica handoff-create \
 
 # Stored in:
 # - Git notes: .git/notes/empirica/handoff/abc123/
-# - SQLite: handoffs.db
+# - SQLite: sessions.db (contains handoff_reports and project_handoffs tables)
 # - Format: JSON + markdown (both)
 ```
 
