@@ -1,0 +1,28 @@
+{
+  "goal_id": "200d3640-df5d-4700-b82f-c6220b2d721c",
+  "session_id": "3c975414-1d74-4c3c-b026-86e875227eda",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-24T19:48:29.679656+00:00",
+  "goal_data": {
+    "objective": "Test high scope CHECK prompt",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.6,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Test passes"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-24T19:48:29.679668+00:00",
+      "action": "created"
+    }
+  ]
+}
