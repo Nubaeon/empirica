@@ -465,6 +465,50 @@ def handle_project_bootstrap_command(args):
             
             # ===== END NEW =====
             
+            # ===== FLOW STATE METRICS =====
+            if breadcrumbs.get('flow_metrics'):
+                print(f"📊 Flow State Analysis (Recent Sessions):")
+                print()
+                
+                flow_data = breadcrumbs['flow_metrics']
+                if flow_data:
+                    for i, session in enumerate(flow_data[:5], 1):
+                        score = session['flow_score']
+                        # Choose emoji based on score
+                        if score >= 0.9:
+                            emoji = "⭐"
+                        elif score >= 0.7:
+                            emoji = "🟢"
+                        elif score >= 0.5:
+                            emoji = "🟡"
+                        else:
+                            emoji = "🔴"
+                        
+                        print(f"   {i}. {session['session_id']} ({session['ai_id']})")
+                        print(f"      Flow Score: {score:.2f} {emoji}")
+                        
+                        # Show top 3 components
+                        components = session['components']
+                        top_3 = sorted(components.items(), key=lambda x: x[1], reverse=True)[:3]
+                        print(f"      Top factors: {', '.join([f'{k}={v:.2f}' for k, v in top_3])}")
+                        
+                        # Show recommendations if any
+                        if session['recommendations']:
+                            print(f"      💡 {session['recommendations'][0]}")
+                        print()
+                    
+                    # Show what creates flow
+                    print(f"   💡 Flow Triggers (Optimize for these):")
+                    print(f"      ✅ CASCADE complete (PREFLIGHT → POSTFLIGHT)")
+                    print(f"      ✅ Bootstrap loaded early")
+                    print(f"      ✅ Goal with subtasks")
+                    print(f"      ✅ CHECK for high-scope work")
+                    print(f"      ✅ AI naming convention (<model>-<workstream>)")
+                    print()
+                else:
+                    print(f"   No completed sessions yet to analyze")
+                    print()
+            
             # ===== FILE TREE =====
             if breadcrumbs.get('file_tree'):
                 print(f"📁 Project Structure (depth 3, respects .gitignore):")

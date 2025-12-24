@@ -2839,6 +2839,39 @@ class SessionDatabase:
         except Exception as e:
             logger.debug(f"Could not scan for epistemic artifacts: {e}")
         
+        # ===== Flow State Metrics =====
+        # Calculate flow metrics for recent sessions to show productivity patterns
+        flow_metrics_data = []
+        try:
+            from empirica.metrics.flow_state import FlowStateMetrics
+            flow_metrics = FlowStateMetrics(self)
+            
+            # Get recent completed sessions (last 5)
+            cursor.execute("""
+                SELECT session_id, ai_id, start_time, end_time
+                FROM sessions
+                WHERE project_id = ? AND end_time IS NOT NULL
+                ORDER BY start_time DESC
+                LIMIT 5
+            """, (resolved_id,))
+            recent_sessions = cursor.fetchall()
+            
+            for sess in recent_sessions:
+                try:
+                    flow_result = flow_metrics.calculate_flow_score(sess['session_id'])
+                    if 'error' not in flow_result:
+                        flow_metrics_data.append({
+                            'session_id': sess['session_id'][:8] + '...',
+                            'ai_id': sess['ai_id'],
+                            'flow_score': flow_result['flow_score'],
+                            'components': flow_result['components'],
+                            'recommendations': flow_result['recommendations']
+                        })
+                except Exception as e:
+                    logger.debug(f"Could not calculate flow for session {sess['session_id']}: {e}")
+        except Exception as e:
+            logger.debug(f"Could not calculate flow metrics: {e}")
+        
         # Get recent artifacts/modified files from handoff reports
         # This tells AI which files were changed and may need doc updates
         # Include sessions with matching project_id OR NULL project_id (legacy sessions)
@@ -3017,6 +3050,8 @@ class SessionDatabase:
             "ai_activity": ai_activity,
             "epistemic_artifacts": epistemic_artifacts,
             # ===== END NEW =====
+            # Flow state metrics
+            "flow_metrics": flow_metrics_data,
             # File tree structure
             "file_tree": self.generate_file_tree(project_root, max_depth=3, use_cache=True),
             "recent_artifacts": recent_artifacts,
