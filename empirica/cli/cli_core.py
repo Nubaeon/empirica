@@ -968,6 +968,8 @@ def main(args=None):
         os.environ['EMPIRICA_QUIET'] = '1'
     
     start_time = time.time()
+    success = False
+    error_message = None
     
     try:
         # Route to appropriate command handler
@@ -1110,9 +1112,11 @@ def main(args=None):
         handler = command_map.get(parsed_args.command)
         if handler:
             handler(parsed_args)
+            success = True
         else:
             print(f"❌ Unknown command: {parsed_args.command}")
             parser.print_help()
+            error_message = f"Unknown command: {parsed_args.command}"
             return 1
         
         # Show execution time if verbose
@@ -1120,14 +1124,53 @@ def main(args=None):
             end_time = time.time()
             print(f"\n⏱️ Execution time: {end_time - start_time:.3f}s")
         
+        # Log command usage telemetry
+        try:
+            from empirica.data.session_database import SessionDatabase
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            session_id = getattr(parsed_args, 'session_id', None) or getattr(parsed_args, 'session_id_named', None)
+            
+            db = SessionDatabase()
+            db.log_command_usage(
+                command_name=parsed_args.command,
+                session_id=session_id,
+                execution_time_ms=execution_time_ms,
+                success=success,
+                error_message=error_message
+            )
+            db.close()
+        except Exception:
+            pass  # Never fail on telemetry
+        
         return 0
         
     except KeyboardInterrupt:
         print("\n🛑 Operation interrupted by user")
+        error_message = "Operation interrupted by user"
         return 130
     except Exception as e:
+        error_message = str(e)
         handle_cli_error(e, f"Command '{parsed_args.command}'", getattr(parsed_args, 'verbose', False))
         return 1
+    finally:
+        # Log command usage telemetry (also catches errors)
+        if 'parsed_args' in locals() and hasattr(parsed_args, 'command'):
+            try:
+                from empirica.data.session_database import SessionDatabase
+                execution_time_ms = int((time.time() - start_time) * 1000)
+                session_id = getattr(parsed_args, 'session_id', None) or getattr(parsed_args, 'session_id_named', None)
+                
+                db = SessionDatabase()
+                db.log_command_usage(
+                    command_name=parsed_args.command,
+                    session_id=session_id,
+                    execution_time_ms=execution_time_ms,
+                    success=success,
+                    error_message=error_message
+                )
+                db.close()
+            except Exception:
+                pass  # Never fail on telemetry
 
 
 if __name__ == "__main__":
