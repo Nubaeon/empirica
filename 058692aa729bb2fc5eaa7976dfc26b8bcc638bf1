@@ -1,0 +1,31 @@
+{
+  "goal_id": "4a262d36-67bb-4021-865e-6bb44dc4d9ab",
+  "session_id": "94058d00-f53a-47ff-ab27-ff86ff005fe6",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-24T20:11:13.288404+00:00",
+  "goal_data": {
+    "objective": "Add flow state metrics to project-bootstrap for visible productivity patterns",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Flow metrics calculated for last 5 sessions",
+      "Color-coded display in bootstrap (\u2b50 \ud83d\udfe2 \ud83d\udfe1 \ud83d\udd34)",
+      "Top contributing factors shown",
+      "Flow triggers checklist displayed"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-24T20:11:13.288417+00:00",
+      "action": "created"
+    }
+  ]
+}
