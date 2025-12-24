@@ -3778,3 +3778,103 @@ if __name__ == "__main__":
     db = SessionDatabase()
     db.close()
     logger.info("✅ Session Database ready")
+
+    def log_command_usage(
+        self,
+        command_name: str,
+        session_id: Optional[str] = None,
+        execution_time_ms: Optional[int] = None,
+        success: bool = True,
+        error_message: Optional[str] = None
+    ) -> str:
+        """Log CLI command usage for telemetry and legacy detection
+        
+        Args:
+            command_name: Name of command executed (e.g., "goals-create")
+            session_id: Optional session ID for context
+            execution_time_ms: Execution time in milliseconds
+            success: Whether command succeeded
+            error_message: Error message if failed
+            
+        Returns:
+            Usage log ID
+        """
+        import uuid
+        import time
+        
+        usage_id = str(uuid.uuid4())
+        timestamp = time.time()
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO command_usage 
+            (id, command_name, session_id, timestamp, execution_time_ms, success, error_message)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (usage_id, command_name, session_id, timestamp, execution_time_ms, success, error_message))
+        
+        self.conn.commit()
+        return usage_id
+    
+    def get_command_usage_stats(self, days: int = 30) -> Dict:
+        """Get command usage statistics for legacy detection
+        
+        Args:
+            days: Number of days to analyze
+            
+        Returns:
+            Dict with usage stats, legacy candidates, broken commands
+        """
+        import time
+        
+        cursor = self.conn.cursor()
+        since_timestamp = time.time() - (days * 24 * 3600)
+        
+        # Most used commands
+        cursor.execute("""
+            SELECT command_name, COUNT(*) as usage_count,
+                   AVG(execution_time_ms) as avg_time_ms,
+                   MAX(timestamp) as last_used
+            FROM command_usage
+            WHERE timestamp >= ?
+            GROUP BY command_name
+            ORDER BY usage_count DESC
+        """, (since_timestamp,))
+        
+        most_used = [dict(row) for row in cursor.fetchall()]
+        
+        # Rarely used (legacy candidates)
+        cursor.execute("""
+            SELECT command_name, COUNT(*) as usage_count,
+                   MAX(timestamp) as last_used,
+                   (? - MAX(timestamp)) / 86400.0 as days_since_last_use
+            FROM command_usage
+            WHERE timestamp >= ?
+            GROUP BY command_name
+            HAVING usage_count < 5
+            ORDER BY usage_count ASC
+        """, (time.time(), since_timestamp))
+        
+        legacy_candidates = [dict(row) for row in cursor.fetchall()]
+        
+        # Low success rate (broken/confusing)
+        cursor.execute("""
+            SELECT command_name,
+                   COUNT(*) as total_uses,
+                   SUM(CASE WHEN success THEN 1 ELSE 0 END) as successes,
+                   ROUND(100.0 * SUM(CASE WHEN success THEN 1 ELSE 0 END) / COUNT(*), 2) as success_rate
+            FROM command_usage
+            WHERE timestamp >= ?
+            GROUP BY command_name
+            HAVING total_uses >= 10 AND success_rate < 50
+            ORDER BY success_rate ASC
+        """, (since_timestamp,))
+        
+        broken_commands = [dict(row) for row in cursor.fetchall()]
+        
+        return {
+            'period_days': days,
+            'most_used': most_used[:10],
+            'legacy_candidates': legacy_candidates,
+            'broken_commands': broken_commands,
+            'total_commands_tracked': len(most_used)
+        }
