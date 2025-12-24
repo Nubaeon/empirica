@@ -466,7 +466,7 @@ def handle_project_bootstrap_command(args):
             # ===== END NEW =====
             
             # ===== FLOW STATE METRICS =====
-            if breadcrumbs.get('flow_metrics'):
+            if breadcrumbs.get('flow_metrics') is not None:
                 print(f"📊 Flow State Analysis (Recent Sessions):")
                 print()
                 
@@ -506,7 +506,9 @@ def handle_project_bootstrap_command(args):
                     print(f"      ✅ AI naming convention (<model>-<workstream>)")
                     print()
                 else:
-                    print(f"   No completed sessions yet to analyze")
+                    print(f"   💡 No completed sessions yet")
+                    print(f"   Tip: Close active sessions with POSTFLIGHT to see flow metrics")
+                    print(f"   Flow score will show patterns from completed work")
                     print()
             
             # ===== DATABASE SCHEMA SUMMARY =====
