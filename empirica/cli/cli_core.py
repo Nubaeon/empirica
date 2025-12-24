@@ -46,10 +46,7 @@ Examples:
     # Session commands (use session-create for session initialization)
     _add_session_parsers(subparsers)
 
-    # Assessment commands
-    _add_assessment_parsers(subparsers)
-    
-    # Cascade commands
+    # CASCADE commands (preflight-submit, check, postflight-submit)
     _add_cascade_parsers(subparsers)
     
     # Investigation commands
@@ -57,9 +54,6 @@ Examples:
     
     # Performance commands
     _add_performance_parsers(subparsers)
-    
-    # Component commands
-    _add_component_parsers(subparsers)
 
     # Skill commands
     _add_skill_parsers(subparsers)
@@ -69,9 +63,6 @@ Examples:
     
     # Config commands
     _add_config_parsers(subparsers)
-    
-    # Profile commands
-    _add_profile_parsers(subparsers)
     
     # Monitor commands
     _add_monitor_parsers(subparsers)
@@ -96,12 +87,6 @@ Examples:
     
     return parser
 
-
-def _add_assessment_parsers(subparsers):
-    """Add assessment command parsers"""
-    # Main assess command
-    
-    # Metacognitive assessment
 
 def _add_cascade_parsers(subparsers):
     """Add cascade command parsers (DEPRECATED - use MCP tools instead)
@@ -274,13 +259,6 @@ def _add_performance_parsers(subparsers):
     performance_parser.add_argument('--verbose', action='store_true', help='Show detailed results')
 
     # REMOVED: benchmark command - use performance --benchmark instead
-
-
-def _add_component_parsers(subparsers):
-    """Add component command parsers"""
-    # List components command
-    # Explain component command
-    # Demo component command
 
 
 def _add_skill_parsers(subparsers):
@@ -903,14 +881,6 @@ def _add_checkpoint_parsers(subparsers):
     session_create_parser.add_argument('--project-id', help='Project UUID to link session to (optional, auto-detected from git remote if omitted)')
     session_create_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
     session_create_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
-
-
-def _add_profile_parsers(subparsers):
-    """Add profile management command parsers"""
-    # Profile list command
-    # NOTE: Profile commands are NOT YET IMPLEMENTED
-    # profile-list, profile-show, profile-create, profile-set-default removed to avoid confusion
-    # TODO: Implement profile management in Phase 4
 
 
 def _add_user_interface_parsers(subparsers):
