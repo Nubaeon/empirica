@@ -1,0 +1,31 @@
+{
+  "goal_id": "cc74d74d-7f97-4752-8ad8-56695fdf8b00",
+  "session_id": "fbf6c2a7-e669-4169-83ec-1bcd73d87f4b",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-24T20:11:13.533248+00:00",
+  "goal_data": {
+    "objective": "Complete Epistemic Environmental Awareness with DB schema and structure health",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "DB schema summary shows tables orthogonally",
+      "Structure health detects project patterns",
+      "Static vs dynamic context separated",
+      "Complete spatial awareness achieved"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-24T20:11:13.533269+00:00",
+      "action": "created"
+    }
+  ]
+}
