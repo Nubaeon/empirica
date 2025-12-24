@@ -1,0 +1,33 @@
+{
+  "goal_id": "b65be061-ac87-49a2-a736-fd4e57dec0f4",
+  "session_id": "2226d0d1-9c50-49e2-bf1d-4a1fb80a6740",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-24T19:31:41.686996+00:00",
+  "goal_data": {
+    "objective": "Add file tree structure awareness to project-bootstrap for better project context",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "project-bootstrap shows file tree structure",
+      "Tree respects .gitignore patterns",
+      "Configurable depth (default 3 levels)",
+      "Performance acceptable on large repos (<500ms)",
+      "Optional caching for repeated calls",
+      "Integration with existing active work section"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-24T19:31:41.687015+00:00",
+      "action": "created"
+    }
+  ]
+}
