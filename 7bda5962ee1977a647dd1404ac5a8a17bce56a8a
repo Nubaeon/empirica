@@ -1,0 +1,30 @@
+{
+  "goal_id": "f9928945-d41b-4b96-895b-4d67f3d5a9eb",
+  "session_id": "3c975414-1d74-4c3c-b026-86e875227eda",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-24T19:47:11.007512+00:00",
+  "goal_data": {
+    "objective": "Implement smart CHECK prompts and empirical tracking",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "goals-create shows CHECK prompt for scope >0.6",
+      "CHECK usage added to flow metrics",
+      "Empirical tracking query created"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-24T19:47:11.007530+00:00",
+      "action": "created"
+    }
+  ]
+}
