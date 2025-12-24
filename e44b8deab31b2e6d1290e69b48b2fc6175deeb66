@@ -1,0 +1,33 @@
+{
+  "goal_id": "4dd5deb2-8650-4957-b9f4-9fc729d7da53",
+  "session_id": "b6875d42-44ab-46ff-a286-8970d0f4ce5c",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-24T19:05:50.317476+00:00",
+  "goal_data": {
+    "objective": "Enhance project-bootstrap with active work context and AI naming standards",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Bootstrap shows active sessions with in_progress goals",
+      "Bootstrap shows AI activity summary (last 7 days)",
+      "Bootstrap links findings to active goals",
+      "Bootstrap shows epistemic artifacts (audit files)",
+      "AI naming convention added to system prompts",
+      "Dynamic context (DB queries) vs static content (prompts) clarified"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-24T19:05:50.317489+00:00",
+      "action": "created"
+    }
+  ]
+}
