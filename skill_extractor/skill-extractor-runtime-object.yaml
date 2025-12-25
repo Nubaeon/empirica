@@ -1,0 +1,451 @@
+# Skill Extractor - Runtime Object for Empirica
+# Based on Anthropic's skill-creator progressive disclosure design
+# Extracts decision frameworks from skill references/ → meta-agent-config.yaml
+
+##############################################################################
+# KEY INSIGHT FROM SKILL-CREATOR
+##############################################################################
+# 
+# Skills use 3-level progressive disclosure:
+#   1. Metadata (name + description) - Always loaded (~100 words)
+#   2. SKILL.md body - When skill triggers (<5k words, <500 lines)
+#   3. references/ - Loaded as Claude needs it (domain knowledge)
+#
+# For epistemic reference cards, we DON'T load full skills.
+# Instead, we EXTRACT from references/ into meta-agent-config.yaml
+# 
+# Why? Token efficiency:
+#   - Full skill references/: 5-10kb per domain
+#   - Extracted decision frameworks: 0.5-1kb per domain
+#   - 80-90% token reduction
+#
+##############################################################################
+
+version: "1.0.0"
+purpose: "Extract skill references/ into meta-agent-config.yaml for epistemic bootstrap"
+
+# What We're Extracting From
+
+source_files:
+  primary: "references/ directory from each skill"
+  examples:
+    - "~/.claude/skills/astro-islands/references/patterns.md"
+    - "~/.claude/skills/performance/references/budgets.md"
+    - "~/.claude/skills/design-system/references/components.md"
+  
+  rationale: |
+    Per skill-creator, references/ contains "documentation intended to be
+    loaded as needed into context to inform Claude's process and thinking."
+    
+    This is EXACTLY what we want for epistemic reference cards:
+    - Domain knowledge (what to consider)
+    - Decision frameworks (when to use X vs Y)
+    - Anti-patterns (what not to do)
+    
+    But we don't want to load the FULL references/ (too verbose).
+    We extract the DECISION-RELEVANT parts into concise YAML.
+
+# Extraction Patterns (What to Look For)
+
+extraction_patterns:
+  
+  # Pattern 1: Domain-Specific Organization
+  # (From skill-creator Pattern 2)
+  domain_specific:
+    description: |
+      Skills with multiple domains organize references/ by domain:
+      
+      bigquery-skill/references/
+        ├── finance.md (revenue metrics)
+        ├── sales.md (pipeline data)
+        └── product.md (API usage)
+      
+      Each reference file = one domain in meta-agent-config
+    
+    extract_from: "Entire reference file (but condense)"
+    
+    output_structure:
+      domain: "Inferred from filename (finance.md → finance)"
+      decision_frameworks: "Extract from 'When to use' sections"
+      cost_models: "Extract from 'Performance' sections"
+      references: "Doc pointers mentioned in file"
+  
+  # Pattern 2: Conditional Details
+  # (From skill-creator Pattern 3)
+  conditional_details:
+    description: |
+      Skills use conditional references:
+      
+      "**For tracked changes**: See [REDLINING.md](REDLINING.md)"
+      "**For OOXML details**: See [OOXML.md](OOXML.md)"
+      
+      These indicate decision branches: "If X condition, read Y file"
+    
+    extract_from: "Conditional links in SKILL.md or references/"
+    
+    output_structure:
+      condition: "What triggers needing this knowledge"
+      reference_file: "Which file to read"
+      decision_impact: "How this affects choices"
+  
+  # Pattern 3: Decision Frameworks
+  decision_frameworks:
+    markers:
+      - "## When to use"
+      - "## When NOT to use"
+      - "## Decision framework"
+      - "## Selection criteria"
+      - "## Choose between"
+    
+    extract: "Bullet points, decision trees, comparison tables"
+    condense: "Remove verbose explanations, keep criteria"
+  
+  # Pattern 4: Anti-Patterns
+  anti_patterns:
+    markers:
+      - "## Anti-pattern"
+      - "## Common mistake"
+      - "## Avoid"
+      - "## Pitfall"
+      - "## Don't"
+    
+    extract: "What fails, why it fails, better alternative"
+    condense: "One line per anti-pattern"
+  
+  # Pattern 5: Cost Models
+  cost_models:
+    markers:
+      - "## Performance"
+      - "## Cost"
+      - "## Bundle size"
+      - "## Trade-offs"
+    
+    extract: "Numerical costs (kb, ms), decision rules"
+    condense: "Just the numbers and rules"
+  
+  # Pattern 6: Doc References
+  doc_references:
+    markers:
+      - "See docs/"
+      - "Reference:"
+      - "For more details:"
+    
+    extract: "Exact doc paths, relevant sections"
+    condense: "path + sections only"
+
+# Extraction Workflow
+
+workflow:
+  step_1_identify_skills:
+    action: "Find all skills in collection"
+    path: "~/.claude/skills/"
+    filter: "Skills with references/ directory"
+  
+  step_2_read_references:
+    action: "For each skill, read all files in references/"
+    parse: "Markdown structure, headers, lists"
+  
+  step_3_extract_content:
+    action: "Apply extraction patterns to find decision-relevant content"
+    patterns:
+      - decision_frameworks
+      - anti_patterns
+      - cost_models
+      - doc_references
+  
+  step_4_condense:
+    action: "Remove verbose explanations, keep only decision criteria"
+    rules:
+      - "Bullet points > prose"
+      - "Numbers > descriptions"
+      - "Exact conditions > vague guidelines"
+      - "One line per pattern"
+  
+  step_5_structure_yaml:
+    action: "Format as meta-agent-config.yaml"
+    template: |
+      meta_agent:
+        domain_knowledge:
+          {domain}:
+            decision_frameworks:
+              when_to_use: [criteria]
+              when_not_to_use: [criteria]
+            anti_patterns:
+              - id: identifier
+                description: brief
+                alternative: better_approach
+            cost_models: {costs}
+            references:
+              primary: path
+              sections: [list]
+  
+  step_6_merge:
+    action: "Integrate with existing meta-agent-config.yaml"
+    strategy: "Append new domains, merge if exists"
+
+# Example: Astro Islands Skill
+
+example_extraction:
+  
+  input_structure:
+    ~/.claude/skills/astro-islands/:
+      SKILL.md: |
+        Core workflow for islands (500 lines)
+        References: See references/patterns.md for decision frameworks
+      
+      references/:
+        patterns.md: |
+          ## When to Use Islands
+          - Component needs client-side interactivity
+          - Requires state management
+          - Real-time updates necessary
+          
+          ## When NOT to Use Islands
+          - Static content → use server-side rendering
+          - Simple forms → use progressive enhancement
+          - Content below fold → lazy load instead
+          
+          ## Common Mistakes
+          - Using islands for forms: 40kb vs 6kb progressive enhancement
+          - Alpine.js with Astro: causes hydration conflicts
+          - Nested islands: race conditions
+          
+          ## Performance Costs
+          - Typical island: 30-50kb JS bundle
+          - Progressive enhancement: 5-10kb
+          - Decision rule: Islands must be 5x more valuable than cost
+          
+          ## References
+          For hydration strategies, see docs/astro/islands.md#hydration
+  
+  extraction_process:
+    step_1: "Identify decision frameworks section"
+    step_2: "Extract 'when to use' and 'when not to use' lists"
+    step_3: "Extract anti-patterns with costs"
+    step_4: "Extract performance costs"
+    step_5: "Extract doc references"
+    step_6: "Condense all to YAML"
+  
+  output_yaml:
+    meta_agent:
+      domain_knowledge:
+        astro-islands:
+          decision_frameworks:
+            when_to_use:
+              - "Client-side interactivity needed"
+              - "State management required"
+              - "Real-time updates"
+            
+            when_not_to_use:
+              - "Static content → server-side"
+              - "Simple forms → progressive enhancement"
+              - "Below fold → lazy load"
+          
+          anti_patterns:
+            - id: "islands-forms"
+              description: "Islands for forms"
+              cost: "40kb vs 6kb"
+              alternative: "Progressive enhancement"
+            
+            - id: "alpine-astro"
+              description: "Alpine.js with Astro"
+              reason: "Hydration conflicts"
+            
+            - id: "nested-islands"
+              description: "Nested islands"
+              reason: "Race conditions"
+          
+          cost_models:
+            typical_island: "30-50kb"
+            progressive_enhancement: "5-10kb"
+            decision_rule: "5x value over cost"
+          
+          references:
+            primary: "docs/astro/islands.md"
+            sections: ["hydration"]
+  
+  token_comparison:
+    full_skill_references: "5kb (patterns.md)"
+    extracted_yaml: "0.6kb"
+    reduction: "88%"
+    
+    bootstrap_card_usage:
+      loads: "Extracted YAML (0.6kb) + noematic objects (0.8kb)"
+      total: "1.4kb"
+      vs_full_references: "5kb (72% reduction)"
+
+# Integration with Bootstrap
+
+bootstrap_integration:
+  
+  how_it_works:
+    1. "Skills extracted → meta-agent-config.yaml (one-time)"
+    2. "Meta-agent-config stored (not loaded by default)"
+    3. "PREFLIGHT detects uncertainty → bootstrap query (MCP)"
+    4. "Bootstrap loads: config YAML + noematic objects (Qdrant)"
+    5. "Reference card constructed (1-2kb decision-relevant content)"
+    6. "AI receives card → uncertainty reduced"
+  
+  comparison:
+    without_extractor:
+      approach: "Load full skill references/ on demand"
+      tokens_per_domain: "5-10kb"
+      total_for_3_domains: "15-30kb"
+    
+    with_extractor:
+      approach: "Extract to YAML, load via bootstrap card"
+      tokens_per_domain: "0.5-1kb (in card)"
+      total_for_3_domains: "1.5-3kb"
+      reduction: "80-90%"
+
+# CLI Interface
+
+cli_usage:
+  
+  extract_single_skill:
+    command: |
+      skill-extractor extract \
+        --skill ~/.claude/skills/astro-islands \
+        --output meta-agent-config.yaml
+    
+    result: "Extracts astro-islands domain to config"
+  
+  extract_all_skills:
+    command: |
+      skill-extractor extract-all \
+        --skill-dir ~/.claude/skills \
+        --output meta-agent-config.yaml
+    
+    result: "Extracts all skills to single config file"
+  
+  extract_by_domain:
+    command: |
+      skill-extractor extract \
+        --domains astro,performance,design \
+        --skill-dir ~/.claude/skills \
+        --output meta-agent-config.yaml
+    
+    result: "Extracts only specified domains"
+  
+  validate:
+    command: |
+      skill-extractor validate \
+        --config meta-agent-config.yaml
+    
+    result: "Validates output YAML structure"
+
+# Output Schema
+
+output_schema:
+  meta_agent_config:
+    structure: |
+      meta_agent:
+        epistemic_thresholds:
+          bootstrap_trigger:
+            - condition: "context < 0.5"
+            - condition: "uncertainty > 0.6"
+        
+        domain_knowledge:
+          # Extracted from skills
+          {domain_name}:
+            decision_frameworks:
+              when_to_use:
+                - criterion_1
+                - criterion_2
+              when_not_to_use:
+                - criterion_1
+                - criterion_2
+              selection_logic:
+                - rule_1
+                - rule_2
+            
+            anti_patterns:
+              - id: identifier
+                description: what_fails
+                cost: numerical_cost (if applicable)
+                reason: why_it_fails
+                alternative: better_approach
+            
+            cost_models:
+              pattern_name: "cost_value"
+              decision_rule: "when_to_apply"
+            
+            references:
+              primary: "docs/path/to/file.md"
+              sections:
+                - section_name_1
+                - section_name_2
+              read_if: "condition_for_deep_dive"
+        
+        bootstrap_mappings:
+          tags_to_domains:
+            "#semantic-tag": domain_name
+            "#another-tag": [multiple, domains]
+
+# Maintenance
+
+maintenance:
+  
+  when_to_run:
+    - "New skill added to collection"
+    - "Existing skill references/ updated"
+    - "Meta-agent-config schema changes"
+  
+  workflow: |
+    1. Run: skill-extractor extract-all --skill-dir ~/.claude/skills
+    2. Review: Check generated YAML for accuracy
+    3. Test: Bootstrap query with new config
+    4. Commit: Git commit meta-agent-config.yaml
+  
+  validation:
+    - "Output YAML is valid syntax"
+    - "All required keys present"
+    - "Token reduction achieved (>80%)"
+    - "Decision-relevance preserved"
+
+# Implementation Notes
+
+implementation:
+  
+  language: "Python 3.10+"
+  
+  dependencies:
+    - "PyYAML: YAML parsing/generation"
+    - "markdown: Parse markdown structure"
+    - "zipfile: Read .skill files (zip archives)"
+    - "pathlib: File operations"
+  
+  key_functions:
+    - "extract_skill(skill_path) → domain_yaml"
+    - "identify_sections(markdown) → {section_type: content}"
+    - "condense_content(content) → concise_yaml"
+    - "merge_configs(new, existing) → merged_yaml"
+    - "validate_yaml(yaml_data) → bool"
+  
+  testing:
+    - "Unit: Section identification, content extraction"
+    - "Integration: Full skill → YAML validation"
+    - "E2E: Extract → bootstrap → verify card"
+
+# Critical Design Principles
+
+design_principles:
+  
+  from_skill_creator:
+    conciseness: |
+      "The context window is a public good"
+      Extract only decision-relevant content, not explanations
+    
+    progressive_disclosure: |
+      "Keep SKILL.md lean, use references/ for details"
+      We extract FROM references/, but make it even leaner for runtime
+    
+    token_efficiency: |
+      "Challenge each piece of information"
+      Does this justify its token cost? If not, don't extract it
+  
+  for_epistemic_cards:
+    decision_focus: "Only content that affects decisions"
+    no_duplication: "Don't repeat what docs already say"
+    exact_pointers: "Reference docs precisely (path + section)"
+    numerical_precision: "Keep exact costs (40kb not 'large')"
