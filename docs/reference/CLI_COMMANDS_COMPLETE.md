@@ -1026,9 +1026,6 @@ empirica chat --resume <SESSION_ID>
 - `--session`: Session ID (creates new if doesn't exist)
 - `--resume`: Resume existing session by ID
 - `--no-save`: Don't save conversation
-- `--no-uvl`: Disable UVL visual indicators
-- `--uvl-verbose`: Show detailed routing decisions
-- `--uvl-stream`: Emit UVL JSON stream for visualization
 - `--verbose`: Show routing details
 
 ---
