@@ -530,22 +530,38 @@ def _extract_numeric_value(value):
 def _extract_all_vectors(vectors):
     """
     Extract all numeric values from vectors dict, handling nested structures.
+    Flattens nested dicts to extract individual vector values.
     
     Args:
         vectors: Dict containing vector data (simple or nested)
     
     Returns:
         Dict with all vector names mapped to numeric values
+    
+    Example:
+        Input: {"engagement": 0.85, "foundation": {"know": 0.75, "do": 0.80}}
+        Output: {"engagement": 0.85, "know": 0.75, "do": 0.80}
     """
     extracted = {}
     
     for key, value in vectors.items():
-        numeric_value = _extract_numeric_value(value)
-        if numeric_value is not None:
-            extracted[key] = numeric_value
+        if isinstance(value, dict):
+            # Nested structure - recursively extract all sub-vectors
+            for nested_key, nested_value in value.items():
+                numeric_value = _extract_numeric_value(nested_value)
+                if numeric_value is not None:
+                    extracted[nested_key] = numeric_value
+                else:
+                    # Fallback to default if extraction fails
+                    extracted[nested_key] = 0.5
         else:
-            # Fallback to default if extraction fails
-            extracted[key] = 0.5
+            # Simple value - extract directly
+            numeric_value = _extract_numeric_value(value)
+            if numeric_value is not None:
+                extracted[key] = numeric_value
+            else:
+                # Fallback to default if extraction fails
+                extracted[key] = 0.5
     
     return extracted
 

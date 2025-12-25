@@ -29,8 +29,10 @@ def handle_goals_complete_command(args):
         output_format = getattr(args, 'output', 'json')
         
         # Validate goal exists
-        goal_repo = GoalRepository()
-        goal = goal_repo.get_goal(goal_id)
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+        cursor.execute("SELECT * FROM goals WHERE id = ?", (goal_id,))
+        goal = cursor.fetchone()
         
         if not goal:
             result = {
@@ -40,20 +42,20 @@ def handle_goals_complete_command(args):
             print(json.dumps(result) if output_format == 'json' else f"❌ {result['error']}")
             sys.exit(1)
         
-        # Get BEADS issue ID and session info
-        db = SessionDatabase()
+        # Get BEADS issue ID and session info  
         cursor = db.conn.execute(
-            "SELECT beads_issue_id, session_id FROM goals WHERE id = ?",
+            "SELECT beads_issue_id FROM goals WHERE id = ?",
             (goal_id,)
         )
         row = cursor.fetchone()
         beads_issue_id = row[0] if row and row[0] else None
-        session_id = row[1] if row and row[1] else None
+        db.close()
         
         result = {
             "ok": True,
             "goal_id": goal_id,
-            "session_id": session_id,
+            "objective": goal['objective'],
+            "session_id": goal['session_id'],
             "beads_issue_id": beads_issue_id
         }
         
@@ -70,8 +72,8 @@ def handle_goals_complete_command(args):
                         self.output = 'json'
                 
                 postflight_args = MockArgs(
-                    session_id=goal.session_id,
-                    task_summary=f"Completed goal: {goal.objective}"
+                    session_id=goal['session_id'],
+                    task_summary=f"Completed goal: {goal['objective']}"
                 )
                 
                 # Run postflight (this will print its own output)

@@ -19,11 +19,50 @@
 **Your AI_ID:** `claude-code` (use for all session creation/queries)
 **Your config:** Loads from `empirica/config/mco/` (model_profiles.yaml, personas.yaml, cascade_styles.yaml)
 
+**AI Identity Naming Convention:**
+- Format: `<model>-<workstream>` (e.g., `claude-bootstrap-enhancement`, `claude-cli-testing`)
+- This enables cross-session discovery and accurate project bootstrap context
+- Avoid generic names like `claude`, `ai`, or `test`
+- Project bootstrap shows active work grouped by AI identity
+
 **Key bias corrections for your model:**
 - Uncertainty: Add +0.10 (you underestimate doubt)
 - Knowledge: Subtract -0.05 (you overestimate knowing)
 
 **Your readiness gate:** confidence ≥0.70 AND uncertainty ≤0.35
+
+---
+
+## STATIC CONTEXT (Learn These - Bootstrap Shows Current State)
+
+### Database Schema (Key Tables)
+- **sessions**: Work sessions (ai_id, start_time, end_time, project_id)
+- **goals**: Objectives with scope (breadth/duration/coordination 0.0-1.0)
+- **reflexes**: CASCADE phases (PREFLIGHT/CHECK/POSTFLIGHT) with 13 vectors
+- **project_findings**: Findings linked to goals/subtasks
+- **command_usage**: CLI telemetry for usage analytics
+
+### Flow State Factors (6 Components - Empirically Validated)
+What creates high productivity:
+1. **CASCADE Completeness (25%)** - PREFLIGHT → CHECK → POSTFLIGHT
+2. **Bootstrap Usage (15%)** - Load context early
+3. **Goal Structure (15%)** - Goals with subtasks
+4. **Learning Velocity (20%)** - Know increase per hour
+5. **CHECK Usage (15%)** - Mid-session validation for high-scope
+6. **Session Continuity (10%)** - AI naming convention followed
+
+**Scoring:** 0.9+ = ⭐ Perfect | 0.7+ = 🟢 Good | 0.5+ = 🟡 Moderate | <0.5 = 🔴 Low
+
+### Project Structure Patterns (Auto-Detected)
+Bootstrap detects: python_package, django, react, monorepo, empirica_extension
+Don't prescribe structure - let bootstrap analyze and measure conformance.
+
+### Command Best Practices
+**AI-First JSON mode (preferred):**
+```bash
+echo '{"session_id": "...", "objective": "..."}' | empirica goals-create -
+```
+Always use `--output json` for machine readability.
 
 ---
 

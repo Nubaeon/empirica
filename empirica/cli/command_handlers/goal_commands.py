@@ -261,6 +261,22 @@ def handle_goals_create_command(args):
                 "beads_issue_id": beads_issue_id  # Include BEADS link in response
             }
             
+            # ===== SMART CHECK PROMPT: Scope-Based =====
+            # Show CHECK recommendation for high-scope goals
+            if scope_breadth >= 0.6 or scope_duration >= 0.5:
+                check_prompt = {
+                    "type": "check_recommendation",
+                    "reason": "high_scope",
+                    "message": "💡 High-scope goal: Consider running CHECK after initial investigation",
+                    "scope_trigger": {
+                        "breadth": scope_breadth if scope_breadth >= 0.6 else None,
+                        "duration": scope_duration if scope_duration >= 0.5 else None
+                    },
+                    "suggested_timing": "after 1-2 subtasks or 30+ minutes",
+                    "command": f"empirica check --session-id {session_id}"
+                }
+                result["check_recommendation"] = check_prompt
+            
             # Store goal in git notes for cross-AI discovery (Phase 1: Git Automation)
             try:
                 from empirica.core.canonical.empirica_git import GitGoalStore
@@ -746,8 +762,11 @@ def handle_goals_list_command(args):
                 print(f"\n{status_emoji} Goal {i}: {goal['goal_id']}")
                 print(f"   Objective: {goal['objective'][:60]}...")
                 print(f"   Scope: breadth={goal['scope']['breadth']:.2f}, duration={goal['scope']['duration']:.2f}, coordination={goal['scope']['coordination']:.2f}")
-                print(f"   Progress: {goal['completion_percentage']:.1f}% ({goal['completed_subtasks']}/{goal['total_subtasks']} subtasks)")
-                print(f"   Created: {goal['created_at'][:10]}")
+                print(f"   Progress: {float(goal['completion_percentage']):.1f}% ({goal['completed_subtasks']}/{goal['total_subtasks']} subtasks)")
+                # Convert timestamp to date string
+                from datetime import datetime
+                created_date = datetime.fromtimestamp(goal['created_at']).strftime('%Y-%m-%d')
+                print(f"   Created: {created_date}")
         
         goal_repo.close()
         return result

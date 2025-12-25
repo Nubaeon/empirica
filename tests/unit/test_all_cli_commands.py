@@ -17,12 +17,12 @@ import json
 from pathlib import Path
 
 class TestCoreWorkflowCommands:
-    """Test Core Workflow commands (8 commands)"""
+    """Test Core Workflow commands (CASCADE phases)
     
-    def test_bootstrap_help(self):
-        """Bootstrap command has working --help"""
-        result = subprocess.run(["empirica", "bootstrap", "--help"], capture_output=True)
-        assert result.returncode == 0
+    NOTE: These are INTERFACE tests only - they verify commands exist and accept args.
+    Epistemic assessment quality (preflight/check/postflight) requires INTEGRATION tests
+    with real reasoning. DO NOT use dummy epistemic data here - AIs might think it's canonical.
+    """
     
     def test_preflight_help(self):
         """Preflight command has working --help"""
@@ -62,35 +62,6 @@ class TestCoreWorkflowCommands:
     def test_workflow_help(self):
         """Workflow command has working --help"""
         result = subprocess.run(["empirica", "workflow", "--help"], capture_output=True)
-        assert result.returncode == 0
-
-
-class TestAssessmentCommands:
-    """Test Assessment commands (5 commands)"""
-    
-    def test_assess_help(self):
-        """Assess command has working --help"""
-        result = subprocess.run(["empirica", "assess", "--help"], capture_output=True)
-        assert result.returncode == 0
-    
-    def test_self_awareness_execution(self):
-        """Self-awareness runs without args (displays current state)"""
-        result = subprocess.run(["empirica", "self-awareness"], capture_output=True, timeout=5)
-        assert result.returncode == 0
-    
-    def test_metacognitive_help(self):
-        """Metacognitive command has working --help"""
-        result = subprocess.run(["empirica", "metacognitive", "--help"], capture_output=True)
-        assert result.returncode == 0
-    
-    def test_calibration_execution(self):
-        """Calibration runs without args (shows calibration status)"""
-        result = subprocess.run(["empirica", "calibration"], capture_output=True, timeout=5)
-        assert result.returncode == 0
-    
-    def test_uvl_execution(self):
-        """UVL runs without args (shows UVL status)"""
-        result = subprocess.run(["empirica", "uvl"], capture_output=True, timeout=5)
         assert result.returncode == 0
 
 
@@ -220,50 +191,11 @@ class TestIdentityCommands:
 
 
 class TestConfigurationCommands:
-    """Test Configuration commands (5 commands)"""
+    """Test Configuration commands"""
     
     def test_config_execution(self):
         """Config runs without args (shows current config)"""
         result = subprocess.run(["empirica", "config"], capture_output=True, timeout=5)
-        assert result.returncode == 0
-    
-    def test_profile_list_execution(self):
-        """Profile-list runs without args (lists all profiles)"""
-        result = subprocess.run(["empirica", "profile-list"], capture_output=True, timeout=5)
-        assert result.returncode == 0
-    
-    def test_profile_show_help(self):
-        """Profile-show command has working --help"""
-        result = subprocess.run(["empirica", "profile-show", "--help"], capture_output=True)
-        assert result.returncode == 0
-    
-    def test_profile_create_help(self):
-        """Profile-create command has working --help"""
-        result = subprocess.run(["empirica", "profile-create", "--help"], capture_output=True)
-        assert result.returncode == 0
-    
-    def test_profile_set_default_help(self):
-        """Profile-set-default command has working --help"""
-        result = subprocess.run(["empirica", "profile-set-default", "--help"], capture_output=True)
-        assert result.returncode == 0
-
-
-class TestComponentsCommands:
-    """Test Components commands (3 commands)"""
-    
-    def test_list_execution(self):
-        """List runs without args (lists all components)"""
-        result = subprocess.run(["empirica", "list"], capture_output=True, timeout=5)
-        assert result.returncode == 0
-    
-    def test_explain_help(self):
-        """Explain command has working --help"""
-        result = subprocess.run(["empirica", "explain", "--help"], capture_output=True)
-        assert result.returncode == 0
-    
-    def test_demo_execution(self):
-        """Demo runs without args (shows available demos)"""
-        result = subprocess.run(["empirica", "demo"], capture_output=True, timeout=5)
         assert result.returncode == 0
 
 
@@ -283,25 +215,6 @@ class TestInvestigationCommands:
     def test_goal_analysis_help(self):
         """Goal-analysis command has working --help"""
         result = subprocess.run(["empirica", "goal-analysis", "--help"], capture_output=True)
-        assert result.returncode == 0
-
-
-class TestDecisionMakingCommands:
-    """Test Decision Making commands (3 commands)"""
-    
-    def test_decision_help(self):
-        """Decision command has working --help"""
-        result = subprocess.run(["empirica", "decision", "--help"], capture_output=True)
-        assert result.returncode == 0
-    
-    def test_decision_batch_help(self):
-        """Decision-batch command has working --help"""
-        result = subprocess.run(["empirica", "decision-batch", "--help"], capture_output=True)
-        assert result.returncode == 0
-    
-    def test_feedback_help(self):
-        """Feedback command has working --help"""
-        result = subprocess.run(["empirica", "feedback", "--help"], capture_output=True)
         assert result.returncode == 0
 
 
@@ -363,13 +276,15 @@ class TestCLISummary:
         assert b"Empirica" in result.stdout
     
     def test_total_command_count(self):
-        """Verify we have all 54 commands"""
+        """Verify core commands exist (38 working commands after cleanup)"""
         result = subprocess.run(["empirica", "--help"], capture_output=True, text=True)
-        # Count commands in help output
-        # This is a sanity check
-        assert "bootstrap" in result.stdout
+        # Sanity check - verify CASCADE workflow and project commands exist
+        assert "preflight-submit" in result.stdout
+        assert "check" in result.stdout
+        assert "postflight-submit" in result.stdout
         assert "goals-create" in result.stdout
         assert "checkpoint-list" in result.stdout
+        assert "project-bootstrap" in result.stdout
 
 
 if __name__ == "__main__":

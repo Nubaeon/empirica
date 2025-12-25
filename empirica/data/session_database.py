@@ -2596,6 +2596,69 @@ class SessionDatabase:
         """Get the most recent project handoff (delegates to ProjectRepository)"""
         return self.projects.get_latest_project_handoff(project_id)
     
+    def generate_file_tree(self, project_root: str, max_depth: int = 3, use_cache: bool = True) -> Optional[str]:
+        """Generate file tree respecting .gitignore
+        
+        Args:
+            project_root: Path to project root
+            max_depth: Tree depth (default: 3)
+            use_cache: Use cached tree if <60s old
+            
+        Returns:
+            str: Tree output (plain text, no ANSI codes) or None if tree not available
+        """
+        import subprocess
+        import time
+        from pathlib import Path
+        
+        # Check if tree is installed
+        try:
+            subprocess.run(["tree", "--version"], capture_output=True, check=True, timeout=1)
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+            logger.debug("tree command not available, skipping file tree generation")
+            return None
+        
+        cache_key = f"tree_{Path(project_root).name}_{max_depth}"
+        cache_dir = Path(project_root) / ".empirica" / "cache"
+        cache_file = cache_dir / f"{cache_key}.txt"
+        
+        # Check cache
+        if use_cache and cache_file.exists():
+            age = time.time() - cache_file.stat().st_mtime
+            if age < 60:  # 60 second cache
+                logger.debug(f"Using cached file tree (age: {age:.1f}s)")
+                return cache_file.read_text()
+        
+        # Generate tree
+        cmd = [
+            "tree",
+            "-L", str(max_depth),
+            "--gitignore",
+            "--dirsfirst",
+            "-n",  # No color (plain text)
+            project_root
+        ]
+        
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            
+            if result.returncode == 0:
+                tree_output = result.stdout
+                # Cache it
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                cache_file.write_text(tree_output)
+                logger.debug(f"Generated file tree (cached to {cache_file})")
+                return tree_output
+            else:
+                logger.warning(f"tree command failed: {result.stderr}")
+                return None
+        except subprocess.TimeoutExpired:
+            logger.warning("tree command timed out (>5s)")
+            return None
+        except Exception as e:
+            logger.warning(f"Error generating file tree: {e}")
+            return None
+    
     def bootstrap_project_breadcrumbs(
         self,
         project_id: str,
@@ -2694,6 +2757,179 @@ class SessionDatabase:
             ORDER BY g.created_timestamp DESC
         """, (resolved_id,))
         incomplete_goals = [dict(row) for row in cursor.fetchall()]
+        
+        # ===== NEW: Active Work Context =====
+        # Get active sessions (not ended)
+        cursor.execute("""
+            SELECT session_id, ai_id, start_time, subject
+            FROM sessions
+            WHERE project_id = ? AND end_time IS NULL
+            ORDER BY start_time DESC
+            LIMIT 5
+        """, (resolved_id,))
+        active_sessions = [dict(row) for row in cursor.fetchall()]
+        
+        # Get goals in_progress (active work)
+        cursor.execute("""
+            SELECT g.id, g.objective, g.status, g.session_id, g.beads_issue_id,
+                   COUNT(st.id) as subtask_count,
+                   s.ai_id, s.start_time
+            FROM goals g
+            JOIN sessions s ON g.session_id = s.session_id
+            LEFT JOIN subtasks st ON g.id = st.goal_id
+            WHERE s.project_id = ? AND g.status = 'in_progress'
+            GROUP BY g.id, g.objective, g.status, g.session_id, g.beads_issue_id, s.ai_id, s.start_time
+            ORDER BY g.created_timestamp DESC
+            LIMIT 10
+        """, (resolved_id,))
+        active_goals = [dict(row) for row in cursor.fetchall()]
+        
+        # Get findings linked to active goals
+        active_goal_ids = [g['id'] for g in active_goals]
+        findings_with_goals = []
+        if active_goal_ids:
+            placeholders = ','.join('?' * len(active_goal_ids))
+            cursor.execute(f"""
+                SELECT pf.finding, pf.goal_id, pf.session_id, pf.created_timestamp,
+                       g.objective as goal_objective
+                FROM project_findings pf
+                LEFT JOIN goals g ON pf.goal_id = g.id
+                WHERE pf.project_id = ? AND pf.goal_id IN ({placeholders})
+                ORDER BY pf.created_timestamp DESC
+                LIMIT 10
+            """, (resolved_id, *active_goal_ids))
+            findings_with_goals = [dict(row) for row in cursor.fetchall()]
+        
+        # Get AI activity summary (last 7 days)
+        cursor.execute("""
+            SELECT ai_id, COUNT(*) as session_count,
+                   MAX(start_time) as last_session
+            FROM sessions
+            WHERE project_id = ? 
+              AND start_time >= datetime('now', '-7 days')
+            GROUP BY ai_id
+            ORDER BY session_count DESC
+            LIMIT 10
+        """, (resolved_id,))
+        ai_activity = [dict(row) for row in cursor.fetchall()]
+        
+        # Scan for epistemic artifacts (audit files, test results)
+        epistemic_artifacts = []
+        try:
+            import glob
+            artifact_patterns = [
+                '/tmp/empirica_*.json',
+                '/tmp/*_audit.json',
+                os.path.join(project_root, '*.audit.json'),
+                os.path.join(project_root, '.empirica', 'artifacts', '*.json')
+            ]
+            for pattern in artifact_patterns:
+                for filepath in glob.glob(pattern):
+                    try:
+                        # Get file size and mtime
+                        stat = os.stat(filepath)
+                        epistemic_artifacts.append({
+                            'path': filepath,
+                            'size': stat.st_size,
+                            'modified': stat.st_mtime,
+                            'type': 'audit' if 'audit' in filepath else 'artifact'
+                        })
+                    except:
+                        pass
+        except Exception as e:
+            logger.debug(f"Could not scan for epistemic artifacts: {e}")
+        
+        # ===== Flow State Metrics =====
+        # Calculate flow metrics for recent sessions to show productivity patterns
+        flow_metrics_data = []
+        try:
+            from empirica.metrics.flow_state import FlowStateMetrics
+            flow_metrics = FlowStateMetrics(self)
+            
+            # Get recent completed sessions (last 5)
+            cursor.execute("""
+                SELECT session_id, ai_id, start_time, end_time
+                FROM sessions
+                WHERE project_id = ? AND end_time IS NOT NULL
+                ORDER BY start_time DESC
+                LIMIT 5
+            """, (resolved_id,))
+            recent_sessions = cursor.fetchall()
+            
+            for sess in recent_sessions:
+                try:
+                    flow_result = flow_metrics.calculate_flow_score(sess['session_id'])
+                    if 'error' not in flow_result:
+                        flow_metrics_data.append({
+                            'session_id': sess['session_id'][:8] + '...',
+                            'ai_id': sess['ai_id'],
+                            'flow_score': flow_result['flow_score'],
+                            'components': flow_result['components'],
+                            'recommendations': flow_result['recommendations']
+                        })
+                except Exception as e:
+                    logger.debug(f"Could not calculate flow for session {sess['session_id']}: {e}")
+        except Exception as e:
+            logger.debug(f"Could not calculate flow metrics: {e}")
+        
+        # ===== Database Schema Summary (Dynamic Context) =====
+        # Show which tables have data and recent activity
+        database_summary = {}
+        try:
+            cursor = self.conn.cursor()
+            
+            # Get all tables
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+            all_tables = [row['name'] for row in cursor.fetchall()]
+            
+            # Get tables with data (row count)
+            tables_with_data = []
+            for table in all_tables:
+                try:
+                    cursor.execute(f"SELECT COUNT(*) as count FROM {table}")
+                    count = cursor.fetchone()['count']
+                    if count > 0:
+                        tables_with_data.append({
+                            'name': table,
+                            'rows': count
+                        })
+                except:
+                    pass
+            
+            # Sort by row count
+            tables_with_data.sort(key=lambda x: x['rows'], reverse=True)
+            
+            # Key tables for quick reference (static knowledge embedded as reminder)
+            key_tables = {
+                'sessions': 'Work sessions with PREFLIGHT/POSTFLIGHT',
+                'goals': 'Hierarchical objectives with scope',
+                'reflexes': 'CASCADE assessments (PREFLIGHT/CHECK/POSTFLIGHT)',
+                'project_findings': 'Findings linked to goals/subtasks',
+                'breadcrumbs': 'Legacy findings/unknowns/dead_ends',
+                'subtasks': 'Goal breakdown with completion tracking'
+            }
+            
+            database_summary = {
+                'total_tables': len(all_tables),
+                'tables_with_data': len(tables_with_data),
+                'top_tables': [
+                    f"{t['name']} ({t['rows']} rows)" 
+                    for t in tables_with_data[:10]
+                ],
+                'key_tables': key_tables,
+                'schema_doc': 'docs/reference/DATABASE_SCHEMA_GENERATED.md'
+            }
+        except Exception as e:
+            logger.debug(f"Could not generate database summary: {e}")
+        
+        # ===== Structure Health Analysis (Dynamic Context) =====
+        # Detect project pattern and assess conformance
+        structure_health = {}
+        try:
+            from empirica.utils.structure_health import analyze_structure_health
+            structure_health = analyze_structure_health(project_root)
+        except Exception as e:
+            logger.debug(f"Could not analyze structure health: {e}")
         
         # Get recent artifacts/modified files from handoff reports
         # This tells AI which files were changed and may need doc updates
@@ -2866,6 +3102,21 @@ class SessionDatabase:
                 }
                 for g in incomplete_goals
             ],
+            # ===== NEW: Active Work Context =====
+            "active_sessions": active_sessions,
+            "active_goals": active_goals,
+            "findings_with_goals": findings_with_goals,
+            "ai_activity": ai_activity,
+            "epistemic_artifacts": epistemic_artifacts,
+            # ===== END NEW =====
+            # Flow state metrics
+            "flow_metrics": flow_metrics_data,
+            # Database schema summary (dynamic context)
+            "database_summary": database_summary,
+            # Structure health (dynamic context)
+            "structure_health": structure_health,
+            # File tree structure
+            "file_tree": self.generate_file_tree(project_root, max_depth=3, use_cache=True),
             "recent_artifacts": recent_artifacts,
             "available_skills": available_skills,
             "full_skills": full_skills,  # Full content for matched skills
@@ -3404,6 +3655,112 @@ class SessionDatabase:
             'breakdown': breakdown
         }
 
+    def get_workspace_overview(self) -> Dict[str, Any]:
+        """
+        Get epistemic overview of all projects in workspace.
+        
+        Returns:
+            Dictionary with:
+            - total_projects: int
+            - projects: List of project dicts with epistemic health
+            - workspace_stats: Aggregate statistics
+        """
+        cursor = self.conn.cursor()
+        
+        # Get all projects with their latest epistemic state
+        cursor.execute("""
+            SELECT 
+                p.id,
+                p.name,
+                p.description,
+                p.status,
+                p.total_sessions,
+                p.last_activity_timestamp,
+                -- Get latest epistemic vectors from most recent session reflex
+                (SELECT r.know FROM reflexes r
+                 JOIN sessions s ON s.session_id = r.session_id
+                 WHERE s.project_id = p.id
+                 ORDER BY r.timestamp DESC LIMIT 1) as latest_know,
+                (SELECT r.uncertainty FROM reflexes r
+                 JOIN sessions s ON s.session_id = r.session_id
+                 WHERE s.project_id = p.id
+                 ORDER BY r.timestamp DESC LIMIT 1) as latest_uncertainty,
+                -- Counts
+                (SELECT COUNT(*) FROM project_findings WHERE project_id = p.id) as findings_count,
+                (SELECT COUNT(*) FROM project_unknowns WHERE project_id = p.id AND is_resolved = 0) as unknowns_count,
+                (SELECT COUNT(*) FROM project_dead_ends WHERE project_id = p.id) as dead_ends_count
+            FROM projects p
+            ORDER BY p.last_activity_timestamp DESC
+        """)
+        
+        projects = []
+        for row in cursor.fetchall():
+            project = {
+                'project_id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'status': row[3],
+                'total_sessions': row[4],
+                'last_activity': row[5],
+                'epistemic_state': {
+                    'know': row[6] if row[6] is not None else 0.5,
+                    'uncertainty': row[7] if row[7] is not None else 0.5
+                },
+                'findings_count': row[8],
+                'unknowns_count': row[9],
+                'dead_ends_count': row[10]
+            }
+            
+            # Calculate health metrics
+            if project['total_sessions'] > 0:
+                dead_end_ratio = project['dead_ends_count'] / project['total_sessions']
+                project['dead_end_ratio'] = dead_end_ratio
+                
+                # Health score (0-1): weighted by knowledge and uncertainty
+                know = project['epistemic_state']['know']
+                uncertainty = project['epistemic_state']['uncertainty']
+                health = (know * 0.6) + ((1 - uncertainty) * 0.4) - (dead_end_ratio * 0.2)
+                project['health_score'] = max(0.0, min(1.0, health))
+            else:
+                project['dead_end_ratio'] = 0.0
+                project['health_score'] = 0.5
+            
+            projects.append(project)
+        
+        # Get workspace-level stats
+        workspace_stats = self._get_workspace_stats()
+        
+        return {
+            'total_projects': len(projects),
+            'projects': projects,
+            'workspace_stats': workspace_stats
+        }
+    
+    def _get_workspace_stats(self) -> Dict[str, Any]:
+        """Get workspace-level aggregated statistics"""
+        cursor = self.conn.cursor()
+        
+        cursor.execute("""
+            SELECT 
+                COUNT(DISTINCT p.id) as total_projects,
+                COUNT(DISTINCT s.session_id) as total_sessions,
+                COUNT(DISTINCT CASE WHEN s.end_time IS NULL THEN s.session_id END) as active_sessions,
+                AVG(CASE WHEN r.know IS NOT NULL THEN r.know END) as avg_know,
+                AVG(CASE WHEN r.uncertainty IS NOT NULL THEN r.uncertainty END) as avg_uncertainty
+            FROM projects p
+            LEFT JOIN sessions s ON s.project_id = p.id
+            LEFT JOIN reflexes r ON r.session_id = s.session_id
+        """)
+        
+        row = cursor.fetchone()
+        return {
+            'total_projects': row[0] or 0,
+            'total_sessions': row[1] or 0,
+            'active_sessions': row[2] or 0,
+            'avg_know': round(row[3], 2) if row[3] else 0.5,
+            'avg_uncertainty': round(row[4], 2) if row[4] else 0.5
+        }
+
     def close(self):
         """Close database connection and all repositories"""
         if hasattr(self, '_tasks') and self._tasks is not None:
@@ -3421,3 +3778,103 @@ if __name__ == "__main__":
     db = SessionDatabase()
     db.close()
     logger.info("✅ Session Database ready")
+
+    def log_command_usage(
+        self,
+        command_name: str,
+        session_id: Optional[str] = None,
+        execution_time_ms: Optional[int] = None,
+        success: bool = True,
+        error_message: Optional[str] = None
+    ) -> str:
+        """Log CLI command usage for telemetry and legacy detection
+        
+        Args:
+            command_name: Name of command executed (e.g., "goals-create")
+            session_id: Optional session ID for context
+            execution_time_ms: Execution time in milliseconds
+            success: Whether command succeeded
+            error_message: Error message if failed
+            
+        Returns:
+            Usage log ID
+        """
+        import uuid
+        import time
+        
+        usage_id = str(uuid.uuid4())
+        timestamp = time.time()
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO command_usage 
+            (id, command_name, session_id, timestamp, execution_time_ms, success, error_message)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (usage_id, command_name, session_id, timestamp, execution_time_ms, success, error_message))
+        
+        self.conn.commit()
+        return usage_id
+    
+    def get_command_usage_stats(self, days: int = 30) -> Dict:
+        """Get command usage statistics for legacy detection
+        
+        Args:
+            days: Number of days to analyze
+            
+        Returns:
+            Dict with usage stats, legacy candidates, broken commands
+        """
+        import time
+        
+        cursor = self.conn.cursor()
+        since_timestamp = time.time() - (days * 24 * 3600)
+        
+        # Most used commands
+        cursor.execute("""
+            SELECT command_name, COUNT(*) as usage_count,
+                   AVG(execution_time_ms) as avg_time_ms,
+                   MAX(timestamp) as last_used
+            FROM command_usage
+            WHERE timestamp >= ?
+            GROUP BY command_name
+            ORDER BY usage_count DESC
+        """, (since_timestamp,))
+        
+        most_used = [dict(row) for row in cursor.fetchall()]
+        
+        # Rarely used (legacy candidates)
+        cursor.execute("""
+            SELECT command_name, COUNT(*) as usage_count,
+                   MAX(timestamp) as last_used,
+                   (? - MAX(timestamp)) / 86400.0 as days_since_last_use
+            FROM command_usage
+            WHERE timestamp >= ?
+            GROUP BY command_name
+            HAVING usage_count < 5
+            ORDER BY usage_count ASC
+        """, (time.time(), since_timestamp))
+        
+        legacy_candidates = [dict(row) for row in cursor.fetchall()]
+        
+        # Low success rate (broken/confusing)
+        cursor.execute("""
+            SELECT command_name,
+                   COUNT(*) as total_uses,
+                   SUM(CASE WHEN success THEN 1 ELSE 0 END) as successes,
+                   ROUND(100.0 * SUM(CASE WHEN success THEN 1 ELSE 0 END) / COUNT(*), 2) as success_rate
+            FROM command_usage
+            WHERE timestamp >= ?
+            GROUP BY command_name
+            HAVING total_uses >= 10 AND success_rate < 50
+            ORDER BY success_rate ASC
+        """, (since_timestamp,))
+        
+        broken_commands = [dict(row) for row in cursor.fetchall()]
+        
+        return {
+            'period_days': days,
+            'most_used': most_used[:10],
+            'legacy_candidates': legacy_candidates,
+            'broken_commands': broken_commands,
+            'total_commands_tracked': len(most_used)
+        }

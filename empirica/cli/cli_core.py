@@ -46,10 +46,7 @@ Examples:
     # Session commands (use session-create for session initialization)
     _add_session_parsers(subparsers)
 
-    # Assessment commands
-    _add_assessment_parsers(subparsers)
-    
-    # Cascade commands
+    # CASCADE commands (preflight-submit, check, postflight-submit)
     _add_cascade_parsers(subparsers)
     
     # Investigation commands
@@ -57,9 +54,6 @@ Examples:
     
     # Performance commands
     _add_performance_parsers(subparsers)
-    
-    # Component commands
-    _add_component_parsers(subparsers)
 
     # Skill commands
     _add_skill_parsers(subparsers)
@@ -69,9 +63,6 @@ Examples:
     
     # Config commands
     _add_config_parsers(subparsers)
-    
-    # Profile commands
-    _add_profile_parsers(subparsers)
     
     # Monitor commands
     _add_monitor_parsers(subparsers)
@@ -96,12 +87,6 @@ Examples:
     
     return parser
 
-
-def _add_assessment_parsers(subparsers):
-    """Add assessment command parsers"""
-    # Main assess command
-    
-    # Metacognitive assessment
 
 def _add_cascade_parsers(subparsers):
     """Add cascade command parsers (DEPRECATED - use MCP tools instead)
@@ -276,13 +261,6 @@ def _add_performance_parsers(subparsers):
     # REMOVED: benchmark command - use performance --benchmark instead
 
 
-def _add_component_parsers(subparsers):
-    """Add component command parsers"""
-    # List components command
-    # Explain component command
-    # Demo component command
-
-
 def _add_skill_parsers(subparsers):
     """Add skill management command parsers"""
     # Skill suggest command
@@ -454,6 +432,7 @@ def _add_checkpoint_parsers(subparsers):
     )
     checkpoint_create_parser.add_argument('--round', type=int, required=True, help='Round number')
     checkpoint_create_parser.add_argument('--metadata', help='JSON metadata (optional)')
+    checkpoint_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Checkpoint load command
     checkpoint_load_parser = subparsers.add_parser(
@@ -485,6 +464,7 @@ def _add_checkpoint_parsers(subparsers):
     checkpoint_list_parser.add_argument('--session-id', help='Session ID (optional, lists all if omitted)')
     checkpoint_list_parser.add_argument('--limit', type=int, default=10, help='Maximum checkpoints to show')
     checkpoint_list_parser.add_argument('--phase', help='Filter by phase (optional)')
+    checkpoint_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Checkpoint diff command
     checkpoint_diff_parser = subparsers.add_parser(
@@ -649,11 +629,41 @@ def _add_checkpoint_parsers(subparsers):
     project_bootstrap_parser.add_argument('--epistemic-state', help='Epistemic vectors from PREFLIGHT as JSON string (e.g., \'{"uncertainty":0.8,"know":0.3}\')')
     project_bootstrap_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
+    # Workspace overview command
+    workspace_overview_parser = subparsers.add_parser(
+        'workspace-overview',
+        help='Show epistemic health overview of all projects in workspace'
+    )
+    workspace_overview_parser.add_argument('--output', choices=['dashboard', 'json'], default='dashboard', help='Output format')
+    workspace_overview_parser.add_argument('--sort-by', choices=['activity', 'knowledge', 'uncertainty', 'name'], default='activity', help='Sort projects by')
+    workspace_overview_parser.add_argument('--filter', choices=['active', 'inactive', 'complete'], help='Filter projects by status')
+
+    # Workspace map command
+    workspace_map_parser = subparsers.add_parser(
+        'workspace-map',
+        help='Discover git repositories in parent directory and show epistemic health'
+    )
+    workspace_map_parser.add_argument('--output', choices=['dashboard', 'json'], default='dashboard', help='Output format')
+
+    # Workspace init command - EPISTEMIC INITIALIZATION
+    workspace_init_parser = subparsers.add_parser(
+        'workspace-init',
+        help='Initialize workspace with epistemic self-awareness (uses CASCADE workflow)'
+    )
+    workspace_init_parser.add_argument('--path', type=str, help='Workspace path (defaults to current directory)')
+    workspace_init_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    workspace_init_parser.add_argument('--non-interactive', action='store_true', help='Skip user questions, use defaults')
+
     # Project semantic search command (Qdrant-backed)
     project_search_parser = subparsers.add_parser(
         'project-search',
         help='Semantic search for relevant docs/memory by task description'
     )
+    project_search_parser.add_argument('--project-id', required=True, help='Project UUID')
+    project_search_parser.add_argument('--task', required=True, help='Task description to search for')
+    project_search_parser.add_argument('--type', choices=['all', 'docs', 'memory'], default='all', help='Result type (default: all)')
+    project_search_parser.add_argument('--limit', type=int, default=5, help='Number of results to return (default: 5)')
+    project_search_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
     # Project embed (build vectors) command
     project_embed_parser = subparsers.add_parser(
@@ -676,11 +686,6 @@ def _add_checkpoint_parsers(subparsers):
     # NOTE: skill-suggest and skill-fetch are NOT YET IMPLEMENTED
     # Placeholder parsers removed to avoid confusion (use project-bootstrap instead)
     # TODO: Implement skill discovery and fetching in Phase 4
-    project_search_parser.add_argument('--project-id', required=True, help='Project UUID')
-    project_search_parser.add_argument('--task', required=True, help='Task description to search for')
-    project_search_parser.add_argument('--type', choices=['all', 'docs', 'memory'], default='all', help='Result type (default: all)')
-    project_search_parser.add_argument('--limit', type=int, default=5, help='Number of results to return (default: 5)')
-    project_search_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Finding log command
     finding_log_parser = subparsers.add_parser(
@@ -878,14 +883,6 @@ def _add_checkpoint_parsers(subparsers):
     session_create_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
 
 
-def _add_profile_parsers(subparsers):
-    """Add profile management command parsers"""
-    # Profile list command
-    # NOTE: Profile commands are NOT YET IMPLEMENTED
-    # profile-list, profile-show, profile-create, profile-set-default removed to avoid confusion
-    # TODO: Implement profile management in Phase 4
-
-
 def _add_user_interface_parsers(subparsers):
     """Add user interface commands for human terminal users"""
     
@@ -971,6 +968,8 @@ def main(args=None):
         os.environ['EMPIRICA_QUIET'] = '1'
     
     start_time = time.time()
+    success = False
+    error_message = None
     
     try:
         # Route to appropriate command handler
@@ -1082,6 +1081,9 @@ def main(args=None):
             'project-handoff': handle_project_handoff_command,
             'project-list': handle_project_list_command,
             'project-bootstrap': handle_project_bootstrap_command,
+            'workspace-overview': handle_workspace_overview_command,
+            'workspace-map': handle_workspace_map_command,
+            'workspace-init': handle_workspace_init_command,
             'project-search': handle_project_search_command,
             'project-embed': handle_project_embed_command,
             'doc-check': handle_doc_check_command,
@@ -1110,9 +1112,11 @@ def main(args=None):
         handler = command_map.get(parsed_args.command)
         if handler:
             handler(parsed_args)
+            success = True
         else:
             print(f"❌ Unknown command: {parsed_args.command}")
             parser.print_help()
+            error_message = f"Unknown command: {parsed_args.command}"
             return 1
         
         # Show execution time if verbose
@@ -1120,14 +1124,53 @@ def main(args=None):
             end_time = time.time()
             print(f"\n⏱️ Execution time: {end_time - start_time:.3f}s")
         
+        # Log command usage telemetry
+        try:
+            from empirica.data.session_database import SessionDatabase
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            session_id = getattr(parsed_args, 'session_id', None) or getattr(parsed_args, 'session_id_named', None)
+            
+            db = SessionDatabase()
+            db.log_command_usage(
+                command_name=parsed_args.command,
+                session_id=session_id,
+                execution_time_ms=execution_time_ms,
+                success=success,
+                error_message=error_message
+            )
+            db.close()
+        except Exception:
+            pass  # Never fail on telemetry
+        
         return 0
         
     except KeyboardInterrupt:
         print("\n🛑 Operation interrupted by user")
+        error_message = "Operation interrupted by user"
         return 130
     except Exception as e:
+        error_message = str(e)
         handle_cli_error(e, f"Command '{parsed_args.command}'", getattr(parsed_args, 'verbose', False))
         return 1
+    finally:
+        # Log command usage telemetry (also catches errors)
+        if 'parsed_args' in locals() and hasattr(parsed_args, 'command'):
+            try:
+                from empirica.data.session_database import SessionDatabase
+                execution_time_ms = int((time.time() - start_time) * 1000)
+                session_id = getattr(parsed_args, 'session_id', None) or getattr(parsed_args, 'session_id_named', None)
+                
+                db = SessionDatabase()
+                db.log_command_usage(
+                    command_name=parsed_args.command,
+                    session_id=session_id,
+                    execution_time_ms=execution_time_ms,
+                    success=success,
+                    error_message=error_message
+                )
+                db.close()
+            except Exception:
+                pass  # Never fail on telemetry
 
 
 if __name__ == "__main__":

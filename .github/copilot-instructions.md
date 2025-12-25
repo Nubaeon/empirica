@@ -27,6 +27,31 @@
 
 ## II. ARCHITECTURE (GROUND TRUTH)
 
+### AI Identity Naming Convention (CRITICAL)
+
+**Always use this format when creating sessions:**
+
+```
+<model>-<workstream>
+```
+
+**Examples:**
+- `claude-rovo-dev-bootstrap-enhancement` ✅ (what I'm using now)
+- `mistral2-cli-testing` ✅
+- `copilot-documentation` ✅
+- `qwen-feature-auth` ✅
+
+**Why This Matters:**
+1. **Cross-session discovery**: Easy to find related work (`WHERE ai_id LIKE 'claude-%'`)
+2. **Project bootstrap accuracy**: Shows WHO worked on WHAT in active work section
+3. **AI activity tracking**: Bootstrap shows sessions grouped by AI identity
+4. **Handoff clarity**: "Continue from `mistral2-refactoring` session abc123"
+
+**Avoid:**
+- `claude` ❌ (too generic)
+- `ai` ❌ (meaningless)
+- `test` ❌ (not descriptive)
+
 ### Session Creation (Simple, No Ceremony)
 
 **AI-First JSON Mode (Preferred):**

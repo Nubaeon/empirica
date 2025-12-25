@@ -315,9 +315,43 @@ def handle_project_bootstrap_command(args):
             project = breadcrumbs['project']
             last = breadcrumbs['last_activity']
             
-            print(f"📋 Project Context: {project['name']}")
+            # ===== PROJECT CONTEXT BANNER =====
+            print("━" * 64)
+            print("🎯 PROJECT CONTEXT")
+            print("━" * 64)
+            print()
+            print(f"📁 Project: {project['name']}")
+            print(f"🆔 ID: {project_id}")
+            
+            # Get git URL
+            git_url = None
+            try:
+                result = subprocess.run(
+                    ['git', 'remote', 'get-url', 'origin'],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+                if result.returncode == 0:
+                    git_url = result.stdout.strip()
+                    print(f"🔗 Repository: {git_url}")
+            except:
+                pass
+            
+            print(f"📍 Location: {db.db_path.parent.parent if hasattr(db, 'db_path') and db.db_path else 'Unknown'}")
+            print(f"💾 Database: .empirica/sessions/sessions.db")
+            print()
+            print("⚠️  All commands write to THIS project's database.")
+            print("   Findings, sessions, goals → stored in this project context.")
+            print()
+            print("━" * 64)
+            print()
+            
+            # ===== PROJECT SUMMARY =====
+            print(f"📋 Project Summary")
             print(f"   {project['description']}")
-            print(f"   Repos: {', '.join(project['repos'])}")
+            if project['repos']:
+                print(f"   Repos: {', '.join(project['repos'])}")
             print(f"   Total sessions: {project['total_sessions']}")
             print()
             
@@ -378,6 +412,190 @@ def handle_project_bootstrap_command(args):
                         print(f"        • {file}")
                     if len(artifact['files_modified']) > 5:
                         print(f"        ... and {len(artifact['files_modified']) - 5} more")
+                print()
+            
+            # ===== NEW: Active Work Section =====
+            if breadcrumbs.get('active_sessions') or breadcrumbs.get('active_goals'):
+                print(f"🚀 Active Work (In Progress):")
+                print()
+                
+                # Show active sessions
+                if breadcrumbs.get('active_sessions'):
+                    print(f"   📡 Active Sessions:")
+                    for sess in breadcrumbs['active_sessions'][:3]:
+                        from datetime import datetime
+                        start = datetime.fromisoformat(str(sess['start_time']))
+                        elapsed = datetime.now() - start
+                        hours = int(elapsed.total_seconds() / 3600)
+                        print(f"      • {sess['session_id'][:8]}... ({sess['ai_id']}) - {hours}h ago")
+                        if sess.get('subject'):
+                            print(f"        Subject: {sess['subject']}")
+                    print()
+                
+                # Show active goals
+                if breadcrumbs.get('active_goals'):
+                    print(f"   🎯 Goals In Progress:")
+                    for goal in breadcrumbs['active_goals'][:5]:
+                        beads_link = f" [BEADS: {goal['beads_issue_id']}]" if goal.get('beads_issue_id') else " ⚠️ No BEADS link"
+                        print(f"      • [{goal['id'][:8]}] {goal['objective']}{beads_link}")
+                        print(f"        AI: {goal['ai_id']} | Subtasks: {goal['subtask_count']}")
+                        
+                        # Show recent findings for this goal
+                        goal_findings = [f for f in breadcrumbs.get('findings_with_goals', []) if f['goal_id'] == goal['id']]
+                        if goal_findings:
+                            print(f"        Latest: {goal_findings[0]['finding'][:60]}...")
+                    print()
+                
+                # Show epistemic artifacts
+                if breadcrumbs.get('epistemic_artifacts'):
+                    print(f"   📊 Epistemic Artifacts:")
+                    for artifact in breadcrumbs['epistemic_artifacts'][:3]:
+                        size_kb = artifact['size'] / 1024
+                        print(f"      • {artifact['path']} ({size_kb:.1f} KB)")
+                    print()
+                
+                # Show AI activity summary
+                if breadcrumbs.get('ai_activity'):
+                    print(f"   👥 AI Activity (Last 7 Days):")
+                    for ai in breadcrumbs['ai_activity'][:5]:
+                        print(f"      • {ai['ai_id']}: {ai['session_count']} session(s)")
+                    print()
+                    print(f"   💡 Tip: Use format '<model>-<workstream>' (e.g., claude-cli-testing)")
+                    print()
+            
+            # ===== END NEW =====
+            
+            # ===== FLOW STATE METRICS =====
+            if breadcrumbs.get('flow_metrics') is not None:
+                print(f"📊 Flow State Analysis (Recent Sessions):")
+                print()
+                
+                flow_data = breadcrumbs['flow_metrics']
+                if flow_data:
+                    for i, session in enumerate(flow_data[:5], 1):
+                        score = session['flow_score']
+                        # Choose emoji based on score
+                        if score >= 0.9:
+                            emoji = "⭐"
+                        elif score >= 0.7:
+                            emoji = "🟢"
+                        elif score >= 0.5:
+                            emoji = "🟡"
+                        else:
+                            emoji = "🔴"
+                        
+                        print(f"   {i}. {session['session_id']} ({session['ai_id']})")
+                        print(f"      Flow Score: {score:.2f} {emoji}")
+                        
+                        # Show top 3 components
+                        components = session['components']
+                        top_3 = sorted(components.items(), key=lambda x: x[1], reverse=True)[:3]
+                        print(f"      Top factors: {', '.join([f'{k}={v:.2f}' for k, v in top_3])}")
+                        
+                        # Show recommendations if any
+                        if session['recommendations']:
+                            print(f"      💡 {session['recommendations'][0]}")
+                        print()
+                    
+                    # Show what creates flow
+                    print(f"   💡 Flow Triggers (Optimize for these):")
+                    print(f"      ✅ CASCADE complete (PREFLIGHT → POSTFLIGHT)")
+                    print(f"      ✅ Bootstrap loaded early")
+                    print(f"      ✅ Goal with subtasks")
+                    print(f"      ✅ CHECK for high-scope work")
+                    print(f"      ✅ AI naming convention (<model>-<workstream>)")
+                    print()
+                else:
+                    print(f"   💡 No completed sessions yet")
+                    print(f"   Tip: Close active sessions with POSTFLIGHT to see flow metrics")
+                    print(f"   Flow score will show patterns from completed work")
+                    print()
+            
+            # ===== DATABASE SCHEMA SUMMARY =====
+            if breadcrumbs.get('database_summary'):
+                print(f"🗄️  Database Schema (Epistemic Data Store):")
+                print()
+                
+                db_summary = breadcrumbs['database_summary']
+                print(f"   Total Tables: {db_summary.get('total_tables', 0)}")
+                print(f"   Tables With Data: {db_summary.get('tables_with_data', 0)}")
+                print()
+                
+                # Show key tables (static knowledge reminder)
+                if db_summary.get('key_tables'):
+                    print(f"   📌 Key Tables:")
+                    for table, description in list(db_summary['key_tables'].items())[:6]:
+                        print(f"      • {table}: {description}")
+                    print()
+                
+                # Show top tables by row count
+                if db_summary.get('top_tables'):
+                    print(f"   📊 Most Active Tables:")
+                    for table_info in db_summary['top_tables'][:5]:
+                        print(f"      • {table_info}")
+                    print()
+                
+                # Reference to full schema
+                if db_summary.get('schema_doc'):
+                    print(f"   📖 Full Schema: {db_summary['schema_doc']}")
+                    print()
+            
+            # ===== STRUCTURE HEALTH =====
+            if breadcrumbs.get('structure_health'):
+                print(f"🏗️  Project Structure Health:")
+                print()
+                
+                health = breadcrumbs['structure_health']
+                
+                # Show detected pattern with confidence
+                confidence = health.get('confidence', 0.0)
+                conformance = health.get('conformance', 0.0)
+                
+                # Choose emoji based on conformance
+                if conformance >= 0.9:
+                    emoji = "✅"
+                elif conformance >= 0.7:
+                    emoji = "🟢"
+                elif conformance >= 0.5:
+                    emoji = "🟡"
+                else:
+                    emoji = "🔴"
+                
+                print(f"   Detected Pattern: {health.get('detected_name', 'Unknown')} {emoji}")
+                print(f"   Detection Confidence: {confidence:.2f}")
+                print(f"   Pattern Conformance: {conformance:.2f}")
+                print(f"   Description: {health.get('description', '')}")
+                print()
+                
+                # Show violations if any
+                violations = health.get('violations', [])
+                if violations:
+                    print(f"   ⚠️  Conformance Issues ({len(violations)}):")
+                    for violation in violations[:3]:
+                        print(f"      • {violation}")
+                    if len(violations) > 3:
+                        print(f"      ... and {len(violations) - 3} more")
+                    print()
+                
+                # Show suggestions
+                suggestions = health.get('suggestions', [])
+                if suggestions:
+                    print(f"   💡 Suggestions:")
+                    for suggestion in suggestions[:3]:
+                        print(f"      {suggestion}")
+                    print()
+            
+            # ===== FILE TREE =====
+            if breadcrumbs.get('file_tree'):
+                print(f"📁 Project Structure (depth 3, respects .gitignore):")
+                print()
+                # Indent the tree output slightly
+                tree_lines = breadcrumbs['file_tree'].split('\n')
+                for line in tree_lines[:50]:  # Limit to 50 lines
+                    if line.strip():
+                        print(f"   {line}")
+                if len(tree_lines) > 50:
+                    print(f"   ... ({len(tree_lines) - 50} more lines)")
                 print()
             
             if breadcrumbs['incomplete_work']:
@@ -572,6 +790,11 @@ def handle_finding_log_command(args):
         if subject is None:
             subject = get_current_subject()  # Auto-detect from directory
         
+        # Show project context (quiet mode - single line)
+        if output_format != 'json':
+            from empirica.cli.cli_utils import print_project_context
+            print_project_context(quiet=True)
+        
         db = SessionDatabase()
 
         # Resolve project name to UUID
@@ -673,6 +896,11 @@ def handle_unknown_log_command(args):
         subject = config_data.get('subject') if config_data else getattr(args, 'subject', None)
         if subject is None:
             subject = get_current_subject()  # Auto-detect from directory
+        
+        # Show project context (quiet mode - single line)
+        if output_format != 'json':
+            from empirica.cli.cli_utils import print_project_context
+            print_project_context(quiet=True)
         
         db = SessionDatabase()
 
@@ -867,4 +1095,323 @@ def handle_refdoc_add_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Reference doc add", getattr(args, 'verbose', False))
+        return None
+
+
+def handle_workspace_overview_command(args):
+    """Handle workspace-overview command - show epistemic health of all projects"""
+    try:
+        from empirica.data.session_database import SessionDatabase
+        from datetime import datetime, timedelta
+        
+        db = SessionDatabase()
+        overview = db.get_workspace_overview()
+        db.close()
+        
+        # Get output format and sorting options
+        output_format = getattr(args, 'output', 'dashboard')
+        sort_by = getattr(args, 'sort_by', 'activity')
+        filter_status = getattr(args, 'filter', None)
+        
+        # Sort projects
+        projects = overview['projects']
+        if sort_by == 'knowledge':
+            projects.sort(key=lambda p: p.get('health_score', 0), reverse=True)
+        elif sort_by == 'uncertainty':
+            projects.sort(key=lambda p: p.get('epistemic_state', {}).get('uncertainty', 0.5))
+        elif sort_by == 'name':
+            projects.sort(key=lambda p: p.get('name', ''))
+        # Default: 'activity' - already sorted by last_activity_timestamp DESC
+        
+        # Filter projects by status
+        if filter_status:
+            projects = [p for p in projects if p.get('status') == filter_status]
+        
+        # JSON output
+        if output_format == 'json':
+            result = {
+                "ok": True,
+                "workspace_stats": overview['workspace_stats'],
+                "total_projects": len(projects),
+                "projects": projects
+            }
+            print(json.dumps(result, indent=2))
+            return result
+        
+        # Dashboard output (human-readable)
+        stats = overview['workspace_stats']
+        
+        print("╔════════════════════════════════════════════════════════════════╗")
+        print("║  Empirica Workspace Overview - Epistemic Project Management    ║")
+        print("╚════════════════════════════════════════════════════════════════╝\n")
+        
+        print("📊 Workspace Summary")
+        print(f"   Total Projects:    {stats['total_projects']}")
+        print(f"   Total Sessions:    {stats['total_sessions']}")
+        print(f"   Active Sessions:   {stats['active_sessions']}")
+        print(f"   Average Know:      {stats['avg_know']:.2f}")
+        print(f"   Average Uncertainty: {stats['avg_uncertainty']:.2f}")
+        print()
+        
+        if not projects:
+            print("   No projects found.")
+            return {"projects": []}
+        
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+        print("📁 Projects by Epistemic Health\n")
+        
+        # Group by health tier
+        high_health = [p for p in projects if p['health_score'] >= 0.7]
+        medium_health = [p for p in projects if 0.5 <= p['health_score'] < 0.7]
+        low_health = [p for p in projects if p['health_score'] < 0.5]
+        
+        # Display high health projects
+        if high_health:
+            print("🟢 HIGH KNOWLEDGE (know ≥ 0.7)")
+            for i, p in enumerate(high_health, 1):
+                _display_project(i, p)
+            print()
+        
+        # Display medium health projects
+        if medium_health:
+            print("🟡 MEDIUM KNOWLEDGE (0.5 ≤ know < 0.7)")
+            for i, p in enumerate(medium_health, 1):
+                _display_project(i, p)
+            print()
+        
+        # Display low health projects
+        if low_health:
+            print("🔴 LOW KNOWLEDGE (know < 0.5)")
+            for i, p in enumerate(low_health, 1):
+                _display_project(i, p)
+            print()
+        
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+        print("💡 Quick Commands:")
+        print(f"   • Bootstrap project:  empirica project-bootstrap --project-id <PROJECT_ID>")
+        print(f"   • Check ready goals:  empirica goals-ready --session-id <SESSION_ID>")
+        print(f"   • List all projects:  empirica project-list")
+        print()
+        
+        return {"projects": projects}
+        
+    except Exception as e:
+        handle_cli_error(e, "Workspace overview", getattr(args, 'verbose', False))
+        return None
+
+
+def _display_project(index, project):
+    """Helper to display a single project in dashboard format"""
+    name = project['name']
+    health = project['health_score']
+    know = project['epistemic_state']['know']
+    uncertainty = project['epistemic_state']['uncertainty']
+    findings = project['findings_count']
+    unknowns = project['unknowns_count']
+    dead_ends = project['dead_ends_count']
+    sessions = project['total_sessions']
+    
+    # Format last activity
+    last_activity = project.get('last_activity')
+    if last_activity:
+        try:
+            from datetime import datetime
+            last_dt = datetime.fromtimestamp(last_activity)
+            now = datetime.now()
+            delta = now - last_dt
+            if delta.days == 0:
+                time_ago = "today"
+            elif delta.days == 1:
+                time_ago = "1 day ago"
+            elif delta.days < 7:
+                time_ago = f"{delta.days} days ago"
+            elif delta.days < 30:
+                weeks = delta.days // 7
+                time_ago = f"{weeks} week{'s' if weeks > 1 else ''} ago"
+            else:
+                months = delta.days // 30
+                time_ago = f"{months} month{'s' if months > 1 else ''} ago"
+        except:
+            time_ago = "unknown"
+    else:
+        time_ago = "never"
+    
+    print(f"   {index}. {name} │ Health: {health:.2f} │ Know: {know:.2f} │ Sessions: {sessions} │ ⏰ {time_ago}")
+    print(f"      Findings: {findings}  Unknowns: {unknowns}  Dead Ends: {dead_ends}")
+    
+    # Show warnings
+    if uncertainty > 0.7:
+        print(f"      ⚠️  High uncertainty ({uncertainty:.2f}) - needs investigation")
+    if dead_ends > 0 and sessions > 0:
+        dead_end_ratio = dead_ends / sessions
+        if dead_end_ratio > 0.3:
+            print(f"      🚨 High dead end ratio ({dead_end_ratio:.0%}) - many failed approaches")
+    if unknowns > 20:
+        print(f"      ❓ Many unresolved unknowns ({unknowns}) - systematically resolve them")
+    
+    # Show project ID (shortened)
+    project_id = project['project_id']
+    print(f"      ID: {project_id[:8]}...")
+
+
+def handle_workspace_map_command(args):
+    """Handle workspace-map command - discover git repos and show epistemic status"""
+    try:
+        from empirica.data.session_database import SessionDatabase
+        import subprocess
+        from pathlib import Path
+        
+        # Get current directory and scan parent
+        current_dir = Path.cwd()
+        parent_dir = current_dir.parent
+        
+        output_format = getattr(args, 'output', 'dashboard')
+        
+        # Find all git repositories in parent directory
+        git_repos = []
+        logger.info(f"Scanning {parent_dir} for git repositories...")
+        
+        for item in parent_dir.iterdir():
+            if not item.is_dir():
+                continue
+            
+            git_dir = item / '.git'
+            if not git_dir.exists():
+                continue
+            
+            # This is a git repo - get remote URL
+            try:
+                result = subprocess.run(
+                    ['git', '-C', str(item), 'remote', 'get-url', 'origin'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                
+                remote_url = result.stdout.strip() if result.returncode == 0 else None
+                
+                repo_info = {
+                    'path': str(item),
+                    'name': item.name,
+                    'remote_url': remote_url,
+                    'has_remote': remote_url is not None
+                }
+                
+                git_repos.append(repo_info)
+                
+            except Exception as e:
+                logger.debug(f"Error getting remote for {item.name}: {e}")
+                git_repos.append({
+                    'path': str(item),
+                    'name': item.name,
+                    'remote_url': None,
+                    'has_remote': False,
+                    'error': str(e)
+                })
+        
+        # Match with Empirica projects
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+        
+        for repo in git_repos:
+            if not repo['has_remote']:
+                repo['empirica_project'] = None
+                continue
+            
+            # Try to find matching project
+            cursor.execute("""
+                SELECT id, name, status, total_sessions,
+                       (SELECT r.know FROM reflexes r
+                        JOIN sessions s ON s.session_id = r.session_id
+                        WHERE s.project_id = projects.id
+                        ORDER BY r.timestamp DESC LIMIT 1) as latest_know,
+                       (SELECT r.uncertainty FROM reflexes r
+                        JOIN sessions s ON s.session_id = r.session_id
+                        WHERE s.project_id = projects.id
+                        ORDER BY r.timestamp DESC LIMIT 1) as latest_uncertainty
+                FROM projects
+                WHERE repos LIKE ?
+            """, (f'%{repo["remote_url"]}%',))
+            
+            row = cursor.fetchone()
+            if row:
+                repo['empirica_project'] = {
+                    'project_id': row[0],
+                    'name': row[1],
+                    'status': row[2],
+                    'total_sessions': row[3],
+                    'know': row[4] if row[4] else 0.5,
+                    'uncertainty': row[5] if row[5] else 0.5
+                }
+            else:
+                repo['empirica_project'] = None
+        
+        db.close()
+        
+        # JSON output
+        if output_format == 'json':
+            result = {
+                "ok": True,
+                "parent_directory": str(parent_dir),
+                "total_repos": len(git_repos),
+                "tracked_repos": sum(1 for r in git_repos if r['empirica_project']),
+                "untracked_repos": sum(1 for r in git_repos if not r['empirica_project']),
+                "repos": git_repos
+            }
+            print(json.dumps(result, indent=2))
+            return result
+        
+        # Dashboard output
+        tracked = [r for r in git_repos if r['empirica_project']]
+        untracked = [r for r in git_repos if not r['empirica_project']]
+        
+        print("╔════════════════════════════════════════════════════════════════╗")
+        print("║  Git Workspace Map - Epistemic Health                         ║")
+        print("╚════════════════════════════════════════════════════════════════╝\n")
+        
+        print(f"📂 Parent Directory: {parent_dir}")
+        print(f"   Total Git Repos:  {len(git_repos)}")
+        print(f"   Tracked:          {len(tracked)}")
+        print(f"   Untracked:        {len(untracked)}")
+        print()
+        
+        if tracked:
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+            print("🟢 Tracked in Empirica\n")
+            
+            for repo in tracked:
+                proj = repo['empirica_project']
+                status_icon = "🟢" if proj['status'] == 'active' else "🟡"
+                
+                print(f"{status_icon} {repo['name']}")
+                print(f"   Path: {repo['path']}")
+                print(f"   Project: {proj['name']}")
+                print(f"   Know: {proj['know']:.2f} | Uncertainty: {proj['uncertainty']:.2f} | Sessions: {proj['total_sessions']}")
+                print(f"   ID: {proj['project_id'][:8]}...")
+                print()
+        
+        if untracked:
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+            print("⚪ Not Tracked in Empirica\n")
+            
+            for repo in untracked:
+                print(f"⚪ {repo['name']}")
+                print(f"   Path: {repo['path']}")
+                if repo['has_remote']:
+                    print(f"   Remote: {repo['remote_url']}")
+                    print(f"   → To track: empirica project-create --name '{repo['name']}' --repos '[\"{repo['remote_url']}\"]'")
+                else:
+                    print(f"   ⚠️  No remote configured")
+                print()
+        
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+        print("💡 Quick Commands:")
+        print(f"   • View workspace overview:  empirica workspace-overview")
+        print(f"   • Bootstrap project:        empirica project-bootstrap --project-id <ID>")
+        print()
+        
+        return {"repos": git_repos}
+        
+    except Exception as e:
+        handle_cli_error(e, "Workspace map", getattr(args, 'verbose', False))
         return None

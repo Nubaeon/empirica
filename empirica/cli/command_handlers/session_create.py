@@ -67,6 +67,13 @@ def handle_session_create_command(args):
         if subject is None:
             subject = get_current_subject()  # Auto-detect from directory
         
+        # Show project context before creating session
+        if output_format != 'json':
+            from empirica.cli.cli_utils import print_project_context
+            print()
+            project_context = print_project_context(quiet=False, verbose=False)
+            print()
+        
         db = SessionDatabase()
         session_id = db.create_session(
             ai_id=ai_id,
@@ -105,6 +112,14 @@ def handle_session_create_command(args):
                 UPDATE sessions SET project_id = ? WHERE session_id = ?
             """, (project_id, session_id))
             db.conn.commit()
+            
+            # Show confirmation that session is linked to this project
+            if output_format != 'json':
+                cursor.execute("SELECT name FROM projects WHERE id = ?", (project_id,))
+                row = cursor.fetchone()
+                if row:
+                    print(f"✅ Session linked to project: {row['name']}")
+                    print()
 
         db.close()
 

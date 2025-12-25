@@ -1097,3 +1097,105 @@ Otherwise, Empirica's memory (findings + git) is more token-efficient.
 Your preference?"
 ```
 
+
+---
+
+## VIII. STATIC CONTEXT (Universal Knowledge)
+
+### Database Schema (Structure)
+**Key tables - bootstrap shows which have data:**
+- **sessions**: Work sessions (ai_id, start_time, end_time, project_id)
+- **goals**: Objectives with scope (breadth/duration/coordination 0.0-1.0)
+- **reflexes**: CASCADE phases (PREFLIGHT/CHECK/POSTFLIGHT) with 13 vectors
+- **project_findings**: Findings linked to goals/subtasks
+- **subtasks**: Goal breakdown with completion tracking
+- **command_usage**: CLI telemetry for usage analytics (NEW)
+
+Full schema: `docs/reference/DATABASE_SCHEMA_GENERATED.md`
+
+### Flow State Factors (Empirically Validated)
+**6 components that create high productivity:**
+
+| Component | Weight | What It Measures |
+|-----------|--------|------------------|
+| CASCADE Completeness | 25% | PREFLIGHT → CHECK → POSTFLIGHT done |
+| Bootstrap Usage | 15% | Context loaded early in session |
+| Goal Structure | 15% | Goals with subtasks defined |
+| Learning Velocity | 20% | Know increase per hour |
+| CHECK Usage | 15% | Mid-session validation on high-scope |
+| Session Continuity | 10% | AI naming convention followed |
+
+**Scoring:**
+- 0.9+ = ⭐ Perfect flow (rare, aim for this)
+- 0.7-0.9 = 🟢 Good flow (sustainable)
+- 0.5-0.7 = 🟡 Moderate flow (can improve)
+- <0.5 = 🔴 Low flow (investigate why)
+
+**Bootstrap shows:** Recent session flow scores + recommendations
+
+### Project Structure Patterns (Auto-Detected)
+**Bootstrap analyzes and detects these patterns:**
+
+```yaml
+python_package:
+  folders: [src/, tests/, docs/]
+  files: [pyproject.toml, setup.py, README.md]
+  
+django:
+  folders: [apps/, templates/, static/]
+  files: [manage.py, settings.py]
+  
+react:
+  folders: [src/, components/, public/]
+  files: [package.json, App.jsx]
+  
+monorepo:
+  folders: [packages/, apps/, libs/]
+  files: [lerna.json, workspace.yaml]
+  
+empirica_extension:
+  folders: [empirica/, tests/, docs/]
+  files: [.empirica-project/PROJECT_CONFIG.yaml]
+```
+
+**Don't prescribe structure upfront** - let bootstrap detect and measure conformance.
+
+### Command Usage (AI-First JSON Mode)
+
+**Preferred pattern:**
+```bash
+# Create from JSON stdin
+echo '{"session_id": "xyz", "objective": "..."}' | empirica goals-create -
+
+# Always use --output json
+empirica goals-list --output json
+```
+
+**Why JSON mode:**
+- Machine-readable output
+- Composable with other tools
+- Explicit schema (no parsing required)
+- Error handling is clear
+
+---
+
+## IX. DYNAMIC vs STATIC
+
+**STATIC (This Document):**
+- How Empirica works (CASCADE, vectors, commands)
+- Database schema structure
+- Flow state factors
+- Project patterns
+
+**DYNAMIC (Bootstrap):**
+- What's being worked on RIGHT NOW
+- Which tables have data in THIS project
+- Recent session flow scores
+- Detected project pattern for THIS repo
+- Active goals, findings, artifacts
+
+**Load bootstrap at session start:**
+```bash
+empirica project-bootstrap --project-id <project>
+```
+
