@@ -11,10 +11,26 @@ import uuid
 import hashlib
 from datetime import datetime
 from ..cli_utils import print_component_status, handle_cli_error, format_uncertainty_output, parse_json_safely, print_header
-from empirica.cli.command_handlers.decision_utils import get_recommendation_from_vectors
 
 # Set up logging for cascade commands
 logger = logging.getLogger(__name__)
+
+
+def get_recommendation_from_vectors(vectors):
+    """
+    Get recommendation based on epistemic vectors (inlined from deleted decision_utils.py)
+    
+    Simple heuristic: if uncertainty > 0.5, recommend investigate; otherwise proceed.
+    """
+    uncertainty = vectors.get('uncertainty', 0.5)
+    engagement = vectors.get('engagement', 0.7)
+    
+    if engagement < 0.6:
+        return "disengage", "Engagement below threshold (0.6)"
+    elif uncertainty > 0.5:
+        return "investigate", f"High uncertainty ({uncertainty:.2f})"
+    else:
+        return "proceed", f"Sufficient confidence ({1-uncertainty:.2f})"
 
 
 

@@ -47,7 +47,6 @@ from .identity_commands import (
     handle_identity_export_command,
     handle_identity_verify_command
 )
-from .decision_commands import handle_decision_command, handle_decision_batch_command
 from .config_commands import (
     handle_config_command,
     handle_config_init_command, handle_config_show_command,
@@ -121,7 +120,6 @@ from .investigation_commands import (
     handle_investigate_merge_branches_command
 )
 from .performance_commands import handle_benchmark_command, handle_performance_command
-from .component_commands import handle_list_command, handle_explain_command, handle_demo_command
 from .utility_commands import (
     handle_goal_analysis_command
 )
@@ -181,10 +179,6 @@ __all__ = [
     'handle_identity_list_command',
     'handle_identity_export_command',
     'handle_identity_verify_command',
-    
-    # Decision commands
-    'handle_decision_command',
-    'handle_decision_batch_command',
     
     # Config commands
     'handle_config_command',
@@ -267,11 +261,6 @@ __all__ = [
     # Performance commands
     'handle_benchmark_command',
     'handle_performance_command',
-    
-    # Component commands
-    'handle_list_command',
-    'handle_explain_command', 
-    'handle_demo_command',
     
     # Utility commands
     'handle_goal_analysis_command',

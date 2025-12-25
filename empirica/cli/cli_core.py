@@ -111,6 +111,7 @@ def main(args=None):
             'sessions-list': handle_sessions_list_command,
             'sessions-show': handle_sessions_show_command,
             'sessions-export': handle_sessions_export_command,
+            'sessions-resume': handle_sessions_resume_command,
             'session-snapshot': handle_session_snapshot_command,
             
             # CASCADE commands
@@ -160,6 +161,12 @@ def main(args=None):
             'checkpoint-verify': handle_checkpoint_verify_command,
             'checkpoint-signatures': handle_checkpoint_signatures_command,
             
+            # Identity commands
+            'identity-create': handle_identity_create_command,
+            'identity-export': handle_identity_export_command,
+            'identity-list': handle_identity_list_command,
+            'identity-verify': handle_identity_verify_command,
+            
             # Handoff commands
             'handoff-create': handle_handoff_create_command,
             'handoff-query': handle_handoff_query_command,
@@ -190,13 +197,13 @@ def main(args=None):
             # Goals commands
             'goals-create': handle_goals_create_command,
             'goals-list': handle_goals_list_command,
-            'goals-show': handle_goals_show_command,
-            'goals-update': handle_goals_update_command,
             'goals-complete': handle_goals_complete_command,
             'goals-claim': handle_goals_claim_command,
             'goals-add-subtask': handle_goals_add_subtask_command,
-            'goals-update-subtask': handle_goals_update_subtask_command,
-            'goals-discovery': handle_goals_discovery_command,
+            'goals-complete-subtask': handle_goals_complete_subtask_command,
+            'goals-get-subtasks': handle_goals_get_subtasks_command,
+            'goals-progress': handle_goals_progress_command,
+            'goals-discover': handle_goals_discover_command,
             'goals-ready': handle_goals_ready_command,
             'goals-resume': handle_goals_resume_command,
             
