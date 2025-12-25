@@ -168,7 +168,14 @@ def handle_check_command(args):
         import sys
         import os
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
-        from empirica.cli.command_handlers.decision_utils import calculate_decision
+        # Inline calculate_decision (from deleted decision_utils.py)
+        def calculate_decision(confidence: float) -> str:
+            if confidence >= 0.7:
+                return "proceed"
+            elif confidence <= 0.3:
+                return "investigate"
+            else:
+                return "proceed_with_caution"
 
         # AI-FIRST MODE: Check if config file provided
         config_data = None
