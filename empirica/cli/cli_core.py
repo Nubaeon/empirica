@@ -85,6 +85,22 @@ from .parsers import (
 )
 
 
+def _get_version():
+    """Get Empirica version with additional info"""
+    try:
+        import empirica
+        version = empirica.__version__
+        
+        # Add Python version and install location
+        import sys
+        python_version = f"Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        install_path = empirica.__file__.rsplit('/', 2)[0] if '/' in empirica.__file__ else empirica.__file__
+        
+        return f"{version}\n{python_version}\nInstall: {install_path}"
+    except:
+        return "1.0.5 (version info unavailable)"
+
+
 def create_argument_parser():
     """Create and configure the main argument parser"""
     parser = argparse.ArgumentParser(
@@ -102,6 +118,7 @@ Examples:
     )
     
     # Global options
+    parser.add_argument('--version', action='version', version=f'%(prog)s {_get_version()}')
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
     parser.add_argument('--config', help='Path to configuration file')
     
