@@ -211,11 +211,11 @@ def main(args=None):
             'chat': handle_chat_command,
             
             # Vision commands
-            'vision': handle_vision_command,
+            'vision': handle_vision_analyze,
             
             # Epistemics commands
-            'epistemics-list': handle_epistemics_list_command,
-            'epistemics-show': handle_epistemics_show_command,
+            'epistemics-list': handle_epistemics_search_command,
+            'epistemics-show': handle_epistemics_stats_command,
         }
         
         if parsed_args.command in command_handlers:
