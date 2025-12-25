@@ -1,2 +1,0 @@
-[console_scripts]
-empirica-mcp = empirica_mcp.server:run

@@ -68,6 +68,7 @@ test_goals_session
 build/
 dist/
 *.egg-info/
+**/*.egg-info/
 
 # Internal business docs (live in empirica-internal repo)
 DEV_ARTIFACTS_LOCATION.md
