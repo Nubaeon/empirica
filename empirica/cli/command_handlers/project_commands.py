@@ -1298,7 +1298,8 @@ def handle_workspace_overview_command(args):
                 "projects": projects
             }
             print(json.dumps(result, indent=2))
-            return result
+            # Return None to avoid exit code issues and duplicate output
+            return None
         
         # Dashboard output (human-readable)
         stats = overview['workspace_stats']

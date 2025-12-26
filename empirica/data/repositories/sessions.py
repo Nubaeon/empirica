@@ -1,6 +1,7 @@
 """Session repository for session CRUD operations"""
 import sqlite3
 import uuid
+import json
 from typing import Dict, List, Optional
 from datetime import datetime
 from .base import BaseRepository
@@ -156,3 +157,81 @@ class SessionRepository(BaseRepository):
 
         row = cursor.fetchone()
         return dict(row) if row else None
+
+    def get_session_summary(self, session_id: str, detail_level: str = "summary") -> Optional[Dict]:
+        """
+        Generate comprehensive session summary for resume/handoff
+
+        Args:
+            session_id: Session to summarize
+            detail_level: 'summary', 'detailed', or 'full'
+
+        Returns:
+            Dictionary with session metadata, epistemic delta, accomplishments, etc.
+        """
+        # Get session metadata
+        session = self.get_session(session_id)
+        if not session:
+            return None
+
+        # Get cascades
+        cascades = self.get_session_cascades(session_id)
+
+        # Get PREFLIGHT/POSTFLIGHT from unified reflexes table instead of legacy cascade_metadata
+        cursor = self._execute("""
+            SELECT phase, json_extract(reflex_data, '$.vectors'), cascade_id, timestamp
+            FROM reflexes
+            WHERE session_id = ?
+            AND phase IN ('PREFLIGHT', 'POSTFLIGHT')
+            ORDER BY timestamp
+        """, (session_id,))
+
+        assessments = {}
+        cascade_tasks = {}
+        for row in cursor.fetchall():
+            phase, vectors_json, cascade_id, timestamp = row
+            if vectors_json:
+                # Convert phase to the expected key format
+                key = f"{phase.lower()}_vectors"
+                assessments[key] = json.loads(vectors_json)
+                # We don't have the task from reflexes, so we'll get it from cascades
+                cascade_cursor = self._execute("SELECT task FROM cascades WHERE cascade_id = ?", (cascade_id,))
+                cascade_row = cascade_cursor.fetchone()
+                if cascade_row:
+                    cascade_tasks[cascade_id] = cascade_row[0]
+
+        # Get investigation tools used (if detailed)
+        tools_used = []
+        if detail_level in ['detailed', 'full']:
+            cursor = self._execute("""
+                SELECT tool_name, COUNT(*) as count
+                FROM investigation_tools
+                WHERE cascade_id IN (
+                    SELECT cascade_id FROM cascades WHERE session_id = ?
+                )
+                GROUP BY tool_name
+                ORDER BY count DESC
+                LIMIT 10
+            """, (session_id,))
+            tools_used = [{"tool": row[0], "count": row[1]} for row in cursor.fetchall()]
+
+        # Calculate epistemic delta
+        delta = None
+        if 'preflight_vectors' in assessments and 'postflight_vectors' in assessments:
+            pre = assessments['preflight_vectors']
+            post = assessments['postflight_vectors']
+            delta = {key: post.get(key, 0.5) - pre.get(key, 0.5) for key in post}
+
+        return {
+            'session_id': session_id,
+            'ai_id': session['ai_id'],
+            'start_time': session['start_time'],
+            'end_time': session.get('end_time'),
+            'total_cascades': len(cascades),
+            'cascades': cascades if detail_level == 'full' else [c['task'] for c in cascades],
+            'preflight': assessments.get('preflight_vectors'),
+            'postflight': assessments.get('postflight_vectors'),
+            'epistemic_delta': delta,
+            'tools_used': tools_used,
+            'avg_confidence': session.get('avg_confidence')
+        }
