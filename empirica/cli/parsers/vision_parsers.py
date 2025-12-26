@@ -6,4 +6,4 @@ def add_vision_parsers(subparsers):
     # Vision command
     vision_parser = subparsers.add_parser('vision', help='Process visual information')
     vision_parser.add_argument('image_path', help='Path to image file')
-    vision_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+    vision_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')

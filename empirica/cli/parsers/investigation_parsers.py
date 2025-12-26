@@ -26,7 +26,7 @@ def add_investigation_parsers(subparsers):
     create_branch_parser.add_argument('--investigation-path', required=True, help='What is being investigated (e.g., oauth2)')
     create_branch_parser.add_argument('--description', help='Description of investigation')
     create_branch_parser.add_argument('--preflight-vectors', help='Epistemic vectors at branch start (JSON)')
-    create_branch_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+    create_branch_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     create_branch_parser.add_argument('--verbose', action='store_true', help='Verbose output')
 
     # investigate-checkpoint-branch command
@@ -38,7 +38,7 @@ def add_investigation_parsers(subparsers):
     checkpoint_branch_parser.add_argument('--postflight-vectors', required=True, help='Epistemic vectors after investigation (JSON)')
     checkpoint_branch_parser.add_argument('--tokens-spent', help='Tokens spent in investigation')
     checkpoint_branch_parser.add_argument('--time-spent', help='Time spent in investigation (minutes)')
-    checkpoint_branch_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+    checkpoint_branch_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     checkpoint_branch_parser.add_argument('--verbose', action='store_true', help='Verbose output')
 
     # investigate-merge-branches command
@@ -48,5 +48,5 @@ def add_investigation_parsers(subparsers):
     )
     merge_branches_parser.add_argument('--session-id', required=True, help='Session ID')
     merge_branches_parser.add_argument('--round', help='Investigation round number')
-    merge_branches_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
+    merge_branches_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     merge_branches_parser.add_argument('--verbose', action='store_true', help='Verbose output')

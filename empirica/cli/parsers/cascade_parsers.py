@@ -53,7 +53,7 @@ def add_cascade_parsers(subparsers):
     preflight_submit_parser.add_argument('--session-id', help='Session ID (legacy)')
     preflight_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
     preflight_submit_parser.add_argument('--reasoning', help='Reasoning for assessment scores (legacy)')
-    preflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
+    preflight_submit_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
     preflight_submit_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
     
     # Check command (AI-first with config file support)
@@ -72,7 +72,7 @@ def add_cascade_parsers(subparsers):
     unknowns_group.add_argument('--unknowns', dest='unknowns', help='Remaining unknowns as JSON array (legacy)')
     unknowns_group.add_argument('--remaining-unknowns', dest='unknowns', help='Alias for --unknowns (legacy)')
     check_parser.add_argument('--confidence', type=float, help='Confidence score (0.0-1.0) (legacy)')
-    check_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
+    check_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
     check_parser.add_argument('--verbose', action='store_true', help='Show detailed analysis')
     
     # Check submit command
@@ -83,7 +83,7 @@ def add_cascade_parsers(subparsers):
     check_submit_parser.add_argument('--reasoning', help='Reasoning for decision')
     check_submit_parser.add_argument('--cycle', type=int, help='Investigation cycle number')
     check_submit_parser.add_argument('--round', type=int, help='Round number (for checkpoint tracking)')
-    check_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    check_submit_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     check_submit_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
     
     # Postflight command (primary, non-blocking)
@@ -91,7 +91,7 @@ def add_cascade_parsers(subparsers):
     postflight_parser.add_argument('--session-id', required=True, help='Session ID')
     postflight_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict (reassessment of same 13 dimensions as preflight)')
     postflight_parser.add_argument('--reasoning', help='Task summary or description of learning/changes from preflight')
-    postflight_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    postflight_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     postflight_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
     # Postflight submit command (AI-first with config file support)
@@ -107,7 +107,7 @@ def add_cascade_parsers(subparsers):
     postflight_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
     postflight_submit_parser.add_argument('--reasoning', help='Description of what changed from preflight (legacy)')
     postflight_submit_parser.add_argument('--changes', help='Alias for --reasoning (deprecated, use --reasoning)', dest='reasoning')
-    postflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
+    postflight_submit_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
     postflight_submit_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
 

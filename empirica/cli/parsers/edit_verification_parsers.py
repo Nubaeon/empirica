@@ -38,7 +38,7 @@ def add_edit_verification_parsers(subparsers):
     )
     edit_confidence_parser.add_argument(
         '--output',
-        choices=['default', 'json'],
+        choices=['human', 'json'],
         default='json',
         help=format_help_text('Output format', default='json')
     )
