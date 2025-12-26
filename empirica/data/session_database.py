@@ -1522,36 +1522,8 @@ class SessionDatabase:
         }
 
     def _load_goals_for_project(self, project_id: str) -> Dict:
-        """Load incomplete and active goals for project"""
-        # Get incomplete goals
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, objective, scope, status, created_timestamp
-            FROM goals
-            WHERE session_id IN (SELECT session_id FROM sessions WHERE project_id = ?)
-            AND is_completed = 0
-            ORDER BY created_timestamp DESC
-        """, (project_id,))
-        incomplete_goals = [dict(row) for row in cursor.fetchall()]
-
-        # Get active goals (more detailed)
-        cursor.execute("""
-            SELECT g.id, g.objective, g.scope, g.status, g.goal_data,
-                   COUNT(DISTINCT s.id) as subtask_count,
-                   SUM(CASE WHEN s.status = 'completed' THEN 1 ELSE 0 END) as completed_subtasks
-            FROM goals g
-            LEFT JOIN subtasks s ON g.id = s.goal_id
-            WHERE g.session_id IN (SELECT session_id FROM sessions WHERE project_id = ?)
-            AND g.is_completed = 0
-            GROUP BY g.id
-            ORDER BY g.created_timestamp DESC
-        """, (project_id,))
-        active_goals = [dict(row) for row in cursor.fetchall()]
-
-        return {
-            'incomplete_work': incomplete_goals,
-            'goals': active_goals
-        }
+        """Load goals for project (delegates to GoalRepository)"""
+        return self.goals.get_project_goals(project_id)
 
     def _capture_live_state_if_requested(
         self,
