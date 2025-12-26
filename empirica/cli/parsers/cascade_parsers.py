@@ -75,14 +75,21 @@ def add_cascade_parsers(subparsers):
     check_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
     check_parser.add_argument('--verbose', action='store_true', help='Show detailed analysis')
     
-    # Check submit command
-    check_submit_parser = subparsers.add_parser('check-submit', help='Submit check assessment results')
-    check_submit_parser.add_argument('--session-id', required=True, help='Session ID')
-    check_submit_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict')
-    check_submit_parser.add_argument('--decision', required=True, choices=['proceed', 'investigate', 'proceed_with_caution'], help='Decision made')
-    check_submit_parser.add_argument('--reasoning', help='Reasoning for decision')
-    check_submit_parser.add_argument('--cycle', type=int, help='Investigation cycle number')
-    check_submit_parser.add_argument('--round', type=int, help='Round number (for checkpoint tracking)')
+    # Check submit command (AI-first with config file support)
+    check_submit_parser = subparsers.add_parser('check-submit', 
+        help='Submit check assessment (AI-first: use config file, Legacy: use flags)')
+    
+    # AI-FIRST: Positional config file argument
+    check_submit_parser.add_argument('config', nargs='?',
+        help='JSON config file path or "-" for stdin (AI-first mode)')
+    
+    # LEGACY: Flag-based arguments (backward compatible)
+    check_submit_parser.add_argument('--session-id', help='Session ID (legacy)')
+    check_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
+    check_submit_parser.add_argument('--decision', choices=['proceed', 'investigate', 'proceed_with_caution'], help='Decision made (legacy)')
+    check_submit_parser.add_argument('--reasoning', help='Reasoning for decision (legacy)')
+    check_submit_parser.add_argument('--cycle', type=int, help='Investigation cycle number (legacy)')
+    check_submit_parser.add_argument('--round', type=int, help='Round number (for checkpoint tracking) (legacy)')
     check_submit_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     check_submit_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
     

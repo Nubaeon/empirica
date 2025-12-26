@@ -398,6 +398,7 @@ def handle_check_submit_command(args):
     try:
         import sys
         import os
+        import json
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         
         # AI-FIRST MODE: Check if config provided
@@ -419,11 +420,13 @@ def handle_check_submit_command(args):
             vectors = config_data.get('vectors')
             decision = config_data.get('decision')
             reasoning = config_data.get('reasoning', '')
+            output_format = config_data.get('output', 'json')  # Default to JSON for AI-first
         else:
             session_id = args.session_id
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
             decision = args.decision
             reasoning = args.reasoning
+            output_format = getattr(args, 'output', 'human')
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
         round_num = getattr(args, 'round', 1)  # Default to 1 if not provided, don't depend on cycle
         
@@ -521,7 +524,7 @@ def handle_check_submit_command(args):
             }
         
         # Format output
-        if hasattr(args, 'output') and args.output == 'json':
+        if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
             print("✅ CHECK assessment submitted successfully")

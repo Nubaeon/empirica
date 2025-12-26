@@ -748,65 +748,20 @@ class SessionDatabase:
         return self.get_latest_vectors(session_id, phase="POSTFLIGHT")
     
     def get_preflight_vectors(self, session_id: str) -> Optional[Dict]:
-        """Get latest PREFLIGHT vectors for session (convenience method)"""
-        return self.get_latest_vectors(session_id, phase="PREFLIGHT")
-    
+        """Get latest PREFLIGHT vectors for session (delegates to VectorRepository)"""
+        return self.vectors.get_preflight_vectors(session_id)
+
     def get_check_vectors(self, session_id: str, cycle: Optional[int] = None) -> List[Dict]:
-        """Get CHECK phase vectors, optionally filtered by cycle"""
-        vectors = self.get_vectors_by_phase(session_id, phase="CHECK")
-        if cycle is not None:
-            return [v for v in vectors if v.get('round') == cycle]
-        return vectors
-    
+        """Get CHECK phase vectors (delegates to VectorRepository)"""
+        return self.vectors.get_check_vectors(session_id, cycle)
+
     def get_postflight_vectors(self, session_id: str) -> Optional[Dict]:
-        """Get latest POSTFLIGHT vectors for session (convenience method)"""
-        return self.get_latest_vectors(session_id, phase="POSTFLIGHT")
+        """Get latest POSTFLIGHT vectors for session (delegates to VectorRepository)"""
+        return self.vectors.get_postflight_vectors(session_id)
     
     def get_vectors_by_phase(self, session_id: str, phase: str) -> List[Dict]:
-        """Get all vectors for a specific phase"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT * FROM reflexes 
-            WHERE session_id = ? AND phase = ? 
-            ORDER BY timestamp ASC
-        """, (session_id, phase))
-        
-        results = []
-        for row in cursor.fetchall():
-            row_dict = dict(row)
-            # Build vectors dict from columns
-            vectors = {
-                'engagement': row_dict.get('engagement'),
-                'know': row_dict.get('know'),
-                'do': row_dict.get('do'),
-                'context': row_dict.get('context'),
-                'clarity': row_dict.get('clarity'),
-                'coherence': row_dict.get('coherence'),
-                'signal': row_dict.get('signal'),
-                'density': row_dict.get('density'),
-                'state': row_dict.get('state'),
-                'change': row_dict.get('change'),
-                'completion': row_dict.get('completion'),
-                'impact': row_dict.get('impact'),
-                'uncertainty': row_dict.get('uncertainty')
-            }
-            # Remove None values
-            vectors = {k: v for k, v in vectors.items() if v is not None}
-            
-            result = {
-                'session_id': row_dict['session_id'],
-                'cascade_id': row_dict.get('cascade_id'),
-                'phase': row_dict['phase'],
-                'round': row_dict.get('round', 1),
-                'timestamp': row_dict['timestamp'],
-                'vectors': vectors,
-                'metadata': json.loads(row_dict['reflex_data']) if row_dict.get('reflex_data') else {},
-                'reasoning': row_dict.get('reasoning'),
-                'evidence': row_dict.get('evidence')
-            }
-            results.append(result)
-        
-        return results
+        """Get all vectors for a specific phase (delegates to VectorRepository)"""
+        return self.vectors.get_vectors_by_phase(session_id, phase)
     
     def store_epistemic_delta(self, cascade_id: str, delta: Dict[str, float]):
         """Store epistemic delta for calibration tracking (delegates to CascadeRepository)"""
@@ -1206,115 +1161,12 @@ class SessionDatabase:
         return None
     
     def store_vectors(self, session_id: str, phase: str, vectors: Dict[str, float], cascade_id: Optional[str] = None, round_num: int = 1, metadata: Optional[Dict] = None, reasoning: Optional[str] = None):
-        """
-        Store epistemic vectors in the reflexes table
-
-        Args:
-            session_id: Session identifier
-            phase: Current phase (PREFLIGHT, CHECK, ACT, POSTFLIGHT)
-            vectors: Dictionary of 13 epistemic vectors
-            cascade_id: Optional cascade identifier
-            round_num: Current round number
-        """
-        cursor = self.conn.cursor()
-
-        # Extract the 13 vectors, providing default values if not present
-        vector_names = [
-            'engagement', 'know', 'do', 'context',
-            'clarity', 'coherence', 'signal', 'density',
-            'state', 'change', 'completion', 'impact', 'uncertainty'
-        ]
-
-        vector_values = []
-        for name in vector_names:
-            value = vectors.get(name, 0.5)  # Default to 0.5 if not provided
-            vector_values.append(value if isinstance(value, (int, float)) else 0.5)
-
-        # Create a reflex data entry with optional metadata
-        reflex_data = {
-            'session_id': session_id,
-            'phase': phase,
-            'round': round_num,
-            'vectors': vectors,
-            'timestamp': time.time()
-        }
-        
-        # Merge in any additional metadata if provided
-        if metadata:
-            reflex_data.update(metadata)
-
-        cursor.execute("""
-            INSERT INTO reflexes (
-                session_id, cascade_id, phase, round, timestamp,
-                engagement, know, do, context,
-                clarity, coherence, signal, density,
-                state, change, completion, impact, uncertainty,
-                reflex_data, reasoning
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            session_id, cascade_id, phase, round_num, time.time(),
-            *vector_values,  # Unpack the 13 vector values
-            json.dumps(reflex_data),
-            reasoning
-        ))
-
-        self.conn.commit()
+        """Store epistemic vectors (delegates to VectorRepository)"""
+        return self.vectors.store_vectors(session_id, phase, vectors, cascade_id, round_num, metadata, reasoning)
 
     def get_latest_vectors(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict]:
-        """
-        Get the latest epistemic vectors for a session from the reflexes table
-
-        Args:
-            session_id: Session identifier
-            phase: Optional phase filter
-
-        Returns:
-            Dictionary with vectors, metadata, timestamp, etc. or None if not found
-        """
-        cursor = self.conn.cursor()
-
-        query = """
-            SELECT * FROM reflexes
-            WHERE session_id = ?
-        """
-        params = [session_id]
-
-        if phase:
-            query += " AND phase = ?"
-            params.append(phase)
-
-        query += " ORDER BY timestamp DESC LIMIT 1"
-
-        cursor.execute(query, params)
-        result = cursor.fetchone()
-
-        if result:
-            row_dict = dict(result)
-            
-            # Extract the 13 vector values from the result
-            vectors = {}
-            for vector_name in ['engagement', 'know', 'do', 'context',
-                               'clarity', 'coherence', 'signal', 'density',
-                               'state', 'change', 'completion', 'impact', 'uncertainty']:
-                if vector_name in row_dict:
-                    value = row_dict[vector_name]
-                    if value is not None:
-                        vectors[vector_name] = float(value)
-            
-            # Return full data structure
-            return {
-                'session_id': row_dict['session_id'],
-                'cascade_id': row_dict.get('cascade_id'),
-                'phase': row_dict['phase'],
-                'round': row_dict.get('round', 1),
-                'timestamp': row_dict['timestamp'],
-                'vectors': vectors,
-                'metadata': json.loads(row_dict['reflex_data']) if row_dict.get('reflex_data') else {},
-                'reasoning': row_dict.get('reasoning'),
-                'evidence': row_dict.get('evidence')
-            }
-
-        return None
+        """Get latest epistemic vectors for session (delegates to VectorRepository)"""
+        return self.vectors.get_latest_vectors(session_id, phase)
 
     def get_findings_by_file(self, filename: str, session_id: Optional[str] = None) -> List[Dict]:
         """Get all findings mentioning a specific file"""
@@ -2531,110 +2383,12 @@ class SessionDatabase:
         }
 
     def get_workspace_overview(self) -> Dict[str, Any]:
-        """
-        Get epistemic overview of all projects in workspace.
-        
-        Returns:
-            Dictionary with:
-            - total_projects: int
-            - projects: List of project dicts with epistemic health
-            - workspace_stats: Aggregate statistics
-        """
-        cursor = self.conn.cursor()
-        
-        # Get all projects with their latest epistemic state
-        cursor.execute("""
-            SELECT 
-                p.id,
-                p.name,
-                p.description,
-                p.status,
-                p.total_sessions,
-                p.last_activity_timestamp,
-                -- Get latest epistemic vectors from most recent session reflex
-                (SELECT r.know FROM reflexes r
-                 JOIN sessions s ON s.session_id = r.session_id
-                 WHERE s.project_id = p.id
-                 ORDER BY r.timestamp DESC LIMIT 1) as latest_know,
-                (SELECT r.uncertainty FROM reflexes r
-                 JOIN sessions s ON s.session_id = r.session_id
-                 WHERE s.project_id = p.id
-                 ORDER BY r.timestamp DESC LIMIT 1) as latest_uncertainty,
-                -- Counts
-                (SELECT COUNT(*) FROM project_findings WHERE project_id = p.id) as findings_count,
-                (SELECT COUNT(*) FROM project_unknowns WHERE project_id = p.id AND is_resolved = 0) as unknowns_count,
-                (SELECT COUNT(*) FROM project_dead_ends WHERE project_id = p.id) as dead_ends_count
-            FROM projects p
-            ORDER BY p.last_activity_timestamp DESC
-        """)
-        
-        projects = []
-        for row in cursor.fetchall():
-            project = {
-                'project_id': row[0],
-                'name': row[1],
-                'description': row[2],
-                'status': row[3],
-                'total_sessions': row[4],
-                'last_activity': row[5],
-                'epistemic_state': {
-                    'know': row[6] if row[6] is not None else 0.5,
-                    'uncertainty': row[7] if row[7] is not None else 0.5
-                },
-                'findings_count': row[8],
-                'unknowns_count': row[9],
-                'dead_ends_count': row[10]
-            }
-            
-            # Calculate health metrics
-            if project['total_sessions'] > 0:
-                dead_end_ratio = project['dead_ends_count'] / project['total_sessions']
-                project['dead_end_ratio'] = dead_end_ratio
-                
-                # Health score (0-1): weighted by knowledge and uncertainty
-                know = project['epistemic_state']['know']
-                uncertainty = project['epistemic_state']['uncertainty']
-                health = (know * 0.6) + ((1 - uncertainty) * 0.4) - (dead_end_ratio * 0.2)
-                project['health_score'] = max(0.0, min(1.0, health))
-            else:
-                project['dead_end_ratio'] = 0.0
-                project['health_score'] = 0.5
-            
-            projects.append(project)
-        
-        # Get workspace-level stats
-        workspace_stats = self._get_workspace_stats()
-        
-        return {
-            'total_projects': len(projects),
-            'projects': projects,
-            'workspace_stats': workspace_stats
-        }
+        """Get workspace overview (delegates to WorkspaceRepository)"""
+        return self.workspace.get_workspace_overview()
     
     def _get_workspace_stats(self) -> Dict[str, Any]:
-        """Get workspace-level aggregated statistics"""
-        cursor = self.conn.cursor()
-        
-        cursor.execute("""
-            SELECT 
-                COUNT(DISTINCT p.id) as total_projects,
-                COUNT(DISTINCT s.session_id) as total_sessions,
-                COUNT(DISTINCT CASE WHEN s.end_time IS NULL THEN s.session_id END) as active_sessions,
-                AVG(CASE WHEN r.know IS NOT NULL THEN r.know END) as avg_know,
-                AVG(CASE WHEN r.uncertainty IS NOT NULL THEN r.uncertainty END) as avg_uncertainty
-            FROM projects p
-            LEFT JOIN sessions s ON s.project_id = p.id
-            LEFT JOIN reflexes r ON r.session_id = s.session_id
-        """)
-        
-        row = cursor.fetchone()
-        return {
-            'total_projects': row[0] or 0,
-            'total_sessions': row[1] or 0,
-            'active_sessions': row[2] or 0,
-            'avg_know': round(row[3], 2) if row[3] else 0.5,
-            'avg_uncertainty': round(row[4], 2) if row[4] else 0.5
-        }
+        """Get workspace stats (delegates to WorkspaceRepository)"""
+        return self.workspace._get_workspace_aggregate_stats()
 
     def close(self):
         """Close database connection and all repositories"""
@@ -2691,65 +2445,5 @@ if __name__ == "__main__":
         return usage_id
     
     def get_command_usage_stats(self, days: int = 30) -> Dict:
-        """Get command usage statistics for legacy detection
-        
-        Args:
-            days: Number of days to analyze
-            
-        Returns:
-            Dict with usage stats, legacy candidates, broken commands
-        """
-        import time
-        
-        cursor = self.conn.cursor()
-        since_timestamp = time.time() - (days * 24 * 3600)
-        
-        # Most used commands
-        cursor.execute("""
-            SELECT command_name, COUNT(*) as usage_count,
-                   AVG(execution_time_ms) as avg_time_ms,
-                   MAX(timestamp) as last_used
-            FROM command_usage
-            WHERE timestamp >= ?
-            GROUP BY command_name
-            ORDER BY usage_count DESC
-        """, (since_timestamp,))
-        
-        most_used = [dict(row) for row in cursor.fetchall()]
-        
-        # Rarely used (legacy candidates)
-        cursor.execute("""
-            SELECT command_name, COUNT(*) as usage_count,
-                   MAX(timestamp) as last_used,
-                   (? - MAX(timestamp)) / 86400.0 as days_since_last_use
-            FROM command_usage
-            WHERE timestamp >= ?
-            GROUP BY command_name
-            HAVING usage_count < 5
-            ORDER BY usage_count ASC
-        """, (time.time(), since_timestamp))
-        
-        legacy_candidates = [dict(row) for row in cursor.fetchall()]
-        
-        # Low success rate (broken/confusing)
-        cursor.execute("""
-            SELECT command_name,
-                   COUNT(*) as total_uses,
-                   SUM(CASE WHEN success THEN 1 ELSE 0 END) as successes,
-                   ROUND(100.0 * SUM(CASE WHEN success THEN 1 ELSE 0 END) / COUNT(*), 2) as success_rate
-            FROM command_usage
-            WHERE timestamp >= ?
-            GROUP BY command_name
-            HAVING total_uses >= 10 AND success_rate < 50
-            ORDER BY success_rate ASC
-        """, (since_timestamp,))
-        
-        broken_commands = [dict(row) for row in cursor.fetchall()]
-        
-        return {
-            'period_days': days,
-            'most_used': most_used[:10],
-            'legacy_candidates': legacy_candidates,
-            'broken_commands': broken_commands,
-            'total_commands_tracked': len(most_used)
-        }
+        """Get command usage stats (delegates to CommandRepository)"""
+        return self.commands.get_command_usage_stats(days)
