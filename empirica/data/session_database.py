@@ -46,6 +46,13 @@ try:
 except ImportError:
     CANONICAL_AVAILABLE = False
 
+# Import formatters
+from .formatters import (
+    generate_context_markdown,
+    export_to_reflex_logs,
+    determine_action
+)
+
 
 class SessionDatabase:
     """Central database for all session data (supports SQLite and PostgreSQL)"""
@@ -95,11 +102,22 @@ class SessionDatabase:
         self._create_tables()
 
         # Initialize domain repositories (sharing same connection)
-        from empirica.data.repositories import GoalRepository, BranchRepository, BreadcrumbRepository, ProjectRepository
+        from empirica.data.repositories import (
+            SessionRepository, CascadeRepository, GoalRepository,
+            BranchRepository, BreadcrumbRepository, ProjectRepository,
+            TokenRepository, CommandRepository, WorkspaceRepository,
+            VectorRepository
+        )
+        self.sessions = SessionRepository(self.conn)
+        self.cascades = CascadeRepository(self.conn)
         self.goals = GoalRepository(self.conn)
         self.branches = BranchRepository(self.conn)
         self.breadcrumbs = BreadcrumbRepository(self.conn)
         self.projects = ProjectRepository(self.conn)
+        self.tokens = TokenRepository(self.conn)
+        self.commands = CommandRepository(self.conn)
+        self.workspace = WorkspaceRepository(self.conn)
+        self.vectors = VectorRepository(self.conn)
 
         # Core repositories need special handling to avoid circular dependency
         # We'll initialize them lazily when first accessed
@@ -151,68 +169,17 @@ class SessionDatabase:
     def _create_tables(self):
         """Create all database tables from schema modules"""
         from empirica.data.schema import ALL_SCHEMAS
-        
+        from empirica.data.migrations import MigrationRunner, ALL_MIGRATIONS
+
         cursor = self.conn.cursor()
-        
+
         # Execute all table schemas
         for schema_sql in ALL_SCHEMAS:
             cursor.execute(schema_sql)
-        
-        # Migration: Add new columns if they don't exist (for existing databases)
-        # These will be removed in Phase 4 (migrations module)
-        try:
-            cursor.execute("ALTER TABLE cascades ADD COLUMN preflight_completed BOOLEAN DEFAULT 0")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-        
-        try:
-            cursor.execute("ALTER TABLE cascades ADD COLUMN plan_completed BOOLEAN DEFAULT 0")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-        
-        try:
-            cursor.execute("ALTER TABLE cascades ADD COLUMN postflight_completed BOOLEAN DEFAULT 0")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-        
-        try:
-            cursor.execute("ALTER TABLE cascades ADD COLUMN epistemic_delta TEXT")  # JSON
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-        
-        try:
-            cursor.execute("ALTER TABLE cascades ADD COLUMN goal_id TEXT")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-        
-        try:
-            cursor.execute("ALTER TABLE cascades ADD COLUMN goal_json TEXT")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
 
-        # Migration for goals table: Add status column if missing
-        try:
-            cursor.execute("ALTER TABLE goals ADD COLUMN status TEXT DEFAULT 'in_progress'")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-
-        # Migration for sessions table: Add project_id column if missing
-        try:
-            cursor.execute("ALTER TABLE sessions ADD COLUMN project_id TEXT")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-        
-        # Migration: Add subject column to sessions table
-        try:
-            cursor.execute("ALTER TABLE sessions ADD COLUMN subject TEXT")
-        except sqlite3.OperationalError:
-            pass
-        
-        # Migration: Add impact column to project_findings table
-        try:
-            cursor.execute("ALTER TABLE project_findings ADD COLUMN impact REAL")
-        except sqlite3.OperationalError:
-            pass
+        # Run tracked migrations (only executes once per migration)
+        migration_runner = MigrationRunner(self.conn)
+        migration_runner.run_all(ALL_MIGRATIONS)
 
         # Create indexes for performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_ai ON sessions(ai_id)")
@@ -390,7 +357,7 @@ class SessionDatabase:
     def create_session(self, ai_id: str, components_loaded: int = 0,
                       user_id: Optional[str] = None, subject: Optional[str] = None) -> str:
         """
-        Create new session, return session_id.
+        Create new session, return session_id (delegates to SessionRepository)
 
         Args:
             ai_id: AI identifier (required)
@@ -401,100 +368,33 @@ class SessionDatabase:
         Returns:
             session_id: UUID string
         """
-        session_id = str(uuid.uuid4())
-
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO sessions (
-                session_id, ai_id, user_id, start_time, components_loaded, subject
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        """, (session_id, ai_id, user_id, datetime.now(), components_loaded, subject))
-        
-        self.conn.commit()
-        return session_id
+        return self.sessions.create_session(ai_id, components_loaded, user_id, subject)
     
     def end_session(self, session_id: str, avg_confidence: Optional[float] = None,
                    drift_detected: bool = False, notes: Optional[str] = None):
-        """Mark session as ended"""
+        """Mark session as ended (delegates to SessionRepository)"""
         self._validate_session_id(session_id)
-
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            UPDATE sessions
-            SET end_time = ?, avg_confidence = ?, drift_detected = ?, session_notes = ?
-            WHERE session_id = ?
-        """, (datetime.now(), avg_confidence, drift_detected, notes, session_id))
-
-        self.conn.commit()
+        return self.sessions.end_session(session_id, avg_confidence, drift_detected, notes)
     
     def create_cascade(self, session_id: str, task: str, context: Dict[str, Any],
                       goal_id: Optional[str] = None, goal: Optional[Dict[str, Any]] = None) -> str:
-        """
-        Create cascade record, return cascade_id
-
-        Args:
-            session_id: Session identifier
-            task: Task description
-            context: Context dictionary
-            goal_id: Optional goal identifier
-            goal: Optional full goal object
-        """
+        """Create cascade record (delegates to CascadeRepository)"""
         self._validate_session_id(session_id)
-        cascade_id = str(uuid.uuid4())
-        goal_json = json.dumps(goal) if goal else None
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO cascades (
-                cascade_id, session_id, task, context_json, goal_id, goal_json, started_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (cascade_id, session_id, task, json.dumps(context), goal_id, goal_json, datetime.now()))
-        
-        # Increment session cascade count
-        cursor.execute("""
-            UPDATE sessions SET total_cascades = total_cascades + 1
-            WHERE session_id = ?
-        """, (session_id,))
-        
-        self.conn.commit()
-        return cascade_id
+        return self.cascades.create_cascade(session_id, task, context, goal_id, goal)
     
     def update_cascade_phase(self, cascade_id: str, phase: str, completed: bool = True):
-        """Mark cascade phase as completed"""
-        # SECURITY: Validate phase parameter to prevent SQL injection
-        VALID_PHASES = {'preflight', 'think', 'plan', 'investigate', 'check', 'act', 'postflight'}
-        if phase not in VALID_PHASES:
-            raise ValueError(f"Invalid phase: {phase}. Must be one of {VALID_PHASES}")
-        
-        phase_column = f"{phase}_completed"
-        cursor = self.conn.cursor()
-        cursor.execute(f"""
-            UPDATE cascades SET {phase_column} = ? WHERE cascade_id = ?
-        """, (completed, cascade_id))
-        self.conn.commit()
+        """Mark cascade phase as completed (delegates to CascadeRepository)"""
+        return self.cascades.update_cascade_phase(cascade_id, phase, completed)
     
     def complete_cascade(self, cascade_id: str, final_action: str, final_confidence: float,
                         investigation_rounds: int, duration_ms: int,
                         engagement_gate_passed: bool, bayesian_active: bool = False,
                         drift_monitored: bool = False):
-        """Mark cascade as completed with final results"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            UPDATE cascades SET
-                final_action = ?,
-                final_confidence = ?,
-                investigation_rounds = ?,
-                duration_ms = ?,
-                completed_at = ?,
-                engagement_gate_passed = ?,
-                bayesian_active = ?,
-                drift_monitored = ?
-            WHERE cascade_id = ?
-        """, (final_action, final_confidence, investigation_rounds, duration_ms,
-              datetime.now(), engagement_gate_passed, bayesian_active, drift_monitored,
-              cascade_id))
-        
-        self.conn.commit()
+        """Mark cascade as completed with final results (delegates to CascadeRepository)"""
+        return self.cascades.complete_cascade(
+            cascade_id, final_action, final_confidence, investigation_rounds,
+            duration_ms, engagement_gate_passed, bayesian_active, drift_monitored
+        )
     
     def log_epistemic_assessment(self, cascade_id: str, assessment: Any, 
                                 phase: str):
@@ -626,19 +526,12 @@ class SessionDatabase:
         self.conn.commit()
     
     def get_session(self, session_id: str) -> Optional[Dict]:
-        """Get session data"""
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM sessions WHERE session_id = ?", (session_id,))
-        row = cursor.fetchone()
-        return dict(row) if row else None
+        """Get session data (delegates to SessionRepository)"""
+        return self.sessions.get_session(session_id)
     
     def get_session_cascades(self, session_id: str) -> List[Dict]:
-        """Get all cascades for a session"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT * FROM cascades WHERE session_id = ? ORDER BY started_at
-        """, (session_id,))
-        return [dict(row) for row in cursor.fetchall()]
+        """Get all cascades for a session (delegates to SessionRepository)"""
+        return self.sessions.get_session_cascades(session_id)
     
     def get_cascade_assessments(self, cascade_id: str) -> List[Dict]:
         """
@@ -767,7 +660,7 @@ class SessionDatabase:
         
         # Export to reflex logs for dashboard
         try:
-            self._export_to_reflex_logs(
+            export_to_reflex_logs(
                 session_id=session_id,
                 phase="investigate",
                 assessment_data={
@@ -813,7 +706,7 @@ class SessionDatabase:
         
         # Export to reflex logs for dashboard
         try:
-            self._export_to_reflex_logs(
+            export_to_reflex_logs(
                 session_id=session_id,
                 phase="act",
                 assessment_data={
@@ -829,208 +722,6 @@ class SessionDatabase:
             pass  # Silent fail - reflex export is not critical
         
         return act_id
-    
-    def _export_to_reflex_logs(
-        self,
-        session_id: str,
-        phase: str,
-        assessment_data: Dict[str, Any],
-        log_dir: str = ".empirica_reflex_logs"
-    ) -> Optional[Path]:
-        """Export assessment to reflex log format for dashboard visualization"""
-        try:
-            from datetime import datetime
-            
-            vectors = assessment_data.get("vectors", {})
-            
-            # Load configuration weights for confidence calculations
-            try:
-                import yaml
-                from pathlib import Path
-
-                # Load the confidence weights configuration
-                config_path = Path(__file__).parent.parent / "config" / "mco" / "confidence_weights.yaml"
-                if config_path.exists():
-                    with open(config_path, 'r') as f:
-                        config = yaml.safe_load(f)
-
-                    foundation_weights = config.get("foundation_confidence_weights", {
-                        'know': 0.4,
-                        'do': 0.3,
-                        'context': 0.3
-                    })
-                else:
-                    # Default weights if config file not found
-                    foundation_weights = {
-                        'know': 0.4,
-                        'do': 0.3,
-                        'context': 0.3
-                    }
-            except Exception:
-                # Fallback to original hardcoded values if config loading fails
-                foundation_weights = {
-                    'know': 0.4,
-                    'do': 0.3,
-                    'context': 0.3
-                }
-
-            # Calculate confidence scores using configurable weights
-            foundation_confidence = (
-                vectors.get('know', 0.5) * foundation_weights.get('know', 0.4) +
-                vectors.get('do', 0.5) * foundation_weights.get('do', 0.3) +
-                vectors.get('context', 0.5) * foundation_weights.get('context', 0.3)
-            )
-
-            # Load comprehension weights
-            try:
-                comprehension_weights = config.get("comprehension_confidence_weights", {
-                    'clarity': 0.3,
-                    'coherence': 0.3,
-                    'signal': 0.2,
-                    'density': 0.2
-                }) if 'config' in locals() else {
-                    'clarity': 0.3,
-                    'coherence': 0.3,
-                    'signal': 0.2,
-                    'density': 0.2
-                }
-            except:
-                comprehension_weights = {
-                    'clarity': 0.3,
-                    'coherence': 0.3,
-                    'signal': 0.2,
-                    'density': 0.2
-                }
-
-            comprehension_confidence = (
-                vectors.get('clarity', 0.5) * comprehension_weights.get('clarity', 0.3) +
-                vectors.get('coherence', 0.5) * comprehension_weights.get('coherence', 0.3) +
-                vectors.get('signal', 0.5) * comprehension_weights.get('signal', 0.2) +
-                (1.0 - vectors.get('density', 0.5)) * comprehension_weights.get('density', 0.2)
-            )
-
-            # Load execution weights
-            try:
-                execution_weights = config.get("execution_confidence_weights", {
-                    'state': 0.25,
-                    'change': 0.25,
-                    'completion': 0.25,
-                    'impact': 0.25
-                }) if 'config' in locals() else {
-                    'state': 0.25,
-                    'change': 0.25,
-                    'completion': 0.25,
-                    'impact': 0.25
-                }
-            except:
-                execution_weights = {
-                    'state': 0.25,
-                    'change': 0.25,
-                    'completion': 0.25,
-                    'impact': 0.25
-                }
-
-            execution_confidence = (
-                vectors.get('state', 0.5) * execution_weights.get('state', 0.25) +
-                vectors.get('change', 0.5) * execution_weights.get('change', 0.25) +
-                vectors.get('completion', 0.5) * execution_weights.get('completion', 0.25) +
-                vectors.get('impact', 0.5) * execution_weights.get('impact', 0.25)
-            )
-
-            # Load overall weights
-            try:
-                overall_weights = config.get("overall_confidence_weights", {
-                    'foundation': 0.35,
-                    'comprehension': 0.25,
-                    'execution': 0.25,
-                    'engagement': 0.15
-                }) if 'config' in locals() else {
-                    'foundation': 0.35,
-                    'comprehension': 0.25,
-                    'execution': 0.25,
-                    'engagement': 0.15
-                }
-            except:
-                overall_weights = {
-                    'foundation': 0.35,
-                    'comprehension': 0.25,
-                    'execution': 0.25,
-                    'engagement': 0.15
-                }
-
-            overall_confidence = (
-                foundation_confidence * overall_weights.get('foundation', 0.35) +
-                comprehension_confidence * overall_weights.get('comprehension', 0.25) +
-                execution_confidence * overall_weights.get('execution', 0.25) +
-                vectors.get('engagement', 0.5) * overall_weights.get('engagement', 0.15)
-            )
-            
-            # Build metaStateVector (current phase = 1.0, others = 0.0)
-            meta_state = {
-                "preflight": 1.0 if phase == "preflight" else 0.0,
-                "think": 0.0,
-                "plan": 0.0,
-                "investigate": 0.0,
-                "check": 1.0 if phase == "check" else 0.0,
-                "act": 0.0,
-                "postflight": 1.0 if phase == "postflight" else 0.0
-            }
-            
-            # Create ReflexFrame structure
-            frame_data = {
-                "frameId": f"{session_id}_{phase}_{assessment_data.get('assessment_id', 'unknown')}",
-                "timestamp": datetime.utcnow().isoformat(),
-                "selfAwareFlag": True,
-                "epistemicVector": {
-                    **vectors,
-                    "foundation_confidence": foundation_confidence,
-                    "comprehension_confidence": comprehension_confidence,
-                    "execution_confidence": execution_confidence,
-                    "overall_confidence": overall_confidence,
-                    "engagement_gate_passed": vectors.get('engagement', 0) >= 0.6
-                },
-                "metaStateVector": meta_state,
-                "recommendedAction": self._determine_action(vectors),
-                "criticalFlags": {
-                    "coherence_critical": vectors.get('coherence', 1.0) < 0.5,
-                    "density_critical": vectors.get('density', 0.0) > 0.9,
-                    "change_critical": vectors.get('change', 1.0) < 0.5
-                },
-                "task": assessment_data.get("task_summary", assessment_data.get("prompt_summary", "Unknown task")),
-                "session_id": session_id,
-                "cascade_id": assessment_data.get("cascade_id"),
-                "phase": phase,
-                "full_assessment": assessment_data
-            }
-            
-            # Write JSON
-            log_date = datetime.utcnow().date()
-            agent_dir = Path(log_dir) / session_id / log_date.isoformat()
-            agent_dir.mkdir(parents=True, exist_ok=True)
-            
-            timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
-            filename = f"reflex_frame_{timestamp}_{phase}.json"
-            log_path = agent_dir / filename
-            
-            with open(log_path, 'w') as f:
-                json.dump(frame_data, f, indent=2)
-            
-            return log_path
-            
-        except Exception as e:
-            return None
-    
-    def _determine_action(self, vectors: Dict[str, float]) -> str:
-        """Determine recommended action based on vectors"""
-        if vectors.get('coherence', 1.0) < 0.5 or vectors.get('density', 0.0) > 0.9:
-            return "reset"
-        if vectors.get('change', 1.0) < 0.5:
-            return "stop"
-        if vectors.get('engagement', 1.0) < 0.6:
-            return "clarify"
-        if vectors.get('uncertainty', 0.0) > 0.8:
-            return "investigate"
-        return "proceed"
     
     def get_preflight_assessment(self, session_id: str) -> Optional[Dict]:
         """
@@ -1118,23 +809,8 @@ class SessionDatabase:
         return results
     
     def store_epistemic_delta(self, cascade_id: str, delta: Dict[str, float]):
-        """
-        Store epistemic delta (PREFLIGHT vs POSTFLIGHT) for calibration tracking
-        
-        Args:
-            cascade_id: Cascade identifier
-            delta: Dictionary of epistemic changes (e.g., {'know': +0.15, 'uncertainty': -0.20})
-        """
-        cursor = self.conn.cursor()
-        
-        # Store as JSON in cascade metadata
-        cursor.execute("""
-            UPDATE cascades
-            SET epistemic_delta = ?
-            WHERE cascade_id = ?
-        """, (json.dumps(delta), cascade_id))
-        
-        self.conn.commit()
+        """Store epistemic delta for calibration tracking (delegates to CascadeRepository)"""
+        return self.cascades.store_epistemic_delta(cascade_id, delta)
     
     def get_last_session_by_ai(self, ai_id: str) -> Optional[Dict]:
         """Get most recent session for an AI agent"""
@@ -1778,7 +1454,7 @@ class SessionDatabase:
         return self.goals.complete_subtask(subtask_id, evidence)
 
     def get_all_sessions(self, ai_id: Optional[str] = None, limit: int = 50) -> List[Dict]:
-        """List all sessions, optionally filtered by ai_id
+        """List all sessions, optionally filtered by ai_id (delegates to SessionRepository)
 
         Args:
             ai_id: Optional AI identifier to filter by
@@ -1787,23 +1463,7 @@ class SessionDatabase:
         Returns:
             List of session dictionaries
         """
-        cursor = self.conn.cursor()
-        
-        if ai_id:
-            cursor.execute("""
-                SELECT * FROM sessions 
-                WHERE ai_id = ? 
-                ORDER BY start_time DESC 
-                LIMIT ?
-            """, (ai_id, limit))
-        else:
-            cursor.execute("""
-                SELECT * FROM sessions 
-                ORDER BY start_time DESC 
-                LIMIT ?
-            """, (limit,))
-        
-        return [dict(row) for row in cursor.fetchall()]
+        return self.sessions.get_all_sessions(ai_id, limit)
 
     def get_goal_tree(self, session_id: str) -> List[Dict]:
         """Get complete goal tree for a session (delegates to GoalRepository)
@@ -2271,7 +1931,7 @@ class SessionDatabase:
 
         # 8. Generate context markdown if requested
         if context_to_inject:
-            context_markdown = self._generate_context_markdown(breadcrumbs)
+            context_markdown = generate_context_markdown(breadcrumbs)
             breadcrumbs['context_markdown'] = context_markdown
 
         # 9. Apply adaptive depth filtering if needed
@@ -2280,136 +1940,6 @@ class SessionDatabase:
 
         return breadcrumbs
 
-
-    def _generate_context_markdown(self, breadcrumbs: Dict) -> str:
-        """
-        Generate markdown-formatted context for injection into AI prompts.
-        
-        Args:
-            breadcrumbs: Dictionary from bootstrap_project_breadcrumbs()
-        
-        Returns:
-            Markdown string formatted for context injection
-        """
-        lines = []
-        
-        # Project header
-        project = breadcrumbs.get('project', {})
-        lines.append(f"# Project: {project.get('name', 'Unknown')}")
-        lines.append(f"> {project.get('description', 'No description')}")
-        lines.append(f"> Total sessions: {project.get('total_sessions', 0)}")
-        lines.append("")
-        
-        # Last activity
-        last = breadcrumbs.get('last_activity', {})
-        if last.get('summary'):
-            lines.append("## Last Activity")
-            lines.append(f"**Summary:** {last['summary']}")
-            lines.append(f"**Next focus:** {last.get('next_focus', 'Continue project work')}")
-            lines.append("")
-        
-        # Key findings
-        findings = breadcrumbs.get('findings', [])
-        if findings:
-            lines.append("## Key Findings")
-            for f in findings:
-                lines.append(f"- {f}")
-            lines.append("")
-        
-        # Remaining unknowns
-        unknowns = breadcrumbs.get('unknowns', [])
-        unresolved = [u for u in unknowns if not u.get('is_resolved', False)]
-        if unresolved:
-            lines.append("## Remaining Unknowns")
-            for u in unresolved:
-                lines.append(f"- {u['unknown']}")
-            lines.append("")
-        
-        # Dead ends to avoid
-        dead_ends = breadcrumbs.get('dead_ends', [])
-        if dead_ends:
-            lines.append("## Dead Ends (Avoid These)")
-            for d in dead_ends:
-                lines.append(f"- **{d['approach']}** - {d['why_failed']}")
-            lines.append("")
-        
-        # Mistakes to avoid
-        mistakes = breadcrumbs.get('mistakes_to_avoid', [])
-        if mistakes:
-            lines.append("## Mistakes to Avoid")
-            for m in mistakes:
-                lines.append(f"- **{m['mistake']}** → {m['prevention']} (cost: {m.get('cost', 'unknown')})")
-            lines.append("")
-        
-        # Incomplete work
-        incomplete = breadcrumbs.get('incomplete_work', [])
-        if incomplete:
-            lines.append("## Incomplete Work")
-            for item in incomplete:
-                lines.append(f"- {item['goal']} ({item['progress']})")
-            lines.append("")
-        
-        # Full skills (matched to task) - filter empty skills
-        full_skills = breadcrumbs.get('full_skills', [])
-        # Only include skills with actual content (non-empty summary, steps, or gotchas)
-        non_empty_skills = [
-            s for s in full_skills 
-            if s.get('summary') or s.get('steps') or s.get('gotchas')
-        ]
-        if non_empty_skills:
-            lines.append("## Relevant Skills")
-            for skill in non_empty_skills:
-                lines.append(f"### {skill.get('title', skill['id'])}")
-                lines.append(f"**Tags:** {', '.join(skill.get('tags', []))}")
-                
-                if skill.get('summary'):
-                    lines.append(f"**Summary:** {skill['summary']}")
-                
-                if skill.get('steps'):
-                    lines.append("**Steps:**")
-                    for step in skill['steps']:
-                        lines.append(f"1. {step}")
-                
-                if skill.get('gotchas'):
-                    lines.append("**Gotchas:**")
-                    for gotcha in skill['gotchas']:
-                        lines.append(f"- ⚠️ {gotcha}")
-                
-                if skill.get('references'):
-                    lines.append("**References:**")
-                    for ref in skill['references']:
-                        lines.append(f"- {ref}")
-                
-                lines.append("")
-        
-        # Context budget info
-        budget = breadcrumbs.get('context_budget')
-        if budget:
-            lines.append("## Context Budget")
-            lines.append(f"**Task complexity:** {budget.get('task_complexity', 'medium')}")
-            lines.append(f"**Total tokens:** {budget.get('total_tokens', 0)}")
-            lines.append("")
-        
-        # Reference docs
-        ref_docs = breadcrumbs.get('reference_docs', [])
-        if ref_docs:
-            lines.append("## Reference Documentation")
-            for doc in ref_docs:
-                lines.append(f"- `{doc['path']}` ({doc['type']}) - {doc['description']}")
-            lines.append("")
-        
-        # Recent artifacts
-        artifacts = breadcrumbs.get('recent_artifacts', [])
-        if artifacts:
-            lines.append("## Recent File Changes")
-            for art in artifacts[:5]:  # Top 5
-                lines.append(f"- {art.get('ai_id', 'unknown')}: {art.get('task_summary', '')}")
-                if art.get('files_modified'):
-                    for file in art['files_modified'][:3]:  # Top 3 files
-                        lines.append(f"  - `{file}`")
-            lines.append("")
-        
-        return "\n".join(lines)
 
     def _auto_resolve_session(self, project_id: str, trigger: Optional[str]) -> Optional[str]:
         """

@@ -19,6 +19,14 @@ from .cli_utils import handle_cli_error, print_header
 from .command_handlers import *
 from .command_handlers.utility_commands import handle_log_token_saving, handle_efficiency_report
 from .command_handlers.edit_verification_command import handle_edit_with_confidence_command
+from .command_handlers.issue_capture_commands import (
+    handle_issue_list_command,
+    handle_issue_show_command,
+    handle_issue_handoff_command,
+    handle_issue_resolve_command,
+    handle_issue_export_command,
+    handle_issue_stats_command,
+)
 
 
 class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
@@ -37,6 +45,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Identity': ['identity-create', 'identity-export', 'identity-list', 'identity-verify'],
                     'Handoffs': ['handoff-create', 'handoff-query'],
                     'Logging': ['finding-log', 'unknown-log', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
+                    'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
                     'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
                     'Monitoring': ['monitor', 'check-drift', 'efficiency-report'],
                     'Skills': ['skill-suggest', 'skill-fetch'],
@@ -77,6 +86,7 @@ from .parsers import (
     add_vision_parsers,
     add_epistemics_parsers,
     add_edit_verification_parsers,
+    add_issue_capture_parsers,
 )
 
 
@@ -128,6 +138,7 @@ def create_argument_parser():
     add_vision_parsers(subparsers)
     add_epistemics_parsers(subparsers)
     add_edit_verification_parsers(subparsers)
+    add_issue_capture_parsers(subparsers)
     
     return parser
 
@@ -287,6 +298,14 @@ def main(args=None):
 
             # Edit verification commands
             'edit-with-confidence': handle_edit_with_confidence_command,
+            
+            # Issue capture commands
+            'issue-list': handle_issue_list_command,
+            'issue-show': handle_issue_show_command,
+            'issue-handoff': handle_issue_handoff_command,
+            'issue-resolve': handle_issue_resolve_command,
+            'issue-export': handle_issue_export_command,
+            'issue-stats': handle_issue_stats_command,
         }
         
         if parsed_args.command in command_handlers:
