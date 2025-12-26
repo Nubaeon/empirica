@@ -2149,63 +2149,12 @@ class SessionDatabase:
         tokens_saved: int,
         evidence: str
     ) -> str:
-        """Log a token saving event
-        
-        Args:
-            session_id: Session identifier
-            saving_type: Type of saving ('doc_awareness', 'finding_reuse', 'mistake_prevention', 'handoff_efficiency')
-            tokens_saved: Estimated tokens saved
-            evidence: What was avoided/reused
-            
-        Returns:
-            saving_id: UUID string
-        """
-        saving_id = str(uuid.uuid4())
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO token_savings (
-                id, session_id, saving_type, tokens_saved, evidence
-            ) VALUES (?, ?, ?, ?, ?)
-        """, (saving_id, session_id, saving_type, tokens_saved, evidence))
-        
-        self.conn.commit()
-        logger.info(f"💰 Token saving logged: {tokens_saved} tokens ({saving_type})")
-        
-        return saving_id
+        """Log token saving (delegates to TokenRepository)"""
+        return self.tokens.log_token_saving(session_id, saving_type, tokens_saved, evidence)
 
     def get_session_token_savings(self, session_id: str) -> Dict:
-        """Get token savings summary for a session
-        
-        Args:
-            session_id: Session identifier
-            
-        Returns:
-            Dictionary with total_tokens_saved, cost_saved_usd, and breakdown by type
-        """
-        cursor = self.conn.cursor()
-        
-        cursor.execute("""
-            SELECT saving_type, SUM(tokens_saved) as total, COUNT(*) as count
-            FROM token_savings
-            WHERE session_id = ?
-            GROUP BY saving_type
-        """, (session_id,))
-        
-        breakdown = {}
-        total = 0
-        for row in cursor.fetchall():
-            saving_type = row[0]
-            tokens = row[1]
-            count = row[2]
-            breakdown[saving_type] = {'tokens': tokens, 'count': count}
-            total += tokens
-        
-        return {
-            'total_tokens_saved': total,
-            'cost_saved_usd': round(total * 0.00003, 4),
-            'breakdown': breakdown
-        }
+        """Get token savings summary (delegates to TokenRepository)"""
+        return self.tokens.get_session_token_savings(session_id)
 
     def get_workspace_overview(self) -> Dict[str, Any]:
         """Get workspace overview (delegates to WorkspaceRepository)"""
@@ -2232,43 +2181,3 @@ if __name__ == "__main__":
     db = SessionDatabase()
     db.close()
     logger.info("✅ Session Database ready")
-
-    def log_command_usage(
-        self,
-        command_name: str,
-        session_id: Optional[str] = None,
-        execution_time_ms: Optional[int] = None,
-        success: bool = True,
-        error_message: Optional[str] = None
-    ) -> str:
-        """Log CLI command usage for telemetry and legacy detection
-        
-        Args:
-            command_name: Name of command executed (e.g., "goals-create")
-            session_id: Optional session ID for context
-            execution_time_ms: Execution time in milliseconds
-            success: Whether command succeeded
-            error_message: Error message if failed
-            
-        Returns:
-            Usage log ID
-        """
-        import uuid
-        import time
-        
-        usage_id = str(uuid.uuid4())
-        timestamp = time.time()
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO command_usage 
-            (id, command_name, session_id, timestamp, execution_time_ms, success, error_message)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (usage_id, command_name, session_id, timestamp, execution_time_ms, success, error_message))
-        
-        self.conn.commit()
-        return usage_id
-    
-    def get_command_usage_stats(self, days: int = 30) -> Dict:
-        """Get command usage stats (delegates to CommandRepository)"""
-        return self.commands.get_command_usage_stats(days)

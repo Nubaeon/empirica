@@ -15,50 +15,64 @@ class TokenRepository(BaseRepository):
         session_id: str,
         saving_type: str,
         tokens_saved: int,
-        description: str
+        evidence: str
     ) -> str:
         """
         Log a token saving event
 
         Args:
             session_id: Session UUID
-            saving_type: Type of saving (e.g., 'compression', 'caching', 'reuse')
-            tokens_saved: Number of tokens saved
-            description: Description of the saving
+            saving_type: Type of saving (e.g., 'doc_awareness', 'finding_reuse', 'mistake_prevention', 'handoff_efficiency')
+            tokens_saved: Estimated tokens saved
+            evidence: What was avoided/reused
 
         Returns:
             saving_id: UUID string
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         saving_id = str(uuid.uuid4())
         self._execute("""
             INSERT INTO token_savings (
-                id, session_id, saving_type, tokens_saved, description, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        """, (saving_id, session_id, saving_type, tokens_saved, description, datetime.utcnow().isoformat()))
+                id, session_id, saving_type, tokens_saved, evidence
+            ) VALUES (?, ?, ?, ?, ?)
+        """, (saving_id, session_id, saving_type, tokens_saved, evidence))
+
+        self.commit()
+        logger.info(f"💰 Token saving logged: {tokens_saved} tokens ({saving_type})")
+
         return saving_id
 
     def get_session_token_savings(self, session_id: str) -> Dict:
         """
-        Get total token savings for a session
+        Get token savings summary for a session
 
         Args:
             session_id: Session UUID
 
         Returns:
-            Dict with total_saved and breakdown by type
+            Dict with total_tokens_saved, cost_saved_usd, and breakdown by type
         """
         cursor = self._execute("""
-            SELECT saving_type, SUM(tokens_saved) as total
+            SELECT saving_type, SUM(tokens_saved) as total, COUNT(*) as count
             FROM token_savings
             WHERE session_id = ?
             GROUP BY saving_type
         """, (session_id,))
 
-        breakdown = {row['saving_type']: row['total'] for row in cursor.fetchall()}
-        total_saved = sum(breakdown.values())
+        breakdown = {}
+        total = 0
+        for row in cursor.fetchall():
+            saving_type = row[0]
+            tokens = row[1]
+            count = row[2]
+            breakdown[saving_type] = {'tokens': tokens, 'count': count}
+            total += tokens
 
         return {
-            'total_saved': total_saved,
+            'total_tokens_saved': total,
+            'cost_saved_usd': round(total * 0.00003, 4),
             'breakdown': breakdown
         }
 
