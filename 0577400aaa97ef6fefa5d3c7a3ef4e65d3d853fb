@@ -1,0 +1,28 @@
+{
+  "goal_id": "2393d8ff-0048-47bc-9785-6d332176e839",
+  "session_id": "8ddc7f2c-72fa-45d9-8036-cf341ca6b6fd",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-26T15:04:28.754039+00:00",
+  "goal_data": {
+    "objective": "Audit session_database.py - modularized but now 4183 lines, check for bloat/redundancy/refactoring opportunities",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.5,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-26T15:04:28.754053+00:00",
+      "action": "created"
+    }
+  ]
+}
