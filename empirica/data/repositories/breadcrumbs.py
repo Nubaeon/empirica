@@ -354,3 +354,18 @@ class BreadcrumbRepository(BaseRepository):
             """, (limit,))
 
         return [dict(row) for row in cursor.fetchall()]
+
+    def get_project_mistakes(self, project_id: str, limit: Optional[int] = None) -> List[Dict]:
+        """Get mistakes for a project"""
+        query = """
+            SELECT mistake, prevention, cost_estimate, root_cause_vector
+            FROM mistakes_made m
+            JOIN sessions s ON m.session_id = s.session_id
+            WHERE s.project_id = ?
+            ORDER BY m.created_timestamp DESC
+        """
+        if limit:
+            query += f" LIMIT {limit}"
+
+        cursor = self._execute(query, (project_id,))
+        return [dict(row) for row in cursor.fetchall()]

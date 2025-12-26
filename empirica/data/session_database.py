@@ -1503,35 +1503,13 @@ class SessionDatabase:
             findings = self.breadcrumbs.get_project_findings(project_id, limit=10, subject=subject)
             unknowns = self.breadcrumbs.get_project_unknowns(project_id, resolved=False, subject=subject)
             dead_ends = self.breadcrumbs.get_project_dead_ends(project_id, limit=5, subject=subject)
-
-            # Recent mistakes (top 5)
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT mistake, prevention, cost_estimate, root_cause_vector
-                FROM mistakes_made m
-                JOIN sessions s ON m.session_id = s.session_id
-                WHERE s.project_id = ?
-                ORDER BY m.created_timestamp DESC
-                LIMIT 5
-            """, (project_id,))
-            recent_mistakes = [dict(row) for row in cursor.fetchall()]
-
+            recent_mistakes = self.breadcrumbs.get_project_mistakes(project_id, limit=5)
         else:  # mode == "live"
             # COMPLETE: All items
             findings = self.breadcrumbs.get_project_findings(project_id, subject=subject)
             unknowns = self.breadcrumbs.get_project_unknowns(project_id, subject=subject)
             dead_ends = self.breadcrumbs.get_project_dead_ends(project_id, subject=subject)
-
-            # All mistakes
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT mistake, prevention, cost_estimate, root_cause_vector
-                FROM mistakes_made m
-                JOIN sessions s ON m.session_id = s.session_id
-                WHERE s.project_id = ?
-                ORDER BY m.created_timestamp DESC
-            """, (project_id,))
-            recent_mistakes = [dict(row) for row in cursor.fetchall()]
+            recent_mistakes = self.breadcrumbs.get_project_mistakes(project_id)
 
         reference_docs = self.breadcrumbs.get_project_reference_docs(project_id)
 
