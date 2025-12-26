@@ -1041,10 +1041,12 @@ class SessionDatabase:
             return {"error": "No checkpoint found for comparison"}
         
         # Get current state from latest assessment
-        current_vectors = self._get_latest_vectors(session_id)
-        
-        if not current_vectors:
+        current_state = self.get_latest_vectors(session_id)
+
+        if not current_state:
             return {"error": "No current state found"}
+
+        current_vectors = current_state.get('vectors', {})
         
         # Calculate diffs
         diffs = {}
@@ -1126,40 +1128,6 @@ class SessionDatabase:
         
         return None
 
-    def _get_latest_vectors(self, session_id: str) -> Optional[Dict[str, float]]:
-        """Get latest epistemic vectors for session (Phase 2)"""
-        cursor = self.conn.cursor()
-        
-        # Try preflight first, then postflight
-        cursor.execute("""
-            SELECT vectors_json, assessed_at
-            FROM preflight_assessments
-            WHERE session_id = ?
-            ORDER BY assessed_at DESC
-            LIMIT 1
-        """, (session_id,))
-        
-        result = cursor.fetchone()
-        
-        if result and result['vectors_json']:
-            return json.loads(result['vectors_json'])
-        
-        # Try postflight if preflight not found
-        cursor.execute("""
-            SELECT vectors_json, assessed_at
-            FROM postflight_assessments
-            WHERE session_id = ?
-            ORDER BY assessed_at DESC
-            LIMIT 1
-        """, (session_id,))
-        
-        result = cursor.fetchone()
-        
-        if result and result['vectors_json']:
-            return json.loads(result['vectors_json'])
-        
-        return None
-    
     def store_vectors(self, session_id: str, phase: str, vectors: Dict[str, float], cascade_id: Optional[str] = None, round_num: int = 1, metadata: Optional[Dict] = None, reasoning: Optional[str] = None):
         """Store epistemic vectors (delegates to VectorRepository)"""
         return self.vectors.store_vectors(session_id, phase, vectors, cascade_id, round_num, metadata, reasoning)
@@ -1167,73 +1135,6 @@ class SessionDatabase:
     def get_latest_vectors(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict]:
         """Get latest epistemic vectors for session (delegates to VectorRepository)"""
         return self.vectors.get_latest_vectors(session_id, phase)
-
-    def get_findings_by_file(self, filename: str, session_id: Optional[str] = None) -> List[Dict]:
-        """Get all findings mentioning a specific file"""
-        import json
-        
-        cursor = self.conn.cursor()
-        
-        if session_id:
-            query = "SELECT findings, session_id, check_id FROM check_phase_assessments WHERE session_id = ? AND findings IS NOT NULL"
-            cursor.execute(query, (session_id,))
-        else:
-            query = "SELECT findings, session_id, check_id FROM check_phase_assessments WHERE findings IS NOT NULL"
-            cursor.execute(query)
-        
-        results = []
-        for row in cursor.fetchall():
-            findings_json = row[0]
-            if not findings_json:
-                continue
-                
-            findings = json.loads(findings_json)
-            for finding in findings:
-                # Backward compatibility: handle both string and structured findings
-                if isinstance(finding, str):
-                    # Old format: plain string, check if filename appears in text
-                    if filename in finding:
-                        results.append({
-                            "finding": {"text": finding, "refs": {"files": [], "docs": [], "urls": []}},
-                            "session_id": row[1],
-                            "check_id": row[2]
-                        })
-                else:
-                    # New format: structured with refs
-                    for ref in finding.get("refs", {}).get("files", []):
-                        if filename in ref.get("file", ""):
-                            results.append({
-                                "finding": finding,
-                                "session_id": row[1],
-                                "check_id": row[2]
-                            })
-                            break
-        
-        return results
-    
-    def get_findings_by_commit(self, commit_sha: str) -> List[Dict]:
-        """Get all findings from a specific git commit"""
-        import json
-        
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT findings, session_id, check_id FROM check_phase_assessments WHERE findings IS NOT NULL")
-        
-        results = []
-        for row in cursor.fetchall():
-            findings_json = row[0]
-            if not findings_json:
-                continue
-                
-            findings = json.loads(findings_json)
-            for finding in findings:
-                if finding.get("commit", "").startswith(commit_sha[:7]):  # Match short SHA
-                    results.append({
-                        "finding": finding,
-                        "session_id": row[1],
-                        "check_id": row[2]
-                    })
-        
-        return results
 
     # =========================================================================
     # Goal and Subtask Management (for decision quality + continuity + audit)
@@ -2064,40 +1965,14 @@ class SessionDatabase:
         subject: Optional[str] = None,
         impact: Optional[float] = None
     ) -> str:
-        """Log a project unknown (what's still unclear)
-
-        Args:
-            impact: Impact score 0.0-1.0 (importance). If None, auto-derives from latest CASCADE.
-        """
-        unknown_id = str(uuid.uuid4())
-
+        """Log a project unknown (delegates to BreadcrumbRepository)"""
         # Auto-derive impact from latest CASCADE if not provided
         if impact is None:
             impact = self._get_latest_impact_score(session_id)
 
-        unknown_data = {
-            "unknown": unknown,
-            "goal_id": goal_id,
-            "subtask_id": subtask_id,
-            "impact": impact,
-            "timestamp": time.time()
-        }
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO project_unknowns (
-                id, project_id, session_id, goal_id, subtask_id,
-                unknown, created_timestamp, unknown_data, subject
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            unknown_id, project_id, session_id, goal_id, subtask_id,
-            unknown, time.time(), json.dumps(unknown_data), subject
-        ))
-        
-        self.conn.commit()
-        logger.info(f"❓ Unknown logged: {unknown[:50]}...")
-        
-        return unknown_id
+        return self.breadcrumbs.log_unknown(
+            project_id, session_id, unknown, goal_id, subtask_id, subject, impact
+        )
     
     def resolve_unknown(self, unknown_id: str, resolved_by: str):
         """Mark an unknown as resolved (delegates to BreadcrumbRepository)"""
