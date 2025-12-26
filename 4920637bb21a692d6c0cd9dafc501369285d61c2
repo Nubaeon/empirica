@@ -1,0 +1,31 @@
+{
+  "goal_id": "88e3ac9e-158b-485f-9186-f631db7fa475",
+  "session_id": "87feb8e1-895f-4dee-973c-1312cd44476a",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-26T16:07:48.589332+00:00",
+  "goal_data": {
+    "objective": "Fix CLI consistency issues (#1, #2) and assess check-drift command for acli rovodev compatibility",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Standardize output choices to {human, json}",
+      "Document --verbose as global flag",
+      "Assess check-drift memory hook compatibility",
+      "All tests passing"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-26T16:07:48.589345+00:00",
+      "action": "created"
+    }
+  ]
+}
