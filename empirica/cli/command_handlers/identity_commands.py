@@ -42,8 +42,9 @@ def handle_identity_create_command(args):
                 print(f"❌ Identity '{ai_id}' already exists")
                 print(f"   Key file: {result['key_file']}")
                 print(f"\n💡 To replace: empirica identity-create --ai-id {ai_id} --overwrite")
-            
-            return result
+
+            # Return None to avoid exit code issues and duplicate output
+            return None
         
         # Create identity
         identity = manager.create_identity(ai_id, overwrite=overwrite)
@@ -76,12 +77,14 @@ def handle_identity_create_command(args):
             print(f"   1. Sign assessments: empirica preflight \"task\" --ai-id {ai_id} --sign")
             print(f"   2. Verify sessions: empirica identity-verify <session-id>")
             print(f"   3. Share public key: empirica identity-export --ai-id {ai_id}")
-        
-        return result
+
+        # Return None to avoid exit code issues and duplicate output
+        return None
         
     except Exception as e:
         handle_cli_error(e, "Identity creation", getattr(args, 'verbose', False))
-        return {"ok": False, "error": str(e)}
+        # Error handler already manages output, return None to avoid duplicate output
+        return None
 
 
 def handle_identity_list_command(args):
@@ -125,11 +128,13 @@ def handle_identity_list_command(args):
                 print("   • Export public key: empirica identity-export --ai-id <name>")
                 print("   • Use for signing: empirica preflight \"task\" --ai-id <name> --sign")
         
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Identity list", getattr(args, 'verbose', False))
-        return {"ok": False, "error": str(e)}
+        # Error handler already manages output, return None to avoid duplicate output
+        return None
 
 
 def handle_identity_export_command(args):
@@ -168,27 +173,30 @@ def handle_identity_export_command(args):
             print(f"   • Public key is safe to distribute")
             print(f"   • Never share your private key!")
         
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except FileNotFoundError:
         result = {
             "ok": False,
             "error": f"Identity '{ai_id}' not found",
             "message": "Create identity first with: empirica identity-create --ai-id <name>"
         }
-        
+
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(result, indent=2))
         else:
             print(f"❌ Identity '{ai_id}' not found")
             print(f"\n💡 Create it first:")
             print(f"   empirica identity-create --ai-id {ai_id}")
-        
-        return result
-        
+
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Identity export", getattr(args, 'verbose', False))
-        return {"ok": False, "error": str(e)}
+        # Error handler already manages output, return None to avoid duplicate output
+        return None
 
 
 def handle_identity_verify_command(args):
@@ -217,8 +225,10 @@ def handle_identity_verify_command(args):
             else:
                 print(f"❌ Session '{session_id}' not found")
             
-            return result
-        
+            # Return None to avoid exit code issues and duplicate output
+            db.close()
+            return None
+
         # Check if session has signature
         # TODO: Implement signature storage and retrieval
         result = {
@@ -228,7 +238,7 @@ def handle_identity_verify_command(args):
             "session_id": session_id,
             "note": "This will be completed when --sign flag is integrated into CASCADE"
         }
-        
+
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(result, indent=2))
         else:
@@ -239,10 +249,13 @@ def handle_identity_verify_command(args):
             print(f"   • Store signatures in database")
             print(f"   • Verify cryptographic integrity")
             print(f"   • Check cascade trace hash")
-        
+
         db.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
+        db.close()  # Make sure to close db in exception case too
         handle_cli_error(e, "Identity verify", getattr(args, 'verbose', False))
-        return {"ok": False, "error": str(e)}
+        # Error handler already manages output, return None to avoid duplicate output
+        return None
