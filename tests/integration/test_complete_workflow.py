@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "mcp_local"))
 from empirica.core.canonical import CanonicalEpistemicAssessor
 from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
 from empirica.data import SessionDatabase
-from empirica_mcp_server import call_tool
+from empirica_mcp.server import call_tool
 
 
 class TestCompleteWorkflow:

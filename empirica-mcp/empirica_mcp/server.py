@@ -16,7 +16,6 @@ Benefits:
 CASCADE Philosophy:
 - validate_input=False: Schemas are GUIDANCE, not enforcement
 - No rigid validation: AI agents self-assess what parameters make sense
-- Flexible parsing: Accept string shortcuts for bootstrap_level ("optimal") 
 - Scope is vectorial (self-assessed): {"breadth": 0-1, "duration": 0-1, "coordination": 0-1}
 - Trust AI reasoning: Let agents assess epistemic state → scope vectors (see goal_scopes.yaml)
 
@@ -114,8 +113,7 @@ async def list_tools() -> List[types.Tool]:
                 "type": "object",
                 "properties": {
                     "ai_id": {"type": "string", "description": "AI agent identifier"},
-                    "session_type": {"type": "string", "description": "Session type (development, production, testing)"},
-                    "bootstrap_level": {"type": ["integer", "string"], "description": "Bootstrap level: 0-4, 'minimal', 'standard', 'extended', 'complete', 'optimal', or 'extended_metacognitive'"}
+                    "session_type": {"type": "string", "description": "Session type (development, production, testing)"}
                 },
                 "required": ["ai_id"]
             }
@@ -1280,20 +1278,6 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
         # Extract AI ID from arguments as fallback
         ai_id = arguments.get('ai_id', ai_id_from_output or 'unknown')
 
-        # Extract bootstrap level from arguments
-        bootstrap_level_arg = arguments.get('bootstrap_level', 2)  # Default to standard level
-
-        # Flexible parsing: accept strings or integers
-        if isinstance(bootstrap_level_arg, str):
-            bootstrap_level_map = {
-                'minimal': 0, 'min': 0, '0': 0,
-                'standard': 1, 'std': 1, '1': 1,
-                'optimal': 2, 'full': 2, 'max': 2, '2': 2
-            }
-            bootstrap_level = bootstrap_level_map.get(bootstrap_level_arg.lower(), 2)
-        else:
-            bootstrap_level = int(bootstrap_level_arg) if bootstrap_level_arg is not None else 2
-
         try:
             from empirica.data.session_database import SessionDatabase
             from empirica.config.path_resolver import get_session_db_path
@@ -1304,7 +1288,6 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
                 db = SessionDatabase(db_path=str(get_session_db_path()))
                 session_id = db.create_session(
                     ai_id=ai_id,
-                    bootstrap_level=bootstrap_level,
                     components_loaded=5  # Standard number of components
                 )
                 db.close()
@@ -1314,7 +1297,6 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
                 "message": "Session created successfully",
                 "session_id": session_id,
                 "ai_id": ai_id,
-                "bootstrap_level": bootstrap_level,
                 "next_step": "Use this session_id with execute_preflight to begin a cascade"
             }
 
@@ -1412,7 +1394,6 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     # Map MCP argument names → CLI flag names (when they differ)
     arg_map = {
         "session_type": "session-type",  # Not used by CLI - will be ignored
-        "bootstrap_level": "bootstrap-level",  # MCP uses bootstrap_level, CLI uses bootstrap-level
         "task_id": "task-id",  # MCP uses task_id, CLI uses task-id (for goals-complete-subtask)
         "round_num": "round",  # MCP uses round_num, CLI uses round (for checkpoint-create)
         "remaining_unknowns": "remaining-unknowns",  # MCP uses remaining_unknowns, CLI uses remaining-unknowns

@@ -327,6 +327,108 @@ index:
     related: ["SYSTEM_OVERVIEW", "CANONICAL_PROMPT"]
 
   # ============================================================================
+  # WORKFLOW AUTOMATION (AI Usage Enhancement)
+  # ============================================================================
+
+  "architecture/TUI_DASHBOARD_DESIGN.md":
+    title: "TUI Dashboard Design"
+    tags: [workflow-automation, dashboard, tui, monitoring, provider-agnostic]
+    concepts:
+      - tui-dashboard
+      - project-monitoring
+      - ssh-friendly
+      - tmux-compatible
+      - single-project-focus
+      - epistemic-visibility
+      - session-awareness
+    questions:
+      - "How to monitor active Empirica session?"
+      - "What is the TUI dashboard?"
+      - "How to prevent AI writing to wrong database?"
+      - "How to see project context?"
+    use_cases:
+      - session-monitoring
+      - project-awareness
+      - context-visibility
+      - flow-state-maintenance
+      - remote-work
+    related: ["INTERACTIVE_CHECKLIST", "AI_WORKFLOW_AUTO", "SYSTEM_OVERVIEW"]
+
+  "architecture/AI_WORKFLOW_AUTOMATION.md":
+    title: "AI Workflow Automation Strategies"
+    tags: [workflow-automation, ai-usage, provider-agnostic, automation, hooks]
+    concepts:
+      - workflow-enforcement
+      - auto-session-creation
+      - statusline-integration
+      - command-aliases
+      - mcp-auto-init
+      - hook-examples
+      - session-persistence
+    questions:
+      - "How to ensure AIs use Empirica properly?"
+      - "How to automate session creation?"
+      - "What workflow enforcement strategies exist?"
+      - "How to make Empirica usage automatic?"
+    use_cases:
+      - workflow-automation
+      - ai-integration
+      - session-management
+      - automation-design
+      - provider-agnostic-design
+    related: ["INTERACTIVE_CHECKLIST", "TUI_DASHBOARD", "CANONICAL_PROMPT"]
+
+  "architecture/INTERACTIVE_CHECKLIST_TUI.md":
+    title: "Interactive Checklist TUI"
+    tags: [workflow-automation, checklist, completeness, provider-agnostic, breadcrumbs]
+    concepts:
+      - three-phase-checklist
+      - completeness-scoring
+      - activity-based-prompting
+      - breadcrumb-tracking
+      - findings-unknowns-mistakes
+      - dead-ends-sources
+      - pre-work-validation
+      - during-work-monitoring
+      - post-work-validation
+    questions:
+      - "How to ensure epistemic completeness?"
+      - "What is completeness scoring?"
+      - "How to prompt for breadcrumbs automatically?"
+      - "What should AI track during work?"
+    use_cases:
+      - completeness-enforcement
+      - breadcrumb-automation
+      - quality-assurance
+      - epistemic-discipline
+      - provider-agnostic-monitoring
+    related: ["AI_WORKFLOW_AUTO", "SEMANTIC_WORKFLOW_INDEX", "CASCADE"]
+
+  "architecture/SEMANTIC_WORKFLOW_INDEX.md":
+    title: "Semantic Workflow Index (Qdrant Integration)"
+    tags: [workflow-automation, semantic-search, qdrant, dynamic-context, provider-agnostic]
+    concepts:
+      - semantic-indexing
+      - workflow-discovery
+      - dynamic-context-loading
+      - activity-based-retrieval
+      - qdrant-integration
+      - project-bootstrap-enhancement
+      - learning-from-sessions
+    questions:
+      - "How to make workflow automation discoverable?"
+      - "How to integrate workflow docs with Qdrant?"
+      - "How does dynamic context loading work?"
+      - "How to query for contextual suggestions?"
+    use_cases:
+      - workflow-discovery
+      - semantic-search
+      - contextual-suggestions
+      - dynamic-help
+      - ai-guided-workflow
+    related: ["INTERACTIVE_CHECKLIST", "AI_WORKFLOW_AUTO", "CANONICAL_PROMPT"]
+
+  # ============================================================================
   # TROUBLESHOOTING & HELP
   # ============================================================================
 
@@ -394,15 +496,16 @@ index:
 # STATISTICS & METADATA
 # ============================================================================
 
-total_docs_indexed: 16
-last_updated: "2025-12-18"
+total_docs_indexed: 20
+last_updated: "2025-12-25"
 coverage:
   core_concepts: 5
   getting_started: 3
-  architecture: 4
+  architecture: 8
   integrations: 1
   troubleshooting: 1
   system_prompts: 2
+  workflow_automation: 4
 
 # ============================================================================
 # USAGE EXAMPLES

@@ -167,8 +167,12 @@ class SignedGitOperations:
             author_name = persona_info["persona_id"]
             author_email = f"{persona_info['persona_id']}@empirica.local"
 
-            # Create signed commit
-            commit_message = f"[{phase}] {message}\n\nPersona: {persona_info['name']}\nVersion: {persona_info['version']}"
+            # Extract impact and completion for commit message tag
+            impact = epistemic_state.get('impact', 0.5)
+            completion = epistemic_state.get('completion', 0.0)
+
+            # Create signed commit with epistemic tags
+            commit_message = f"[{phase}] {message} [impact={impact:.2f}, completion={completion:.2f}]\n\nPersona: {persona_info['name']}\nVersion: {persona_info['version']}"
 
             self.repo.index.commit(
                 commit_message,

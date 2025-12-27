@@ -25,25 +25,36 @@ class BreadcrumbRepository(BaseRepository):
         session_id: str,
         finding: str,
         goal_id: Optional[str] = None,
-        subtask_id: Optional[str] = None
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
     ) -> str:
-        """Log a project finding (what was learned/discovered)"""
+        """Log a project finding (what was learned/discovered)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). If None, defaults to 0.5.
+        """
         finding_id = str(uuid.uuid4())
+
+        if impact is None:
+            impact = 0.5
 
         finding_data = {
             "finding": finding,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
 
         self._execute("""
             INSERT INTO project_findings (
                 id, project_id, session_id, goal_id, subtask_id,
-                finding, created_timestamp, finding_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                finding, created_timestamp, finding_data, subject, impact
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             finding_id, project_id, session_id, goal_id, subtask_id,
-            finding, time.time(), json.dumps(finding_data)
+            finding, time.time(), json.dumps(finding_data), subject, impact
         ))
 
         self.commit()
@@ -57,25 +68,36 @@ class BreadcrumbRepository(BaseRepository):
         session_id: str,
         unknown: str,
         goal_id: Optional[str] = None,
-        subtask_id: Optional[str] = None
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
     ) -> str:
-        """Log a project unknown (what's still unclear)"""
+        """Log a project unknown (what's still unclear)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). If None, defaults to 0.5.
+        """
         unknown_id = str(uuid.uuid4())
+
+        if impact is None:
+            impact = 0.5
 
         unknown_data = {
             "unknown": unknown,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
 
         self._execute("""
             INSERT INTO project_unknowns (
                 id, project_id, session_id, goal_id, subtask_id,
-                unknown, created_timestamp, unknown_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                unknown, created_timestamp, unknown_data, subject, impact
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             unknown_id, project_id, session_id, goal_id, subtask_id,
-            unknown, time.time(), json.dumps(unknown_data)
+            unknown, time.time(), json.dumps(unknown_data), subject, impact
         ))
 
         self.commit()
@@ -102,16 +124,23 @@ class BreadcrumbRepository(BaseRepository):
         why_failed: str,
         goal_id: Optional[str] = None,
         subtask_id: Optional[str] = None,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        impact: float = 0.5
     ) -> str:
-        """Log a project dead end (what didn't work)"""
+        """Log a project dead end (what didn't work)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). Default 0.5 if not provided.
+        """
         dead_end_id = str(uuid.uuid4())
 
         dead_end_data = {
             "approach": approach,
             "why_failed": why_failed,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
 
         self._execute("""
@@ -233,7 +262,8 @@ class BreadcrumbRepository(BaseRepository):
         cost_estimate: Optional[str] = None,
         root_cause_vector: Optional[str] = None,
         prevention: Optional[str] = None,
-        goal_id: Optional[str] = None
+        goal_id: Optional[str] = None,
+        project_id: Optional[str] = None
     ) -> str:
         """
         Log a mistake for learning and future prevention.
@@ -263,12 +293,12 @@ class BreadcrumbRepository(BaseRepository):
 
         self._execute("""
             INSERT INTO mistakes_made (
-                id, session_id, goal_id, mistake, why_wrong,
+                id, session_id, goal_id, project_id, mistake, why_wrong,
                 cost_estimate, root_cause_vector, prevention,
                 created_timestamp, mistake_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            mistake_id, session_id, goal_id, mistake, why_wrong,
+            mistake_id, session_id, goal_id, project_id, mistake, why_wrong,
             cost_estimate, root_cause_vector, prevention,
             time.time(), json.dumps(mistake_data)
         ))
@@ -323,4 +353,19 @@ class BreadcrumbRepository(BaseRepository):
                 LIMIT ?
             """, (limit,))
 
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_project_mistakes(self, project_id: str, limit: Optional[int] = None) -> List[Dict]:
+        """Get mistakes for a project"""
+        query = """
+            SELECT mistake, prevention, cost_estimate, root_cause_vector
+            FROM mistakes_made m
+            JOIN sessions s ON m.session_id = s.session_id
+            WHERE s.project_id = ?
+            ORDER BY m.created_timestamp DESC
+        """
+        if limit:
+            query += f" LIMIT {limit}"
+
+        cursor = self._execute(query, (project_id,))
         return [dict(row) for row in cursor.fetchall()]

@@ -17,6 +17,109 @@ This CLI is **AI-first** - designed for AI assistants to use autonomously. All 6
 
 ---
 
+## AI-First JSON Stdin Pattern
+
+**Empirica commands accept JSON via stdin for zero shell quoting issues.**
+
+### The Pattern
+
+All Empirica commands that accept complex configuration support a **positional `config` argument** with `nargs='?'`:
+
+```python
+# Parser pattern
+parser.add_argument('config', nargs='?',
+    help='JSON config file path or "-" for stdin (AI-first mode)')
+
+# Handler pattern
+def handle_command(args):
+    config_data = None
+
+    if hasattr(args, 'config') and args.config:
+        if args.config == '-':
+            # Read from stdin
+            config_data = json.loads(sys.stdin.read())
+        else:
+            # Read from file
+            with open(args.config, 'r') as f:
+                config_data = json.loads(f.read())
+
+    # Extract parameters from config or fall back to CLI flags
+    session_id = config_data.get('session_id') if config_data else args.session_id
+```
+
+### Usage Examples
+
+**Method 1: Stdin (Recommended for AI)**
+```bash
+# Using echo
+echo '{"session_id":"abc","objective":"Implement feature X"}' | empirica goals-create -
+
+# Using cat with heredoc
+cat <<'EOF' | empirica handoff-create -
+{
+  "session_id": "abc123",
+  "task_summary": "Implemented OAuth2 with PKCE",
+  "key_findings": ["PKCE required", "Tokens in httpOnly cookies"],
+  "next_session_context": "Continue with MFA integration"
+}
+EOF
+
+# Using file
+cat /tmp/config.json | empirica preflight-submit -
+```
+
+**Method 2: File Path**
+```bash
+empirica goals-create /tmp/goal-config.json
+```
+
+**Method 3: Legacy Flags (Backward Compatible)**
+```bash
+empirica goals-create --session-id abc --objective "Implement feature X"
+```
+
+### Why This Pattern?
+
+**Problem with shell quoting:**
+```bash
+# ❌ Escaping nightmare
+empirica command --json "{\"key\":\"value with 'quotes'\"}"
+
+# ❌ Heredoc with variable expansion issues
+cat <<EOF | empirica command
+{"key": "$VAR"}  # Variables expand unexpectedly
+EOF
+```
+
+**Solution with stdin:**
+```bash
+# ✅ No escaping needed
+echo '{"key":"value with 'quotes'"}' | empirica command -
+
+# ✅ Heredoc with single quotes (no expansion)
+cat <<'EOF' | empirica command -
+{"key": "$VAR"}  # Literal string, no expansion
+EOF
+```
+
+### Commands Supporting JSON Stdin
+
+**CASCADE Workflow:**
+- `preflight-submit -`
+- `check-submit -`
+- `postflight-submit -`
+
+**Goals & Tasks:**
+- `goals-create -`
+- `handoff-create -`
+
+**Sessions:**
+- `session-create -`
+
+**See individual command documentation for exact JSON schema.**
+
+---
+
 ## Quick Start (Your First Session)
 
 ```bash

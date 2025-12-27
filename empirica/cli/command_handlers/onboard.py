@@ -127,9 +127,9 @@ Python API:
    )
 
 MCP Tool (for AI agents):
-   # Bootstrap creates session automatically
-   bootstrap_session(ai_id="myai", bootstrap_level=1)
-   
+   # Create session
+   session_create(ai_id="myai")
+
    # Execute workflow
    execute_preflight(session_id=sid, prompt="Task")
    submit_preflight_assessment(session_id=sid, vectors={...})
@@ -147,9 +147,6 @@ MCP Tool (for AI agents):
 ═══════════════════════════════════════════════════════════════════════
 
 ❓ QUESTIONS?
-
-- What is bootstrap_level? 
-  0=minimal, 1=standard (recommended), 2=extended tracking
 
 - When should I use CHECK?
   After INVESTIGATE, to validate readiness before ACT

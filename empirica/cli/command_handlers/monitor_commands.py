@@ -390,27 +390,324 @@ def handle_monitor_cost_command(args):
         handle_cli_error(e, "Cost Analysis", getattr(args, 'verbose', False))
 
 
+def handle_pre_summary_snapshot(session_id: str, output_format: str, cycle=None, round_num=None, scope_depth=None):
+    """
+    Pre-summary trigger: Save current checkpoint as ref-doc.
+
+    Creates a snapshot of current epistemic state BEFORE memory compacting.
+    Saved as ref-doc in .empirica/ref-docs/pre_summary_<timestamp>.json
+
+    This ref-doc becomes the anchor for post-summary drift detection.
+    """
+    from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+    from empirica.data.session_database import SessionDatabase
+    from datetime import datetime
+    from pathlib import Path
+    import json
+
+    # Load current checkpoint (most recent epistemic state)
+    git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+    checkpoints = git_logger.list_checkpoints(limit=1)
+
+    if not checkpoints:
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": False,
+                "error": "No checkpoints found for session",
+                "message": "Run PREFLIGHT or CHECK to create a checkpoint first",
+                "session_id": session_id
+            }))
+            return
+        else:
+            print("\n📸 Pre-Summary Snapshot")
+            print("=" * 70)
+            print(f"   Session ID: {session_id}")
+            print("=" * 70)
+            print("\n⚠️  No checkpoints found for session")
+            print("   Run PREFLIGHT or CHECK to create a checkpoint first")
+            return
+
+    # Print header only for human output
+    if output_format != 'json':
+        print("\n📸 Pre-Summary Snapshot")
+        print("=" * 70)
+        print(f"   Session ID: {session_id}")
+        print("=" * 70)
+
+    current_checkpoint = checkpoints[0]
+
+    # Also capture bootstrap snapshot
+    db = SessionDatabase()
+    try:
+        # Get project_id from session
+        session_data = db.get_session(session_id)
+        project_id = session_data.get('project_id') if session_data else None
+
+        bootstrap = db.bootstrap_project_breadcrumbs(
+            project_id=project_id,
+            check_integrity=False
+        ) if project_id else {}
+    except Exception as e:
+        logger.warning(f"Could not load bootstrap: {e}")
+        bootstrap = {}
+
+    # Create ref-doc snapshot
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    snapshot = {
+        "type": "pre_summary_snapshot",
+        "session_id": session_id,
+        "timestamp": timestamp,
+        "checkpoint": current_checkpoint,
+        "investigation_context": {
+            "cycle": cycle,
+            "round": round_num,
+            "scope_depth": scope_depth
+        },
+        "bootstrap_summary": {
+            "findings_count": len(bootstrap.get('findings', [])),
+            "unknowns_count": len(bootstrap.get('unknowns', [])),
+            "goals_count": len(bootstrap.get('goals', [])),
+            "dead_ends_count": len(bootstrap.get('dead_ends', []))
+        }
+    }
+
+    # Save as ref-doc
+    ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+    ref_docs_dir.mkdir(parents=True, exist_ok=True)
+
+    ref_doc_path = ref_docs_dir / f"pre_summary_{timestamp}.json"
+
+    with open(ref_doc_path, 'w') as f:
+        json.dump(snapshot, f, indent=2)
+
+    # Also add to database ref-docs table
+    try:
+        if project_id:
+            db.add_reference_doc(
+                project_id=project_id,
+                doc_path=str(ref_doc_path),
+                doc_type="pre_summary_snapshot",
+                description=f"Pre-summary epistemic snapshot captured at {timestamp}"
+            )
+    except Exception as e:
+        logger.warning(f"Could not add to ref-docs table: {e}")
+
+    if output_format == 'json':
+        print(json.dumps({
+            "ok": True,
+            "snapshot_path": str(ref_doc_path),
+            "timestamp": timestamp,
+            "session_id": session_id
+        }))
+    else:
+        print(f"\n✅ Snapshot saved: {ref_doc_path.name}")
+        print(f"   Vectors: {len(current_checkpoint.get('vectors', {}))}")
+        print(f"   Findings: {snapshot['bootstrap_summary']['findings_count']}")
+        print(f"   Unknowns: {snapshot['bootstrap_summary']['unknowns_count']}")
+        print("\n💡 After summarization, run:")
+        print(f"   empirica check-drift --session-id {session_id} --trigger post_summary")
+        print("=" * 70)
+
+
+def handle_post_summary_drift_check(session_id: str, output_format: str):
+    """
+    Post-summary trigger: Compare current state to pre-summary snapshot.
+
+    Loads pre-summary ref-doc + current bootstrap as anchor.
+    Presents evidence for AI to reassess, then facilitates comparison.
+
+    This detects metacognitive drift from memory compacting.
+    """
+    from empirica.data.session_database import SessionDatabase
+    from pathlib import Path
+    import json
+
+    print("\n🔄 Post-Summary Drift Check")
+    print("=" * 70)
+    print(f"   Session ID: {session_id}")
+    print("=" * 70)
+
+    db = SessionDatabase()
+
+    # Find most recent pre-summary snapshot ref-doc
+    ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+
+    if not ref_docs_dir.exists():
+        print("\n⚠️  No ref-docs directory found")
+        print("   Run with --trigger pre_summary before memory compacting")
+        return
+
+    # Find pre_summary files for this session
+    snapshot_files = sorted(ref_docs_dir.glob("pre_summary_*.json"), reverse=True)
+
+    if not snapshot_files:
+        print("\n⚠️  No pre-summary snapshot found")
+        print("   Run with --trigger pre_summary before memory compacting")
+        return
+
+    # Load most recent snapshot
+    snapshot_path = snapshot_files[0]
+
+    with open(snapshot_path, 'r') as f:
+        snapshot = json.load(f)
+
+    # Verify it's for this session
+    if snapshot.get('session_id') != session_id:
+        print(f"\n⚠️  Latest snapshot is for different session: {snapshot.get('session_id')}")
+        print(f"   Looking for snapshot for: {session_id}")
+        return
+
+    # Load current bootstrap (ground truth)
+    try:
+        session_data = db.get_session(session_id)
+        project_id = session_data.get('project_id') if session_data else None
+
+        bootstrap = db.generate_project_bootstrap(
+            session_id=session_id,
+            project_id=project_id,
+            include_file_tree=True  # Full context for reassessment
+        ) if project_id else {}
+    except Exception as e:
+        logger.warning(f"Could not load bootstrap: {e}")
+        bootstrap = {}
+
+    # Show investigation context from snapshot
+    inv_context = snapshot.get('investigation_context', {})
+    if any(inv_context.values()):
+        print("\n🔬 INVESTIGATION CONTEXT:")
+        print("=" * 70)
+        if inv_context.get('cycle'):
+            print(f"   Cycle: {inv_context['cycle']}")
+        if inv_context.get('round'):
+            print(f"   Round: {inv_context['round']}")
+        if inv_context.get('scope_depth') is not None:
+            depth_label = "surface" if inv_context['scope_depth'] < 0.4 else "moderate" if inv_context['scope_depth'] < 0.7 else "deep"
+            print(f"   Scope Depth: {inv_context['scope_depth']:.2f} ({depth_label})")
+
+    # Present evidence for reassessment
+    print("\n📚 BOOTSTRAP EVIDENCE (Ground Truth):")
+    print("=" * 70)
+
+    findings = bootstrap.get('findings', [])
+    unknowns = bootstrap.get('unknowns', [])
+    goals = bootstrap.get('goals', [])
+    dead_ends = bootstrap.get('dead_ends', [])
+
+    print(f"\n   Findings: {len(findings)}")
+    if findings:
+        print(f"      Most recent: \"{findings[0].get('finding', 'N/A')[:60]}...\"")
+
+    print(f"\n   Active Unknowns: {len(unknowns)}")
+    if unknowns:
+        for i, unk in enumerate(unknowns[:3], 1):
+            print(f"      {i}. {unk.get('unknown', 'N/A')[:60]}")
+
+    print(f"\n   Goals: {len(goals)}")
+    incomplete = [g for g in goals if g.get('status') != 'completed']
+    if incomplete:
+        print(f"      Incomplete: {len(incomplete)}")
+
+    print(f"\n   Dead Ends: {len(dead_ends)}")
+
+    # Show pre-summary state
+    print("\n📊 YOUR PRE-SUMMARY STATE:")
+    print("=" * 70)
+
+    pre_vectors = snapshot.get('checkpoint', {}).get('vectors', {})
+    pre_timestamp = snapshot.get('timestamp', 'Unknown')
+
+    print(f"\n   Captured: {pre_timestamp}")
+    print(f"   KNOW:        {pre_vectors.get('know', 'N/A')}")
+    print(f"   UNCERTAINTY: {pre_vectors.get('uncertainty', 'N/A')}")
+    print(f"   CONTEXT:     {pre_vectors.get('context', 'N/A')}")
+    print(f"   CLARITY:     {pre_vectors.get('clarity', 'N/A')}")
+
+    # Prompt for reassessment
+    print("\n❓ REASSESSMENT PROMPT:")
+    print("=" * 70)
+    print(f"""
+   Based on the bootstrap evidence above:
+   - {len(findings)} findings show what was learned
+   - {len(unknowns)} unknowns show what's still unclear
+   - {len(incomplete)} incomplete goals show ongoing work
+
+   Compare to your pre-summary state from {pre_timestamp}.
+
+   Run CHECK or PREFLIGHT now to create fresh assessment.
+   System will compare to detect drift.
+    """)
+
+    print("=" * 70)
+
+    # Output for JSON mode
+    if output_format == 'json':
+        return json.dumps({
+            "ok": True,
+            "pre_summary": {
+                "timestamp": pre_timestamp,
+                "vectors": pre_vectors,
+                "snapshot_path": str(snapshot_path)
+            },
+            "bootstrap": {
+                "findings_count": len(findings),
+                "unknowns_count": len(unknowns),
+                "goals_count": len(goals),
+                "incomplete_goals": len(incomplete),
+                "dead_ends_count": len(dead_ends)
+            },
+            "action_required": "Run CHECK or PREFLIGHT to create fresh assessment for comparison"
+        }, indent=2)
+
+
 def handle_check_drift_command(args):
     """
     Check for epistemic drift by comparing current state to historical baselines.
 
     Uses MirrorDriftMonitor to detect unexpected drops in epistemic vectors
     that indicate memory corruption, context loss, or other drift.
+
+    Trigger modes:
+    - manual: Standard drift check against historical baselines
+    - pre_summary: Save current checkpoint as ref-doc before memory compacting
+    - post_summary: Compare current state to pre-summary ref-doc using bootstrap as anchor
     """
     try:
         from empirica.core.drift.mirror_drift_monitor import MirrorDriftMonitor
         from empirica.core.canonical.empirica_git.checkpoint_manager import CheckpointManager
+        from empirica.data.session_database import SessionDatabase
+        from datetime import datetime
+        from pathlib import Path
 
         session_id = args.session_id
+        trigger = getattr(args, 'trigger', 'manual')
         threshold = getattr(args, 'threshold', 0.2)
         lookback = getattr(args, 'lookback', 5)
+        cycle = getattr(args, 'cycle', None)
+        round_num = getattr(args, 'round', None)
+        scope_depth = getattr(args, 'scope_depth', None)
         output_format = getattr(args, 'output', 'human')
 
+        # Handle pre-summary trigger: Save checkpoint as ref-doc
+        if trigger == 'pre_summary':
+            return handle_pre_summary_snapshot(session_id, output_format, cycle, round_num, scope_depth)
+
+        # Handle post-summary trigger: Compare with pre-summary ref-doc
+        if trigger == 'post_summary':
+            return handle_post_summary_drift_check(session_id, output_format)
+
+        # Manual mode: Standard drift detection
         print("\n🔍 Epistemic Drift Detection")
         print("=" * 70)
         print(f"   Session ID:  {session_id}")
         print(f"   Threshold:   {threshold}")
         print(f"   Lookback:    {lookback} checkpoints")
+        if cycle is not None:
+            print(f"   Cycle:       {cycle}")
+        if round_num is not None:
+            print(f"   Round:       {round_num}")
+        if scope_depth is not None:
+            depth_label = "surface" if scope_depth < 0.4 else "moderate" if scope_depth < 0.7 else "deep"
+            print(f"   Scope Depth: {scope_depth:.2f} ({depth_label})")
         print("=" * 70)
 
         # Load current epistemic state from latest checkpoint

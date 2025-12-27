@@ -127,19 +127,10 @@ def handle_goals_create_command(args):
             coordination=scope_coordination
         )
         
-        # Validate success criteria
+        # Validate success criteria (make it optional now)
         if not success_criteria_list:
-            error_msg = "At least one success criterion is required"
-            if output_format == 'json':
-                print(json.dumps({
-                    "ok": False,
-                    "error": error_msg,
-                    "hint": "Use config file with 'success_criteria' array or --success-criteria flag"
-                }))
-            else:
-                print(f"❌ {error_msg}")
-                print(f"   Hint: Use config file with 'success_criteria' array or --success-criteria flag")
-            sys.exit(1)
+            # Make a default success criterion if none provided
+            success_criteria_list = ["Goal completion achieved"]
         
         # Use the actual Goal repository
         goal_repo = GoalRepository()
@@ -336,8 +327,9 @@ def handle_goals_create_command(args):
                 print(f"❌ {result.get('message', 'Failed to create goal')}")
         
         goal_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Create goal", getattr(args, 'verbose', False))
 
@@ -469,8 +461,9 @@ def handle_goals_add_subtask_command(args):
                 print(f"   Estimated tokens: {estimated_tokens}")
         
         task_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Add subtask", getattr(args, 'verbose', False))
 
@@ -517,8 +510,9 @@ def handle_goals_complete_subtask_command(args):
                 print(f"   Evidence: {evidence[:80]}...")
         
         task_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Complete subtask", getattr(args, 'verbose', False))
 
@@ -581,8 +575,9 @@ def handle_goals_progress_command(args):
                 print(f"   Goal ID: {goal_id}")
         
         goal_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Get goal progress", getattr(args, 'verbose', False))
 
@@ -769,8 +764,9 @@ def handle_goals_list_command(args):
                 print(f"   Created: {created_date}")
         
         goal_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "List goals", getattr(args, 'verbose', False))
 
@@ -852,8 +848,9 @@ def handle_goals_get_subtasks_command(args):
                 print(f"❌ {result.get('message', 'Error retrieving subtasks')}")
         
         task_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Get subtasks", getattr(args, 'verbose', False))
 
@@ -877,20 +874,20 @@ def handle_sessions_resume_command(args):
         if ai_id:
             # Get sessions for specific AI
             cursor.execute("""
-                SELECT session_id, ai_id, start_time, end_time, 
-                       bootstrap_level, total_cascades, avg_confidence, session_notes
-                FROM sessions 
-                WHERE ai_id = ? 
-                ORDER BY start_time DESC 
+                SELECT session_id, ai_id, start_time, end_time,
+                       total_cascades, avg_confidence, session_notes
+                FROM sessions
+                WHERE ai_id = ?
+                ORDER BY start_time DESC
                 LIMIT ?
             """, (ai_id, count))
         else:
             # Get recent sessions for all AIs
             cursor.execute("""
-                SELECT session_id, ai_id, start_time, end_time, 
-                       bootstrap_level, total_cascades, avg_confidence, session_notes
-                FROM sessions 
-                ORDER BY start_time DESC 
+                SELECT session_id, ai_id, start_time, end_time,
+                       total_cascades, avg_confidence, session_notes
+                FROM sessions
+                ORDER BY start_time DESC
                 LIMIT ?
             """, (count,))
         
@@ -935,7 +932,6 @@ def handle_sessions_resume_command(args):
                 "end_time": session_data['end_time'],
                 "status": "completed" if session_data['end_time'] else "active",
                 "phase": current_phase,
-                "bootstrap_level": session_data['bootstrap_level'],
                 "total_cascades": session_data['total_cascades'],
                 "avg_confidence": session_data['avg_confidence'],
                 "last_activity": session_data['start_time'],  # Real timestamp!
@@ -965,7 +961,8 @@ def handle_sessions_resume_command(args):
                     print(f"   Cascades: {session['total_cascades']}")
         
         db.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Resume sessions", getattr(args, 'verbose', False))

@@ -1,8 +1,8 @@
 # CLI Commands - Complete Reference
 
-**Empirica v4.0 - All 49 Commands**
+**Empirica v4.0 - All 74 Commands**
 
-**Date:** 2025-12-08  
+**Date:** 2025-12-25
 **Status:** Production-ready
 
 ---
@@ -21,7 +21,7 @@
 10. [User Interface (3 commands)](#user-interface)
 11. [Utility Commands (1 command)](#utility-commands)
 
-**Total: 49 commands**
+**Total: 74 commands**
 
 ---
 
@@ -1026,9 +1026,6 @@ empirica chat --resume <SESSION_ID>
 - `--session`: Session ID (creates new if doesn't exist)
 - `--resume`: Resume existing session by ID
 - `--no-save`: Don't save conversation
-- `--no-uvl`: Disable UVL visual indicators
-- `--uvl-verbose`: Show detailed routing decisions
-- `--uvl-stream`: Emit UVL JSON stream for visualization
 - `--verbose`: Show routing details
 
 ---

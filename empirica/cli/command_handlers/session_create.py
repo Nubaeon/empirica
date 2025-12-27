@@ -32,7 +32,6 @@ def handle_session_create_command(args):
             # AI-FIRST MODE
             ai_id = config_data.get('ai_id')
             user_id = config_data.get('user_id')
-            bootstrap_level = config_data.get('bootstrap_level', 1)
             project_id = config_data.get('project_id')  # Optional explicit project ID
             output_format = 'json'
 
@@ -48,7 +47,6 @@ def handle_session_create_command(args):
             # LEGACY MODE
             ai_id = args.ai_id
             user_id = getattr(args, 'user_id', None)
-            bootstrap_level = getattr(args, 'bootstrap_level', 1)
             project_id = getattr(args, 'project_id', None)  # Optional explicit project ID
             output_format = getattr(args, 'output', 'json')  # Default to JSON
 
@@ -77,10 +75,19 @@ def handle_session_create_command(args):
         db = SessionDatabase()
         session_id = db.create_session(
             ai_id=ai_id,
-            bootstrap_level=bootstrap_level,
             components_loaded=6,  # Standard component count
             subject=subject
         )
+
+        # Initialize auto-capture for this session
+        from empirica.core.issue_capture import initialize_auto_capture
+        try:
+            auto_capture = initialize_auto_capture(session_id, enable=True)
+            if output_format != 'json':
+                print(f"✅ Auto-capture enabled for this session")
+        except Exception as e:
+            if output_format != 'json':
+                print(f"⚠️  Auto-capture initialization warning: {e}")
 
         # Try to auto-detect project from git remote URL (if not explicitly provided)
         if not project_id:
@@ -129,7 +136,6 @@ def handle_session_create_command(args):
                 "session_id": session_id,
                 "ai_id": ai_id,
                 "user_id": user_id,
-                "bootstrap_level": bootstrap_level,
                 "project_id": project_id,
                 "message": "Session created successfully"
             }
@@ -138,7 +144,6 @@ def handle_session_create_command(args):
             print(f"✅ Session created successfully!")
             print(f"   📋 Session ID: {session_id}")
             print(f"   🤖 AI ID: {ai_id}")
-            print(f"   📊 Bootstrap Level: {bootstrap_level}")
 
             # Show project breadcrumbs if project was detected
             if project_id:

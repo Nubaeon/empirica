@@ -1802,12 +1802,6 @@ empirica chat [OPTIONS]
   Resume existing session by ID
 - `--no-save`: **Optional** | Flag (default: `True`) |   
   Don't save conversation
-- `--no-uvl`: **Optional** | Flag (default: `True`) |   
-  Disable UVL visual indicators
-- `--uvl-verbose`: **Optional** | Flag (default: `False`) |   
-  Show detailed routing decisions
-- `--uvl-stream`: **Optional** | Flag (default: `False`) |   
-  Emit UVL JSON stream for visualization
 - `--verbose`: **Optional** | Flag (default: `False`) |   
   Show routing details
 

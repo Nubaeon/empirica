@@ -77,7 +77,8 @@ def handle_goals_discover_command(args):
         
     except Exception as e:
         handle_cli_error(e, "Goal discovery", getattr(args, 'verbose', False))
-        return {"ok": False, "error": str(e)}
+        # Error handler already manages output, return None to avoid duplicate output
+        return None
 
 
 def handle_goals_resume_command(args):
@@ -155,4 +156,5 @@ def handle_goals_resume_command(args):
         
     except Exception as e:
         handle_cli_error(e, "Goal resume", getattr(args, 'verbose', False))
-        return {"ok": False, "error": str(e)}
+        # Error handler already manages output, return None to avoid duplicate output
+        return None

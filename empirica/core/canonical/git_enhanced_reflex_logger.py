@@ -875,7 +875,7 @@ class GitEnhancedReflexLogger:
                     note_ref = f"empirica/session/{self.session_id}/{ph}/{round_num}"
 
                     result = subprocess.run(
-                        ["git", "notes", "show", f"--ref={note_ref}", "HEAD"],
+                        ["git", "notes", "--ref", note_ref, "show", "HEAD"],
                         capture_output=True,
                         timeout=2,
                         cwd=self.git_repo_path,

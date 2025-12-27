@@ -51,7 +51,8 @@ def handle_goals_ready_command(args):
                 print("   Hint: Install bd CLI: curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash")
             
             db.close()
-            return result
+            # Return None to avoid exit code issues and duplicate output
+            return None
         
         # Query BEADS for ready work
         beads_ready = beads.get_ready_work(limit=50, priority=min_priority)
@@ -69,7 +70,8 @@ def handle_goals_ready_command(args):
                 print("📭 No ready work found")
             
             db.close()
-            return result
+            # Return None to avoid exit code issues and duplicate output
+            return None
         
         # Map BEADS issues to Empirica goals
         for beads_issue in beads_ready:

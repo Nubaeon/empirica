@@ -1,0 +1,150 @@
+1
+
+arXiv:2311.05232v2 [cs.CL] 19 Nov 2024
+
+A Survey on Hallucination in Large Language Models:
+Principles, Taxonomy, Challenges, and Open Questions
+LEI HUANG, Harbin Institute of Technology, China
+WEIJIANG YU, Huawei Inc., China
+WEITAO MA and WEIHONG ZHONG, Harbin Institute of Technology, China
+ZHANGYIN FENG and HAOTIAN WANG, Harbin Institute of Technology, China
+QIANGLONG CHEN and WEIHUA PENG, Huawei Inc., China
+XIAOCHENG FENG∗ , BING QIN, and TING LIU, Harbin Institute of Technology, China
+The emergence of large language models (LLMs) has marked a significant breakthrough in natural language
+processing (NLP), fueling a paradigm shift in information acquisition. Nevertheless, LLMs are prone to
+hallucination, generating plausible yet nonfactual content. This phenomenon raises significant concerns over
+the reliability of LLMs in real-world information retrieval (IR) systems and has attracted intensive research to
+detect and mitigate such hallucinations. Given the open-ended general-purpose attributes inherent to LLMs,
+LLM hallucinations present distinct challenges that diverge from prior task-specific models. This divergence
+highlights the urgency for a nuanced understanding and comprehensive overview of recent advances in
+LLM hallucinations. In this survey, we begin with an innovative taxonomy of hallucination in the era of
+LLM and then delve into the factors contributing to hallucinations. Subsequently, we present a thorough
+overview of hallucination detection methods and benchmarks. Our discussion then transfers to representative
+methodologies for mitigating LLM hallucinations. Additionally, we delve into the current limitations faced
+by retrieval-augmented LLMs in combating hallucinations, offering insights for developing more robust IR
+systems. Finally, we highlight the promising research directions on LLM hallucinations, including hallucination
+in large vision-language models and understanding of knowledge boundaries in LLM hallucinations.
+CCS Concepts: • Computing methodologies → Natural language generation; • General and reference
+→ Surveys and overviews.
+Additional Key Words and Phrases: Large Language Models, Hallucination, Factuality, Faithfulness
+ACM Reference Format:
+Lei Huang, Weijiang Yu, Weitao Ma, Weihong Zhong, Zhangyin Feng, Haotian Wang, Qianglong Chen, Weihua
+Peng, Xiaocheng Feng, Bing Qin, and Ting Liu. 2024. A Survey on Hallucination in Large Language Models:
+Principles, Taxonomy, Challenges, and Open Questions. ACM Transactions on Information Systems 1, 1, Article 1
+(January 2024), 58 pages. https://doi.org/10.1145/3703155
+∗ corresponding author
+
+Authors’ addresses: Lei Huang, Harbin Institute of Technology, 800 Dongchuan Road, Harbin, Heilongjiang, China,
+150001, lhuang@ir.hit.edu.cn; Weijiang Yu, Huawei Inc., Bantian Subdistrict, Shenzhen, Guangdong, China, 518129,
+weijiangyu8@gmail.com; Weitao Ma, wtma@ir.hit.edu.cn; Weihong Zhong, whzhong@ir.hit.edu.cn, Harbin Institute of
+Technology, 800 Dongchuan Road, Harbin, Heilongjiang, China, 150001; Zhangyin Feng, zyfeng@ir.hit.edu.cn; Haotian
+Wang, wanght1998@gmail.com, Harbin Institute of Technology, 800 Dongchuan Road, Harbin, Heilongjiang, China, 150001;
+Qianglong Chen, chenqianglong.ai@gmail.com; Weihua Peng, pengwh.hit@gmail.com, Huawei Inc., Bantian Subdistrict,
+Shenzhen, Guangdong, China, 518129; Xiaocheng Feng, xcfeng@ir.hit.edu.cn; Bing Qin, qinb@ir.hit.edu.cn; Ting Liu,
+tliu@ir.hit.edu.cn, Harbin Institute of Technology, 800 Dongchuan Road, Harbin, Heilongjiang, China, 150001.
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee
+provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the
+full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored.
+Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires
+prior specific permission and/or a fee. Request permissions from permissions@acm.org.
+© 2024 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+1046-8188/2024/1-ART1 $15.00
+https://doi.org/10.1145/3703155
+ACM Transactions on Information Systems, Vol. 1, No. 1, Article 1. Publication date: January 2024.
+
+1:2
+
+1
+
+Huang, et al.
+
+INTRODUCTION
+
+Recently, the emergence of large language models (LLMs) [383], exemplified by LLaMA [299, 300],
+Claude [9], Gemini [7, 259] and GPT-4 [232], has ushered in a significant paradigm shift in natural
+language processing (NLP), achieving unprecedented progress in language understanding [116, 124],
+generation [373, 393] and reasoning [57, 151, 250, 326, 354]. Furthermore, the extensive factual
+knowledge encoded within LLMs has demonstrated considerable advancements in leveraging
+LLMs for information seeking [6, 246], potentially reshaping the landscape of information retrieval
+systems [394]. Nevertheless, in tandem with these remarkable advancements, concerns have arisen
+about the tendency of LLMs to generate hallucinations [15, 105], resulting in seemingly plausible yet
+factually unsupported content. Further compounding this issue is the capability of LLMs to generate
+highly convincing and human-like responses [265], which makes detecting these hallucinations
+particularly challenging, thereby complicating the practical deployment of LLMs, especially realworld information retrieval (IR) systems that have integrated into our daily lives like chatbots
+[8, 231], search engines [4, 214], and recommender systems [97, 171]. Given that the information
+provided by these systems can directly influence decision-making, any misleading information has
+the potential to spread false beliefs, or even cause harm.
+Notably, hallucinations in conventional natural language generation (NLG) tasks have been
+extensively studied [125, 136], with hallucinations defined as generated content that is either
+nonsensical or unfaithful to the provided source content. These hallucinations are categorized into
+two types: intrinsic hallucination, where the generated output contradicts the source content, and
+extrinsic hallucination, where the generated output cannot be verified from the source. However,
+given their remarkable versatility across tasks [15, 30], understanding hallucinations in LLMs
+presents a unique challenge compared to models tailored for specific tasks. Besides, as LLMs
+typically function as open-ended systems, the scope of hallucination encompasses a broader concept,
+predominantly manifesting factual errors. This shift necessitates a reevaluation and adjustment
+of the existing taxonomy of hallucinations, aiming to enhance its adaptability in the evolving
+landscape of LLMs.
+In this survey, we propose a redefined taxonomy of hallucination tailored specifically for applications involving LLMs. We categorize hallucination into two primary types: factuality hallucination
+and faithfulness hallucination. Factuality hallucination emphasizes the discrepancy between generated content and verifiable real-world facts, typically manifesting as factual inconsistencies.
+Conversely, faithfulness hallucination captures the divergence of generated content from user input
+or the lack of self-consistency within the generated content. This category is further subdivided
+into instruction inconsistency, where the content deviates from the user’s original instruction;
+context inconsistency, highlighting discrepancies from the provided context; and logical inconsistency, pointing out internal contradictions within the content. Such categorization refines our
+understanding of hallucinations in LLMs, aligning it closely with their contemporary usage.
+Delving into the underlying causes of hallucinations in LLMs is essential not merely for enhancing the comprehension of these phenomena but also for informing strategies aimed at alleviating
+them. Recognizing the multifaceted sources of LLM hallucinations, our survey identifies potential
+contributors into three main aspects: data, training, and inference stages. This categorization allows
+us to span a broad spectrum of factors, providing a holistic view of the origins and mechanisms by
+which hallucinations may arise within LLM systems. Furthermore, we comprehensively outline a
+variety of effective detection methods specifically devised for detecting hallucinations in LLMs, as
+well as an exhaustive overview of benchmarks related to LLM hallucinations, serving as appropriate
+testbeds to assess the extent of hallucinations generated by LLMs and the efficacy of detection
+methods. Beyond evaluation, significant efforts have been undertaken to mitigate hallucinations of
+
+ACM Transactions on Information Systems, Vol. 1, No. 1, Article 1. Publication date: January 2024.
+
+A Survey on Hallucination in Large Language Models: Principles, Taxonomy, Challenges, and Open Questions
+
+1:3
+
+LLMs. These initiatives are comprehensively surveyed in our study, in accordance with the corresponding causes, spanning from data-related, training-related, and inference-related approaches. In
+addition, the effectiveness of retrieval-augmented generation (RAG) in mitigating hallucinations has
+garnered tremendous attention within the field. Despite the considerable potential of RAG, current
+systems inherently face limitations and even suffer from hallucinations. Accordingly, our survey
+undertakes an in-depth analysis of these challenges, aiming to provide valuable insights aimed
+at developing more robust RAG systems. We also highlight several promising avenues for future
+research, such as hallucinations in large vision-language models and understanding of knowledge
+boundaries in LLM hallucinations, paving the way for forthcoming research in the field.
+Comparing with Existing Surveys. As hallucination stands out as a major challenge in generative AI, numerous research [136, 192, 258, 298, 312, 376] has been directed towards hallucinations.
+While these contributions have explored LLM hallucination from various perspectives and provided
+valuable insights, our survey seeks to delineate their distinct contributions and the comprehensive
+scope they encompass. Ji et al. [136] primarily shed light on hallucinations in pre-trained models
+for NLG tasks, leaving LLMs outside their discussion purview. Tonmoy et al. [298] mainly focused
+on discussing the mitigation strategies combating LLM hallucinations. Besides, Liu et al. [192] took
+a broader view of LLM trustworthiness without delving into specific hallucination phenomena,
+whereas Wang et al. [312] provided an in-depth look at factuality in LLMs. However, our work narrows down to a critical subset of trustworthiness challenges, specifically addressing factuality and
+extending the discussion to include faithfulness hallucinations. To the best of our knowledge, Zhang
+et al. [376] presented research closely aligned with ours, detailing LLM hallucination taxonomies,
+evaluation benchmarks, and mitigation strategies. However, our survey sets itself apart through
+a unique taxonomy and organizational structure. We present a detailed, layered classification of
+hallucinations and conduct a more comprehensive analysis of the causes of hallucinations. Crucially,
+our proposed mitigation strategies are directly tied to these causes, offering a targeted and coherent
+framework for addressing LLM hallucinations.
+Organization of this Survey. In this survey, we present a comprehensive overview of the latest
+developments in LLM hallucinations, as shown in Fig 1. We commence by constructing a taxonomy
+of hallucinations in the realm of LLM (§2). Subsequently, we analyze factors contributing to LLM
+hallucinations in depth (§3), followed by a review of various strategies and benchmarks employed
+for the reliable detection of hallucinations in LLMs (§4). We then detail a spectrum of approaches
+designed to mitigate these hallucinations (§5). Concluding, we delve into the challenges faced by
+current RAG systems (§6) and delineate potential pathways for forthcoming research (§7).
+2
+
+DEFINITIONS
+
+For the sake of a comprehensive understanding of hallucinations in LLMs, we commence with a
+succinct introduction to LLMs (§2.1), delineating the scope of this survey. Subsequently, we delve
+into the training stages of LLMs (§2.2), as a thorough understanding of the training mechanisms
+contributes significantly to elucidating the origins of hallucinations. Lastly, we expound upon the
+concept of hallucinations in LLMs (§2.3), further categorizing it into two distinct types.
+2.1

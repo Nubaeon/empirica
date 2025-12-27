@@ -1,8 +1,8 @@
 """
-CLI Core - Main entry point and argument parsing for modular Empirica CLI
+CLI Core - Main entry point and argument parsing for Empirica CLI
 
-This module provides the main() function and argument parser setup for the
-modularized Empirica CLI, replacing the monolithic cli.py structure.
+This module provides the main() function and argument parser setup.
+Parser definitions are modularized in the parsers/ subdirectory.
 """
 
 # Apply asyncio fixes early (before any MCP connections)
@@ -18,6 +18,92 @@ import time
 from .cli_utils import handle_cli_error, print_header
 from .command_handlers import *
 from .command_handlers.utility_commands import handle_log_token_saving, handle_efficiency_report
+from .command_handlers.edit_verification_command import handle_edit_with_confidence_command
+from .command_handlers.issue_capture_commands import (
+    handle_issue_list_command,
+    handle_issue_show_command,
+    handle_issue_handoff_command,
+    handle_issue_resolve_command,
+    handle_issue_export_command,
+    handle_issue_stats_command,
+)
+
+
+class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """Custom formatter that groups subcommands by category"""
+    
+    def _format_action(self, action):
+        try:
+            if isinstance(action, argparse._SubParsersAction):
+                categories = {
+                    'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot'],
+                    'CASCADE Workflow': ['preflight', 'preflight-submit', 'check', 'check-submit', 'postflight', 'postflight-submit', 'workflow'],
+                    'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
+                    'Project Management': ['project-init', 'project-create', 'project-list', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
+                    'Workspace': ['workspace-init', 'workspace-map', 'workspace-overview'],
+                    'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
+                    'Identity': ['identity-create', 'identity-export', 'identity-list', 'identity-verify'],
+                    'Handoffs': ['handoff-create', 'handoff-query'],
+                    'Logging': ['finding-log', 'unknown-log', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
+                    'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
+                    'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
+                    'Monitoring': ['monitor', 'check-drift', 'efficiency-report'],
+                    'Skills': ['skill-suggest', 'skill-fetch'],
+                    'Utilities': ['goal-analysis', 'log-token-saving', 'config', 'performance'],
+                    'Vision': ['vision'],
+                    'Epistemics': ['epistemics-list', 'epistemics-show'],
+                    'User Interface': ['chat']
+                }
+                
+                parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
+                for category, commands in categories.items():
+                    parts.append(f'\n{category} ({len(commands)} commands):\n')
+                    parts.append('-' * 70 + '\n')
+                    for cmd in commands:
+                        if cmd in action.choices:
+                            parts.append(f'  {cmd:30s}\n')
+                parts.append('\n' + '=' * 70 + '\n')
+                parts.append('\nUse "empirica <command> --help" for detailed help on a specific command.\n')
+                return ''.join(parts)
+        except Exception:
+            pass
+        
+        return super()._format_action(action)
+
+# Import all parser modules
+from .parsers import (
+    add_cascade_parsers,
+    add_investigation_parsers,
+    add_performance_parsers,
+    add_skill_parsers,
+    add_utility_parsers,
+    add_config_parsers,
+    add_monitor_parsers,
+    add_session_parsers,
+    add_action_parsers,
+    add_checkpoint_parsers,
+    add_user_interface_parsers,
+    add_vision_parsers,
+    add_epistemics_parsers,
+    add_edit_verification_parsers,
+    add_issue_capture_parsers,
+)
+
+
+def _get_version():
+    """Get Empirica version with additional info"""
+    try:
+        import empirica
+        version = empirica.__version__
+        
+        # Add Python version and install location
+        import sys
+        python_version = f"Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        install_path = empirica.__file__.rsplit('/', 2)[0] if '/' in empirica.__file__ else empirica.__file__
+        
+        return f"{version}\n{python_version}\nInstall: {install_path}"
+    except:
+        return "1.0.5 (version info unavailable)"
 
 
 def create_argument_parser():
@@ -25,1058 +111,150 @@ def create_argument_parser():
     parser = argparse.ArgumentParser(
         prog='empirica',
         description='🧠 Empirica - Semantic Self-Aware AI Framework',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  empirica session-create --ai-id myai          # Create session
-  empirica preflight --session-id xyz           # Execute PREFLIGHT
-  empirica check --session-id xyz               # Execute CHECK gate
-  empirica postflight --session-id xyz          # Execute POSTFLIGHT
-  empirica goals-create --session-id xyz        # Create goal
-        """
+        formatter_class=GroupedHelpFormatter,
+        epilog="Global Flags (must come BEFORE command name):\n  empirica [--version] [--verbose] <command> [args]\n\nExamples:\n  empirica session-create --ai-id myai      # Create session\n  empirica --verbose sessions-list          # Show debug info\n  empirica preflight-submit --session-id xyz # PREFLIGHT\n  empirica --verbose check --session-id xyz # CHECK with debugging"
     )
     
-    # Global options
-    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
+    # Global options (must come before subcommand)
+    parser.add_argument('--version', action='version', version=f'%(prog)s {_get_version()}')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output (shows DB path, execution time, etc.). Must come before command name.')
     parser.add_argument('--config', help='Path to configuration file')
     
     # Create subcommands
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
-    # Session commands (use session-create for session initialization)
-    _add_session_parsers(subparsers)
-
-    # CASCADE commands (preflight-submit, check, postflight-submit)
-    _add_cascade_parsers(subparsers)
-    
-    # Investigation commands
-    _add_investigation_parsers(subparsers)
-    
-    # Performance commands
-    _add_performance_parsers(subparsers)
-
-    # Skill commands
-    _add_skill_parsers(subparsers)
-
-    # Utility commands
-    _add_utility_parsers(subparsers)
-    
-    # Config commands
-    _add_config_parsers(subparsers)
-    
-    # Monitor commands
-    _add_monitor_parsers(subparsers)
-
-    # MCP commands - REMOVED (no longer needed)
-    # _add_mcp_parsers(subparsers)
-
-    # Action commands (INVESTIGATE and ACT tracking)
-    _add_action_parsers(subparsers)
-    
-    # Checkpoint commands (Phase 2)
-    _add_checkpoint_parsers(subparsers)
-    
-    # User interface commands (for human users)
-    _add_user_interface_parsers(subparsers)
-    
-    # Vision commands
-    _add_vision_parsers(subparsers)
-    
-    # Epistemic trajectory commands
-    _add_epistemics_parsers(subparsers)
+    # Add all parser groups
+    add_session_parsers(subparsers)
+    add_cascade_parsers(subparsers)
+    add_investigation_parsers(subparsers)
+    add_performance_parsers(subparsers)
+    add_skill_parsers(subparsers)
+    add_utility_parsers(subparsers)
+    add_config_parsers(subparsers)
+    add_monitor_parsers(subparsers)
+    add_action_parsers(subparsers)
+    add_checkpoint_parsers(subparsers)
+    add_user_interface_parsers(subparsers)
+    add_vision_parsers(subparsers)
+    add_epistemics_parsers(subparsers)
+    add_edit_verification_parsers(subparsers)
+    add_issue_capture_parsers(subparsers)
     
     return parser
 
 
-def _add_cascade_parsers(subparsers):
-    """Add cascade command parsers (DEPRECATED - use MCP tools instead)
-    
-    The 'cascade' command was part of ModalitySwitcher plugin.
-    For CASCADE workflow, use MCP tools:
-    - empirica execute-preflight
-    - empirica execute-check  
-    - empirica execute-postflight
-    
-    This function is kept for backward compatibility but does nothing.
-    """
-    # Deprecated - CASCADE workflow now uses MCP tools
-    pass
-    
-    # Enhanced decision analysis command with ModalitySwitcher
-    # Preflight command
-    preflight_parser = subparsers.add_parser('preflight', help='Execute preflight epistemic assessment')
-    preflight_parser.add_argument('prompt', help='Task description to assess')
-    preflight_parser.add_argument('--session-id', help='Optional session ID (auto-generated if not provided)')
-    preflight_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier for session tracking')
-    preflight_parser.add_argument('--no-git', action='store_true', help='Disable automatic git checkpoint creation')
-    preflight_parser.add_argument('--sign', action='store_true', help='Sign assessment with AI keypair (Phase 2: EEP-1)')
-    preflight_parser.add_argument('--prompt-only', action='store_true', help='Return ONLY the self-assessment prompt as JSON (no waiting, for genuine AI assessment)')
-    preflight_parser.add_argument('--assessment-json', help='Genuine AI self-assessment JSON (required for genuine assessment)')
-    preflight_parser.add_argument('--sentinel-assess', action='store_true', help='Route to Sentinel assessment system (future feature)')
-    preflight_parser.add_argument('--json', action='store_const', const='json', dest='output_format', help='Output as JSON (deprecated, use --output json)')
-    preflight_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for programmatic use; --output human for inspection)')
-    preflight_parser.add_argument('--sentinel', action='store_true', help='Route to Sentinel for interactive decision-making (future: Sentinel assessment routing)')
-    preflight_parser.add_argument('--compact', action='store_true', help='Output as single-line key=value (human format only)')
-    preflight_parser.add_argument('--kv', action='store_true', help='Output as multi-line key=value (human format only)')
-    preflight_parser.add_argument('--verbose', action='store_true', help='Show detailed assessment (human format only)')
-    preflight_parser.add_argument('--quiet', action='store_true', help='Quiet mode (requires --assessment-json)')
-    
-    # Workflow command
-    workflow_parser = subparsers.add_parser('workflow', help='Execute full preflight→work→postflight workflow')
-    workflow_parser.add_argument('prompt', help='Task description')
-    workflow_parser.add_argument('--auto', action='store_true', help='Skip manual pause between steps')
-    workflow_parser.add_argument('--verbose', action='store_true', help='Show detailed workflow steps')
-
-    # NEW: MCP v2 Workflow Commands (Critical Priority)
-    
-    # Preflight submit command (AI-first with config file support)
-    preflight_submit_parser = subparsers.add_parser('preflight-submit',
-        help='Submit preflight assessment (AI-first: use config file, Legacy: use flags)')
-
-    # AI-FIRST: Positional config file argument
-    preflight_submit_parser.add_argument('config', nargs='?',
-        help='JSON config file path or "-" for stdin (AI-first mode)')
-
-    # LEGACY: Flag-based arguments (backward compatible)
-    preflight_submit_parser.add_argument('--session-id', help='Session ID (legacy)')
-    preflight_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
-    preflight_submit_parser.add_argument('--reasoning', help='Reasoning for assessment scores (legacy)')
-    preflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
-    
-    # Check command (AI-first with config file support)
-    check_parser = subparsers.add_parser('check',
-        help='Execute epistemic check (AI-first: use config file, Legacy: use flags)')
-
-    # AI-FIRST: Positional config file argument
-    check_parser.add_argument('config', nargs='?',
-        help='JSON config file path or "-" for stdin (AI-first mode)')
-
-    # LEGACY: Flag-based arguments (backward compatible)
-    check_parser.add_argument('--session-id', help='Session ID (legacy)')
-    check_parser.add_argument('--findings', help='Investigation findings as JSON array (legacy)')
-    # Create mutually exclusive group for unknowns (accept either name)
-    unknowns_group = check_parser.add_mutually_exclusive_group(required=False)
-    unknowns_group.add_argument('--unknowns', dest='unknowns', help='Remaining unknowns as JSON array (legacy)')
-    unknowns_group.add_argument('--remaining-unknowns', dest='unknowns', help='Alias for --unknowns (legacy)')
-    check_parser.add_argument('--confidence', type=float, help='Confidence score (0.0-1.0) (legacy)')
-    check_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
-    check_parser.add_argument('--verbose', action='store_true', help='Show detailed analysis')
-    
-    # Check submit command
-    check_submit_parser = subparsers.add_parser('check-submit', help='Submit check assessment results')
-    check_submit_parser.add_argument('--session-id', required=True, help='Session ID')
-    check_submit_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict')
-    check_submit_parser.add_argument('--decision', required=True, choices=['proceed', 'investigate', 'proceed_with_caution'], help='Decision made')
-    check_submit_parser.add_argument('--reasoning', help='Reasoning for decision')
-    check_submit_parser.add_argument('--cycle', type=int, help='Investigation cycle number')
-    check_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Postflight command (primary, non-blocking)
-    postflight_parser = subparsers.add_parser('postflight', help='Submit postflight epistemic assessment results')
-    postflight_parser.add_argument('--session-id', required=True, help='Session ID')
-    postflight_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict (reassessment of same 13 dimensions as preflight)')
-    postflight_parser.add_argument('--reasoning', help='Task summary or description of learning/changes from preflight')
-    postflight_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-
-    # Postflight submit command (AI-first with config file support)
-    postflight_submit_parser = subparsers.add_parser('postflight-submit',
-        help='Submit postflight assessment (AI-first: use config file, Legacy: use flags)')
-
-    # AI-FIRST: Positional config file argument
-    postflight_submit_parser.add_argument('config', nargs='?',
-        help='JSON config file path or "-" for stdin (AI-first mode)')
-
-    # LEGACY: Flag-based arguments (backward compatible)
-    postflight_submit_parser.add_argument('--session-id', help='Session ID (legacy)')
-    postflight_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
-    postflight_submit_parser.add_argument('--reasoning', help='Description of what changed from preflight (legacy)')
-    postflight_submit_parser.add_argument('--changes', help='Alias for --reasoning (deprecated, use --reasoning)', dest='reasoning')
-    postflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
-
-
-def _add_investigation_parsers(subparsers):
-    """Add investigation command parsers"""
-    # Main investigate command (consolidates investigate + analyze)
-    investigate_parser = subparsers.add_parser('investigate', help='Investigate file/directory/concept')
-    investigate_parser.add_argument('target', help='Target to investigate')
-    investigate_parser.add_argument('--type', default='auto',
-                                   choices=['auto', 'file', 'directory', 'concept', 'comprehensive'],
-                                   help='Investigation type. Use "comprehensive" for deep analysis (replaces analyze command)')
-    investigate_parser.add_argument('--context', help='JSON context data')
-    investigate_parser.add_argument('--detailed', action='store_true', help='Show detailed investigation')
-    investigate_parser.add_argument('--verbose', action='store_true', help='Show detailed investigation')
-
-    # REMOVED: analyze command - use investigate --type=comprehensive instead
-
-    # ========== Epistemic Branching Commands (CASCADE 2.0) ==========
-
-    # investigate-create-branch command
-    create_branch_parser = subparsers.add_parser(
-        'investigate-create-branch',
-        help='Create parallel investigation branch (epistemic auto-merge)'
-    )
-    create_branch_parser.add_argument('--session-id', required=True, help='Session ID')
-    create_branch_parser.add_argument('--investigation-path', required=True, help='What is being investigated (e.g., oauth2)')
-    create_branch_parser.add_argument('--description', help='Description of investigation')
-    create_branch_parser.add_argument('--preflight-vectors', help='Epistemic vectors at branch start (JSON)')
-    create_branch_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
-    create_branch_parser.add_argument('--verbose', action='store_true', help='Verbose output')
-
-    # investigate-checkpoint-branch command
-    checkpoint_branch_parser = subparsers.add_parser(
-        'investigate-checkpoint-branch',
-        help='Checkpoint branch after investigation'
-    )
-    checkpoint_branch_parser.add_argument('--branch-id', required=True, help='Branch ID')
-    checkpoint_branch_parser.add_argument('--postflight-vectors', required=True, help='Epistemic vectors after investigation (JSON)')
-    checkpoint_branch_parser.add_argument('--tokens-spent', help='Tokens spent in investigation')
-    checkpoint_branch_parser.add_argument('--time-spent', help='Time spent in investigation (minutes)')
-    checkpoint_branch_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
-    checkpoint_branch_parser.add_argument('--verbose', action='store_true', help='Verbose output')
-
-    # investigate-merge-branches command
-    merge_branches_parser = subparsers.add_parser(
-        'investigate-merge-branches',
-        help='Auto-merge best branch based on epistemic scores'
-    )
-    merge_branches_parser.add_argument('--session-id', required=True, help='Session ID')
-    merge_branches_parser.add_argument('--round', help='Investigation round number')
-    merge_branches_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
-    merge_branches_parser.add_argument('--verbose', action='store_true', help='Verbose output')
-
-
-def _add_performance_parsers(subparsers):
-    """Add performance command parsers"""
-    # Performance command (consolidates performance + benchmark)
-    performance_parser = subparsers.add_parser('performance', help='Analyze performance or run benchmarks')
-    performance_parser.add_argument('--benchmark', action='store_true', help='Run performance benchmarks (replaces benchmark command)')
-    performance_parser.add_argument('--target', default='system', help='Performance analysis target')
-    performance_parser.add_argument('--type', default='comprehensive', help='Benchmark/analysis type')
-    performance_parser.add_argument('--iterations', type=int, default=10, help='Number of iterations (for benchmarks)')
-    performance_parser.add_argument('--memory', action='store_true', default=True, help='Include memory analysis')
-    performance_parser.add_argument('--context', help='JSON context data')
-    performance_parser.add_argument('--detailed', action='store_true', help='Show detailed metrics')
-    performance_parser.add_argument('--verbose', action='store_true', help='Show detailed results')
-
-    # REMOVED: benchmark command - use performance --benchmark instead
-
-
-def _add_skill_parsers(subparsers):
-    """Add skill management command parsers"""
-    # Skill suggest command
-    skill_suggest_parser = subparsers.add_parser('skill-suggest', help='Suggest skills for a task')
-    skill_suggest_parser.add_argument('--task', help='Task description to suggest skills for')
-    skill_suggest_parser.add_argument('--project-id', help='Project ID for context-aware suggestions')
-    skill_suggest_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
-    skill_suggest_parser.add_argument('--verbose', action='store_true', help='Show detailed suggestions')
-
-    # Skill fetch command
-    skill_fetch_parser = subparsers.add_parser('skill-fetch', help='Fetch and normalize a skill')
-    skill_fetch_parser.add_argument('--name', required=True, help='Skill name')
-    skill_fetch_parser.add_argument('--url', help='URL to fetch skill from (markdown)')
-    skill_fetch_parser.add_argument('--file', help='Local .skill archive file to load')
-    skill_fetch_parser.add_argument('--tags', help='Comma-separated tags for the skill')
-    skill_fetch_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
-    skill_fetch_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
-
-
-def _add_utility_parsers(subparsers):
-    """Add utility command parsers"""
-    # Feedback command
-    # Goal analysis command
-    goal_parser = subparsers.add_parser('goal-analysis', help='Analyze goal feasibility')
-    goal_parser.add_argument('goal', help='Goal to analyze')
-    goal_parser.add_argument('--context', help='JSON context data')
-    goal_parser.add_argument('--verbose', action='store_true', help='Show detailed analysis')
-    
-    # Calibration command
-    # UVL command
-    # Token savings commands
-    from empirica.cli.command_handlers.utility_commands import handle_log_token_saving, handle_efficiency_report
-    
-    log_token_saving_parser = subparsers.add_parser('log-token-saving', help='Log a token saving event')
-    log_token_saving_parser.add_argument('--session-id', required=True, help='Session ID')
-    log_token_saving_parser.add_argument('--type', required=True,
-        choices=['doc_awareness', 'finding_reuse', 'mistake_prevention', 'handoff_efficiency'],
-        help='Type of token saving')
-    log_token_saving_parser.add_argument('--tokens', type=int, required=True, help='Tokens saved')
-    log_token_saving_parser.add_argument('--evidence', required=True, help='What was avoided/reused')
-    log_token_saving_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
-    log_token_saving_parser.set_defaults(func=handle_log_token_saving)
-    
-    efficiency_report_parser = subparsers.add_parser('efficiency-report', help='Show token efficiency report')
-    efficiency_report_parser.add_argument('--session-id', required=True, help='Session ID')
-    efficiency_report_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
-    efficiency_report_parser.set_defaults(func=handle_efficiency_report)
-
-
-def _add_config_parsers(subparsers):
-    """Add configuration command parsers"""
-    # Unified config command (consolidates config-init, config-show, config-validate, config-get, config-set)
-    config_parser = subparsers.add_parser('config', help='Configuration management')
-    config_parser.add_argument('key', nargs='?', help='Configuration key (dot notation, e.g., routing.default_strategy)')
-    config_parser.add_argument('value', nargs='?', help='Value to set (if key provided)')
-    config_parser.add_argument('--init', action='store_true', help='Initialize configuration (replaces config-init)')
-    config_parser.add_argument('--validate', action='store_true', help='Validate configuration (replaces config-validate)')
-    config_parser.add_argument('--section', help='Show specific section (e.g., routing, adapters)')
-    config_parser.add_argument('--format', choices=['yaml', 'json'], default='yaml', help='Output format')
-    config_parser.add_argument('--force', action='store_true', help='Overwrite existing config (with --init)')
-    config_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
-
-    # REMOVED: config-init, config-show, config-validate, config-get, config-set
-    # Use: config --init, config (no args), config --validate, config KEY, config KEY VALUE
-
-
-def _add_monitor_parsers(subparsers):
-    """Add monitoring command parsers"""
-    # Unified monitor command (consolidates monitor, monitor-export, monitor-reset, monitor-cost)
-    monitor_parser = subparsers.add_parser('monitor', help='Monitoring dashboard and statistics')
-    monitor_parser.add_argument('--export', metavar='FILE', help='Export data to file (replaces monitor-export)')
-    monitor_parser.add_argument('--reset', action='store_true', help='Reset statistics (replaces monitor-reset)')
-    monitor_parser.add_argument('--cost', action='store_true', help='Show cost analysis (replaces monitor-cost)')
-    monitor_parser.add_argument('--history', action='store_true', help='Show recent request history')
-    monitor_parser.add_argument('--health', action='store_true', help='Include adapter health checks')
-    monitor_parser.add_argument('--project', action='store_true', help='Show cost projections (with --cost)')
-    monitor_parser.add_argument('--format', choices=['json', 'csv'], default='json', help='Export format (with --export)')
-    monitor_parser.add_argument('--yes', '-y', action='store_true', help='Skip confirmation (with --reset)')
-    monitor_parser.add_argument('--verbose', action='store_true', help='Show detailed stats')
-
-    # Check drift command - detect epistemic drift
-    check_drift_parser = subparsers.add_parser('check-drift',
-        help='Detect epistemic drift by comparing current state to historical baselines')
-    check_drift_parser.add_argument('--session-id', required=True, help='Session UUID to check for drift')
-    check_drift_parser.add_argument('--threshold', type=float, default=0.2, help='Drift threshold (default: 0.2)')
-    check_drift_parser.add_argument('--lookback', type=int, default=5, help='Number of checkpoints to analyze (default: 5)')
-    check_drift_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
-    check_drift_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
-
-    # REMOVED: monitor-export, monitor-reset, monitor-cost
-    # Use: monitor --export FILE, monitor --reset, monitor --cost
-
-
-def _add_mcp_parsers(subparsers):
-    """Add MCP server command parsers - REMOVED: MCP server lifecycle managed by IDE/CLI"""
-    # All MCP server commands (mcp-start, mcp-stop, mcp-status, mcp-test, mcp-list-tools, mcp-call)
-    # removed as they are redundant - IDE/CLI manages MCP server lifecycle
-    pass
-
-
-def _add_session_parsers(subparsers):
-    """Add session management command parsers"""
-    # Sessions list command
-    sessions_list_parser = subparsers.add_parser('sessions-list', help='List all sessions')
-    sessions_list_parser.add_argument('--limit', type=int, default=50, help='Maximum sessions to show')
-    sessions_list_parser.add_argument('--verbose', action='store_true', help='Show detailed info')
-    sessions_list_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
-    
-    # Sessions show command
-    sessions_show_parser = subparsers.add_parser('sessions-show', help='Show detailed session info')
-    sessions_show_parser.add_argument('session_id', nargs='?', help='Session ID or alias (latest, latest:active, latest:<ai_id>, latest:active:<ai_id>)')
-    sessions_show_parser.add_argument('--session-id', dest='session_id_named', help='Session ID (alternative to positional argument)')
-    sessions_show_parser.add_argument('--verbose', action='store_true', help='Show all vectors and cascades')
-    sessions_show_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
-
-    # session-snapshot command
-    session_snapshot_parser = subparsers.add_parser('session-snapshot', help='Show session snapshot (where you left off)')
-    session_snapshot_parser.add_argument('session_id', help='Session ID or alias')
-    session_snapshot_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
-
-    # Sessions export command
-    sessions_export_parser = subparsers.add_parser('sessions-export', help='Export session to JSON')
-    sessions_export_parser.add_argument('session_id', nargs='?', help='Session ID or alias (latest, latest:active, latest:<ai_id>)')
-    sessions_export_parser.add_argument('--session-id', dest='session_id_named', help='Session ID (alternative to positional argument)')
-    sessions_export_parser.add_argument('--output', '-o', help='Output file path (default: session_<id>.json)')
-    
-    # Session end command
-    # session-end removed - use handoff-create instead (better parameter names, already in MCP)
-
-
-def _add_action_parsers(subparsers):
-    """Add action logging command parsers for INVESTIGATE and ACT phases"""
-    # investigate-log command
-    investigate_log_parser = subparsers.add_parser('investigate-log', 
-        help='Log investigation findings during INVESTIGATE phase')
-    investigate_log_parser.add_argument('--session-id', required=True, help='Session ID')
-    investigate_log_parser.add_argument('--findings', required=True, 
-        help='JSON array of findings discovered')
-    investigate_log_parser.add_argument('--evidence', 
-        help='JSON object with evidence (file paths, line numbers, etc.)')
-    investigate_log_parser.add_argument('--verbose', action='store_true', help='Verbose output')
-    
-    # act-log command
-    act_log_parser = subparsers.add_parser('act-log', 
-        help='Log actions taken during ACT phase')
-    act_log_parser.add_argument('--session-id', required=True, help='Session ID')
-    act_log_parser.add_argument('--actions', required=True, 
-        help='JSON array of actions taken')
-    act_log_parser.add_argument('--artifacts', 
-        help='JSON array of files modified/created')
-    act_log_parser.add_argument('--goal-id', 
-        help='Goal UUID being worked on')
-    act_log_parser.add_argument('--verbose', action='store_true', help='Verbose output')
-
-
-def _add_checkpoint_parsers(subparsers):
-    """Add git checkpoint management command parsers (Phase 2)"""
-    # Checkpoint create command
-    checkpoint_create_parser = subparsers.add_parser(
-        'checkpoint-create',
-        help='Create git checkpoint for session (Phase 1.5/2.0)'
-    )
-    checkpoint_create_parser.add_argument('--session-id', required=True, help='Session ID')
-    checkpoint_create_parser.add_argument(
-        '--phase',
-        choices=['PREFLIGHT', 'CHECK', 'ACT', 'POSTFLIGHT'],
-        required=True,
-        help='Workflow phase'
-    )
-    checkpoint_create_parser.add_argument('--round', type=int, required=True, help='Round number')
-    checkpoint_create_parser.add_argument('--metadata', help='JSON metadata (optional)')
-    checkpoint_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Checkpoint load command
-    checkpoint_load_parser = subparsers.add_parser(
-        'checkpoint-load',
-        help='Load latest checkpoint for session'
-    )
-    checkpoint_load_parser.add_argument('--session-id', required=True, help='Session ID')
-    checkpoint_load_parser.add_argument('--max-age', type=int, default=24, help='Max age in hours (default: 24)')
-    checkpoint_load_parser.add_argument('--phase', help='Filter by specific phase (optional)')
-    checkpoint_load_parser.add_argument(
-        '--output',
-        choices=['table', 'json'],
-        default='table',
-        help='Output format (also accepts --output json)'
-    )
-    # Add backward compatibility with --format
-    checkpoint_load_parser.add_argument(
-        '--format',
-        dest='output',
-        choices=['json', 'table'],
-        help='Output format (deprecated, use --output)'
-    )
-    
-    # Checkpoint list command
-    checkpoint_list_parser = subparsers.add_parser(
-        'checkpoint-list',
-        help='List checkpoints for session'
-    )
-    checkpoint_list_parser.add_argument('--session-id', help='Session ID (optional, lists all if omitted)')
-    checkpoint_list_parser.add_argument('--limit', type=int, default=10, help='Maximum checkpoints to show')
-    checkpoint_list_parser.add_argument('--phase', help='Filter by phase (optional)')
-    checkpoint_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Checkpoint diff command
-    checkpoint_diff_parser = subparsers.add_parser(
-        'checkpoint-diff',
-        help='Show vector differences from last checkpoint'
-    )
-    checkpoint_diff_parser.add_argument('--session-id', required=True, help='Session ID')
-    checkpoint_diff_parser.add_argument('--threshold', type=float, default=0.15, help='Significance threshold')
-    checkpoint_diff_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Efficiency report command
-    checkpoint_sign_parser = subparsers.add_parser(
-        'checkpoint-sign',
-        help='Sign checkpoint with AI identity (Phase 2 - Crypto)'
-    )
-    checkpoint_sign_parser.add_argument('--session-id', required=True, help='Session ID')
-    checkpoint_sign_parser.add_argument(
-        '--phase',
-        choices=['PREFLIGHT', 'CHECK', 'ACT', 'POSTFLIGHT'],
-        required=True,
-        help='Workflow phase'
-    )
-    checkpoint_sign_parser.add_argument('--round', type=int, required=True, help='Round number')
-    checkpoint_sign_parser.add_argument('--ai-id', required=True, help='AI identity to sign with')
-    checkpoint_sign_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Checkpoint verify command
-    checkpoint_verify_parser = subparsers.add_parser(
-        'checkpoint-verify',
-        help='Verify signed checkpoint (Phase 2 - Crypto)'
-    )
-    checkpoint_verify_parser.add_argument('--session-id', required=True, help='Session ID')
-    checkpoint_verify_parser.add_argument(
-        '--phase',
-        choices=['PREFLIGHT', 'CHECK', 'ACT', 'POSTFLIGHT'],
-        required=True,
-        help='Workflow phase'
-    )
-    checkpoint_verify_parser.add_argument('--round', type=int, required=True, help='Round number')
-    checkpoint_verify_parser.add_argument('--ai-id', help='AI identity (uses embedded public key if omitted)')
-    checkpoint_verify_parser.add_argument('--public-key', help='Public key hex (overrides AI ID)')
-    checkpoint_verify_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Checkpoint signatures command
-    checkpoint_signatures_parser = subparsers.add_parser(
-        'checkpoint-signatures',
-        help='List all signed checkpoints (Phase 2 - Crypto)'
-    )
-    checkpoint_signatures_parser.add_argument('--session-id', help='Filter by session ID (optional)')
-    checkpoint_signatures_parser.add_argument('--ai-id', help='AI identity (only needed if no local identities exist)')
-    checkpoint_signatures_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-
-    # Handoff Reports Commands (Phase 1.6)
-    
-    # Handoff create command
-    handoff_create_parser = subparsers.add_parser(
-        'handoff-create',
-        help='Create handoff report: epistemic (with CASCADE deltas) or planning (documentation-only)'
-    )
-    handoff_create_parser.add_argument('--session-id', required=True, help='Session UUID')
-    handoff_create_parser.add_argument('--task-summary', required=True, help='What was accomplished (2-3 sentences)')
-    handoff_create_parser.add_argument('--summary', dest='task_summary', help='Alias for --task-summary')
-    handoff_create_parser.add_argument('--key-findings', required=True, help='JSON array of findings')
-    handoff_create_parser.add_argument('--findings', dest='key_findings', help='Alias for --key-findings')
-    handoff_create_parser.add_argument('--remaining-unknowns', help='JSON array of unknowns (optional)')
-    handoff_create_parser.add_argument('--unknowns', dest='remaining_unknowns', help='Alias for --remaining-unknowns')
-    handoff_create_parser.add_argument('--next-session-context', required=True, help='Critical context for next session')
-    handoff_create_parser.add_argument('--artifacts', help='JSON array of files created (optional)')
-    handoff_create_parser.add_argument('--planning-only', action='store_true', help='Create planning handoff (no CASCADE workflow required) instead of epistemic handoff')
-    handoff_create_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
-    
-    # Handoff query command
-    handoff_query_parser = subparsers.add_parser(
-        'handoff-query',
-        help='Query handoff reports'
-    )
-    handoff_query_parser.add_argument('--session-id', help='Specific session UUID')
-    handoff_query_parser.add_argument('--ai-id', help='Filter by AI ID')
-    handoff_query_parser.add_argument('--limit', type=int, default=5, help='Number of results (default: 5)')
-    handoff_query_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
-
-    # Mistake Logging Commands (Learning from Failures)
-    
-    # Mistake log command
-    mistake_log_parser = subparsers.add_parser(
-        'mistake-log',
-        help='Log a mistake for learning and future prevention'
-    )
-    mistake_log_parser.add_argument('--session-id', required=True, help='Session UUID')
-    mistake_log_parser.add_argument('--mistake', required=True, help='What was done wrong')
-    mistake_log_parser.add_argument('--why-wrong', required=True, help='Explanation of why it was wrong')
-    mistake_log_parser.add_argument('--cost-estimate', help='Estimated time/effort wasted (e.g., "2 hours")')
-    mistake_log_parser.add_argument('--root-cause-vector', help='Epistemic vector that caused the mistake (e.g., "KNOW", "CONTEXT")')
-    mistake_log_parser.add_argument('--prevention', help='How to prevent this mistake in the future')
-    mistake_log_parser.add_argument('--goal-id', help='Optional goal identifier this mistake relates to')
-    mistake_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Mistake query command
-    mistake_query_parser = subparsers.add_parser(
-        'mistake-query',
-        help='Query logged mistakes'
-    )
-    mistake_query_parser.add_argument('--session-id', help='Filter by session UUID')
-    mistake_query_parser.add_argument('--goal-id', help='Filter by goal UUID')
-    mistake_query_parser.add_argument('--limit', type=int, default=10, help='Number of results (default: 10)')
-    mistake_query_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-
-    # Project Tracking Commands (Multi-repo/multi-session)
-    
-    # Project init command (NEW: initialize Empirica in a new repo)
-    project_init_parser = subparsers.add_parser(
-        'project-init',
-        help='Initialize Empirica in a new git repository (creates config files)'
-    )
-    project_init_parser.add_argument('--project-name', help='Project name (defaults to repo name)')
-    project_init_parser.add_argument('--project-description', help='Project description')
-    project_init_parser.add_argument('--enable-beads', action='store_true', help='Enable BEADS by default')
-    project_init_parser.add_argument('--create-semantic-index', action='store_true', help='Create SEMANTIC_INDEX.yaml template')
-    project_init_parser.add_argument('--non-interactive', action='store_true', help='Skip interactive prompts')
-    project_init_parser.add_argument('--force', action='store_true', help='Reinitialize if already initialized')
-    project_init_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Project create command
-    project_create_parser = subparsers.add_parser(
-        'project-create',
-        help='Create a new project for multi-repo tracking'
-    )
-    project_create_parser.add_argument('--name', required=True, help='Project name')
-    project_create_parser.add_argument('--description', help='Project description')
-    project_create_parser.add_argument('--repos', help='JSON array of repository names (e.g., \'["empirica", "empirica-dev"]\')')
-    project_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Project handoff command
-    project_handoff_parser = subparsers.add_parser(
-        'project-handoff',
-        help='Create project-level handoff report'
-    )
-    project_handoff_parser.add_argument('--project-id', required=True, help='Project UUID')
-    project_handoff_parser.add_argument('--summary', required=True, help='Project summary')
-    project_handoff_parser.add_argument('--key-decisions', help='JSON array of key decisions')
-    project_handoff_parser.add_argument('--patterns', help='JSON array of patterns discovered')
-    project_handoff_parser.add_argument('--remaining-work', help='JSON array of remaining work')
-    project_handoff_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Project list command
-    project_list_parser = subparsers.add_parser(
-        'project-list',
-        help='List all projects'
-    )
-    project_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Project bootstrap command
-    project_bootstrap_parser = subparsers.add_parser(
-        'project-bootstrap',
-        help='Show epistemic breadcrumbs for project'
-    )
-    project_bootstrap_parser.add_argument('--project-id', required=False, help='Project UUID or name (auto-detected from git remote if omitted)')
-    project_bootstrap_parser.add_argument('--subject', help='Subject/workstream to filter by (auto-detected from directory if omitted)')
-    project_bootstrap_parser.add_argument('--check-integrity', action='store_true', help='Analyze doc-code integrity (adds ~2s)')
-    project_bootstrap_parser.add_argument('--context-to-inject', action='store_true', help='Generate markdown context for AI prompt injection')
-    project_bootstrap_parser.add_argument('--task-description', help='Task description for context load balancing')
-    project_bootstrap_parser.add_argument('--epistemic-state', help='Epistemic vectors from PREFLIGHT as JSON string (e.g., \'{"uncertainty":0.8,"know":0.3}\')')
-    project_bootstrap_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-
-    # Workspace overview command
-    workspace_overview_parser = subparsers.add_parser(
-        'workspace-overview',
-        help='Show epistemic health overview of all projects in workspace'
-    )
-    workspace_overview_parser.add_argument('--output', choices=['dashboard', 'json'], default='dashboard', help='Output format')
-    workspace_overview_parser.add_argument('--sort-by', choices=['activity', 'knowledge', 'uncertainty', 'name'], default='activity', help='Sort projects by')
-    workspace_overview_parser.add_argument('--filter', choices=['active', 'inactive', 'complete'], help='Filter projects by status')
-
-    # Workspace map command
-    workspace_map_parser = subparsers.add_parser(
-        'workspace-map',
-        help='Discover git repositories in parent directory and show epistemic health'
-    )
-    workspace_map_parser.add_argument('--output', choices=['dashboard', 'json'], default='dashboard', help='Output format')
-
-    # Workspace init command - EPISTEMIC INITIALIZATION
-    workspace_init_parser = subparsers.add_parser(
-        'workspace-init',
-        help='Initialize workspace with epistemic self-awareness (uses CASCADE workflow)'
-    )
-    workspace_init_parser.add_argument('--path', type=str, help='Workspace path (defaults to current directory)')
-    workspace_init_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    workspace_init_parser.add_argument('--non-interactive', action='store_true', help='Skip user questions, use defaults')
-
-    # Project semantic search command (Qdrant-backed)
-    project_search_parser = subparsers.add_parser(
-        'project-search',
-        help='Semantic search for relevant docs/memory by task description'
-    )
-    project_search_parser.add_argument('--project-id', required=True, help='Project UUID')
-    project_search_parser.add_argument('--task', required=True, help='Task description to search for')
-    project_search_parser.add_argument('--type', choices=['all', 'docs', 'memory'], default='all', help='Result type (default: all)')
-    project_search_parser.add_argument('--limit', type=int, default=5, help='Number of results to return (default: 5)')
-    project_search_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-
-    # Project embed (build vectors) command
-    project_embed_parser = subparsers.add_parser(
-        'project-embed',
-        help='Embed project docs & memory into Qdrant for semantic search'
-    )
-    project_embed_parser.add_argument('--project-id', required=True, help='Project UUID')
-    project_embed_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-
-    # Documentation completeness check
-    doc_check_parser = subparsers.add_parser(
-        'doc-check',
-        help='Compute documentation completeness and suggest updates'
-    )
-    doc_check_parser.add_argument('--project-id', required=True, help='Project UUID')
-    doc_check_parser.add_argument('--session-id', help='Optional session UUID for context')
-    doc_check_parser.add_argument('--goal-id', help='Optional goal UUID for context')
-    doc_check_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-
-    # NOTE: skill-suggest and skill-fetch are NOT YET IMPLEMENTED
-    # Placeholder parsers removed to avoid confusion (use project-bootstrap instead)
-    # TODO: Implement skill discovery and fetching in Phase 4
-    
-    # Finding log command
-    finding_log_parser = subparsers.add_parser(
-        'finding-log',
-        help='Log a project finding (what was learned/discovered)'
-    )
-    finding_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
-    finding_log_parser.add_argument('--project-id', required=False, help='Project UUID')
-    finding_log_parser.add_argument('--session-id', required=False, help='Session UUID')
-    finding_log_parser.add_argument('--finding', required=False, help='What was learned/discovered')
-    finding_log_parser.add_argument('--goal-id', help='Optional goal UUID')
-    finding_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
-    finding_log_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
-    finding_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Unknown log command
-    unknown_log_parser = subparsers.add_parser(
-        'unknown-log',
-        help='Log a project unknown (what\'s still unclear)'
-    )
-    unknown_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
-    unknown_log_parser.add_argument('--project-id', required=False, help='Project UUID')
-    unknown_log_parser.add_argument('--session-id', required=False, help='Session UUID')
-    unknown_log_parser.add_argument('--unknown', required=False, help='What is unclear/unknown')
-    unknown_log_parser.add_argument('--goal-id', help='Optional goal UUID')
-    unknown_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
-    unknown_log_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
-    unknown_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Dead end log command
-    deadend_log_parser = subparsers.add_parser(
-        'deadend-log',
-        help='Log a project dead end (what didn\'t work)'
-    )
-    deadend_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
-    deadend_log_parser.add_argument('--project-id', required=False, help='Project UUID')
-    deadend_log_parser.add_argument('--session-id', required=False, help='Session UUID')
-    deadend_log_parser.add_argument('--approach', required=False, help='What approach was tried')
-    deadend_log_parser.add_argument('--why-failed', required=False, help='Why it failed')
-    deadend_log_parser.add_argument('--goal-id', help='Optional goal UUID')
-    deadend_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
-    deadend_log_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
-    deadend_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Reference doc add command
-    refdoc_add_parser = subparsers.add_parser(
-        'refdoc-add',
-        help='Add a reference document to project'
-    )
-    refdoc_add_parser.add_argument('--project-id', required=True, help='Project UUID')
-    refdoc_add_parser.add_argument('--doc-path', required=True, help='Document path')
-    refdoc_add_parser.add_argument('--doc-type', help='Document type (architecture, guide, api, design)')
-    refdoc_add_parser.add_argument('--description', help='Document description')
-    refdoc_add_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-
-    # NEW: Goal Management Commands (MCP v2 Integration)
-    
-    # Goals create command (AI-first with config file support)
-    goals_create_parser = subparsers.add_parser('goals-create',
-        help='Create new goal (AI-first: use config file, Legacy: use flags)')
-
-    # AI-FIRST: Positional config file argument (optional, takes precedence)
-    goals_create_parser.add_argument('config', nargs='?',
-        help='JSON config file path or "-" for stdin (AI-first mode)')
-
-    # LEGACY: Flag-based arguments (backward compatible)
-    goals_create_parser.add_argument('--session-id', help='Session ID (legacy)')
-    goals_create_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier (legacy)')
-    goals_create_parser.add_argument('--objective', help='Goal objective text (legacy)')
-    goals_create_parser.add_argument('--scope-breadth', type=float, default=0.3, help='Goal breadth (0.0-1.0, how wide the goal spans)')
-    goals_create_parser.add_argument('--scope-duration', type=float, default=0.2, help='Goal duration (0.0-1.0, expected lifetime)')
-    goals_create_parser.add_argument('--scope-coordination', type=float, default=0.1, help='Goal coordination (0.0-1.0, multi-agent coordination needed)')
-    goals_create_parser.add_argument('--success-criteria', help='Success criteria as JSON array (or "-" to read from stdin)')
-    goals_create_parser.add_argument('--success-criteria-file', help='Read success criteria from file (avoids shell quoting issues)')
-    goals_create_parser.add_argument('--estimated-complexity', type=float, help='Complexity estimate (0.0-1.0)')
-    goals_create_parser.add_argument('--constraints', help='Constraints as JSON object')
-    goals_create_parser.add_argument('--metadata', help='Metadata as JSON object')
-    goals_create_parser.add_argument('--use-beads', action='store_true', help='Create BEADS issue and link to goal')
-    goals_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Goals add-subtask command
-    goals_add_subtask_parser = subparsers.add_parser('goals-add-subtask', help='Add subtask to existing goal')
-    goals_add_subtask_parser.add_argument('--goal-id', required=True, help='Goal UUID')
-    goals_add_subtask_parser.add_argument('--description', required=True, help='Subtask description')
-    goals_add_subtask_parser.add_argument('--importance', choices=['critical', 'high', 'medium', 'low'], default='medium', help='Epistemic importance')
-    goals_add_subtask_parser.add_argument('--dependencies', help='Dependencies as JSON array')
-    goals_add_subtask_parser.add_argument('--estimated-tokens', type=int, help='Estimated token usage')
-    goals_add_subtask_parser.add_argument('--use-beads', action='store_true', help='Create BEADS subtask and link to goal')
-    goals_add_subtask_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Goals complete-subtask command
-    goals_complete_subtask_parser = subparsers.add_parser('goals-complete-subtask', help='Mark subtask as complete')
-    goals_complete_subtask_parser.add_argument('--task-id', required=True, help='Subtask UUID')
-    goals_complete_subtask_parser.add_argument('--evidence', help='Completion evidence (commit hash, file path, etc.)')
-    goals_complete_subtask_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Goals progress command
-    goals_progress_parser = subparsers.add_parser('goals-progress', help='Get goal completion progress')
-    goals_progress_parser.add_argument('--goal-id', required=True, help='Goal UUID')
-    goals_progress_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Goals get-subtasks command (NEW)
-    goals_get_subtasks_parser = subparsers.add_parser('goals-get-subtasks', help='Get detailed subtask information')
-    goals_get_subtasks_parser.add_argument('--goal-id', required=True, help='Goal UUID')
-    goals_get_subtasks_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Goals list command
-    goals_list_parser = subparsers.add_parser('goals-list', help='List goals')
-    goals_list_parser.add_argument('--session-id', help='Filter by session ID')
-    goals_list_parser.add_argument('--scope-breadth-min', type=float, help='Filter by minimum breadth (0.0-1.0)')
-    goals_list_parser.add_argument('--scope-breadth-max', type=float, help='Filter by maximum breadth (0.0-1.0)')
-    goals_list_parser.add_argument('--scope-duration-min', type=float, help='Filter by minimum duration (0.0-1.0)')
-    goals_list_parser.add_argument('--scope-duration-max', type=float, help='Filter by maximum duration (0.0-1.0)')
-    goals_list_parser.add_argument('--scope-coordination-min', type=float, help='Filter by minimum coordination (0.0-1.0)')
-    goals_list_parser.add_argument('--scope-coordination-max', type=float, help='Filter by maximum coordination (0.0-1.0)')
-    goals_list_parser.add_argument('--completed', action='store_true', help='Filter by completion status')
-    goals_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # goals-ready command (BEADS integration - Phase 1)
-    goals_ready_parser = subparsers.add_parser('goals-ready', help='Query ready work (BEADS + epistemic filtering)')
-    goals_ready_parser.add_argument('--session-id', required=True, help='Session UUID')
-    goals_ready_parser.add_argument('--min-confidence', type=float, default=0.7, help='Minimum confidence threshold (0.0-1.0)')
-    goals_ready_parser.add_argument('--max-uncertainty', type=float, default=0.3, help='Maximum uncertainty threshold (0.0-1.0)')
-    goals_ready_parser.add_argument('--min-priority', type=int, help='Minimum BEADS priority (1, 2, or 3)')
-    goals_ready_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Goals-discover command (NEW: Phase 1 - Cross-AI Goal Discovery)
-    goals_discover_parser = subparsers.add_parser('goals-discover', help='Discover goals from other AIs via git')
-    goals_discover_parser.add_argument('--from-ai-id', help='Filter by AI creator')
-    goals_discover_parser.add_argument('--session-id', help='Filter by session')
-    goals_discover_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Goals-resume command (NEW: Phase 1 - Cross-AI Goal Handoff)
-    goals_resume_parser = subparsers.add_parser('goals-resume', help='Resume another AI\'s goal')
-    goals_resume_parser.add_argument('goal_id', help='Goal ID to resume')
-    goals_resume_parser.add_argument('--ai-id', default='empirica_cli', help='Your AI identifier')
-    goals_resume_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Goals-claim command (NEW: Phase 3a - Git Bridge)
-    goals_claim_parser = subparsers.add_parser('goals-claim', help='Claim goal, create git branch, link to BEADS')
-    goals_claim_parser.add_argument('--goal-id', required=True, help='Goal UUID to claim')
-    goals_claim_parser.add_argument('--create-branch', action='store_true', default=True, help='Create git branch (default: True)')
-    goals_claim_parser.add_argument('--no-branch', dest='create_branch', action='store_false', help='Skip branch creation')
-    goals_claim_parser.add_argument('--run-preflight', action='store_true', help='Run PREFLIGHT after claiming')
-    goals_claim_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Goals-complete command (NEW: Phase 3a - Git Bridge)
-    goals_complete_parser = subparsers.add_parser('goals-complete', help='Complete goal, merge branch, close BEADS issue')
-    goals_complete_parser.add_argument('--goal-id', required=True, help='Goal UUID to complete')
-    goals_complete_parser.add_argument('--run-postflight', action='store_true', help='Run POSTFLIGHT before completing')
-    goals_complete_parser.add_argument('--merge-branch', action='store_true', help='Merge git branch to main')
-    goals_complete_parser.add_argument('--delete-branch', action='store_true', help='Delete branch after merge')
-    goals_complete_parser.add_argument('--create-handoff', action='store_true', help='Create handoff report')
-    goals_complete_parser.add_argument('--reason', default='completed', help='Completion reason (for BEADS)')
-    goals_complete_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Identity commands (NEW: Phase 2 - Cryptographic Trust / EEP-1)
-    identity_create_parser = subparsers.add_parser('identity-create', help='Create new AI identity with Ed25519 keypair')
-    identity_create_parser.add_argument('--ai-id', required=True, help='AI identifier')
-    identity_create_parser.add_argument('--overwrite', action='store_true', help='Overwrite existing identity')
-    identity_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    identity_list_parser = subparsers.add_parser('identity-list', help='List all AI identities')
-    identity_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    identity_export_parser = subparsers.add_parser('identity-export', help='Export public key for sharing')
-    identity_export_parser.add_argument('--ai-id', required=True, help='AI identifier')
-    identity_export_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    identity_verify_parser = subparsers.add_parser('identity-verify', help='Verify signed session')
-    identity_verify_parser.add_argument('session_id', help='Session ID to verify')
-    identity_verify_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    
-    # Sessions resume command
-    sessions_resume_parser = subparsers.add_parser('sessions-resume', help='Resume previous sessions')
-    sessions_resume_parser.add_argument('--ai-id', help='Filter by AI ID')
-    sessions_resume_parser.add_argument('--count', type=int, default=1, help='Number of sessions to retrieve')
-    sessions_resume_parser.add_argument('--detail-level', choices=['summary', 'detailed', 'full'], default='summary', help='Detail level')
-    sessions_resume_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-
-    # Session create command (AI-first with config file support)
-    session_create_parser = subparsers.add_parser('session-create',
-        help='Create new session (AI-first: use config file, Legacy: use flags)')
-
-    # AI-FIRST: Positional config file argument
-    session_create_parser.add_argument('config', nargs='?',
-        help='JSON config file path or "-" for stdin (AI-first mode)')
-
-    # LEGACY: Flag-based arguments (backward compatible)
-    session_create_parser.add_argument('--ai-id', help='AI agent identifier (legacy)')
-    session_create_parser.add_argument('--user-id', help='User identifier (legacy)')
-    session_create_parser.add_argument('--bootstrap-level', type=int, default=1, help='Bootstrap level (0-4) (legacy)')
-    session_create_parser.add_argument('--project-id', help='Project UUID to link session to (optional, auto-detected from git remote if omitted)')
-    session_create_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
-    session_create_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
-
-
-def _add_user_interface_parsers(subparsers):
-    """Add user interface commands for human terminal users"""
-    
-    # Onboard command - interactive intro to Empirica
-    onboard_parser = subparsers.add_parser('onboard', help='Interactive introduction to Empirica')
-    
-    # Ask command - simple question answering
-    ask_parser = subparsers.add_parser('ask', help='Ask a question (simple query interface for human users)')
-    ask_parser.add_argument('query', help='Question to ask')
-    ask_parser.add_argument('--adapter', help='Force specific adapter (qwen, minimax, gemini, etc.)')
-    ask_parser.add_argument('--model', help='Force specific model (e.g., qwen-coder-turbo)')
-    ask_parser.add_argument('--strategy', choices=['epistemic', 'cost', 'latency', 'quality', 'balanced'],
-                           default='epistemic', help='Routing strategy (default: epistemic)')
-    ask_parser.add_argument('--session', help='Session ID for conversation tracking (auto-generated if not provided)')
-    ask_parser.add_argument('--temperature', type=float, default=0.7, help='Sampling temperature (0.0-1.0)')
-    ask_parser.add_argument('--max-tokens', type=int, default=2000, help='Maximum response tokens')
-    ask_parser.add_argument('--no-save', dest='save', action='store_false', help='Don\'t save to session database')
-    ask_parser.add_argument('--verbose', action='store_true', help='Show routing details')
-    
-    # Chat command - interactive multi-turn conversation
-    chat_parser = subparsers.add_parser('chat', help='Interactive chat session (REPL for human users)')
-    chat_parser.add_argument('--adapter', help='Force specific adapter')
-    chat_parser.add_argument('--model', help='Force specific model')
-    chat_parser.add_argument('--strategy', choices=['epistemic', 'cost', 'latency', 'quality', 'balanced'],
-                            default='epistemic', help='Routing strategy')
-    chat_parser.add_argument('--session', help='Session ID (creates new if doesn\'t exist)')
-    chat_parser.add_argument('--resume', help='Resume existing session by ID')
-    chat_parser.add_argument('--no-save', dest='save', action='store_false', help='Don\'t save conversation')
-    chat_parser.add_argument('--no-uvl', dest='show_uvl', action='store_false', help='Disable UVL visual indicators')
-    chat_parser.add_argument('--uvl-verbose', action='store_true', help='Show detailed routing decisions')
-    chat_parser.add_argument('--uvl-stream', action='store_true', help='Emit UVL JSON stream for visualization')
-    chat_parser.add_argument('--verbose', action='store_true', help='Show routing details')
-
-
-def _add_vision_parsers(subparsers):
-    """Add vision analysis commands"""
-    from .command_handlers.vision_commands import add_vision_parsers
-    add_vision_parsers(subparsers)
-
-
-
-
-def _add_epistemics_parsers(subparsers):
-    """Add epistemic trajectory command parsers"""
-    
-    # epistemics-search
-    search_parser = subparsers.add_parser(
-        'epistemics-search',
-        help='Search epistemic learning trajectories'
-    )
-    search_parser.add_argument('--project-id', required=True, help='Project UUID')
-    search_parser.add_argument('--query', default='', help='Semantic search query')
-    search_parser.add_argument('--min-learning', type=float, help='Minimum know delta (e.g., 0.2)')
-    search_parser.add_argument('--calibration', choices=['good', 'fair', 'poor'], help='Filter by calibration quality')
-    search_parser.add_argument('--limit', type=int, default=5, help='Max results')
-    search_parser.add_argument('--output', choices=['json', 'text'], default='json', help='Output format')
-    
-    # epistemics-stats
-    stats_parser = subparsers.add_parser(
-        'epistemics-stats',
-        help='Show epistemic trajectory statistics'
-    )
-    stats_parser.add_argument('--project-id', required=True, help='Project UUID')
-    stats_parser.add_argument('--output', choices=['json', 'text'], default='json', help='Output format')
-
-
 def main(args=None):
     """Main CLI entry point"""
-    if args is None:
-        args = sys.argv[1:]
+    start_time = time.time()
     
     parser = create_argument_parser()
     parsed_args = parser.parse_args(args)
     
-    # Handle no command case
     if not parsed_args.command:
         parser.print_help()
-        return 0
+        sys.exit(1)
     
-    # Set quiet mode if specified
-    if getattr(parsed_args, 'quiet', False):
-        import os
-        os.environ['EMPIRICA_QUIET'] = '1'
+    # Enable verbose output if requested
+    verbose = getattr(parsed_args, 'verbose', False)
+    if verbose:
+        print(f"[VERBOSE] Empirica v{_get_version().split()[0]}", file=sys.stderr)
+        print(f"[VERBOSE] Command: {parsed_args.command}", file=sys.stderr)
+        try:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            print(f"[VERBOSE] Database: {db.db_path}", file=sys.stderr)
+            db.close()
+        except Exception as e:
+            print(f"[VERBOSE] Database: (unavailable: {e})", file=sys.stderr)
     
-    start_time = time.time()
-    success = False
-    error_message = None
-    
+    # Log command usage for telemetry
     try:
-        # Route to appropriate command handler
-        command_map = {
-            # Bootstrap commands (consolidated: bootstrap-system and onboard removed)
-
-            # Assessment commands
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        db.log_command_usage(
+            command_name=parsed_args.command,
+            execution_time_ms=0,  # Will update at end
+            success=None,  # Will update based on execution
+            error_message=None
+        )
+        db.close()
+    except Exception:
+        pass  # Don't fail if telemetry fails
+    
+    # Command handler mapping
+    try:
+        command_handlers = {
+            # Session commands
+            'session-create': handle_session_create_command,
+            'sessions-list': handle_sessions_list_command,
+            'sessions-show': handle_sessions_show_command,
+            'sessions-export': handle_sessions_export_command,
+            'sessions-resume': handle_sessions_resume_command,
+            'session-snapshot': handle_session_snapshot_command,
             
-            # Cascade commands (core workflow via MCP)
-            # 'cascade': removed - use MCP tools: execute_preflight, execute_check, execute_postflight
+            # CASCADE commands
             'preflight': handle_preflight_command,
-            'workflow': handle_workflow_command,
-
-            # NEW: MCP v2 Workflow Commands (Critical Priority)
             'preflight-submit': handle_preflight_submit_command,
             'check': handle_check_command,
             'check-submit': handle_check_submit_command,
-            'postflight': handle_postflight_submit_command,  # Primary command: non-blocking assessment submission
-            'postflight-submit': handle_postflight_submit_command,  # Alias for backward compatibility
+            'postflight': handle_postflight_command,
+            'postflight-submit': handle_postflight_submit_command,
+            'workflow': handle_workflow_command,
             
-            # Decision commands (from decision_commands.py)
-            'decision': handle_decision_command,
-            'decision-batch': handle_decision_batch_command,
-            
-            # Modality commands (EXPERIMENTAL)
-            'modality-route': handle_modality_route_command,
-            
-            # Investigation commands (consolidated: analyze removed)
-            'investigate': handle_investigate_command,  # Now handles --type=comprehensive
+            # Investigation commands
+            'investigate': handle_investigate_command,
+            'investigate-log': handle_investigate_log_command,
             'investigate-create-branch': handle_investigate_create_branch_command,
             'investigate-checkpoint-branch': handle_investigate_checkpoint_branch_command,
             'investigate-merge-branches': handle_investigate_merge_branches_command,
-
-            # Performance commands (consolidated: benchmark removed)
-            'performance': handle_performance_command,  # Now handles --benchmark
-
-            # Component commands
-            'list': handle_list_command,
-            'explain': handle_explain_command,
-            'demo': handle_demo_command,
+            
+            # Action commands
+            'act-log': handle_act_log_command,
+            
+            # Performance commands
+            'performance': handle_performance_command,
+            
+            # Skill commands
+            'skill-suggest': handle_skill_suggest_command,
+            'skill-fetch': handle_skill_fetch_command,
             
             # Utility commands
             'goal-analysis': handle_goal_analysis_command,
-            
-            # Config commands (consolidated: 5 commands → 1)
-            'config': handle_config_command,  # Handles --init, --validate, KEY, KEY VALUE
-            
-            # Monitor commands (consolidated: 4 commands → 1)
-            'monitor': handle_monitor_command,  # Handles --export, --reset, --cost
-            'check-drift': handle_check_drift_command,  # Detect epistemic drift
-
-            # MCP commands - REMOVED (IDE/CLI manages MCP lifecycle)
-            # mcp-start, mcp-stop, mcp-status, mcp-test, mcp-list-tools, mcp-call all removed
-
-            # Session commands
-            'sessions-list': handle_sessions_list_command,
-            'sessions-show': handle_sessions_show_command,
-            'session-snapshot': handle_session_snapshot_command,
-            'sessions-export': handle_sessions_export_command,
             'log-token-saving': handle_log_token_saving,
-            # 'session-end' removed - use 'handoff-create' instead
+            'efficiency-report': handle_efficiency_report,
             
-            # Action commands (INVESTIGATE and ACT phase tracking)
-            'investigate-log': handle_investigate_log_command,
-            'act-log': handle_act_log_command,
+            # Config commands
+            'config': handle_config_command,
             
-            # NEW: Goal Management Commands (MCP v2 Integration)
-            'goals-create': handle_goals_create_command,
-            'goals-add-subtask': handle_goals_add_subtask_command,
-            'goals-complete-subtask': handle_goals_complete_subtask_command,
-            'goals-progress': handle_goals_progress_command,
-            'goals-get-subtasks': handle_goals_get_subtasks_command,
-            'goals-list': handle_goals_list_command,
-            'goals-ready': handle_goals_ready_command,
-            'goals-discover': handle_goals_discover_command,
-            'goals-resume': handle_goals_resume_command,
-            'goals-claim': handle_goals_claim_command,
-            'goals-complete': handle_goals_complete_command,
-            'identity-create': handle_identity_create_command,
-            'identity-list': handle_identity_list_command,
-            'identity-export': handle_identity_export_command,
-            'identity-verify': handle_identity_verify_command,
-            'sessions-resume': handle_sessions_resume_command,
-            'session-create': handle_session_create_command,
+            # Monitor commands
+            'monitor': handle_monitor_command,
+            'check-drift': handle_check_drift_command,
             
-            # Checkpoint commands (Phase 2)
+            # Checkpoint commands
             'checkpoint-create': handle_checkpoint_create_command,
             'checkpoint-load': handle_checkpoint_load_command,
             'checkpoint-list': handle_checkpoint_list_command,
             'checkpoint-diff': handle_checkpoint_diff_command,
-            'efficiency-report': handle_efficiency_report_command,
-            
-            # Checkpoint signing commands (Phase 2 - Crypto)
             'checkpoint-sign': handle_checkpoint_sign_command,
             'checkpoint-verify': handle_checkpoint_verify_command,
             'checkpoint-signatures': handle_checkpoint_signatures_command,
             
-            # Handoff Reports commands (Phase 1.6)
+            # Identity commands
+            'identity-create': handle_identity_create_command,
+            'identity-export': handle_identity_export_command,
+            'identity-list': handle_identity_list_command,
+            'identity-verify': handle_identity_verify_command,
+            
+            # Handoff commands
             'handoff-create': handle_handoff_create_command,
             'handoff-query': handle_handoff_query_command,
             
-            # Mistake Logging commands (Learning from Failures)
+            # Mistake logging
             'mistake-log': handle_mistake_log_command,
             'mistake-query': handle_mistake_query_command,
             
-            # Project Tracking commands (Multi-repo/multi-session)
-            'project-init': lambda args: __import__('empirica.cli.command_handlers.project_init', fromlist=['handle_project_init_command']).handle_project_init_command(args),
+            # Project commands
+            'project-init': handle_project_init_command,
             'project-create': handle_project_create_command,
             'project-handoff': handle_project_handoff_command,
             'project-list': handle_project_list_command,
@@ -1087,91 +265,93 @@ def main(args=None):
             'project-search': handle_project_search_command,
             'project-embed': handle_project_embed_command,
             'doc-check': handle_doc_check_command,
+            
+            # Finding/unknown/deadend logging
             'finding-log': handle_finding_log_command,
             'unknown-log': handle_unknown_log_command,
             'deadend-log': handle_deadend_log_command,
             'refdoc-add': handle_refdoc_add_command,
             
-            # Skill management commands
-            'skill-suggest': handle_skill_suggest_command,
-            'skill-fetch': handle_skill_fetch_command,
-
-            # User interface commands (for human users)
-            'onboard': handle_onboard_command,
-            'ask': handle_ask_command,
+            # Goals commands
+            'goals-create': handle_goals_create_command,
+            'goals-list': handle_goals_list_command,
+            'goals-complete': handle_goals_complete_command,
+            'goals-claim': handle_goals_claim_command,
+            'goals-add-subtask': handle_goals_add_subtask_command,
+            'goals-complete-subtask': handle_goals_complete_subtask_command,
+            'goals-get-subtasks': handle_goals_get_subtasks_command,
+            'goals-progress': handle_goals_progress_command,
+            'goals-discover': handle_goals_discover_command,
+            'goals-ready': handle_goals_ready_command,
+            'goals-resume': handle_goals_resume_command,
+            
+            # User interface commands
             'chat': handle_chat_command,
-            
-            # Vision commands
-            'vision-analyze': handle_vision_analyze,
-            'vision-log': handle_vision_log,
-            # Epistemic trajectory commands
-            'epistemics-search': handle_epistemics_search_command,
-            'epistemics-stats': handle_epistemics_stats_command,
-        }
+            'dashboard': handle_dashboard_command,
 
-        handler = command_map.get(parsed_args.command)
-        if handler:
-            handler(parsed_args)
-            success = True
-        else:
-            print(f"❌ Unknown command: {parsed_args.command}")
-            parser.print_help()
-            error_message = f"Unknown command: {parsed_args.command}"
-            return 1
-        
-        # Show execution time if verbose
-        if getattr(parsed_args, 'verbose', False):
-            end_time = time.time()
-            print(f"\n⏱️ Execution time: {end_time - start_time:.3f}s")
-        
-        # Log command usage telemetry
-        try:
-            from empirica.data.session_database import SessionDatabase
-            execution_time_ms = int((time.time() - start_time) * 1000)
-            session_id = getattr(parsed_args, 'session_id', None) or getattr(parsed_args, 'session_id_named', None)
+            # Vision commands
+            'vision': handle_vision_analyze,
             
-            db = SessionDatabase()
-            db.log_command_usage(
-                command_name=parsed_args.command,
-                session_id=session_id,
-                execution_time_ms=execution_time_ms,
-                success=success,
-                error_message=error_message
-            )
-            db.close()
-        except Exception:
-            pass  # Never fail on telemetry
+            # Epistemics commands
+            'epistemics-list': handle_epistemics_search_command,
+            'epistemics-show': handle_epistemics_stats_command,
+
+            # Edit verification commands
+            'edit-with-confidence': handle_edit_with_confidence_command,
+            
+            # Issue capture commands
+            'issue-list': handle_issue_list_command,
+            'issue-show': handle_issue_show_command,
+            'issue-handoff': handle_issue_handoff_command,
+            'issue-resolve': handle_issue_resolve_command,
+            'issue-export': handle_issue_export_command,
+            'issue-stats': handle_issue_stats_command,
+        }
         
-        return 0
-        
-    except KeyboardInterrupt:
-        print("\n🛑 Operation interrupted by user")
-        error_message = "Operation interrupted by user"
-        return 130
-    except Exception as e:
-        error_message = str(e)
-        handle_cli_error(e, f"Command '{parsed_args.command}'", getattr(parsed_args, 'verbose', False))
-        return 1
-    finally:
-        # Log command usage telemetry (also catches errors)
-        if 'parsed_args' in locals() and hasattr(parsed_args, 'command'):
+        if parsed_args.command in command_handlers:
+            handler = command_handlers[parsed_args.command]
+            result = handler(parsed_args)
+            
+            # Log successful execution
+            elapsed_ms = int((time.time() - start_time) * 1000)
+            if verbose:
+                print(f"[VERBOSE] Execution time: {elapsed_ms}ms", file=sys.stderr)
+            
             try:
-                from empirica.data.session_database import SessionDatabase
-                execution_time_ms = int((time.time() - start_time) * 1000)
-                session_id = getattr(parsed_args, 'session_id', None) or getattr(parsed_args, 'session_id_named', None)
-                
                 db = SessionDatabase()
                 db.log_command_usage(
                     command_name=parsed_args.command,
-                    session_id=session_id,
-                    execution_time_ms=execution_time_ms,
-                    success=success,
-                    error_message=error_message
+                    execution_time_ms=elapsed_ms,
+                    success=True,
+                    error_message=None
                 )
                 db.close()
             except Exception:
-                pass  # Never fail on telemetry
+                pass
+            
+            sys.exit(0 if result is None or result == 0 else result)
+        else:
+            print(f"❌ Unknown command: {parsed_args.command}")
+            sys.exit(1)
+            
+    except Exception as e:
+        # Log failed execution
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        try:
+            db = SessionDatabase()
+            db.log_command_usage(
+                command_name=parsed_args.command,
+                execution_time_ms=elapsed_ms,
+                success=False,
+                error_message=str(e)
+            )
+            db.close()
+        except Exception:
+            pass
+        
+        handle_cli_error(e, parsed_args.command)
+        sys.exit(1)
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == '__main__':
+    main()

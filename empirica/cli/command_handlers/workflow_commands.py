@@ -154,201 +154,281 @@ def handle_preflight_submit_command(args):
             else:
                 print(f"❌ {result.get('message', 'Failed to submit PREFLIGHT assessment')}")
 
-        return result
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Preflight submit", getattr(args, 'verbose', False))
 
 
 def handle_check_command(args):
-    """Handle check command - AI-first with config file support"""
+    """
+    Handle CHECK command - Evidence-based mid-session grounding
+
+    Auto-loads:
+    - PREFLIGHT baseline vectors
+    - Current checkpoint (latest assessment)
+    - Accumulated findings/unknowns
+
+    Returns:
+    - Evidence-based decision suggestion
+    - Drift analysis from baseline
+    - Reasoning for suggestion
+    """
     try:
         import time
-        import uuid
+        import sys
+        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+        from empirica.data.session_database import SessionDatabase
+
+        # Try to load from stdin if available
+        config_data = None
+        try:
+            if not sys.stdin.isatty():
+                config_data = parse_json_safely(sys.stdin.read())
+        except:
+            pass
+
+        # Extract parameters from args or stdin config
+        session_id = getattr(args, 'session_id', None) or (config_data.get('session_id') if config_data else None)
+        cycle = getattr(args, 'cycle', None) or (config_data.get('cycle') if config_data else None)
+        round_num = getattr(args, 'round', None) or (config_data.get('round') if config_data else None)
+        output_format = getattr(args, 'output', 'json') or (config_data.get('output', 'json') if config_data else 'json')
+        verbose = getattr(args, 'verbose', False) or (config_data.get('verbose', False) if config_data else False)
+
+        if not session_id:
+            print(json.dumps({
+                "ok": False,
+                "error": "session_id is required"
+            }))
+            sys.exit(1)
+
+        db = SessionDatabase()
+        git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+
+        # 1. Load PREFLIGHT baseline
+        preflight = db.get_preflight_vectors(session_id)
+        if not preflight:
+            print(json.dumps({
+                "ok": False,
+                "error": "No PREFLIGHT found for session",
+                "hint": "Run PREFLIGHT first to establish baseline"
+            }))
+            sys.exit(1)
+
+        # Extract vectors from preflight (it's a dict with 'vectors' key)
+        baseline_vectors = preflight.get('vectors', preflight) if isinstance(preflight, dict) else preflight
+
+        # 2. Load current checkpoint (latest assessment)
+        checkpoints = git_logger.list_checkpoints(limit=1)
+        if not checkpoints:
+            # For first CHECK, baseline = current
+            current_vectors = baseline_vectors
+            drift = 0.0
+            deltas = {k: 0.0 for k in baseline_vectors.keys() if isinstance(baseline_vectors.get(k), (int, float))}
+        else:
+            current_checkpoint = checkpoints[0]
+            current_vectors = current_checkpoint.get('vectors', {})
+
+            # 3. Calculate drift from baseline
+            deltas = {}
+            drift_sum = 0.0
+            drift_count = 0
+
+            for key in ['know', 'uncertainty', 'engagement', 'impact', 'completion']:
+                if key in baseline_vectors and key in current_vectors:
+                    delta = current_vectors[key] - baseline_vectors[key]
+                    deltas[key] = delta
+                    drift_sum += abs(delta)
+                    drift_count += 1
+
+            drift = drift_sum / drift_count if drift_count > 0 else 0.0
+
+        # 4. Auto-load findings/unknowns from database using BreadcrumbRepository
+        try:
+            # Get project_id from session
+            session_data = db.get_session(session_id)
+            project_id = session_data.get('project_id') if session_data else None
+
+            if project_id:
+                # Use BreadcrumbRepository to query findings/unknowns
+                findings_list = db.breadcrumbs.get_project_findings(project_id)
+                unknowns_list = db.breadcrumbs.get_project_unknowns(project_id, resolved=False)
+
+                # Extract just the finding/unknown text for display
+                findings = [{"finding": f.get('finding', ''), "impact": f.get('impact')}
+                           for f in findings_list]
+                unknowns = [u.get('unknown', '') for u in unknowns_list]
+            else:
+                findings = []
+                unknowns = []
+        except Exception as e:
+            logger.warning(f"Could not load findings/unknowns: {e}")
+            findings = []
+            unknowns = []
+
+        # 5. Generate evidence-based suggestion
+        findings_count = len(findings)
+        unknowns_count = len(unknowns)
+        completion = current_vectors.get('completion', 0.0)
+        uncertainty = current_vectors.get('uncertainty', 0.5)
+
+        # Evidence-based decision logic
+        suggestions = []
+
+        if drift > 0.3 and unknowns_count > 5:
+            decision = "investigate"
+            strength = "strong"
+            reasoning = f"High drift ({drift:.2f}) from baseline + {unknowns_count} unknowns remaining suggests further investigation needed"
+            suggestions.append("Investigate critical unknowns before proceeding")
+            suggestions.append("Consider whether drift indicates learning or confusion")
+        elif drift > 0.2 or unknowns_count > 3:
+            decision = "investigate"
+            strength = "moderate"
+            reasoning = f"Moderate drift ({drift:.2f}) and {unknowns_count} unknowns suggest investigation may be beneficial"
+            suggestions.append("Review unknowns to determine if they block next steps")
+        elif drift < 0.1 and unknowns_count == 0:
+            decision = "proceed"
+            strength = "strong"
+            reasoning = f"Low drift ({drift:.2f}) from baseline + no unknowns suggests readiness to proceed"
+            suggestions.append("Evidence supports proceeding to action phase")
+        elif completion > 0.8:
+            decision = "proceed"
+            strength = "moderate"
+            reasoning = f"High completion ({completion:.2f}) suggests task nearly done, proceed with final steps"
+            suggestions.append("Task nearing completion - wrap up remaining work")
+        else:
+            decision = "proceed_with_caution"
+            strength = "weak"
+            reasoning = f"Medium drift ({drift:.2f}), {unknowns_count} unknowns, completion at {completion:.2f}"
+            suggestions.append("Assess whether unknowns block immediate next steps")
+            suggestions.append("Proceed if context warrants, investigate if blocked")
+
+        # Determine drift level
+        if drift > 0.3:
+            drift_level = "high"
+        elif drift > 0.1:
+            drift_level = "medium"
+        else:
+            drift_level = "low"
+
+        # 6. Create checkpoint with new assessment
+        checkpoint_id = git_logger.add_checkpoint(
+            phase="CHECK",
+            round_num=cycle or 1,
+            vectors=current_vectors,
+            metadata={
+                "decision": decision,
+                "suggestion_strength": strength,
+                "drift": drift,
+                "findings_count": findings_count,
+                "unknowns_count": unknowns_count,
+                "reasoning": reasoning
+            }
+        )
+
+        # 7. Build result
+        result = {
+            "ok": True,
+            "session_id": session_id,
+            "checkpoint_id": checkpoint_id,
+            "decision": decision,
+            "suggestion_strength": strength,
+            "confidence": 1.0 - uncertainty,
+            "drift_analysis": {
+                "overall_drift": drift,
+                "drift_level": drift_level,
+                "baseline": baseline_vectors,
+                "current": current_vectors,
+                "deltas": deltas
+            },
+            "evidence": {
+                "findings_count": findings_count,
+                "unknowns_count": unknowns_count
+            },
+            "investigation_progress": {
+                "cycle": cycle,
+                "round": round_num,
+                "total_checkpoints": len(git_logger.list_checkpoints(limit=100))
+            },
+            "recommendation": {
+                "type": "suggestive",
+                "message": reasoning,
+                "suggestions": suggestions,
+                "note": "This is an evidence-based suggestion. Override if task context warrants it."
+            },
+            "timestamp": time.time()
+        }
+
+        # Include full evidence if verbose
+        if verbose:
+            result["evidence"]["findings"] = findings
+            result["evidence"]["unknowns"] = unknowns
+
+        # Output
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            # Human-readable output
+            print(f"\n🔍 CHECK - Mid-Session Grounding")
+            print("=" * 70)
+            print(f"Session: {session_id}")
+            print(f"Decision: {decision.upper()} ({strength} suggestion)")
+            print(f"\n📊 Drift Analysis:")
+            print(f"   Overall drift: {drift:.2%} ({drift_level})")
+            print(f"   Know: {deltas.get('know', 0):+.2f}")
+            print(f"   Uncertainty: {deltas.get('uncertainty', 0):+.2f}")
+            print(f"   Completion: {deltas.get('completion', 0):+.2f}")
+            print(f"\n📚 Evidence:")
+            print(f"   Findings: {findings_count}")
+            print(f"   Unknowns: {unknowns_count}")
+            print(f"\n💡 Recommendation:")
+            print(f"   {reasoning}")
+            for suggestion in suggestions:
+                print(f"   • {suggestion}")
+
+    except Exception as e:
+        handle_cli_error(e, "CHECK", getattr(args, 'verbose', False))
+
+
+
+
+def handle_check_submit_command(args):
+    """Handle check-submit command"""
+    try:
         import sys
         import os
+        import json
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
-        from empirica.cli.command_handlers.decision_utils import calculate_decision
-
-        # AI-FIRST MODE: Check if config file provided
+        
+        # AI-FIRST MODE: Check if config provided
         config_data = None
         if hasattr(args, 'config') and args.config:
             if args.config == '-':
                 config_data = parse_json_safely(sys.stdin.read())
             else:
                 if not os.path.exists(args.config):
+                    import json
                     print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
                     sys.exit(1)
                 with open(args.config, 'r') as f:
                     config_data = parse_json_safely(f.read())
-
-        # Extract parameters from config or fall back to legacy flags
+        
+        # Parse arguments from config or CLI
         if config_data:
-            # AI-FIRST MODE
             session_id = config_data.get('session_id')
-            findings = config_data.get('findings', [])
-            unknowns = config_data.get('unknowns', [])
-            confidence = config_data.get('confidence')
-            cycle = config_data.get('cycle', 1)
-            verbose = config_data.get('verbose', False)
-            output_format = 'json'
-
-            # Validate required fields
-            if not session_id or confidence is None:
-                print(json.dumps({
-                    "ok": False,
-                    "error": "Config file must include 'session_id' and 'confidence' fields",
-                    "hint": "See /tmp/check_config_example.json for schema"
-                }))
-                sys.exit(1)
+            vectors = config_data.get('vectors')
+            decision = config_data.get('decision')
+            reasoning = config_data.get('reasoning', '')
+            output_format = config_data.get('output', 'json')  # Default to JSON for AI-first
         else:
-            # LEGACY MODE
             session_id = args.session_id
-            findings = parse_json_safely(args.findings) if isinstance(args.findings, str) else args.findings
-            unknowns = parse_json_safely(args.unknowns) if isinstance(args.unknowns, str) else args.unknowns
-            confidence = args.confidence
-            cycle = getattr(args, 'cycle', 1)
-            verbose = getattr(args, 'verbose', False)
-            output_format = getattr(args, 'output', 'json')
-
-            # Validate required fields for legacy mode
-            if not session_id or confidence is None:
-                print(json.dumps({
-                    "ok": False,
-                    "error": "Legacy mode requires --session-id and --confidence flags",
-                    "hint": "For AI-first mode, use: empirica check config.json"
-                }))
-                sys.exit(1)
-
-        # Auto-convert strings to single-item arrays for better UX (defensive parsing)
-        if isinstance(findings, str):
-            findings = [findings]
-        elif not isinstance(findings, list):
-            # If parse_json_safely returned None or invalid type, wrap in list
-            findings = [str(findings)] if findings else []
-        
-        if isinstance(unknowns, str):
-            unknowns = [unknowns]
-        elif not isinstance(unknowns, list):
-            # If parse_json_safely returned None or invalid type, wrap in list
-            unknowns = [str(unknowns)] if unknowns else []
-
-        # Validate inputs (now more defensive)
-        if not isinstance(findings, list):
-            raise ValueError(f"Findings must be a list, got {type(findings)}")
-        if not isinstance(unknowns, list):
-            raise ValueError(f"Unknowns must be a list, got {type(unknowns)}")
-        if not 0.0 <= confidence <= 1.0:
-            raise ValueError("Confidence must be between 0.0 and 1.0")
-
-        # Extract actual vectors from args or infer from confidence
-        if hasattr(args, 'vectors') and args.vectors:
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
-        else:
-            # If no vectors provided, infer from confidence
-            uncertainty = 1.0 - confidence
-            vectors = {
-                'engagement': 0.75,
-                'know': confidence,
-                'do': confidence,
-                'context': confidence * 0.9,
-                'clarity': confidence * 0.95,
-                'coherence': confidence * 0.92,
-                'signal': confidence * 0.88,
-                'density': confidence * 0.85,
-                'state': confidence,
-                'change': confidence * 0.80,
-                'completion': confidence * 0.70,
-                'impact': confidence * 0.75,
-                'uncertainty': uncertainty
-            }
-
-        # Use unified storage via GitEnhancedReflexLogger
-        logger_instance = GitEnhancedReflexLogger(
-            session_id=session_id,
-            enable_git_notes=True
-        )
-
-        decision = calculate_decision(confidence)
-
-        checkpoint_id = logger_instance.add_checkpoint(
-            phase="CHECK",
-            round_num=cycle,
-            vectors=vectors,
-            metadata={
-                "findings": findings,
-                "unknowns": unknowns,
-                "findings_count": len(findings),
-                "unknowns_count": len(unknowns),
-                "confidence": confidence,
-                "decision": decision
-            }
-        )
-
-        result = {
-            "ok": True,
-            "session_id": session_id,
-            "checkpoint_id": checkpoint_id,
-            "findings_count": len(findings),
-            "unknowns_count": len(unknowns),
-            "confidence": confidence,
-            "decision": decision,
-            "cycle": cycle,
-            "timestamp": time.time()
-        }
-
-        # Add findings and unknowns to result
-        if verbose:
-            result["findings"] = findings
-            result["unknowns"] = unknowns
-
-        # Format output (AI-first = JSON by default)
-        if output_format == 'json':
-            print(json.dumps(result, indent=2))
-        else:
-            # Human-readable output (legacy)
-            if result['ok']:
-                print("✅ CHECK assessment created and stored")
-                print(f"   Session: {session_id[:8]}...")
-                print(f"   Cycle: {cycle}")
-                print(f"   Confidence: {confidence:.2f}")
-                print(f"   Decision: {decision.upper()}")
-                print(f"   Storage: SQLite + Git Notes + JSON")
-                print(f"   Findings: {len(findings)} analyzed")
-                print(f"   Unknowns: {len(unknowns)} remaining")
-
-                if verbose:
-                    print("\n   Key findings:")
-                    for i, finding in enumerate(findings[:5], 1):
-                        print(f"     {i}. {finding}")
-                    if len(findings) > 5:
-                        print(f"     ... and {len(findings) - 5} more")
-
-                    print("\n   Remaining unknowns:")
-                    for i, unknown in enumerate(unknowns[:5], 1):
-                        print(f"     {i}. {unknown}")
-                    if len(unknowns) > 5:
-                        print(f"     ... and {len(unknowns) - 5} more")
-            else:
-                print(f"❌ {result.get('message', 'Failed to create CHECK assessment')}")
-
-        return result
-
-    except Exception as e:
-        handle_cli_error(e, "Check assessment", getattr(args, 'verbose', False))
-
-
-def handle_check_submit_command(args):
-    """Handle check-submit command"""
-    try:
-        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
-        
-        # Parse arguments
-        session_id = args.session_id
-        vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
-        decision = args.decision
-        reasoning = args.reasoning
-        cycle = getattr(args, 'cycle', None) or 1  # Handle None case
+            decision = args.decision
+            reasoning = args.reasoning
+            output_format = getattr(args, 'output', 'human')
+        cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
+        round_num = getattr(args, 'round', 1)  # Default to 1 if not provided, don't depend on cycle
         
         # Validate inputs
         if not isinstance(vectors, dict):
@@ -374,14 +454,15 @@ def handle_check_submit_command(args):
             # Add checkpoint - this writes to ALL 3 storage layers
             checkpoint_id = logger_instance.add_checkpoint(
                 phase="CHECK",
-                round_num=cycle,
+                round_num=round_num,
                 vectors=vectors,
                 metadata={
                     "decision": decision,
                     "reasoning": reasoning,
                     "confidence": confidence,
                     "gaps": gaps,
-                    "cycle": cycle
+                    "cycle": cycle,
+                    "round": round_num
                 }
             )
 
@@ -396,13 +477,15 @@ def handle_check_submit_command(args):
                             "empirica", "checkpoint-create",
                             "--session-id", session_id,
                             "--phase", "CHECK",
-                            "--round", str(cycle),
+                            "--round", str(round_num),
                             "--metadata", json.dumps({
                                 "auto_checkpoint": True,
                                 "reason": "risky_decision",
                                 "uncertainty": uncertainty,
                                 "decision": decision,
-                                "gaps": gaps
+                                "gaps": gaps,
+                                "cycle": cycle,
+                                "round": round_num
                             })
                         ],
                         capture_output=True,
@@ -441,7 +524,7 @@ def handle_check_submit_command(args):
             }
         
         # Format output
-        if hasattr(args, 'output') and args.output == 'json':
+        if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
             print("✅ CHECK assessment submitted successfully")
@@ -452,8 +535,9 @@ def handle_check_submit_command(args):
             print(f"   Storage: SQLite + Git Notes + JSON")
             if reasoning:
                 print(f"   Reasoning: {reasoning[:80]}...")
-        
-        return result
+
+        # Return None to avoid exit code issues and duplicate output
+        return None
         
     except Exception as e:
         handle_cli_error(e, "Check submit", getattr(args, 'verbose', False))
@@ -738,27 +822,10 @@ def handle_postflight_submit_command(args):
                 }
             )
 
-            # AUTO-CHECKPOINT: Create git checkpoint after POSTFLIGHT (wired in, not optional)
-            # This ensures learning is always preserved for next AI session
-            try:
-                import subprocess
-                subprocess.run(
-                    [
-                        "empirica", "checkpoint-create",
-                        "--session-id", session_id,
-                        "--phase", "POSTFLIGHT",
-                        "--metadata", json.dumps({
-                            "auto_checkpoint": True,
-                            "learning_delta": deltas,
-                            "calibration": calibration_accuracy
-                        })
-                    ],
-                    capture_output=True,
-                    timeout=10
-                )
-            except Exception as e:
-                # Auto-checkpoint failure is not fatal, but log it
-                logger.warning(f"Auto-checkpoint after POSTFLIGHT failed (non-fatal): {e}")
+            # NOTE: Removed auto-checkpoint after POSTFLIGHT
+            # POSTFLIGHT already writes to all 3 storage layers (SQLite + Git Notes + JSON)
+            # Creating an additional checkpoint was creating duplicate entries with default values
+            # The GitEnhancedReflexLogger.add_checkpoint() call above is sufficient
 
             # EPISTEMIC TRAJECTORY STORAGE: Store learning deltas to Qdrant (if available)
             trajectory_stored = False
@@ -871,7 +938,8 @@ def handle_postflight_submit_command(args):
             except Exception:
                 pass
 
-        return result
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Postflight submit", getattr(args, 'verbose', False))

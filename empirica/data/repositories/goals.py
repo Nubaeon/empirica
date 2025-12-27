@@ -253,3 +253,34 @@ class GoalRepository(BaseRepository):
             'total_unknowns': total_unknowns,
             'unknowns_by_goal': list(unknowns_by_goal.values())
         }
+
+    def get_project_goals(self, project_id: str) -> Dict:
+        """Get incomplete and active goals for a project"""
+        # Get incomplete goals
+        cursor = self._execute("""
+            SELECT id, objective, scope, status, created_timestamp
+            FROM goals
+            WHERE session_id IN (SELECT session_id FROM sessions WHERE project_id = ?)
+            AND is_completed = 0
+            ORDER BY created_timestamp DESC
+        """, (project_id,))
+        incomplete_goals = [dict(row) for row in cursor.fetchall()]
+
+        # Get active goals with subtask counts
+        cursor = self._execute("""
+            SELECT g.id, g.objective, g.scope, g.status, g.goal_data,
+                   COUNT(DISTINCT s.id) as subtask_count,
+                   SUM(CASE WHEN s.status = 'completed' THEN 1 ELSE 0 END) as completed_subtasks
+            FROM goals g
+            LEFT JOIN subtasks s ON g.id = s.goal_id
+            WHERE g.session_id IN (SELECT session_id FROM sessions WHERE project_id = ?)
+            AND g.is_completed = 0
+            GROUP BY g.id
+            ORDER BY g.created_timestamp DESC
+        """, (project_id,))
+        active_goals = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            'incomplete_work': incomplete_goals,
+            'goals': active_goals
+        }

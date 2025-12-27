@@ -13,10 +13,10 @@ Key Features:
 - Session database (SQLite + JSON exports)
 - Universal plugin extensibility
 
-Version: 1.0.0
+Version: 1.0.5
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.5"
 __author__ = "Empirica Project"
 
 # Core imports

@@ -18,29 +18,73 @@ def handle_handoff_create_command(args):
     Supports two modes:
     1. Epistemic handoff (requires PREFLIGHT/POSTFLIGHT assessments)
     2. Planning handoff (documentation-only, no CASCADE workflow needed)
+
+    Input modes:
+    - AI-first: JSON via stdin (empirica handoff-create -)
+    - Legacy: CLI flags (backward compatible)
     """
     try:
+        import sys
+        import os
         from empirica.core.handoff.report_generator import EpistemicHandoffReportGenerator
         from empirica.core.handoff.storage import HybridHandoffStorage
         from empirica.data.session_database import SessionDatabase
+        from ..cli_utils import parse_json_safely
 
-        # Parse arguments
-        session_id = args.session_id
-        task_summary = args.task_summary
-        planning_only = getattr(args, 'planning_only', False)
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
 
-        # Parse JSON arrays
-        key_findings = json.loads(args.key_findings) if isinstance(args.key_findings, str) else args.key_findings
-        remaining_unknowns = json.loads(args.remaining_unknowns) if args.remaining_unknowns and isinstance(args.remaining_unknowns, str) else (args.remaining_unknowns or [])
-        
-        # Auto-convert strings to single-item arrays for better UX
-        if isinstance(key_findings, str):
-            key_findings = [key_findings]
-        if isinstance(remaining_unknowns, str):
-            remaining_unknowns = [remaining_unknowns]
-        artifacts = json.loads(args.artifacts) if args.artifacts and isinstance(args.artifacts, str) else (args.artifacts or [])
+        # Extract parameters from config or fall back to legacy flags
+        if config_data:
+            # AI-FIRST MODE
+            session_id = config_data.get('session_id')
+            task_summary = config_data.get('task_summary')
+            key_findings = config_data.get('key_findings', [])
+            remaining_unknowns = config_data.get('remaining_unknowns', [])
+            next_session_context = config_data.get('next_session_context')
+            artifacts = config_data.get('artifacts', [])
+            planning_only = config_data.get('planning_only', False)
 
-        next_session_context = args.next_session_context
+            # Validate required fields
+            if not session_id:
+                print(json.dumps({"ok": False, "error": "Config must include 'session_id' field"}))
+                sys.exit(1)
+            if not task_summary:
+                print(json.dumps({"ok": False, "error": "Config must include 'task_summary' field"}))
+                sys.exit(1)
+            if not key_findings:
+                print(json.dumps({"ok": False, "error": "Config must include 'key_findings' array"}))
+                sys.exit(1)
+            if not next_session_context:
+                print(json.dumps({"ok": False, "error": "Config must include 'next_session_context' field"}))
+                sys.exit(1)
+        else:
+            # LEGACY MODE
+            session_id = args.session_id
+            task_summary = args.task_summary
+            planning_only = getattr(args, 'planning_only', False)
+
+            # Parse JSON arrays from strings
+            key_findings = json.loads(args.key_findings) if isinstance(args.key_findings, str) else args.key_findings
+            remaining_unknowns = json.loads(args.remaining_unknowns) if args.remaining_unknowns and isinstance(args.remaining_unknowns, str) else (args.remaining_unknowns or [])
+
+            # Auto-convert strings to single-item arrays for better UX
+            if isinstance(key_findings, str):
+                key_findings = [key_findings]
+            if isinstance(remaining_unknowns, str):
+                remaining_unknowns = [remaining_unknowns]
+            artifacts = json.loads(args.artifacts) if args.artifacts and isinstance(args.artifacts, str) else (args.artifacts or [])
+
+            next_session_context = args.next_session_context
 
         # Determine handoff type based on available assessments
         db = SessionDatabase()

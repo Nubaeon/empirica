@@ -16,6 +16,7 @@ def handle_mistake_log_command(args):
         from empirica.data.session_database import SessionDatabase
 
         # Parse arguments
+        project_id = getattr(args, 'project_id', None)
         session_id = args.session_id
         mistake = args.mistake
         why_wrong = args.why_wrong
@@ -33,7 +34,8 @@ def handle_mistake_log_command(args):
             cost_estimate=cost_estimate,
             root_cause_vector=root_cause_vector,
             prevention=prevention,
-            goal_id=goal_id
+            goal_id=goal_id,
+            project_id=project_id  # Add project_id parameter
         )
         db.close()
 
@@ -55,7 +57,8 @@ def handle_mistake_log_command(args):
             if cost_estimate:
                 print(f"   Cost: {cost_estimate}")
 
-        return {"mistake_id": mistake_id}
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Mistake log", getattr(args, 'verbose', False))
@@ -115,7 +118,8 @@ def handle_mistake_query_command(args):
                     print(f"   Prevention: {m['prevention'][:60]}...")
                 print(f"   Session: {m['session_id'][:8]}...")
 
-        return {"mistakes": mistakes}
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Mistake query", getattr(args, 'verbose', False))

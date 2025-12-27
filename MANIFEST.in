@@ -32,6 +32,9 @@ prune docs
 # Re-include only essential docs
 graft docs/skills
 graft docs/system-prompts
+graft docs/architecture
+include docs/CASCADE_WORKFLOW.md
+include docs/SEMANTIC_INDEX.yaml
 prune tests/coordination/archive
 prune empirica-dev
 prune forgejo-plugin-empirica

@@ -53,15 +53,72 @@ def handle_cli_error(error: Exception, command: str, verbose: bool = False) -> N
 
 
 def parse_json_safely(json_string: Optional[str], default: Dict = None) -> Dict[str, Any]:
-    """Safely parse JSON string with fallback"""
+    """Safely parse JSON string with fallback and escape sequence repair"""
     if not json_string:
         return default or {}
-    
+
     try:
         return json.loads(json_string)
     except json.JSONDecodeError as e:
-        print(f"⚠️ JSON parsing error: {e}")
-        return default or {}
+        # Try to fix common escape sequence issues
+        try:
+            # Common issue: unescaped backslashes in paths or strings
+            # Replace single backslashes that aren't part of valid escape sequences
+            import re
+            # First, try to fix simple backslash issues
+            fixed_json = json_string.replace('\\', '\\\\')
+            # But be careful not to double-escape already escaped sequences
+            # Restore common valid escape sequences
+            fixed_json = fixed_json.replace('\\\\n', '\\n').replace('\\\\t', '\\t').replace('\\\\r', '\\r')
+            fixed_json = fixed_json.replace('\\\\b', '\\b').replace('\\\\f', '\\f').replace('\\\\/', '/')
+            fixed_json = fixed_json.replace('\\\\\\/', '\\/')  # Handle over-correction
+
+            # Try to parse again with the fixed string
+            parsed = json.loads(fixed_json)
+            return parsed
+        except json.JSONDecodeError:
+            # If still failing, try a more sophisticated approach
+            try:
+                # Try to detect and fix common escape sequence patterns
+                fixed_json = _fix_json_escapes(json_string)
+                return json.loads(fixed_json)
+            except json.JSONDecodeError:
+                print(f"⚠️ JSON parsing error: {e}")
+                print(f"   Error details: Invalid \\escape in JSON string")
+                return default or {}
+
+
+def _fix_json_escapes(json_str: str) -> str:
+    """Attempt to fix common JSON escape sequence issues"""
+    import re
+
+    # Pattern to match problematic backslashes that are not part of valid escape sequences
+    # Valid escape sequences: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+    # Any \ that is not followed by these is likely problematic
+
+    # First, extract and preserve valid escape sequences temporarily
+    valid_escapes = {}
+    escape_placeholder = "__ESCAPE_PLACEHOLDER_{}__"
+
+    # Find and temporarily replace valid escape sequences
+    valid_escape_pattern = r'\\[\"\\/bfnrt]|\\u[0-9a-fA-F]{4}'
+    matches = list(re.finditer(valid_escape_pattern, json_str))
+
+    temp_str = json_str
+    for i, match in enumerate(matches):
+        placeholder = escape_placeholder.format(i)
+        valid_escapes[placeholder] = match.group(0)
+        temp_str = temp_str.replace(match.group(0), placeholder, 1)
+
+    # Now fix remaining problematic backslashes
+    # Replace single backslashes with double backslashes
+    temp_str = re.sub(r'(?<!\\)\\(?!["\\/bfnrtu])', r'\\\\', temp_str)
+
+    # Restore the valid escape sequences
+    for placeholder, original in valid_escapes.items():
+        temp_str = temp_str.replace(placeholder, original)
+
+    return temp_str
 
 
 def format_execution_time(start_time: float, end_time: Optional[float] = None) -> str:

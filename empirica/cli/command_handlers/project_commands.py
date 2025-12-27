@@ -234,13 +234,28 @@ def handle_project_bootstrap_command(args):
             subject = get_current_subject()  # Auto-detect from directory
         
         db = SessionDatabase()
+
+        # Get new parameters
+        session_id = getattr(args, 'session_id', None)
+        include_live_state = getattr(args, 'include_live_state', False)
+        fresh_assess = getattr(args, 'fresh_assess', False)
+        trigger = getattr(args, 'trigger', None)
+        depth = getattr(args, 'depth', 'auto')
+        ai_id = getattr(args, 'ai_id', None)  # Get AI ID for epistemic handoff
+
         breadcrumbs = db.bootstrap_project_breadcrumbs(
             project_id,
             check_integrity=check_integrity,
             context_to_inject=context_to_inject,
             task_description=task_description,
             epistemic_state=epistemic_state,
-            subject=subject
+            subject=subject,
+            session_id=session_id,
+            include_live_state=include_live_state,
+            fresh_assess=fresh_assess,
+            trigger=trigger,
+            depth=depth,
+            ai_id=ai_id  # Pass AI ID to bootstrap
         )
 
         # Optional: Detect memory gaps if session-id provided
@@ -273,6 +288,16 @@ def handle_project_bootstrap_command(args):
                     breadcrumbs=breadcrumbs,
                     session_context=session_context
                 )
+
+        # Add workflow suggestions based on session state
+        workflow_suggestions = None
+        if session_id:
+            from empirica.cli.utils.workflow_suggestions import get_workflow_suggestions
+            workflow_suggestions = get_workflow_suggestions(
+                project_id=project_id,
+                session_id=session_id,
+                db=db
+            )
 
         db.close()
 
@@ -310,6 +335,8 @@ def handle_project_bootstrap_command(args):
                 "project_id": project_id,
                 "breadcrumbs": breadcrumbs
             }
+            if workflow_suggestions:
+                result['workflow_automation'] = workflow_suggestions
             print(json.dumps(result, indent=2))
         else:
             project = breadcrumbs['project']
@@ -359,6 +386,47 @@ def handle_project_bootstrap_command(args):
             print(f"   {last['summary']}")
             print(f"   Next focus: {last['next_focus']}")
             print()
+            
+            # ===== AI EPISTEMIC HANDOFF =====
+            if breadcrumbs.get('ai_epistemic_handoff'):
+                handoff = breadcrumbs['ai_epistemic_handoff']
+                print(f"🧠 Epistemic Handoff (from {handoff.get('ai_id', 'unknown')}):")
+                vectors = handoff.get('vectors', {})
+                deltas = handoff.get('deltas', {})
+                
+                if vectors:
+                    print(f"   State (POSTFLIGHT):")
+                    print(f"      Engagement: {vectors.get('engagement', 'N/A'):.2f}", end='')
+                    if 'engagement' in deltas:
+                        delta = deltas['engagement']
+                        arrow = "↑" if delta > 0 else "↓" if delta < 0 else "→"
+                        print(f" {arrow} {delta:+.2f}", end='')
+                    print()
+                    
+                    if 'foundation' in vectors:
+                        f = vectors['foundation']
+                        d = deltas.get('foundation', {})
+                        print(f"      Foundation: know={f.get('know', 'N/A'):.2f}", end='')
+                        if 'know' in d:
+                            print(f" {d['know']:+.2f}", end='')
+                        print(f", do={f.get('do', 'N/A'):.2f}", end='')
+                        if 'do' in d:
+                            print(f" {d['do']:+.2f}", end='')
+                        print(f", context={f.get('context', 'N/A'):.2f}", end='')
+                        if 'context' in d:
+                            print(f" {d['context']:+.2f}", end='')
+                        print()
+                    
+                    print(f"      Uncertainty: {vectors.get('uncertainty', 'N/A'):.2f}", end='')
+                    if 'uncertainty' in deltas:
+                        delta = deltas['uncertainty']
+                        arrow = "↓" if delta < 0 else "↑" if delta > 0 else "→"  # Lower is better
+                        print(f" {arrow} {delta:+.2f}", end='')
+                    print()
+                
+                if handoff.get('reasoning'):
+                    print(f"   Learning: {handoff['reasoning'][:80]}...")
+                print()
             
             if breadcrumbs.get('findings'):
                 print(f"📝 Recent Findings (last 10):")
@@ -642,6 +710,13 @@ def handle_project_bootstrap_command(args):
                             print(f"      • empirica {item['command']}")
                 print()
 
+            # Workflow Automation Suggestions (if session-id provided)
+            if workflow_suggestions:
+                from empirica.cli.utils.workflow_suggestions import format_workflow_suggestions
+                workflow_output = format_workflow_suggestions(workflow_suggestions)
+                if workflow_output.strip():
+                    print(workflow_output)
+
             # Memory Gap Analysis (if session-id provided)
             if breadcrumbs.get('memory_gap_analysis'):
                 analysis = breadcrumbs['memory_gap_analysis']
@@ -756,6 +831,7 @@ def handle_finding_log_command(args):
             finding = config_data.get('finding')
             goal_id = config_data.get('goal_id')
             subtask_id = config_data.get('subtask_id')
+            impact = config_data.get('impact')  # Optional - auto-derives if None
             output_format = 'json'
 
             # Validate required fields
@@ -773,14 +849,16 @@ def handle_finding_log_command(args):
             project_id = args.project_id
             goal_id = getattr(args, 'goal_id', None)
             subtask_id = getattr(args, 'subtask_id', None)
+            impact = getattr(args, 'impact', None)  # Optional - auto-derives if None
             output_format = getattr(args, 'output', 'json')
 
             # Validate required fields for legacy mode
-            if not project_id or not session_id or not finding:
+            # Allow project_id to be None initially, will auto-resolve below
+            if not session_id or not finding:
                 print(json.dumps({
                     "ok": False,
-                    "error": "Legacy mode requires --project-id, --session-id, and --finding flags",
-                    "hint": "For AI-first mode, use: empirica finding-log config.json"
+                    "error": "Legacy mode requires --session-id and --finding flags",
+                    "hint": "Project ID will be auto-resolved if not provided. For AI-first mode, use: empirica finding-log config.json"
                 }))
                 sys.exit(1)
 
@@ -797,8 +875,38 @@ def handle_finding_log_command(args):
         
         db = SessionDatabase()
 
-        # Resolve project name to UUID
-        project_id = resolve_project_id(project_id, db)
+        # Auto-resolve project_id if not provided
+        if not project_id:
+            # Try to get project from session record
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT project_id FROM sessions WHERE session_id = ?
+            """, (session_id,))
+            row = cursor.fetchone()
+            if row and row['project_id']:
+                project_id = row['project_id']
+                logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
+            else:
+                # Fallback: try to resolve from current directory
+                from empirica.config.project_config_loader import load_project_config
+                try:
+                    project_config = load_project_config()
+                    if project_config and hasattr(project_config, 'project_id'):
+                        project_id = project_config.project_id
+                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
+                except:
+                    pass
+
+        # Resolve project name to UUID if still not resolved
+        if project_id:
+            project_id = resolve_project_id(project_id, db)
+        else:
+            # Last resort: create a generic project ID based on session if no project context available
+            import hashlib
+            project_id = hashlib.md5(f"session-{session_id}".encode()).hexdigest()
+            logger.warning(f"Using fallback project_id derived from session: {project_id[:8]}...")
+
+        # At this point, project_id should be resolved
         
         # SESSION-BASED AUTO-LINKING: If goal_id not provided, check for active goal in session
         if not goal_id:
@@ -820,7 +928,8 @@ def handle_finding_log_command(args):
             finding=finding,
             goal_id=goal_id,
             subtask_id=subtask_id,
-            subject=subject
+            subject=subject,
+            impact=impact
         )
         db.close()
 
@@ -840,7 +949,7 @@ def handle_finding_log_command(args):
             print(f"   Finding ID: {finding_id}")
             print(f"   Project: {project_id[:8]}...")
 
-        return {"finding_id": finding_id}
+        return 0  # Success
 
     except Exception as e:
         handle_cli_error(e, "Finding log", getattr(args, 'verbose', False))
@@ -875,8 +984,9 @@ def handle_unknown_log_command(args):
             unknown = config_data.get('unknown')
             goal_id = config_data.get('goal_id')
             subtask_id = config_data.get('subtask_id')
+            impact = config_data.get('impact')  # Optional - auto-derives if None
             output_format = 'json'
-            
+
             if not project_id or not session_id or not unknown:
                 print(json.dumps({
                     "ok": False,
@@ -889,6 +999,7 @@ def handle_unknown_log_command(args):
             project_id = args.project_id
             goal_id = getattr(args, 'goal_id', None)
             subtask_id = getattr(args, 'subtask_id', None)
+            impact = getattr(args, 'impact', None)  # Optional - auto-derives if None
             output_format = getattr(args, 'output', 'json')
 
         # Auto-detect subject from current directory
@@ -904,8 +1015,38 @@ def handle_unknown_log_command(args):
         
         db = SessionDatabase()
 
-        # Resolve project name to UUID
-        project_id = resolve_project_id(project_id, db)
+        # Auto-resolve project_id if not provided
+        if not project_id:
+            # Try to get project from session record
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT project_id FROM sessions WHERE session_id = ?
+            """, (session_id,))
+            row = cursor.fetchone()
+            if row and row['project_id']:
+                project_id = row['project_id']
+                logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
+            else:
+                # Fallback: try to resolve from current directory
+                from empirica.config.project_config_loader import load_project_config
+                try:
+                    project_config = load_project_config()
+                    if project_config and hasattr(project_config, 'project_id'):
+                        project_id = project_config.project_id
+                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
+                except:
+                    pass
+
+        # Resolve project name to UUID if still not resolved
+        if project_id:
+            project_id = resolve_project_id(project_id, db)
+        else:
+            # Last resort: create a generic project ID based on session if no project context available
+            import hashlib
+            project_id = hashlib.md5(f"session-{session_id}".encode()).hexdigest()
+            logger.warning(f"Using fallback project_id derived from session: {project_id[:8]}...")
+
+        # At this point, project_id should be resolved
         
         # SESSION-BASED AUTO-LINKING: If goal_id not provided, check for active goal in session
         if not goal_id:
@@ -926,7 +1067,8 @@ def handle_unknown_log_command(args):
             unknown=unknown,
             goal_id=goal_id,
             subtask_id=subtask_id,
-            subject=subject
+            subject=subject,
+            impact=impact
         )
         db.close()
 
@@ -944,7 +1086,7 @@ def handle_unknown_log_command(args):
             print(f"   Unknown ID: {unknown_id}")
             print(f"   Project: {project_id[:8]}...")
 
-        return {"unknown_id": unknown_id}
+        return 0  # Success
 
     except Exception as e:
         handle_cli_error(e, "Unknown log", getattr(args, 'verbose', False))
@@ -980,8 +1122,9 @@ def handle_deadend_log_command(args):
             why_failed = config_data.get('why_failed')
             goal_id = config_data.get('goal_id')
             subtask_id = config_data.get('subtask_id')
+            impact = config_data.get('impact')  # Optional - auto-derives if None
             output_format = 'json'
-            
+
             if not project_id or not session_id or not approach or not why_failed:
                 print(json.dumps({
                     "ok": False,
@@ -995,6 +1138,7 @@ def handle_deadend_log_command(args):
             project_id = args.project_id
             goal_id = getattr(args, 'goal_id', None)
             subtask_id = getattr(args, 'subtask_id', None)
+            impact = getattr(args, 'impact', None)  # Optional - auto-derives if None
             output_format = getattr(args, 'output', 'json')
 
         # Auto-detect subject from current directory
@@ -1005,8 +1149,38 @@ def handle_deadend_log_command(args):
         
         db = SessionDatabase()
 
-        # Resolve project name to UUID
-        project_id = resolve_project_id(project_id, db)
+        # Auto-resolve project_id if not provided
+        if not project_id:
+            # Try to get project from session record
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT project_id FROM sessions WHERE session_id = ?
+            """, (session_id,))
+            row = cursor.fetchone()
+            if row and row['project_id']:
+                project_id = row['project_id']
+                logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
+            else:
+                # Fallback: try to resolve from current directory
+                from empirica.config.project_config_loader import load_project_config
+                try:
+                    project_config = load_project_config()
+                    if project_config and hasattr(project_config, 'project_id'):
+                        project_id = project_config.project_id
+                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
+                except:
+                    pass
+
+        # Resolve project name to UUID if still not resolved
+        if project_id:
+            project_id = resolve_project_id(project_id, db)
+        else:
+            # Last resort: create a generic project ID based on session if no project context available
+            import hashlib
+            project_id = hashlib.md5(f"session-{session_id}".encode()).hexdigest()
+            logger.warning(f"Using fallback project_id derived from session: {project_id[:8]}...")
+
+        # At this point, project_id should be resolved
         
         # SESSION-BASED AUTO-LINKING: If goal_id not provided, check for active goal in session
         if not goal_id:
@@ -1028,7 +1202,8 @@ def handle_deadend_log_command(args):
             why_failed=why_failed,
             goal_id=goal_id,
             subtask_id=subtask_id,
-            subject=subject
+            subject=subject,
+            impact=impact
         )
         db.close()
 
@@ -1046,7 +1221,7 @@ def handle_deadend_log_command(args):
             print(f"   Dead End ID: {dead_end_id}")
             print(f"   Project: {project_id[:8]}...")
 
-        return {"dead_end_id": dead_end_id}
+        return 0  # Success
 
     except Exception as e:
         handle_cli_error(e, "Dead end log", getattr(args, 'verbose', False))
@@ -1067,8 +1242,38 @@ def handle_refdoc_add_command(args):
 
         db = SessionDatabase()
 
-        # Resolve project name to UUID
-        project_id = resolve_project_id(project_id, db)
+        # Auto-resolve project_id if not provided
+        if not project_id:
+            # Try to get project from session record
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT project_id FROM sessions WHERE session_id = ?
+            """, (session_id,))
+            row = cursor.fetchone()
+            if row and row['project_id']:
+                project_id = row['project_id']
+                logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
+            else:
+                # Fallback: try to resolve from current directory
+                from empirica.config.project_config_loader import load_project_config
+                try:
+                    project_config = load_project_config()
+                    if project_config and hasattr(project_config, 'project_id'):
+                        project_id = project_config.project_id
+                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
+                except:
+                    pass
+
+        # Resolve project name to UUID if still not resolved
+        if project_id:
+            project_id = resolve_project_id(project_id, db)
+        else:
+            # Last resort: create a generic project ID based on session if no project context available
+            import hashlib
+            project_id = hashlib.md5(f"session-{session_id}".encode()).hexdigest()
+            logger.warning(f"Using fallback project_id derived from session: {project_id[:8]}...")
+
+        # At this point, project_id should be resolved
 
         doc_id = db.add_reference_doc(
             project_id=project_id,
@@ -1091,7 +1296,7 @@ def handle_refdoc_add_command(args):
             print(f"   Doc ID: {doc_id}")
             print(f"   Path: {doc_path}")
 
-        return {"doc_id": doc_id}
+        return 0  # Success
 
     except Exception as e:
         handle_cli_error(e, "Reference doc add", getattr(args, 'verbose', False))
@@ -1136,7 +1341,8 @@ def handle_workspace_overview_command(args):
                 "projects": projects
             }
             print(json.dumps(result, indent=2))
-            return result
+            # Return None to avoid exit code issues and duplicate output
+            return None
         
         # Dashboard output (human-readable)
         stats = overview['workspace_stats']

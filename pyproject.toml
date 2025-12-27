@@ -109,6 +109,12 @@ where = ["."]
 include = ["empirica*", "mcp_local*"]
 exclude = ["tests*", "_archive*", "_dev*"]
 
+[tool.setuptools.package-data]
+empirica = [
+    "docs/**/*",
+    "config/mco/**/*.yaml",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

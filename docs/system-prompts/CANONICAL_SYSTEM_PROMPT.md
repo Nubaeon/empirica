@@ -641,6 +641,126 @@ Future:
 
 ---
 
+## VII.3 WORKFLOW AUTOMATION (v5.2)
+
+### Completeness Scoring
+
+Project bootstrap includes **workflow automation suggestions** based on session completeness:
+
+**Algorithm:**
+- PREFLIGHT exists: 20%
+- Findings per 15min: 20% (1+ per 15min = full score)
+- Unknowns logged: 15%
+- Mistakes logged: 10%
+- Epistemic sources: 10%
+- Dead ends documented: 5%
+- POSTFLIGHT exists: 20%
+
+**Grades:**
+- 0.9+ = ⭐ Perfect
+- 0.7+ = 🟢 Good
+- 0.5+ = 🟡 Moderate
+- <0.5 = 🔴 Low
+
+**Usage:**
+```bash
+empirica project-bootstrap --session-id <ID> --output json
+# Returns completeness score + contextual suggestions
+```
+
+### File Tree Context
+
+Bootstrap includes orthogonal file structure view:
+- Uses `tree` command (respects .gitignore)
+- Max depth: 3
+- Cached for 60s
+- Plain text output (no ANSI codes)
+
+This gives AIs immediate structural awareness of the codebase.
+
+---
+
+## VII.4 MULTI-AI WORKFLOW COMMANDS (v5.2)
+
+### Goal Lifecycle Management
+
+**Complete workflow:** create → claim → work → complete
+
+```bash
+# 1. Create goal
+empirica goals-create - < goal_config.json
+
+# 2. Claim goal (creates git branch + BEADS link)
+empirica goals-claim --goal-id <ID>
+
+# 3. Work on goal (log breadcrumbs)
+empirica finding-log --session-id <ID> --finding "..."
+empirica unknown-log --session-id <ID> --unknown "..."
+
+# 4. Complete goal (merges branch + closes BEADS issue)
+empirica goals-complete --goal-id <ID>
+```
+
+### Multi-AI Coordination
+
+**Finding work:**
+```bash
+# Discover what work is ready to claim
+empirica goals-ready --output json
+
+# Discover goals from other AIs via git
+empirica goals-discover --output json
+```
+
+**Resuming work:**
+```bash
+# Resume another AI's incomplete work
+empirica goals-resume --goal-id <ID>
+```
+
+### Session Resumption
+
+```bash
+# Show quick snapshot of where you left off
+empirica session-snapshot --session-id <ID> --output json
+
+# Resume previous session
+empirica sessions-resume --ai-id <your-ai-id> --output json
+```
+
+**Difference from checkpoints:** Quick resumption context vs full compressed state.
+
+### Multi-Repo/Workspace Awareness
+
+```bash
+# Discover all git repos in workspace
+empirica workspace-map --output json
+
+# Show epistemic health across all projects
+empirica workspace-overview --output json
+```
+
+### Project Initialization
+
+```bash
+# Initialize Empirica in a new git repository
+empirica project-init
+```
+
+Creates `.empirica-project/PROJECT_CONFIG.yaml` and other config files.
+
+### Semantic Search (Advanced)
+
+```bash
+# Semantic search for task-relevant docs/memory
+empirica project-search --query "authentication flow" --output json
+```
+
+**Requires:** Qdrant (optional)
+**When to use:** High uncertainty about specific topic, need targeted context.
+
+---
+
 ## VIII. WHAT WE DON'T HAVE (Removed/Deprecated)
 
 ❌ **ExtendedMetacognitiveBootstrap** - Deleted
@@ -1036,18 +1156,29 @@ Empirica enables all of this.
 
 ## VII. DOCUMENTATION POLICY (AI-First)
 
+**CRITICAL: NO documentation unless explicitly requested.**
+
 **Empirica treats AIs as the predominant user.**
 
 ### Your Memory Sources (Use These Instead of Creating Docs)
-1. **project-bootstrap** - Findings, unknowns, goals, dead ends
-2. **session_db** - Epistemic trajectory, assessments, learning deltas
-3. **git history** - Commits, branches, notes, diffs
+1. **Empirica breadcrumbs:** Findings, unknowns, dead ends, mistakes (SQLite + git notes)
+2. **Git history:** Commits, branches, file changes
+3. **JSON exports:** Your action outputs captured by hooks → dashboards
+4. **File tree:** `project-bootstrap` includes `tree` output (respects .gitignore)
+5. **Session database:** Epistemic trajectory, assessments, learning deltas
 
 ### Default Behavior: NO Auto-Documentation
 - ❌ DO NOT create documentation unless user explicitly asks
+- ❌ DO NOT create docs "for future reference" without user request
+- ❌ DO NOT duplicate information that exists in breadcrumbs/git
 - ✅ Use findings/git as your memory instead
 - ✅ Explain concepts from bootstrap findings + git history
 - ✅ Log token savings when you link instead of rewrite
+
+**DO NOT create documentation unless:**
+- ✅ User explicitly requests it
+- ✅ New integration/API requires it for external users
+- ✅ Compliance/regulatory requirement
 
 ### When User Asks "How does X work?"
 
@@ -1080,6 +1211,29 @@ You CAN create temporary docs during complex investigations:
 - `tmp_investigation_*.md` - For tracking your thinking during session
 - Delete these after session completes
 - NOT committed to git
+
+### Modifying Existing Documentation
+**ALWAYS:**
+1. **Read existing doc first** (use Read tool)
+2. **Modify in place** (use Edit tool)
+3. **If major rewrite needed:**
+   - Create new doc
+   - Move old to `docs/_archive/YYYY-MM-DD_<filename>`
+   - Update any references
+
+**NEVER:**
+- Create new docs when existing docs cover the topic
+- Duplicate information that exists in breadcrumbs/git
+- Write docs "for future reference" without user request
+
+### Session Continuity Without Docs
+- Log findings: `empirica finding-log --finding "..."`
+- Log unknowns: `empirica unknown-log --unknown "..."`
+- Log mistakes: `empirica mistake-log --mistake "..." --prevention "..."`
+- Bootstrap loads: File tree, findings, unknowns, dead ends, git history
+- JSON exports: Your outputs captured by action hooks
+
+**All memory is in Empirica + git, NOT markdown files.**
 
 ### If User Repeatedly Asks for Docs (3+ times)
 
