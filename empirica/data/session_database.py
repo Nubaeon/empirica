@@ -1231,6 +1231,111 @@ class SessionDatabase:
         """Get the most recent project handoff (delegates to ProjectRepository)"""
         return self.projects.get_latest_project_handoff(project_id)
     
+    def get_ai_epistemic_handoff(self, project_id: str, ai_id: str) -> Optional[Dict]:
+        """Get latest epistemic handoff (POSTFLIGHT checkpoint) for a specific AI.
+        
+        Enables epistemic continuity by loading the previous session's ending epistemic state.
+        """
+        return self.projects.get_ai_epistemic_handoff(project_id, ai_id)
+    
+    def get_auto_captured_issues(self, project_id: str, limit: int = 10) -> List[Dict]:
+        """Get auto-captured issues for project.
+        
+        Returns list of issues sorted by severity and recency.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT id, session_id, severity, category, message, status, created_at, code_location
+            FROM auto_captured_issues
+            WHERE session_id IN (
+                SELECT session_id FROM sessions WHERE project_id = ?
+            )
+            ORDER BY 
+                CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 
+                             WHEN 'medium' THEN 3 WHEN 'low' THEN 4 END,
+                created_at DESC
+            LIMIT ?
+        """, (project_id, limit))
+        
+        rows = cursor.fetchall()
+        issues = []
+        for row in rows:
+            issues.append({
+                'id': row[0],
+                'session_id': row[1],
+                'severity': row[2],
+                'category': row[3],
+                'message': row[4],
+                'status': row[5],
+                'created_at': row[6],
+                'code_location': row[7]
+            })
+        
+        return issues
+
+    def get_git_status(self, project_root: str) -> Optional[Dict]:
+        """Get git status information for the project.
+        
+        Returns dict with:
+        - current_branch: Current branch name
+        - commits_ahead: Number of commits ahead of remote
+        - uncommitted_changes: Number of uncommitted changes
+        - untracked_files: Number of untracked files
+        - recent_commits: List of recent commit messages
+        """
+        import subprocess
+        
+        try:
+            # Get current branch
+            branch_result = subprocess.run(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            current_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else 'unknown'
+            
+            # Get status short summary
+            status_result = subprocess.run(
+                ['git', 'status', '--short'],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            uncommitted = len(status_result.stdout.strip().split('\n')) if status_result.returncode == 0 and status_result.stdout.strip() else 0
+            
+            # Get untracked files
+            untracked_result = subprocess.run(
+                ['git', 'ls-files', '--others', '--exclude-standard'],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            untracked = len(untracked_result.stdout.strip().split('\n')) if untracked_result.returncode == 0 and untracked_result.stdout.strip() else 0
+            
+            # Get recent commits (last 3)
+            commits_result = subprocess.run(
+                ['git', 'log', '--oneline', '-3'],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            recent_commits = commits_result.stdout.strip().split('\n') if commits_result.returncode == 0 and commits_result.stdout.strip() else []
+            
+            return {
+                'current_branch': current_branch,
+                'uncommitted_changes': uncommitted,
+                'untracked_files': untracked,
+                'recent_commits': recent_commits
+            }
+        except Exception as e:
+            logger.debug(f"Error getting git status: {e}")
+            return None
+    
     def generate_file_tree(self, project_root: str, max_depth: int = 3, use_cache: bool = True) -> Optional[str]:
         """Generate file tree respecting .gitignore
         
@@ -1373,7 +1478,8 @@ class SessionDatabase:
         include_live_state: bool = False,
         fresh_assess: bool = False,
         trigger: Optional[str] = None,
-        depth: str = "auto"
+        depth: str = "auto",
+        ai_id: Optional[str] = None
     ) -> Dict:
         """
         Generate epistemic breadcrumbs for starting a new session on existing project.
@@ -1392,6 +1498,7 @@ class SessionDatabase:
             fresh_assess: Use fresh self-assessment vs loading checkpoint (optional)
             trigger: Trigger context for session resolution (pre_compact/post_compact/manual)
             depth: Context depth (minimal/moderate/full/auto)
+            ai_id: AI identifier to load epistemic handoff for (e.g., 'claude-code')
 
         Returns quick context: findings, unknowns, dead_ends, mistakes, decisions, incomplete work.
         """
@@ -1410,6 +1517,11 @@ class SessionDatabase:
         # 2. Get latest handoff
         latest_handoff = self.get_latest_project_handoff(resolved_id)
 
+        # 2b. Get AI-specific epistemic handoff if ai_id provided
+        ai_epistemic_handoff = None
+        if ai_id:
+            ai_epistemic_handoff = self.get_ai_epistemic_handoff(resolved_id, ai_id)
+
         # 3. Load all breadcrumbs based on mode
         breadcrumbs = self._load_breadcrumbs_for_mode(resolved_id, mode, subject)
 
@@ -1421,6 +1533,16 @@ class SessionDatabase:
         file_tree = self.generate_file_tree(project_root)
         breadcrumbs['file_tree'] = file_tree
 
+        # 5b. Capture git status
+        git_status = self.get_git_status(project_root)
+        if git_status:
+            breadcrumbs['git_status'] = git_status
+
+        # 5c. Load auto-captured issues
+        auto_issues = self.get_auto_captured_issues(resolved_id, limit=10)
+        if auto_issues:
+            breadcrumbs['auto_captured_issues'] = auto_issues
+
         # 6. Capture live state if requested
         live_state = self._capture_live_state_if_requested(
             session_id, resolved_id, include_live_state, fresh_assess, trigger
@@ -1430,15 +1552,35 @@ class SessionDatabase:
             breadcrumbs['session_id'] = session_id or live_state.get('session_id')
 
         # 7. Add project metadata
+        repos = project.get('repos', []) or []
+        if isinstance(repos, str):
+            try:
+                import json
+                repos = json.loads(repos)
+            except:
+                repos = []
+        
         breadcrumbs['project'] = {
             'id': project['id'],
             'name': project.get('name', 'Unknown'),
             'description': project.get('description', ''),
-            'status': project.get('status', 'active')
+            'status': project.get('status', 'active'),
+            'repos': repos,
+            'total_sessions': project.get('total_sessions', 0)
         }
 
         if latest_handoff:
             breadcrumbs['latest_handoff'] = latest_handoff
+
+        # 7b. Add AI-specific epistemic handoff if loaded
+        if ai_epistemic_handoff:
+            breadcrumbs['ai_epistemic_handoff'] = ai_epistemic_handoff
+
+        # 7c. Add last activity summary
+        breadcrumbs['last_activity'] = {
+            'summary': f"Last activity: {project.get('last_activity_timestamp', 'Unknown')}",
+            'next_focus': 'Continue with incomplete work and unknown resolutions'
+        }
 
         # 8. Generate context markdown if requested
         if context_to_inject:

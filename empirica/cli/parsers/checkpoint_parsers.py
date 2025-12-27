@@ -243,6 +243,7 @@ def add_checkpoint_parsers(subparsers):
     )
     project_bootstrap_parser.add_argument('--project-id', required=False, help='Project UUID or name (auto-detected from git remote if omitted)')
     project_bootstrap_parser.add_argument('--session-id', required=False, help='Session UUID (auto-resolved from project if omitted)')
+    project_bootstrap_parser.add_argument('--ai-id', required=False, help='AI identifier to load epistemic handoff for (e.g., claude-code)')
     project_bootstrap_parser.add_argument('--subject', help='Subject/workstream to filter by (auto-detected from directory if omitted)')
     project_bootstrap_parser.add_argument('--check-integrity', action='store_true', help='Analyze doc-code integrity (adds ~2s)')
     project_bootstrap_parser.add_argument('--context-to-inject', action='store_true', help='Generate markdown context for AI prompt injection')

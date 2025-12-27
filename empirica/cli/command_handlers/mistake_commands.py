@@ -57,7 +57,8 @@ def handle_mistake_log_command(args):
             if cost_estimate:
                 print(f"   Cost: {cost_estimate}")
 
-        return {"mistake_id": mistake_id}
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Mistake log", getattr(args, 'verbose', False))
@@ -117,7 +118,8 @@ def handle_mistake_query_command(args):
                     print(f"   Prevention: {m['prevention'][:60]}...")
                 print(f"   Session: {m['session_id'][:8]}...")
 
-        return {"mistakes": mistakes}
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Mistake query", getattr(args, 'verbose', False))

@@ -79,6 +79,16 @@ def handle_session_create_command(args):
             subject=subject
         )
 
+        # Initialize auto-capture for this session
+        from empirica.core.issue_capture import initialize_auto_capture
+        try:
+            auto_capture = initialize_auto_capture(session_id, enable=True)
+            if output_format != 'json':
+                print(f"✅ Auto-capture enabled for this session")
+        except Exception as e:
+            if output_format != 'json':
+                print(f"⚠️  Auto-capture initialization warning: {e}")
+
         # Try to auto-detect project from git remote URL (if not explicitly provided)
         if not project_id:
             try:

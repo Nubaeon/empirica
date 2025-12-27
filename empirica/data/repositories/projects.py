@@ -277,6 +277,71 @@ class ProjectRepository(BaseRepository):
         row = cursor.fetchone()
         return dict(row) if row else None
 
+    def get_ai_epistemic_handoff(self, project_id: str, ai_id: str) -> Optional[Dict]:
+        """Get latest epistemic handoff (POSTFLIGHT checkpoint) for a specific AI in this project.
+        
+        This loads the most recent session's POSTFLIGHT checkpoint for the given AI ID,
+        enabling epistemic continuity across session boundaries.
+        
+        Args:
+            project_id: Project UUID
+            ai_id: AI identifier (e.g., 'claude-code')
+            
+        Returns:
+            Dictionary with epistemic vectors and reasoning, or None if no checkpoint exists
+        """
+        cursor = self._execute("""
+            SELECT r.* FROM reflexes r
+            JOIN sessions s ON r.session_id = s.session_id
+            WHERE s.project_id = ? AND s.ai_id = ? AND r.phase = 'POSTFLIGHT'
+            ORDER BY r.timestamp DESC
+            LIMIT 1
+        """, (project_id, ai_id))
+        
+        row = cursor.fetchone()
+        if not row:
+            return None
+        
+        # Convert to dict and reconstruct vector state
+        checkpoint = dict(row)
+        
+        # Build epistemic vectors dict from columns
+        vectors = {
+            'engagement': checkpoint.get('engagement'),
+            'foundation': {
+                'know': checkpoint.get('know'),
+                'do': checkpoint.get('do'),
+                'context': checkpoint.get('context')
+            },
+            'comprehension': {
+                'clarity': checkpoint.get('clarity'),
+                'coherence': checkpoint.get('coherence'),
+                'signal': checkpoint.get('signal'),
+                'density': checkpoint.get('density')
+            },
+            'execution': {
+                'state': checkpoint.get('state'),
+                'change': checkpoint.get('change'),
+                'completion': checkpoint.get('completion'),
+                'impact': checkpoint.get('impact')
+            },
+            'uncertainty': checkpoint.get('uncertainty')
+        }
+        
+        # Remove None values
+        vectors = {k: v for k, v in vectors.items() if v is not None}
+        
+        return {
+            'checkpoint_id': checkpoint.get('id'),
+            'session_id': checkpoint.get('session_id'),
+            'ai_id': ai_id,
+            'phase': 'POSTFLIGHT',
+            'vectors': vectors,
+            'reasoning': checkpoint.get('reasoning'),
+            'evidence': checkpoint.get('evidence'),
+            'timestamp': checkpoint.get('timestamp')
+        }
+
     # Note: bootstrap_project_breadcrumbs is kept in SessionDatabase facade
     # due to complex cross-repository dependencies (breadcrumbs, goals, handoffs)
     # The facade handles the orchestration of multiple repository calls

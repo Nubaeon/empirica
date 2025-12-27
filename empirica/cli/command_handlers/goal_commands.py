@@ -327,8 +327,9 @@ def handle_goals_create_command(args):
                 print(f"❌ {result.get('message', 'Failed to create goal')}")
         
         goal_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Create goal", getattr(args, 'verbose', False))
 
@@ -509,8 +510,9 @@ def handle_goals_complete_subtask_command(args):
                 print(f"   Evidence: {evidence[:80]}...")
         
         task_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Complete subtask", getattr(args, 'verbose', False))
 
@@ -573,8 +575,9 @@ def handle_goals_progress_command(args):
                 print(f"   Goal ID: {goal_id}")
         
         goal_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Get goal progress", getattr(args, 'verbose', False))
 
@@ -761,8 +764,9 @@ def handle_goals_list_command(args):
                 print(f"   Created: {created_date}")
         
         goal_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "List goals", getattr(args, 'verbose', False))
 
@@ -844,8 +848,9 @@ def handle_goals_get_subtasks_command(args):
                 print(f"❌ {result.get('message', 'Error retrieving subtasks')}")
         
         task_repo.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Get subtasks", getattr(args, 'verbose', False))
 
@@ -956,7 +961,8 @@ def handle_sessions_resume_command(args):
                     print(f"   Cascades: {session['total_cascades']}")
         
         db.close()
-        return result
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Resume sessions", getattr(args, 'verbose', False))

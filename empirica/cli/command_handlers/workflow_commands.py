@@ -822,27 +822,10 @@ def handle_postflight_submit_command(args):
                 }
             )
 
-            # AUTO-CHECKPOINT: Create git checkpoint after POSTFLIGHT (wired in, not optional)
-            # This ensures learning is always preserved for next AI session
-            try:
-                import subprocess
-                subprocess.run(
-                    [
-                        "empirica", "checkpoint-create",
-                        "--session-id", session_id,
-                        "--phase", "POSTFLIGHT",
-                        "--metadata", json.dumps({
-                            "auto_checkpoint": True,
-                            "learning_delta": deltas,
-                            "calibration": calibration_accuracy
-                        })
-                    ],
-                    capture_output=True,
-                    timeout=10
-                )
-            except Exception as e:
-                # Auto-checkpoint failure is not fatal, but log it
-                logger.warning(f"Auto-checkpoint after POSTFLIGHT failed (non-fatal): {e}")
+            # NOTE: Removed auto-checkpoint after POSTFLIGHT
+            # POSTFLIGHT already writes to all 3 storage layers (SQLite + Git Notes + JSON)
+            # Creating an additional checkpoint was creating duplicate entries with default values
+            # The GitEnhancedReflexLogger.add_checkpoint() call above is sufficient
 
             # EPISTEMIC TRAJECTORY STORAGE: Store learning deltas to Qdrant (if available)
             trajectory_stored = False
