@@ -1,0 +1,10 @@
+{
+  "subtask_id": "292d4173-9fa0-4d21-994b-2a000aad69e8",
+  "goal_id": "661ab101-3688-4fb4-967c-820b330f0422",
+  "description": "Test git note creation",
+  "epistemic_importance": "high",
+  "completed_timestamp": 1766875538.0507295,
+  "completion_evidence": "commit:6bdd7c0471e28456bfb3f94aebd0e6855ec181b3",
+  "actual_tokens": null,
+  "estimated_tokens": 500
+}
