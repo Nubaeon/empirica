@@ -515,27 +515,34 @@ def handle_memory_compact_command(args):
             logger.info("Creating pre-compact checkpoint...")
 
             # Get latest epistemic vectors from session
-            latest_vectors = db.get_latest_vectors(session_id)
+            latest_vectors_result = db.get_latest_vectors(session_id)
 
-            if latest_vectors:
+            if latest_vectors_result:
                 from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
 
-                reflex_logger = GitEnhancedReflexLogger(session_id=session_id)
-                checkpoint_id = reflex_logger.add_checkpoint(
-                    phase="PRE_MEMORY_COMPACT",
-                    round_num=1,
-                    vectors=latest_vectors,
-                    metadata={"reasoning": "Pre-compact epistemic state snapshot for continuity measurement"},
-                    epistemic_tags={"memory_compact": True, "pre_compact": True}
-                )
+                # Extract just the vectors dict (get_latest_vectors returns full result structure)
+                vectors_only = latest_vectors_result.get('vectors', {})
+                
+                if vectors_only:
+                    reflex_logger = GitEnhancedReflexLogger(session_id=session_id)
+                    checkpoint_id = reflex_logger.add_checkpoint(
+                        phase="PRE_MEMORY_COMPACT",
+                        round_num=1,
+                        vectors=vectors_only,
+                        metadata={"reasoning": "Pre-compact epistemic state snapshot for continuity measurement"},
+                        epistemic_tags={"memory_compact": True, "pre_compact": True}
+                    )
 
-                output["pre_compact_checkpoint"] = {
-                    "checkpoint_id": checkpoint_id,
-                    "vectors": latest_vectors,
-                    "timestamp": datetime.now().isoformat()
-                }
+                    output["pre_compact_checkpoint"] = {
+                        "checkpoint_id": checkpoint_id,
+                        "vectors": vectors_only,
+                        "timestamp": datetime.now().isoformat()
+                    }
 
-                logger.info(f"Pre-compact checkpoint created: {checkpoint_id[:8]}")
+                    logger.info(f"Pre-compact checkpoint created: {checkpoint_id[:8]}")
+                else:
+                    logger.warning("No epistemic vectors in result - skipping checkpoint")
+                    output["pre_compact_checkpoint"] = None
             else:
                 logger.warning("No epistemic vectors found - skipping checkpoint")
                 output["pre_compact_checkpoint"] = None

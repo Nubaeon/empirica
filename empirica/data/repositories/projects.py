@@ -283,12 +283,14 @@ class ProjectRepository(BaseRepository):
         This loads the most recent session's POSTFLIGHT checkpoint for the given AI ID,
         enabling epistemic continuity across session boundaries.
         
+        Includes delta calculation: Shows what changed from PREFLIGHT → POSTFLIGHT.
+        
         Args:
             project_id: Project UUID
             ai_id: AI identifier (e.g., 'claude-code')
             
         Returns:
-            Dictionary with epistemic vectors and reasoning, or None if no checkpoint exists
+            Dictionary with epistemic vectors, deltas, and reasoning, or None if no checkpoint exists
         """
         cursor = self._execute("""
             SELECT r.* FROM reflexes r
@@ -298,49 +300,99 @@ class ProjectRepository(BaseRepository):
             LIMIT 1
         """, (project_id, ai_id))
         
-        row = cursor.fetchone()
-        if not row:
+        postflight = cursor.fetchone()
+        if not postflight:
             return None
         
-        # Convert to dict and reconstruct vector state
-        checkpoint = dict(row)
+        # Convert to dict
+        postflight_dict = dict(postflight)
+        session_id = postflight_dict.get('session_id')
         
-        # Build epistemic vectors dict from columns
+        # Try to find corresponding PREFLIGHT to calculate deltas
+        cursor = self._execute("""
+            SELECT r.* FROM reflexes r
+            WHERE r.session_id = ? AND r.phase = 'PREFLIGHT'
+            ORDER BY r.timestamp ASC
+            LIMIT 1
+        """, (session_id,))
+        
+        preflight = cursor.fetchone()
+        preflight_dict = dict(preflight) if preflight else None
+        
+        # Build epistemic vectors dict from POSTFLIGHT
         vectors = {
-            'engagement': checkpoint.get('engagement'),
+            'engagement': postflight_dict.get('engagement'),
             'foundation': {
-                'know': checkpoint.get('know'),
-                'do': checkpoint.get('do'),
-                'context': checkpoint.get('context')
+                'know': postflight_dict.get('know'),
+                'do': postflight_dict.get('do'),
+                'context': postflight_dict.get('context')
             },
             'comprehension': {
-                'clarity': checkpoint.get('clarity'),
-                'coherence': checkpoint.get('coherence'),
-                'signal': checkpoint.get('signal'),
-                'density': checkpoint.get('density')
+                'clarity': postflight_dict.get('clarity'),
+                'coherence': postflight_dict.get('coherence'),
+                'signal': postflight_dict.get('signal'),
+                'density': postflight_dict.get('density')
             },
             'execution': {
-                'state': checkpoint.get('state'),
-                'change': checkpoint.get('change'),
-                'completion': checkpoint.get('completion'),
-                'impact': checkpoint.get('impact')
+                'state': postflight_dict.get('state'),
+                'change': postflight_dict.get('change'),
+                'completion': postflight_dict.get('completion'),
+                'impact': postflight_dict.get('impact')
             },
-            'uncertainty': checkpoint.get('uncertainty')
+            'uncertainty': postflight_dict.get('uncertainty')
         }
         
         # Remove None values
         vectors = {k: v for k, v in vectors.items() if v is not None}
         
-        return {
-            'checkpoint_id': checkpoint.get('id'),
-            'session_id': checkpoint.get('session_id'),
+        # Calculate deltas if PREFLIGHT exists
+        deltas = None
+        if preflight_dict:
+            deltas = {
+                'engagement': self._calculate_delta(preflight_dict.get('engagement'), postflight_dict.get('engagement')),
+                'foundation': {
+                    'know': self._calculate_delta(preflight_dict.get('know'), postflight_dict.get('know')),
+                    'do': self._calculate_delta(preflight_dict.get('do'), postflight_dict.get('do')),
+                    'context': self._calculate_delta(preflight_dict.get('context'), postflight_dict.get('context'))
+                },
+                'comprehension': {
+                    'clarity': self._calculate_delta(preflight_dict.get('clarity'), postflight_dict.get('clarity')),
+                    'coherence': self._calculate_delta(preflight_dict.get('coherence'), postflight_dict.get('coherence')),
+                    'signal': self._calculate_delta(preflight_dict.get('signal'), postflight_dict.get('signal')),
+                    'density': self._calculate_delta(preflight_dict.get('density'), postflight_dict.get('density'))
+                },
+                'execution': {
+                    'state': self._calculate_delta(preflight_dict.get('state'), postflight_dict.get('state')),
+                    'change': self._calculate_delta(preflight_dict.get('change'), postflight_dict.get('change')),
+                    'completion': self._calculate_delta(preflight_dict.get('completion'), postflight_dict.get('completion')),
+                    'impact': self._calculate_delta(preflight_dict.get('impact'), postflight_dict.get('impact'))
+                },
+                'uncertainty': self._calculate_delta(preflight_dict.get('uncertainty'), postflight_dict.get('uncertainty'))
+            }
+            # Remove None deltas
+            deltas = {k: v for k, v in deltas.items() if v is not None}
+        
+        result = {
+            'checkpoint_id': postflight_dict.get('id'),
+            'session_id': session_id,
             'ai_id': ai_id,
             'phase': 'POSTFLIGHT',
             'vectors': vectors,
-            'reasoning': checkpoint.get('reasoning'),
-            'evidence': checkpoint.get('evidence'),
-            'timestamp': checkpoint.get('timestamp')
+            'reasoning': postflight_dict.get('reasoning'),
+            'evidence': postflight_dict.get('evidence'),
+            'timestamp': postflight_dict.get('timestamp')
         }
+        
+        if deltas:
+            result['deltas'] = deltas
+        
+        return result
+    
+    def _calculate_delta(self, before: Optional[float], after: Optional[float]) -> Optional[float]:
+        """Calculate change from before to after, returning None if either is None"""
+        if before is None or after is None:
+            return None
+        return round(after - before, 3)
 
     # Note: bootstrap_project_breadcrumbs is kept in SessionDatabase facade
     # due to complex cross-repository dependencies (breadcrumbs, goals, handoffs)

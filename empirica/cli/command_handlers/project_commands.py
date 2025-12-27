@@ -241,6 +241,7 @@ def handle_project_bootstrap_command(args):
         fresh_assess = getattr(args, 'fresh_assess', False)
         trigger = getattr(args, 'trigger', None)
         depth = getattr(args, 'depth', 'auto')
+        ai_id = getattr(args, 'ai_id', None)  # Get AI ID for epistemic handoff
 
         breadcrumbs = db.bootstrap_project_breadcrumbs(
             project_id,
@@ -253,7 +254,8 @@ def handle_project_bootstrap_command(args):
             include_live_state=include_live_state,
             fresh_assess=fresh_assess,
             trigger=trigger,
-            depth=depth
+            depth=depth,
+            ai_id=ai_id  # Pass AI ID to bootstrap
         )
 
         # Optional: Detect memory gaps if session-id provided
@@ -384,6 +386,47 @@ def handle_project_bootstrap_command(args):
             print(f"   {last['summary']}")
             print(f"   Next focus: {last['next_focus']}")
             print()
+            
+            # ===== AI EPISTEMIC HANDOFF =====
+            if breadcrumbs.get('ai_epistemic_handoff'):
+                handoff = breadcrumbs['ai_epistemic_handoff']
+                print(f"🧠 Epistemic Handoff (from {handoff.get('ai_id', 'unknown')}):")
+                vectors = handoff.get('vectors', {})
+                deltas = handoff.get('deltas', {})
+                
+                if vectors:
+                    print(f"   State (POSTFLIGHT):")
+                    print(f"      Engagement: {vectors.get('engagement', 'N/A'):.2f}", end='')
+                    if 'engagement' in deltas:
+                        delta = deltas['engagement']
+                        arrow = "↑" if delta > 0 else "↓" if delta < 0 else "→"
+                        print(f" {arrow} {delta:+.2f}", end='')
+                    print()
+                    
+                    if 'foundation' in vectors:
+                        f = vectors['foundation']
+                        d = deltas.get('foundation', {})
+                        print(f"      Foundation: know={f.get('know', 'N/A'):.2f}", end='')
+                        if 'know' in d:
+                            print(f" {d['know']:+.2f}", end='')
+                        print(f", do={f.get('do', 'N/A'):.2f}", end='')
+                        if 'do' in d:
+                            print(f" {d['do']:+.2f}", end='')
+                        print(f", context={f.get('context', 'N/A'):.2f}", end='')
+                        if 'context' in d:
+                            print(f" {d['context']:+.2f}", end='')
+                        print()
+                    
+                    print(f"      Uncertainty: {vectors.get('uncertainty', 'N/A'):.2f}", end='')
+                    if 'uncertainty' in deltas:
+                        delta = deltas['uncertainty']
+                        arrow = "↓" if delta < 0 else "↑" if delta > 0 else "→"  # Lower is better
+                        print(f" {arrow} {delta:+.2f}", end='')
+                    print()
+                
+                if handoff.get('reasoning'):
+                    print(f"   Learning: {handoff['reasoning'][:80]}...")
+                print()
             
             if breadcrumbs.get('findings'):
                 print(f"📝 Recent Findings (last 10):")
