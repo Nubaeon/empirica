@@ -770,7 +770,123 @@ class SessionDatabase:
     def get_session_summary(self, session_id: str, detail_level: str = "summary") -> Optional[Dict]:
         """Generate session summary (delegates to SessionRepository)"""
         return self.sessions.get_session_summary(session_id, detail_level)
-    
+
+    def calculate_flow_metrics(self, project_id: str, limit: int = 5) -> Dict:
+        """
+        Calculate flow state metrics for recent sessions in a project.
+
+        Flow state = optimal AI productivity characterized by:
+        - High engagement + capability (know/do)
+        - Clear goals + low uncertainty
+        - Meaningful progress (completion/impact)
+
+        Args:
+            project_id: Project UUID
+            limit: Number of recent sessions to analyze (default: 5)
+
+        Returns:
+            Dict with flow scores, trend, blockers, and triggers
+        """
+        from .flow_state_calculator import (
+            calculate_flow_score,
+            classify_flow_state,
+            calculate_flow_trend,
+            identify_flow_blockers,
+            check_flow_triggers
+        )
+
+        # Get recent sessions with POSTFLIGHT vectors
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT
+                s.session_id,
+                s.ai_id,
+                s.start_time,
+                r.engagement, r.know, r.do, r.context,
+                r.clarity, r.coherence, r.signal, r.density,
+                r.state, r.change, r.completion, r.impact, r.uncertainty
+            FROM sessions s
+            JOIN reflexes r ON s.session_id = r.session_id
+            WHERE s.project_id = ?
+            AND r.phase = 'POSTFLIGHT'
+            ORDER BY r.timestamp DESC
+            LIMIT ?
+        """, (project_id, limit))
+
+        rows = cursor.fetchall()
+
+        if not rows:
+            return {
+                'flow_scores': [],
+                'current_flow': None,
+                'trend': None,
+                'blockers': [],
+                'triggers_present': {}
+            }
+
+        # Calculate flow score for each session
+        flow_data = []
+        for row in rows:
+            session_id = row[0]
+            ai_id = row[1]
+            start_time = row[2]
+
+            # Build vectors dict from columns
+            vectors = {
+                'engagement': row[3],
+                'know': row[4],
+                'do': row[5],
+                'context': row[6],
+                'clarity': row[7],
+                'coherence': row[8],
+                'signal': row[9],
+                'density': row[10],
+                'state': row[11],
+                'change': row[12],
+                'completion': row[13],
+                'impact': row[14],
+                'uncertainty': row[15]
+            }
+
+            # Calculate flow score
+            flow_score = calculate_flow_score(vectors)
+            state_name, emoji = classify_flow_state(flow_score)
+
+            flow_data.append({
+                'session_id': session_id,
+                'ai_id': ai_id,
+                'start_time': start_time,
+                'flow_score': flow_score,
+                'flow_state': state_name,
+                'emoji': emoji,
+                'vectors': vectors
+            })
+
+        # Get latest (most recent) session data
+        latest = flow_data[0] if flow_data else None
+
+        # Calculate trend
+        flow_scores = [f['flow_score'] for f in reversed(flow_data)]  # Oldest to newest
+        trend_desc, trend_emoji = calculate_flow_trend(flow_scores) if len(flow_scores) >= 2 else ("Not enough data", "")
+
+        # Identify blockers from latest session
+        blockers = identify_flow_blockers(latest['vectors']) if latest else []
+
+        # Check flow triggers
+        triggers_present = check_flow_triggers(latest['vectors']) if latest else {}
+
+        return {
+            'flow_scores': flow_data,
+            'current_flow': latest,
+            'average_flow': round(sum(flow_scores) / len(flow_scores), 1) if flow_scores else 0.0,
+            'trend': {
+                'description': trend_desc,
+                'emoji': trend_emoji
+            },
+            'blockers': blockers,
+            'triggers_present': triggers_present
+        }
+
     def get_git_checkpoint(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict]:
         """
         Retrieve checkpoint from git notes with SQLite fallback (Phase 2).
@@ -1590,6 +1706,15 @@ class SessionDatabase:
         # 9. Apply adaptive depth filtering if needed
         if depth != "auto" or trigger == "post_compact":
             breadcrumbs = self._apply_depth_filter(breadcrumbs, depth, trigger)
+
+        # 10. Calculate flow state metrics (AI productivity patterns)
+        try:
+            flow_metrics = self.calculate_flow_metrics(resolved_id, limit=5)
+            if flow_metrics and flow_metrics.get('current_flow'):
+                breadcrumbs['flow_metrics'] = flow_metrics
+        except Exception as e:
+            logger.debug(f"Flow metrics calculation skipped: {e}")
+            # Flow metrics are optional - don't fail bootstrap if calculation errors
 
         return breadcrumbs
 

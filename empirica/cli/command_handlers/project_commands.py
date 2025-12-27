@@ -427,7 +427,41 @@ def handle_project_bootstrap_command(args):
                 if handoff.get('reasoning'):
                     print(f"   Learning: {handoff['reasoning'][:80]}...")
                 print()
-            
+
+            # ===== FLOW STATE METRICS =====
+            if breadcrumbs.get('flow_metrics'):
+                flow = breadcrumbs['flow_metrics']
+                current = flow.get('current_flow')
+
+                if current:
+                    print(f"⚡ Flow State (AI Productivity):")
+                    print(f"   Current: {current['emoji']} {current['flow_state']} ({current['flow_score']}/100)")
+
+                    # Show trend if available
+                    trend = flow.get('trend', {})
+                    if trend.get('emoji'):
+                        print(f"   Trend: {trend['emoji']} {trend['description']}")
+
+                    # Show average
+                    avg = flow.get('average_flow', 0)
+                    print(f"   Average (last 5): {avg}/100")
+
+                    # Show blockers if any
+                    blockers = flow.get('blockers', [])
+                    if blockers:
+                        print(f"   ⚠️  Blockers:")
+                        for blocker in blockers[:3]:
+                            print(f"      • {blocker}")
+
+                    # Show flow triggers status
+                    triggers = flow.get('triggers_present', {})
+                    if triggers:
+                        active_triggers = [name for name, present in triggers.items() if present]
+                        if active_triggers:
+                            print(f"   ✓ Active triggers: {', '.join(active_triggers)}")
+
+                    print()
+
             if breadcrumbs.get('findings'):
                 print(f"📝 Recent Findings (last 10):")
                 for i, f in enumerate(breadcrumbs['findings'][:10], 1):
