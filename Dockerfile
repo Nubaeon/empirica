@@ -24,7 +24,8 @@ COPY dist/empirica-1.1.0-py3-none-any.whl /tmp/
 
 # Install Empirica
 RUN pip install --no-cache-dir /tmp/empirica-1.1.0-py3-none-any.whl \
-    && rm /tmp/empirica-1.1.0-py3-none-any.whl
+    && rm /tmp/empirica-1.1.0-py3-none-any.whl \
+    && pip install --upgrade pip
 
 # Create directory for user data
 RUN mkdir -p /data/.empirica
