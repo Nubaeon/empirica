@@ -1,0 +1,32 @@
+{
+  "goal_id": "3ef0c0c0-cb9d-4f03-9cf4-33beac257c37",
+  "session_id": "d1d4263a-ab7c-4ca5-8fb0-99369ca27073",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-28T17:47:21.708862+00:00",
+  "goal_data": {
+    "objective": "Test full Empirica workflow integration",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.3,
+      "coordination": 0.4
+    },
+    "success_criteria": [
+      "CASCADE phases complete (PREFLIGHT, CHECK, POSTFLIGHT)",
+      "Goals and subtasks tracked",
+      "Breadcrumbs logged (findings, unknowns, dead ends)",
+      "BEADS integration working (branch created)",
+      "MCP tools validated"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-28T17:47:21.708875+00:00",
+      "action": "created"
+    }
+  ]
+}
