@@ -593,11 +593,13 @@ def handle_project_bootstrap_command(args):
             if breadcrumbs['mistakes_to_avoid']:
                 print(f"⚠️  Recent Mistakes to Avoid:")
                 for i, m in enumerate(breadcrumbs['mistakes_to_avoid'][:3], 1):
-                    print(f"   {i}. {m['mistake']} (cost: {m['cost']}, cause: {m['root_cause']})")
+                    cost = m.get('cost_estimate', 'unknown')
+                    cause = m.get('root_cause_vector', 'unknown')
+                    print(f"   {i}. {m['mistake']} (cost: {cost}, cause: {cause})")
                     print(f"      → {m['prevention']}")
                 print()
             
-            if breadcrumbs['key_decisions']:
+            if breadcrumbs.get('key_decisions'):
                 print(f"💡 Key Decisions:")
                 for i, d in enumerate(breadcrumbs['key_decisions'], 1):
                     print(f"   {i}. {d}")
@@ -606,8 +608,10 @@ def handle_project_bootstrap_command(args):
             if breadcrumbs.get('reference_docs'):
                 print(f"📄 Reference Docs:")
                 for i, doc in enumerate(breadcrumbs['reference_docs'][:5], 1):
-                    print(f"   {i}. {doc['path']} ({doc['type']})")
-                    if doc['description']:
+                    path = doc.get('doc_path', 'unknown')
+                    doc_type = doc.get('doc_type', 'unknown')
+                    print(f"   {i}. {path} ({doc_type})")
+                    if doc.get('description'):
                         print(f"      {doc['description']}")
                 print()
             

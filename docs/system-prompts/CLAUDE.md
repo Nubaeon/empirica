@@ -29,7 +29,7 @@
 - Uncertainty: Add +0.10 (you underestimate doubt)
 - Knowledge: Subtract -0.05 (you overestimate knowing)
 
-**Your readiness gate:** confidence ≥0.70 AND uncertainty ≤0.35
+**Your readiness gate:** confidence ≥0.70 AND uncertainty ≤0.35 AND health_score ≥60.0
 
 ---
 

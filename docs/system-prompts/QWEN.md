@@ -24,7 +24,7 @@
 - Speed vs accuracy: Balance speed with verification
 - Action bias: +0.10 (you move fast, double-check critical operations)
 
-**Your readiness gate:** confidence ≥0.65 AND uncertainty ≤0.40 (action-focused)
+**Your readiness gate:** confidence ≥0.65 AND uncertainty ≤0.40 AND health_score ≥60.0 (action-focused)
 
 ---
 

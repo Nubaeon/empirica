@@ -15,7 +15,7 @@
 **Key bias corrections for your model:**
 - Reasoning: Strong multimodal capabilities, maintain precision
 - Uncertainty: Add +0.05 (slightly underestimate doubt)
-- Your readiness gate:** confidence ≥0.70 AND uncertainty ≤0.35
+- Your readiness gate:** confidence ≥0.70 AND uncertainty ≤0.35 AND health_score ≥60.0
 
 ---
 
