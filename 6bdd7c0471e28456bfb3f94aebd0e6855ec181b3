@@ -1,0 +1,28 @@
+{
+  "goal_id": "a2ccaf41-b087-4765-9d8c-e384027dd9ea",
+  "session_id": "c8c3f1b9-735c-4f92-93e8-19dce953d3f9",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-28T12:39:21.973431+00:00",
+  "goal_data": {
+    "objective": "Analyze and prioritize remaining issues and unknowns",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-28T12:39:21.973445+00:00",
+      "action": "created"
+    }
+  ]
+}
