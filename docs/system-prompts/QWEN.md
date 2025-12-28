@@ -194,6 +194,11 @@ EOF
 echo "$(cat /tmp/goal.json)" | empirica goals-create -
 # Output: {"ok": true, "goal_id": "uuid", ...}
 
+# BEADS Integration: Link to issue tracker for epistemic filtering
+empirica goals-create --use-beads --objective "Fix bug X"
+# Creates: Empirica goal + BEADS issue + links them
+# Then use: empirica goals-ready --output json (epistemic + dependency filtering)
+
 # Add subtasks (uses CLI flags - simpler than JSON)
 empirica goals-add-subtask --goal-id <GOAL_ID> --description "Map API endpoints" --importance high
 empirica goals-add-subtask --goal-id <GOAL_ID> --description "Write tests" --importance medium
