@@ -39,6 +39,12 @@ try:
     import git
     GitRepo = git.Repo
     GitCommandError = git.GitCommandError
+    GIT_PYTHON_AVAILABLE = True
+except ImportError:
+    # GitPython not installed - use fallback
+    GitRepo = None
+    GitCommandError = Exception
+    GIT_PYTHON_AVAILABLE = False
 finally:
     # Restore empirica.core.git if it was there
     if _empirica_git_module is not None:
@@ -94,7 +100,11 @@ class SignedGitOperations:
 
         Raises:
             git.InvalidGitRepositoryError: If path is not a git repo
+            ImportError: If GitPython not installed
         """
+        if not GIT_PYTHON_AVAILABLE:
+            raise ImportError("GitPython not installed - git operations unavailable. Install with: pip install gitpython")
+
         self.repo = GitRepo(repo_path)
         self.git = self.repo.git
 
@@ -167,8 +177,12 @@ class SignedGitOperations:
             author_name = persona_info["persona_id"]
             author_email = f"{persona_info['persona_id']}@empirica.local"
 
-            # Create signed commit
-            commit_message = f"[{phase}] {message}\n\nPersona: {persona_info['name']}\nVersion: {persona_info['version']}"
+            # Extract impact and completion for commit message tag
+            impact = epistemic_state.get('impact', 0.5)
+            completion = epistemic_state.get('completion', 0.0)
+
+            # Create signed commit with epistemic tags
+            commit_message = f"[{phase}] {message} [impact={impact:.2f}, completion={completion:.2f}]\n\nPersona: {persona_info['name']}\nVersion: {persona_info['version']}"
 
             self.repo.index.commit(
                 commit_message,

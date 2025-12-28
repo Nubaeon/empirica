@@ -29,8 +29,8 @@ def handle_goals_claim_command(args):
         
         # Validate goal exists
         goal_repo = GoalRepository()
-        goal = goal_repo.get_by_id(goal_id)
-        
+        goal = goal_repo.get_goal(goal_id)
+
         if not goal:
             result = {
                 "ok": False,
@@ -38,12 +38,28 @@ def handle_goals_claim_command(args):
             }
             print(json.dumps(result) if output_format == 'json' else f"❌ {result['error']}")
             sys.exit(1)
-        
-        # Get session info
+
+        # Get session_id from the database (not stored in the Goal object itself)
         db = SessionDatabase()
         cursor = db.conn.execute(
+            "SELECT session_id FROM goals WHERE id = ?",
+            (goal_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            result = {
+                "ok": False,
+                "error": f"Goal session not found in database: {goal_id}"
+            }
+            print(json.dumps(result) if output_format == 'json' else f"❌ {result['error']}")
+            db.close()
+            sys.exit(1)
+        session_id = row[0]
+
+        # Get AI ID from session
+        cursor = db.conn.execute(
             "SELECT ai_id FROM sessions WHERE session_id = ?",
-            (goal.session_id,)
+            (session_id,)
         )
         row = cursor.fetchone()
         ai_id = row[0] if row else "unknown"
@@ -60,7 +76,7 @@ def handle_goals_claim_command(args):
         result = {
             "ok": True,
             "goal_id": goal_id,
-            "session_id": goal.session_id,
+            "session_id": session_id,
             "beads_issue_id": beads_issue_id
         }
         
@@ -120,7 +136,7 @@ def handle_goals_claim_command(args):
                         goal_id=goal_id,
                         beads_issue_id=beads_issue_id,
                         ai_id=ai_id,
-                        session_id=goal.session_id
+                        session_id=session_id
                     )
                     result["branch_mapping_saved"] = True
                 except Exception as e:

@@ -25,7 +25,7 @@ from empirica.core.persona.persona_profile import (
 )
 from empirica.core.identity.ai_identity import AIIdentity, IdentityManager
 from empirica.core.persona.signing_persona import SigningPersona
-from empirica.core.git.signed_operations import SignedGitOperations
+from empirica.core.git_ops.signed_operations import SignedGitOperations
 from empirica.core.qdrant.persona_registry import PersonaRegistry
 
 

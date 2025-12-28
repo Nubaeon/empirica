@@ -8,7 +8,6 @@ Tests verify that the NEW schema works correctly with real components
 import pytest
 import asyncio
 from empirica.core.metacognitive_cascade.metacognitive_cascade import CanonicalEpistemicCascade, CascadePhase
-from empirica.core.canonical.canonical_epistemic_assessment import CanonicalEpistemicAssessor
 from empirica.core.persona.harness.persona_harness import PersonaHarness
 from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema, CascadePhase as NewCascadePhase
 from empirica.core.schemas.assessment_converters import convert_old_to_new, convert_new_to_old

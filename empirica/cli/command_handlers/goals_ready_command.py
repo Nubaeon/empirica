@@ -7,6 +7,7 @@ Returns tasks that are both dependency-ready AND epistemically-ready.
 
 import json
 import logging
+import sys
 from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -23,15 +24,44 @@ def handle_goals_ready_command(args):
         from empirica.integrations.beads import BeadsAdapter
         from empirica.data.session_database import SessionDatabase
         
-        session_id = args.session_id
+        # Session ID is optional - auto-detect active session if not provided
+        session_id = getattr(args, 'session_id', None)
         min_confidence = getattr(args, 'min_confidence', 0.7)
         max_uncertainty = getattr(args, 'max_uncertainty', 0.3)
         min_priority = getattr(args, 'min_priority', None)
         output_format = getattr(args, 'output', 'json')
-        
+
         # Initialize adapters
         beads = BeadsAdapter()
         db = SessionDatabase()
+
+        # Auto-detect active session if not provided
+        if not session_id:
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT session_id FROM sessions
+                WHERE end_time IS NULL
+                ORDER BY start_time DESC
+                LIMIT 1
+            """)
+            row = cursor.fetchone()
+            if row:
+                session_id = row['session_id']
+                if getattr(args, 'verbose', False):
+                    print(f"📍 Auto-detected active session: {session_id[:8]}...", file=sys.stderr)
+            else:
+                result = {
+                    "ok": False,
+                    "error": "No active session found",
+                    "hint": "Create a session: empirica session-create --ai-id <YOUR_AI_ID>"
+                }
+                if output_format == 'json':
+                    print(json.dumps(result, indent=2))
+                else:
+                    print("❌ No active session found")
+                    print("   Hint: Create a session: empirica session-create --ai-id <YOUR_AI_ID>")
+                db.close()
+                return 0
         
         ready_work = []
         
@@ -51,7 +81,8 @@ def handle_goals_ready_command(args):
                 print("   Hint: Install bd CLI: curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash")
             
             db.close()
-            return result
+            # Return 0 to indicate success
+            return 0
         
         # Query BEADS for ready work
         beads_ready = beads.get_ready_work(limit=50, priority=min_priority)
@@ -69,7 +100,8 @@ def handle_goals_ready_command(args):
                 print("📭 No ready work found")
             
             db.close()
-            return result
+            # Return 0 to indicate success
+            return 0
         
         # Map BEADS issues to Empirica goals
         for beads_issue in beads_ready:
@@ -207,7 +239,8 @@ def handle_goals_ready_command(args):
                 print("   (Tasks may have BEADS blockers cleared but epistemic confidence too low)")
         
         db.close()
-        return result
+        print(json.dumps(result, indent=2))
+        return 0
         
     except Exception as e:
         logger.error(f"goals-ready error: {e}", exc_info=True)
@@ -216,4 +249,4 @@ def handle_goals_ready_command(args):
             "error": str(e)
         }
         print(json.dumps(result, indent=2))
-        return result
+        return 1

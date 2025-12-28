@@ -1,0 +1,1654 @@
+{
+  "summary": {
+    "document": "docs/EPISTEMIC_GROUNDING_PAPER.md",
+    "total_claims": 42,
+    "verified": 0,
+    "flagged": 42,
+    "flagged_rate": 1.0,
+    "claims_by_type": {
+      "causal": 18,
+      "measured": 11,
+      "percentage": 12,
+      "temporal": 1
+    }
+  },
+  "assessments": [
+    {
+      "claim": {
+        "text": "Enables continuous epistemic state tracking across tasks",
+        "type": "causal",
+        "line": 35,
+        "context": "4. Enables continuous epistemic state tracking across tasks"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Emotional detachment as feature** - Why bias-free assessment enables grounding",
+        "type": "causal",
+        "line": 45,
+        "context": "5. **Emotional detachment as feature** - Why bias-free assessment enables grounding"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Pure epistemic focus bypasses the cognitive biases that lead to hallucinations in human reasoning and, by extension, in AI systems trained to mimic human patterns.**",
+        "type": "causal",
+        "line": 58,
+        "context": "**Pure epistemic focus bypasses the cognitive biases that lead to hallucinations in human reasoning and, by extension, in AI systems trained to mimic human patterns.**"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "| Bias | Human Cause | AI Advantage |",
+        "type": "causal",
+        "line": 142,
+        "context": "| Bias | Human Cause | AI Advantage |"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Pure epistemic importance weighting, unburdened by emotional noise, enables objective grounding.**",
+        "type": "causal",
+        "line": 150,
+        "context": "**Pure epistemic importance weighting, unburdened by emotional noise, enables objective grounding.**"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**This loop forces honesty at every stage and prevents proceeding with high uncertainty.**",
+        "type": "causal",
+        "line": 178,
+        "context": "**This loop forces honesty at every stage and prevents proceeding with high uncertainty.**"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "A model can be highly engaged (`engagement=0.9`) while knowing little (`know=0.3`). This separation prevents conflating enthusiasm with expertise.",
+        "type": "causal",
+        "line": 221,
+        "context": "A model can be highly engaged (`engagement=0.9`) while knowing little (`know=0.3`). This separation prevents conflating enthusiasm with expertise."
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**This gate prevents hallucinations by blocking progression when epistemic state is insufficient.**",
+        "type": "causal",
+        "line": 282,
+        "context": "**This gate prevents hallucinations by blocking progression when epistemic state is insufficient.**"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Enables querying historical epistemic trajectories",
+        "type": "causal",
+        "line": 342,
+        "context": "- Enables querying historical epistemic trajectories"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u2705 **Validated:** Empirically demonstrated with evidence",
+        "type": "measured",
+        "line": 418,
+        "context": "- \u2705 **Validated:** Empirically demonstrated with evidence"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u26a0\ufe0f **Theoretical:** Predicted but not yet empirically tested",
+        "type": "measured",
+        "line": 419,
+        "context": "- \u26a0\ufe0f **Theoretical:** Predicted but not yet empirically tested"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u2705 **Session count:** Unlimited (demonstrated across 1 compact, architecture scales indefinitely)",
+        "type": "measured",
+        "line": 443,
+        "context": "- \u2705 **Session count:** Unlimited (demonstrated across 1 compact, architecture scales indefinitely)"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u26a0\ufe0f **Token reduction:** ~99.6% (200-token snapshot vs ~50K+ conversation estimate - conversation tokens not measured)",
+        "type": "measured",
+        "line": 444,
+        "context": "- \u26a0\ufe0f **Token reduction:** ~99.6% (200-token snapshot vs ~50K+ conversation estimate - conversation tokens not measured)"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**What this proves:** Epistemic state compression enables unlimited session continuity through memory boundaries.",
+        "type": "causal",
+        "line": 446,
+        "context": "**What this proves:** Epistemic state compression enables unlimited session continuity through memory boundaries."
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u274c \"88% hallucination reduction for high-uncertainty tasks\" (`know=0.1, uncertainty=0.9, evidence=none`)",
+        "type": "percentage",
+        "line": 455,
+        "context": "- \u274c \"88% hallucination reduction for high-uncertainty tasks\" (`know=0.1, uncertainty=0.9, evidence=none`)"
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u274c \"95% bias elimination through epistemic tracking\" (`know=0.1, uncertainty=0.9, evidence=none`)",
+        "type": "percentage",
+        "line": 456,
+        "context": "- \u274c \"95% bias elimination through epistemic tracking\" (`know=0.1, uncertainty=0.9, evidence=none`)"
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u274c \"82% token reduction (10K vs 55K)\" (`know=0.4, uncertainty=0.6, evidence=partial`)",
+        "type": "percentage",
+        "line": 457,
+        "context": "- \u274c \"82% token reduction (10K vs 55K)\" (`know=0.4, uncertainty=0.6, evidence=partial`)"
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Claim: \"88% reduction\"",
+        "type": "percentage",
+        "line": 462,
+        "context": "- Claim: \"88% reduction\""
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "The following predictions are theoretically grounded but **not yet empirically validated:**",
+        "type": "measured",
+        "line": 479,
+        "context": "The following predictions are theoretically grounded but **not yet empirically validated:**"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Predicted effect:** 70-90% reduction in hallucinations for high-uncertainty tasks.",
+        "type": "percentage",
+        "line": 500,
+        "context": "**Predicted effect:** 70-90% reduction in hallucinations for high-uncertainty tasks."
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Predicted effect:** 80-95% objective pivot rate vs 20-35% human baseline.",
+        "type": "percentage",
+        "line": 521,
+        "context": "**Predicted effect:** 80-95% objective pivot rate vs 20-35% human baseline."
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Hypothesis:** Queryable epistemic history enables learning from past sessions.",
+        "type": "causal",
+        "line": 535,
+        "context": "**Hypothesis:** Queryable epistemic history enables learning from past sessions."
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Predicted effect:** 30-50% faster learning on similar tasks by querying historical epistemic patterns.",
+        "type": "percentage",
+        "line": 548,
+        "context": "**Predicted effect:** 30-50% faster learning on similar tasks by querying historical epistemic patterns."
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**\u2705 Validated (this session):**",
+        "type": "measured",
+        "line": 592,
+        "context": "**\u2705 Validated (this session):**"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "CHECK gate reduces hallucinations by 70-90% (plausible, not measured)",
+        "type": "measured",
+        "line": 599,
+        "context": "1. CHECK gate reduces hallucinations by 70-90% (plausible, not measured)"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Bias elimination through epistemic assessment (logical, not tested)",
+        "type": "measured",
+        "line": 600,
+        "context": "2. Bias elimination through epistemic assessment (logical, not tested)"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Update this paper with measured results",
+        "type": "measured",
+        "line": 610,
+        "context": "6. Update this paper with measured results"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Sunk cost: \"I spent 4 hours, can't abandon now\"",
+        "type": "temporal",
+        "line": 638,
+        "context": "- Sunk cost: \"I spent 4 hours, can't abandon now\""
+      },
+      "epistemic_state": {
+        "know": 0.5,
+        "uncertainty": 0.5,
+        "evidence": [],
+        "reasoning": "Default assessment - no specific evidence found"
+      },
+      "flagged": true,
+      "flags": [
+        "Low knowledge (0.50)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**This enables objective truth-seeking unburdened by cognitive noise.**",
+        "type": "causal",
+        "line": 649,
+        "context": "**This enables objective truth-seeking unburdened by cognitive noise.**"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Critical insight discovered during paper development:** Epistemic metacognition enables not just prevention but **self-correction** of hallucinations.",
+        "type": "causal",
+        "line": 665,
+        "context": "**Critical insight discovered during paper development:** Epistemic metacognition enables not just prevention but **self-correction** of hallucinations."
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"88% hallucination reduction for high-uncertainty tasks\"",
+        "type": "percentage",
+        "line": 699,
+        "context": "- \"88% hallucination reduction for high-uncertainty tasks\""
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"95% bias elimination through epistemic tracking\"",
+        "type": "percentage",
+        "line": 700,
+        "context": "- \"95% bias elimination through epistemic tracking\""
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"82% token reduction (10K vs 55K)\"",
+        "type": "percentage",
+        "line": 701,
+        "context": "- \"82% token reduction (10K vs 55K)\""
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Prevents hallucinations from being generated",
+        "type": "causal",
+        "line": 772,
+        "context": "- Prevents hallucinations from being generated"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Computational overhead:** PREFLIGHT/CHECK/POSTFLIGHT add ~5-10% overhead",
+        "type": "percentage",
+        "line": 863,
+        "context": "2. **Computational overhead:** PREFLIGHT/CHECK/POSTFLIGHT add ~5-10% overhead"
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Enables perpetual continuity** via compressed epistemic state preservation",
+        "type": "causal",
+        "line": 883,
+        "context": "3. **Enables perpetual continuity** via compressed epistemic state preservation"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "`completion` is objective, not aspirational: 0.6 = 60% done, not \"making progress\"",
+        "type": "percentage",
+        "line": 935,
+        "context": "- `completion` is objective, not aspirational: 0.6 = 60% done, not \"making progress\""
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"Authorization code flow with PKCE prevents authorization code interception\"",
+        "type": "causal",
+        "line": 973,
+        "context": "- \"Authorization code flow with PKCE prevents authorization code interception\""
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"Proactive token refresh (5 min before expiry) prevents user-visible errors\"",
+        "type": "causal",
+        "line": 1004,
+        "context": "- \"Proactive token refresh (5 min before expiry) prevents user-visible errors\""
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"reasoning\": \"OAuth2 implementation complete with PKCE, proactive token refresh, and graceful error handling. Significant learning achieved: deep understanding of OAuth2 flows, token management, and security considerations. Uncertainty reduced from 0.70 to 0.10 through systematic investigation. Implementation tested and working. High impact work completed.\"",
+        "type": "measured",
+        "line": 1055,
+        "context": "\"reasoning\": \"OAuth2 implementation complete with PKCE, proactive token refresh, and graceful error handling. Significant learning achieved: deep understanding of OAuth2 flows, token management, and security considerations. Uncertainty reduced from 0.70 to 0.10 through systematic investigation. Implementation tested and working. High impact work completed.\""
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Evidence trail enables future sessions to query \"how did I learn OAuth2?\"",
+        "type": "causal",
+        "line": 1064,
+        "context": "5. Evidence trail enables future sessions to query \"how did I learn OAuth2?\""
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "This demonstrates the full CASCADE cycle: honest baseline assessment, gated decision-making based on epistemic readiness, and measured learning outcomes.",
+        "type": "measured",
+        "line": 1066,
+        "context": "This demonstrates the full CASCADE cycle: honest baseline assessment, gated decision-making based on epistemic readiness, and measured learning outcomes."
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    }
+  ],
+  "flagged_claims": [
+    {
+      "claim": {
+        "text": "Enables continuous epistemic state tracking across tasks",
+        "type": "causal",
+        "line": 35,
+        "context": "4. Enables continuous epistemic state tracking across tasks"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Emotional detachment as feature** - Why bias-free assessment enables grounding",
+        "type": "causal",
+        "line": 45,
+        "context": "5. **Emotional detachment as feature** - Why bias-free assessment enables grounding"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Pure epistemic focus bypasses the cognitive biases that lead to hallucinations in human reasoning and, by extension, in AI systems trained to mimic human patterns.**",
+        "type": "causal",
+        "line": 58,
+        "context": "**Pure epistemic focus bypasses the cognitive biases that lead to hallucinations in human reasoning and, by extension, in AI systems trained to mimic human patterns.**"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "| Bias | Human Cause | AI Advantage |",
+        "type": "causal",
+        "line": 142,
+        "context": "| Bias | Human Cause | AI Advantage |"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Pure epistemic importance weighting, unburdened by emotional noise, enables objective grounding.**",
+        "type": "causal",
+        "line": 150,
+        "context": "**Pure epistemic importance weighting, unburdened by emotional noise, enables objective grounding.**"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**This loop forces honesty at every stage and prevents proceeding with high uncertainty.**",
+        "type": "causal",
+        "line": 178,
+        "context": "**This loop forces honesty at every stage and prevents proceeding with high uncertainty.**"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "A model can be highly engaged (`engagement=0.9`) while knowing little (`know=0.3`). This separation prevents conflating enthusiasm with expertise.",
+        "type": "causal",
+        "line": 221,
+        "context": "A model can be highly engaged (`engagement=0.9`) while knowing little (`know=0.3`). This separation prevents conflating enthusiasm with expertise."
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**This gate prevents hallucinations by blocking progression when epistemic state is insufficient.**",
+        "type": "causal",
+        "line": 282,
+        "context": "**This gate prevents hallucinations by blocking progression when epistemic state is insufficient.**"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Enables querying historical epistemic trajectories",
+        "type": "causal",
+        "line": 342,
+        "context": "- Enables querying historical epistemic trajectories"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u2705 **Validated:** Empirically demonstrated with evidence",
+        "type": "measured",
+        "line": 418,
+        "context": "- \u2705 **Validated:** Empirically demonstrated with evidence"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u26a0\ufe0f **Theoretical:** Predicted but not yet empirically tested",
+        "type": "measured",
+        "line": 419,
+        "context": "- \u26a0\ufe0f **Theoretical:** Predicted but not yet empirically tested"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u2705 **Session count:** Unlimited (demonstrated across 1 compact, architecture scales indefinitely)",
+        "type": "measured",
+        "line": 443,
+        "context": "- \u2705 **Session count:** Unlimited (demonstrated across 1 compact, architecture scales indefinitely)"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u26a0\ufe0f **Token reduction:** ~99.6% (200-token snapshot vs ~50K+ conversation estimate - conversation tokens not measured)",
+        "type": "measured",
+        "line": 444,
+        "context": "- \u26a0\ufe0f **Token reduction:** ~99.6% (200-token snapshot vs ~50K+ conversation estimate - conversation tokens not measured)"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**What this proves:** Epistemic state compression enables unlimited session continuity through memory boundaries.",
+        "type": "causal",
+        "line": 446,
+        "context": "**What this proves:** Epistemic state compression enables unlimited session continuity through memory boundaries."
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u274c \"88% hallucination reduction for high-uncertainty tasks\" (`know=0.1, uncertainty=0.9, evidence=none`)",
+        "type": "percentage",
+        "line": 455,
+        "context": "- \u274c \"88% hallucination reduction for high-uncertainty tasks\" (`know=0.1, uncertainty=0.9, evidence=none`)"
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u274c \"95% bias elimination through epistemic tracking\" (`know=0.1, uncertainty=0.9, evidence=none`)",
+        "type": "percentage",
+        "line": 456,
+        "context": "- \u274c \"95% bias elimination through epistemic tracking\" (`know=0.1, uncertainty=0.9, evidence=none`)"
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\u274c \"82% token reduction (10K vs 55K)\" (`know=0.4, uncertainty=0.6, evidence=partial`)",
+        "type": "percentage",
+        "line": 457,
+        "context": "- \u274c \"82% token reduction (10K vs 55K)\" (`know=0.4, uncertainty=0.6, evidence=partial`)"
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Claim: \"88% reduction\"",
+        "type": "percentage",
+        "line": 462,
+        "context": "- Claim: \"88% reduction\""
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "The following predictions are theoretically grounded but **not yet empirically validated:**",
+        "type": "measured",
+        "line": 479,
+        "context": "The following predictions are theoretically grounded but **not yet empirically validated:**"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Predicted effect:** 70-90% reduction in hallucinations for high-uncertainty tasks.",
+        "type": "percentage",
+        "line": 500,
+        "context": "**Predicted effect:** 70-90% reduction in hallucinations for high-uncertainty tasks."
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Predicted effect:** 80-95% objective pivot rate vs 20-35% human baseline.",
+        "type": "percentage",
+        "line": 521,
+        "context": "**Predicted effect:** 80-95% objective pivot rate vs 20-35% human baseline."
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Hypothesis:** Queryable epistemic history enables learning from past sessions.",
+        "type": "causal",
+        "line": 535,
+        "context": "**Hypothesis:** Queryable epistemic history enables learning from past sessions."
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Predicted effect:** 30-50% faster learning on similar tasks by querying historical epistemic patterns.",
+        "type": "percentage",
+        "line": 548,
+        "context": "**Predicted effect:** 30-50% faster learning on similar tasks by querying historical epistemic patterns."
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**\u2705 Validated (this session):**",
+        "type": "measured",
+        "line": 592,
+        "context": "**\u2705 Validated (this session):**"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "CHECK gate reduces hallucinations by 70-90% (plausible, not measured)",
+        "type": "measured",
+        "line": 599,
+        "context": "1. CHECK gate reduces hallucinations by 70-90% (plausible, not measured)"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Bias elimination through epistemic assessment (logical, not tested)",
+        "type": "measured",
+        "line": 600,
+        "context": "2. Bias elimination through epistemic assessment (logical, not tested)"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Update this paper with measured results",
+        "type": "measured",
+        "line": 610,
+        "context": "6. Update this paper with measured results"
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Sunk cost: \"I spent 4 hours, can't abandon now\"",
+        "type": "temporal",
+        "line": 638,
+        "context": "- Sunk cost: \"I spent 4 hours, can't abandon now\""
+      },
+      "epistemic_state": {
+        "know": 0.5,
+        "uncertainty": 0.5,
+        "evidence": [],
+        "reasoning": "Default assessment - no specific evidence found"
+      },
+      "flagged": true,
+      "flags": [
+        "Low knowledge (0.50)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**This enables objective truth-seeking unburdened by cognitive noise.**",
+        "type": "causal",
+        "line": 649,
+        "context": "**This enables objective truth-seeking unburdened by cognitive noise.**"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Critical insight discovered during paper development:** Epistemic metacognition enables not just prevention but **self-correction** of hallucinations.",
+        "type": "causal",
+        "line": 665,
+        "context": "**Critical insight discovered during paper development:** Epistemic metacognition enables not just prevention but **self-correction** of hallucinations."
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"88% hallucination reduction for high-uncertainty tasks\"",
+        "type": "percentage",
+        "line": 699,
+        "context": "- \"88% hallucination reduction for high-uncertainty tasks\""
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"95% bias elimination through epistemic tracking\"",
+        "type": "percentage",
+        "line": 700,
+        "context": "- \"95% bias elimination through epistemic tracking\""
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"82% token reduction (10K vs 55K)\"",
+        "type": "percentage",
+        "line": 701,
+        "context": "- \"82% token reduction (10K vs 55K)\""
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Prevents hallucinations from being generated",
+        "type": "causal",
+        "line": 772,
+        "context": "- Prevents hallucinations from being generated"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Computational overhead:** PREFLIGHT/CHECK/POSTFLIGHT add ~5-10% overhead",
+        "type": "percentage",
+        "line": 863,
+        "context": "2. **Computational overhead:** PREFLIGHT/CHECK/POSTFLIGHT add ~5-10% overhead"
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "**Enables perpetual continuity** via compressed epistemic state preservation",
+        "type": "causal",
+        "line": 883,
+        "context": "3. **Enables perpetual continuity** via compressed epistemic state preservation"
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "`completion` is objective, not aspirational: 0.6 = 60% done, not \"making progress\"",
+        "type": "percentage",
+        "line": 935,
+        "context": "- `completion` is objective, not aspirational: 0.6 = 60% done, not \"making progress\""
+      },
+      "epistemic_state": {
+        "know": 0.3,
+        "uncertainty": 0.7,
+        "evidence": [],
+        "reasoning": "Specific percentage without measurement context - likely estimated or unverified"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.70)",
+        "Low knowledge (0.30)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"Authorization code flow with PKCE prevents authorization code interception\"",
+        "type": "causal",
+        "line": 973,
+        "context": "- \"Authorization code flow with PKCE prevents authorization code interception\""
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"Proactive token refresh (5 min before expiry) prevents user-visible errors\"",
+        "type": "causal",
+        "line": 1004,
+        "context": "- \"Proactive token refresh (5 min before expiry) prevents user-visible errors\""
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "\"reasoning\": \"OAuth2 implementation complete with PKCE, proactive token refresh, and graceful error handling. Significant learning achieved: deep understanding of OAuth2 flows, token management, and security considerations. Uncertainty reduced from 0.70 to 0.10 through systematic investigation. Implementation tested and working. High impact work completed.\"",
+        "type": "measured",
+        "line": 1055,
+        "context": "\"reasoning\": \"OAuth2 implementation complete with PKCE, proactive token refresh, and graceful error handling. Significant learning achieved: deep understanding of OAuth2 flows, token management, and security considerations. Uncertainty reduced from 0.70 to 0.10 through systematic investigation. Implementation tested and working. High impact work completed.\""
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "Evidence trail enables future sessions to query \"how did I learn OAuth2?\"",
+        "type": "causal",
+        "line": 1064,
+        "context": "5. Evidence trail enables future sessions to query \"how did I learn OAuth2?\""
+      },
+      "epistemic_state": {
+        "know": 0.4,
+        "uncertainty": 0.6,
+        "evidence": [],
+        "reasoning": "Causal claim requires controlled testing or strong evidence"
+      },
+      "flagged": true,
+      "flags": [
+        "High uncertainty (0.60)",
+        "Low knowledge (0.40)",
+        "No supporting evidence"
+      ]
+    },
+    {
+      "claim": {
+        "text": "This demonstrates the full CASCADE cycle: honest baseline assessment, gated decision-making based on epistemic readiness, and measured learning outcomes.",
+        "type": "measured",
+        "line": 1066,
+        "context": "This demonstrates the full CASCADE cycle: honest baseline assessment, gated decision-making based on epistemic readiness, and measured learning outcomes."
+      },
+      "epistemic_state": {
+        "know": 0.7,
+        "uncertainty": 0.3,
+        "evidence": [],
+        "reasoning": "Claim uses measurement language, suggests empirical basis"
+      },
+      "flagged": true,
+      "flags": [
+        "No supporting evidence"
+      ]
+    }
+  ],
+  "verified_claims": []
+}

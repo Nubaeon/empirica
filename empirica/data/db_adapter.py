@@ -121,11 +121,20 @@ class SQLiteAdapter(DatabaseAdapter):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        self._conn = sqlite3.connect(str(self.db_path))
+        # Enable timeout for database lock waits (30 seconds)
+        self._conn = sqlite3.connect(str(self.db_path), timeout=30.0)
         self._conn.row_factory = sqlite3.Row  # Return rows as dicts
+
+        # Enable WAL mode for better concurrency
+        # WAL allows readers and writers to work simultaneously
+        self._conn.execute("PRAGMA journal_mode=WAL")
+
+        # Set busy timeout (additional layer of protection)
+        self._conn.execute("PRAGMA busy_timeout=30000")  # 30 seconds in milliseconds
+
         self._cursor = None
 
-        logger.info(f"📊 SQLite adapter initialized: {self.db_path}")
+        logger.info(f"📊 SQLite adapter initialized: {self.db_path} (WAL mode enabled)")
 
     @property
     def conn(self):

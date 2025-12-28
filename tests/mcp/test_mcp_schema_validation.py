@@ -7,7 +7,13 @@ Tests that all MCP tool schemas follow proper JSON schema patterns.
 import asyncio
 import pytest
 from typing import Dict, Any
-from mcp_local.empirica_mcp_server import list_tools
+# Update import to use current MCP server architecture
+try:
+    from empirica_mcp.server import list_tools
+except ImportError:
+    # Fallback for compatibility during transition
+    from empirica.cli.mcp_client import list_tools as cli_list_tools
+    list_tools = cli_list_tools
 
 
 def test_all_tools_have_schemas():

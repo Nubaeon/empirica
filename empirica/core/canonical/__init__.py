@@ -6,7 +6,9 @@ Provides genuine LLM-powered metacognitive self-assessment without heuristics or
 Core Components:
 - reflex_frame: Canonical data structures (VectorState, EpistemicAssessment, ReflexFrame)
 - reflex_logger: Temporal logging to JSON files (prevents recursion)
-- canonical_epistemic_assessment: LLM-powered assessor (no heuristics)
+- canonical_goal_orchestrator: Goal decomposition and orchestration
+
+NOTE: EpistemicAssessor moved to empirica-sentinel repo (separate module for orchestration/heuristics)
 
 Key Principles:
 1. Genuine reasoning: LLM self-assessment, not keyword matching
@@ -37,10 +39,6 @@ from .reflex_logger import (
     log_assessment_sync
 )
 
-from .canonical_epistemic_assessment import (
-    CanonicalEpistemicAssessor
-)
-
 __all__ = [
     # Data Structures
     'VectorState',
@@ -56,9 +54,6 @@ __all__ = [
     'ReflexLogger',
     'log_assessment',
     'log_assessment_sync',
-
-    # Assessor
-    'CanonicalEpistemicAssessor',
     
     # NEW schema (main export)
     'EpistemicAssessmentSchema'

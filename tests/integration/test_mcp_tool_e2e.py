@@ -12,7 +12,14 @@ import asyncio
 import pytest
 import uuid
 import json
-from mcp_local.empirica_mcp_server import list_tools, app
+# Update import to use current MCP server architecture
+try:
+    from empirica_mcp.server import list_tools, app
+except ImportError:
+    # Fallback for compatibility during transition
+    from empirica.cli.mcp_client import list_tools as cli_list_tools
+    list_tools = cli_list_tools
+    app = None  # MCP app not available in CLI-only mode
 from mcp.types import Tool, CallToolRequest
 
 

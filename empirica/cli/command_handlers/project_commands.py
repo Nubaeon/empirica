@@ -54,7 +54,8 @@ def handle_project_create_command(args):
             if repos:
                 print(f"   Repos: {', '.join(repos)}")
 
-        return {"project_id": project_id}
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Project create", getattr(args, 'verbose', False))
@@ -113,11 +114,12 @@ def handle_project_handoff_command(args):
                     sign = "+" if delta > 0 else ""
                     print(f"      {vector}: {sign}{delta:.2f}")
 
-        return {"handoff_id": handoff_id, "total_deltas": total_deltas}
+        print(json.dumps({"handoff_id": handoff_id, "total_deltas": total_deltas}, indent=2))
+        return 0
 
     except Exception as e:
         handle_cli_error(e, "Project handoff", getattr(args, 'verbose', False))
-        return None
+        return 1
 
 
 def handle_project_list_command(args):
@@ -157,7 +159,8 @@ def handle_project_list_command(args):
                 print(f"   Sessions: {p['total_sessions']}")
                 print()
 
-        return {"projects": projects}
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Project list", getattr(args, 'verbose', False))
@@ -234,13 +237,79 @@ def handle_project_bootstrap_command(args):
             subject = get_current_subject()  # Auto-detect from directory
         
         db = SessionDatabase()
+
+        # Get new parameters
+        session_id = getattr(args, 'session_id', None)
+        include_live_state = getattr(args, 'include_live_state', False)
+        fresh_assess = getattr(args, 'fresh_assess', False)
+        trigger = getattr(args, 'trigger', None)
+        depth = getattr(args, 'depth', 'auto')
+        ai_id = getattr(args, 'ai_id', None)  # Get AI ID for epistemic handoff
+
+        # SessionStart Hook: Auto-load MCO config after memory compact
+        mco_config = None
+        if trigger == 'post_compact':
+            from empirica.config.mco_loader import get_mco_config
+            from pathlib import Path
+
+            # Find latest pre_summary snapshot
+            ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+            if ref_docs_dir.exists():
+                snapshot_files = sorted(
+                    ref_docs_dir.glob("pre_summary_*.json"),
+                    key=lambda p: p.stat().st_mtime,
+                    reverse=True
+                )
+
+                if snapshot_files:
+                    latest_snapshot = snapshot_files[0]
+
+                    # Try to load MCO config from snapshot
+                    try:
+                        with open(latest_snapshot) as f:
+                            snapshot_data = json.load(f)
+                            mco_snapshot = snapshot_data.get('mco_config')
+
+                            if mco_snapshot:
+                                # Format MCO config for output
+                                mco_loader = get_mco_config()
+                                mco_config = {
+                                    'source': 'pre_summary_snapshot',
+                                    'snapshot_path': str(latest_snapshot),
+                                    'config': mco_snapshot,
+                                    'formatted': mco_loader.format_for_prompt(mco_snapshot)
+                                }
+                            else:
+                                # Fallback: Load fresh from files
+                                mco_loader = get_mco_config()
+                                mco_snapshot = mco_loader.export_snapshot(
+                                    session_id=session_id or 'unknown',
+                                    ai_id=ai_id,
+                                    cascade_style='default'
+                                )
+                                mco_config = {
+                                    'source': 'mco_files_fallback',
+                                    'snapshot_path': None,
+                                    'config': mco_snapshot,
+                                    'formatted': mco_loader.format_for_prompt(mco_snapshot)
+                                }
+                    except Exception as e:
+                        logger.warning(f"Could not load MCO from snapshot: {e}")
+                        # Continue without MCO config
+
         breadcrumbs = db.bootstrap_project_breadcrumbs(
             project_id,
             check_integrity=check_integrity,
             context_to_inject=context_to_inject,
             task_description=task_description,
             epistemic_state=epistemic_state,
-            subject=subject
+            subject=subject,
+            session_id=session_id,
+            include_live_state=include_live_state,
+            fresh_assess=fresh_assess,
+            trigger=trigger,
+            depth=depth,
+            ai_id=ai_id  # Pass AI ID to bootstrap
         )
 
         # Optional: Detect memory gaps if session-id provided
@@ -273,6 +342,16 @@ def handle_project_bootstrap_command(args):
                     breadcrumbs=breadcrumbs,
                     session_context=session_context
                 )
+
+        # Add workflow suggestions based on session state
+        workflow_suggestions = None
+        if session_id:
+            from empirica.cli.utils.workflow_suggestions import get_workflow_suggestions
+            workflow_suggestions = get_workflow_suggestions(
+                project_id=project_id,
+                session_id=session_id,
+                db=db
+            )
 
         db.close()
 
@@ -310,11 +389,31 @@ def handle_project_bootstrap_command(args):
                 "project_id": project_id,
                 "breadcrumbs": breadcrumbs
             }
+            if workflow_suggestions:
+                result['workflow_automation'] = workflow_suggestions
+            if mco_config:
+                result['mco_config'] = mco_config
             print(json.dumps(result, indent=2))
         else:
+            # Print MCO config first if post-compact (SessionStart hook)
+            if mco_config:
+                print("\n" + "=" * 70)
+                print("🔧 MCO Configuration Restored (SessionStart Hook)")
+                print("=" * 70)
+                if mco_config['source'] == 'pre_summary_snapshot':
+                    print(f"   Source: {mco_config['snapshot_path']}")
+                else:
+                    print(f"   Source: Fresh load from MCO files (snapshot had no MCO)")
+                print("=" * 70)
+                print(mco_config['formatted'])
+                print("\n" + "=" * 70)
+                print("💡 Your configuration has been restored from pre-compact snapshot.")
+                print("   Apply these bias corrections during CASCADE assessments.")
+                print("=" * 70 + "\n")
+
             project = breadcrumbs['project']
             last = breadcrumbs['last_activity']
-            
+
             # ===== PROJECT CONTEXT BANNER =====
             print("━" * 64)
             print("🎯 PROJECT CONTEXT")
@@ -360,6 +459,116 @@ def handle_project_bootstrap_command(args):
             print(f"   Next focus: {last['next_focus']}")
             print()
             
+            # ===== AI EPISTEMIC HANDOFF =====
+            if breadcrumbs.get('ai_epistemic_handoff'):
+                handoff = breadcrumbs['ai_epistemic_handoff']
+                print(f"🧠 Epistemic Handoff (from {handoff.get('ai_id', 'unknown')}):")
+                vectors = handoff.get('vectors', {})
+                deltas = handoff.get('deltas', {})
+                
+                if vectors:
+                    print(f"   State (POSTFLIGHT):")
+                    print(f"      Engagement: {vectors.get('engagement', 'N/A'):.2f}", end='')
+                    if 'engagement' in deltas:
+                        delta = deltas['engagement']
+                        arrow = "↑" if delta > 0 else "↓" if delta < 0 else "→"
+                        print(f" {arrow} {delta:+.2f}", end='')
+                    print()
+                    
+                    if 'foundation' in vectors:
+                        f = vectors['foundation']
+                        d = deltas.get('foundation', {})
+                        print(f"      Foundation: know={f.get('know', 'N/A'):.2f}", end='')
+                        if 'know' in d:
+                            print(f" {d['know']:+.2f}", end='')
+                        print(f", do={f.get('do', 'N/A'):.2f}", end='')
+                        if 'do' in d:
+                            print(f" {d['do']:+.2f}", end='')
+                        print(f", context={f.get('context', 'N/A'):.2f}", end='')
+                        if 'context' in d:
+                            print(f" {d['context']:+.2f}", end='')
+                        print()
+                    
+                    print(f"      Uncertainty: {vectors.get('uncertainty', 'N/A'):.2f}", end='')
+                    if 'uncertainty' in deltas:
+                        delta = deltas['uncertainty']
+                        arrow = "↓" if delta < 0 else "↑" if delta > 0 else "→"  # Lower is better
+                        print(f" {arrow} {delta:+.2f}", end='')
+                    print()
+                
+                if handoff.get('reasoning'):
+                    print(f"   Learning: {handoff['reasoning'][:80]}...")
+                print()
+
+            # ===== FLOW STATE METRICS =====
+            if breadcrumbs.get('flow_metrics'):
+                flow = breadcrumbs['flow_metrics']
+                current = flow.get('current_flow')
+
+                if current:
+                    print(f"⚡ Flow State (AI Productivity):")
+                    print(f"   Current: {current['emoji']} {current['flow_state']} ({current['flow_score']}/100)")
+
+                    # Show trend if available
+                    trend = flow.get('trend', {})
+                    if trend.get('emoji'):
+                        print(f"   Trend: {trend['emoji']} {trend['description']}")
+
+                    # Show average
+                    avg = flow.get('average_flow', 0)
+                    print(f"   Average (last 5): {avg}/100")
+
+                    # Show blockers if any
+                    blockers = flow.get('blockers', [])
+                    if blockers:
+                        print(f"   ⚠️  Blockers:")
+                        for blocker in blockers[:3]:
+                            print(f"      • {blocker}")
+
+                    # Show flow triggers status
+                    triggers = flow.get('triggers_present', {})
+                    if triggers:
+                        active_triggers = [name for name, present in triggers.items() if present]
+                        if active_triggers:
+                            print(f"   ✓ Active triggers: {', '.join(active_triggers)}")
+
+                    print()
+
+            # ===== HEALTH SCORE (EPISTEMIC QUALITY) =====
+            if breadcrumbs.get('health_score'):
+                health = breadcrumbs['health_score']
+                current = health.get('current_health')
+
+                if current:
+                    print(f"💪 Health Score (Epistemic Quality):")
+                    print(f"   Current: {current['health_score']}/100")
+
+                    # Show trend if available
+                    trend = health.get('trend', {})
+                    if trend.get('emoji'):
+                        print(f"   Trend: {trend['emoji']} {trend['description']}")
+
+                    # Show average
+                    avg = health.get('average_health', 0)
+                    print(f"   Average (last 5): {avg}/100")
+
+                    # Show component breakdown
+                    components = health.get('components', {})
+                    if components:
+                        print(f"   Components:")
+                        kq = components.get('knowledge_quality', {})
+                        ep = components.get('epistemic_progress', {})
+                        cap = components.get('capability', {})
+                        conf = components.get('confidence', {})
+                        eng = components.get('engagement', {})
+                        
+                        print(f"      Knowledge Quality: {kq.get('average', 0):.2f}")
+                        print(f"      Epistemic Progress: {ep.get('average', 0):.2f}")
+                        print(f"      Capability: {cap.get('average', 0):.2f}")
+                        print(f"      Confidence: {conf.get('confidence_score', 0):.2f}")
+                        print(f"      Engagement: {eng.get('engagement', 0):.2f}")
+                    print()
+
             if breadcrumbs.get('findings'):
                 print(f"📝 Recent Findings (last 10):")
                 for i, f in enumerate(breadcrumbs['findings'][:10], 1):
@@ -384,11 +593,13 @@ def handle_project_bootstrap_command(args):
             if breadcrumbs['mistakes_to_avoid']:
                 print(f"⚠️  Recent Mistakes to Avoid:")
                 for i, m in enumerate(breadcrumbs['mistakes_to_avoid'][:3], 1):
-                    print(f"   {i}. {m['mistake']} (cost: {m['cost']}, cause: {m['root_cause']})")
+                    cost = m.get('cost_estimate', 'unknown')
+                    cause = m.get('root_cause_vector', 'unknown')
+                    print(f"   {i}. {m['mistake']} (cost: {cost}, cause: {cause})")
                     print(f"      → {m['prevention']}")
                 print()
             
-            if breadcrumbs['key_decisions']:
+            if breadcrumbs.get('key_decisions'):
                 print(f"💡 Key Decisions:")
                 for i, d in enumerate(breadcrumbs['key_decisions'], 1):
                     print(f"   {i}. {d}")
@@ -397,8 +608,10 @@ def handle_project_bootstrap_command(args):
             if breadcrumbs.get('reference_docs'):
                 print(f"📄 Reference Docs:")
                 for i, doc in enumerate(breadcrumbs['reference_docs'][:5], 1):
-                    print(f"   {i}. {doc['path']} ({doc['type']})")
-                    if doc['description']:
+                    path = doc.get('doc_path', 'unknown')
+                    doc_type = doc.get('doc_type', 'unknown')
+                    print(f"   {i}. {path} ({doc_type})")
+                    if doc.get('description'):
                         print(f"      {doc['description']}")
                 print()
             
@@ -642,6 +855,13 @@ def handle_project_bootstrap_command(args):
                             print(f"      • empirica {item['command']}")
                 print()
 
+            # Workflow Automation Suggestions (if session-id provided)
+            if workflow_suggestions:
+                from empirica.cli.utils.workflow_suggestions import format_workflow_suggestions
+                workflow_output = format_workflow_suggestions(workflow_suggestions)
+                if workflow_output.strip():
+                    print(workflow_output)
+
             # Memory Gap Analysis (if session-id provided)
             if breadcrumbs.get('memory_gap_analysis'):
                 analysis = breadcrumbs['memory_gap_analysis']
@@ -720,7 +940,8 @@ def handle_project_bootstrap_command(args):
 
                 print()
 
-        return {"breadcrumbs": breadcrumbs}
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Project bootstrap", getattr(args, 'verbose', False))
@@ -756,6 +977,7 @@ def handle_finding_log_command(args):
             finding = config_data.get('finding')
             goal_id = config_data.get('goal_id')
             subtask_id = config_data.get('subtask_id')
+            impact = config_data.get('impact')  # Optional - auto-derives if None
             output_format = 'json'
 
             # Validate required fields
@@ -773,14 +995,16 @@ def handle_finding_log_command(args):
             project_id = args.project_id
             goal_id = getattr(args, 'goal_id', None)
             subtask_id = getattr(args, 'subtask_id', None)
+            impact = getattr(args, 'impact', None)  # Optional - auto-derives if None
             output_format = getattr(args, 'output', 'json')
 
             # Validate required fields for legacy mode
-            if not project_id or not session_id or not finding:
+            # Allow project_id to be None initially, will auto-resolve below
+            if not session_id or not finding:
                 print(json.dumps({
                     "ok": False,
-                    "error": "Legacy mode requires --project-id, --session-id, and --finding flags",
-                    "hint": "For AI-first mode, use: empirica finding-log config.json"
+                    "error": "Legacy mode requires --session-id and --finding flags",
+                    "hint": "Project ID will be auto-resolved if not provided. For AI-first mode, use: empirica finding-log config.json"
                 }))
                 sys.exit(1)
 
@@ -797,8 +1021,38 @@ def handle_finding_log_command(args):
         
         db = SessionDatabase()
 
-        # Resolve project name to UUID
-        project_id = resolve_project_id(project_id, db)
+        # Auto-resolve project_id if not provided
+        if not project_id:
+            # Try to get project from session record
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT project_id FROM sessions WHERE session_id = ?
+            """, (session_id,))
+            row = cursor.fetchone()
+            if row and row['project_id']:
+                project_id = row['project_id']
+                logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
+            else:
+                # Fallback: try to resolve from current directory
+                from empirica.config.project_config_loader import load_project_config
+                try:
+                    project_config = load_project_config()
+                    if project_config and hasattr(project_config, 'project_id'):
+                        project_id = project_config.project_id
+                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
+                except:
+                    pass
+
+        # Resolve project name to UUID if still not resolved
+        if project_id:
+            project_id = resolve_project_id(project_id, db)
+        else:
+            # Last resort: create a generic project ID based on session if no project context available
+            import hashlib
+            project_id = hashlib.md5(f"session-{session_id}".encode()).hexdigest()
+            logger.warning(f"Using fallback project_id derived from session: {project_id[:8]}...")
+
+        # At this point, project_id should be resolved
         
         # SESSION-BASED AUTO-LINKING: If goal_id not provided, check for active goal in session
         if not goal_id:
@@ -820,7 +1074,8 @@ def handle_finding_log_command(args):
             finding=finding,
             goal_id=goal_id,
             subtask_id=subtask_id,
-            subject=subject
+            subject=subject,
+            impact=impact
         )
         db.close()
 
@@ -840,7 +1095,7 @@ def handle_finding_log_command(args):
             print(f"   Finding ID: {finding_id}")
             print(f"   Project: {project_id[:8]}...")
 
-        return {"finding_id": finding_id}
+        return 0  # Success
 
     except Exception as e:
         handle_cli_error(e, "Finding log", getattr(args, 'verbose', False))
@@ -875,8 +1130,9 @@ def handle_unknown_log_command(args):
             unknown = config_data.get('unknown')
             goal_id = config_data.get('goal_id')
             subtask_id = config_data.get('subtask_id')
+            impact = config_data.get('impact')  # Optional - auto-derives if None
             output_format = 'json'
-            
+
             if not project_id or not session_id or not unknown:
                 print(json.dumps({
                     "ok": False,
@@ -889,6 +1145,7 @@ def handle_unknown_log_command(args):
             project_id = args.project_id
             goal_id = getattr(args, 'goal_id', None)
             subtask_id = getattr(args, 'subtask_id', None)
+            impact = getattr(args, 'impact', None)  # Optional - auto-derives if None
             output_format = getattr(args, 'output', 'json')
 
         # Auto-detect subject from current directory
@@ -904,8 +1161,38 @@ def handle_unknown_log_command(args):
         
         db = SessionDatabase()
 
-        # Resolve project name to UUID
-        project_id = resolve_project_id(project_id, db)
+        # Auto-resolve project_id if not provided
+        if not project_id:
+            # Try to get project from session record
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT project_id FROM sessions WHERE session_id = ?
+            """, (session_id,))
+            row = cursor.fetchone()
+            if row and row['project_id']:
+                project_id = row['project_id']
+                logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
+            else:
+                # Fallback: try to resolve from current directory
+                from empirica.config.project_config_loader import load_project_config
+                try:
+                    project_config = load_project_config()
+                    if project_config and hasattr(project_config, 'project_id'):
+                        project_id = project_config.project_id
+                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
+                except:
+                    pass
+
+        # Resolve project name to UUID if still not resolved
+        if project_id:
+            project_id = resolve_project_id(project_id, db)
+        else:
+            # Last resort: create a generic project ID based on session if no project context available
+            import hashlib
+            project_id = hashlib.md5(f"session-{session_id}".encode()).hexdigest()
+            logger.warning(f"Using fallback project_id derived from session: {project_id[:8]}...")
+
+        # At this point, project_id should be resolved
         
         # SESSION-BASED AUTO-LINKING: If goal_id not provided, check for active goal in session
         if not goal_id:
@@ -926,7 +1213,8 @@ def handle_unknown_log_command(args):
             unknown=unknown,
             goal_id=goal_id,
             subtask_id=subtask_id,
-            subject=subject
+            subject=subject,
+            impact=impact
         )
         db.close()
 
@@ -944,11 +1232,55 @@ def handle_unknown_log_command(args):
             print(f"   Unknown ID: {unknown_id}")
             print(f"   Project: {project_id[:8]}...")
 
-        return {"unknown_id": unknown_id}
+        return 0  # Success
 
     except Exception as e:
         handle_cli_error(e, "Unknown log", getattr(args, 'verbose', False))
         return None
+
+
+def handle_unknown_resolve_command(args):
+    """Handle unknown-resolve command"""
+    try:
+        from empirica.data.session_database import SessionDatabase
+
+        unknown_id = getattr(args, 'unknown_id', None)
+        resolved_by = getattr(args, 'resolved_by', None)
+        output_format = getattr(args, 'output', 'json')
+
+        if not unknown_id or not resolved_by:
+            result = {
+                "ok": False,
+                "error": "unknown_id and resolved_by are required"
+            }
+            print(json.dumps(result))
+            return 1
+
+        # Resolve the unknown
+        db = SessionDatabase()
+        db.resolve_unknown(unknown_id=unknown_id, resolved_by=resolved_by)
+        db.close()
+
+        # Format output
+        result = {
+            "ok": True,
+            "unknown_id": unknown_id,
+            "resolved_by": resolved_by,
+            "message": "Unknown resolved successfully"
+        }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"✅ Unknown resolved successfully")
+            print(f"   Unknown ID: {unknown_id[:8]}...")
+            print(f"   Resolved by: {resolved_by}")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Unknown resolve", getattr(args, 'verbose', False))
+        return 1
 
 
 def handle_deadend_log_command(args):
@@ -980,8 +1312,9 @@ def handle_deadend_log_command(args):
             why_failed = config_data.get('why_failed')
             goal_id = config_data.get('goal_id')
             subtask_id = config_data.get('subtask_id')
+            impact = config_data.get('impact')  # Optional - auto-derives if None
             output_format = 'json'
-            
+
             if not project_id or not session_id or not approach or not why_failed:
                 print(json.dumps({
                     "ok": False,
@@ -995,6 +1328,7 @@ def handle_deadend_log_command(args):
             project_id = args.project_id
             goal_id = getattr(args, 'goal_id', None)
             subtask_id = getattr(args, 'subtask_id', None)
+            impact = getattr(args, 'impact', None)  # Optional - auto-derives if None
             output_format = getattr(args, 'output', 'json')
 
         # Auto-detect subject from current directory
@@ -1005,8 +1339,38 @@ def handle_deadend_log_command(args):
         
         db = SessionDatabase()
 
-        # Resolve project name to UUID
-        project_id = resolve_project_id(project_id, db)
+        # Auto-resolve project_id if not provided
+        if not project_id:
+            # Try to get project from session record
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT project_id FROM sessions WHERE session_id = ?
+            """, (session_id,))
+            row = cursor.fetchone()
+            if row and row['project_id']:
+                project_id = row['project_id']
+                logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
+            else:
+                # Fallback: try to resolve from current directory
+                from empirica.config.project_config_loader import load_project_config
+                try:
+                    project_config = load_project_config()
+                    if project_config and hasattr(project_config, 'project_id'):
+                        project_id = project_config.project_id
+                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
+                except:
+                    pass
+
+        # Resolve project name to UUID if still not resolved
+        if project_id:
+            project_id = resolve_project_id(project_id, db)
+        else:
+            # Last resort: create a generic project ID based on session if no project context available
+            import hashlib
+            project_id = hashlib.md5(f"session-{session_id}".encode()).hexdigest()
+            logger.warning(f"Using fallback project_id derived from session: {project_id[:8]}...")
+
+        # At this point, project_id should be resolved
         
         # SESSION-BASED AUTO-LINKING: If goal_id not provided, check for active goal in session
         if not goal_id:
@@ -1028,7 +1392,8 @@ def handle_deadend_log_command(args):
             why_failed=why_failed,
             goal_id=goal_id,
             subtask_id=subtask_id,
-            subject=subject
+            subject=subject,
+            impact=impact
         )
         db.close()
 
@@ -1046,7 +1411,7 @@ def handle_deadend_log_command(args):
             print(f"   Dead End ID: {dead_end_id}")
             print(f"   Project: {project_id[:8]}...")
 
-        return {"dead_end_id": dead_end_id}
+        return 0  # Success
 
     except Exception as e:
         handle_cli_error(e, "Dead end log", getattr(args, 'verbose', False))
@@ -1067,8 +1432,38 @@ def handle_refdoc_add_command(args):
 
         db = SessionDatabase()
 
-        # Resolve project name to UUID
-        project_id = resolve_project_id(project_id, db)
+        # Auto-resolve project_id if not provided
+        if not project_id:
+            # Try to get project from session record
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT project_id FROM sessions WHERE session_id = ?
+            """, (session_id,))
+            row = cursor.fetchone()
+            if row and row['project_id']:
+                project_id = row['project_id']
+                logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
+            else:
+                # Fallback: try to resolve from current directory
+                from empirica.config.project_config_loader import load_project_config
+                try:
+                    project_config = load_project_config()
+                    if project_config and hasattr(project_config, 'project_id'):
+                        project_id = project_config.project_id
+                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
+                except:
+                    pass
+
+        # Resolve project name to UUID if still not resolved
+        if project_id:
+            project_id = resolve_project_id(project_id, db)
+        else:
+            # Last resort: create a generic project ID based on session if no project context available
+            import hashlib
+            project_id = hashlib.md5(f"session-{session_id}".encode()).hexdigest()
+            logger.warning(f"Using fallback project_id derived from session: {project_id[:8]}...")
+
+        # At this point, project_id should be resolved
 
         doc_id = db.add_reference_doc(
             project_id=project_id,
@@ -1091,7 +1486,7 @@ def handle_refdoc_add_command(args):
             print(f"   Doc ID: {doc_id}")
             print(f"   Path: {doc_path}")
 
-        return {"doc_id": doc_id}
+        return 0  # Success
 
     except Exception as e:
         handle_cli_error(e, "Reference doc add", getattr(args, 'verbose', False))
@@ -1136,7 +1531,8 @@ def handle_workspace_overview_command(args):
                 "projects": projects
             }
             print(json.dumps(result, indent=2))
-            return result
+            # Return None to avoid exit code issues and duplicate output
+            return None
         
         # Dashboard output (human-readable)
         stats = overview['workspace_stats']
@@ -1155,7 +1551,8 @@ def handle_workspace_overview_command(args):
         
         if not projects:
             print("   No projects found.")
-            return {"projects": []}
+            print(json.dumps({"projects": []}, indent=2))
+            return 0
         
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
         print("📁 Projects by Epistemic Health\n")
@@ -1193,8 +1590,9 @@ def handle_workspace_overview_command(args):
         print(f"   • List all projects:  empirica project-list")
         print()
         
-        return {"projects": projects}
-        
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Workspace overview", getattr(args, 'verbose', False))
         return None
@@ -1410,8 +1808,9 @@ def handle_workspace_map_command(args):
         print(f"   • Bootstrap project:        empirica project-bootstrap --project-id <ID>")
         print()
         
-        return {"repos": git_repos}
+        print(json.dumps({"repos": git_repos}, indent=2))
+        return 0
         
     except Exception as e:
         handle_cli_error(e, "Workspace map", getattr(args, 'verbose', False))
-        return None
+        return 1

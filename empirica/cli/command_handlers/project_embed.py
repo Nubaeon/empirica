@@ -78,14 +78,41 @@ def handle_project_embed_command(args):
         mem_items: List[Dict] = []
         mid = 1_000_000
         for f in findings:
-            mem_items.append({'id': mid, 'text': f.get('finding', ''), 'type': 'finding'})
+            mem_items.append({
+                'id': mid,
+                'text': f.get('finding', ''),
+                'type': 'finding',
+                'goal_id': f.get('goal_id'),
+                'subtask_id': f.get('subtask_id'),
+                'session_id': f.get('session_id'),
+                'timestamp': f.get('created_timestamp'),
+                'subject': f.get('subject')
+            })
             mid += 1
         for u in unknowns:
-            mem_items.append({'id': mid, 'text': u.get('unknown', ''), 'type': 'unknown'})
+            mem_items.append({
+                'id': mid,
+                'text': u.get('unknown', ''),
+                'type': 'unknown',
+                'goal_id': u.get('goal_id'),
+                'subtask_id': u.get('subtask_id'),
+                'session_id': u.get('session_id'),
+                'timestamp': u.get('created_timestamp'),
+                'subject': u.get('subject'),
+                'is_resolved': u.get('is_resolved', False)
+            })
             mid += 1
         for m in mistakes:
             text = f"{m.get('mistake','')} Prevention: {m.get('prevention','')}"
-            mem_items.append({'id': mid, 'text': text, 'type': 'mistake'})
+            mem_items.append({
+                'id': mid,
+                'text': text,
+                'type': 'mistake',
+                'session_id': m.get('session_id'),
+                'goal_id': m.get('goal_id'),
+                # Note: mistakes_made doesn't have subtask_id yet (will add in migration)
+                'timestamp': m.get('created_timestamp')
+            })
             mid += 1
 
         upsert_memory(project_id, mem_items)

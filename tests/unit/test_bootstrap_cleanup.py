@@ -20,22 +20,27 @@ class TestBootstrapComponents:
     def test_bootstrap_command_works(self):
         """Bootstrap command executes without errors"""
         result = subprocess.run(
-            ["empirica", "bootstrap"],
+            ["empirica", "project-bootstrap", "--output", "json"],
             capture_output=True,
             text=True,
             timeout=10
         )
-        
+
         # Should succeed
         assert result.returncode == 0, f"Bootstrap failed: {result.stderr}"
-        
-        # Should show success message
-        assert "Bootstrap complete" in result.stdout
+
+        # Should return valid JSON with "ok": true
+        import json
+        try:
+            output = json.loads(result.stdout)
+            assert output.get("ok") == True, "Bootstrap should return ok=true"
+        except json.JSONDecodeError:
+            pytest.fail(f"Bootstrap did not return valid JSON: {result.stdout[:200]}")
         
     def test_bootstrap_no_import_errors(self):
         """Bootstrap runs without import errors in stderr"""
         result = subprocess.run(
-            ["empirica", "bootstrap"],
+            ["empirica", "project-bootstrap", "--output", "json"],
             capture_output=True,
             text=True,
             timeout=10
@@ -52,70 +57,63 @@ class TestBootstrapComponents:
         error_lines = [l for l in lines if 'error' in l.lower() and 'deprecated' not in l.lower()]
         assert len(error_lines) == 0, f"Unexpected errors: {error_lines}"
     
-    def test_bootstrap_test_mode(self):
-        """Bootstrap with --test flag works"""
+    def test_bootstrap_json_output(self):
+        """Bootstrap with --output json works"""
         result = subprocess.run(
-            ["empirica", "bootstrap", "--test"],
+            ["empirica", "project-bootstrap", "--output", "json"],
             capture_output=True,
             text=True,
             timeout=10
         )
-        
+
         assert result.returncode == 0
-        assert "Bootstrap complete" in result.stdout
-        assert "Tests passed" in result.stdout or "Running bootstrap tests" in result.stdout
+
+        # Should return valid JSON
+        import json
+        try:
+            output = json.loads(result.stdout)
+            assert "ok" in output, "JSON output should have 'ok' field"
+            assert "breadcrumbs" in output, "JSON output should have 'breadcrumbs' field"
+        except json.JSONDecodeError:
+            pytest.fail(f"Bootstrap did not return valid JSON: {result.stdout[:200]}")
     
-    def test_bootstrap_loads_core_components(self):
-        """Bootstrap loads expected number of core components (6-8)"""
+    def test_bootstrap_returns_breadcrumbs(self):
+        """Bootstrap returns breadcrumbs data structure"""
         result = subprocess.run(
-            ["empirica", "bootstrap"],
+            ["empirica", "project-bootstrap", "--output", "json"],
             capture_output=True,
             text=True,
             timeout=10
         )
-        
-        # Extract component count
-        for line in result.stdout.split('\n'):
-            if "Components loaded:" in line:
-                # Format: "📊 Components loaded: 6"
-                count_str = line.split(":")[-1].strip()
-                count = int(count_str)
-                
-                # Should load 6-8 core components
-                assert 6 <= count <= 8, f"Unexpected component count: {count}"
-                return
-        
-        pytest.fail("Could not find component count in output")
+
+        import json
+        output = json.loads(result.stdout)
+
+        # Should have breadcrumbs structure
+        assert "breadcrumbs" in output, "Should have breadcrumbs"
+        breadcrumbs = output["breadcrumbs"]
+
+        # Should have expected fields
+        expected_fields = ["project", "last_activity", "findings", "unknowns", "dead_ends"]
+        for field in expected_fields:
+            assert field in breadcrumbs, f"Breadcrumbs should have {field}"
     
     def test_bootstrap_fast_execution(self):
-        """Bootstrap executes quickly (< 1 second)"""
+        """Bootstrap executes quickly (< 5 seconds)"""
+        import time
+
+        start = time.time()
         result = subprocess.run(
-            ["empirica", "bootstrap"],
+            ["empirica", "project-bootstrap", "--output", "json"],
             capture_output=True,
             text=True,
             timeout=10
         )
-        
-        # Check bootstrap time
-        for line in result.stdout.split('\n'):
-            if "Bootstrap time:" in line:
-                # Should be fast (microseconds or milliseconds)
-                assert "μs" in line or "ms" in line, f"Bootstrap too slow: {line}"
-                
-                # Extract time
-                if "μs" in line:
-                    # Should be < 1000 microseconds
-                    pass  # Already fast
-                elif "ms" in line:
-                    # Should be < 1000 milliseconds
-                    time_str = line.split(":")[-1].strip().replace("ms", "")
-                    time_val = float(time_str)
-                    assert time_val < 1000, f"Bootstrap too slow: {time_val}ms"
-                
-                return
-        
-        # If no time in output, that's OK (MCP server mode)
-        pass
+        elapsed = time.time() - start
+
+        # Should complete quickly
+        assert elapsed < 5.0, f"Bootstrap took {elapsed:.2f}s, should be < 5s"
+        assert result.returncode == 0, "Bootstrap should succeed"
 
 
 class TestBootstrapImports:
@@ -189,38 +187,41 @@ class TestBootstrapImports:
 class TestBootstrapFallback:
     """Test MCP server fallback behavior"""
     
-    def test_mcp_bootstrap_path_works(self):
-        """MCP server bootstrap path is functional"""
+    def test_project_bootstrap_works(self):
+        """Project bootstrap command is functional"""
         result = subprocess.run(
-            ["empirica", "bootstrap"],
+            ["empirica", "project-bootstrap", "--output", "json"],
             capture_output=True,
             text=True,
             timeout=10
         )
-        
-        # Should use MCP path (primary) or local fallback
-        # Either way should work
+
+        # Should work and return JSON
         assert result.returncode == 0
-        assert "Bootstrap complete" in result.stdout
+
+        import json
+        output = json.loads(result.stdout)
+        assert output.get("ok") == True
 
 
 class TestBootstrapVerboseMode:
     """Test bootstrap verbose output"""
     
-    def test_bootstrap_verbose_shows_components(self):
-        """Bootstrap --verbose shows loaded components"""
+    def test_bootstrap_verbose_mode(self):
+        """Bootstrap --verbose mode works"""
         result = subprocess.run(
-            ["empirica", "bootstrap", "--verbose"],
+            ["empirica", "project-bootstrap", "--verbose", "--output", "json"],
             capture_output=True,
             text=True,
             timeout=10
         )
-        
+
         assert result.returncode == 0
-        
-        # Should show component list (if verbose works)
-        # Or at least succeed
-        assert "Bootstrap complete" in result.stdout
+
+        # Verbose mode should still return valid JSON
+        import json
+        output = json.loads(result.stdout)
+        assert "ok" in output
 
 
 # Integration test
@@ -231,24 +232,26 @@ class TestBootstrapIntegration:
         """Complete bootstrap workflow"""
         # Bootstrap
         result = subprocess.run(
-            ["empirica", "bootstrap"],
+            ["empirica", "project-bootstrap", "--output", "json"],
             capture_output=True,
             text=True,
             timeout=10
         )
-        
+
         assert result.returncode == 0
-        assert "Bootstrap complete" in result.stdout
-        
+
+        import json
+        output = json.loads(result.stdout)
+        assert output.get("ok") == True
+
         # Should be able to run other commands after bootstrap
-        # (Bootstrap initializes framework)
         result2 = subprocess.run(
-            ["empirica", "sessions-list"],
+            ["empirica", "sessions-list", "--output", "json"],
             capture_output=True,
             text=True,
             timeout=10
         )
-        
+
         # Sessions-list should work after bootstrap
         assert result2.returncode == 0
 

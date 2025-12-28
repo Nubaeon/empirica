@@ -25,25 +25,36 @@ class BreadcrumbRepository(BaseRepository):
         session_id: str,
         finding: str,
         goal_id: Optional[str] = None,
-        subtask_id: Optional[str] = None
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
     ) -> str:
-        """Log a project finding (what was learned/discovered)"""
+        """Log a project finding (what was learned/discovered)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). If None, defaults to 0.5.
+        """
         finding_id = str(uuid.uuid4())
+
+        if impact is None:
+            impact = 0.5
 
         finding_data = {
             "finding": finding,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
 
         self._execute("""
             INSERT INTO project_findings (
                 id, project_id, session_id, goal_id, subtask_id,
-                finding, created_timestamp, finding_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                finding, created_timestamp, finding_data, subject, impact
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             finding_id, project_id, session_id, goal_id, subtask_id,
-            finding, time.time(), json.dumps(finding_data)
+            finding, time.time(), json.dumps(finding_data), subject, impact
         ))
 
         self.commit()
@@ -57,25 +68,36 @@ class BreadcrumbRepository(BaseRepository):
         session_id: str,
         unknown: str,
         goal_id: Optional[str] = None,
-        subtask_id: Optional[str] = None
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
     ) -> str:
-        """Log a project unknown (what's still unclear)"""
+        """Log a project unknown (what's still unclear)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). If None, defaults to 0.5.
+        """
         unknown_id = str(uuid.uuid4())
+
+        if impact is None:
+            impact = 0.5
 
         unknown_data = {
             "unknown": unknown,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
 
         self._execute("""
             INSERT INTO project_unknowns (
                 id, project_id, session_id, goal_id, subtask_id,
-                unknown, created_timestamp, unknown_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                unknown, created_timestamp, unknown_data, subject, impact
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             unknown_id, project_id, session_id, goal_id, subtask_id,
-            unknown, time.time(), json.dumps(unknown_data)
+            unknown, time.time(), json.dumps(unknown_data), subject, impact
         ))
 
         self.commit()
@@ -102,16 +124,23 @@ class BreadcrumbRepository(BaseRepository):
         why_failed: str,
         goal_id: Optional[str] = None,
         subtask_id: Optional[str] = None,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        impact: float = 0.5
     ) -> str:
-        """Log a project dead end (what didn't work)"""
+        """Log a project dead end (what didn't work)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). Default 0.5 if not provided.
+        """
         dead_end_id = str(uuid.uuid4())
 
         dead_end_data = {
             "approach": approach,
             "why_failed": why_failed,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
 
         self._execute("""
@@ -160,18 +189,69 @@ class BreadcrumbRepository(BaseRepository):
 
         return doc_id
 
-    def get_project_findings(self, project_id: str, limit: Optional[int] = None, subject: Optional[str] = None) -> List[Dict]:
-        """Get all findings for a project, optionally filtered by subject"""
+    def get_project_findings(
+        self,
+        project_id: str,
+        limit: Optional[int] = None,
+        subject: Optional[str] = None,
+        depth: str = "moderate",
+        uncertainty: Optional[float] = None
+    ) -> List[Dict]:
+        """
+        Get findings for a project with deprecation filtering.
+        
+        Args:
+            project_id: Project identifier
+            limit: Optional limit on results (applied after filtering)
+            subject: Optional subject filter
+            depth: Relevance depth ("minimal", "moderate", "full", "complete", "auto")
+            uncertainty: Epistemic uncertainty (for auto-depth, 0.0-1.0)
+            
+        Returns:
+            Filtered list of findings
+        """
+        # Query all findings
         if subject:
             query = "SELECT * FROM project_findings WHERE project_id = ? AND subject = ? ORDER BY created_timestamp DESC"
             params = (project_id, subject)
         else:
             query = "SELECT * FROM project_findings WHERE project_id = ? ORDER BY created_timestamp DESC"
             params = (project_id,)
-        if limit:
-            query += f" LIMIT {limit}"
+        
         cursor = self._execute(query, params)
-        return [dict(row) for row in cursor.fetchall()]
+        findings = [dict(row) for row in cursor.fetchall()]
+        
+        # Apply deprecation filtering
+        from empirica.core.findings_deprecation import FindingsDeprecationEngine
+        
+        # Auto-depth based on uncertainty if requested
+        if depth == "auto" and uncertainty is not None:
+            if uncertainty > 0.5:
+                depth = "full"
+            elif uncertainty > 0.3:
+                depth = "moderate"
+            else:
+                depth = "minimal"
+        
+        # Calculate relevance scores
+        relevance_scores = [
+            FindingsDeprecationEngine.calculate_relevance_score(f)
+            for f in findings
+        ]
+        
+        # Filter by depth
+        filtered = FindingsDeprecationEngine.filter_by_depth(
+            findings,
+            depth=depth,
+            relevance_scores=relevance_scores,
+            uncertainty=uncertainty or 0.5
+        )
+        
+        # Apply limit if specified
+        if limit:
+            filtered = filtered[:limit]
+        
+        return filtered
 
     def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None, subject: Optional[str] = None) -> List[Dict]:
         """Get unknowns for a project (optionally filter by resolved status and subject)"""
@@ -233,7 +313,8 @@ class BreadcrumbRepository(BaseRepository):
         cost_estimate: Optional[str] = None,
         root_cause_vector: Optional[str] = None,
         prevention: Optional[str] = None,
-        goal_id: Optional[str] = None
+        goal_id: Optional[str] = None,
+        project_id: Optional[str] = None
     ) -> str:
         """
         Log a mistake for learning and future prevention.
@@ -263,12 +344,12 @@ class BreadcrumbRepository(BaseRepository):
 
         self._execute("""
             INSERT INTO mistakes_made (
-                id, session_id, goal_id, mistake, why_wrong,
+                id, session_id, goal_id, project_id, mistake, why_wrong,
                 cost_estimate, root_cause_vector, prevention,
                 created_timestamp, mistake_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            mistake_id, session_id, goal_id, mistake, why_wrong,
+            mistake_id, session_id, goal_id, project_id, mistake, why_wrong,
             cost_estimate, root_cause_vector, prevention,
             time.time(), json.dumps(mistake_data)
         ))
@@ -323,4 +404,18 @@ class BreadcrumbRepository(BaseRepository):
                 LIMIT ?
             """, (limit,))
 
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_project_mistakes(self, project_id: str, limit: Optional[int] = None) -> List[Dict]:
+        """Get mistakes for a project (uses direct project_id column)"""
+        query = """
+            SELECT mistake, prevention, cost_estimate, root_cause_vector, created_timestamp
+            FROM mistakes_made
+            WHERE project_id = ?
+            ORDER BY created_timestamp DESC
+        """
+        if limit:
+            query += f" LIMIT {limit}"
+
+        cursor = self._execute(query, (project_id,))
         return [dict(row) for row in cursor.fetchall()]

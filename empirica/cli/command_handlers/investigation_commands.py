@@ -103,7 +103,15 @@ def handle_investigate_command(args):
         
         if result.get('error'):
             print(f"❌ Investigation error: {result['error']}")
-        
+
+        # Format output based on requested format
+        output_format = getattr(args, 'output', 'default')
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Investigation", getattr(args, 'verbose', False))
 
@@ -157,7 +165,15 @@ def handle_analyze_command(args):
                         print(f"     • {key}: {value}")
                 else:
                     print(f"     {details}")
-        
+
+        # Format output based on requested format
+        output_format = getattr(args, 'output', 'default')
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+
+        # Return None to avoid exit code issues and duplicate output
+        return None
+
     except Exception as e:
         handle_cli_error(e, "Analysis", getattr(args, 'verbose', False))
 
@@ -205,10 +221,7 @@ def _investigate_directory(dir_path: str, verbose: bool = False) -> dict:
 def _investigate_concept(concept: str, context: str = None, verbose: bool = False) -> dict:
     """Investigate a concept or abstract idea"""
     try:
-        from empirica.core.canonical.canonical_epistemic_assessment import CanonicalEpistemicAssessor
-        
-        # Use canonical assessor (LLM-based, no heuristics)
-        evaluator = CanonicalEpistemicAssessor(agent_id="concept-investigation")
+        # NOTE: EpistemicAssessor moved to empirica-sentinel repo
         context_data = parse_json_safely(context)
         
         # Use available method or create mock result

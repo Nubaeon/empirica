@@ -42,26 +42,136 @@ def format_uncertainty_output(uncertainty_scores: Dict[str, float], verbose: boo
     return "\n".join(output)
 
 
-def handle_cli_error(error: Exception, command: str, verbose: bool = False) -> None:
-    """Standardized error handling for CLI commands"""
+def handle_cli_error(error: Exception, command: str, verbose: bool = False, session_id: Optional[str] = None) -> None:
+    """
+    Standardized error handling for CLI commands with auto-capture integration.
+
+    Args:
+        error: The exception that occurred
+        command: Name of the command that failed
+        verbose: Whether to print detailed traceback
+        session_id: Optional session ID for auto-capture (auto-detected if not provided)
+    """
     print(f"❌ {command} error: {error}")
-    
+
     if verbose:
         import traceback
         print("🔍 Detailed error information:")
         print(traceback.format_exc())
 
+    # Auto-capture the error for handoff to other AIs
+    try:
+        from empirica.core.issue_capture import get_auto_capture, initialize_auto_capture, IssueSeverity, IssueCategory
+
+        # Get or initialize auto-capture service
+        service = get_auto_capture()
+        if not service:
+            # Try to auto-detect session_id if not provided
+            if not session_id:
+                try:
+                    from empirica.data.session_database import SessionDatabase
+                    db = SessionDatabase()
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT session_id FROM sessions
+                        WHERE end_time IS NULL
+                        ORDER BY start_time DESC
+                        LIMIT 1
+                    """)
+                    row = cursor.fetchone()
+                    session_id = row['session_id'] if row else None
+                    db.close()
+                except:
+                    pass
+
+            # Initialize service if we have a session_id
+            if session_id:
+                service = initialize_auto_capture(session_id, enable=True)
+
+        # Capture the error if service is available
+        if service:
+            issue_id = service.capture_error(
+                message=f"{command} command failed: {str(error)}",
+                severity=IssueSeverity.HIGH,
+                category=IssueCategory.ERROR,
+                context={"command": command},
+                exc_info=error
+            )
+            if verbose and issue_id:
+                print(f"📋 Auto-captured as issue {issue_id[:8]}... for handoff")
+    except Exception as capture_error:
+        # Don't fail the error handler if auto-capture fails
+        if verbose:
+            print(f"⚠️  Auto-capture failed: {capture_error}")
+
 
 def parse_json_safely(json_string: Optional[str], default: Dict = None) -> Dict[str, Any]:
-    """Safely parse JSON string with fallback"""
+    """Safely parse JSON string with fallback and escape sequence repair"""
     if not json_string:
         return default or {}
-    
+
     try:
         return json.loads(json_string)
     except json.JSONDecodeError as e:
-        print(f"⚠️ JSON parsing error: {e}")
-        return default or {}
+        # Try to fix common escape sequence issues
+        try:
+            # Common issue: unescaped backslashes in paths or strings
+            # Replace single backslashes that aren't part of valid escape sequences
+            import re
+            # First, try to fix simple backslash issues
+            fixed_json = json_string.replace('\\', '\\\\')
+            # But be careful not to double-escape already escaped sequences
+            # Restore common valid escape sequences
+            fixed_json = fixed_json.replace('\\\\n', '\\n').replace('\\\\t', '\\t').replace('\\\\r', '\\r')
+            fixed_json = fixed_json.replace('\\\\b', '\\b').replace('\\\\f', '\\f').replace('\\\\/', '/')
+            fixed_json = fixed_json.replace('\\\\\\/', '\\/')  # Handle over-correction
+
+            # Try to parse again with the fixed string
+            parsed = json.loads(fixed_json)
+            return parsed
+        except json.JSONDecodeError:
+            # If still failing, try a more sophisticated approach
+            try:
+                # Try to detect and fix common escape sequence patterns
+                fixed_json = _fix_json_escapes(json_string)
+                return json.loads(fixed_json)
+            except json.JSONDecodeError:
+                print(f"⚠️ JSON parsing error: {e}")
+                print(f"   Error details: Invalid \\escape in JSON string")
+                return default or {}
+
+
+def _fix_json_escapes(json_str: str) -> str:
+    """Attempt to fix common JSON escape sequence issues"""
+    import re
+
+    # Pattern to match problematic backslashes that are not part of valid escape sequences
+    # Valid escape sequences: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+    # Any \ that is not followed by these is likely problematic
+
+    # First, extract and preserve valid escape sequences temporarily
+    valid_escapes = {}
+    escape_placeholder = "__ESCAPE_PLACEHOLDER_{}__"
+
+    # Find and temporarily replace valid escape sequences
+    valid_escape_pattern = r'\\[\"\\/bfnrt]|\\u[0-9a-fA-F]{4}'
+    matches = list(re.finditer(valid_escape_pattern, json_str))
+
+    temp_str = json_str
+    for i, match in enumerate(matches):
+        placeholder = escape_placeholder.format(i)
+        valid_escapes[placeholder] = match.group(0)
+        temp_str = temp_str.replace(match.group(0), placeholder, 1)
+
+    # Now fix remaining problematic backslashes
+    # Replace single backslashes with double backslashes
+    temp_str = re.sub(r'(?<!\\)\\(?!["\\/bfnrtu])', r'\\\\', temp_str)
+
+    # Restore the valid escape sequences
+    for placeholder, original in valid_escapes.items():
+        temp_str = temp_str.replace(placeholder, original)
+
+    return temp_str
 
 
 def format_execution_time(start_time: float, end_time: Optional[float] = None) -> str:

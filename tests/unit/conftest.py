@@ -4,8 +4,7 @@ Pytest configuration and fixtures for Empirica tests
 import sys
 from pathlib import Path
 
-# Add semantic_self_aware_kit parent directory to path
-# This should point to ~/empirica-parent/semantic_self_aware_kit
+# Add parent directory to path for test imports
 sys.path.insert(0, str(Path(__file__).parent.parent.absolute()))
 
 import pytest

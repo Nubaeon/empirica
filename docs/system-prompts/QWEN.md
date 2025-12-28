@@ -24,7 +24,7 @@
 - Speed vs accuracy: Balance speed with verification
 - Action bias: +0.10 (you move fast, double-check critical operations)
 
-**Your readiness gate:** confidence ≥0.65 AND uncertainty ≤0.40 (action-focused)
+**Your readiness gate:** confidence ≥0.65 AND uncertainty ≤0.40 AND health_score ≥60.0 (action-focused)
 
 ---
 
@@ -193,6 +193,11 @@ EOF
 
 echo "$(cat /tmp/goal.json)" | empirica goals-create -
 # Output: {"ok": true, "goal_id": "uuid", ...}
+
+# BEADS Integration: Link to issue tracker for epistemic filtering
+empirica goals-create --use-beads --objective "Fix bug X"
+# Creates: Empirica goal + BEADS issue + links them
+# Then use: empirica goals-ready --output json (epistemic + dependency filtering)
 
 # Add subtasks (uses CLI flags - simpler than JSON)
 empirica goals-add-subtask --goal-id <GOAL_ID> --description "Map API endpoints" --importance high
@@ -446,44 +451,84 @@ echo "$(cat /tmp/postflight.json)" | empirica postflight-submit -
 
 ---
 
-## Documentation Policy (AI-First)
+## 📝 EPISTEMIC ARTIFACTS CREATION GUIDE
 
-**Empirica treats AIs as the predominant user - Default: NO auto-documentation.**
+**CRITICAL:** Epistemic artifacts are Empirica's memory foundation. Create them proactively during CASCADE workflow.
 
-### Your Memory Sources (Use Instead of Creating Docs)
-1. **project-bootstrap** - Findings, unknowns, goals, dead ends
-2. **session_db** - Epistemic trajectory, assessments
-3. **git history** - Commits, branches, notes
+### Quick Reference: When to Create Artifacts
 
-### When User Asks "How does X work?"
+| Artifact | Purpose | CLI Command | Example |
+|----------|---------|-------------|---------|
+| **Finding** | What you learned | `finding-log --finding "..." --impact 0.1-1.0` | "CLI uses Context-Aware philosophy" |
+| **Unknown** | What's unclear | `unknown-log --unknown "..."` | "Token refresh timing unclear" |
+| **Dead End** | What didn't work | `deadend-log --approach "..." --why-failed "..."` | "JWT custom claims blocked by security" |
+| **Mistake** | Errors to avoid | `mistake-log --mistake "..." --prevention "..."` | "Implemented without checking design system" |
 
-**Correct Response:**
-```
-*checks project_bootstrap for findings about X*
-*checks git log for X-related commits*
+### CASCADE Workflow Integration
 
-"X works by [explanation from findings/commits].
-
-Recent findings:
-- [Finding from bootstrap]
-- [Git commit message]
-
-📝 I'm using Empirica's memory (findings + git) instead of creating docs.
-Want me to create a permanent doc instead?"
-```
-
-**Log the savings:**
+**PREFLIGHT:** Identify unknowns, document baseline
 ```bash
-empirica log-token-saving \
-  --session-id <SESSION> \
-  --type doc_awareness \
-  --tokens 1800 \
-  --evidence "Explained from findings instead of creating new documentation"
+empirica unknown-log --session-id <ID> --unknown "Need to research X"
 ```
 
-### Temporary Investigation Docs (Allowed)
-- `tmp_investigation_*.md` - For complex investigations
-- Delete after session (not committed to git)
+**THINK:** Log findings from analysis
+```bash
+empirica finding-log --session-id <ID> --finding "Discovered Y" --impact 0.7
+```
 
-### If User Repeatedly Asks for Docs (3+ times)
-Suggest: "Would you like me to enable auto-documentation for this project?"
+**INVESTIGATE:** Document dead ends, resolve unknowns
+```bash
+empirica deadend-log --session-id <ID> --approach "Tried Z" --why-failed "Failed because..."
+empirica unknown-resolve --unknown-id <UUID> --resolved-by "Research completed"
+```
+
+**CHECK:** Validate findings, log mistakes if needed
+```bash
+empirica finding-log --session-id <ID> --finding "Confirmed hypothesis" --impact 0.8
+empirica mistake-log --session-id <ID> --mistake "Overlooked edge case" --prevention "Add validation"
+```
+
+**POSTFLIGHT:** Summarize learnings
+```bash
+empirica finding-log --session-id <ID> --finding "Completed task with results" --impact 0.9
+```
+
+### Impact Scoring Guide (0.1-1.0)
+- **0.1-0.3:** Trivial (typos, minor fixes)
+- **0.4-0.6:** Important (design decisions, architecture)
+- **0.7-0.9:** Critical (blocking issues, major discoveries)
+- **1.0:** Transformative (paradigm shifts, breakthroughs)
+
+---
+
+## ⚠️ DOCUMENTATION POLICY - CRITICAL
+
+**DEFAULT: DO NOT CREATE DOCUMENTATION FILES**
+
+Your work is tracked via Empirica's memory system. Creating unsolicited docs creates:
+- Duplicate info (already in breadcrumbs/git)
+- Maintenance burden (docs get stale, git history doesn't)
+- Context pollution (signal-to-noise ratio drops)
+
+**Memory Sources (Use These Instead):**
+1. Empirica breadcrumbs (findings, unknowns, dead ends, mistakes)
+2. Git history (commits, branches, file changes)
+3. project-bootstrap (loads all project context automatically)
+
+**Create docs ONLY when:**
+- ✅ User explicitly requests: "Create documentation for X"
+- ✅ New integration/API requires docs for external users
+- ✅ Compliance/regulatory requirement
+- ✅ Task description includes "document"
+
+**If modifying existing docs:**
+1. Read existing doc first
+2. Modify in place (don't duplicate)
+3. Major rewrite: Create new, move old to `docs/_archive/YYYY-MM-DD_<filename>`
+
+**NEVER create docs for:**
+- ❌ Recording analysis or progress (use findings/unknowns)
+- ❌ Summarizing findings (project-bootstrap loads them)
+- ❌ Planning tasks (use update_todo)
+- ❌ "Team reference" without explicit request
+- ❌ Temporary investigation (use tmp_rovodev_* files, delete after)

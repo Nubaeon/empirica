@@ -23,7 +23,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
 EpistemicAssessment = EpistemicAssessmentSchema  # Alias for backwards compat
-from empirica.core.canonical import CanonicalEpistemicAssessor, 
 from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade, CascadePhase
 from empirica.data.session_database import SessionDatabase
 
@@ -43,7 +42,6 @@ class TestFullCascadeWorkflow:
             agent_id="test_full_cascade",
             action_confidence_threshold=0.70,
             max_investigation_rounds=3,
-            enable_bayesian=False,  # Simplify for testing
             enable_drift_monitor=False,
             enable_action_hooks=False,
             enable_session_db=False
@@ -426,7 +424,6 @@ class TestCascadeEdgeCases:
             agent_id="test_edge_cases",
             action_confidence_threshold=0.70,
             max_investigation_rounds=3,
-            enable_bayesian=False,
             enable_drift_monitor=False,
             enable_action_hooks=False,
             enable_session_db=False

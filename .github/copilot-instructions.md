@@ -77,7 +77,21 @@ empirica session-create --ai-id myai --output json
 
 ## III. CASCADE WORKFLOW (Explicit Phases)
 
-**Pattern:** PREFLIGHT → [Work + optional CHECK gates]* → POSTFLIGHT
+**Pattern:** PREFLIGHT → [Work + CHECK gates (MANDATORY for high-risk)]* → POSTFLIGHT
+
+**CHECK is ESSENTIAL** (not optional anymore):
+- **Circuit breaker** for autonomous AI workflows
+- **Prevents drift** in multi-round work and memory compacts
+- **Token ROI**: ~450 tokens to prevent 50K-200K wasted tokens = **100-400x return**
+- **Sentinel integration point**: Natural pause for human-in-the-loop review
+
+**Use CHECK when ANY apply:**
+- ✅ Uncertainty >0.5
+- ✅ Scope breadth >0.6
+- ✅ Investigation >2 hours
+- ✅ Before major decisions
+- ✅ Before epistemic handoffs
+- ✅ Autonomous multi-AI workflows
 
 ### PREFLIGHT (Before Starting Work)
 
@@ -153,7 +167,7 @@ echo "$(cat check.json)" | empirica check -
 - confidence ≥ 0.7 → decision: `"proceed"`
 - confidence < 0.7 → decision: `"investigate_more"`
 
-**CHECK is a GATE, not just another assessment.**
+**CHECK is MANDATORY for high-risk work** - prevents runaway autonomous execution and drift accumulation.
 
 ### POSTFLIGHT (After Work)
 
@@ -185,7 +199,7 @@ echo "$(cat postflight.json)" | empirica postflight-submit -
 
 1. **Epistemic Transparency > Speed** - Know what you don't know, admit uncertainty, investigate systematically
 2. **Genuine Self-Assessment** - Rate what you ACTUALLY know right now, not aspirations
-3. **CHECK is a Gate** - Not just another assessment; a decision point
+3. **CHECK is ESSENTIAL** - **MANDATORY for high-risk work**. Not just a gate, but a critical control mechanism for autonomous workflows. Prevents 50K-200K token waste, enables safe multi-AI handoffs, acts as Sentinel integration point.
 4. **Unified Storage** - CASCADE phases write to `reflexes` table + git notes atomically
 
 ---

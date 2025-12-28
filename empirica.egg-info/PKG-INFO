@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: empirica
-Version: 1.0.5
+Version: 1.1.0
 Summary: Genuine AI epistemic self-assessment framework - Universal interface for single AI tracking
 Author: Empirica Team
 License-Expression: MIT
@@ -28,6 +28,7 @@ Requires-Dist: jsonschema>=4.0
 Requires-Dist: httpx>=0.24
 Requires-Dist: requests>=2.31.0
 Requires-Dist: cryptography>=41.0
+Requires-Dist: gitpython>=3.1.0
 Requires-Dist: anthropic>=0.39.0
 Requires-Dist: tiktoken>=0.5.0
 Requires-Dist: rich>=13.0
@@ -66,7 +67,7 @@ Dynamic: license-file
 
 > **AI agents that know what they know—and what they don't**
 
-[![Version](https://img.shields.io/badge/version-1.0.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.0.3)
+[![Version](https://img.shields.io/badge/version-1.0.6-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.0.6)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)
@@ -309,6 +310,31 @@ cargo install beads
 - Auto-links with Empirica goals
 
 **Learn more:** [BEADS Integration Guide](https://github.com/Nubaeon/empirica/blob/main/docs/integrations/BEADS_GOALS_READY_GUIDE.md)
+
+### Claude Code Integration
+
+**Automatic epistemic continuity across memory compacts:**
+
+```bash
+# Install plugin (bundled with Empirica)
+./scripts/install_claude_plugin.sh
+```
+
+**Features:**
+- 🔄 **Auto-saves epistemic state** before Claude Code memory compacts
+- 📥 **Auto-restores context** after compacts (MCO config + bootstrap)
+- 📊 **Drift detection** - measures epistemic drift across compacts
+- 🎯 **Zero configuration** - automatically finds latest session
+- 💾 **Token efficient** - 97.5% reduction vs manual reconstruction
+
+**What it does:**
+- **PreCompact hook** → Saves checkpoint + MCO config before compact
+- **SessionStart hook** → Loads bootstrap + MCO config after compact
+- **SessionEnd hook** → Curates old snapshots (keeps high-impact, removes low-impact)
+
+**Result:** Epistemic drift reduced from **60% → 10%** across memory compacts.
+
+**Learn more:** [Claude Code Integration Guide](./plugins/claude-code-integration/README.md)
 
 ### Vector Search (Qdrant)
 

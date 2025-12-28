@@ -18,6 +18,10 @@ from .threshold_loader import (
     get_threshold,
     override_threshold
 )
+from .mco_loader import (
+    MCOLoader,
+    get_mco_config
+)
 
 __all__ = [
     'get_credentials_loader',
@@ -30,4 +34,6 @@ __all__ = [
     'load_threshold_profile',
     'get_threshold',
     'override_threshold',
+    'MCOLoader',
+    'get_mco_config',
 ]

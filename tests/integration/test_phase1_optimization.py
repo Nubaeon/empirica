@@ -15,8 +15,6 @@ parent_dir = Path(__file__).parent
 if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
 
-from semantic_self_aware_kit.parallel_reasoning import ParallelReasoningSystem
-
 async def test_integrated_assessment():
     """
     Test that synthesis can include epistemic assessment directly

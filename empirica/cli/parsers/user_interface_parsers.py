@@ -12,3 +12,7 @@ def add_user_interface_parsers(subparsers):
     chat_parser.add_argument('--resume', help='Resume existing session by ID')
     chat_parser.add_argument('--no-save', action='store_true', help='Don\'t save conversation')
     chat_parser.add_argument('--verbose', action='store_true', help='Show routing details')
+
+    # Dashboard command - TUI monitoring
+    dashboard_parser = subparsers.add_parser('dashboard', help='Launch TUI dashboard for project monitoring')
+    dashboard_parser.add_argument('--refresh-rate', type=float, default=1.0, help='Refresh rate in seconds (default: 1.0)')

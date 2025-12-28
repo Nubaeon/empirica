@@ -24,25 +24,18 @@ class TestCanonicalGoalOrchestrator:
         # Create a mock epistemic assessment
         assessment = EpistemicAssessment(
             engagement=VectorState(score=0.75, rationale="Active collaboration with user"),
-            engagement_gate_passed=True,
-            know=VectorState(score=0.6, rationale="Some domain knowledge but with gaps"),
-            do=VectorState(score=0.7, rationale="Capable of implementation tasks"),
-            context=VectorState(score=0.65, rationale="Environment context understood but needs more details"),
-            foundation_confidence=0.65,
-            clarity=VectorState(score=0.75, rationale="Task requirements are clear"),
-            coherence=VectorState(score=0.8, rationale="Request is logically consistent"),
-            signal=VectorState(score=0.7, rationale="Clear priority on security aspects"),
-            density=VectorState(score=0.5, rationale="Manageable information load"),
-            comprehension_confidence=0.7,
-            state=VectorState(score=0.6, rationale="Environment mapping in progress"),
-            change=VectorState(score=0.7, rationale="Can track modifications effectively"),
-            completion=VectorState(score=0.5, rationale="Task just beginning"),
-            impact=VectorState(score=0.75, rationale="Clear understanding of consequences"),
-            execution_confidence=0.65,
+            foundation_know=VectorState(score=0.6, rationale="Some domain knowledge but with gaps"),
+            foundation_do=VectorState(score=0.7, rationale="Capable of implementation tasks"),
+            foundation_context=VectorState(score=0.65, rationale="Environment context understood but needs more details"),
+            comprehension_clarity=VectorState(score=0.75, rationale="Task requirements are clear"),
+            comprehension_coherence=VectorState(score=0.8, rationale="Request is logically consistent"),
+            comprehension_signal=VectorState(score=0.7, rationale="Clear priority on security aspects"),
+            comprehension_density=VectorState(score=0.5, rationale="Manageable information load"),
+            execution_state=VectorState(score=0.6, rationale="Environment mapping in progress"),
+            execution_change=VectorState(score=0.7, rationale="Can track modifications effectively"),
+            execution_completion=VectorState(score=0.5, rationale="Task just beginning"),
+            execution_impact=VectorState(score=0.75, rationale="Clear understanding of consequences"),
             uncertainty=VectorState(score=0.3, rationale="Low uncertainty about approach"),
-            overall_confidence=0.65,
-            recommended_action=Action.PROCEED,
-            assessment_id="test_orchestrator"
         )
         
         current_state = {
@@ -78,25 +71,18 @@ class TestCanonicalGoalOrchestrator:
         # Test high engagement (should lead to high autonomy)
         high_engagement_assessment = EpistemicAssessment(
             engagement=VectorState(score=0.85, rationale="High collaborative engagement"),
-            engagement_gate_passed=True,
-            know=VectorState(score=0.8, rationale="Good domain knowledge"),
-            do=VectorState(score=0.8, rationale="High capability"),
-            context=VectorState(score=0.8, rationale="Good context understanding"),
-            foundation_confidence=0.8,
-            clarity=VectorState(score=0.8, rationale="Task is clear"),
-            coherence=VectorState(score=0.9, rationale="High coherence"),
-            signal=VectorState(score=0.8, rationale="Clear priorities"),
-            density=VectorState(score=0.2, rationale="Low information density"),
-            comprehension_confidence=0.8,
-            state=VectorState(score=0.8, rationale="Good state awareness"),
-            change=VectorState(score=0.85, rationale="Good change tracking"),
-            completion=VectorState(score=0.8, rationale="Clear completion criteria"),
-            impact=VectorState(score=0.8, rationale="Good impact understanding"),
-            execution_confidence=0.8,
+            foundation_know=VectorState(score=0.8, rationale="Good domain knowledge"),
+            foundation_do=VectorState(score=0.8, rationale="High capability"),
+            foundation_context=VectorState(score=0.8, rationale="Good context understanding"),
+            comprehension_clarity=VectorState(score=0.8, rationale="Task is clear"),
+            comprehension_coherence=VectorState(score=0.9, rationale="High coherence"),
+            comprehension_signal=VectorState(score=0.8, rationale="Clear priorities"),
+            comprehension_density=VectorState(score=0.2, rationale="Low information density"),
+            execution_state=VectorState(score=0.8, rationale="Good state awareness"),
+            execution_change=VectorState(score=0.85, rationale="Good change tracking"),
+            execution_completion=VectorState(score=0.8, rationale="Clear completion criteria"),
+            execution_impact=VectorState(score=0.8, rationale="Good impact understanding"),
             uncertainty=VectorState(score=0.1, rationale="Very low uncertainty"),
-            overall_confidence=0.8,
-            recommended_action=Action.PROCEED,
-            assessment_id="high_engagement_test"
         )
         
         conversation_context = "Complex system architecture improvement"
@@ -115,25 +101,18 @@ class TestCanonicalGoalOrchestrator:
         # Test low engagement (should lead to low autonomy)
         low_engagement_assessment = EpistemicAssessment(
             engagement=VectorState(score=0.3, rationale="Low collaborative engagement"),
-            engagement_gate_passed=False,
-            know=VectorState(score=0.7, rationale="Good domain knowledge"),
-            do=VectorState(score=0.7, rationale="High capability"),
-            context=VectorState(score=0.7, rationale="Good context understanding"),
-            foundation_confidence=0.7,
-            clarity=VectorState(score=0.7, rationale="Task is clear"),
-            coherence=VectorState(score=0.8, rationale="High coherence"),
-            signal=VectorState(score=0.7, rationale="Clear priorities"),
-            density=VectorState(score=0.3, rationale="Low information density"),
-            comprehension_confidence=0.7,
-            state=VectorState(score=0.7, rationale="Good state awareness"),
-            change=VectorState(score=0.75, rationale="Good change tracking"),
-            completion=VectorState(score=0.7, rationale="Clear completion criteria"),
-            impact=VectorState(score=0.7, rationale="Good impact understanding"),
-            execution_confidence=0.7,
+            foundation_know=VectorState(score=0.7, rationale="Good domain knowledge"),
+            foundation_do=VectorState(score=0.7, rationale="High capability"),
+            foundation_context=VectorState(score=0.7, rationale="Good context understanding"),
+            comprehension_clarity=VectorState(score=0.7, rationale="Task is clear"),
+            comprehension_coherence=VectorState(score=0.8, rationale="High coherence"),
+            comprehension_signal=VectorState(score=0.7, rationale="Clear priorities"),
+            comprehension_density=VectorState(score=0.3, rationale="Low information density"),
+            execution_state=VectorState(score=0.7, rationale="Good state awareness"),
+            execution_change=VectorState(score=0.75, rationale="Good change tracking"),
+            execution_completion=VectorState(score=0.7, rationale="Clear completion criteria"),
+            execution_impact=VectorState(score=0.7, rationale="Good impact understanding"),
             uncertainty=VectorState(score=0.3, rationale="Moderate uncertainty"),
-            overall_confidence=0.7,
-            recommended_action=Action.CLARIFY,
-            assessment_id="low_engagement_test"
         )
         
         low_engagement_goals = asyncio.run(orchestrator.orchestrate_goals(
@@ -154,25 +133,18 @@ class TestCanonicalGoalOrchestrator:
         # Create assessment with low clarity
         low_clarity_assessment = EpistemicAssessment(
             engagement=VectorState(score=0.7, rationale="Good engagement"),
-            engagement_gate_passed=True,
-            know=VectorState(score=0.8, rationale="Good domain knowledge"),
-            do=VectorState(score=0.8, rationale="High capability"),
-            context=VectorState(score=0.7, rationale="Good context understanding"),
-            foundation_confidence=0.75,
-            clarity=VectorState(score=0.4, rationale="Task requirements are unclear"),  # Low clarity
-            coherence=VectorState(score=0.8, rationale="High coherence"),
-            signal=VectorState(score=0.7, rationale="Clear priorities"),
-            density=VectorState(score=0.3, rationale="Low information density"),
-            comprehension_confidence=0.65,
-            state=VectorState(score=0.7, rationale="Good state awareness"),
-            change=VectorState(score=0.75, rationale="Good change tracking"),
-            completion=VectorState(score=0.7, rationale="Clear completion criteria"),
-            impact=VectorState(score=0.8, rationale="Good impact understanding"),
-            execution_confidence=0.75,
+            foundation_know=VectorState(score=0.8, rationale="Good domain knowledge"),
+            foundation_do=VectorState(score=0.8, rationale="High capability"),
+            foundation_context=VectorState(score=0.7, rationale="Good context understanding"),
+            comprehension_clarity=VectorState(score=0.4, rationale="Task requirements are unclear"),  # Low clarity
+            comprehension_coherence=VectorState(score=0.8, rationale="High coherence"),
+            comprehension_signal=VectorState(score=0.7, rationale="Clear priorities"),
+            comprehension_density=VectorState(score=0.3, rationale="Low information density"),
+            execution_state=VectorState(score=0.7, rationale="Good state awareness"),
+            execution_change=VectorState(score=0.75, rationale="Good change tracking"),
+            execution_completion=VectorState(score=0.7, rationale="Clear completion criteria"),
+            execution_impact=VectorState(score=0.8, rationale="Good impact understanding"),
             uncertainty=VectorState(score=0.4, rationale="Some uncertainty due to clarity issues"),
-            overall_confidence=0.72,
-            recommended_action=Action.CLARIFY,
-            assessment_id="low_clarity_test"
         )
         
         conversation_context = "Unclear requirements for database migration"
@@ -197,25 +169,18 @@ class TestCanonicalGoalOrchestrator:
         # Create assessment with low knowledge
         low_knowledge_assessment = EpistemicAssessment(
             engagement=VectorState(score=0.75, rationale="Good engagement"),
-            engagement_gate_passed=True,
-            know=VectorState(score=0.4, rationale="Limited domain knowledge"),  # Low knowledge
-            do=VectorState(score=0.7, rationale="High capability for investigation"),
-            context=VectorState(score=0.7, rationale="Good context understanding"),
-            foundation_confidence=0.6,
-            clarity=VectorState(score=0.8, rationale="Task is clear"),
-            coherence=VectorState(score=0.8, rationale="High coherence"),
-            signal=VectorState(score=0.7, rationale="Clear priorities"),
-            density=VectorState(score=0.3, rationale="Low information density"),
-            comprehension_confidence=0.7,
-            state=VectorState(score=0.7, rationale="Good state awareness"),
-            change=VectorState(score=0.75, rationale="Good change tracking"),
-            completion=VectorState(score=0.7, rationale="Clear completion criteria"),
-            impact=VectorState(score=0.7, rationale="Good impact understanding"),
-            execution_confidence=0.65,
+            foundation_know=VectorState(score=0.4, rationale="Limited domain knowledge"),  # Low knowledge
+            foundation_do=VectorState(score=0.7, rationale="High capability for investigation"),
+            foundation_context=VectorState(score=0.7, rationale="Good context understanding"),
+            comprehension_clarity=VectorState(score=0.8, rationale="Task is clear"),
+            comprehension_coherence=VectorState(score=0.8, rationale="High coherence"),
+            comprehension_signal=VectorState(score=0.7, rationale="Clear priorities"),
+            comprehension_density=VectorState(score=0.3, rationale="Low information density"),
+            execution_state=VectorState(score=0.7, rationale="Good state awareness"),
+            execution_change=VectorState(score=0.75, rationale="Good change tracking"),
+            execution_completion=VectorState(score=0.7, rationale="Clear completion criteria"),
+            execution_impact=VectorState(score=0.7, rationale="Good impact understanding"),
             uncertainty=VectorState(score=0.5, rationale="High uncertainty due to knowledge gaps"),
-            overall_confidence=0.65,
-            recommended_action=Action.INVESTIGATE,
-            assessment_id="low_knowledge_test"
         )
         
         conversation_context = "Complex machine learning model implementation"
@@ -253,25 +218,18 @@ class TestCanonicalGoalOrchestrator:
         conversation_context = "User wants to optimize database queries"
         assessment = EpistemicAssessment(
             engagement=VectorState(score=0.7, rationale="Good engagement"),
-            engagement_gate_passed=True,
-            know=VectorState(score=0.5, rationale="Some knowledge gaps in optimization"),
-            do=VectorState(score=0.6, rationale="Moderate capability"),
-            context=VectorState(score=0.6, rationale="Context partially understood"),
-            foundation_confidence=0.55,
-            clarity=VectorState(score=0.65, rationale="Task is somewhat clear"),
-            coherence=VectorState(score=0.7, rationale="Request is coherent"),
-            signal=VectorState(score=0.6, rationale="Priorities identified"),
-            density=VectorState(score=0.4, rationale="Manageable information load"),
-            comprehension_confidence=0.6,
-            state=VectorState(score=0.5, rationale="Environment mapping incomplete"),
-            change=VectorState(score=0.6, rationale="Change tracking capability moderate"),
-            completion=VectorState(score=0.5, rationale="Completion criteria unclear"),
-            impact=VectorState(score=0.65, rationale="Impact understanding moderate"),
-            execution_confidence=0.55,
+            foundation_know=VectorState(score=0.5, rationale="Some knowledge gaps in optimization"),
+            foundation_do=VectorState(score=0.6, rationale="Moderate capability"),
+            foundation_context=VectorState(score=0.6, rationale="Context partially understood"),
+            comprehension_clarity=VectorState(score=0.65, rationale="Task is somewhat clear"),
+            comprehension_coherence=VectorState(score=0.7, rationale="Request is coherent"),
+            comprehension_signal=VectorState(score=0.6, rationale="Priorities identified"),
+            comprehension_density=VectorState(score=0.4, rationale="Manageable information load"),
+            execution_state=VectorState(score=0.5, rationale="Environment mapping incomplete"),
+            execution_change=VectorState(score=0.6, rationale="Change tracking capability moderate"),
+            execution_completion=VectorState(score=0.5, rationale="Completion criteria unclear"),
+            execution_impact=VectorState(score=0.65, rationale="Impact understanding moderate"),
             uncertainty=VectorState(score=0.4, rationale="Some uncertainty about best approach"),
-            overall_confidence=0.58,
-            recommended_action=Action.INVESTIGATE,
-            assessment_id="placeholder_test"
         )
         
         current_state = {"database_type": "PostgreSQL", "performance_requirements": "high"}

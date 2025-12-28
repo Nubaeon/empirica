@@ -214,11 +214,14 @@ class DatabaseHandoffStorage:
             db_path = get_session_db_path()
         
         self.db_path = Path(db_path)
-        self.conn = sqlite3.connect(str(self.db_path))
+        # Enable timeout and WAL mode for better concurrency
+        self.conn = sqlite3.connect(str(self.db_path), timeout=30.0)
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.execute("PRAGMA busy_timeout=30000")
         self.conn.row_factory = sqlite3.Row
-        
+
         self._create_table()
-        logger.info(f"📊 Database handoff storage initialized: {self.db_path}")
+        logger.info(f"📊 Database handoff storage initialized: {self.db_path} (WAL mode enabled)")
     
     def _create_table(self):
         """Create handoff_reports table"""

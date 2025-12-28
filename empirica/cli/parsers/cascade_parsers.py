@@ -1,15 +1,15 @@
 """CASCADE workflow command parsers."""
 
 def add_cascade_parsers(subparsers):
-    """Add cascade command parsers (DEPRECATED - use MCP tools instead)
-    
-    The 'cascade' command was part of ModalitySwitcher plugin.
-    For CASCADE workflow, use MCP tools:
-    - empirica execute-preflight
-    - empirica execute-check  
-    - empirica execute-postflight
-    
-    This function is kept for backward compatibility but does nothing.
+    """Add cascade command parsers (Primary CLI interface for epistemic assessments)
+
+    The CASCADE workflow commands are the primary interface for AI-based epistemic assessments.
+    MCP tools are available as GUI/IDE interfaces that map to these CLI commands:
+    - MCP execute-preflight maps to CLI preflight command
+    - MCP execute-check maps to CLI check command
+    - MCP execute-postflight maps to CLI postflight command
+
+    This function provides the core CLI interface for epistemic self-assessment.
     """
     # Deprecated - CASCADE workflow now uses MCP tools
     pass
@@ -53,7 +53,8 @@ def add_cascade_parsers(subparsers):
     preflight_submit_parser.add_argument('--session-id', help='Session ID (legacy)')
     preflight_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
     preflight_submit_parser.add_argument('--reasoning', help='Reasoning for assessment scores (legacy)')
-    preflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
+    preflight_submit_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
+    preflight_submit_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
     
     # Check command (AI-first with config file support)
     check_parser = subparsers.add_parser('check',
@@ -71,24 +72,34 @@ def add_cascade_parsers(subparsers):
     unknowns_group.add_argument('--unknowns', dest='unknowns', help='Remaining unknowns as JSON array (legacy)')
     unknowns_group.add_argument('--remaining-unknowns', dest='unknowns', help='Alias for --unknowns (legacy)')
     check_parser.add_argument('--confidence', type=float, help='Confidence score (0.0-1.0) (legacy)')
-    check_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
+    check_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
     check_parser.add_argument('--verbose', action='store_true', help='Show detailed analysis')
     
-    # Check submit command
-    check_submit_parser = subparsers.add_parser('check-submit', help='Submit check assessment results')
-    check_submit_parser.add_argument('--session-id', required=True, help='Session ID')
-    check_submit_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict')
-    check_submit_parser.add_argument('--decision', required=True, choices=['proceed', 'investigate', 'proceed_with_caution'], help='Decision made')
-    check_submit_parser.add_argument('--reasoning', help='Reasoning for decision')
-    check_submit_parser.add_argument('--cycle', type=int, help='Investigation cycle number')
-    check_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    # Check submit command (AI-first with config file support)
+    check_submit_parser = subparsers.add_parser('check-submit', 
+        help='Submit check assessment (AI-first: use config file, Legacy: use flags)')
+    
+    # AI-FIRST: Positional config file argument
+    check_submit_parser.add_argument('config', nargs='?',
+        help='JSON config file path or "-" for stdin (AI-first mode)')
+    
+    # LEGACY: Flag-based arguments (backward compatible)
+    check_submit_parser.add_argument('--session-id', help='Session ID (legacy)')
+    check_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
+    check_submit_parser.add_argument('--decision', choices=['proceed', 'investigate', 'proceed_with_caution'], help='Decision made (legacy)')
+    check_submit_parser.add_argument('--reasoning', help='Reasoning for decision (legacy)')
+    check_submit_parser.add_argument('--cycle', type=int, help='Investigation cycle number (legacy)')
+    check_submit_parser.add_argument('--round', type=int, help='Round number (for checkpoint tracking) (legacy)')
+    check_submit_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    check_submit_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
     
     # Postflight command (primary, non-blocking)
     postflight_parser = subparsers.add_parser('postflight', help='Submit postflight epistemic assessment results')
     postflight_parser.add_argument('--session-id', required=True, help='Session ID')
     postflight_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict (reassessment of same 13 dimensions as preflight)')
     postflight_parser.add_argument('--reasoning', help='Task summary or description of learning/changes from preflight')
-    postflight_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    postflight_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    postflight_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
     # Postflight submit command (AI-first with config file support)
     postflight_submit_parser = subparsers.add_parser('postflight-submit',
@@ -103,6 +114,7 @@ def add_cascade_parsers(subparsers):
     postflight_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
     postflight_submit_parser.add_argument('--reasoning', help='Description of what changed from preflight (legacy)')
     postflight_submit_parser.add_argument('--changes', help='Alias for --reasoning (deprecated, use --reasoning)', dest='reasoning')
-    postflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='json', help='Output format (default: json for AI)')
+    postflight_submit_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
+    postflight_submit_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
 

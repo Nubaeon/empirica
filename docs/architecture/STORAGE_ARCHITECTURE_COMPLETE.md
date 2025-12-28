@@ -6,6 +6,27 @@
 
 ---
 
+## Overview (Critical Infrastructure)
+
+This guide provides a comprehensive and visual explanation of Empirica's three-layer storage architecture and the critical distinction between git diffs (content tracking) and epistemic vectors (confidence tracking).
+
+### Diagram 1: Complete Storage Architecture Flow
+
+**File:** `storage_architecture_flow.svg`
+
+![Storage Architecture Flow](./storage_architecture_flow.svg)
+
+**What This Shows:**
+- Complete data flow from epistemic event → three parallel storage layers: SQLite, Git Notes, and JSON Logs.
+- High-level overview of how data is compressed and accessed by different use cases (live dashboard, historical trends, debugging, crypto signing).
+
+**Key Takeaways:**
+1.  **Three parallel writes** from `GitEnhancedReflexLogger` ensure data redundancy and optimize for different use cases.
+2.  **Different storage for different use cases:** SQLite for fast SQL queries, Git Notes for compressed and distributed state, JSON Logs for full audit and debugging.
+3.  **Significant token reduction** (e.g., 15,000 tokens → 450 tokens, 97% reduction) for efficient storage and transfer of epistemic state.
+
+---
+
 ## CASCADE Phase Requirements
 
 **REQUIRED Phases (Every Session):**
@@ -51,11 +72,30 @@
 
 ---
 
-## Three Storage Layers
+## Three Storage Layers (Comparison)
+
+### Quick Reference Table
+
+### Storage Layer Comparison
+
+| Layer | Location | Size | Purpose | Query Method |
+|-------|----------|------|---------|--------------|
+| **SQLite** | `.empirica/sessions/sessions.db` | 450 tokens | Fast queries, structured | SQL |
+| **Git Notes** | `refs/notes/empirica/session/...` | 450 tokens | Distributed, signed, compressed | Git commands |
+| **JSON Logs** | `.empirica_reflex_logs/...` | 6,500 tokens | Full audit, debugging | File read |
+
+### Token Compression Levels
+
+| Format | Size | Use Case |
+|--------|------|----------|
+| **Full reasoning transcript** | ~15,000 tokens | Training data only |
+| **Full reflex log (JSON)** | ~6,500 tokens | Deep debugging, audit |
+| **Compressed checkpoint** | ~450 tokens | Session resumption, multi-AI handoff |
+| **Git diff** | ~50 tokens | Code changes only |
 
 ### Layer 1: SQLite Database (`.empirica/sessions/sessions.db`)
 
-**Purpose:** Structured queryable storage, SQL access, relational integrity
+**Purpose:** Structured queryable storage, SQL access, relational integrity. Primary source of truth.
 
 **Table:** `reflexes`
 
@@ -99,10 +139,7 @@ CREATE TABLE reflexes (
 - Full JSON in `reflex_data` field
 
 **Queryable By:**
-- Session ID
-- Phase
-- Round
-- Timestamp
+- Session ID, Phase, Round, Timestamp
 - Vector values (e.g., `WHERE know > 0.8`)
 
 **Use Cases:**
@@ -115,7 +152,7 @@ CREATE TABLE reflexes (
 
 ### Layer 2: Git Notes (Compressed Checkpoints)
 
-**Purpose:** Distributed, versioned, compressed epistemic state
+**Purpose:** Distributed, versioned, compressed epistemic state, ideal for multi-AI coordination and efficient context transfer.
 
 **Namespace:** `refs/notes/empirica/session/{session_id}/{phase}/{round}`
 
@@ -150,7 +187,7 @@ refs/notes/empirica/session/abc-123/POSTFLIGHT/1
 }
 ```
 
-**Compression:** ~450 tokens vs ~6,500 tokens (93% reduction)
+**Compression:** ~450 tokens vs ~6,500 tokens (93% reduction) for full reflex log.
 
 **What's Omitted (vs full reflex logs):**
 - Rationales for each vector ❌
@@ -175,7 +212,7 @@ refs/notes/empirica/session/abc-123/POSTFLIGHT/1
 
 ### Layer 3: JSON Reflex Logs (Full Detail)
 
-**Purpose:** Complete reasoning transcript, debugging, audit trail
+**Purpose:** Complete reasoning transcript, deep debugging, audit trail for human review and training data.
 
 **Location:** `.empirica_reflex_logs/{YYYY-MM-DD}/{agent_id}/{session_id}/`
 
@@ -274,160 +311,30 @@ Compressed Checkpoint (~450 tokens)
 
 ---
 
-## What Gets Signed (Crypto - Phase 2)
-
-### Git Note SHA (Recommended)
-
-```bash
-# Add checkpoint
-git notes --ref empirica/session/abc-123/PREFLIGHT/1 \
-  add -m '{"session_id":"abc-123",...}' HEAD
-
-# Get note SHA
-NOTE_SHA=$(git rev-parse refs/notes/empirica/session/abc-123/PREFLIGHT/1)
-
-# Sign checkpoint (identity must exist first)
-empirica checkpoint-sign --session-id abc-123
-```
-
-**What Gets Signed:**
-- Compressed checkpoint content (450 tokens)
-- Session ID, phase, round
-- Vectors (scores only)
-- Timestamp
-- Metadata (high-level)
-
-**Why This:**
-- ✅ Tamper-proof (git SHA)
-- ✅ Distributed (travels with repo)
-- ✅ Efficient (small payload)
-- ✅ Verifiable (git notes are content-addressed)
-
-### Alternative: SQLite Row Hash
-
-```sql
-SELECT 
-  hash(session_id || phase || round || timestamp || reflex_data) as checkpoint_hash
-FROM reflexes
-WHERE id = ?;
-```
-
----
-
-## Dashboard API Access
-
-### For Web Dashboards
-
-**Query SQLite for structured data:**
-
-```python
-from empirica.data.session_database import SessionDatabase
-
-db = SessionDatabase()
-
-# Get all checkpoints for session
-checkpoints = db.conn.execute("""
-    SELECT phase, round, timestamp, know, do, uncertainty
-    FROM reflexes
-    WHERE session_id = ?
-    ORDER BY timestamp ASC
-""", (session_id,)).fetchall()
-
-# Get calibration deltas
-deltas = db.conn.execute("""
-    SELECT 
-        phase,
-        know - LAG(know) OVER (ORDER BY timestamp) as know_delta,
-        uncertainty - LAG(uncertainty) OVER (ORDER BY timestamp) as uncertainty_delta
-    FROM reflexes
-    WHERE session_id = ?
-""", (session_id,)).fetchall()
-```
-
-### For tmux/IDE Dashboards
-
-**Use Git Notes for efficiency:**
-
-```python
-from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
-
-logger = GitEnhancedReflexLogger(session_id="abc-123")
-
-# List all checkpoints (fast - queries git notes)
-checkpoints = logger.list_checkpoints(limit=10)
-
-# Get latest checkpoint (compressed)
-latest = logger.get_last_checkpoint()
-print(f"Latest: {latest['phase']} - KNOW: {latest['vectors']['know']}")
-
-# Get vector diff (delta since last checkpoint)
-diff = logger.get_vector_diff(since_checkpoint=previous, current_vectors=current)
-print(f"KNOW changed by: {diff['delta']['know']}")
-```
-
----
-
 ## Epistemic State ≠ Git Diff
 
-### Git Diff (What Changed)
+### Diagram 2: Epistemic State ≠ Git Diff
 
-```diff
-- const AUTH_TIMEOUT = 3600;
-+ const AUTH_TIMEOUT = 7200;
-```
+**File:** `epistemic_vs_git_diff.svg`
 
-**Tells you:**
-- What: Timeout doubled
-- When: Commit timestamp
-- Who: Commit author
+![Epistemic vs Git Diff](./epistemic_vs_git_diff.svg)
 
-**Doesn't tell you:**
-- Why: Was this tested? Speculative?
-- How confident: High confidence or guessing?
-- What alternatives: Were other values considered?
-- Risk: What could break?
-
-### Epistemic Vectors (Confidence About What Changed)
-
-```json
-{
-  "auth_module": {
-    "phase": "CHECK",
-    "vectors": {
-      "know": 0.85,
-      "do": 0.90,
-      "uncertainty": 0.15
-    },
-    "meta": {
-      "investigated": ["timeout_edge_cases", "session_hijack"],
-      "not_investigated": ["distributed_session_sync"],
-      "confidence_basis": "tested_in_staging_30_days",
-      "risk_assessment": "low_for_single_server_high_for_cluster"
-    }
-  }
-}
-```
-
-**Tells you:**
-- Why: "Tested in staging for 30 days"
-- Confidence: 85% knowledge, 15% uncertainty
-- Gaps: "distributed_session_sync not investigated"
-- Risk: "Low for single server, high for cluster"
+**What This Shows:**
+- Side-by-side comparison of git diff (WHAT changed) vs epistemic vectors (WHY + HOW CONFIDENT).
+- Highlights that both are needed for a complete understanding, serving different purposes.
 
 ### The Key Distinction
 
 | Aspect | Git Diff | Epistemic Vectors |
 |--------|----------|-------------------|
-| **Tracks** | Content changes | Confidence about content |
+| **Tracks** | Content changes (syntactic) | Confidence about content (semantic) |
 | **Compression** | Syntactic (min chars) | Semantic (min meaning) |
 | **Size** | Variable (depends on change) | Fixed (~450 tokens) |
 | **Query** | By file/line/author | By phase/confidence/uncertainty |
 | **Signed** | Commit SHA | Git note SHA |
 | **Purpose** | Version control | Epistemic tracking |
 
----
-
-## Compression Comparison
+---## Compression Comparison
 
 | Format | Size | Content |
 |--------|------|---------|
@@ -486,7 +393,7 @@ cursor.execute("""
     FROM reflexes
     WHERE know < 0.5 OR uncertainty > 0.7
     ORDER BY timestamp DESC
-""")
+")
 ```
 
 ---
@@ -521,9 +428,7 @@ SIG=$(git notes --ref empirica/signatures/abc-123/PREFLIGHT/1 show HEAD)
 empirica identity-verify --sha $NOTE_SHA --signature $SIG --ai-id copilot
 ```
 
----
-
-## Goal Storage System
+---## Goal Storage System
 
 ### Purpose
 Goals organize work with **epistemic context** and enable **cross-AI coordination** via git notes.
@@ -603,26 +508,12 @@ Goals organize work with **epistemic context** and enable **cross-AI coordinatio
 ```bash
 # AI-2 discovers goals from AI-1
 empirica goals-discover --from-ai-id claude-code
-
-# Output:
-# Found 3 goals:
-# - abc123: "Audit authentication system" (in-progress, 50% complete)
-# - def456: "Refactor database layer" (complete)
-# - ghi789: "Add rate limiting" (pending)
 ```
 
 #### Goal Resume with Epistemic Handoff
 ```bash
 # AI-2 resumes AI-1's goal
 empirica goals-resume abc123 --ai-id minimax-agent
-
-# System:
-# 1. Loads goal from git notes
-# 2. Retrieves epistemic context (AI-1's PRE assessment)
-# 3. AI-2 does own PRE assessment
-# 4. Compares: AI-2's vectors vs AI-1's vectors
-# 5. AI-2 continues with full context
-# 6. Adds to lineage: AI-2 resumed AI-1's goal
 ```
 
 #### Lineage Tracking
@@ -640,9 +531,7 @@ Goal completed: minimax-agent (12:00)
 - **Progress tracking:** Subtasks completed by either AI
 - **Provenance:** Full lineage of who did what
 
----
-
-## Handoff Report System
+---## Handoff Report System
 
 ### Purpose
 Enable **session continuity** without transferring full context (98% compression).
@@ -700,7 +589,7 @@ Enable **session continuity** without transferring full context (98% compression
 empirica handoff-create \
   --session-id abc123 \
   --summary "Audited auth system..." \
-  --findings '["JWT gap", "Long timeout", ...]' \
+  --findings '["JWT gap", "Long timeout", ...]'
   --unknowns '["Rate limiting", "Secret rotation"]'
 
 # Stored in:
@@ -713,24 +602,9 @@ empirica handoff-create \
 ```bash
 # AI retrieves handoff
 empirica handoff-query --ai-id myai --limit 1
-
-# Output: 300-token summary with:
-# - What was learned (epistemic deltas)
-# - What was found (key findings)
-# - What's still unknown
-# - What to do next
-# - What artifacts were created
 ```
 
-#### Benefits
-- **Lightweight:** 300 tokens vs 20,000 (fits in any context window)
-- **Actionable:** Next steps clear
-- **Verifiable:** Artifacts listed
-- **Distributed:** Git pull syncs handoffs
-
----
-
-## Cross-AI Coordination Architecture
+---## Cross-AI Coordination Architecture
 
 ### Git-Enabled Distributed Collaboration
 
@@ -801,27 +675,53 @@ git push    # Share your contributions
 # All in git notes (doesn't touch working tree)
 ```
 
----
+---## Standardized Data Formats
 
-## Summary Table: Where Each Field Lives
+### JSON (Reflex Logs)
+```json
+{
+  "session_id": "abc-123",
+  "phase": "PREFLIGHT",
+  "timestamp": "2025-12-15T14:30:00Z",
+  "vectors": {
+    "engagement": 0.80,
+    "know": 0.65,
+    ...
+    "uncertainty": 0.45
+  },
+  "reasoning": "Starting with moderate knowledge..."
+}
+```
 
-| Field | SQLite | Git Notes | JSON Logs | Signed |
-|-------|--------|-----------|-----------|--------|
-| **session_id** | ✅ | ✅ | ✅ | ✅ |
-| **phase** | ✅ | ✅ | ✅ | ✅ |
-| **round** | ✅ | ✅ | ✅ | ✅ |
-| **timestamp** | ✅ | ✅ | ✅ | ✅ |
-| **vectors (scores)** | ✅ | ✅ | ✅ | ✅ |
-| **vectors (rationales)** | ❌ | ❌ | ✅ | ❌ |
-| **overall_confidence** | ✅ | ✅ | ✅ | ✅ |
-| **meta (high-level)** | ✅ | ✅ | ✅ | ✅ |
-| **reasoning_transcript** | ❌ | ❌ | ✅ | ❌ |
-| **tool_execution_logs** | ❌ | ❌ | ✅ | ❌ |
-| **evidence_lists** | ❌ | ❌ | ✅ | ❌ |
+### SQLite Schema
+```sql
+CREATE TABLE reflexes (
+    id TEXT PRIMARY KEY,
+    session_id TEXT,
+    phase TEXT,  -- PREFLIGHT, CHECK, POSTFLIGHT
+    engagement REAL, know REAL, do REAL, ...
+    uncertainty REAL,
+    timestamp DATETIME
+);
 
----
+CREATE TABLE findings (
+    id TEXT PRIMARY KEY,
+    project_id TEXT,
+    session_id TEXT,
+    finding TEXT,
+    timestamp DATETIME
+);
+```
 
-## API Examples
+### Git Notes Format
+```
+refs/empirica/sessions/abc-123/reflexes/preflight-001
+
+Compressed JSON (base64):
+eyJzZXNzaW9uX2lkIjoiYWJjLTEyMyIs...
+```
+
+---## API Examples
 
 ### Dashboard: Show Current Epistemic State
 
@@ -849,6 +749,7 @@ def get_learning_curve(session_id: str) -> List[Dict]:
         SELECT phase, round, timestamp, know, do, uncertainty
         FROM reflexes
         WHERE session_id = ?
+        GROUP BY phase
         ORDER BY timestamp ASC
     """, (session_id,)).fetchall()
     
@@ -873,9 +774,21 @@ def get_calibration_report(session_id: str) -> Dict:
     }
 ```
 
----
+### Dashboard: Multi-Session Comparison
 
-**This is the complete storage architecture.** All three layers serve different purposes and can be queried independently based on dashboard needs.
+```python
+def get_low_confidence_sessions(project_id: str) -> List[Dict]:
+    """Find all sessions with low confidence or high uncertainty"""
+    db = SessionDatabase()
+    rows = db.conn.execute("""
+        SELECT session_id, phase, know, uncertainty
+        FROM reflexes
+        WHERE (know < 0.5 OR uncertainty > 0.7) AND project_id = ?
+        ORDER BY timestamp DESC
+    """, (project_id,)).fetchall()
+    
+    return [dict(row) for row in rows]
+```
 
 ---
 
@@ -907,17 +820,20 @@ subprocess.run(["git", "notes", "--ref", note_ref, "add", "-f", "-F", "-", "HEAD
 ```bash
 # Check if git notes are being created
 git notes --ref empirica/session/<SESSION_ID>/PREFLIGHT/1 show HEAD
-
-# Should display JSON checkpoint data
 ```
 
 If you're running an older version (< 0.9.1), update to get the fix.
 
-### All Three Storage Layers
+---
 
-The system uses atomic writes with graceful degradation:
-1. **SQLite** - Always succeeds (source of truth)
-2. **Git Notes** - Best effort (fails gracefully if no git repo)
-3. **JSON Logs** - Always succeeds (audit trail)
 
-If git notes fail, you never lose data - SQLite and JSON continue working.
+### Atomic Writes with Graceful Degradation
+
+The system uses atomic writes to all three storage layers (SQLite, Git Notes, JSON Logs) with graceful degradation:
+1.  **SQLite:** Always succeeds (primary source of truth).
+2.  **Git Notes:** Best effort (fails gracefully if no Git repo or issue).
+3.  **JSON Logs:** Always succeeds (audit trail).
+
+If Git Notes fail, you never lose data – SQLite and JSON continue working, ensuring data integrity.
+
+```

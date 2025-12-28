@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "empirica"
-version = "1.0.5"
+version = "1.1.0"
 description = "Genuine AI epistemic self-assessment framework - Universal interface for single AI tracking"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -44,6 +44,7 @@ dependencies = [
     
     # Security and cryptography
     "cryptography>=41.0",       # Required for AI identity and checkpoint signing
+    "gitpython>=3.1.0",         # Required for git notes integration and BEADS
 
     # Optional but commonly used
     "anthropic>=0.39.0",        # Anthropic SDK for adapters
@@ -106,8 +107,15 @@ empirica = "empirica.cli.cli_core:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["empirica*", "mcp_local*"]
+include = ["empirica*"]
 exclude = ["tests*", "_archive*", "_dev*"]
+
+[tool.setuptools.package-data]
+empirica = [
+    "docs/**/*",
+    "config/mco/**/*.yaml",
+    "plugins/claude-code-integration/**/*",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -120,7 +128,7 @@ addopts = [
     "--strict-config",
     "-ra",
     "--cov=empirica",
-    "--cov=mcp_local",
+    "--cov=empirica",
     "--cov-report=term-missing:skip-covered",
     "--cov-report=html",
     "--cov-report=json",
@@ -133,7 +141,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["empirica", "mcp_local"]
+source = ["empirica"]
 omit = [
     "tests/*",
     "_archive/*",
@@ -162,7 +170,7 @@ line-length = 120
 target-version = "py310"
 include = [
     "empirica/**/*.py",
-    "mcp_local/**/*.py",
+    "empirica/**/*.py",
     "tests/**/*.py",
 ]
 exclude = [
@@ -197,7 +205,7 @@ ignore = [
 max-complexity = 15
 
 [tool.ruff.lint.isort]
-known-first-party = ["empirica", "mcp_local"]
+known-first-party = ["empirica"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
 [tool.ruff.lint.per-file-ignores]
@@ -205,7 +213,7 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 "__init__.py" = ["F401"]  # allow unused imports in __init__
 
 [tool.pyright]
-include = ["empirica", "mcp_local", "tests"]
+include = ["empirica", "tests"]
 exclude = [
     "_archive",
     "_dev",

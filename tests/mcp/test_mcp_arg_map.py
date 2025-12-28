@@ -10,7 +10,13 @@ This tests the parameter translation layer that handles cases like:
 
 import asyncio
 import pytest
-from mcp_local.empirica_mcp_server import list_tools
+# Update import to use current MCP server architecture
+try:
+    from empirica_mcp.server import list_tools
+except ImportError:
+    # Fallback for compatibility during transition
+    from empirica.cli.mcp_client import list_tools as cli_list_tools
+    list_tools = cli_list_tools
 
 
 class TestArgMapTranslations:

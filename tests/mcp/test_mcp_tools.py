@@ -2,7 +2,13 @@
 import pytest
 import json
 from unittest.mock import MagicMock, patch
-from mcp_local.empirica_mcp_server import call_tool
+# Update import to use current MCP server architecture
+try:
+    from empirica_mcp.server import call_tool
+except ImportError:
+    # Fallback for compatibility during transition
+    from empirica.cli.mcp_client import call_tool as cli_call_tool
+    call_tool = cli_call_tool
 from mcp import types
 
 @pytest.mark.asyncio

@@ -66,14 +66,25 @@ def upsert_docs(project_id: str, docs: List[Dict]) -> None:
 
 def upsert_memory(project_id: str, items: List[Dict]) -> None:
     """
-    items: List of {id, text, type: finding|unknown|mistake|dead_end}
+    items: List of {id, text, type, goal_id, subtask_id, session_id, timestamp, ...}
+    Stores full epistemic lineage metadata for filtering and analysis
     """
     client = _get_qdrant_client()
     coll = _memory_collection(project_id)
     points: List[PointStruct] = []
     for it in items:
         vector = get_embedding(it.get("text", ""))
-        payload = {"type": it.get("type", "unknown")}
+        # Store full metadata for epistemic lineage tracking
+        payload = {
+            "type": it.get("type", "unknown"),
+            "goal_id": it.get("goal_id"),
+            "subtask_id": it.get("subtask_id"),
+            "session_id": it.get("session_id"),
+            "timestamp": it.get("timestamp"),
+            "subject": it.get("subject"),
+            # Type-specific metadata
+            "is_resolved": it.get("is_resolved"),  # For unknowns
+        }
         points.append(PointStruct(id=it["id"], vector=vector, payload=payload))
     if points:
         client.upsert(collection_name=coll, points=points)

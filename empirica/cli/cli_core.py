@@ -18,54 +18,57 @@ import time
 from .cli_utils import handle_cli_error, print_header
 from .command_handlers import *
 from .command_handlers.utility_commands import handle_log_token_saving, handle_efficiency_report
+from .command_handlers.edit_verification_command import handle_edit_with_confidence_command
+from .command_handlers.issue_capture_commands import (
+    handle_issue_list_command,
+    handle_issue_show_command,
+    handle_issue_handoff_command,
+    handle_issue_resolve_command,
+    handle_issue_export_command,
+    handle_issue_stats_command,
+)
 
 
 class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Custom formatter that groups subcommands by category"""
     
     def _format_action(self, action):
-        result = super()._format_action(action)
+        try:
+            if isinstance(action, argparse._SubParsersAction):
+                categories = {
+                    'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
+                    'CASCADE Workflow': ['preflight', 'preflight-submit', 'check', 'check-submit', 'postflight', 'postflight-submit', 'workflow'],
+                    'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
+                    'Project Management': ['project-init', 'project-create', 'project-list', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
+                    'Workspace': ['workspace-init', 'workspace-map', 'workspace-overview'],
+                    'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
+                    'Identity': ['identity-create', 'identity-export', 'identity-list', 'identity-verify'],
+                    'Handoffs': ['handoff-create', 'handoff-query'],
+                    'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
+                    'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
+                    'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
+                    'Monitoring': ['monitor', 'check-drift', 'efficiency-report'],
+                    'Skills': ['skill-suggest', 'skill-fetch'],
+                    'Utilities': ['goal-analysis', 'log-token-saving', 'config', 'performance'],
+                    'Vision': ['vision'],
+                    'Epistemics': ['epistemics-list', 'epistemics-show'],
+                    'User Interface': ['chat']
+                }
+                
+                parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
+                for category, commands in categories.items():
+                    parts.append(f'\n{category} ({len(commands)} commands):\n')
+                    parts.append('-' * 70 + '\n')
+                    for cmd in commands:
+                        if cmd in action.choices:
+                            parts.append(f'  {cmd:30s}\n')
+                parts.append('\n' + '=' * 70 + '\n')
+                parts.append('\nUse "empirica <command> --help" for detailed help on a specific command.\n')
+                return ''.join(parts)
+        except Exception:
+            pass
         
-        if isinstance(action, argparse._SubParsersAction):
-            categories = {
-                'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot'],
-                'CASCADE Workflow': ['preflight', 'preflight-submit', 'check', 'check-submit', 'postflight', 'postflight-submit', 'workflow'],
-                'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
-                'Project Management': ['project-init', 'project-create', 'project-list', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
-                'Workspace': ['workspace-init', 'workspace-map', 'workspace-overview'],
-                'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
-                'Identity': ['identity-create', 'identity-export', 'identity-list', 'identity-verify'],
-                'Handoffs': ['handoff-create', 'handoff-query'],
-                'Logging': ['finding-log', 'unknown-log', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
-                'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
-                'Monitoring': ['monitor', 'check-drift', 'efficiency-report'],
-                'Skills': ['skill-suggest', 'skill-fetch'],
-                'Utilities': ['goal-analysis', 'log-token-saving', 'config', 'performance'],
-                'Vision': ['vision'],
-                'Epistemics': ['epistemics-list', 'epistemics-show'],
-                'User Interface': ['chat']
-            }
-            
-            parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
-            for category, commands in categories.items():
-                parts.append(f'\n{category} ({len(commands)} commands):\n')
-                parts.append('-' * 70 + '\n')
-                for cmd in commands:
-                    if cmd in action.choices:
-                        # Get help text from the _SubParsersAction's choice_actions
-                        help_text = action._name_parser_map.get(cmd).description if cmd in action._name_parser_map else ''
-                        if not help_text:
-                            # Fallback to searching in choice_actions
-                            for choice_action in action._choices_actions:
-                                if choice_action.dest == cmd:
-                                    help_text = choice_action.help or ''
-                                    break
-                        parts.append(f'  {cmd:30s}  {help_text}\n')
-            parts.append('\n' + '=' * 70 + '\n')
-            parts.append('\nUse "empirica <command> --help" for detailed help on a specific command.\n')
-            return ''.join(parts)
-        
-        return result
+        return super()._format_action(action)
 
 # Import all parser modules
 from .parsers import (
@@ -82,6 +85,8 @@ from .parsers import (
     add_user_interface_parsers,
     add_vision_parsers,
     add_epistemics_parsers,
+    add_edit_verification_parsers,
+    add_issue_capture_parsers,
 )
 
 
@@ -105,21 +110,14 @@ def create_argument_parser():
     """Create and configure the main argument parser"""
     parser = argparse.ArgumentParser(
         prog='empirica',
-        description='🧠 Empirica - Semantic Self-Aware AI Framework',
+        description='🧠 Empirica - Epistemic Vector-Based Functional Self-Awareness Framework',
         formatter_class=GroupedHelpFormatter,
-        epilog="""
-Examples:
-  empirica session-create --ai-id myai          # Create session
-  empirica preflight --session-id xyz           # Execute PREFLIGHT
-  empirica check --session-id xyz               # Execute CHECK gate
-  empirica postflight --session-id xyz          # Execute POSTFLIGHT
-  empirica goals-create --session-id xyz        # Create goal
-        """
+        epilog="Global Flags (must come BEFORE command name):\n  empirica [--version] [--verbose] <command> [args]\n\nExamples:\n  empirica session-create --ai-id myai      # Create session\n  empirica --verbose sessions-list          # Show debug info\n  empirica preflight-submit --session-id xyz # PREFLIGHT\n  empirica --verbose check --session-id xyz # CHECK with debugging"
     )
     
-    # Global options
+    # Global options (must come before subcommand)
     parser.add_argument('--version', action='version', version=f'%(prog)s {_get_version()}')
-    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output (shows DB path, execution time, etc.). Must come before command name.')
     parser.add_argument('--config', help='Path to configuration file')
     
     # Create subcommands
@@ -139,6 +137,8 @@ Examples:
     add_user_interface_parsers(subparsers)
     add_vision_parsers(subparsers)
     add_epistemics_parsers(subparsers)
+    add_edit_verification_parsers(subparsers)
+    add_issue_capture_parsers(subparsers)
     
     return parser
 
@@ -191,6 +191,7 @@ def main(args=None):
             'sessions-export': handle_sessions_export_command,
             'sessions-resume': handle_sessions_resume_command,
             'session-snapshot': handle_session_snapshot_command,
+            'memory-compact': handle_memory_compact_command,
             
             # CASCADE commands
             'preflight': handle_preflight_command,
@@ -229,7 +230,8 @@ def main(args=None):
             # Monitor commands
             'monitor': handle_monitor_command,
             'check-drift': handle_check_drift_command,
-            
+            'mco-load': handle_mco_load_command,
+
             # Checkpoint commands
             'checkpoint-create': handle_checkpoint_create_command,
             'checkpoint-load': handle_checkpoint_load_command,
@@ -269,6 +271,7 @@ def main(args=None):
             # Finding/unknown/deadend logging
             'finding-log': handle_finding_log_command,
             'unknown-log': handle_unknown_log_command,
+            'unknown-resolve': handle_unknown_resolve_command,
             'deadend-log': handle_deadend_log_command,
             'refdoc-add': handle_refdoc_add_command,
             
@@ -287,13 +290,25 @@ def main(args=None):
             
             # User interface commands
             'chat': handle_chat_command,
-            
+            'dashboard': handle_dashboard_command,
+
             # Vision commands
             'vision': handle_vision_analyze,
             
             # Epistemics commands
             'epistemics-list': handle_epistemics_search_command,
             'epistemics-show': handle_epistemics_stats_command,
+
+            # Edit verification commands
+            'edit-with-confidence': handle_edit_with_confidence_command,
+            
+            # Issue capture commands
+            'issue-list': handle_issue_list_command,
+            'issue-show': handle_issue_show_command,
+            'issue-handoff': handle_issue_handoff_command,
+            'issue-resolve': handle_issue_resolve_command,
+            'issue-export': handle_issue_export_command,
+            'issue-stats': handle_issue_stats_command,
         }
         
         if parsed_args.command in command_handlers:

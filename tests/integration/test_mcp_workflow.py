@@ -8,10 +8,15 @@ import asyncio
 from pathlib import Path
 import sys
 
-# Add mcp_local to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "mcp_local"))
-
-from empirica_mcp_server import call_tool
+# Update to use current MCP server architecture
+try:
+    from empirica_mcp.server import call_tool
+except ImportError:
+    # Fallback: Use CLI routing for compatibility during transition
+    def call_tool(name, arguments):
+        """Fallback call_tool that routes through CLI"""
+        from empirica.cli.mcp_client import call_tool as cli_call_tool
+        return cli_call_tool(name, arguments)
 from mcp import types
 
 

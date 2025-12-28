@@ -514,7 +514,7 @@ If you have empirica-mcp in a specific virtual environment:
 ✅ **Automation** - CI/CD, scripts  
 ✅ **Universal compatibility** - Works with any AI  
 
-**Recommendation:** Use MCP for primary IDE work, CLI for scripts and automation.
+**Recommendation:** Use CLI for primary epistemic assessments, MCP for GUI/IDE integration.
 
 ---
 

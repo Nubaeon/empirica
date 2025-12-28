@@ -1,0 +1,53 @@
+{
+  "session_id": "cc702a9f-1152-4f99-9fc6-88bfebc22a6c",
+  "ai_id": "claude-code",
+  "start_time": "2025-12-27T14:16:32.971725",
+  "end_time": null,
+  "total_cascades": 1,
+  "cascades": [
+    {
+      "cascade_id": "06b45087-a313-4b6f-8594-1292da5ffd8e",
+      "session_id": "cc702a9f-1152-4f99-9fc6-88bfebc22a6c",
+      "task": "PREFLIGHT assessment",
+      "context_json": null,
+      "goal_id": null,
+      "goal_json": null,
+      "preflight_completed": 0,
+      "think_completed": 0,
+      "plan_completed": 0,
+      "investigate_completed": 0,
+      "check_completed": 0,
+      "act_completed": 0,
+      "postflight_completed": 0,
+      "final_action": null,
+      "final_confidence": null,
+      "investigation_rounds": 0,
+      "duration_ms": null,
+      "started_at": 1766844998.7929866,
+      "completed_at": null,
+      "engagement_gate_passed": null,
+      "bayesian_active": 0,
+      "drift_monitored": 0,
+      "epistemic_delta": null
+    }
+  ],
+  "preflight": {
+    "engagement": 0.92,
+    "know": 0.85,
+    "do": 0.9,
+    "context": 0.88,
+    "clarity": 0.88,
+    "coherence": 0.85,
+    "signal": 0.9,
+    "density": 0.6,
+    "state": 0.3,
+    "change": 0.9,
+    "completion": 0.2,
+    "impact": 0.5,
+    "uncertainty": 0.3
+  },
+  "postflight": null,
+  "epistemic_delta": null,
+  "tools_used": [],
+  "avg_confidence": null
+}

@@ -35,6 +35,8 @@ class GoalDecision:
     signal_score: float
     know_score: float
     context_score: float
+    health_score: Optional[float] = None
+    health_gate_passed: Optional[bool] = None
 
 
 def decide_goal_creation(
@@ -42,6 +44,8 @@ def decide_goal_creation(
     signal: float,
     know: float,
     context: float,
+    health_score: Optional[float] = None,
+    health_threshold: float = 60.0,
     clarity_threshold: float = 0.6,
     signal_threshold: float = 0.5,
     know_threshold: float = 0.5,
@@ -51,51 +55,80 @@ def decide_goal_creation(
     Simple decision logic: Should we create a goal now?
     
     Logic:
-    1. Check COMPREHENSION (clarity + signal)
-    2. Check FOUNDATION (know + context)
-    3. Decide based on both
+    1. Check CLARITY GATE (health_score + clarity)
+    2. Check COMPREHENSION (clarity + signal)
+    3. Check FOUNDATION (know + context)
+    4. Decide based on all three
     
     Args:
         clarity: How clear is the request? (0-1)
         signal: How good is the information quality? (0-1)
         know: Do I know the domain/codebase? (0-1)
         context: Do I know the environment? (0-1)
+        health_score: Overall epistemic health score (0-100)
+        health_threshold: Minimum health score for clarity gate (default: 60.0)
         *_threshold: Decision thresholds (configurable)
     
     Returns:
         GoalDecision with recommendation
         
     Decision Matrix:
+        health_score ≥ health_threshold → "Epistemic health is good"
         clarity ≥ threshold AND signal ≥ threshold → "I understand the request"
         know ≥ threshold AND context ≥ threshold → "I can operate"
         
-        understand + can_operate → create_goal
-        understand + can't_operate → investigate_first
+        healthy + understand + can_operate → create_goal
+        healthy + understand + can't_operate → investigate_first
+        not_healthy → improve_epistemic_health
         don't_understand → ask_clarification
     """
     
-    # Step 1: Do I understand the request?
+    # Step 1: Check CLARITY GATE (epistemic health)
+    health_gate_passed = True
+    if health_score is not None:
+        health_gate_passed = (health_score >= health_threshold)
+    
+    # Step 2: Do I understand the request?
     understands_request = (clarity >= clarity_threshold and signal >= signal_threshold)
     
-    # Step 2: Can I operate?
+    # Step 3: Can I operate?
     can_operate = (know >= know_threshold and context >= context_threshold)
     
-    # Step 3: Decide
-    if understands_request and can_operate:
+    # Step 4: Decide
+    if not health_gate_passed:
+        # "Epistemic health is not sufficient"
+        return GoalDecision(
+            should_create_goal_now=False,
+            reasoning=(
+                f"Epistemic health score ({health_score:.1f}) is below threshold ({health_threshold}). "
+                f"Should improve knowledge quality and reduce uncertainty before proceeding."
+            ),
+            suggested_action='improve_epistemic_health',
+            confidence=0.4,  # Moderate confidence in health assessment
+            clarity_score=clarity,
+            signal_score=signal,
+            know_score=know,
+            context_score=context,
+            health_score=health_score,
+            health_gate_passed=health_gate_passed
+        )
+    elif understands_request and can_operate:
         # "I understand what to do AND I have the foundation"
         return GoalDecision(
             should_create_goal_now=True,
             reasoning=(
                 f"Clear request (clarity={clarity:.2f}, signal={signal:.2f}) "
                 f"and sufficient foundation (know={know:.2f}, context={context:.2f}). "
-                f"Ready to create goal and act."
+                f"{'Health score (' + str(health_score) + ') passes clarity gate. ' if health_score is not None else ''}Ready to create goal and act."
             ),
             suggested_action='create_goal',
             confidence=min(clarity, signal, know, context),  # Most conservative
             clarity_score=clarity,
             signal_score=signal,
             know_score=know,
-            context_score=context
+            context_score=context,
+            health_score=health_score,
+            health_gate_passed=health_gate_passed
         )
     
     elif understands_request and not can_operate:
@@ -116,14 +149,16 @@ def decide_goal_creation(
             reasoning=(
                 f"Clear request (clarity={clarity:.2f}, signal={signal:.2f}) "
                 f"but low {investigate_what} ({know if investigate_what == 'know' else context:.2f}). "
-                f"Should investigate {focus} before creating goal."
+                f"{'Health score (' + str(health_score) + ') passes clarity gate. ' if health_score is not None else ''}Should investigate {focus} before creating goal."
             ),
             suggested_action='investigate_first',
             confidence=min(clarity, signal),  # Confident in understanding, not in ability
             clarity_score=clarity,
             signal_score=signal,
             know_score=know,
-            context_score=context
+            context_score=context,
+            health_score=health_score,
+            health_gate_passed=health_gate_passed
         )
     
     else:
@@ -141,14 +176,16 @@ def decide_goal_creation(
             reasoning=(
                 f"Cannot create goal: {problem}. "
                 f"Clarity={clarity:.2f}, signal={signal:.2f}. "
-                f"Should ask for clarification."
+                f"{'Health score (' + str(health_score) + ') passes clarity gate. ' if health_score is not None else ''}Should ask for clarification."
             ),
             suggested_action='ask_clarification',
             confidence=0.3,  # Low confidence when unclear
             clarity_score=clarity,
             signal_score=signal,
             know_score=know,
-            context_score=context
+            context_score=context,
+            health_score=health_score,
+            health_gate_passed=health_gate_passed
         )
 
 

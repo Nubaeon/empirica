@@ -1,9 +1,12 @@
 """Test SessionDatabase SQLite operations."""
 import pytest
 import json
-from empirica.core.canonical.reflex_frame import EpistemicAssessment, VectorState, Action
+from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
 import sqlite3
 from typing import Optional, Dict, Any, List
+
+# Use schema as assessment
+EpistemicAssessment = EpistemicAssessmentSchema
 
 # A helper function to create a dummy assessment for testing
 def create_dummy_assessment(assessment_id="test_id"):

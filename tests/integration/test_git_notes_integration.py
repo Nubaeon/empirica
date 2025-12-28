@@ -72,10 +72,18 @@ class TestGitNotesIntegration:
         if not tracker.git_available:
             pytest.skip("Git not available, skipping git notes test")
         
-        # Complete with evidence
+        # Complete with evidence (use HEAD commit)
+        import subprocess
+        head_commit = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
+            capture_output=True,
+            text=True,
+            cwd='.'
+        ).stdout.strip()
+
         success = tracker.record_subtask_completion(
             subtask.id,
-            evidence="commit:abc1234"
+            evidence=f"commit:{head_commit}"
         )
         
         assert success, "Subtask completion should succeed"

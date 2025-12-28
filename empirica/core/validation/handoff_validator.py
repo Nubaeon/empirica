@@ -258,15 +258,16 @@ class HandoffValidator:
                 "reason": f"Many unknowns ({len(unknowns)}) vs findings ({len(findings)}) - progress unclear"
             }
 
-        # Check 2: Critical unknowns should have impact descriptions
-        undefined_impact_unknowns = [
-            u for u in unknowns if not u.get("impact") or u.get("impact") == "unknown"
+        # Check 2: Unknowns should be actionable (not too many unresolved)
+        # Note: Unknowns don't have impact scores - they're open questions, not findings
+        unresolved_unknowns = [
+            u for u in unknowns if not u.get("is_resolved", False)
         ]
 
-        if len(undefined_impact_unknowns) > len(unknowns) * 0.5:
+        if len(unresolved_unknowns) > len(unknowns) * 0.8:
             return {
                 "reasonable": False,
-                "reason": f"Many unknowns without clear impact - prioritization unclear"
+                "reason": f"Many unresolved unknowns ({len(unresolved_unknowns)}) - progress unclear"
             }
 
         return {"reasonable": True, "reason": "unknowns_appear_reasonable"}

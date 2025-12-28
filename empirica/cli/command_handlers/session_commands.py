@@ -24,15 +24,24 @@ def handle_sessions_list_command(args):
         db = SessionDatabase()  # Use path resolver
         cursor = db.conn.cursor()
         
-        # Query all sessions
-        cursor.execute("""
-            SELECT 
+        # Build query with optional AI ID filter
+        query = """
+            SELECT
                 session_id, ai_id, user_id, start_time, end_time,
                 total_cascades, avg_confidence, drift_detected
             FROM sessions
-            ORDER BY start_time DESC
-            LIMIT ?
-        """, (args.limit if hasattr(args, 'limit') else 50,))
+        """
+        params = []
+
+        # Add AI ID filter if provided
+        if hasattr(args, 'ai_id') and args.ai_id:
+            query += "WHERE ai_id = ? "
+            params.append(args.ai_id)
+
+        query += "ORDER BY start_time DESC LIMIT ?"
+        params.append(args.limit if hasattr(args, 'limit') else 50)
+
+        cursor.execute(query, params)
         
         sessions = cursor.fetchall()
         
@@ -134,25 +143,30 @@ def handle_sessions_show_command(args):
     try:
         from empirica.data.session_database import SessionDatabase
         from empirica.utils.session_resolver import resolve_session_id
+        import json
 
         # Support both positional and named argument for session ID
         session_id_arg = args.session_id or getattr(args, 'session_id_named', None)
         if not session_id_arg:
-            print("\n❌ Session ID required")
-            print("💡 Usage: empirica sessions-show <session-id>")
-            print("💡 Or: empirica sessions-show --session-id <session-id>")
+            if getattr(args, 'output', None) == 'json':
+                print(json.dumps({"ok": False, "error": "Session ID required"}))
+            else:
+                print("\n❌ Session ID required")
+                print("💡 Usage: empirica sessions-show <session-id>")
+                print("💡 Or: empirica sessions-show --session-id <session-id>")
             return
 
         # Resolve session alias to UUID
         try:
             session_id = resolve_session_id(session_id_arg)
         except ValueError as e:
-            print(f"\n❌ {str(e)}")
-            print(f"💡 Provided: {session_id_arg}")
-            print(f"💡 List sessions with: empirica sessions-list")
+            if getattr(args, 'output', None) == 'json':
+                print(json.dumps({"ok": False, "error": str(e)}))
+            else:
+                print(f"\n❌ {str(e)}")
+                print(f"💡 Provided: {session_id_arg}")
+                print(f"💡 List sessions with: empirica sessions-list")
             return
-
-        print_header(f"📊 Session Details: {session_id[:8]}")
 
         db = SessionDatabase()  # Use path resolver
 
@@ -161,10 +175,21 @@ def handle_sessions_show_command(args):
         
         if not summary:
             logger.warning(f"Session not found: {session_id_arg}")
-            print(f"\n❌ Session not found: {session_id_arg}")
-            print(f"💡 List sessions with: empirica sessions list")
+            if getattr(args, 'output', None) == 'json':
+                print(json.dumps({"ok": False, "error": f"Session not found: {session_id_arg}"}))
+            else:
+                print(f"\n❌ Session not found: {session_id_arg}")
+                print(f"💡 List sessions with: empirica sessions list")
             db.close()
             return
+        
+        # If JSON output requested, return early
+        if getattr(args, 'output', None) == 'json':
+            print(json.dumps({"ok": True, "session": summary}))
+            db.close()
+            return
+        
+        print_header(f"📊 Session Details: {session_id[:8]}")
         
         # Basic info
         print(f"\n🆔 Session ID: {summary['session_id']}")
@@ -388,11 +413,16 @@ def handle_sessions_export_command(args):
             db.close()
             return
         
+        # Check if output format is JSON (to stdout)
+        output_format = getattr(args, 'output_format', 'file')
+        if output_format == 'json' or getattr(args, 'format', None) == 'json':
+            # Output JSON to stdout
+            print(json.dumps({"ok": True, "session": summary}))
+            db.close()
+            return
+        
         # Determine output file
-        if args.output:
-            output_file = args.output
-        else:
-            output_file = f"session_{session_id_arg[:8]}.json"
+        output_file = args.output if hasattr(args, 'output') and args.output else f"session_{session_id_arg[:8]}.json"
         
         # Write to file
         with open(output_file, 'w') as f:
@@ -448,13 +478,13 @@ def handle_memory_compact_command(args):
         from empirica.utils.session_resolver import resolve_session_id
 
         # Read JSON config from stdin or file
-        if hasattr(args, 'config_file') and args.config_file:
-            if args.config_file == '-':
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
                 # Read from stdin
                 config = json.load(sys.stdin)
             else:
                 # Read from file
-                with open(args.config_file, 'r') as f:
+                with open(args.config, 'r') as f:
                     config = json.load(f)
         else:
             # No argument provided, read from stdin (AI-first mode)
@@ -474,6 +504,9 @@ def handle_memory_compact_command(args):
         include_bootstrap = config.get('include_bootstrap', True)
         checkpoint_current = config.get('checkpoint_current', True)
         compact_mode = config.get('compact_mode', 'full')
+
+        # NEW: Accept current_vectors from AI (accurate pre-compact state)
+        current_vectors = config.get('current_vectors', None)
 
         # Resolve session alias to UUID
         try:
@@ -511,33 +544,41 @@ def handle_memory_compact_command(args):
         }
 
         # Step 1: Checkpoint current state (pre-compact tag)
+        vectors_to_save = None
         if checkpoint_current:
             logger.info("Creating pre-compact checkpoint...")
 
-            # Get latest epistemic vectors from session
-            latest_vectors = db.get_latest_vectors(session_id)
+            # Use current_vectors if provided, otherwise get latest from session
+            if current_vectors:
+                vectors_to_save = current_vectors
+                logger.info("Using current_vectors from hook input (accurate pre-compact state)")
+            else:
+                latest_vectors_result = db.get_latest_vectors(session_id)
+                if latest_vectors_result:
+                    vectors_to_save = latest_vectors_result.get('vectors', {})
+                    logger.warning("Using historical vectors (no current_vectors provided)")
 
-            if latest_vectors:
+            if vectors_to_save:
                 from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
 
                 reflex_logger = GitEnhancedReflexLogger(session_id=session_id)
                 checkpoint_id = reflex_logger.add_checkpoint(
                     phase="PRE_MEMORY_COMPACT",
                     round_num=1,
-                    vectors=latest_vectors,
+                    vectors=vectors_to_save,
                     metadata={"reasoning": "Pre-compact epistemic state snapshot for continuity measurement"},
                     epistemic_tags={"memory_compact": True, "pre_compact": True}
                 )
 
                 output["pre_compact_checkpoint"] = {
                     "checkpoint_id": checkpoint_id,
-                    "vectors": latest_vectors,
+                    "vectors": vectors_to_save,
                     "timestamp": datetime.now().isoformat()
                 }
 
                 logger.info(f"Pre-compact checkpoint created: {checkpoint_id[:8]}")
             else:
-                logger.warning("No epistemic vectors found - skipping checkpoint")
+                logger.warning("No epistemic vectors available - skipping checkpoint")
                 output["pre_compact_checkpoint"] = None
 
         # Step 2: Run project-bootstrap (load ground truth)
@@ -573,7 +614,6 @@ def handle_memory_compact_command(args):
             # Create new session linked via git notes (metadata linkage for future)
             continuation_session_id = db.create_session(
                 ai_id=ai_id,
-                bootstrap_level=1,  # Bootstrap loaded
                 subject=None
             )
 
@@ -585,20 +625,58 @@ def handle_memory_compact_command(args):
                 """, (project_id, continuation_session_id))
                 db.conn.commit()
 
-            # Store linkage in git notes as JSON metadata
-            # TODO: Future enhancement - add parent_session_id column to sessions table
+            # Step 3a: Calculate recommended PREFLIGHT for continuation (preserves delta calculation)
+            recommended_preflight = None
+            if vectors_to_save:
+                # Adjust vectors for fresh session context
+                recommended_preflight = vectors_to_save.copy()
+
+                # Context increases (bootstrap loaded)
+                if 'context' in recommended_preflight:
+                    recommended_preflight['context'] = min(
+                        recommended_preflight.get('context', 0.5) + 0.10,
+                        1.0
+                    )
+
+                # Uncertainty slightly increases (fresh session)
+                recommended_preflight['uncertainty'] = min(
+                    recommended_preflight.get('uncertainty', 0.3) + 0.05,
+                    1.0
+                )
+
+                # State resets for continuation (change/completion adjust for new session)
+                recommended_preflight['state'] = recommended_preflight.get('state', 0.7)
+                recommended_preflight['change'] = 0.20  # Fresh start
+                recommended_preflight['completion'] = 0.15  # Just beginning
+
+            # Step 3b: Create PREFLIGHT checkpoint in continuation session (CRITICAL for delta calculation!)
+            # This enables: continuation session PREFLIGHT → POSTFLIGHT delta calculation
             from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
             continuation_logger = GitEnhancedReflexLogger(session_id=continuation_session_id)
-            continuation_logger.add_checkpoint(
-                phase="SESSION_CONTINUATION",
-                round_num=1,
-                vectors=latest_vectors if latest_vectors else {},
-                metadata={
-                    "parent_session_id": session_id,
-                    "reason": "memory_compact_continuation",
-                    "compact_mode": compact_mode
+
+            if recommended_preflight:
+                # Create actual PREFLIGHT checkpoint (not SESSION_CONTINUATION)
+                preflight_checkpoint_id = continuation_logger.add_checkpoint(
+                    phase="PREFLIGHT",  # ✅ CRITICAL: Must be PREFLIGHT for delta calculation
+                    round_num=1,
+                    vectors=recommended_preflight,
+                    metadata={
+                        "parent_session_id": session_id,
+                        "reason": "memory_compact_continuation",
+                        "compact_mode": compact_mode,
+                        "reasoning": "Continuation session PREFLIGHT (adjusted from pre-compact state + bootstrap context)"
+                    },
+                    epistemic_tags={"continuation": True, "memory_compact": True}
+                )
+                logger.info(f"Continuation PREFLIGHT checkpoint created: {preflight_checkpoint_id[:8]}")
+
+                output["continuation_preflight"] = {
+                    "checkpoint_id": preflight_checkpoint_id,
+                    "vectors": recommended_preflight,
+                    "timestamp": datetime.now().isoformat()
                 }
-            )
+            else:
+                logger.warning("No vectors available for continuation PREFLIGHT checkpoint")
 
             output["continuation"] = {
                 "new_session_id": continuation_session_id,
@@ -609,36 +687,14 @@ def handle_memory_compact_command(args):
 
             logger.info(f"Continuation session created: {continuation_session_id[:8]}")
 
-        # Step 4: Generate recommended PREFLIGHT for continuation
-        if latest_vectors:
-            # Adjust vectors for fresh session context
-            recommended_preflight = latest_vectors.copy()
-
-            # Context increases (bootstrap loaded)
-            if 'foundation' in recommended_preflight:
-                recommended_preflight['foundation']['context'] = min(
-                    recommended_preflight['foundation'].get('context', 0.5) + 0.10,
-                    1.0
+            # Add recommended_preflight to output for reference
+            if recommended_preflight:
+                output["recommended_preflight"] = recommended_preflight
+                output["calibration_notes"] = (
+                    "CONTEXT +0.10 (bootstrap loaded), "
+                    "UNCERTAINTY +0.05 (fresh session), "
+                    "CHANGE/COMPLETION reset for continuation"
                 )
-
-            # Uncertainty slightly increases (fresh session)
-            recommended_preflight['uncertainty'] = min(
-                recommended_preflight.get('uncertainty', 0.3) + 0.05,
-                1.0
-            )
-
-            # State/change/completion reset for new session
-            if 'execution' in recommended_preflight:
-                recommended_preflight['execution']['state'] = recommended_preflight['execution'].get('state', 0.5)
-                recommended_preflight['execution']['change'] = 0.20  # Fresh start
-                recommended_preflight['execution']['completion'] = 0.15  # Just beginning
-
-            output["recommended_preflight"] = recommended_preflight
-            output["calibration_notes"] = (
-                "CONTEXT +0.10 (bootstrap loaded), "
-                "UNCERTAINTY +0.05 (fresh session), "
-                "CHANGE/COMPLETION reset for continuation"
-            )
 
         # Step 5: Format for IDE injection
         if compact_mode == "full":
@@ -646,7 +702,7 @@ def handle_memory_compact_command(args):
                 session_id=session_id,
                 continuation_session_id=continuation_session_id,
                 bootstrap_context=bootstrap_context,
-                pre_compact_vectors=latest_vectors
+                pre_compact_vectors=vectors_to_save
             )
 
         db.close()

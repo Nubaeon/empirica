@@ -3,9 +3,15 @@
 Empirica Path Resolver - Single Source of Truth for All Paths
 
 Resolves paths in priority order:
-1. Environment variables (EMPIRICA_DATA_DIR, EMPIRICA_SESSION_DB, etc.)
+1. Environment variables (EMPIRICA_WORKSPACE_ROOT for Docker, EMPIRICA_DATA_DIR for explicit paths)
 2. .empirica/config.yaml in git root
 3. Fallback to CWD/.empirica (legacy behavior)
+
+Environment Variables:
+    EMPIRICA_WORKSPACE_ROOT: For Docker/multi-AI environments. Points to workspace root.
+                            System will look for <workspace>/.empirica/
+    EMPIRICA_DATA_DIR:      Explicit path to empirica data directory
+    EMPIRICA_SESSION_DB:    Explicit path to sessions database file
 
 Usage:
     from empirica.config.path_resolver import get_empirica_root, get_session_db_path
@@ -13,9 +19,16 @@ Usage:
     root = get_empirica_root()  # Returns Path object
     db_path = get_session_db_path()  # Returns full path to sessions.db
 
+Docker Example:
+    Set in docker-compose.yml:
+      environment:
+        - EMPIRICA_WORKSPACE_ROOT=/workspace
+    
+    This ensures all containers use the same workspace for empirica data.
+
 Author: Claude Code
 Date: 2025-12-03
-Version: 1.0.0
+Version: 1.1.0 (Added EMPIRICA_WORKSPACE_ROOT support)
 """
 
 import os
@@ -92,35 +105,44 @@ def get_empirica_root() -> Path:
     Get Empirica root data directory.
 
     Priority:
-    1. EMPIRICA_DATA_DIR environment variable
-    2. .empirica/config.yaml -> root
-    3. <git-root>/.empirica (if in git repo)
-    4. <cwd>/.empirica (fallback)
+    1. EMPIRICA_WORKSPACE_ROOT environment variable (for Docker/workspace environments)
+    2. EMPIRICA_DATA_DIR environment variable (explicit data dir)
+    3. .empirica/config.yaml -> root
+    4. <git-root>/.empirica (if in git repo)
+    5. <cwd>/.empirica (fallback)
 
     Returns:
         Path to .empirica root directory
     """
-    # 1. Check environment variable
+    # 1. Check workspace root (Docker/multi-AI environments)
+    if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
+        workspace_path = Path(workspace_root).expanduser().resolve()
+        empirica_root = workspace_path / '.empirica'
+        if empirica_root.exists() or workspace_path.exists():
+            logger.debug(f"📍 Using EMPIRICA_WORKSPACE_ROOT: {empirica_root}")
+            return empirica_root
+
+    # 2. Check explicit data dir environment variable
     if env_root := os.getenv('EMPIRICA_DATA_DIR'):
         root = Path(env_root).expanduser().resolve()
         logger.debug(f"📍 Using EMPIRICA_DATA_DIR: {root}")
         return root
 
-    # 2. Check .empirica/config.yaml
+    # 3. Check .empirica/config.yaml
     config = load_empirica_config()
     if config and 'root' in config:
         root = Path(config['root']).expanduser().resolve()
         logger.debug(f"📍 Using config.yaml root: {root}")
         return root
 
-    # 3. Use git root if available
+    # 4. Use git root if available
     git_root = get_git_root()
     if git_root:
         root = git_root / '.empirica'
         logger.debug(f"📍 Using git root: {root}")
         return root
 
-    # 4. Fallback to CWD (legacy behavior)
+    # 5. Fallback to CWD (legacy behavior)
     root = Path.cwd() / '.empirica'
     logger.debug(f"📍 Fallback to CWD: {root}")
     return root

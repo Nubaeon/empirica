@@ -7,6 +7,8 @@
 
 Starting with v1.0.2, the Empirica MCP server is distributed as a **standalone Python package** (`empirica-mcp`) that works across all repositories and installations.
 
+**Note:** The CLI is the primary interface for epistemic assessments. MCP tools provide GUI/IDE integration that maps directly to CLI commands.
+
 ### ✅ What Changed
 
 | Old (v1.0.1) | New (v1.0.2+) |

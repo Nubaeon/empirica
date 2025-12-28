@@ -88,6 +88,7 @@ from .project_commands import (
     handle_workspace_map_command,
     handle_finding_log_command,
     handle_unknown_log_command,
+    handle_unknown_resolve_command,
     handle_deadend_log_command,
     handle_refdoc_add_command
 )
@@ -110,7 +111,7 @@ from .skill_commands import (
 from .monitor_commands import (
     handle_monitor_command, handle_monitor_export_command,
     handle_monitor_reset_command, handle_monitor_cost_command,
-    handle_check_drift_command
+    handle_check_drift_command, handle_mco_load_command
 )
 from .investigation_commands import (
     handle_investigate_command,
@@ -125,6 +126,7 @@ from .utility_commands import (
 )
 from .ask_handler import handle_ask_command
 from .chat_handler import handle_chat_command
+from .dashboard import handle_dashboard_command
 from .vision_commands import (
     handle_vision_analyze,
     handle_vision_log,
@@ -235,6 +237,7 @@ __all__ = [
     'handle_workspace_init_command',
     'handle_finding_log_command',
     'handle_unknown_log_command',
+    'handle_unknown_resolve_command',
     'handle_deadend_log_command',
     'handle_refdoc_add_command',
     'handle_project_search_command',
@@ -250,7 +253,8 @@ __all__ = [
     'handle_monitor_reset_command',
     'handle_monitor_cost_command',
     'handle_check_drift_command',
-    
+    'handle_mco_load_command',
+
     # Investigation commands
     'handle_investigate_command',
     'handle_analyze_command',
@@ -273,7 +277,8 @@ __all__ = [
     # User interface commands (for human users)
     'handle_ask_command',
     'handle_chat_command',
-    
+    'handle_dashboard_command',
+
     # Vision commands
     'handle_vision_analyze',
     'handle_vision_log',

@@ -132,9 +132,10 @@ def test_session_db_checkpoint_integration(temp_db, git_repo):
         print("✅ No checkpoint found (expected for new session)")
     
     # Get latest vectors
-    latest = temp_db._get_latest_vectors(session_id)
+    latest = temp_db.get_latest_vectors(session_id)
     assert latest is not None
-    assert 'engagement' in latest
+    assert 'vectors' in latest
+    assert 'engagement' in latest['vectors']
     
     print("✅ SessionDatabase integration test passed")
 

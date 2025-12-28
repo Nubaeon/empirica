@@ -19,7 +19,7 @@ The Empirica MCP (Model Context Protocol) server exposes Empirica functionality 
 - **Transport:** stdio
 - **Tools:** 40 tools (3 stateless + 37 CLI wrappers)
 
-**For complete MCP ↔ CLI mapping:** See [`MCP_CLI_MAPPING.md`](MCP_CLI_MAPPING.md)
+**For complete MCP ↔ CLI mapping:** See [`api/mcp_cli_mapping.md`](api/mcp_cli_mapping.md)
 
 ---
 

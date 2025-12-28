@@ -1,0 +1,42 @@
+{
+  "description": "Empirica project-local Claude Code settings",
+  "hooks": {
+    "PreCompact": [
+      {
+        "description": "Save epistemic snapshot before auto-compact",
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.empirica/hooks/pre-compact.sh",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "description": "Save epistemic snapshot before manual /compact",
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.empirica/hooks/pre-compact.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "description": "Load epistemic snapshot + bootstrap after compaction",
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.empirica/hooks/session-start.sh",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

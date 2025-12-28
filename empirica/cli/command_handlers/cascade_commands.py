@@ -95,19 +95,23 @@ def handle_decision_command(args):
 def handle_preflight_command(args):
     """Execute preflight epistemic assessment before task"""
     try:
-        from empirica.core.canonical import CanonicalEpistemicAssessor
         from empirica.data.session_database import SessionDatabase
-        import asyncio
         
         prompt = args.prompt
         session_id = args.session_id or str(uuid.uuid4())  # Full UUID, no truncation
         ai_id = getattr(args, 'ai_id', 'empirica_cli')
         
-        # Execute preflight assessment
-        assessor = CanonicalEpistemicAssessor(agent_id=ai_id)
-        
-        # Get self-assessment prompt from canonical assessor
-        assessment_request = asyncio.run(assessor.assess(prompt, {}))
+        # NOTE: EpistemicAssessor moved to empirica-sentinel repo
+        # For now, show helpful error message
+        logger.error("❌ REFACTORING IN PROGRESS")
+        logger.error("   EpistemicAssessor has been extracted to empirica-sentinel module")
+        logger.error("   Use CLI commands for primary epistemic assessment:")
+        logger.error("   - empirica preflight <task>")
+        logger.error("   - empirica check <session_id>")
+        logger.error("   - empirica postflight <session_id> --vectors <json>")
+        logger.error("")
+        logger.error("💡 MCP tools are available as GUI/IDE interfaces that map to CLI commands")
+        return
         
         if not isinstance(assessment_request, dict) or 'self_assessment_prompt' not in assessment_request:
             logger.error("❌ Failed to generate self-assessment prompt")
@@ -134,7 +138,7 @@ def handle_preflight_command(args):
             print("   • execute_preflight MCP tool")
             print("   • submit_preflight_assessment MCP tool")
             print("")
-            print("💡 Alternative: Use working MCP tools instead of hanging CLI")
+            print("💡 Alternative: MCP tools provide GUI/IDE integration that maps to CLI commands")
             return
         
         print_header("🚀 Preflight Assessment")
@@ -269,7 +273,7 @@ def handle_preflight_command(args):
         from empirica.data.session_database import SessionDatabase
         db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
         try:
-            db.create_session(ai_id=ai_id, bootstrap_level=1, components_loaded=5, user_id=None)
+            db.create_session(ai_id=ai_id, components_loaded=5, user_id=None)
         except:
             pass  # Session might already exist
 

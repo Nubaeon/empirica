@@ -19,12 +19,19 @@ from datetime import datetime
 
 # Add paths
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "mcp_local"))
 
-from empirica.core.canonical import CanonicalEpistemicAssessor
 from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
 from empirica.data import SessionDatabase
-from empirica_mcp.server import call_tool
+
+# Update import to use current MCP server architecture
+try:
+    from empirica_mcp.server import call_tool
+except ImportError:
+    # Fallback: Use CLI routing for compatibility during transition
+    def call_tool(name, arguments):
+        """Fallback call_tool that routes through CLI"""
+        from empirica.cli.mcp_client import call_tool as cli_call_tool
+        return cli_call_tool(name, arguments)
 
 
 class TestCompleteWorkflow:

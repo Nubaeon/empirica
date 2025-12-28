@@ -27,23 +27,27 @@ def handle_investigate_log_command(args):
         session_id = args.session_id
         findings = parse_json_safely(args.findings) if isinstance(args.findings, str) else args.findings
         evidence = parse_json_safely(args.evidence) if hasattr(args, 'evidence') and args.evidence else {}
-        
+        output_format = getattr(args, 'output', 'text')
+
         if not isinstance(findings, list):
             raise ValueError("Findings must be a JSON array")
-        
+
         db = SessionDatabase()
         cursor = db.conn.cursor()
-        
+
         # Get active cascade
         cursor.execute("""
-            SELECT cascade_id, context_json FROM cascades 
+            SELECT cascade_id, context_json FROM cascades
             WHERE session_id = ? AND completed_at IS NULL
             ORDER BY started_at DESC LIMIT 1
         """, (session_id,))
-        
+
         result = cursor.fetchone()
         if not result:
-            print("❌ No active cascade found. Run preflight first.")
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": "No active cascade found"}))
+            else:
+                print("❌ No active cascade found. Run preflight first.")
             db.close()
             return
 
@@ -85,14 +89,23 @@ def handle_investigate_log_command(args):
             )
         except Exception as e:
             logger.debug(f"Git notes optional: {e}")
-        
-        print("✅ Investigation findings logged")
-        print(f"   Session: {session_id[:8]}...")
-        print(f"   Cascade: {cascade_id[:8]}...")
-        print(f"   Findings: {len(findings)}")
-        if evidence:
-            print(f"   Evidence: {list(evidence.keys())}")
-        
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": True,
+                "session_id": session_id,
+                "cascade_id": cascade_id,
+                "findings_count": len(findings),
+                "evidence_keys": list(evidence.keys()) if evidence else []
+            }))
+        else:
+            print("✅ Investigation findings logged")
+            print(f"   Session: {session_id[:8]}...")
+            print(f"   Cascade: {cascade_id[:8]}...")
+            print(f"   Findings: {len(findings)}")
+            if evidence:
+                print(f"   Evidence: {list(evidence.keys())}")
+
     except Exception as e:
         handle_cli_error(e, "Investigation log", getattr(args, 'verbose', False))
 
@@ -110,23 +123,27 @@ def handle_act_log_command(args):
         actions = parse_json_safely(args.actions) if isinstance(args.actions, str) else args.actions
         artifacts = parse_json_safely(args.artifacts) if hasattr(args, 'artifacts') and args.artifacts else []
         goal_id = getattr(args, 'goal_id', None)
-        
+        output_format = getattr(args, 'output', 'text')
+
         if not isinstance(actions, list):
             raise ValueError("Actions must be a JSON array")
-        
+
         db = SessionDatabase()
         cursor = db.conn.cursor()
-        
+
         # Get active cascade
         cursor.execute("""
-            SELECT cascade_id, context_json FROM cascades 
+            SELECT cascade_id, context_json FROM cascades
             WHERE session_id = ? AND completed_at IS NULL
             ORDER BY started_at DESC LIMIT 1
         """, (session_id,))
-        
+
         result = cursor.fetchone()
         if not result:
-            print("❌ No active cascade found")
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": "No active cascade found"}))
+            else:
+                print("❌ No active cascade found")
             db.close()
             return
         
@@ -174,13 +191,23 @@ def handle_act_log_command(args):
             )
         except Exception as e:
             logger.debug(f"Git notes optional: {e}")
-        
-        print("✅ Actions logged")
-        print(f"   Session: {session_id[:8]}...")
-        print(f"   Cascade: {cascade_id[:8]}...")
-        print(f"   Actions: {len(actions) if isinstance(actions, list) else 1}")
-        if artifacts:
-            print(f"   Artifacts: {len(artifacts)}")
-        
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": True,
+                "session_id": session_id,
+                "cascade_id": cascade_id,
+                "actions_count": len(actions) if isinstance(actions, list) else 1,
+                "artifacts_count": len(artifacts) if artifacts else 0,
+                "goal_id": goal_id
+            }))
+        else:
+            print("✅ Actions logged")
+            print(f"   Session: {session_id[:8]}...")
+            print(f"   Cascade: {cascade_id[:8]}...")
+            print(f"   Actions: {len(actions) if isinstance(actions, list) else 1}")
+            if artifacts:
+                print(f"   Artifacts: {len(artifacts)}")
+
     except Exception as e:
         handle_cli_error(e, "Action log", getattr(args, 'verbose', False))

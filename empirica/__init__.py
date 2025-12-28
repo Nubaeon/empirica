@@ -13,15 +13,15 @@ Key Features:
 - Session database (SQLite + JSON exports)
 - Universal plugin extensibility
 
-Version: 1.0.5
+Version: 1.0.6
 """
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 __author__ = "Empirica Project"
 
 # Core imports
 try:
-    from empirica.core.canonical import CanonicalEpistemicAssessor, ReflexLogger
+    from empirica.core.canonical import ReflexLogger
     from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
 except ImportError as e:
     print(f"Warning: Core imports failed: {e}")
@@ -37,7 +37,6 @@ except ImportError as e:
 
 __all__ = [
     # Core components
-    'CanonicalEpistemicAssessor',
     'CanonicalEpistemicCascade',
     'ReflexLogger',
     'SessionDatabase',
