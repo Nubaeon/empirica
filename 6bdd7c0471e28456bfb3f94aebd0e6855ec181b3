@@ -1,0 +1,28 @@
+{
+  "goal_id": "bedf1428-0a1f-485f-9549-342ca935981d",
+  "session_id": "967fdea4-e344-4439-bcaf-be0ced51bb9f",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-28T13:50:29.740181+00:00",
+  "goal_data": {
+    "objective": "Fix 14 test collection errors caused by missing modules",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-28T13:50:29.740198+00:00",
+      "action": "created"
+    }
+  ]
+}
