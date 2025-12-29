@@ -1,0 +1,32 @@
+{
+  "goal_id": "212d1a09-554d-4aa1-9fe2-e24395d05348",
+  "session_id": "8c91c7dd-cfc9-41e4-ac2e-f05140be9014",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-29T21:35:05.674709+00:00",
+  "goal_data": {
+    "objective": "Implement vector-programmed epistemic MCP server - world's first epistemic agent architecture",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.6,
+      "coordination": 0.5
+    },
+    "success_criteria": [
+      "EpistemicStateMachine maintains 13-vector state across requests",
+      "VectorRouter demonstrates different routing decisions based on vectors",
+      "Modes produce observably different behaviors (investigate vs implement)",
+      "Claude Desktop integration works with --epistemic-mode flag",
+      "Demo shows transparent epistemic reasoning to users"
+    ],
+    "estimated_complexity": 0.75,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-29T21:35:05.674722+00:00",
+      "action": "created"
+    }
+  ]
+}
