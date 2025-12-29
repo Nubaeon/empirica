@@ -9,7 +9,7 @@ FROM python:3.11-slim
 
 LABEL maintainer="Empirica Team"
 LABEL description="Epistemic self-assessment framework for AI agents"
-LABEL version="1.1.0"
+LABEL version="1.1.1"
 
 # Set working directory
 WORKDIR /app
@@ -20,11 +20,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
-COPY dist/empirica-1.1.0-py3-none-any.whl /tmp/
+COPY dist/empirica-1.1.1-py3-none-any.whl /tmp/
 
 # Install Empirica
-RUN pip install --no-cache-dir /tmp/empirica-1.1.0-py3-none-any.whl \
-    && rm /tmp/empirica-1.1.0-py3-none-any.whl \
+RUN pip install --no-cache-dir /tmp/empirica-1.1.1-py3-none-any.whl \
+    && rm /tmp/empirica-1.1.1-py3-none-any.whl \
     && pip install --upgrade pip
 
 # Create directory for user data
