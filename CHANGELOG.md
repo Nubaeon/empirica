@@ -5,6 +5,16 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-12-29
+
+### Fixed
+- **CRITICAL: CHECK GATE confidence threshold bug** - The CHECK command was ignoring explicit confidence values provided by AI agents and instead calculating confidence from uncertainty vectors (1.0 - uncertainty). This prevented the proper enforcement of the ≥0.70 confidence threshold for the CASCADE GATE. Fixed by:
+  - Extracting `explicit_confidence` from CHECK input config
+  - Using explicit confidence in decision logic when provided
+  - Making proceed/investigate decision based on confidence ≥ 0.70 threshold as per system design
+  - Keeping drift and unknowns as secondary evidence validation
+- **Impact**: All users now have a properly functioning CHECK GATE that respects stated confidence while validating against evidence
+
 ## [1.1.0] - 2025-12-28
 
 ### Added
