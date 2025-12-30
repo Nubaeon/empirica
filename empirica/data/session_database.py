@@ -767,6 +767,47 @@ class SessionDatabase:
                 'url': s.get('source_url')
             } for s in sources]
         
+        # Get findings, unknowns, mistakes, dead-ends for this session
+        findings = []
+        unknowns = []
+        mistakes = []
+        dead_ends = []
+        
+        if project_id:
+            cursor_local = self.conn.cursor()
+            
+            # Get findings
+            cursor_local.execute("""
+                SELECT id, finding, impact, created_timestamp FROM project_findings 
+                WHERE session_id = ? ORDER BY created_timestamp DESC
+            """, (session_id,))
+            findings = [{'id': row[0], 'finding': row[1], 'impact': row[2], 'timestamp': row[3]} 
+                       for row in cursor_local.fetchall()]
+            
+            # Get unknowns
+            cursor_local.execute("""
+                SELECT id, unknown, is_resolved, created_timestamp FROM project_unknowns 
+                WHERE session_id = ? ORDER BY created_timestamp DESC
+            """, (session_id,))
+            unknowns = [{'id': row[0], 'unknown': row[1], 'resolved': row[2], 'timestamp': row[3]} 
+                       for row in cursor_local.fetchall()]
+            
+            # Get mistakes
+            cursor_local.execute("""
+                SELECT id, mistake, cost_estimate, created_timestamp FROM mistakes_made 
+                WHERE session_id = ? ORDER BY created_timestamp DESC
+            """, (session_id,))
+            mistakes = [{'id': row[0], 'mistake': row[1], 'cost': row[2], 'timestamp': row[3]} 
+                       for row in cursor_local.fetchall()]
+            
+            # Get dead-ends
+            cursor_local.execute("""
+                SELECT id, approach, why_failed, created_timestamp FROM project_dead_ends 
+                WHERE session_id = ? ORDER BY created_timestamp DESC
+            """, (session_id,))
+            dead_ends = [{'id': row[0], 'approach': row[1], 'why_failed': row[2], 'timestamp': row[3]} 
+                        for row in cursor_local.fetchall()]
+        
         return {
             'session_id': session_id,
             'ai_id': session['ai_id'],
@@ -775,6 +816,10 @@ class SessionDatabase:
             'learning_delta': learning_delta,
             'active_goals': active_goals,
             'sources_referenced': sources_referenced,
+            'findings': findings,
+            'unknowns': unknowns,
+            'mistakes': mistakes,
+            'dead_ends': dead_ends,
             'subject': session.get('subject')
         }
 
