@@ -524,13 +524,18 @@ def handle_pre_summary_snapshot(session_id: str, output_format: str, cycle=None,
         print("=" * 70)
 
 
-def handle_post_summary_drift_check(session_id: str, output_format: str):
+def handle_post_summary_drift_check(session_id: str, output_format: str, signaling_level: str = 'default'):
     """
     Post-summary trigger: Compare current state to pre-summary snapshot.
 
     Loads pre-summary ref-doc + current bootstrap as anchor.
     Calculates drift between pre-compact vectors and current state.
     Detects sentinel gate triggers for critical drift thresholds.
+
+    Signaling levels:
+    - basic: Drift score + sentinel action only (minimal, for automation)
+    - default: Key vectors (know, uncertainty, context, clarity) + sentinel
+    - full: All 13 vectors + investigation context + bootstrap evidence
 
     This detects metacognitive drift from memory compacting.
     """
@@ -652,35 +657,119 @@ def handle_post_summary_drift_check(session_id: str, output_format: str):
         sentinel_triggered = True
         sentinel_action = 'LOCK'  # 🔒 Dangerous pattern - lock state before proceeding
 
+    # Determine what to include based on signaling level
+    key_vectors = ['know', 'uncertainty', 'context', 'clarity']
+    all_vectors = ['know', 'uncertainty', 'context', 'clarity', 'engagement', 'completion', 'impact',
+                   'do', 'coherence', 'signal', 'density', 'state', 'change']
+
     # JSON output for hooks/automation
     if output_format == 'json':
-        print(json.dumps({
-            "ok": True,
-            "session_id": session_id,
-            "drift_score": drift_score,
-            "drift_details": drift_details,
-            "sentinel_triggered": sentinel_triggered,
-            "sentinel_action": sentinel_action,
-            "pre_summary": {
-                "timestamp": pre_timestamp,
-                "vectors": pre_vectors,
-                "snapshot_path": str(snapshot_path)
-            },
-            "current_state": {
-                "vectors": current_vectors
-            },
-            "bootstrap": {
-                "findings_count": len(findings),
-                "unknowns_count": len(unknowns),
-                "goals_count": len(goals),
-                "incomplete_goals": len(incomplete),
-                "dead_ends_count": len(dead_ends)
+        if signaling_level == 'basic':
+            # Minimal output - just what automation needs
+            output = {
+                "ok": True,
+                "drift_score": drift_score,
+                "sentinel_triggered": sentinel_triggered,
+                "sentinel_action": sentinel_action
             }
-        }, indent=2))
+        elif signaling_level == 'default':
+            # Standard output - key vectors
+            key_drift = {k: v for k, v in drift_details.items() if k in key_vectors}
+            output = {
+                "ok": True,
+                "session_id": session_id,
+                "drift_score": drift_score,
+                "drift_details": key_drift,
+                "sentinel_triggered": sentinel_triggered,
+                "sentinel_action": sentinel_action,
+                "pre_vectors": {k: pre_vectors.get(k) for k in key_vectors if pre_vectors.get(k) is not None},
+                "current_vectors": {k: current_vectors.get(k) for k in key_vectors if current_vectors.get(k) is not None}
+            }
+        else:  # full
+            # Complete output - everything
+            output = {
+                "ok": True,
+                "session_id": session_id,
+                "drift_score": drift_score,
+                "drift_details": drift_details,
+                "sentinel_triggered": sentinel_triggered,
+                "sentinel_action": sentinel_action,
+                "pre_summary": {
+                    "timestamp": pre_timestamp,
+                    "vectors": pre_vectors,
+                    "snapshot_path": str(snapshot_path)
+                },
+                "current_state": {
+                    "vectors": current_vectors
+                },
+                "bootstrap": {
+                    "findings_count": len(findings),
+                    "unknowns_count": len(unknowns),
+                    "goals_count": len(goals),
+                    "incomplete_goals": len(incomplete),
+                    "dead_ends_count": len(dead_ends)
+                },
+                "investigation_context": snapshot.get('investigation_context', {})
+            }
+        print(json.dumps(output, indent=2))
         return
 
     # Human-readable output
-    print("\n🔄 Post-Summary Drift Check")
+    # Traffic light emoji based on drift
+    def get_drift_display(score):
+        if score is None:
+            return "⚪", "Unknown"
+        elif score < 0.1:
+            return "🔵", "Crystalline"
+        elif score < 0.2:
+            return "🟢", "Solid"
+        elif score < 0.3:
+            return "🟡", "Emergent"
+        elif score < 0.4:
+            return "🔴", "Flicker"
+        else:
+            return "⚪", "Void"
+
+    emoji, level = get_drift_display(drift_score)
+
+    if signaling_level == 'basic':
+        # Basic: One-line summary
+        if drift_score is not None:
+            line = f"{emoji} Drift: {drift_score:.1%} ({level})"
+            if sentinel_triggered:
+                sentinel_emoji = {'HALT': '⛔', 'BRANCH': '🔱', 'REVISE': '🔄', 'LOCK': '🔒'}.get(sentinel_action, '⚠️')
+                line += f" | {sentinel_emoji} {sentinel_action}"
+            print(line)
+        else:
+            print("⚪ Drift: N/A (no vector data)")
+        return
+
+    elif signaling_level == 'default':
+        # Default: Key vectors with sentinel
+        print(f"\n{emoji} Post-Compact Drift: {drift_score:.1%} ({level})" if drift_score else "\n⚪ Drift: Unknown")
+
+        if sentinel_triggered:
+            sentinel_emoji = {'HALT': '⛔', 'BRANCH': '🔱', 'REVISE': '🔄', 'LOCK': '🔒'}.get(sentinel_action, '⚠️')
+            print(f"{sentinel_emoji} SENTINEL: {sentinel_action}")
+
+        if drift_details:
+            print("\nKey Vectors:")
+            for key in key_vectors:
+                if key in drift_details:
+                    value = drift_details[key]
+                    direction = "↑" if value > 0 else "↓" if value < 0 else "→"
+                    # Vector-specific interpretation
+                    if key == "uncertainty":
+                        status = "🟢" if value <= 0 else "🔴"
+                    elif key == "know":
+                        status = "🟢" if value >= 0 else "🔴"
+                    else:
+                        status = "🟡" if abs(value) > 0.1 else "⚪"
+                    print(f"   {status} {key}: {direction} {abs(value):.2f}")
+        return
+
+    # Full: Complete analysis
+    print("\n🔄 Post-Summary Drift Check (Full)")
     print("=" * 70)
     print(f"   Session ID: {session_id}")
     print("=" * 70)
@@ -690,39 +779,30 @@ def handle_post_summary_drift_check(session_id: str, output_format: str):
     print("=" * 70)
 
     if drift_score is not None:
-        # Traffic light emoji based on drift
-        if drift_score < 0.1:
-            emoji = "🔵"
-            level = "Crystalline"
-        elif drift_score < 0.2:
-            emoji = "🟢"
-            level = "Solid"
-        elif drift_score < 0.3:
-            emoji = "🟡"
-            level = "Emergent"
-        elif drift_score < 0.4:
-            emoji = "🔴"
-            level = "Flicker"
-        else:
-            emoji = "⚪"
-            level = "Void"
-
         print(f"\n   Overall Drift: {emoji} {drift_score:.1%} ({level})")
 
         if sentinel_triggered:
-            sentinel_emoji = {
-                'HALT': '⛔',
-                'BRANCH': '🔱',
-                'REVISE': '🔄',
-                'LOCK': '🔒'
-            }.get(sentinel_action, '⚠️')
+            sentinel_emoji = {'HALT': '⛔', 'BRANCH': '🔱', 'REVISE': '🔄', 'LOCK': '🔒'}.get(sentinel_action, '⚠️')
             print(f"\n   {sentinel_emoji} SENTINEL GATE: {sentinel_action}")
             print(f"      Memory drift exceeded safety threshold. Human review recommended.")
 
-        print("\n   Per-Vector Drift:")
-        for key, value in drift_details.items():
-            direction = "↑" if value > 0 else "↓" if value < 0 else "→"
-            print(f"      {key}: {direction} {abs(value):.2f}")
+        print("\n   Per-Vector Drift (All 13):")
+        for key in all_vectors:
+            if key in drift_details:
+                value = drift_details[key]
+                direction = "↑" if value > 0 else "↓" if value < 0 else "→"
+                # Color code based on significance
+                if abs(value) >= 0.3:
+                    marker = "🔴"
+                elif abs(value) >= 0.2:
+                    marker = "🟡"
+                elif abs(value) >= 0.1:
+                    marker = "🟢"
+                else:
+                    marker = "⚪"
+                print(f"      {marker} {key}: {direction} {abs(value):.2f}")
+            elif key in pre_vectors or key in current_vectors:
+                print(f"      ⚪ {key}: (partial data)")
     else:
         print("\n   ⚠️  Could not calculate drift (missing vector data)")
 
@@ -730,10 +810,31 @@ def handle_post_summary_drift_check(session_id: str, output_format: str):
     print("\n📊 PRE-COMPACT STATE:")
     print("=" * 70)
     print(f"\n   Captured: {pre_timestamp}")
-    for key in core_vectors:
+    for key in all_vectors:
         val = pre_vectors.get(key)
         if val is not None:
             print(f"   {key.upper()}: {val:.2f}")
+
+    # Show current state
+    print("\n📊 CURRENT STATE:")
+    print("=" * 70)
+    for key in all_vectors:
+        val = current_vectors.get(key)
+        if val is not None:
+            print(f"   {key.upper()}: {val:.2f}")
+
+    # Show investigation context from snapshot
+    inv_context = snapshot.get('investigation_context', {})
+    if any(inv_context.values()):
+        print("\n🔬 INVESTIGATION CONTEXT:")
+        print("=" * 70)
+        if inv_context.get('cycle'):
+            print(f"   Cycle: {inv_context['cycle']}")
+        if inv_context.get('round'):
+            print(f"   Round: {inv_context['round']}")
+        if inv_context.get('scope_depth') is not None:
+            depth_label = "surface" if inv_context['scope_depth'] < 0.4 else "moderate" if inv_context['scope_depth'] < 0.7 else "deep"
+            print(f"   Scope Depth: {inv_context['scope_depth']:.2f} ({depth_label})")
 
     # Show bootstrap context
     print("\n📚 BOOTSTRAP EVIDENCE:")
@@ -772,6 +873,7 @@ def handle_check_drift_command(args):
         cycle = getattr(args, 'cycle', None)
         round_num = getattr(args, 'round', None)
         scope_depth = getattr(args, 'scope_depth', None)
+        signaling_level = getattr(args, 'signaling', 'default')
         output_format = getattr(args, 'output', 'human')
 
         # Handle pre-summary trigger: Save checkpoint as ref-doc
@@ -780,7 +882,7 @@ def handle_check_drift_command(args):
 
         # Handle post-summary trigger: Compare with pre-summary ref-doc
         if trigger == 'post_summary':
-            return handle_post_summary_drift_check(session_id, output_format)
+            return handle_post_summary_drift_check(session_id, output_format, signaling_level)
 
         # Manual mode: Standard drift detection
         print("\n🔍 Epistemic Drift Detection")

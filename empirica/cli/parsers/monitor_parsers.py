@@ -28,6 +28,8 @@ def add_monitor_parsers(subparsers):
     check_drift_parser.add_argument('--cycle', type=int, help='Investigation cycle number (optional filter)')
     check_drift_parser.add_argument('--round', type=int, help='CHECK round number (optional filter)')
     check_drift_parser.add_argument('--scope-depth', type=float, help='Investigation depth: 0.0=surface scan, 1.0=exhaustive (optional)')
+    check_drift_parser.add_argument('--signaling', choices=['basic', 'default', 'full'], default='default',
+        help='Signaling detail level: basic (drift+sentinel only), default (key vectors), full (all vectors+context)')
     check_drift_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     check_drift_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
 

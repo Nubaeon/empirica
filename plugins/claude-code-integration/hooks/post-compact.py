@@ -88,6 +88,8 @@ def main():
 
             if pre_snapshot and bootstrap.get('live_state'):
                 # Use check-drift CLI for proper epistemic drift detection
+                # Signaling level can be set via environment variable
+                signaling_level = os.environ.get('EMPIRICA_SIGNALING_LEVEL', 'default')
                 try:
                     drift_result = subprocess.run(
                         [
@@ -95,6 +97,7 @@ def main():
                             '--session-id', empirica_session,
                             '--trigger', 'post_summary',
                             '--threshold', '0.2',  # Standard drift threshold
+                            '--signaling', signaling_level,
                             '--output', 'json'
                         ],
                         capture_output=True,
