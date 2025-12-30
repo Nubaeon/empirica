@@ -43,6 +43,63 @@ def init_collections(project_id: str) -> None:
             client.create_collection(name, vectors_config=VectorParams(size=1536, distance=Distance.COSINE))
 
 
+def embed_single_memory_item(
+    project_id: str,
+    item_id: str,
+    text: str,
+    item_type: str,
+    session_id: str = None,
+    goal_id: str = None,
+    subtask_id: str = None,
+    subject: str = None,
+    impact: float = None,
+    is_resolved: bool = None,
+    resolved_by: str = None,
+    timestamp: str = None
+) -> bool:
+    """
+    Embed a single memory item (finding, unknown, mistake, dead_end) to Qdrant.
+    Called automatically when logging epistemic breadcrumbs.
+
+    Returns True if successful, False otherwise.
+    """
+    try:
+        client = _get_qdrant_client()
+        coll = _memory_collection(project_id)
+
+        # Ensure collection exists
+        if not client.collection_exists(coll):
+            client.create_collection(coll, vectors_config=VectorParams(size=1536, distance=Distance.COSINE))
+
+        vector = get_embedding(text)
+        payload = {
+            "type": item_type,
+            "text": text[:500] if text else None,
+            "text_full": text if len(text) <= 500 else None,
+            "session_id": session_id,
+            "goal_id": goal_id,
+            "subtask_id": subtask_id,
+            "subject": subject,
+            "impact": impact,
+            "is_resolved": is_resolved,
+            "resolved_by": resolved_by,
+            "timestamp": timestamp,
+        }
+
+        # Use hash of item_id for numeric Qdrant point ID
+        import hashlib
+        point_id = int(hashlib.md5(item_id.encode()).hexdigest()[:15], 16)
+
+        point = PointStruct(id=point_id, vector=vector, payload=payload)
+        client.upsert(collection_name=coll, points=[point])
+        return True
+    except Exception as e:
+        # Log but don't fail - embedding is enhancement, not critical path
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to embed memory item: {e}")
+        return False
+
+
 def upsert_docs(project_id: str, docs: List[Dict]) -> None:
     """
     docs: List of {id, text, metadata:{doc_path, tags, concepts, questions, use_cases}}
@@ -67,23 +124,30 @@ def upsert_docs(project_id: str, docs: List[Dict]) -> None:
 def upsert_memory(project_id: str, items: List[Dict]) -> None:
     """
     items: List of {id, text, type, goal_id, subtask_id, session_id, timestamp, ...}
-    Stores full epistemic lineage metadata for filtering and analysis
+    Stores full epistemic lineage metadata for filtering and analysis.
+    Text is stored in payload for search result display.
     """
     client = _get_qdrant_client()
     coll = _memory_collection(project_id)
     points: List[PointStruct] = []
     for it in items:
-        vector = get_embedding(it.get("text", ""))
+        text = it.get("text", "")
+        vector = get_embedding(text)
         # Store full metadata for epistemic lineage tracking
+        # Include text for search result display (truncated to avoid bloat)
         payload = {
             "type": it.get("type", "unknown"),
+            "text": text[:500] if text else None,  # Truncate for storage efficiency
+            "text_full": text if len(text) <= 500 else None,  # Full text if short
             "goal_id": it.get("goal_id"),
             "subtask_id": it.get("subtask_id"),
             "session_id": it.get("session_id"),
             "timestamp": it.get("timestamp"),
             "subject": it.get("subject"),
+            "impact": it.get("impact"),  # Epistemic impact score
             # Type-specific metadata
             "is_resolved": it.get("is_resolved"),  # For unknowns
+            "resolved_by": it.get("resolved_by"),  # Resolution explanation
         }
         points.append(PointStruct(id=it["id"], vector=vector, payload=payload))
     if points:
