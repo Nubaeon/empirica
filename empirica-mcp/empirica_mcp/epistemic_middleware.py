@@ -78,21 +78,70 @@ class EpistemicMiddleware:
         
         # Skip epistemic for known/safe tools
         # These are standard CLI tools with clear semantics
+        # IMPORTANT: Tool names must match exactly what's defined in server.py
         safe_tools = {
+            # Stateless tools (handled directly, no CLI)
             'get_empirica_introduction',
-            'get_workflow_guidance', 
+            'get_workflow_guidance',
             'cli_help',
+            # Session management
             'session_create',
             'session_snapshot',
-            'session_resume',
-            'preflight_submit',
-            'check',
-            'postflight_submit',
-            'goals_create',
-            'goals_complete',
+            'resume_previous_session',  # NOT session_resume
+            'memory_compact',
+            # CASCADE workflow tools
+            'execute_preflight',
+            'submit_preflight_assessment',  # NOT preflight_submit
+            'execute_check',
+            'submit_check_assessment',
+            'execute_postflight',
+            'submit_postflight_assessment',  # NOT postflight_submit
+            # Goal management
+            'create_goal',  # NOT goals_create
+            'add_subtask',
+            'complete_subtask',  # NOT goals_complete
+            'get_goal_progress',
+            'get_goal_subtasks',
+            'list_goals',
+            'goals_ready',
+            'goals_claim',
+            # Breadcrumb logging (session-scoped)
             'finding_log',
             'unknown_log',
-            'mistake_log'
+            'mistake_log',
+            'deadend_log',
+            'log_mistake',  # Alternative mistake logging
+            # Project operations
+            'project_bootstrap',
+            # Checkpoint operations
+            'create_git_checkpoint',
+            'load_git_checkpoint',
+            # Handoff operations
+            'create_handoff_report',
+            'query_handoff_reports',
+            # Identity operations
+            'create_identity',
+            'list_identities',
+            'export_public_key',
+            'verify_signature',
+            # Investigation
+            'investigate',
+            'discover_goals',
+            'resume_goal',
+            # Vision
+            'vision_analyze',
+            'vision_log',
+            # Edit verification
+            'edit_with_confidence',
+            # Reference docs
+            'refdoc_add',
+            # Calibration
+            'get_calibration_report',
+            'get_epistemic_state',
+            'get_session_summary',
+            # Epistemic monitoring
+            'epistemics_list',
+            'epistemics_show',
         }
         
         # Skip epistemic for safe tools - they have well-defined semantics

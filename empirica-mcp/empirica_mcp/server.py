@@ -232,13 +232,15 @@ async def list_tools() -> List[types.Tool]:
 
         types.Tool(
             name="finding_log",
-            description="Log a finding (what was learned) to the current session",
+            description="Log a finding (what was learned) to session and optionally project",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "session_id": {"type": "string", "description": "Session ID"},
                     "finding": {"type": "string", "description": "What was learned or discovered"},
-                    "impact": {"type": "number", "description": "Impact score 0.0-1.0", "minimum": 0.0, "maximum": 1.0}
+                    "impact": {"type": "number", "description": "Impact score 0.0-1.0", "minimum": 0.0, "maximum": 1.0},
+                    "goal_id": {"type": "string", "description": "Optional goal UUID to link finding"},
+                    "subtask_id": {"type": "string", "description": "Optional subtask UUID to link finding"}
                 },
                 "required": ["session_id", "finding"]
             }
@@ -246,12 +248,14 @@ async def list_tools() -> List[types.Tool]:
 
         types.Tool(
             name="unknown_log",
-            description="Log an unknown (what remains unclear) to the current session",
+            description="Log an unknown (what remains unclear) to session and optionally project",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "session_id": {"type": "string", "description": "Session ID"},
-                    "unknown": {"type": "string", "description": "What remains unclear or needs investigation"}
+                    "unknown": {"type": "string", "description": "What remains unclear or needs investigation"},
+                    "goal_id": {"type": "string", "description": "Optional goal UUID to link unknown"},
+                    "subtask_id": {"type": "string", "description": "Optional subtask UUID to link unknown"}
                 },
                 "required": ["session_id", "unknown"]
             }
@@ -259,7 +263,7 @@ async def list_tools() -> List[types.Tool]:
 
         types.Tool(
             name="mistake_log",
-            description="Log a mistake (error to avoid in future) to the current session",
+            description="Log a mistake (error to avoid in future) to session and optionally project",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -267,7 +271,9 @@ async def list_tools() -> List[types.Tool]:
                     "mistake": {"type": "string", "description": "What was done wrong"},
                     "why_wrong": {"type": "string", "description": "Why it was wrong"},
                     "prevention": {"type": "string", "description": "How to prevent in future"},
-                    "cost_estimate": {"type": "string", "description": "Time/resources wasted (e.g., '2 hours')"}
+                    "cost_estimate": {"type": "string", "description": "Time/resources wasted (e.g., '2 hours')"},
+                    "goal_id": {"type": "string", "description": "Optional goal UUID to link mistake"},
+                    "subtask_id": {"type": "string", "description": "Optional subtask UUID to link mistake"}
                 },
                 "required": ["session_id", "mistake", "why_wrong", "prevention"]
             }
@@ -275,13 +281,15 @@ async def list_tools() -> List[types.Tool]:
 
         types.Tool(
             name="deadend_log",
-            description="Log a dead-end (approach that didn't work) to the current session",
+            description="Log a dead-end (approach that didn't work) to session and optionally project",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "session_id": {"type": "string", "description": "Session ID"},
                     "approach": {"type": "string", "description": "What approach was tried"},
-                    "why_failed": {"type": "string", "description": "Why it didn't work"}
+                    "why_failed": {"type": "string", "description": "Why it didn't work"},
+                    "goal_id": {"type": "string", "description": "Optional goal UUID to link dead-end"},
+                    "subtask_id": {"type": "string", "description": "Optional subtask UUID to link dead-end"}
                 },
                 "required": ["session_id", "approach", "why_failed"]
             }
@@ -494,6 +502,33 @@ async def list_tools() -> List[types.Tool]:
             }
         ),
 
+        # ========== Epistemic Monitoring (Route to CLI) ==========
+
+        types.Tool(
+            name="epistemics_list",
+            description="List all epistemic assessments (PREFLIGHT, CHECK, POSTFLIGHT) for a session",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID to list epistemics for"}
+                },
+                "required": ["session_id"]
+            }
+        ),
+
+        types.Tool(
+            name="epistemics_show",
+            description="Show detailed epistemic assessment for a session, optionally filtered by phase",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"},
+                    "phase": {"type": "string", "description": "Optional phase filter (PREFLIGHT, CHECK, POSTFLIGHT)", "enum": ["PREFLIGHT", "CHECK", "POSTFLIGHT"]}
+                },
+                "required": ["session_id"]
+            }
+        ),
+
         types.Tool(
             name="resume_previous_session",
             description="Resume previous session(s)",
@@ -693,69 +728,7 @@ async def list_tools() -> List[types.Tool]:
             }
         ),
 
-        # ========== Project-Level Tracking (Route to CLI) ==========
-
-        types.Tool(
-            name="project_bootstrap",
-            description="Bootstrap project context with epistemic breadcrumbs for starting a new session",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "project_id": {"type": "string", "description": "Project UUID"},
-                    "mode": {"type": "string", "enum": ["session_start", "live"], "description": "Bootstrap mode: session_start (fast, recent items) or live (complete, all items)"}
-                },
-                "required": ["project_id"]
-            }
-        ),
-
-        types.Tool(
-            name="finding_log",
-            description="Log a project finding (what was learned/discovered)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "project_id": {"type": "string", "description": "Project UUID"},
-                    "session_id": {"type": "string", "description": "Session UUID"},
-                    "finding": {"type": "string", "description": "What was learned/discovered"},
-                    "goal_id": {"type": "string", "description": "Optional goal UUID"},
-                    "subtask_id": {"type": "string", "description": "Optional subtask UUID"}
-                },
-                "required": ["project_id", "session_id", "finding"]
-            }
-        ),
-
-        types.Tool(
-            name="unknown_log",
-            description="Log a project unknown (what's still unclear)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "project_id": {"type": "string", "description": "Project UUID"},
-                    "session_id": {"type": "string", "description": "Session UUID"},
-                    "unknown": {"type": "string", "description": "What is unclear/unknown"},
-                    "goal_id": {"type": "string", "description": "Optional goal UUID"},
-                    "subtask_id": {"type": "string", "description": "Optional subtask UUID"}
-                },
-                "required": ["project_id", "session_id", "unknown"]
-            }
-        ),
-
-        types.Tool(
-            name="deadend_log",
-            description="Log a project dead end (what didn't work)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "project_id": {"type": "string", "description": "Project UUID"},
-                    "session_id": {"type": "string", "description": "Session UUID"},
-                    "approach": {"type": "string", "description": "Approach that was attempted"},
-                    "why_failed": {"type": "string", "description": "Why it didn't work"},
-                    "goal_id": {"type": "string", "description": "Optional goal UUID"},
-                    "subtask_id": {"type": "string", "description": "Optional subtask UUID"}
-                },
-                "required": ["project_id", "session_id", "approach", "why_failed"]
-            }
-        ),
+        # ========== Reference Documentation (Route to CLI) ==========
 
         types.Tool(
             name="refdoc_add",
@@ -1556,6 +1529,10 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "unknown_log": ["unknown-log"],
         "deadend_log": ["deadend-log"],
         "refdoc_add": ["refdoc-add"],
+
+        # Epistemic Monitoring
+        "epistemics_list": ["epistemics-list"],
+        "epistemics_show": ["epistemics-show"],
     }
     
     # Commands that take positional arguments (not flags)
@@ -1645,7 +1622,8 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "goals-progress", "goals-list", "sessions-resume",
         "handoff-create", "handoff-query",
         "project-bootstrap", "finding-log", "unknown-log", "deadend-log", "refdoc-add",
-        "memory-compact"
+        "memory-compact",
+        "epistemics-list", "epistemics-show"
     }
 
     cli_command = tool_map.get(tool_name, [tool_name])[0]
@@ -1698,6 +1676,7 @@ def handle_introduction() -> List[types.TextContent]:
 - **Drift Monitor:** Detects overconfidence/underconfidence patterns
 - **Git Checkpoints:** ~85% token reduction for session resumption
 - **Handoff Reports:** ~90% token reduction for multi-agent work
+- **Epistemic Middleware:** Optional MCP layer for vector-driven routing (EMPIRICA_EPISTEMIC_MODE=true)
 
 ## Philosophy
 
@@ -1902,12 +1881,43 @@ empirica postflight --session-id=latest:active:your-id
 empirica postflight-submit --session-id=latest:active:your-id --vectors='{"engagement":0.9,"know":0.8,...}'
 ```
 
+## Epistemic Monitoring Commands
+- `empirica epistemics-list --session-id=<id>` - List all assessments
+- `empirica epistemics-show --session-id=<id>` - Show detailed assessment
+- `empirica epistemics-show --session-id=<id> --phase=PREFLIGHT` - Filter by phase
+
+## MCP Server Configuration
+
+The MCP server supports an optional **Epistemic Middleware** layer for vector-driven self-awareness:
+
+```bash
+# Enable epistemic middleware (optional)
+export EMPIRICA_EPISTEMIC_MODE=true
+export EMPIRICA_PERSONALITY=balanced_architect  # Optional: default personality
+
+# Middleware modes:
+# - clarify: Low clarity (<0.6) → ask questions
+# - load_context: Low context (<0.5) → load project data
+# - investigate: High uncertainty (>0.6) → systematic research
+# - confident_implementation: High know (≥0.7), low uncertainty (<0.4)
+# - cautious_implementation: Moderate vectors (default)
+```
+
+**Note:** Most tools bypass middleware automatically (session_create, CASCADE workflow, logging tools, etc.) as they have well-defined semantics.
+
 ## Notes
 
 - **All commands support `--output json` for programmatic use**
 - Session aliases work with: sessions-show, checkpoint-load, and all workflow commands
 - For detailed help: `empirica <command> --help`
 - For MCP tool usage: Use tool names (session_create, execute_preflight, etc.)
+
+## Troubleshooting
+
+- **Tool not found:** Ensure empirica is installed and in PATH
+- **Session not found:** Check session ID/alias is correct, use `sessions-list` to find sessions
+- **Epistemic middleware blocking:** Set `EMPIRICA_EPISTEMIC_MODE=false` to disable
+- **JSON output issues:** Add `--output json` to CLI commands for programmatic parsing
 """
 
     return [types.TextContent(type="text", text=help_text)]
