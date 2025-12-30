@@ -428,7 +428,9 @@ def add_checkpoint_parsers(subparsers):
     
     # Goals complete-subtask command
     goals_complete_subtask_parser = subparsers.add_parser('goals-complete-subtask', help='Mark subtask as complete')
-    goals_complete_subtask_parser.add_argument('--task-id', required=True, help='Subtask UUID')
+    # Use subtask-id as primary parameter, with task-id as deprecated alias for backward compatibility
+    goals_complete_subtask_parser.add_argument('--subtask-id', help='Subtask UUID (preferred)')
+    goals_complete_subtask_parser.add_argument('--task-id', help='Subtask UUID (deprecated, use --subtask-id)')
     goals_complete_subtask_parser.add_argument('--evidence', help='Completion evidence (commit hash, file path, etc.)')
     goals_complete_subtask_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     

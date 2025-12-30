@@ -163,3 +163,90 @@ def handle_epistemics_stats_command(args):
             "error": str(e)
         }))
         sys.exit(1)
+
+
+def handle_epistemics_list_command(args):
+    """
+    List epistemic trajectories for a session.
+    
+    Usage:
+        empirica epistemics-list --session-id <UUID> --output json
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        from empirica.cli.cli_utils import handle_cli_error
+        
+        session_id = args.session_id
+        output_format = getattr(args, 'output', 'json')
+        
+        if not session_id:
+            print(json.dumps({
+                "ok": False,
+                "error": "session_id is required"
+            }))
+            sys.exit(1)
+        
+        # Get trajectories directly from database
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+        
+        # First get session info
+        cursor.execute("SELECT project_id, ai_id FROM sessions WHERE session_id = ?", (session_id,))
+        session_row = cursor.fetchone()
+        
+        if not session_row:
+            print(json.dumps({
+                "ok": False,
+                "error": f"Session {session_id} not found"
+            }))
+            db.close()
+            sys.exit(1)
+        
+        project_id = session_row['project_id']
+        ai_id = session_row['ai_id']
+        
+        # Get all reflexes for this session
+        cursor.execute("""
+            SELECT reflex_type, vector_values, reasoning, timestamp
+            FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp ASC
+        """, (session_id,))
+        
+        reflexes = []
+        for row in cursor.fetchall():
+            reflexes.append({
+                "phase": row['reflex_type'],
+                "vectors": json.loads(row['vector_values']) if row['vector_values'] else {},
+                "reasoning": row['reasoning'],
+                "timestamp": row['timestamp']
+            })
+        
+        db.close()
+        
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": True,
+                "session_id": session_id,
+                "project_id": project_id,
+                "ai_id": ai_id,
+                "count": len(reflexes),
+                "trajectories": reflexes
+            }, indent=2))
+        else:
+            print(f"📊 Epistemic Trajectories for Session: {session_id}")
+            print(f"   Project: {project_id}")
+            print(f"   AI: {ai_id}")
+            print(f"   Count: {len(reflexes)}\n")
+            for t in reflexes:
+                print(f"   Phase: {t['phase']}")
+                print(f"   Time: {t['timestamp']}")
+                vectors = t.get('vectors', {})
+                if vectors:
+                    print(f"   Know: {vectors.get('know', 'N/A')}, Uncertainty: {vectors.get('uncertainty', 'N/A')}")
+                print()
+        
+    except Exception as e:
+        from empirica.cli.cli_utils import handle_cli_error
+        handle_cli_error(e, "List epistemics", getattr(args, 'verbose', False))
+
