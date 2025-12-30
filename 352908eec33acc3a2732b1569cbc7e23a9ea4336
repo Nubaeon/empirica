@@ -1,0 +1,33 @@
+{
+  "goal_id": "dd1b8fd2-79aa-42ea-9e86-bfdbb84f2c73",
+  "session_id": "c62c67cf-2124-4a3b-9ef6-bcd0af4ba4f0",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-30T13:06:07.831744+00:00",
+  "goal_data": {
+    "objective": "Implement Phase 1 of dual-scope architecture - additive only, no breaking changes",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "session_findings table created with proper schema",
+      "session_unknowns, session_mistakes, session_dead_ends tables created",
+      "CLI commands accept --scope flag with smart defaults",
+      "Backward compatibility preserved (existing scripts work)",
+      "Tests pass for both scopes",
+      "Migration script created and tested"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-30T13:06:07.831758+00:00",
+      "action": "created"
+    }
+  ]
+}
