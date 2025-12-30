@@ -92,19 +92,23 @@ def calculate_confidence(vectors: dict) -> float:
 
 
 def format_confidence(confidence: float) -> str:
-    """Format confidence as colored percentage."""
+    """Format confidence as colored percentage with tiered emoji."""
     pct = int(confidence * 100)
 
     if confidence >= 0.75:
         color = Colors.BRIGHT_GREEN
+        emoji = "⚡"  # High energy/power
     elif confidence >= 0.50:
         color = Colors.GREEN
+        emoji = "💡"  # Good understanding
     elif confidence >= 0.35:
         color = Colors.YELLOW
+        emoji = "💫"  # Some uncertainty
     else:
         color = Colors.RED
+        emoji = "🌑"  # Low confidence/dark
 
-    return f"{color}{pct}%{Colors.RESET}"
+    return f"{emoji}{color}{pct}%{Colors.RESET}"
 
 
 def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
