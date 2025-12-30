@@ -115,11 +115,76 @@ def get_latest_vectors(db: SessionDatabase, session_id: str) -> tuple:
     return phase, vectors
 
 
+def get_vector_deltas(db: SessionDatabase, session_id: str) -> dict:
+    """Get deltas between latest and previous vectors (PREFLIGHT vs POSTFLIGHT)."""
+    cursor = db.conn.cursor()
+
+    # Get the two most recent reflexes to compute deltas
+    cursor.execute("""
+        SELECT phase, know, uncertainty, context, completion, engagement
+        FROM reflexes
+        WHERE session_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 2
+    """, (session_id,))
+    rows = cursor.fetchall()
+
+    if len(rows) < 2:
+        return {}
+
+    latest = rows[0]
+    previous = rows[1]
+
+    deltas = {}
+    keys = ['know', 'uncertainty', 'context', 'completion', 'engagement']
+
+    for i, key in enumerate(keys):
+        curr_val = latest[i + 1]  # +1 to skip phase
+        prev_val = previous[i + 1]
+
+        if curr_val is not None and prev_val is not None:
+            delta = curr_val - prev_val
+            if abs(delta) >= 0.05:  # Only show meaningful changes
+                deltas[key] = delta
+
+    return deltas
+
+
+def format_deltas(deltas: dict) -> str:
+    """Format deltas for display (e.g., 'know:+0.15 unc:-0.10')."""
+    if not deltas:
+        return ""
+
+    parts = []
+    # Priority order for display
+    priority_keys = ['know', 'uncertainty', 'completion', 'context', 'engagement']
+
+    for key in priority_keys:
+        if key in deltas:
+            delta = deltas[key]
+            # Abbreviate keys
+            abbrev = {'know': 'K', 'uncertainty': 'U', 'context': 'C',
+                      'completion': '✓', 'engagement': 'E'}
+            sign = '+' if delta > 0 else ''
+
+            # Color code: green for improvements, red for regressions
+            # For uncertainty, lower is better (negative is green)
+            if key == 'uncertainty':
+                color = Colors.GREEN if delta < 0 else Colors.RED
+            else:
+                color = Colors.GREEN if delta > 0 else Colors.RED
+
+            parts.append(f"{color}{abbrev.get(key, key[:1])}:{sign}{delta:.2f}{Colors.RESET}")
+
+    return ' '.join(parts[:3])  # Max 3 deltas to keep it compact
+
+
 def format_statusline(
     session: dict,
     phase: str,
     vectors: dict,
     drift_state: SignalingState,
+    deltas: dict = None,
     mode: str = 'default'
 ) -> str:
     """Format the statusline based on mode."""
@@ -135,13 +200,19 @@ def format_statusline(
         return ' '.join(parts)
 
     elif mode == 'default':
-        # Phase + key vectors + drift
+        # Phase + key vectors + deltas + drift
         if phase:
             parts.append(f"{Colors.BLUE}{phase}{Colors.RESET}")
 
         if vectors:
             vec_str = format_vectors_compact(vectors, show_values=False)
             parts.append(vec_str)
+
+        # Add deltas if present
+        if deltas:
+            delta_str = format_deltas(deltas)
+            if delta_str:
+                parts.append(f"Δ {delta_str}")
 
         if drift_state and drift_state.drift_score is not None:
             drift_str = format_drift_compact(
@@ -153,7 +224,7 @@ def format_statusline(
         return ' │ '.join(parts)
 
     elif mode == 'learning':
-        # Focus on vectors with values
+        # Focus on vectors with values and deltas
         if phase:
             parts.append(f"{phase}")
 
@@ -162,6 +233,12 @@ def format_statusline(
             all_keys = ['know', 'uncertainty', 'context', 'clarity', 'completion']
             vec_str = format_vectors_compact(vectors, keys=all_keys, show_values=True)
             parts.append(vec_str)
+
+        # Always show deltas in learning mode
+        if deltas:
+            delta_str = format_deltas(deltas)
+            if delta_str:
+                parts.append(f"Δ {delta_str}")
 
         if drift_state and drift_state.drift_score is not None:
             parts.append(drift_state.format_basic())
@@ -181,6 +258,12 @@ def format_statusline(
             all_keys = ['know', 'uncertainty', 'context', 'clarity', 'engagement', 'completion', 'impact']
             vec_str = format_vectors_compact(vectors, keys=all_keys, show_values=True)
             parts.append(vec_str)
+
+        # Show deltas in full mode
+        if deltas:
+            delta_str = format_deltas(deltas)
+            if delta_str:
+                parts.append(f"Δ {delta_str}")
 
         if drift_state:
             parts.append(drift_state.format_basic())
@@ -206,6 +289,9 @@ def main():
         # Get vectors from DB (real-time)
         phase, vectors = get_latest_vectors(db, session_id)
 
+        # Get deltas (learning measurement)
+        deltas = get_vector_deltas(db, session_id)
+
         # Get drift from cache (updated by hooks)
         drift_state = read_drift_cache(str(Path.cwd()))
 
@@ -219,7 +305,7 @@ def main():
             )
 
         # Format and output
-        output = format_statusline(session, phase, vectors, drift_state, mode)
+        output = format_statusline(session, phase, vectors, drift_state, deltas, mode)
         print(output)
 
     except Exception as e:
