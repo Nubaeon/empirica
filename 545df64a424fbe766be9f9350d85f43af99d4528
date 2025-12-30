@@ -1,0 +1,31 @@
+{
+  "goal_id": "eaadd1bf-49c8-41e1-8f01-227950c2ef50",
+  "session_id": "4d427e83-2bea-473b-b790-7af8cc5dc48c",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-30T14:09:17.324773+00:00",
+  "goal_data": {
+    "objective": "Test dual-scope architecture with MCP server integration",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Session-scoped breadcrumbs work via MCP",
+      "Project-scoped breadcrumbs work via MCP",
+      "Both scopes can be queried and distinguished",
+      "Verify scope field appears in all responses"
+    ],
+    "estimated_complexity": 0.3,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-30T14:09:17.324792+00:00",
+      "action": "created"
+    }
+  ]
+}
