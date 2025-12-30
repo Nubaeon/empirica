@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""
+Global entry point for Empirica MCP Server
+Allows: empirica-mcp command from anywhere
+"""
+import sys
+from pathlib import Path
+
+# Add empirica repo to path
+empirica_repo = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(empirica_repo))
+
+# Import and run server
+from empirica_mcp.server import run
+
+if __name__ == "__main__":
+    run()

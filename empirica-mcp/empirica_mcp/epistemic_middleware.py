@@ -76,6 +76,89 @@ class EpistemicMiddleware:
         if not self.enable_epistemic:
             return await original_handler(tool_name, arguments)
         
+        # Skip epistemic for known/safe tools
+        # These are standard CLI tools with clear semantics
+        # IMPORTANT: Tool names must match exactly what's defined in server.py
+        safe_tools = {
+            # Stateless tools (handled directly, no CLI)
+            'get_empirica_introduction',
+            'get_workflow_guidance',
+            'cli_help',
+            # Session management
+            'session_create',
+            'session_snapshot',
+            'resume_previous_session',  # NOT session_resume
+            'memory_compact',
+            # CASCADE workflow tools
+            'execute_preflight',
+            'submit_preflight_assessment',  # NOT preflight_submit
+            'execute_check',
+            'submit_check_assessment',
+            'execute_postflight',
+            'submit_postflight_assessment',  # NOT postflight_submit
+            # Goal management
+            'create_goal',  # NOT goals_create
+            'add_subtask',
+            'complete_subtask',  # NOT goals_complete
+            'get_goal_progress',
+            'get_goal_subtasks',
+            'list_goals',
+            'goals_ready',
+            'goals_claim',
+            # Breadcrumb logging (session-scoped)
+            'finding_log',
+            'unknown_log',
+            'mistake_log',
+            'deadend_log',
+            'log_mistake',  # Alternative mistake logging
+            # Project operations
+            'project_bootstrap',
+            # Checkpoint operations
+            'create_git_checkpoint',
+            'load_git_checkpoint',
+            # Handoff operations
+            'create_handoff_report',
+            'query_handoff_reports',
+            # Identity operations
+            'create_identity',
+            'list_identities',
+            'export_public_key',
+            'verify_signature',
+            # Investigation
+            'investigate',
+            'discover_goals',
+            'resume_goal',
+            # Vision
+            'vision_analyze',
+            'vision_log',
+            # Edit verification
+            'edit_with_confidence',
+            # Reference docs
+            'refdoc_add',
+            # Calibration
+            'get_calibration_report',
+            'get_epistemic_state',
+            'get_session_summary',
+            # Epistemic monitoring
+            'epistemics_list',
+            'epistemics_show',
+            # Human copilot tools
+            'monitor',
+            'check_drift',
+            'issue_list',
+            'issue_handoff',
+            'workspace_overview',
+            'efficiency_report',
+            'skill_suggest',
+            'workspace_map',
+            'unknown_resolve',
+        }
+        
+        # Skip epistemic for safe tools - they have well-defined semantics
+        if tool_name in safe_tools:
+            self.request_count += 1
+            return await original_handler(tool_name, arguments)
+        
         self.request_count += 1
         
         # Step 1: Assess request

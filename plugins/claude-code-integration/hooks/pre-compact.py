@@ -36,7 +36,7 @@ def main():
             except ValueError:
                 continue
     except Exception:
-        pass
+        pass  # Session detection failure is non-fatal
 
     if not empirica_session:
         # Exit silently if no Empirica session active
@@ -98,10 +98,7 @@ def main():
             # Success - save snapshot
             bootstrap = json.loads(result.stdout) if result.stdout else {}
 
-            # Save snapshot to .empirica/ref-docs
-            from pathlib import Path
-            from datetime import datetime
-
+            # Save snapshot to .empirica/ref-docs (Path already imported at top)
             ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
             ref_docs_dir.mkdir(parents=True, exist_ok=True)
 

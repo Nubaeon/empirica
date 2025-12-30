@@ -4,11 +4,46 @@ Project Commands - Multi-repo/multi-session project tracking
 
 import json
 import logging
-from typing import Optional
+from typing import Optional, Literal
 from ..cli_utils import handle_cli_error
 from empirica.core.memory_gap_detector import MemoryGapDetector
 
 logger = logging.getLogger(__name__)
+
+
+def infer_scope(session_id: Optional[str], project_id: Optional[str], explicit_scope: Optional[str]) -> Literal['session', 'project', 'both']:
+    """
+    Smart scope inference for dual-scoped logging.
+    
+    Rules:
+    1. If explicit_scope provided → use it
+    2. If only session_id → 'session'
+    3. If only project_id → 'project'
+    4. If both → 'both' (dual-log)
+    5. If neither → 'project' (backward compatible default)
+    
+    Args:
+        session_id: Optional session UUID
+        project_id: Optional project UUID
+        explicit_scope: Optional explicit scope choice
+        
+    Returns:
+        'session', 'project', or 'both'
+    """
+    if explicit_scope:
+        return explicit_scope
+    
+    has_session = session_id is not None
+    has_project = project_id is not None
+    
+    if has_session and has_project:
+        return 'both'  # Dual-log when both provided
+    elif has_session:
+        return 'session'
+    elif has_project:
+        return 'project'
+    else:
+        return 'project'  # Backward compatible default
 
 
 def handle_project_create_command(args):
@@ -815,7 +850,9 @@ def handle_project_bootstrap_command(args):
             if breadcrumbs['incomplete_work']:
                 print(f"🎯 Incomplete Work:")
                 for i, w in enumerate(breadcrumbs['incomplete_work'], 1):
-                    print(f"   {i}. {w['goal']} ({w['progress']})")
+                    objective = w.get('objective', w.get('goal', 'Unknown'))
+                    status = w.get('status', 'unknown')
+                    print(f"   {i}. {objective} ({status})")
                 print()
 
             if breadcrumbs.get('available_skills'):
@@ -1069,22 +1106,45 @@ def handle_finding_log_command(args):
                 goal_id = active_goal['id']
                 # Note: subtask_id remains None unless explicitly provided
 
-        finding_id = db.log_finding(
-            project_id=project_id,
-            session_id=session_id,
-            finding=finding,
-            goal_id=goal_id,
-            subtask_id=subtask_id,
-            subject=subject,
-            impact=impact
-        )
+        # DUAL-SCOPE LOGIC: Infer scope and log to appropriate table(s)
+        explicit_scope = config_data.get('scope') if config_data else getattr(args, 'scope', None)
+        scope = infer_scope(session_id, project_id, explicit_scope)
+        
+        finding_ids = []
+        
+        if scope in ['session', 'both']:
+            # Log to session_findings
+            finding_id_session = db.log_session_finding(
+                session_id=session_id,
+                finding=finding,
+                goal_id=goal_id,
+                subtask_id=subtask_id,
+                subject=subject,
+                impact=impact
+            )
+            finding_ids.append(('session', finding_id_session))
+        
+        if scope in ['project', 'both']:
+            # Log to project_findings (legacy table)
+            finding_id_project = db.log_finding(
+                project_id=project_id,
+                session_id=session_id,
+                finding=finding,
+                goal_id=goal_id,
+                subtask_id=subtask_id,
+                subject=subject,
+                impact=impact
+            )
+            finding_ids.append(('project', finding_id_project))
+        
         db.close()
 
         result = {
             "ok": True,
-            "finding_id": finding_id,
-            "project_id": project_id,
-            "message": "Finding logged successfully"
+            "scope": scope,
+            "findings": [{"scope": s, "finding_id": fid} for s, fid in finding_ids],
+            "project_id": project_id if project_id else None,
+            "message": f"Finding logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 
         # Format output (AI-first = JSON by default)
@@ -1093,8 +1153,11 @@ def handle_finding_log_command(args):
         else:
             # Human-readable output (legacy)
             print(f"✅ Finding logged successfully")
-            print(f"   Finding ID: {finding_id}")
-            print(f"   Project: {project_id[:8]}...")
+            if finding_ids:
+                for scope, fid in finding_ids:
+                    print(f"   Finding ID ({scope}): {fid}")
+            if project_id:
+                print(f"   Project: {project_id[:8]}...")
 
         return 0  # Success
 
@@ -1208,22 +1271,45 @@ def handle_unknown_log_command(args):
             if active_goal:
                 goal_id = active_goal['id']
 
-        unknown_id = db.log_unknown(
-            project_id=project_id,
-            session_id=session_id,
-            unknown=unknown,
-            goal_id=goal_id,
-            subtask_id=subtask_id,
-            subject=subject,
-            impact=impact
-        )
+        # DUAL-SCOPE LOGIC: Infer scope and log to appropriate table(s)
+        explicit_scope = config_data.get('scope') if config_data else getattr(args, 'scope', None)
+        scope = infer_scope(session_id, project_id, explicit_scope)
+        
+        unknown_ids = []
+        
+        if scope in ['session', 'both']:
+            # Log to session_unknowns
+            unknown_id_session = db.log_session_unknown(
+                session_id=session_id,
+                unknown=unknown,
+                goal_id=goal_id,
+                subtask_id=subtask_id,
+                subject=subject,
+                impact=impact
+            )
+            unknown_ids.append(('session', unknown_id_session))
+        
+        if scope in ['project', 'both']:
+            # Log to project_unknowns (legacy table)
+            unknown_id_project = db.log_unknown(
+                project_id=project_id,
+                session_id=session_id,
+                unknown=unknown,
+                goal_id=goal_id,
+                subtask_id=subtask_id,
+                subject=subject,
+                impact=impact
+            )
+            unknown_ids.append(('project', unknown_id_project))
+        
         db.close()
 
         result = {
             "ok": True,
-            "unknown_id": unknown_id,
-            "project_id": project_id,
-            "message": "Unknown logged successfully"
+            "scope": scope,
+            "unknowns": [{"scope": s, "unknown_id": uid} for s, uid in unknown_ids],
+            "project_id": project_id if project_id else None,
+            "message": f"Unknown logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 
         if output_format == 'json':
@@ -1386,23 +1472,47 @@ def handle_deadend_log_command(args):
             if active_goal:
                 goal_id = active_goal['id']
 
-        dead_end_id = db.log_dead_end(
-            project_id=project_id,
-            session_id=session_id,
-            approach=approach,
-            why_failed=why_failed,
-            goal_id=goal_id,
-            subtask_id=subtask_id,
-            subject=subject,
-            impact=impact
-        )
+        # DUAL-SCOPE LOGIC: Infer scope and log to appropriate table(s)
+        explicit_scope = config_data.get('scope') if config_data else getattr(args, 'scope', None)
+        scope = infer_scope(session_id, project_id, explicit_scope)
+        
+        dead_end_ids = []
+        
+        if scope in ['session', 'both']:
+            # Log to session_dead_ends
+            dead_end_id_session = db.log_session_dead_end(
+                session_id=session_id,
+                approach=approach,
+                why_failed=why_failed,
+                goal_id=goal_id,
+                subtask_id=subtask_id,
+                subject=subject,
+                impact=impact
+            )
+            dead_end_ids.append(('session', dead_end_id_session))
+        
+        if scope in ['project', 'both']:
+            # Log to project_dead_ends (legacy table)
+            dead_end_id_project = db.log_dead_end(
+                project_id=project_id,
+                session_id=session_id,
+                approach=approach,
+                why_failed=why_failed,
+                goal_id=goal_id,
+                subtask_id=subtask_id,
+                subject=subject,
+                impact=impact
+            )
+            dead_end_ids.append(('project', dead_end_id_project))
+        
         db.close()
 
         result = {
             "ok": True,
-            "dead_end_id": dead_end_id,
-            "project_id": project_id,
-            "message": "Dead end logged successfully"
+            "scope": scope,
+            "dead_ends": [{"scope": s, "dead_end_id": did} for s, did in dead_end_ids],
+            "project_id": project_id if project_id else None,
+            "message": f"Dead end logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 
         if output_format == 'json':

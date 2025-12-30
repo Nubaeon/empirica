@@ -200,6 +200,96 @@ def migration_012_unknowns_impact(cursor: sqlite3.Cursor):
     add_column_if_missing(cursor, "project_unknowns", "impact", "REAL", "0.5")
 
 
+# Migration 13: Add session-scoped breadcrumb tables (dual-scope architecture)
+def migration_013_session_scoped_breadcrumbs(cursor: sqlite3.Cursor):
+    """Create session_* tables for session-scoped learning (dual-scope Phase 1)"""
+    
+    # session_findings (mirrors project_findings)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS session_findings (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            goal_id TEXT,
+            subtask_id TEXT,
+            finding TEXT NOT NULL,
+            created_timestamp REAL NOT NULL,
+            finding_data TEXT NOT NULL,
+            subject TEXT,
+            impact REAL,
+            
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+            FOREIGN KEY (goal_id) REFERENCES goals(id),
+            FOREIGN KEY (subtask_id) REFERENCES subtasks(id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_findings_session ON session_findings(session_id)")
+    
+    # session_unknowns (mirrors project_unknowns)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS session_unknowns (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            goal_id TEXT,
+            subtask_id TEXT,
+            unknown TEXT NOT NULL,
+            is_resolved BOOLEAN DEFAULT FALSE,
+            resolved_by TEXT,
+            created_timestamp REAL NOT NULL,
+            resolved_timestamp REAL,
+            unknown_data TEXT NOT NULL,
+            subject TEXT,
+            impact REAL DEFAULT 0.5,
+            
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+            FOREIGN KEY (goal_id) REFERENCES goals(id),
+            FOREIGN KEY (subtask_id) REFERENCES subtasks(id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_unknowns_session ON session_unknowns(session_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_unknowns_resolved ON session_unknowns(is_resolved)")
+    
+    # session_dead_ends (mirrors project_dead_ends)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS session_dead_ends (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            goal_id TEXT,
+            subtask_id TEXT,
+            approach TEXT NOT NULL,
+            why_failed TEXT NOT NULL,
+            created_timestamp REAL NOT NULL,
+            dead_end_data TEXT NOT NULL,
+            subject TEXT,
+            
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+            FOREIGN KEY (goal_id) REFERENCES goals(id),
+            FOREIGN KEY (subtask_id) REFERENCES subtasks(id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_dead_ends_session ON session_dead_ends(session_id)")
+    
+    # session_mistakes (mirrors mistakes_made structure)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS session_mistakes (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            goal_id TEXT,
+            mistake TEXT NOT NULL,
+            why_wrong TEXT NOT NULL,
+            cost_estimate TEXT,
+            root_cause_vector TEXT,
+            prevention TEXT,
+            created_timestamp REAL NOT NULL,
+            mistake_data TEXT NOT NULL,
+            
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+            FOREIGN KEY (goal_id) REFERENCES goals(id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_mistakes_session ON session_mistakes(session_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_mistakes_goal ON session_mistakes(goal_id)")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -213,4 +303,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("010_sessions_bootstrap_level", "Add bootstrap_level to sessions", migration_010_sessions_bootstrap_level),
     ("011_mistakes_project_id", "Add project_id to mistakes_made", migration_011_mistakes_project_id),
     ("012_unknowns_impact", "Add impact scoring to project_unknowns", migration_012_unknowns_impact),
+    ("013_session_scoped_breadcrumbs", "Add session-scoped breadcrumb tables (dual-scope Phase 1)", migration_013_session_scoped_breadcrumbs),
 ]

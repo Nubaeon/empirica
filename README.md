@@ -2,11 +2,20 @@
 
 > **AI agents that know what they know—and what they don't**
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.1.0)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.0)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)
 [![Docker](https://img.shields.io/badge/docker-nubaeon%2Fempirica-blue)](https://hub.docker.com/r/nubaeon/empirica)
+
+## What's New in 1.2.0
+
+- **🔧 MCP Server with 57 Tools** - Full Model Context Protocol integration with epistemic middleware
+- **👥 9 Human Copilot Tools** - Enhanced human oversight (monitor, check-drift, issue-handoff, etc.)
+- **🌙 3-Layer Signaling System** - Moon phase indicators for drift detection (basic/default/full)
+- **🚦 Sentinel Gates** - Automatic safety gates (HALT/BRANCH/REVISE/LOCK) for memory drift
+- **🔄 Memory Compact Hooks** - Seamless Claude Code integration with pre/post compact hooks
+- **📊 Unified Statusline** - Real-time epistemic status with vector health indicators
 
 ## What is Empirica?
 
@@ -59,20 +68,20 @@ pip install empirica[all]
 
 ```bash
 # Pull the latest image
-docker pull nubaeon/empirica:1.1.0
+docker pull nubaeon/empirica:1.2.0
 
 # Run a command
-docker run -it nubaeon/empirica:1.1.0 empirica --help
+docker run -it nubaeon/empirica:1.2.0 empirica --help
 
 # Interactive session with persistent data
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.1.0 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.2.0 /bin/bash
 ```
 
 #### From Source
 
 ```bash
 # Latest stable release
-pip install git+https://github.com/Nubaeon/empirica.git@v1.1.0
+pip install git+https://github.com/Nubaeon/empirica.git@v1.2.0
 
 # Development branch
 pip install git+https://github.com/Nubaeon/empirica.git@develop
@@ -192,6 +201,19 @@ git fetch origin refs/notes/empirica/*:refs/notes/empirica/*
 ```bash
 cargo install beads
 ```
+
+### MCP Server (Model Context Protocol)
+
+**For AI tools that support MCP:**
+```bash
+# Install MCP server
+pip install empirica-mcp
+
+# Run server
+empirica-mcp
+```
+
+**Features:** 57 tools including 9 Human Copilot tools for enhanced human oversight.
 
 ### Claude Code Integration
 

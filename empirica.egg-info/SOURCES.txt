@@ -10,6 +10,7 @@ docs/architecture/CHECK_SEMANTICS_FORMALIZATION.md
 docs/architecture/CLI_DESIGN_PHILOSOPHY.md
 docs/architecture/EPISTEMIC_ARCHITECTURE_ASSESSMENT.md
 docs/architecture/EPISTEMIC_STATE_COMPLETE_CAPTURE.md
+docs/architecture/EPISTEMIC_VECTOR_INTERPRETER.md
 docs/architecture/INVESTIGATION_CYCLE_TRACKING.md
 docs/architecture/MCO_INTEGRATION.md
 docs/architecture/MEMORY_COMPACT_SPEC.md
@@ -32,7 +33,17 @@ docs/system-prompts/QWEN.md
 docs/system-prompts/README.md
 docs/system-prompts/instructions.md
 empirica/__init__.py
+empirica-mcp/test_epistemic.py
+empirica-mcp/empirica_mcp/epistemic_middleware.py
 empirica-mcp/empirica_mcp/server.py
+empirica-mcp/empirica_mcp/epistemic/__init__.py
+empirica-mcp/empirica_mcp/epistemic/cli_prompt_templates.py
+empirica-mcp/empirica_mcp/epistemic/mcp_response_templates.py
+empirica-mcp/empirica_mcp/epistemic/modes.py
+empirica-mcp/empirica_mcp/epistemic/personality.py
+empirica-mcp/empirica_mcp/epistemic/router.py
+empirica-mcp/empirica_mcp/epistemic/shared_vector_semantics.py
+empirica-mcp/empirica_mcp/epistemic/state_machine.py
 empirica.egg-info/PKG-INFO
 empirica.egg-info/SOURCES.txt
 empirica.egg-info/dependency_links.txt
@@ -152,6 +163,7 @@ empirica/core/epistemic_trajectory.py
 empirica/core/findings_deprecation.py
 empirica/core/issue_capture.py
 empirica/core/memory_gap_detector.py
+empirica/core/signaling.py
 empirica/core/thresholds.py
 empirica/core/canonical/__init__.py
 empirica/core/canonical/canonical_goal_orchestrator.py

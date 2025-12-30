@@ -8,7 +8,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.empirica/hooks/pre-compact.sh",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/plugins/claude-code-integration/hooks/pre-compact.py",
             "timeout": 30
           }
         ]
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.empirica/hooks/pre-compact.sh",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/plugins/claude-code-integration/hooks/pre-compact.py",
             "timeout": 30
           }
         ]
@@ -27,12 +27,12 @@
     ],
     "SessionStart": [
       {
-        "description": "Load epistemic snapshot + bootstrap after compaction",
+        "description": "Load epistemic context + run drift detection after compaction",
         "matcher": "compact",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.empirica/hooks/session-start.sh",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/plugins/claude-code-integration/hooks/post-compact.py",
             "timeout": 60
           }
         ]

@@ -474,8 +474,23 @@ def handle_goals_complete_subtask_command(args):
         from empirica.core.tasks.repository import TaskRepository
         from empirica.core.tasks.types import TaskStatus
         
-        # Parse arguments
-        task_id = args.task_id
+        # Parse arguments with backward compatibility
+        # Priority: subtask_id (new) > task_id (deprecated)
+        if hasattr(args, 'subtask_id') and args.subtask_id:
+            task_id = args.subtask_id
+            if hasattr(args, 'task_id') and args.task_id and args.task_id != args.subtask_id:
+                print("⚠️  Warning: Both --subtask-id and --task-id provided. Using --subtask-id.", file=sys.stderr)
+        elif hasattr(args, 'task_id') and args.task_id:
+            task_id = args.task_id
+            print("ℹ️  Note: --task-id is deprecated. Please use --subtask-id instead.", file=sys.stderr)
+        else:
+            print(json.dumps({
+                "ok": False,
+                "error": "Either --subtask-id or --task-id is required",
+                "hint": "Preferred: empirica goals-complete-subtask --subtask-id <ID>"
+            }))
+            sys.exit(1)
+            
         evidence = args.evidence
         
         # Use the Task repository

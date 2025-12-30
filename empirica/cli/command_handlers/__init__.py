@@ -134,7 +134,8 @@ from .vision_commands import (
 )
 from .epistemics_commands import (
     handle_epistemics_search_command,
-    handle_epistemics_stats_command
+    handle_epistemics_stats_command,
+    handle_epistemics_list_command
 )
 
 
@@ -287,6 +288,7 @@ __all__ = [
     # Epistemic trajectory commands
     'handle_epistemics_search_command',
     'handle_epistemics_stats_command',
+    'handle_epistemics_list_command',
     
     # Session-end command
     # 'handle_session_end_command',  # removed - use handoff-create

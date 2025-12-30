@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: empirica
-Version: 1.1.2
+Version: 1.2.0
 Summary: Genuine AI epistemic self-assessment framework - Universal interface for single AI tracking
 Author: Empirica Team
 License-Expression: MIT
@@ -67,7 +67,7 @@ Dynamic: license-file
 
 > **AI agents that know what they know—and what they don't**
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.1.0)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.0)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)

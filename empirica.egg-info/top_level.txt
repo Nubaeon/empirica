@@ -1,4 +1,2 @@
 empirica
-empirica-epre
 empirica-mcp
-empirica-outreach

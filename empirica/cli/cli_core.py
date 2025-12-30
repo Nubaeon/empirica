@@ -296,7 +296,7 @@ def main(args=None):
             'vision': handle_vision_analyze,
             
             # Epistemics commands
-            'epistemics-list': handle_epistemics_search_command,
+            'epistemics-list': handle_epistemics_list_command,
             'epistemics-show': handle_epistemics_stats_command,
 
             # Edit verification commands

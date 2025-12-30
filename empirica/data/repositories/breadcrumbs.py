@@ -158,6 +158,163 @@ class BreadcrumbRepository(BaseRepository):
 
         return dead_end_id
 
+    # ========================================================================
+    # SESSION-SCOPED BREADCRUMBS (Dual-Scope Phase 1)
+    # ========================================================================
+    
+    def log_session_finding(
+        self,
+        session_id: str,
+        finding: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
+    ) -> str:
+        """Log a session-scoped finding (ephemeral, session-specific learning)"""
+        finding_id = str(uuid.uuid4())
+
+        if impact is None:
+            impact = 0.5
+
+        finding_data = {
+            "finding": finding,
+            "goal_id": goal_id,
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
+        }
+
+        self._execute("""
+            INSERT INTO session_findings (
+                id, session_id, goal_id, subtask_id,
+                finding, created_timestamp, finding_data, subject, impact
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            finding_id, session_id, goal_id, subtask_id,
+            finding, time.time(), json.dumps(finding_data), subject, impact
+        ))
+
+        self.commit()
+        logger.info(f"📝 Session finding logged: {finding[:50]}...")
+
+        return finding_id
+    
+    def log_session_unknown(
+        self,
+        session_id: str,
+        unknown: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
+    ) -> str:
+        """Log a session-scoped unknown (what's still unclear in this session)"""
+        unknown_id = str(uuid.uuid4())
+
+        if impact is None:
+            impact = 0.5
+
+        unknown_data = {
+            "unknown": unknown,
+            "goal_id": goal_id,
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
+        }
+
+        self._execute("""
+            INSERT INTO session_unknowns (
+                id, session_id, goal_id, subtask_id,
+                unknown, is_resolved, created_timestamp, unknown_data, subject, impact
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            unknown_id, session_id, goal_id, subtask_id,
+            unknown, False, time.time(), json.dumps(unknown_data), subject, impact
+        ))
+
+        self.commit()
+        logger.info(f"❓ Session unknown logged: {unknown[:50]}...")
+
+        return unknown_id
+    
+    def log_session_dead_end(
+        self,
+        session_id: str,
+        approach: str,
+        why_failed: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: float = 0.5
+    ) -> str:
+        """Log a session-scoped dead end (what didn't work in this session)"""
+        dead_end_id = str(uuid.uuid4())
+
+        dead_end_data = {
+            "approach": approach,
+            "why_failed": why_failed,
+            "goal_id": goal_id,
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
+        }
+
+        self._execute("""
+            INSERT INTO session_dead_ends (
+                id, session_id, goal_id, subtask_id,
+                approach, why_failed, created_timestamp, dead_end_data, subject
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            dead_end_id, session_id, goal_id, subtask_id,
+            approach, why_failed, time.time(), json.dumps(dead_end_data), subject
+        ))
+
+        self.commit()
+        logger.info(f"💀 Session dead end logged: {approach[:50]}...")
+
+        return dead_end_id
+    
+    def log_session_mistake(
+        self,
+        session_id: str,
+        mistake: str,
+        why_wrong: str,
+        cost_estimate: Optional[str] = None,
+        root_cause_vector: Optional[str] = None,
+        prevention: Optional[str] = None,
+        goal_id: Optional[str] = None
+    ) -> str:
+        """Log a session-scoped mistake (learning from failures in this session)"""
+        mistake_id = str(uuid.uuid4())
+
+        mistake_data = {
+            "mistake": mistake,
+            "why_wrong": why_wrong,
+            "cost_estimate": cost_estimate,
+            "root_cause_vector": root_cause_vector,
+            "prevention": prevention,
+            "goal_id": goal_id,
+            "timestamp": time.time()
+        }
+
+        self._execute("""
+            INSERT INTO session_mistakes (
+                id, session_id, goal_id, mistake, why_wrong,
+                cost_estimate, root_cause_vector, prevention,
+                created_timestamp, mistake_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            mistake_id, session_id, goal_id, mistake, why_wrong,
+            cost_estimate, root_cause_vector, prevention,
+            time.time(), json.dumps(mistake_data)
+        ))
+
+        self.commit()
+        logger.info(f"🔴 Session mistake logged: {mistake[:50]}...")
+
+        return mistake_id
+
     def add_reference_doc(
         self,
         project_id: str,
@@ -198,7 +355,8 @@ class BreadcrumbRepository(BaseRepository):
         uncertainty: Optional[float] = None
     ) -> List[Dict]:
         """
-        Get findings for a project with deprecation filtering.
+        Get findings for a project with deprecation filtering (DUAL-SCOPE).
+        Aggregates findings from both session_findings (across all sessions) and project_findings.
         
         Args:
             project_id: Project identifier
@@ -208,15 +366,35 @@ class BreadcrumbRepository(BaseRepository):
             uncertainty: Epistemic uncertainty (for auto-depth, 0.0-1.0)
             
         Returns:
-            Filtered list of findings
+            Filtered list of findings from both scopes
         """
-        # Query all findings
+        # Query findings from BOTH project_findings and session_findings (across all sessions in project)
         if subject:
-            query = "SELECT * FROM project_findings WHERE project_id = ? AND subject = ? ORDER BY created_timestamp DESC"
-            params = (project_id, subject)
+            query = """
+                SELECT id, session_id, goal_id, subtask_id, finding, created_timestamp, finding_data, subject, impact, project_id, 'project' as scope 
+                FROM project_findings 
+                WHERE project_id = ? AND subject = ? 
+                UNION ALL
+                SELECT f.id, f.session_id, f.goal_id, f.subtask_id, f.finding, f.created_timestamp, f.finding_data, f.subject, f.impact, s.project_id, 'session' as scope 
+                FROM session_findings f
+                JOIN sessions s ON f.session_id = s.session_id
+                WHERE s.project_id = ? AND f.subject = ?
+                ORDER BY created_timestamp DESC
+            """
+            params = (project_id, subject, project_id, subject)
         else:
-            query = "SELECT * FROM project_findings WHERE project_id = ? ORDER BY created_timestamp DESC"
-            params = (project_id,)
+            query = """
+                SELECT id, session_id, goal_id, subtask_id, finding, created_timestamp, finding_data, subject, impact, project_id, 'project' as scope 
+                FROM project_findings 
+                WHERE project_id = ? 
+                UNION ALL
+                SELECT f.id, f.session_id, f.goal_id, f.subtask_id, f.finding, f.created_timestamp, f.finding_data, f.subject, f.impact, s.project_id, 'session' as scope 
+                FROM session_findings f
+                JOIN sessions s ON f.session_id = s.session_id
+                WHERE s.project_id = ?
+                ORDER BY created_timestamp DESC
+            """
+            params = (project_id, project_id)
         
         cursor = self._execute(query, params)
         findings = [dict(row) for row in cursor.fetchall()]
@@ -254,43 +432,87 @@ class BreadcrumbRepository(BaseRepository):
         return filtered
 
     def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None, subject: Optional[str] = None) -> List[Dict]:
-        """Get unknowns for a project (optionally filter by resolved status and subject)"""
+        """Get unknowns for a project (DUAL-SCOPE: aggregates session + project unknowns)"""
+        # Column list: id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, scope
         if subject:
             if resolved is None:
                 cursor = self._execute("""
-                    SELECT * FROM project_unknowns
+                    SELECT id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, 'project' as scope 
+                    FROM project_unknowns
                     WHERE project_id = ? AND subject = ?
+                    UNION ALL
+                    SELECT u.id, u.session_id, u.goal_id, u.subtask_id, u.unknown, u.is_resolved, u.resolved_by, u.created_timestamp, u.resolved_timestamp, u.unknown_data, u.subject, u.impact, s.project_id, 'session' as scope 
+                    FROM session_unknowns u
+                    JOIN sessions s ON u.session_id = s.session_id
+                    WHERE s.project_id = ? AND u.subject = ?
                     ORDER BY created_timestamp DESC
-                """, (project_id, subject))
+                """, (project_id, subject, project_id, subject))
             else:
                 cursor = self._execute("""
-                    SELECT * FROM project_unknowns
+                    SELECT id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, 'project' as scope 
+                    FROM project_unknowns
                     WHERE project_id = ? AND subject = ? AND is_resolved = ?
+                    UNION ALL
+                    SELECT u.id, u.session_id, u.goal_id, u.subtask_id, u.unknown, u.is_resolved, u.resolved_by, u.created_timestamp, u.resolved_timestamp, u.unknown_data, u.subject, u.impact, s.project_id, 'session' as scope 
+                    FROM session_unknowns u
+                    JOIN sessions s ON u.session_id = s.session_id
+                    WHERE s.project_id = ? AND u.subject = ? AND u.is_resolved = ?
                     ORDER BY created_timestamp DESC
-                """, (project_id, subject, resolved))
+                """, (project_id, subject, resolved, project_id, subject, resolved))
         else:
             if resolved is None:
                 cursor = self._execute("""
-                    SELECT * FROM project_unknowns
+                    SELECT id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, 'project' as scope 
+                    FROM project_unknowns
                     WHERE project_id = ?
+                    UNION ALL
+                    SELECT u.id, u.session_id, u.goal_id, u.subtask_id, u.unknown, u.is_resolved, u.resolved_by, u.created_timestamp, u.resolved_timestamp, u.unknown_data, u.subject, u.impact, s.project_id, 'session' as scope 
+                    FROM session_unknowns u
+                    JOIN sessions s ON u.session_id = s.session_id
+                    WHERE s.project_id = ?
                     ORDER BY created_timestamp DESC
-                """, (project_id,))
+                """, (project_id, project_id))
             else:
                 cursor = self._execute("""
-                    SELECT * FROM project_unknowns
+                    SELECT id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, 'project' as scope 
+                    FROM project_unknowns
                     WHERE project_id = ? AND is_resolved = ?
+                    UNION ALL
+                    SELECT u.id, u.session_id, u.goal_id, u.subtask_id, u.unknown, u.is_resolved, u.resolved_by, u.created_timestamp, u.resolved_timestamp, u.unknown_data, u.subject, u.impact, s.project_id, 'session' as scope 
+                    FROM session_unknowns u
+                    JOIN sessions s ON u.session_id = s.session_id
+                    WHERE s.project_id = ? AND u.is_resolved = ?
                     ORDER BY created_timestamp DESC
-                """, (project_id, resolved))
+                """, (project_id, resolved, project_id, resolved))
         return [dict(row) for row in cursor.fetchall()]
 
     def get_project_dead_ends(self, project_id: str, limit: Optional[int] = None, subject: Optional[str] = None) -> List[Dict]:
-        """Get all dead ends for a project, optionally filtered by subject"""
+        """Get all dead ends for a project (DUAL-SCOPE: aggregates session + project)"""
+        # Column list: id, session_id, goal_id, subtask_id, approach, why_failed, created_timestamp, dead_end_data, subject, project_id, scope
         if subject:
-            query = "SELECT * FROM project_dead_ends WHERE project_id = ? AND subject = ? ORDER BY created_timestamp DESC"
-            params = (project_id, subject)
+            query = """
+                SELECT id, session_id, goal_id, subtask_id, approach, why_failed, created_timestamp, dead_end_data, subject, project_id, 'project' as scope 
+                FROM project_dead_ends WHERE project_id = ? AND subject = ?
+                UNION ALL
+                SELECT d.id, d.session_id, d.goal_id, d.subtask_id, d.approach, d.why_failed, d.created_timestamp, d.dead_end_data, d.subject, s.project_id, 'session' as scope 
+                FROM session_dead_ends d
+                JOIN sessions s ON d.session_id = s.session_id
+                WHERE s.project_id = ? AND d.subject = ?
+                ORDER BY created_timestamp DESC
+            """
+            params = (project_id, subject, project_id, subject)
         else:
-            query = "SELECT * FROM project_dead_ends WHERE project_id = ? ORDER BY created_timestamp DESC"
-            params = (project_id,)
+            query = """
+                SELECT id, session_id, goal_id, subtask_id, approach, why_failed, created_timestamp, dead_end_data, subject, project_id, 'project' as scope 
+                FROM project_dead_ends WHERE project_id = ?
+                UNION ALL
+                SELECT d.id, d.session_id, d.goal_id, d.subtask_id, d.approach, d.why_failed, d.created_timestamp, d.dead_end_data, d.subject, s.project_id, 'session' as scope 
+                FROM session_dead_ends d
+                JOIN sessions s ON d.session_id = s.session_id
+                WHERE s.project_id = ?
+                ORDER BY created_timestamp DESC
+            """
+            params = (project_id, project_id)
         if limit:
             query += f" LIMIT {limit}"
         cursor = self._execute(query, params)
