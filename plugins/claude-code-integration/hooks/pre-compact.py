@@ -101,6 +101,9 @@ def main():
             # Success - save snapshot
             bootstrap = json.loads(result.stdout) if result.stdout else {}
 
+            # Extract breadcrumbs (CLI wraps in {"ok", "project_id", "breadcrumbs"})
+            breadcrumbs = bootstrap.get('breadcrumbs', bootstrap)
+
             # Save snapshot to .empirica/ref-docs (Path already imported at top)
             ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
             ref_docs_dir.mkdir(parents=True, exist_ok=True)
@@ -108,17 +111,19 @@ def main():
             timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
             snapshot_path = ref_docs_dir / f"pre_summary_{timestamp}.json"
 
+            # session_id and live_state are in breadcrumbs
             snapshot = {
                 "type": "pre_summary_snapshot",
                 "timestamp": timestamp,
-                "session_id": bootstrap.get('session_id'),
+                "session_id": breadcrumbs.get('session_id'),
                 "trigger": trigger,
-                "live_state": bootstrap.get('live_state'),
+                "live_state": breadcrumbs.get('live_state'),
+                "checkpoint": breadcrumbs.get('live_state', {}).get('vectors', {}) if breadcrumbs.get('live_state') else {},
                 "breadcrumbs_summary": {
-                    "findings_count": len(bootstrap.get('findings', [])),
-                    "unknowns_count": len(bootstrap.get('unknowns', [])),
-                    "goals_count": len(bootstrap.get('goals', [])),
-                    "dead_ends_count": len(bootstrap.get('dead_ends', []))
+                    "findings_count": len(breadcrumbs.get('findings', [])),
+                    "unknowns_count": len(breadcrumbs.get('unknowns', [])),
+                    "goals_count": len(breadcrumbs.get('goals', [])),
+                    "dead_ends_count": len(breadcrumbs.get('dead_ends', []))
                 }
             }
 
@@ -128,19 +133,24 @@ def main():
             print(json.dumps({
                 "ok": True,
                 "trigger": trigger,
-                "empirica_session_id": bootstrap.get('session_id'),
+                "empirica_session_id": breadcrumbs.get('session_id'),
                 "snapshot_saved": True,
                 "snapshot_path": str(snapshot_path),
                 "message": f"Pre-compact snapshot saved ({trigger} compact)"
             }), file=sys.stdout)
 
             # Also print user-visible message to stderr
+            session_id_str = breadcrumbs.get('session_id', 'Unknown')
+            session_display = session_id_str[:8] if session_id_str else 'Unknown'
+            live_state = breadcrumbs.get('live_state', {})
+            vectors = live_state.get('vectors', {}) if live_state else {}
+
             print(f"""
 📸 Empirica: Pre-compact snapshot saved
-   Session: {bootstrap.get('session_id', 'Unknown')[:8]}...
+   Session: {session_display}...
    Trigger: {trigger}
    Snapshot: {snapshot_path.name}
-   Fresh state: {bootstrap.get('live_state', {}).get('fresh', False)}
+   Vectors: know={vectors.get('know', 'N/A')}, unc={vectors.get('uncertainty', 'N/A')}
 """, file=sys.stderr)
 
             sys.exit(0)

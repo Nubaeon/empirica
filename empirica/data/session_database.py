@@ -1904,9 +1904,15 @@ class SessionDatabase:
 
         # Capture or load live state
         if fresh_assess:
-            return self._capture_fresh_state(session_id, project_id)
+            result = self._capture_fresh_state(session_id, project_id)
         else:
-            return self._load_latest_checkpoint_state(session_id)
+            result = self._load_latest_checkpoint_state(session_id)
+
+        # CRITICAL: Include session_id in result so bootstrap can use it
+        if result:
+            result['session_id'] = session_id
+
+        return result
 
 
     def bootstrap_project_breadcrumbs(
