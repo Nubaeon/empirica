@@ -80,26 +80,50 @@ def main():
             except:
                 pre_snapshot = None
 
-            # Calculate drift if both states available
+            # Calculate drift using proper check-drift API (not inline heuristics)
             drift = None
             drift_details = {}
+            drift_report = None
+            sentinel_action = None
+
             if pre_snapshot and bootstrap.get('live_state'):
-                # Handle both old and new snapshot formats
-                # Old format: checkpoint.vectors
-                # New format: live_state.vectors
-                pre_vectors = (
-                    pre_snapshot.get('live_state', {}).get('vectors', {}) or
-                    pre_snapshot.get('checkpoint', {}).get('vectors', {})
-                )
-                post_vectors = bootstrap['live_state'].get('vectors', {})
+                # Use check-drift CLI for proper epistemic drift detection
+                try:
+                    drift_result = subprocess.run(
+                        [
+                            'empirica', 'check-drift',
+                            '--session-id', empirica_session,
+                            '--trigger', 'post_summary',
+                            '--threshold', '0.2',  # Standard drift threshold
+                            '--output', 'json'
+                        ],
+                        capture_output=True,
+                        text=True,
+                        timeout=15,
+                        cwd=os.getcwd()
+                    )
 
-                # Calculate drift for each vector
-                for key in ['know', 'uncertainty', 'engagement', 'impact', 'completion']:
-                    if key in pre_vectors and key in post_vectors:
-                        drift_details[key] = post_vectors[key] - pre_vectors[key]
+                    if drift_result.returncode == 0 and drift_result.stdout:
+                        drift_report = json.loads(drift_result.stdout)
+                        drift = drift_report.get('drift_score')
+                        drift_details = drift_report.get('drift_details', {})
 
-                # Average absolute drift
-                drift = sum(abs(v) for v in drift_details.values()) / len(drift_details) if drift_details else None
+                        # Check for sentinel gate triggers
+                        if drift_report.get('sentinel_triggered'):
+                            sentinel_action = drift_report.get('sentinel_action')
+                except Exception as e:
+                    # Fallback to basic calculation if check-drift fails
+                    pre_vectors = (
+                        pre_snapshot.get('live_state', {}).get('vectors', {}) or
+                        pre_snapshot.get('checkpoint', {}).get('vectors', {})
+                    )
+                    post_vectors = bootstrap['live_state'].get('vectors', {})
+
+                    for key in ['know', 'uncertainty', 'engagement', 'impact', 'completion']:
+                        if key in pre_vectors and key in post_vectors:
+                            drift_details[key] = post_vectors[key] - pre_vectors[key]
+
+                    drift = sum(abs(v) for v in drift_details.values()) / len(drift_details) if drift_details else None
 
             # Print structured output for Claude Code to inject
             print(json.dumps({
@@ -107,6 +131,8 @@ def main():
                 "empirica_session_id": empirica_session,
                 "drift": drift,
                 "drift_details": drift_details,
+                "drift_report": drift_report,
+                "sentinel_action": sentinel_action,
                 "pre_snapshot": {
                     "timestamp": pre_snapshot.get('timestamp') if pre_snapshot else None,
                     "vectors": (
@@ -135,20 +161,33 @@ def main():
                 "message": "Post-compact: Bootstrap evidence loaded with adaptive depth"
             }), file=sys.stdout)
 
-            # User-visible summary message
+            # User-visible summary message with metacognitive signaling
             drift_msg = f"{drift:.1%} ({_drift_level(drift)})" if drift is not None else "N/A (no pre-state)"
+            drift_emoji = _drift_emoji(drift)
+
+            # Check for sentinel gate triggers
+            sentinel_msg = ""
+            if sentinel_action:
+                sentinel_emoji = {
+                    'HALT': '⛔',
+                    'BRANCH': '🔱',
+                    'REVISE': '🔄',
+                    'LOCK': '🔒'
+                }.get(sentinel_action, '⚠️')
+                sentinel_msg = f"\n\n{sentinel_emoji} SENTINEL: {sentinel_action}\n   Memory drift exceeded safety threshold. Human review recommended."
 
             print(f"""
 🔄 Empirica: Post-compact context loaded
 
-📊 Drift Analysis:
-   Overall drift: {drift_msg}
+📊 Drift Analysis: {drift_emoji}
+   Overall drift: {drift_msg}{sentinel_msg}
 """, file=sys.stderr)
 
             if drift_details:
                 for key, value in drift_details.items():
                     direction = "↑" if value > 0 else "↓" if value < 0 else "→"
-                    print(f"   {key}: {direction} {abs(value):.2f}", file=sys.stderr)
+                    vec_emoji = _vector_emoji(key, abs(value) if isinstance(value, (int, float)) else 0.5)
+                    print(f"   {key}: {vec_emoji} {direction} {abs(value):.2f}", file=sys.stderr)
 
             depth_msg = _get_depth_from_bootstrap(bootstrap)
             drift_context = f"based on {drift:.1%} drift" if drift is not None else "based on available context"
@@ -196,6 +235,81 @@ def _drift_level(drift):
         return "medium"
     else:
         return "low"
+
+
+def _drift_emoji(drift):
+    """
+    Return emoji based on drift level (Traffic Light system)
+
+    Biological Dashboard Calibration:
+    - Crystalline (🔵): Delta < 0.1 - Ground truth; pure coherence
+    - Solid (🟢): 0.1 ≤ Delta < 0.2 - Working knowledge
+    - Emergent (🟡): 0.2 ≤ Delta < 0.3 - Forming understanding
+    - Flicker (🔴): 0.3 ≤ Delta < 0.4 - Active uncertainty
+    - Void (⚪): No data or Delta ≥ 0.4 - Unknown territory
+    """
+    if drift is None:
+        return "⚪"  # Void - no data
+    elif drift < 0.1:
+        return "🔵"  # Crystalline - ground truth
+    elif drift < 0.2:
+        return "🟢"  # Solid - working knowledge
+    elif drift < 0.3:
+        return "🟡"  # Emergent - forming understanding
+    elif drift < 0.4:
+        return "🔴"  # Flicker - active uncertainty
+    else:
+        return "⚪"  # Void - unknown territory
+
+
+def _vector_emoji(key, value):
+    """
+    Return emoji for individual vector based on value and type
+
+    Vector interpretation:
+    - High positive drift (>0.2): Significant change
+    - Moderate drift (0.1-0.2): Normal variation
+    - Low drift (<0.1): Stable
+
+    Key-specific interpretations:
+    - know: Higher = better (learning)
+    - uncertainty: Lower = better (confidence)
+    - completion: Higher = progress
+    - engagement: Stability preferred
+    """
+    # Vector-specific interpretations
+    if key == "uncertainty":
+        # For uncertainty, lower is better
+        if value < 0.1:
+            return "🟢"  # Stable low uncertainty
+        elif value < 0.2:
+            return "🟡"  # Moderate uncertainty change
+        else:
+            return "🔴"  # High uncertainty drift (concerning)
+    elif key in ["know", "completion"]:
+        # For knowledge/completion, positive drift is good
+        if value < 0.1:
+            return "⚪"  # Minimal change
+        elif value < 0.2:
+            return "🟢"  # Good progress
+        else:
+            return "🔵"  # Significant learning
+    elif key == "impact":
+        # Impact changes are noteworthy
+        if value < 0.1:
+            return "⚪"  # Minimal
+        elif value < 0.3:
+            return "🟡"  # Moderate
+        else:
+            return "🔴"  # High impact drift
+    else:
+        # Generic vectors (engagement, context, etc.)
+        if value < 0.1:
+            return "🟢"  # Stable
+        elif value < 0.2:
+            return "🟡"  # Moderate change
+        else:
+            return "🔴"  # Significant drift
 
 def _get_depth_from_bootstrap(bootstrap):
     """Infer depth from loaded data size"""
