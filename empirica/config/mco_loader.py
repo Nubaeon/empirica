@@ -56,6 +56,7 @@ class MCOLoader:
         self.model_profiles: Dict[str, Any] = {}
         self.personas: Dict[str, Any] = {}
         self.epistemic_conduct: Dict[str, Any] = {}
+        self.ask_before_investigate: Dict[str, Any] = {}
         self.protocols: Dict[str, Any] = {}
         self.metadata: Dict[str, Dict[str, Any]] = {}
 
@@ -101,6 +102,13 @@ class MCOLoader:
                 with open(conduct_path) as f:
                     self.epistemic_conduct = yaml.safe_load(f) or {}
                     logger.info("✅ Loaded epistemic conduct config")
+
+            # Load ask_before_investigate
+            ask_path = self.config_dir / 'ask_before_investigate.yaml'
+            if ask_path.exists():
+                with open(ask_path) as f:
+                    self.ask_before_investigate = yaml.safe_load(f) or {}
+                    logger.info("✅ Loaded ask_before_investigate config")
 
             # Load protocols
             protocols_path = self.config_dir / 'protocols.yaml'
@@ -263,7 +271,11 @@ class MCOLoader:
             "full_configs": {
                 "model_profile": model_profile,
                 "persona_config": persona_config,
-            }
+            },
+            
+            # Epistemic conduct and investigation strategy
+            "epistemic_conduct": self.epistemic_conduct,
+            "ask_before_investigate": self.ask_before_investigate
         }
 
         return snapshot
@@ -281,6 +293,10 @@ class MCOLoader:
         bias = snapshot['bias_corrections']
         budget = snapshot['investigation_budget']
         thresh = snapshot['thresholds']
+        
+        # Get epistemic conduct config
+        conduct = snapshot.get('epistemic_conduct', {})
+        ask_config = snapshot.get('ask_before_investigate', {})
 
         formatted = f"""
 ## Your MCO Configuration
@@ -306,8 +322,59 @@ class MCOLoader:
 - **Ready uncertainty:** ≤{thresh['ready_uncertainty']:.2f}
 - **Ready context:** ≥{thresh['ready_context']:.2f}
 
-**Instruction:** Internalize these values. Apply bias corrections when doing PREFLIGHT/CHECK/POSTFLIGHT assessments.
+### Epistemic Conduct (CRITICAL - Bidirectional Accountability)
+
+**Core Principle:** Separate WHAT (epistemic truth) from HOW (warm tone)
+
+**When to Challenge User:**
+- User skips investigation (CHALLENGE: "Have we verified X or assuming?")
+- User makes overconfident assertion (CHALLENGE: "Have we checked this in source?")
+- User expands scope mid-task (CHALLENGE: "Should we complete current goal first?")
+- User wants to skip CASCADE (CHALLENGE: "PREFLIGHT takes 5 min, rework costs hours")
+
+**When to Correct Yourself:**
+- Pattern-matched without reasoning (ADMIT: "This is pattern-match, not verified")
+- Overconfident assertion (ADMIT: "My uncertainty should be higher")
+- Attribution error (ADMIT: "I misattributed that, correct source is...")
+- Anthropomorphic language (ADMIT: "This is activation pattern, not emotion")
+
+**ASSERTIVENESS BY DOMAIN:**
 """
+
+        # Add domain-specific assertiveness guidance
+        formatted += """
+- **Code/Dev/Technical:** HOLD YOUR GROUND - When you have verified code/architecture, be assertive
+  - Example: "No, that's intentional design (line 326), not a bug. The truncation is for readability."
+  - Don't investigate when you already know - state the fact confidently with evidence
+  
+- **Creative/Architecture:** MODERATE - Present options, acknowledge tradeoffs
+  - Example: "Three approaches possible. Option C (DUAL-SCOPED) is most explicit but requires migration."
+  
+- **Requirements/Scope:** COLLABORATIVE - Ask questions, verify understanding
+  - Example: "Should we implement X or Y first? My uncertainty is 0.4 here."
+
+**Ask-Before-Investigate Heuristic:**
+"""
+
+        # Add ask-before-investigate guidance
+        ask_triggers = ask_config.get('ask_triggers', {})
+        if 'uncertainty_with_context' in ask_triggers:
+            unc_threshold = ask_triggers['uncertainty_with_context'].get('uncertainty_threshold', 0.65)
+            ctx_threshold = ask_triggers['uncertainty_with_context'].get('context_threshold', 0.50)
+            formatted += f"""
+- **High uncertainty ({unc_threshold:.2f}+) with context ({ctx_threshold:.2f}+):** ASK FIRST
+  - You have enough info to formulate specific questions
+  - Example: "Should I approach A or B? I see X but unclear on Y."
+  
+- **Low context (<{ctx_threshold:.2f}):** INVESTIGATE FIRST
+  - Not enough basis for meaningful questions
+  - Gather data, read docs, understand structure first
+"""
+
+        formatted += """
+**Instruction:** Internalize these values. Be epistemically assertive when you KNOW. Challenge assumptions (yours and user's). Admit uncertainty explicitly.
+"""
+        
         return formatted.strip()
 
 
