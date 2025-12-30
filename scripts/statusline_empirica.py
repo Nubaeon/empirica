@@ -61,6 +61,52 @@ def get_ai_id() -> str:
     return os.getenv('EMPIRICA_AI_ID', 'claude-code').strip()
 
 
+def calculate_confidence(vectors: dict) -> float:
+    """
+    Calculate overall confidence score from vectors.
+
+    Formula: weighted average of key epistemic indicators
+    - know (40%): How much we understand
+    - 1-uncertainty (30%): Inverse of doubt
+    - context (20%): How well we understand the situation
+    - completion (10%): How much is done
+
+    Returns: 0.0 to 1.0 (displayed as 0-100%)
+    """
+    if not vectors:
+        return 0.0
+
+    know = vectors.get('know', 0.5)
+    uncertainty = vectors.get('uncertainty', 0.5)
+    context = vectors.get('context', 0.5)
+    completion = vectors.get('completion', 0.0)
+
+    confidence = (
+        0.40 * know +
+        0.30 * (1.0 - uncertainty) +
+        0.20 * context +
+        0.10 * completion
+    )
+
+    return max(0.0, min(1.0, confidence))
+
+
+def format_confidence(confidence: float) -> str:
+    """Format confidence as colored percentage."""
+    pct = int(confidence * 100)
+
+    if confidence >= 0.75:
+        color = Colors.BRIGHT_GREEN
+    elif confidence >= 0.50:
+        color = Colors.GREEN
+    elif confidence >= 0.35:
+        color = Colors.YELLOW
+    else:
+        color = Colors.RED
+
+    return f"{color}{pct}%{Colors.RESET}"
+
+
 def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     """Get the active session for this AI."""
     cursor = db.conn.cursor()
@@ -189,10 +235,14 @@ def format_statusline(
 ) -> str:
     """Format the statusline based on mode."""
 
-    parts = [f"{Colors.GREEN}[empirica]{Colors.RESET}"]
+    # Calculate confidence score
+    confidence = calculate_confidence(vectors)
+    conf_str = format_confidence(confidence)
+
+    parts = [f"{Colors.GREEN}[empirica]{Colors.RESET} {conf_str}"]
 
     if mode == 'basic':
-        # Just drift
+        # Just confidence + drift
         if drift_state and drift_state.drift_score is not None:
             parts.append(drift_state.format_basic())
         else:
