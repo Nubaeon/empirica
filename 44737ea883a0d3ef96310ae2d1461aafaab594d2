@@ -1,0 +1,28 @@
+{
+  "goal_id": "1be4dcef-5d64-4de3-8092-0fb311c56793",
+  "session_id": "0ba2510b-48da-4f00-9c2b-bb30393b53ed",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-30T17:18:55.892778+00:00",
+  "goal_data": {
+    "objective": "Implement proper metacognitive signaling with biological dashboard (Traffic Light + Sentinel Gates)",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.8,
+      "coordination": 0.5
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-30T17:18:55.892793+00:00",
+      "action": "created"
+    }
+  ]
+}
