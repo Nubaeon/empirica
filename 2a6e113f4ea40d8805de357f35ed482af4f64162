@@ -1,0 +1,28 @@
+{
+  "goal_id": "cec6db63-e5d6-4cd4-9cf4-443bf9ec2af5",
+  "session_id": "1cf2b8bd-a9ea-4a4d-87d7-9c364209a26b",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-30T10:47:59.027338+00:00",
+  "goal_data": {
+    "objective": "Add missing MCP tools for complete CLI coverage",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-30T10:47:59.027354+00:00",
+      "action": "created"
+    }
+  ]
+}
