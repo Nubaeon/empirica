@@ -575,10 +575,10 @@ def handle_post_summary_drift_check(session_id: str, output_format: str, signali
         snapshot = json.load(f)
 
     # Get pre-compact vectors (from checkpoint or live_state)
-    pre_vectors = (
-        snapshot.get('checkpoint', {}).get('vectors', {}) or
-        snapshot.get('live_state', {}).get('vectors', {})
-    )
+    # Handle case where keys exist but values are None
+    checkpoint_data = snapshot.get('checkpoint') or {}
+    live_state_data = snapshot.get('live_state') or {}
+    pre_vectors = checkpoint_data.get('vectors', {}) or live_state_data.get('vectors', {})
     pre_timestamp = snapshot.get('timestamp', 'Unknown')
 
     # Load current epistemic state

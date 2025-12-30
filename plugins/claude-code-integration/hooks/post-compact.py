@@ -25,8 +25,7 @@ def main():
     # Auto-detect latest Empirica session (no env var needed)
     empirica_session = None
     try:
-        # Import after subprocess to avoid circular imports
-        from pathlib import Path
+        # Path already imported at top of file
         sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
         from empirica.utils.session_resolver import get_latest_session_id
 
@@ -73,7 +72,6 @@ def main():
 
             # Load pre-snapshot for comparison
             try:
-                from pathlib import Path
                 ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
                 snapshots = sorted(ref_docs_dir.glob("pre_summary_*.json"), reverse=True)
 
@@ -147,7 +145,7 @@ def main():
                         pre_snapshot.get('live_state', {}).get('vectors', {}) or
                         pre_snapshot.get('checkpoint', {}).get('vectors', {})
                     )
-                    post_vectors = bootstrap['live_state'].get('vectors', {})
+                    post_vectors = bootstrap.get('live_state', {}).get('vectors', {}) if bootstrap.get('live_state') else {}
 
                     for key in ['know', 'uncertainty', 'engagement', 'impact', 'completion']:
                         if key in pre_vectors and key in post_vectors:
@@ -166,13 +164,13 @@ def main():
                 "pre_snapshot": {
                     "timestamp": pre_snapshot.get('timestamp') if pre_snapshot else None,
                     "vectors": (
-                        pre_snapshot.get('live_state', {}).get('vectors', {}) or
-                        pre_snapshot.get('checkpoint', {}).get('vectors', {})
+                        (pre_snapshot.get('live_state') or {}).get('vectors', {}) or
+                        (pre_snapshot.get('checkpoint') or {}).get('vectors', {})
                     ) if pre_snapshot else {}
                 },
                 "post_state": {
-                    "vectors": bootstrap.get('live_state', {}).get('vectors', {}),
-                    "git": bootstrap.get('live_state', {}).get('git', {})
+                    "vectors": (bootstrap.get('live_state') or {}).get('vectors', {}),
+                    "git": (bootstrap.get('live_state') or {}).get('git', {})
                 },
                 "breadcrumbs": {
                     "findings": bootstrap.get('findings', []),
