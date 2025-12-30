@@ -1,356 +1,372 @@
 #!/usr/bin/env python3
 """
-Empirica PostCompact Hook - Restore epistemic context after memory compacting
+Empirica PostCompact Hook - Ground Truth Re-Assessment
 
-This hook runs when a new session starts after compacting.
-It loads bootstrap + pre-compact ref-doc, presenting evidence for drift detection.
+After memory compaction, the AI has only a summary - not real knowledge.
+This hook injects DYNAMIC context and triggers a PREFLIGHT re-assessment
+to establish genuine epistemic ground truth.
+
+Key insight: The AI's pre-compact vectors are meaningless post-compact.
+The AI must RE-ASSESS what it actually knows given the evidence.
 """
 
 import json
 import sys
 import subprocess
 import os
-
-# Add empirica to path for signaling module
 from pathlib import Path
+from datetime import datetime
+
 sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
 
+
 def main():
-    # Read hook input from stdin (provided by Claude Code)
     hook_input = json.loads(sys.stdin.read())
-
     session_id = hook_input.get('session_id')
-    source = hook_input.get('source')  # Should be 'compact'
 
-    # Auto-detect latest Empirica session (no env var needed)
-    empirica_session = None
+    # Find active Empirica session
+    empirica_session = _get_empirica_session()
+    if not empirica_session:
+        print(json.dumps({"ok": True, "skipped": True, "reason": "No active Empirica session"}))
+        sys.exit(0)
+
+    ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
+
+    # Load pre-compact snapshot (what the AI thought it knew)
+    pre_snapshot = _load_pre_snapshot()
+    pre_vectors = {}
+    pre_reasoning = None
+    pre_goals = []
+
+    if pre_snapshot:
+        pre_vectors = pre_snapshot.get('checkpoint', {}) or \
+                      (pre_snapshot.get('live_state') or {}).get('vectors', {})
+        pre_reasoning = (pre_snapshot.get('live_state') or {}).get('reasoning')
+        # Extract goal context if available
+        summary = pre_snapshot.get('breadcrumbs_summary', {})
+
+    # Load DYNAMIC context - only what's relevant for re-grounding
+    dynamic_context = _load_dynamic_context(empirica_session, ai_id, pre_snapshot)
+
+    # Generate the PREFLIGHT re-assessment prompt
+    preflight_prompt = _generate_preflight_prompt(
+        pre_vectors=pre_vectors,
+        pre_reasoning=pre_reasoning,
+        dynamic_context=dynamic_context
+    )
+
+    # Calculate what drift WOULD be if vectors unchanged (to show the problem)
+    potential_drift = _calculate_potential_drift(pre_vectors)
+
+    # Build the injection payload
+    output = {
+        "ok": True,
+        "empirica_session_id": empirica_session,
+        "action_required": "PREFLIGHT_REASSESS",
+        "pre_compact_state": {
+            "vectors": pre_vectors,
+            "reasoning": pre_reasoning,
+            "timestamp": pre_snapshot.get('timestamp') if pre_snapshot else None
+        },
+        "dynamic_context": dynamic_context,
+        "preflight_prompt": preflight_prompt,
+        "potential_drift_warning": potential_drift,
+        "inject_context": True,
+        "message": "Post-compact: Ground truth re-assessment required"
+    }
+
+    print(json.dumps(output), file=sys.stdout)
+
+    # User-visible message
+    _print_user_message(pre_vectors, dynamic_context, potential_drift)
+
+    sys.exit(0)
+
+
+def _get_empirica_session():
+    """Find the active Empirica session"""
     try:
-        # Path already imported at top of file
-        sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
         from empirica.utils.session_resolver import get_latest_session_id
-
-        # Get latest active claude-code* session
-        # Try claude-code-* variants first, fallback to any active session
         for ai_pattern in ['claude-code', None]:
             try:
-                empirica_session = get_latest_session_id(ai_id=ai_pattern, active_only=True)
-                break
+                return get_latest_session_id(ai_id=ai_pattern, active_only=True)
             except ValueError:
                 continue
     except Exception:
         pass
+    return None
 
-    if not empirica_session:
-        # Exit silently if no Empirica session active
-        print(json.dumps({
-            "ok": True,
-            "skipped": True,
-            "reason": "No active Empirica session detected"
-        }))
-        sys.exit(0)
 
-    # Run project-bootstrap with fresh assessment and adaptive depth
-    # CRITICAL: Must pass --ai-id to find the session
-    ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
+def _load_pre_snapshot():
+    """Load the most recent pre-compact snapshot"""
     try:
-        result = subprocess.run(
-            [
-                'empirica', 'project-bootstrap',
-                '--ai-id', ai_id,
-                '--include-live-state',
-                '--fresh-assess',
-                '--trigger', 'post_compact',  # Auto-loads pre-snapshot, calculates drift
-                '--depth', 'auto',  # Adaptive depth based on drift
-                '--output', 'json'
-            ],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            cwd=os.getcwd()
-        )
+        ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+        snapshots = sorted(ref_docs_dir.glob("pre_summary_*.json"), reverse=True)
+        if snapshots:
+            with open(snapshots[0], 'r') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return None
 
-        if result.returncode == 0:
-            # Success - load output for injection
-            bootstrap = json.loads(result.stdout) if result.stdout else {}
 
-            # Load pre-snapshot for comparison
-            try:
-                ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
-                snapshots = sorted(ref_docs_dir.glob("pre_summary_*.json"), reverse=True)
+def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> dict:
+    """
+    Load DYNAMIC context - only what's relevant for re-grounding.
 
-                pre_snapshot = None
-                if snapshots:
-                    with open(snapshots[0], 'r') as f:
-                        pre_snapshot = json.load(f)
-            except:
-                pre_snapshot = None
+    NOT everything that ever was - just:
+    1. Active goals (what was being worked on)
+    2. Recent findings from THIS session (last learnings)
+    3. Unresolved unknowns (open questions)
+    4. Critical dead ends (mistakes to avoid)
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
 
-            # Calculate drift using proper check-drift API (not inline heuristics)
-            drift = None
-            drift_details = {}
-            drift_report = None
-            sentinel_action = None
+        # Get the session's project_id
+        cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+        row = cursor.fetchone()
+        project_id = row[0] if row else None
 
-            # Always try check-drift if we have a pre-snapshot
-            if pre_snapshot:
-                # Use check-drift CLI for proper epistemic drift detection
-                # Signaling level can be set via environment variable
-                signaling_level = os.environ.get('EMPIRICA_SIGNALING_LEVEL', 'default')
-                try:
-                    drift_result = subprocess.run(
-                        [
-                            'empirica', 'check-drift',
-                            '--session-id', empirica_session,
-                            '--trigger', 'post_summary',
-                            '--threshold', '0.2',  # Standard drift threshold
-                            '--signaling', signaling_level,
-                            '--output', 'json'
-                        ],
-                        capture_output=True,
-                        text=True,
-                        timeout=15,
-                        cwd=os.getcwd()
-                    )
+        context = {
+            "active_goals": [],
+            "recent_findings": [],
+            "open_unknowns": [],
+            "critical_dead_ends": [],
+            "session_context": {}
+        }
 
-                    if drift_result.returncode == 0 and drift_result.stdout:
-                        drift_report = json.loads(drift_result.stdout)
-                        drift = drift_report.get('drift_score')
-                        drift_details = drift_report.get('drift_details', {})
+        if not project_id:
+            db.close()
+            return context
 
-                        # Write drift cache for statusline
-                        try:
-                            from empirica.core.signaling import (
-                                SignalingState, write_drift_cache,
-                                get_drift_level, detect_sentinel_action
-                            )
+        # 1. Active goals (incomplete, high priority)
+        cursor.execute("""
+            SELECT id, objective, status, scope
+            FROM goals
+            WHERE project_id = ? AND status IN ('active', 'in_progress', 'blocked')
+            ORDER BY created_timestamp DESC LIMIT 3
+        """, (project_id,))
+        for row in cursor.fetchall():
+            context["active_goals"].append({
+                "id": row[0],
+                "objective": row[1],
+                "status": row[2],
+                "scope": row[3]
+            })
 
-                            state = SignalingState(
-                                phase='POST_COMPACT',
-                                vectors=drift_report.get('current_vectors') or drift_report.get('current_state', {}).get('vectors'),
-                                drift_score=drift,
-                                drift_details=drift_details,
-                                drift_level=get_drift_level(drift),
-                                sentinel_action=detect_sentinel_action(drift, drift_details),
-                                session_id=empirica_session,
-                                ai_id='claude-code'
-                            )
-                            write_drift_cache(state, os.getcwd())
-                        except Exception as cache_err:
-                            # Cache write failure is non-fatal
-                            pass
+        # 2. Recent findings from THIS session (last session's learnings)
+        cursor.execute("""
+            SELECT finding, impact, created_timestamp
+            FROM project_findings
+            WHERE project_id = ? AND impact >= 0.6
+            ORDER BY created_timestamp DESC LIMIT 5
+        """, (project_id,))
+        for row in cursor.fetchall():
+            context["recent_findings"].append({
+                "finding": row[0],
+                "impact": row[1],
+                "when": str(row[2])[:19] if row[2] else None
+            })
 
-                        # Check for sentinel gate triggers
-                        if drift_report.get('sentinel_triggered'):
-                            sentinel_action = drift_report.get('sentinel_action')
-                except Exception as e:
-                    # Fallback to basic calculation if check-drift fails
-                    pre_vectors = (
-                        pre_snapshot.get('live_state', {}).get('vectors', {}) or
-                        pre_snapshot.get('checkpoint', {}).get('vectors', {})
-                    )
-                    post_vectors = bootstrap.get('live_state', {}).get('vectors', {}) if bootstrap.get('live_state') else {}
+        # 3. Unresolved unknowns (open questions you need to address)
+        cursor.execute("""
+            SELECT unknown, impact, created_timestamp
+            FROM project_unknowns
+            WHERE project_id = ? AND is_resolved = 0
+            ORDER BY impact DESC, created_timestamp DESC LIMIT 5
+        """, (project_id,))
+        for row in cursor.fetchall():
+            context["open_unknowns"].append({
+                "unknown": row[0],
+                "impact": row[1]
+            })
 
-                    for key in ['know', 'uncertainty', 'engagement', 'impact', 'completion']:
-                        if key in pre_vectors and key in post_vectors:
-                            drift_details[key] = post_vectors[key] - pre_vectors[key]
+        # 4. Critical dead ends (mistakes to avoid)
+        cursor.execute("""
+            SELECT approach, why_failed
+            FROM project_dead_ends
+            WHERE project_id = ?
+            ORDER BY created_timestamp DESC LIMIT 3
+        """, (project_id,))
+        for row in cursor.fetchall():
+            context["critical_dead_ends"].append({
+                "approach": row[0],
+                "why_failed": row[1]
+            })
 
-                    drift = sum(abs(v) for v in drift_details.values()) / len(drift_details) if drift_details else None
+        # 5. Session context (what was happening)
+        context["session_context"] = {
+            "session_id": session_id,
+            "ai_id": ai_id,
+            "project_id": project_id
+        }
 
-            # Print structured output for Claude Code to inject
-            print(json.dumps({
-                "ok": True,
-                "empirica_session_id": empirica_session,
-                "drift": drift,
-                "drift_details": drift_details,
-                "drift_report": drift_report,
-                "sentinel_action": sentinel_action,
-                "pre_snapshot": {
-                    "timestamp": pre_snapshot.get('timestamp') if pre_snapshot else None,
-                    "vectors": (
-                        (pre_snapshot.get('live_state') or {}).get('vectors', {}) or
-                        (pre_snapshot.get('checkpoint') or {}).get('vectors', {})
-                    ) if pre_snapshot else {}
-                },
-                "post_state": {
-                    "vectors": (bootstrap.get('live_state') or {}).get('vectors', {}),
-                    "git": (bootstrap.get('live_state') or {}).get('git', {})
-                },
-                "breadcrumbs": {
-                    "findings": bootstrap.get('findings', []),
-                    "unknowns": bootstrap.get('unknowns', []),
-                    "goals": bootstrap.get('goals', []),
-                    "dead_ends": bootstrap.get('dead_ends', []),
-                    "reference_docs": bootstrap.get('reference_docs', [])
-                },
-                "breadcrumbs_summary": {
-                    "findings_count": len(bootstrap.get('findings', [])),
-                    "unknowns_count": len(bootstrap.get('unknowns', [])),
-                    "goals_count": len(bootstrap.get('goals', [])),
-                    "dead_ends_count": len(bootstrap.get('dead_ends', []))
-                },
-                "inject_context": True,
-                "message": "Post-compact: Bootstrap evidence loaded with adaptive depth"
-            }), file=sys.stdout)
+        db.close()
+        return context
 
-            # User-visible summary message with metacognitive signaling
-            drift_msg = f"{drift:.1%} ({_drift_level(drift)})" if drift is not None else "N/A (no pre-state)"
-            drift_emoji = _drift_emoji(drift)
-
-            # Check for sentinel gate triggers
-            sentinel_msg = ""
-            if sentinel_action:
-                sentinel_emoji = {
-                    'HALT': '⛔',
-                    'BRANCH': '🔱',
-                    'REVISE': '🔄',
-                    'LOCK': '🔒'
-                }.get(sentinel_action, '⚠️')
-                sentinel_msg = f"\n\n{sentinel_emoji} SENTINEL: {sentinel_action}\n   Memory drift exceeded safety threshold. Human review recommended."
-
-            print(f"""
-🔄 Empirica: Post-compact context loaded
-
-📊 Drift Analysis: {drift_emoji}
-   Overall drift: {drift_msg}{sentinel_msg}
-""", file=sys.stderr)
-
-            if drift_details:
-                for key, value in drift_details.items():
-                    direction = "↑" if value > 0 else "↓" if value < 0 else "→"
-                    vec_emoji = _vector_emoji(key, abs(value) if isinstance(value, (int, float)) else 0.5)
-                    print(f"   {key}: {vec_emoji} {direction} {abs(value):.2f}", file=sys.stderr)
-
-            depth_msg = _get_depth_from_bootstrap(bootstrap)
-            drift_context = f"based on {drift:.1%} drift" if drift is not None else "based on available context"
-
-            print(f"""
-📚 Bootstrap Evidence:
-   Findings: {len(bootstrap.get('findings', []))}
-   Unknowns: {len(bootstrap.get('unknowns', []))}
-   Goals: {len(bootstrap.get('goals', []))}
-
-💡 Context depth: {depth_msg}
-   Adaptive loading {drift_context}
-""", file=sys.stderr)
-
-            sys.exit(0)
-        else:
-            # Error running project-bootstrap
-            print(json.dumps({
-                "ok": False,
-                "error": result.stderr,
-                "empirica_session_id": empirica_session
-            }))
-            sys.exit(1)  # Non-blocking error
-
-    except subprocess.TimeoutExpired:
-        print(json.dumps({
-            "ok": False,
-            "error": "project-bootstrap timed out (>30s)"
-        }))
-        sys.exit(1)
     except Exception as e:
-        print(json.dumps({
-            "ok": False,
-            "error": str(e)
-        }))
-        sys.exit(1)
-
-def _drift_level(drift):
-    """Convert drift percentage to level label"""
-    if drift is None:
-        return "unknown"
-    elif drift > 0.3:
-        return "high"
-    elif drift > 0.1:
-        return "medium"
-    else:
-        return "low"
+        return {
+            "error": str(e),
+            "active_goals": [],
+            "recent_findings": [],
+            "open_unknowns": [],
+            "critical_dead_ends": []
+        }
 
 
-def _drift_emoji(drift):
+def _generate_preflight_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_context: dict) -> str:
     """
-    Return emoji based on drift level (Traffic Light system)
+    Generate a PREFLIGHT prompt that triggers genuine re-assessment.
 
-    Biological Dashboard Calibration:
-    - Crystalline (🔵): Delta < 0.1 - Ground truth; pure coherence
-    - Solid (🟢): 0.1 ≤ Delta < 0.2 - Working knowledge
-    - Emergent (🟡): 0.2 ≤ Delta < 0.3 - Forming understanding
-    - Flicker (🔴): 0.3 ≤ Delta < 0.4 - Active uncertainty
-    - Void (⚪): No data or Delta ≥ 0.4 - Unknown territory
+    This is the key innovation: instead of just loading data, we prompt
+    the AI to actively re-assess what it knows given the evidence.
     """
-    if drift is None:
-        return "⚪"  # Void - no data
-    elif drift < 0.1:
-        return "🔵"  # Crystalline - ground truth
-    elif drift < 0.2:
-        return "🟢"  # Solid - working knowledge
-    elif drift < 0.3:
-        return "🟡"  # Emergent - forming understanding
-    elif drift < 0.4:
-        return "🔴"  # Flicker - active uncertainty
+    goals_text = ""
+    if dynamic_context.get("active_goals"):
+        goals_text = "\n".join([
+            f"  - {g['objective']} ({g['status']})"
+            for g in dynamic_context["active_goals"]
+        ])
     else:
-        return "⚪"  # Void - unknown territory
+        goals_text = "  (No active goals)"
+
+    findings_text = ""
+    if dynamic_context.get("recent_findings"):
+        findings_text = "\n".join([
+            f"  - {f['finding'][:100]}..." if len(f['finding']) > 100 else f"  - {f['finding']}"
+            for f in dynamic_context["recent_findings"]
+        ])
+    else:
+        findings_text = "  (No recent findings)"
+
+    unknowns_text = ""
+    if dynamic_context.get("open_unknowns"):
+        unknowns_text = "\n".join([
+            f"  - {u['unknown'][:100]}..." if len(u['unknown']) > 100 else f"  - {u['unknown']}"
+            for u in dynamic_context["open_unknowns"]
+        ])
+    else:
+        unknowns_text = "  (No open unknowns)"
+
+    dead_ends_text = ""
+    if dynamic_context.get("critical_dead_ends"):
+        dead_ends_text = "\n".join([
+            f"  - {d['approach']}: {d['why_failed']}"
+            for d in dynamic_context["critical_dead_ends"]
+        ])
+    else:
+        dead_ends_text = "  (None recorded)"
+
+    pre_know = pre_vectors.get('know', 'N/A')
+    pre_unc = pre_vectors.get('uncertainty', 'N/A')
+
+    prompt = f"""
+## POST-COMPACT GROUND TRUTH RE-ASSESSMENT
+
+Your context was just compacted. Your previous vectors (know={pre_know}, uncertainty={pre_unc})
+are NO LONGER VALID - they reflected knowledge you had in full context.
+
+**You now have only a summary. You must RE-ASSESS what you actually know.**
+
+### Evidence from Database (Ground Truth):
+
+**Active Goals:**
+{goals_text}
+
+**Recent Findings (high-impact learnings):**
+{findings_text}
+
+**Open Unknowns (unresolved questions):**
+{unknowns_text}
+
+**Dead Ends (approaches that failed):**
+{dead_ends_text}
+
+### Required Action: Run PREFLIGHT
+
+Assess your ACTUAL epistemic state given ONLY what you can see above:
+
+```bash
+empirica preflight-submit - << 'EOF'
+{{
+  "session_id": "{dynamic_context.get('session_context', {}).get('session_id', 'unknown')}",
+  "vectors": {{
+    "know": <0.0-1.0: What do you ACTUALLY know from the evidence above?>,
+    "uncertainty": <0.0-1.0: How uncertain are you given limited context?>,
+    "context": <0.0-1.0: How well do you understand the current state?>,
+    "completion": <0.0-1.0: How complete is your understanding?>
+  }},
+  "reasoning": "Post-compact re-assessment: <explain what you know and don't know>"
+}}
+EOF
+```
+
+**Key principle:** Be HONEST about reduced knowledge. Post-compact know should typically be
+LOWER than pre-compact because you've lost detailed context. Uncertainty should be HIGHER.
+"""
+    return prompt
 
 
-def _vector_emoji(key, value):
+def _calculate_potential_drift(pre_vectors: dict) -> dict:
     """
-    Return emoji for individual vector based on value and type
-
-    Vector interpretation:
-    - High positive drift (>0.2): Significant change
-    - Moderate drift (0.1-0.2): Normal variation
-    - Low drift (<0.1): Stable
-
-    Key-specific interpretations:
-    - know: Higher = better (learning)
-    - uncertainty: Lower = better (confidence)
-    - completion: Higher = progress
-    - engagement: Stability preferred
+    Calculate what drift WOULD look like if we naively kept pre-compact vectors.
+    This shows why re-assessment is necessary.
     """
-    # Vector-specific interpretations
-    if key == "uncertainty":
-        # For uncertainty, lower is better
-        if value < 0.1:
-            return "🟢"  # Stable low uncertainty
-        elif value < 0.2:
-            return "🟡"  # Moderate uncertainty change
-        else:
-            return "🔴"  # High uncertainty drift (concerning)
-    elif key in ["know", "completion"]:
-        # For knowledge/completion, positive drift is good
-        if value < 0.1:
-            return "⚪"  # Minimal change
-        elif value < 0.2:
-            return "🟢"  # Good progress
-        else:
-            return "🔵"  # Significant learning
-    elif key == "impact":
-        # Impact changes are noteworthy
-        if value < 0.1:
-            return "⚪"  # Minimal
-        elif value < 0.3:
-            return "🟡"  # Moderate
-        else:
-            return "🔴"  # High impact drift
-    else:
-        # Generic vectors (engagement, context, etc.)
-        if value < 0.1:
-            return "🟢"  # Stable
-        elif value < 0.2:
-            return "🟡"  # Moderate change
-        else:
-            return "🔴"  # Significant drift
+    if not pre_vectors:
+        return {"warning": "No pre-compact vectors to compare"}
 
-def _get_depth_from_bootstrap(bootstrap):
-    """Infer depth from loaded data size"""
-    findings_count = len(bootstrap.get('findings', []))
-    if findings_count <= 5:
-        return "minimal"
-    elif findings_count <= 10:
-        return "moderate"
-    else:
-        return "full"
+    # Post-compact, honest assessment would typically show:
+    # - Lower know (lost detailed context)
+    # - Higher uncertainty (less confident)
+    # - Similar or lower context (depends on evidence loaded)
+
+    pre_know = pre_vectors.get('know', 0.5)
+    pre_unc = pre_vectors.get('uncertainty', 0.5)
+
+    return {
+        "pre_compact": {
+            "know": pre_know,
+            "uncertainty": pre_unc
+        },
+        "expected_honest_post_compact": {
+            "know": max(0.3, pre_know - 0.2),  # Typically drops
+            "uncertainty": min(0.8, pre_unc + 0.2)  # Typically rises
+        },
+        "message": "If your post-compact know equals pre-compact, you may be overestimating"
+    }
+
+
+def _print_user_message(pre_vectors: dict, dynamic_context: dict, potential_drift: dict):
+    """Print user-visible summary to stderr"""
+    pre_know = pre_vectors.get('know', 'N/A')
+    pre_unc = pre_vectors.get('uncertainty', 'N/A')
+
+    goals_count = len(dynamic_context.get('active_goals', []))
+    findings_count = len(dynamic_context.get('recent_findings', []))
+    unknowns_count = len(dynamic_context.get('open_unknowns', []))
+
+    print(f"""
+🔄 Empirica: Post-Compact Ground Truth
+
+📊 Pre-Compact State (NOW INVALID):
+   know={pre_know}, uncertainty={pre_unc}
+
+⚠️  These vectors reflected FULL context knowledge.
+   You now have only a summary - RE-ASSESS required.
+
+📚 Dynamic Context Loaded:
+   Active Goals: {goals_count}
+   Recent Findings: {findings_count}
+   Open Unknowns: {unknowns_count}
+
+🎯 ACTION REQUIRED: Run PREFLIGHT
+   Assess what you ACTUALLY know from the evidence above.
+   Be honest - post-compact know is typically LOWER.
+""", file=sys.stderr)
+
 
 if __name__ == '__main__':
     main()
