@@ -585,7 +585,10 @@ def handle_post_summary_drift_check(session_id: str, output_format: str, signali
     try:
         git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
         checkpoints = git_logger.list_checkpoints(limit=1)
-        current_vectors = checkpoints[0].get('vectors', {}) if checkpoints else {}
+        # Guard against None checkpoint entries
+        current_vectors = {}
+        if checkpoints and checkpoints[0] is not None:
+            current_vectors = checkpoints[0].get('vectors', {}) or {}
     except Exception as e:
         logger.warning(f"Could not load current checkpoint: {e}")
         current_vectors = {}
@@ -910,10 +913,16 @@ def handle_check_drift_command(args):
 
         current_checkpoint = checkpoints[0]
 
+        # Guard against None checkpoint entries
+        if current_checkpoint is None:
+            print("\n⚠️  Checkpoint data is invalid (None)")
+            print("   Run PREFLIGHT or CHECK to create a valid checkpoint")
+            return
+
         # Create mock assessment from checkpoint vectors
         class MockAssessment:
             def __init__(self, vectors):
-                for name, score in vectors.items():
+                for name, score in (vectors or {}).items():
                     setattr(self, name, type('VectorState', (), {'score': score})())
 
         current_assessment = MockAssessment(current_checkpoint.get('vectors', {}))

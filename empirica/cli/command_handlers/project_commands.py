@@ -1316,8 +1316,10 @@ def handle_unknown_log_command(args):
             print(json.dumps(result, indent=2))
         else:
             print(f"✅ Unknown logged successfully")
-            print(f"   Unknown ID: {unknown_id}")
-            print(f"   Project: {project_id[:8]}...")
+            for scope_name, uid in unknown_ids:
+                print(f"   {scope_name.title()} Unknown ID: {uid[:8] if uid else 'N/A'}...")
+            if project_id:
+                print(f"   Project: {project_id[:8]}...")
 
         return 0  # Success
 

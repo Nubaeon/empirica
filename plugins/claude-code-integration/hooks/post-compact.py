@@ -58,9 +58,14 @@ def main():
     # Calculate what drift WOULD be if vectors unchanged (to show the problem)
     potential_drift = _calculate_potential_drift(pre_vectors)
 
-    # Build the injection payload
+    # Build the injection payload using Claude Code's hook format
+    # CRITICAL: Use hookSpecificOutput.additionalContext for content injection
     output = {
-        "ok": True,
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": preflight_prompt
+        },
+        # Additional metadata (not injected, but useful for debugging)
         "empirica_session_id": empirica_session,
         "action_required": "PREFLIGHT_REASSESS",
         "pre_compact_state": {
@@ -68,16 +73,12 @@ def main():
             "reasoning": pre_reasoning,
             "timestamp": pre_snapshot.get('timestamp') if pre_snapshot else None
         },
-        "dynamic_context": dynamic_context,
-        "preflight_prompt": preflight_prompt,
-        "potential_drift_warning": potential_drift,
-        "inject_context": True,
-        "message": "Post-compact: Ground truth re-assessment required"
+        "potential_drift_warning": potential_drift
     }
 
     print(json.dumps(output), file=sys.stdout)
 
-    # User-visible message
+    # User-visible message to stderr
     _print_user_message(pre_vectors, dynamic_context, potential_drift)
 
     sys.exit(0)
