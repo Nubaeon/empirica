@@ -1,0 +1,28 @@
+{
+  "goal_id": "facadb3d-4df7-495c-a813-783c6115269e",
+  "session_id": "6332d455-0f90-4b74-ae02-a0d88c8945e3",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-30T16:57:43.021305+00:00",
+  "goal_data": {
+    "objective": "Design and implement dual defense layers: Noetic Filter (cognition) + Axiologic Detection (action)",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.7,
+      "coordination": 0.4
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-30T16:57:43.021320+00:00",
+      "action": "created"
+    }
+  ]
+}
