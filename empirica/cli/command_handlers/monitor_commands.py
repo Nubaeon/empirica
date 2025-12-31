@@ -888,19 +888,21 @@ def handle_check_drift_command(args):
             return handle_post_summary_drift_check(session_id, output_format, signaling_level)
 
         # Manual mode: Standard drift detection
-        print("\n🔍 Epistemic Drift Detection")
-        print("=" * 70)
-        print(f"   Session ID:  {session_id}")
-        print(f"   Threshold:   {threshold}")
-        print(f"   Lookback:    {lookback} checkpoints")
-        if cycle is not None:
-            print(f"   Cycle:       {cycle}")
-        if round_num is not None:
-            print(f"   Round:       {round_num}")
-        if scope_depth is not None:
-            depth_label = "surface" if scope_depth < 0.4 else "moderate" if scope_depth < 0.7 else "deep"
-            print(f"   Scope Depth: {scope_depth:.2f} ({depth_label})")
-        print("=" * 70)
+        # Only print header for human-readable output
+        if output_format != 'json':
+            print("\n🔍 Epistemic Drift Detection")
+            print("=" * 70)
+            print(f"   Session ID:  {session_id}")
+            print(f"   Threshold:   {threshold}")
+            print(f"   Lookback:    {lookback} checkpoints")
+            if cycle is not None:
+                print(f"   Cycle:       {cycle}")
+            if round_num is not None:
+                print(f"   Round:       {round_num}")
+            if scope_depth is not None:
+                depth_label = "surface" if scope_depth < 0.4 else "moderate" if scope_depth < 0.7 else "deep"
+                print(f"   Scope Depth: {scope_depth:.2f} ({depth_label})")
+            print("=" * 70)
 
         # Load current epistemic state from latest checkpoint (using git notes, not commit history)
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
@@ -928,11 +930,11 @@ def handle_check_drift_command(args):
 
         current_assessment = MockAssessment(current_checkpoint.get('vectors', {}))
 
-        # Run drift detection
+        # Run drift detection (disable logging for JSON output to keep it clean)
         monitor = MirrorDriftMonitor(
             drift_threshold=threshold,
             lookback_window=lookback,
-            enable_logging=True
+            enable_logging=(output_format != 'json')
         )
 
         report = monitor.detect_drift(current_assessment, session_id)

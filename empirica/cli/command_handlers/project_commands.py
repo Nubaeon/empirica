@@ -1582,8 +1582,10 @@ def handle_deadend_log_command(args):
             print(json.dumps(result, indent=2))
         else:
             print(f"✅ Dead end logged successfully")
-            print(f"   Dead End ID: {dead_end_id}")
-            print(f"   Project: {project_id[:8]}...")
+            for scope_name, did in dead_end_ids:
+                print(f"   {scope_name.capitalize()} Dead End ID: {did[:8] if did else 'N/A'}...")
+            if project_id:
+                print(f"   Project: {project_id[:8]}...")
 
         return 0  # Success
 

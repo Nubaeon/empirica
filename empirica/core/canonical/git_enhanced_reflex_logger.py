@@ -1048,16 +1048,37 @@ class GitEnhancedReflexLogger:
             
             # Strip "refs/notes/" prefix for git notes command
             note_ref = ref[11:]  # "refs/notes/" is 11 characters
-            
-            # Get the note content for HEAD
-            # CRITICAL: Correct syntax is: git notes --ref <ref> show <commit>
-            show_result = subprocess.run(
-                ["git", "notes", "--ref", note_ref, "show", "HEAD"],
+
+            # First, find what commit this note is attached to
+            # git notes list returns: <note-blob> <annotated-commit>
+            list_result = subprocess.run(
+                ["git", "notes", "--ref", note_ref, "list"],
                 capture_output=True,
                 text=True,
                 cwd=self.git_repo_path
             )
-            
+
+            if list_result.returncode != 0 or not list_result.stdout.strip():
+                logger.debug(f"No notes found for ref {note_ref}")
+                continue
+
+            # Parse the annotated commit (second column)
+            # Format: "<note-blob-sha> <annotated-commit-sha>"
+            note_line = list_result.stdout.strip().split('\n')[0]  # First note
+            parts = note_line.split()
+            if len(parts) < 2:
+                logger.warning(f"Unexpected note list format for {note_ref}: {note_line}")
+                continue
+            annotated_commit = parts[1]
+
+            # Get the note content for the specific commit it's attached to
+            show_result = subprocess.run(
+                ["git", "notes", "--ref", note_ref, "show", annotated_commit],
+                capture_output=True,
+                text=True,
+                cwd=self.git_repo_path
+            )
+
             if show_result.returncode == 0:
                 try:
                     checkpoint = json.loads(show_result.stdout)

@@ -71,28 +71,29 @@ class MirrorDriftMonitor:
     ) -> DriftReport:
         """
         Detect drift by comparing current state to recent history
-        
+
         Args:
             current_assessment: Current epistemic assessment
             session_id: Session UUID
-        
+
         Returns:
             DriftReport with detection results
         """
-        # Load recent checkpoints from Git
-        history = self._load_recent_checkpoints(session_id, self.lookback_window)
-        
-        if not history:
+        # Load recent checkpoints from Git (extra 1 to exclude current from baseline)
+        history = self._load_recent_checkpoints(session_id, self.lookback_window + 1)
+
+        if len(history) < 2:
             return DriftReport(
                 drift_detected=False,
                 severity='none',
                 recommended_action='continue',
                 drifted_vectors=[],
-                reason='no_baseline_available'
+                reason='insufficient_baseline' if history else 'no_baseline_available'
             )
-        
-        # Calculate baseline from history
-        baseline = self._calculate_baseline(history)
+
+        # Calculate baseline from history EXCLUDING current (most recent)
+        # history[0] is current, history[1:] is baseline
+        baseline = self._calculate_baseline(history[1:])
         
         # Compare current to baseline
         drift_report = self._compare_states(baseline, current_assessment)

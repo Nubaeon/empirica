@@ -252,43 +252,92 @@ def get_health_emoji(health: VectorHealth) -> str:
     return HEALTH_EMOJIS.get(health, '⚪')
 
 
-def format_vector_state(vector_name: str, value: Optional[float], show_value: bool = False) -> str:
+def format_vector_state(vector_name: str, value: Optional[float], show_value: bool = False, use_percentage: bool = True) -> str:
     """
-    Format a single vector's state as emoji string.
+    Format a single vector's state as string.
 
     Args:
         vector_name: Name of the vector
         value: Current value (0.0-1.0)
-        show_value: If True, include numeric value
+        show_value: If True, include numeric value (legacy)
+        use_percentage: If True, show percentage instead of health emoji
 
     Returns:
-        Formatted string like "🧠🟢" or "🧠🟢.70"
+        Formatted string like "K:85%" or "🧠🟢" (legacy)
     """
-    vec_emoji = get_vector_emoji(vector_name)
-    health = get_vector_health(vector_name, value)
-    health_emoji = get_health_emoji(health)
-
-    if show_value and value is not None:
-        return f"{vec_emoji}{health_emoji}{value:.2f}"
+    if use_percentage:
+        # New percentage format: K:85%
+        abbrev = {
+            'know': 'K', 'uncertainty': 'U', 'context': 'C', 'clarity': 'L',
+            'completion': '✓', 'engagement': 'E', 'impact': 'I', 'coherence': 'H',
+            'signal': 'S', 'density': 'D', 'do': 'A', 'state': 'T', 'change': 'Δ'
+        }
+        key = abbrev.get(vector_name, vector_name[:1].upper())
+        if value is not None:
+            pct = int(value * 100)
+            return f"{key}:{pct}%"
+        else:
+            return f"{key}:?"
     else:
-        return f"{vec_emoji}{health_emoji}"
+        # Legacy emoji format
+        vec_emoji = get_vector_emoji(vector_name)
+        health = get_vector_health(vector_name, value)
+        health_emoji = get_health_emoji(health)
+
+        if show_value and value is not None:
+            return f"{vec_emoji}{health_emoji}{value:.2f}"
+        else:
+            return f"{vec_emoji}{health_emoji}"
+
+
+def infer_cognitive_phase(cascade_phase: Optional[str]) -> str:
+    """
+    Infer noetic/praxic phase from CASCADE phase.
+
+    NOETIC (investigation): PREFLIGHT, CHECK with investigate
+    PRAXIC (action): CHECK with proceed, ACT, POSTFLIGHT
+
+    Args:
+        cascade_phase: CASCADE phase (PREFLIGHT, CHECK, ACT, POSTFLIGHT)
+
+    Returns:
+        'NOETIC' or 'PRAXIC'
+    """
+    if cascade_phase is None:
+        return 'NOETIC'  # Default to investigation
+
+    phase_upper = cascade_phase.upper()
+
+    # POSTFLIGHT and ACT are always praxic (action taken)
+    if phase_upper in ('POSTFLIGHT', 'ACT'):
+        return 'PRAXIC'
+    # PREFLIGHT is always noetic (starting investigation)
+    elif phase_upper == 'PREFLIGHT':
+        return 'NOETIC'
+    # CHECK is transitional - assume praxic if we got to CHECK
+    elif phase_upper == 'CHECK':
+        return 'PRAXIC'
+    else:
+        return 'NOETIC'
 
 
 def format_vectors_compact(
     vectors: Dict[str, float],
     keys: Optional[List[str]] = None,
-    show_values: bool = False
+    show_values: bool = False,
+    use_percentage: bool = True
 ) -> str:
     """
-    Format multiple vectors as compact emoji string.
+    Format multiple vectors as compact string.
 
     Args:
         vectors: Dict of vector_name -> value
         keys: Which vectors to include (default: key vectors)
-        show_values: If True, include numeric values
+        show_values: If True, include numeric values (legacy)
+        use_percentage: If True, show percentages (new format)
 
     Returns:
-        Formatted string like "🧠🟢 🎯🟢 📍🟡 💡🟢"
+        Formatted string like "K:85% U:15% C:80%" or "🧠🟢 🎯🟢 📍🟡 💡🟢" (legacy)
     """
     if keys is None:
         keys = ['know', 'uncertainty', 'context', 'clarity']
@@ -296,7 +345,7 @@ def format_vectors_compact(
     parts = []
     for key in keys:
         if key in vectors:
-            parts.append(format_vector_state(key, vectors[key], show_values))
+            parts.append(format_vector_state(key, vectors[key], show_values, use_percentage))
 
     return ' '.join(parts)
 
@@ -329,6 +378,32 @@ def format_drift_compact(
         result += f" {sentinel_emoji} {sentinel_action.value}"
 
     return result
+
+
+def format_drift_status(drift_detected: bool, severity: Optional[str] = None) -> str:
+    """
+    Format drift status as simple indicator.
+
+    Args:
+        drift_detected: Whether drift was detected
+        severity: Drift severity (none, low, medium, high, critical)
+
+    Returns:
+        Formatted string like "✓ stable" or "⚠️ DRIFT"
+    """
+    if not drift_detected:
+        return "✓ stable"
+
+    if severity == 'critical':
+        return "🔴 DRIFT:CRITICAL"
+    elif severity == 'high':
+        return "⚠️ DRIFT:HIGH"
+    elif severity == 'medium':
+        return "⚠️ DRIFT"
+    elif severity == 'low':
+        return "△ drift"
+    else:
+        return "⚠️ DRIFT"
 
 
 @dataclass
