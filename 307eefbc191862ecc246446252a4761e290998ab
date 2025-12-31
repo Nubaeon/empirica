@@ -1,0 +1,31 @@
+{
+  "goal_id": "6effc2b9-15bc-43e5-95a6-61d4125b7b61",
+  "session_id": "b45e7c08-33d7-4e14-b899-6f2ea08d439b",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-31T17:00:22.436947+00:00",
+  "goal_data": {
+    "objective": "Integrate semantic search into workflow - embeddings stored but not used in NOETIC phase guidance",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "{'description': 'Define WHEN to use project-search in NOETIC phase (high uncertainty, new domain)', 'is_required': True}",
+      "{'description': 'Add semantic search guidance to CLAUDE.md system prompt', 'is_required': True}",
+      "{'description': 'Update project-bootstrap to suggest semantic search when uncertainty high', 'is_required': False}",
+      "{'description': 'Test semantic search retrieving relevant findings during investigation', 'is_required': True}"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-31T17:00:22.436962+00:00",
+      "action": "created"
+    }
+  ]
+}
