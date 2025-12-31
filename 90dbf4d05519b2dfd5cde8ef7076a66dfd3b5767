@@ -1,0 +1,31 @@
+{
+  "goal_id": "97fda6e8-87b5-41dd-825f-737a582b420d",
+  "session_id": "19852c50-f417-49a4-a613-f88cf1f6c45c",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-31T15:19:32.831150+00:00",
+  "goal_data": {
+    "objective": "Draft paper: Theatrical vs Instrumental AI Control",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.7,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Abstract and structure drafted",
+      "Key distinction articulated (performative vs measurable)",
+      "Empirica as case study of instrumental approach",
+      "Connection to existing research portfolio"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-31T15:19:32.831162+00:00",
+      "action": "created"
+    }
+  ]
+}
