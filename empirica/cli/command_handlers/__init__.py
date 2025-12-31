@@ -138,11 +138,6 @@ __all__ = [
     # Onboarding commands
     'handle_onboard_command',
 
-    # Cascade commands
-    'handle_preflight_command',
-    'handle_postflight_command',
-    'handle_workflow_command',
-    
     # Modality commands (EXPERIMENTAL)
     'handle_modality_route_command',
     'handle_modality_decision_command',
@@ -260,9 +255,6 @@ __all__ = [
     # Performance commands
     'handle_benchmark_command',
     'handle_performance_command',
-    
-    # Utility commands
-    'handle_goal_analysis_command',
     
     # Session commands
     'handle_sessions_list_command',
