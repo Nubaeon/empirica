@@ -251,7 +251,7 @@ def add_checkpoint_parsers(subparsers):
     project_bootstrap_parser.add_argument('--task-description', help='Task description for context load balancing')
     project_bootstrap_parser.add_argument('--epistemic-state', help='Epistemic vectors from PREFLIGHT as JSON string (e.g., \'{"uncertainty":0.8,"know":0.3}\')')
     project_bootstrap_parser.add_argument('--include-live-state', action='store_true', help='Include current epistemic vectors + git state')
-    project_bootstrap_parser.add_argument('--fresh-assess', action='store_true', help='Capture fresh state instead of loading latest checkpoint (requires --include-live-state)')
+    # DEPRECATED: --fresh-assess removed (legacy). Use 'empirica assess-state' instead for canonical vector capture
     project_bootstrap_parser.add_argument('--trigger', choices=['pre_compact', 'post_compact', 'manual'], help='Compact boundary trigger for session auto-resolution')
     project_bootstrap_parser.add_argument('--depth', choices=['minimal', 'moderate', 'full', 'auto'], default='auto', help='Context depth: minimal (~500 tokens), moderate (~1500), full (~3000-5000), auto (drift-based)')
     project_bootstrap_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')

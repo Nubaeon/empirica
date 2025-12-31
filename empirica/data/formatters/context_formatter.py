@@ -67,7 +67,9 @@ def generate_context_markdown(breadcrumbs: Dict) -> str:
     if incomplete:
         lines.append("## Incomplete Work")
         for item in incomplete:
-            lines.append(f"- {item['goal']} ({item['progress']})")
+            goal = item.get('goal') or item.get('objective', 'Unknown goal')
+            progress = item.get('progress', 'unknown')
+            lines.append(f"- {goal} ({progress})")
         lines.append("")
 
     # Full skills (matched to task) - filter empty skills
@@ -80,7 +82,7 @@ def generate_context_markdown(breadcrumbs: Dict) -> str:
     if non_empty_skills:
         lines.append("## Relevant Skills")
         for skill in non_empty_skills:
-            lines.append(f"### {skill.get('title', skill['id'])}")
+            lines.append(f"### {skill.get('title') or skill.get('id', 'Unknown Skill')}")
             lines.append(f"**Tags:** {', '.join(skill.get('tags', []))}")
 
             if skill.get('summary'):

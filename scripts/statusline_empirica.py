@@ -35,9 +35,11 @@ from empirica.core.signaling import (
     SignalingState,
     format_vectors_compact,
     format_drift_compact,
+    format_drift_status,
     get_drift_level,
     detect_sentinel_action,
     read_drift_cache,
+    infer_cognitive_phase,
     DRIFT_CACHE_PATH,
 )
 
@@ -59,6 +61,56 @@ class Colors:
 def get_ai_id() -> str:
     """Get AI identifier from environment."""
     return os.getenv('EMPIRICA_AI_ID', 'claude-code').strip()
+
+
+def calculate_confidence(vectors: dict) -> float:
+    """
+    Calculate overall confidence score from vectors.
+
+    Formula: weighted average of key epistemic indicators
+    - know (40%): How much we understand
+    - 1-uncertainty (30%): Inverse of doubt
+    - context (20%): How well we understand the situation
+    - completion (10%): How much is done
+
+    Returns: 0.0 to 1.0 (displayed as 0-100%)
+    """
+    if not vectors:
+        return 0.0
+
+    know = vectors.get('know', 0.5)
+    uncertainty = vectors.get('uncertainty', 0.5)
+    context = vectors.get('context', 0.5)
+    completion = vectors.get('completion', 0.0)
+
+    confidence = (
+        0.40 * know +
+        0.30 * (1.0 - uncertainty) +
+        0.20 * context +
+        0.10 * completion
+    )
+
+    return max(0.0, min(1.0, confidence))
+
+
+def format_confidence(confidence: float) -> str:
+    """Format confidence as colored percentage with tiered emoji."""
+    pct = int(confidence * 100)
+
+    if confidence >= 0.75:
+        color = Colors.BRIGHT_GREEN
+        emoji = "⚡"  # High energy/power
+    elif confidence >= 0.50:
+        color = Colors.GREEN
+        emoji = "💡"  # Good understanding
+    elif confidence >= 0.35:
+        color = Colors.YELLOW
+        emoji = "💫"  # Some uncertainty
+    else:
+        color = Colors.RED
+        emoji = "🌑"  # Low confidence/dark
+
+    return f"{emoji}{color}{pct}%{Colors.RESET}"
 
 
 def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
@@ -115,56 +167,207 @@ def get_latest_vectors(db: SessionDatabase, session_id: str) -> tuple:
     return phase, vectors
 
 
+def get_vector_deltas(db: SessionDatabase, session_id: str) -> dict:
+    """
+    Get learning deltas: PREFLIGHT → POSTFLIGHT only.
+
+    This measures actual learning across the session, ignoring CHECK
+    phases which are for gating, not learning measurement.
+    """
+    cursor = db.conn.cursor()
+
+    # Get PREFLIGHT baseline (first PREFLIGHT in session)
+    cursor.execute("""
+        SELECT know, uncertainty, context, completion, engagement
+        FROM reflexes
+        WHERE session_id = ? AND phase = 'PREFLIGHT'
+        ORDER BY timestamp ASC
+        LIMIT 1
+    """, (session_id,))
+    preflight = cursor.fetchone()
+
+    # Get latest POSTFLIGHT (final state)
+    cursor.execute("""
+        SELECT know, uncertainty, context, completion, engagement
+        FROM reflexes
+        WHERE session_id = ? AND phase = 'POSTFLIGHT'
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """, (session_id,))
+    postflight = cursor.fetchone()
+
+    if not preflight or not postflight:
+        # Fallback: if no complete cycle, show sequential delta
+        cursor.execute("""
+            SELECT know, uncertainty, context, completion, engagement
+            FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC
+            LIMIT 2
+        """, (session_id,))
+        rows = cursor.fetchall()
+        if len(rows) < 2:
+            return {}
+        postflight = rows[0]
+        preflight = rows[1]
+
+    deltas = {}
+    keys = ['know', 'uncertainty', 'context', 'completion', 'engagement']
+
+    for i, key in enumerate(keys):
+        post_val = postflight[i]
+        pre_val = preflight[i]
+
+        if post_val is not None and pre_val is not None:
+            delta = post_val - pre_val
+            if abs(delta) >= 0.05:  # Only show meaningful changes
+                deltas[key] = delta
+
+    return deltas
+
+
+def format_deltas(deltas: dict) -> str:
+    """Format deltas for display (e.g., 'know:+0.15 unc:-0.10')."""
+    if not deltas:
+        return ""
+
+    parts = []
+    # Priority order for display
+    priority_keys = ['know', 'uncertainty', 'completion', 'context', 'engagement']
+
+    for key in priority_keys:
+        if key in deltas:
+            delta = deltas[key]
+            # Abbreviate keys
+            abbrev = {'know': 'K', 'uncertainty': 'U', 'context': 'C',
+                      'completion': '✓', 'engagement': 'E'}
+            sign = '+' if delta > 0 else ''
+
+            # Color code: green for improvements, red for regressions
+            # For uncertainty, lower is better (negative is green)
+            if key == 'uncertainty':
+                color = Colors.GREEN if delta < 0 else Colors.RED
+            else:
+                color = Colors.GREEN if delta > 0 else Colors.RED
+
+            parts.append(f"{color}{abbrev.get(key, key[:1])}:{sign}{delta:.2f}{Colors.RESET}")
+
+    return ' '.join(parts[:3])  # Max 3 deltas to keep it compact
+
+
+def get_drift_from_db(db: SessionDatabase, session_id: str) -> tuple:
+    """Check drift status from recent reflexes."""
+    cursor = db.conn.cursor()
+    cursor.execute("""
+        SELECT know, uncertainty, context, completion
+        FROM reflexes
+        WHERE session_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 6
+    """, (session_id,))
+    rows = cursor.fetchall()
+
+    if len(rows) < 2:
+        return False, None
+
+    # Compare latest to average of previous
+    latest = rows[0]
+    previous = rows[1:]
+
+    # Calculate average of previous
+    avg_know = sum(r[0] or 0.5 for r in previous) / len(previous)
+    avg_unc = sum(r[1] or 0.5 for r in previous) / len(previous)
+
+    # Check for significant drops
+    know_drop = avg_know - (latest[0] or 0.5)
+    unc_increase = (latest[1] or 0.5) - avg_unc
+
+    # Drift detection thresholds
+    if know_drop > 0.3 or unc_increase > 0.3:
+        return True, 'high'
+    elif know_drop > 0.2 or unc_increase > 0.2:
+        return True, 'medium'
+    elif know_drop > 0.1 or unc_increase > 0.1:
+        return True, 'low'
+
+    return False, None
+
+
 def format_statusline(
     session: dict,
     phase: str,
     vectors: dict,
     drift_state: SignalingState,
-    mode: str = 'default'
+    deltas: dict = None,
+    mode: str = 'default',
+    drift_detected: bool = False,
+    drift_severity: str = None
 ) -> str:
     """Format the statusline based on mode."""
 
-    parts = [f"{Colors.GREEN}[empirica]{Colors.RESET}"]
+    # Calculate confidence score
+    confidence = calculate_confidence(vectors)
+    conf_str = format_confidence(confidence)
+
+    # Infer cognitive phase (noetic/praxic)
+    cognitive_phase = infer_cognitive_phase(phase)
+
+    parts = [f"{Colors.GREEN}[empirica]{Colors.RESET} {conf_str}"]
 
     if mode == 'basic':
-        # Just drift
-        if drift_state and drift_state.drift_score is not None:
-            parts.append(drift_state.format_basic())
-        else:
-            parts.append("🌑 No drift data")
+        # Just confidence + drift
+        drift_str = format_drift_status(drift_detected, drift_severity)
+        parts.append(drift_str)
         return ' '.join(parts)
 
     elif mode == 'default':
-        # Phase + key vectors + drift
+        # Cognitive phase + CASCADE phase + key vectors (%) + deltas + drift
+        if cognitive_phase:
+            phase_color = Colors.CYAN if cognitive_phase == 'NOETIC' else Colors.BRIGHT_GREEN
+            parts.append(f"{phase_color}{cognitive_phase}{Colors.RESET}")
+
         if phase:
             parts.append(f"{Colors.BLUE}{phase}{Colors.RESET}")
 
         if vectors:
-            vec_str = format_vectors_compact(vectors, show_values=False)
+            # Use percentage format for key vectors
+            vec_str = format_vectors_compact(vectors, keys=['know', 'uncertainty', 'context'], use_percentage=True)
             parts.append(vec_str)
 
-        if drift_state and drift_state.drift_score is not None:
-            drift_str = format_drift_compact(
-                drift_state.drift_score,
-                drift_state.sentinel_action
-            )
-            parts.append(drift_str)
+        # Add deltas if present
+        if deltas:
+            delta_str = format_deltas(deltas)
+            if delta_str:
+                parts.append(f"Δ {delta_str}")
+
+        # Drift status
+        drift_str = format_drift_status(drift_detected, drift_severity)
+        parts.append(drift_str)
 
         return ' │ '.join(parts)
 
     elif mode == 'learning':
-        # Focus on vectors with values
+        # Focus on vectors with values and deltas
+        if cognitive_phase:
+            parts.append(f"{cognitive_phase}")
+
         if phase:
             parts.append(f"{phase}")
 
         if vectors:
-            # Show more vectors with values
+            # Show more vectors with percentages
             all_keys = ['know', 'uncertainty', 'context', 'clarity', 'completion']
-            vec_str = format_vectors_compact(vectors, keys=all_keys, show_values=True)
+            vec_str = format_vectors_compact(vectors, keys=all_keys, use_percentage=True)
             parts.append(vec_str)
 
-        if drift_state and drift_state.drift_score is not None:
-            parts.append(drift_state.format_basic())
+        # Always show deltas in learning mode
+        if deltas:
+            delta_str = format_deltas(deltas)
+            if delta_str:
+                parts.append(f"Δ {delta_str}")
+
+        drift_str = format_drift_status(drift_detected, drift_severity)
+        parts.append(drift_str)
 
         return ' │ '.join(parts)
 
@@ -174,16 +377,25 @@ def format_statusline(
         session_id = session.get('session_id', '????')[:4]
         parts = [f"{Colors.BRIGHT_CYAN}[empirica:{ai_id}@{session_id}]{Colors.RESET}"]
 
+        if cognitive_phase:
+            parts.append(f"{cognitive_phase}")
+
         if phase:
             parts.append(f"{Colors.BLUE}{phase}{Colors.RESET}")
 
         if vectors:
             all_keys = ['know', 'uncertainty', 'context', 'clarity', 'engagement', 'completion', 'impact']
-            vec_str = format_vectors_compact(vectors, keys=all_keys, show_values=True)
+            vec_str = format_vectors_compact(vectors, keys=all_keys, use_percentage=True)
             parts.append(vec_str)
 
-        if drift_state:
-            parts.append(drift_state.format_basic())
+        # Show deltas in full mode
+        if deltas:
+            delta_str = format_deltas(deltas)
+            if delta_str:
+                parts.append(f"Δ {delta_str}")
+
+        drift_str = format_drift_status(drift_detected, drift_severity)
+        parts.append(drift_str)
 
         return ' │ '.join(parts)
 
@@ -206,7 +418,13 @@ def main():
         # Get vectors from DB (real-time)
         phase, vectors = get_latest_vectors(db, session_id)
 
-        # Get drift from cache (updated by hooks)
+        # Get deltas (learning measurement)
+        deltas = get_vector_deltas(db, session_id)
+
+        # Check drift from DB (compare recent reflexes)
+        drift_detected, drift_severity = get_drift_from_db(db, session_id)
+
+        # Get drift from cache (updated by hooks) - fallback
         drift_state = read_drift_cache(str(Path.cwd()))
 
         # If no cached drift, create minimal state from vectors
@@ -218,8 +436,13 @@ def main():
                 ai_id=ai_id
             )
 
+        db.close()
+
         # Format and output
-        output = format_statusline(session, phase, vectors, drift_state, mode)
+        output = format_statusline(
+            session, phase, vectors, drift_state, deltas, mode,
+            drift_detected=drift_detected, drift_severity=drift_severity
+        )
         print(output)
 
     except Exception as e:

@@ -28,12 +28,18 @@ from empirica.core.git_ops.signed_operations import SignedGitOperations
 def temp_repo():
     """Create temporary git repository"""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Initialize bare repo
+        # Initialize repo
         repo = git.Repo.init(tmpdir)
 
         # Configure git user for commits
         repo.config_writer().set_value("user", "name", "Test User").release()
         repo.config_writer().set_value("user", "email", "test@test.local").release()
+
+        # Create initial commit so HEAD exists (required for git notes)
+        readme = Path(tmpdir) / "README.md"
+        readme.write_text("# Test Repo\n")
+        repo.index.add(["README.md"])
+        repo.index.commit("Initial commit")
 
         yield repo
 
@@ -139,8 +145,15 @@ def test_get_signed_state_from_commit(git_ops, test_signing_persona, test_episte
 
 def test_get_signed_state_missing_notes(git_ops, temp_repo):
     """Test retrieving state from commit without notes returns None"""
-    # Create commit without notes
-    temp_repo.index.commit("Test commit without notes", allow_empty=True)
+    # Create commit without notes (use subprocess for --allow-empty)
+    import subprocess
+    subprocess.run(
+        ['git', 'commit', '--allow-empty', '-m', 'Test commit without notes'],
+        cwd=temp_repo.working_dir,
+        check=True,
+        capture_output=True
+    )
+    temp_repo.head.reset(commit=temp_repo.head.commit, index=True)
     commit_sha = temp_repo.head.commit.hexsha
 
     # Try to get signed state

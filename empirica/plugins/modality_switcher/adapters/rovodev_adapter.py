@@ -458,7 +458,7 @@ class RovodevAdapter:
     
     def __del__(self):
         """Cleanup: stop server if we started it."""
-        if self.auto_start and self.server_process:
+        if getattr(self, 'auto_start', False) and getattr(self, 'server_process', None):
             self._stop_server()
 
 

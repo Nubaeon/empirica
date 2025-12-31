@@ -247,11 +247,143 @@ def handle_monitor_command(args):
             for adapter, healthy in health_results.items():
                 status = "✅ Healthy" if healthy else "❌ Unhealthy"
                 print(f"   {adapter:10s}: {status}")
-        
+
+        # Turtle view - epistemic health
+        if getattr(args, 'turtle', False):
+            _display_turtle_health()
+
         print("\n" + "=" * 70)
-        
+
     except Exception as e:
         handle_cli_error(e, "Monitor", getattr(args, 'verbose', False))
+
+
+def _display_turtle_health():
+    """Display epistemic health metrics (the turtle view)."""
+    print("\n" + "=" * 70)
+    print("🐢 Epistemic Health (Turtles All The Way Down)")
+    print("=" * 70)
+
+    try:
+        from empirica.data.session_database import SessionDatabase
+        from empirica.data.flow_state_calculator import calculate_flow_score, classify_flow_state, identify_flow_blockers
+        from empirica.utils.session_resolver import get_latest_session_id
+
+        db = SessionDatabase()
+
+        # Get current session
+        try:
+            session_id = get_latest_session_id(ai_id='claude-code', active_only=True)
+        except ValueError:
+            session_id = None
+
+        if not session_id:
+            print("\n   ⚠️  No active session found")
+            print("   Run: empirica session-create --ai-id <your-id>")
+            return
+
+        # Get project_id for this session
+        cursor = db.conn.cursor()
+        cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+        row = cursor.fetchone()
+        project_id = row[0] if row else None
+
+        # Get latest vectors for flow calculation
+        cursor.execute("""
+            SELECT engagement, know, do, context, clarity, coherence,
+                   signal, density, state, change, completion, impact, uncertainty
+            FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
+        row = cursor.fetchone()
+
+        vectors = {}
+        if row:
+            vector_names = ['engagement', 'know', 'do', 'context', 'clarity', 'coherence',
+                           'signal', 'density', 'state', 'change', 'completion', 'impact', 'uncertainty']
+            vectors = {name: val for name, val in zip(vector_names, row) if val is not None}
+
+        # Flow State (using vector-based calculator)
+        print("\n   ✨ Flow State")
+        print("   " + "-" * 40)
+
+        if vectors:
+            flow_score = calculate_flow_score(vectors)
+            flow_state, flow_emoji = classify_flow_state(flow_score)
+            print(f"   Current: {flow_emoji} {flow_state} ({flow_score:.1f}/100)")
+
+            # Show blockers if any
+            blockers = identify_flow_blockers(vectors)
+            if blockers:
+                print(f"   Blockers: {blockers[0]}")
+        else:
+            print("   ⚠️  No vectors recorded - run PREFLIGHT first")
+
+        # CASCADE Completeness
+        print("\n   🔄 CASCADE Completeness")
+        print("   " + "-" * 40)
+        cursor.execute("""
+            SELECT phase, COUNT(*) as count
+            FROM reflexes
+            WHERE session_id = ?
+            GROUP BY phase
+        """, (session_id,))
+        phases = {row[0]: row[1] for row in cursor.fetchall()}
+
+        has_preflight = phases.get('PREFLIGHT', 0) > 0
+        has_check = phases.get('CHECK', 0) > 0
+        has_postflight = phases.get('POSTFLIGHT', 0) > 0
+
+        cascade_parts = []
+        cascade_parts.append("✅ PREFLIGHT" if has_preflight else "⬜ PREFLIGHT")
+        cascade_parts.append("✅ CHECK" if has_check else "⬜ CHECK")
+        cascade_parts.append("✅ POSTFLIGHT" if has_postflight else "⬜ POSTFLIGHT")
+        print(f"   {' → '.join(cascade_parts)}")
+
+        completeness = sum([has_preflight, has_postflight]) / 2 * 100
+        print(f"   Completeness: {completeness:.0f}%")
+
+        # Unknowns/Findings Ratio
+        if project_id:
+            print("\n   📊 Knowledge State")
+            print("   " + "-" * 40)
+            cursor.execute("SELECT COUNT(*) FROM project_findings WHERE project_id = ?", (project_id,))
+            findings_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM project_unknowns WHERE project_id = ? AND is_resolved = 0", (project_id,))
+            unknowns_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM project_unknowns WHERE project_id = ? AND is_resolved = 1", (project_id,))
+            resolved_count = cursor.fetchone()[0]
+
+            print(f"   Findings: {findings_count} | Unknowns: {unknowns_count} open, {resolved_count} resolved")
+
+            if unknowns_count + findings_count > 0:
+                knowledge_ratio = findings_count / (unknowns_count + findings_count) * 100
+                bar_len = int(knowledge_ratio / 5)
+                bar = "█" * bar_len + "░" * (20 - bar_len)
+                print(f"   Knowledge: [{bar}] {knowledge_ratio:.0f}%")
+
+        # Latest vectors
+        print("\n   📈 Latest Vectors")
+        print("   " + "-" * 40)
+        cursor.execute("""
+            SELECT know, uncertainty, engagement, completion
+            FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
+        row = cursor.fetchone()
+        if row:
+            know, unc, eng, comp = row
+            print(f"   know={know:.2f}  uncertainty={unc:.2f}  engagement={eng:.2f}  completion={comp:.2f}")
+        else:
+            print("   No vectors recorded yet")
+
+        db.close()
+
+    except Exception as e:
+        logger.warning(f"Turtle health check failed: {e}")
+        print(f"\n   ⚠️  Could not load epistemic health: {e}")
 
 
 def handle_monitor_export_command(args):
@@ -585,7 +717,10 @@ def handle_post_summary_drift_check(session_id: str, output_format: str, signali
     try:
         git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
         checkpoints = git_logger.list_checkpoints(limit=1)
-        current_vectors = checkpoints[0].get('vectors', {}) if checkpoints else {}
+        # Guard against None checkpoint entries
+        current_vectors = {}
+        if checkpoints and checkpoints[0] is not None:
+            current_vectors = checkpoints[0].get('vectors', {}) or {}
     except Exception as e:
         logger.warning(f"Could not load current checkpoint: {e}")
         current_vectors = {}
@@ -885,23 +1020,26 @@ def handle_check_drift_command(args):
             return handle_post_summary_drift_check(session_id, output_format, signaling_level)
 
         # Manual mode: Standard drift detection
-        print("\n🔍 Epistemic Drift Detection")
-        print("=" * 70)
-        print(f"   Session ID:  {session_id}")
-        print(f"   Threshold:   {threshold}")
-        print(f"   Lookback:    {lookback} checkpoints")
-        if cycle is not None:
-            print(f"   Cycle:       {cycle}")
-        if round_num is not None:
-            print(f"   Round:       {round_num}")
-        if scope_depth is not None:
-            depth_label = "surface" if scope_depth < 0.4 else "moderate" if scope_depth < 0.7 else "deep"
-            print(f"   Scope Depth: {scope_depth:.2f} ({depth_label})")
-        print("=" * 70)
+        # Only print header for human-readable output
+        if output_format != 'json':
+            print("\n🔍 Epistemic Drift Detection")
+            print("=" * 70)
+            print(f"   Session ID:  {session_id}")
+            print(f"   Threshold:   {threshold}")
+            print(f"   Lookback:    {lookback} checkpoints")
+            if cycle is not None:
+                print(f"   Cycle:       {cycle}")
+            if round_num is not None:
+                print(f"   Round:       {round_num}")
+            if scope_depth is not None:
+                depth_label = "surface" if scope_depth < 0.4 else "moderate" if scope_depth < 0.7 else "deep"
+                print(f"   Scope Depth: {scope_depth:.2f} ({depth_label})")
+            print("=" * 70)
 
-        # Load current epistemic state from latest checkpoint
-        manager = CheckpointManager()
-        checkpoints = manager.load_recent_checkpoints(session_id=session_id, count=1)
+        # Load current epistemic state from latest checkpoint (using git notes, not commit history)
+        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+        git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+        checkpoints = git_logger.list_checkpoints(limit=lookback)
 
         if not checkpoints:
             print("\n⚠️  No checkpoints found for session")
@@ -910,19 +1048,25 @@ def handle_check_drift_command(args):
 
         current_checkpoint = checkpoints[0]
 
+        # Guard against None checkpoint entries
+        if current_checkpoint is None:
+            print("\n⚠️  Checkpoint data is invalid (None)")
+            print("   Run PREFLIGHT or CHECK to create a valid checkpoint")
+            return
+
         # Create mock assessment from checkpoint vectors
         class MockAssessment:
             def __init__(self, vectors):
-                for name, score in vectors.items():
+                for name, score in (vectors or {}).items():
                     setattr(self, name, type('VectorState', (), {'score': score})())
 
         current_assessment = MockAssessment(current_checkpoint.get('vectors', {}))
 
-        # Run drift detection
+        # Run drift detection (disable logging for JSON output to keep it clean)
         monitor = MirrorDriftMonitor(
             drift_threshold=threshold,
             lookback_window=lookback,
-            enable_logging=True
+            enable_logging=(output_format != 'json')
         )
 
         report = monitor.detect_drift(current_assessment, session_id)
@@ -1152,3 +1296,131 @@ def handle_mco_load_command(args):
 
     except Exception as e:
         handle_cli_error(e, "MCO Load", getattr(args, 'verbose', False))
+
+
+def handle_assess_state_command(args):
+    """
+    Capture sessionless epistemic state (fresh measurement without session context).
+
+    Used for:
+    - Statusline displays (current epistemic state)
+    - Pre-compact snapshots (fresh vectors before memory compacting)
+    - Post-compact snapshots (fresh vectors after memory compacting)
+    - Monitoring dashboards (current epistemic health)
+
+    Unlike check-drift (which compares states), assess-state captures a fresh measurement.
+    Not stored in reflexes table (sessionless), can be included in snapshots.
+
+    Output:
+    - JSON: Just vectors and metadata
+    - Human: Formatted display with context
+    """
+    try:
+        from datetime import datetime
+        import json
+
+        session_id = getattr(args, 'session_id', None)
+        prompt = getattr(args, 'prompt', None)
+        output_format = getattr(args, 'output', 'human')
+        verbose = getattr(args, 'verbose', False)
+
+        # Print header only for human output
+        if output_format != 'json':
+            print("\n🔍 Epistemic State Assessment (Sessionless)")
+            print("=" * 70)
+            if session_id:
+                print(f"   Session ID: {session_id}")
+            if prompt:
+                print(f"   Context: {prompt[:60]}...")
+            print("=" * 70)
+
+        # If session_id provided, load last checkpoint as reference
+        vectors = {}
+        checkpoint_data = {}
+
+        if session_id:
+            # Try git notes first (canonical source)
+            try:
+                from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+                git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+                checkpoints = git_logger.list_checkpoints(limit=1)
+
+                if checkpoints and checkpoints[0] is not None:
+                    checkpoint_data = checkpoints[0]
+                    vectors = checkpoint_data.get('vectors', {}) or {}
+            except Exception as e:
+                if verbose:
+                    logger.warning(f"Could not load checkpoint from git notes: {e}")
+
+            # Fallback to reflexes table if git notes empty
+            if not vectors:
+                try:
+                    from empirica.data.session_database import SessionDatabase
+                    db = SessionDatabase()
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT engagement, know, do, context, clarity, coherence,
+                               signal, density, state, change, completion, impact, uncertainty
+                        FROM reflexes
+                        WHERE session_id = ?
+                        ORDER BY timestamp DESC LIMIT 1
+                    """, (session_id,))
+                    row = cursor.fetchone()
+                    db.close()
+
+                    if row:
+                        vectors = {
+                            'engagement': row[0], 'know': row[1], 'do': row[2],
+                            'context': row[3], 'clarity': row[4], 'coherence': row[5],
+                            'signal': row[6], 'density': row[7], 'state': row[8],
+                            'change': row[9], 'completion': row[10], 'impact': row[11],
+                            'uncertainty': row[12]
+                        }
+                        # Filter None values
+                        vectors = {k: v for k, v in vectors.items() if v is not None}
+                        checkpoint_data = {'vectors': vectors, 'source': 'reflexes_table'}
+                except Exception as e:
+                    if verbose:
+                        logger.warning(f"Could not load checkpoint from reflexes: {e}")
+
+        # Capture fresh state
+        # In production, this would call into an LLM or use cached epistemic state
+        # For now, return the last known checkpoint vectors with metadata
+        state = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'vectors': vectors,
+            'has_session': session_id is not None,
+            'has_checkpoint': bool(checkpoint_data),
+            'prompt_context': prompt is not None
+        }
+
+        # Output results
+        if output_format == 'json':
+            print(json.dumps({
+                'ok': True,
+                'state': state,
+                'session_id': session_id,
+                'timestamp': state['timestamp']
+            }))
+        else:
+            print("\n📊 Current Epistemic Vectors:")
+            print("-" * 70)
+            if vectors:
+                for key, value in sorted(vectors.items()):
+                    if isinstance(value, (int, float)):
+                        bar_length = int(value * 20)
+                        bar = "█" * bar_length + "░" * (20 - bar_length)
+                        print(f"   {key:20s} {value:5.2f}  {bar}")
+                    else:
+                        print(f"   {key:20s} {str(value)}")
+            else:
+                print("   ⚠️  No vectors available")
+                print("   Run PREFLIGHT or CHECK to establish baseline")
+            print("-" * 70)
+            print(f"\n   Timestamp: {state['timestamp']}")
+            if session_id:
+                print(f"   Session:   {session_id}")
+            print()
+
+    except Exception as e:
+        handle_cli_error(e, "Assess State", getattr(args, 'verbose', False))

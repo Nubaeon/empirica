@@ -163,15 +163,6 @@ class SignedGitOperations:
         signed_json = json.dumps(signed_state, indent=2)
 
         try:
-            # Add signed state to git notes
-            # This stores the note associated with the current HEAD
-            # (before we create the commit)
-            self.git.notes(
-                'add',
-                '--force',  # Overwrite if exists
-                '-m', signed_json
-            )
-
             # Create commit with persona as author
             persona_info = signing_persona.get_persona_info()
             author_name = persona_info["persona_id"]
@@ -184,13 +175,32 @@ class SignedGitOperations:
             # Create signed commit with epistemic tags
             commit_message = f"[{phase}] {message} [impact={impact:.2f}, completion={completion:.2f}]\n\nPersona: {persona_info['name']}\nVersion: {persona_info['version']}"
 
-            self.repo.index.commit(
-                commit_message,
-                author=git.Actor(author_name, author_email),
-                allow_empty=True
+            # Use git command directly for --allow-empty (not supported by GitPython)
+            subprocess.run(
+                [
+                    'git', 'commit',
+                    '--allow-empty',
+                    '-m', commit_message,
+                    '--author', f'{author_name} <{author_email}>'
+                ],
+                cwd=self.repo.working_dir,
+                check=True,
+                capture_output=True,
+                text=True
             )
 
+            # Refresh repo state and get commit SHA
+            self.repo.head.reset(commit=self.repo.head.commit, index=True)
             commit_sha = self.repo.head.commit.hexsha
+
+            # Add signed state to git notes AFTER commit exists
+            # This attaches the note to the correct commit
+            self.git.notes(
+                'add',
+                '--force',  # Overwrite if exists
+                '-m', signed_json,
+                commit_sha  # Explicitly attach to this commit
+            )
 
             logger.info(
                 f"✓ Committed signed state: {phase} "
@@ -264,8 +274,19 @@ class SignedGitOperations:
         results = []
 
         try:
-            # Get commits in range
-            commits = list(self.repo.iter_commits(f"{start_commit}..{end_commit}"))
+            # Get commits in range (use start^..end for inclusive range)
+            # If start has no parent (initial commit), fall back to listing all to end
+            try:
+                start_obj = self.repo.commit(start_commit)
+                if start_obj.parents:
+                    # Has parent - use parent..end to include start
+                    commits = list(self.repo.iter_commits(f"{start_commit}^..{end_commit}"))
+                else:
+                    # No parent (initial commit) - list all commits up to end
+                    commits = list(self.repo.iter_commits(end_commit))
+            except Exception:
+                # Fallback to exclusive range
+                commits = list(self.repo.iter_commits(f"{start_commit}..{end_commit}"))
 
             logger.info(f"Verifying CASCADE chain: {len(commits)} commits")
 

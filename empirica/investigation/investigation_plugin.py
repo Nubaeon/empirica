@@ -2,13 +2,13 @@
 """
 Investigation Plugin Interface
 
-Allows users to extend Empirica's investigation capabilities with custom tools
-without modifying core code. Plugins are automatically included in the tool
-capability map presented to the LLM during investigation.
+Defines reusable plugin interfaces for extending Empirica's investigation
+capabilities with custom tools. Plugins can be used to integrate external
+services (JIRA, Confluence, Slack, etc.) into epistemic workflows.
 
 Usage:
-    from metacognitive_cascade.investigation_plugin import InvestigationPlugin
-    
+    from empirica.investigation.investigation_plugin import InvestigationPlugin
+
     jira_plugin = InvestigationPlugin(
         name='jira_search',
         description='Search JIRA for related issues and tickets',
@@ -16,14 +16,13 @@ Usage:
         confidence_gain=0.20,
         tool_type='search'
     )
-    
-    cascade = CanonicalEpistemicCascade(
-        investigation_plugins={'jira_search': jira_plugin}
-    )
 """
 
+import logging
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

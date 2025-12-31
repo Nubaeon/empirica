@@ -121,7 +121,7 @@ Python API:
    logger = ReflexLogger(session_id=session_id)
    logger.log_reflex(
        phase="PREFLIGHT",
-       round_num=1,
+       # round auto-increments
        vectors={"engagement": 0.8, "know": 0.6, ...},
        reasoning="Starting with moderate knowledge"
    )

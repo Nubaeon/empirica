@@ -37,7 +37,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
             if isinstance(action, argparse._SubParsersAction):
                 categories = {
                     'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
-                    'CASCADE Workflow': ['preflight', 'preflight-submit', 'check', 'check-submit', 'postflight', 'postflight-submit', 'workflow'],
+                    'CASCADE Workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
                     'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
                     'Project Management': ['project-init', 'project-create', 'project-list', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
                     'Workspace': ['workspace-init', 'workspace-map', 'workspace-overview'],
@@ -47,12 +47,13 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
                     'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
                     'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
-                    'Monitoring': ['monitor', 'check-drift', 'efficiency-report'],
+                    'Monitoring': ['monitor', 'check-drift', 'assess-state', 'efficiency-report'],
                     'Skills': ['skill-suggest', 'skill-fetch'],
-                    'Utilities': ['goal-analysis', 'log-token-saving', 'config', 'performance'],
+                    'Utilities': ['log-token-saving', 'config', 'performance'],
                     'Vision': ['vision'],
                     'Epistemics': ['epistemics-list', 'epistemics-show'],
-                    'User Interface': ['chat']
+                    'User Interface': ['chat'],
+                    'Architecture': ['assess-component', 'assess-compare', 'assess-directory']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -87,6 +88,12 @@ from .parsers import (
     add_epistemics_parsers,
     add_edit_verification_parsers,
     add_issue_capture_parsers,
+    add_architecture_parsers,
+)
+from .command_handlers.architecture_commands import (
+    handle_assess_component_command,
+    handle_assess_compare_command,
+    handle_assess_directory_command,
 )
 
 
@@ -139,7 +146,8 @@ def create_argument_parser():
     add_epistemics_parsers(subparsers)
     add_edit_verification_parsers(subparsers)
     add_issue_capture_parsers(subparsers)
-    
+    add_architecture_parsers(subparsers)
+
     return parser
 
 
@@ -193,14 +201,11 @@ def main(args=None):
             'session-snapshot': handle_session_snapshot_command,
             'memory-compact': handle_memory_compact_command,
             
-            # CASCADE commands
-            'preflight': handle_preflight_command,
+            # CASCADE commands (working -submit variants only)
             'preflight-submit': handle_preflight_submit_command,
             'check': handle_check_command,
             'check-submit': handle_check_submit_command,
-            'postflight': handle_postflight_command,
             'postflight-submit': handle_postflight_submit_command,
-            'workflow': handle_workflow_command,
             
             # Investigation commands
             'investigate': handle_investigate_command,
@@ -220,7 +225,6 @@ def main(args=None):
             'skill-fetch': handle_skill_fetch_command,
             
             # Utility commands
-            'goal-analysis': handle_goal_analysis_command,
             'log-token-saving': handle_log_token_saving,
             'efficiency-report': handle_efficiency_report,
             
@@ -230,6 +234,7 @@ def main(args=None):
             # Monitor commands
             'monitor': handle_monitor_command,
             'check-drift': handle_check_drift_command,
+            'assess-state': handle_assess_state_command,
             'mco-load': handle_mco_load_command,
 
             # Checkpoint commands
@@ -309,6 +314,11 @@ def main(args=None):
             'issue-resolve': handle_issue_resolve_command,
             'issue-export': handle_issue_export_command,
             'issue-stats': handle_issue_stats_command,
+
+            # Architecture assessment commands
+            'assess-component': handle_assess_component_command,
+            'assess-compare': handle_assess_compare_command,
+            'assess-directory': handle_assess_directory_command,
         }
         
         if parsed_args.command in command_handlers:

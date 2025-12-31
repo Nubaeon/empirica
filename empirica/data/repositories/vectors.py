@@ -17,7 +17,7 @@ class VectorRepository(BaseRepository):
         round_num: int = 1,
         metadata: Optional[Dict] = None,
         reasoning: Optional[str] = None
-    ):
+    ) -> int:
         """
         Store epistemic vectors in the reflexes table
 
@@ -29,6 +29,9 @@ class VectorRepository(BaseRepository):
             round_num: Current round number
             metadata: Optional additional metadata
             reasoning: Optional reasoning text
+
+        Returns:
+            Row ID of the inserted record
         """
         # Extract the 13 vectors, providing default values if not present
         vector_names = [
@@ -55,7 +58,7 @@ class VectorRepository(BaseRepository):
         if metadata:
             reflex_data.update(metadata)
 
-        self._execute("""
+        cursor = self._execute("""
             INSERT INTO reflexes (
                 session_id, cascade_id, phase, round, timestamp,
                 engagement, know, do, context,
@@ -71,6 +74,7 @@ class VectorRepository(BaseRepository):
         ))
 
         self.commit()
+        return cursor.lastrowid
 
     def get_latest_vectors(
         self,

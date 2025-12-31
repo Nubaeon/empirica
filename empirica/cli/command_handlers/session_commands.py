@@ -564,7 +564,7 @@ def handle_memory_compact_command(args):
                 reflex_logger = GitEnhancedReflexLogger(session_id=session_id)
                 checkpoint_id = reflex_logger.add_checkpoint(
                     phase="PRE_MEMORY_COMPACT",
-                    round_num=1,
+                    # round auto-increments
                     vectors=vectors_to_save,
                     metadata={"reasoning": "Pre-compact epistemic state snapshot for continuity measurement"},
                     epistemic_tags={"memory_compact": True, "pre_compact": True}
@@ -658,7 +658,7 @@ def handle_memory_compact_command(args):
                 # Create actual PREFLIGHT checkpoint (not SESSION_CONTINUATION)
                 preflight_checkpoint_id = continuation_logger.add_checkpoint(
                     phase="PREFLIGHT",  # ✅ CRITICAL: Must be PREFLIGHT for delta calculation
-                    round_num=1,
+                    # round auto-increments
                     vectors=recommended_preflight,
                     metadata={
                         "parent_session_id": session_id,

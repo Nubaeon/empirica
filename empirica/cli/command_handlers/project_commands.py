@@ -276,7 +276,7 @@ def handle_project_bootstrap_command(args):
         # Get new parameters
         session_id = getattr(args, 'session_id', None)
         include_live_state = getattr(args, 'include_live_state', False)
-        fresh_assess = getattr(args, 'fresh_assess', False)
+        # DEPRECATED: fresh_assess removed - use 'empirica assess-state' for canonical vector capture
         trigger = getattr(args, 'trigger', None)
         depth = getattr(args, 'depth', 'auto')
         ai_id = getattr(args, 'ai_id', None)  # Get AI ID for epistemic handoff
@@ -341,7 +341,7 @@ def handle_project_bootstrap_command(args):
             subject=subject,
             session_id=session_id,
             include_live_state=include_live_state,
-            fresh_assess=fresh_assess,
+            # fresh_assess removed - use 'empirica assess-state' for canonical vector capture
             trigger=trigger,
             depth=depth,
             ai_id=ai_id  # Pass AI ID to bootstrap
@@ -1139,11 +1139,39 @@ def handle_finding_log_command(args):
         
         db.close()
 
+        # AUTO-EMBED: Add finding to Qdrant for semantic search
+        embedded = False
+        if project_id and finding_ids:
+            try:
+                from empirica.core.qdrant.vector_store import embed_single_memory_item
+                from datetime import datetime
+                # Use project finding_id if available, else session
+                primary_id = next((fid for scope, fid in finding_ids if scope == 'project'), None)
+                if not primary_id:
+                    primary_id = finding_ids[0][1] if finding_ids else None
+                if primary_id:
+                    embedded = embed_single_memory_item(
+                        project_id=project_id,
+                        item_id=primary_id,
+                        text=finding,
+                        item_type='finding',
+                        session_id=session_id,
+                        goal_id=goal_id,
+                        subtask_id=subtask_id,
+                        subject=subject,
+                        impact=impact,
+                        timestamp=datetime.now().isoformat()
+                    )
+            except Exception as embed_err:
+                # Non-fatal - log but continue
+                logger.warning(f"Auto-embed failed: {embed_err}")
+
         result = {
             "ok": True,
             "scope": scope,
             "findings": [{"scope": s, "finding_id": fid} for s, fid in finding_ids],
             "project_id": project_id if project_id else None,
+            "embedded": embedded,
             "message": f"Finding logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 
@@ -1158,6 +1186,8 @@ def handle_finding_log_command(args):
                     print(f"   Finding ID ({scope}): {fid}")
             if project_id:
                 print(f"   Project: {project_id[:8]}...")
+            if embedded:
+                print(f"   🔍 Auto-embedded for semantic search")
 
         return 0  # Success
 
@@ -1304,11 +1334,40 @@ def handle_unknown_log_command(args):
         
         db.close()
 
+        # AUTO-EMBED: Add unknown to Qdrant for semantic search
+        embedded = False
+        if project_id and unknown_ids:
+            try:
+                from empirica.core.qdrant.vector_store import embed_single_memory_item
+                from datetime import datetime
+                # Use project unknown_id if available, else session
+                primary_id = next((uid for scope, uid in unknown_ids if scope == 'project'), None)
+                if not primary_id:
+                    primary_id = unknown_ids[0][1] if unknown_ids else None
+                if primary_id:
+                    embedded = embed_single_memory_item(
+                        project_id=project_id,
+                        item_id=primary_id,
+                        text=unknown,
+                        item_type='unknown',
+                        session_id=session_id,
+                        goal_id=goal_id,
+                        subtask_id=subtask_id,
+                        subject=subject,
+                        impact=impact,
+                        is_resolved=False,
+                        timestamp=datetime.now().isoformat()
+                    )
+            except Exception as embed_err:
+                # Non-fatal - log but continue
+                logger.warning(f"Auto-embed failed: {embed_err}")
+
         result = {
             "ok": True,
             "scope": scope,
             "unknowns": [{"scope": s, "unknown_id": uid} for s, uid in unknown_ids],
             "project_id": project_id if project_id else None,
+            "embedded": embedded,
             "message": f"Unknown logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 
@@ -1316,8 +1375,12 @@ def handle_unknown_log_command(args):
             print(json.dumps(result, indent=2))
         else:
             print(f"✅ Unknown logged successfully")
-            print(f"   Unknown ID: {unknown_id}")
-            print(f"   Project: {project_id[:8]}...")
+            for scope_name, uid in unknown_ids:
+                print(f"   {scope_name.title()} Unknown ID: {uid[:8] if uid else 'N/A'}...")
+            if project_id:
+                print(f"   Project: {project_id[:8]}...")
+            if embedded:
+                print(f"   🔍 Auto-embedded for semantic search")
 
         return 0  # Success
 
@@ -1519,8 +1582,10 @@ def handle_deadend_log_command(args):
             print(json.dumps(result, indent=2))
         else:
             print(f"✅ Dead end logged successfully")
-            print(f"   Dead End ID: {dead_end_id}")
-            print(f"   Project: {project_id[:8]}...")
+            for scope_name, did in dead_end_ids:
+                print(f"   {scope_name.capitalize()} Dead End ID: {did[:8] if did else 'N/A'}...")
+            if project_id:
+                print(f"   Project: {project_id[:8]}...")
 
         return 0  # Success
 

@@ -306,7 +306,7 @@ class PluginRegistry:
     def health_check_all(self) -> Dict[str, bool]:
         """
         Run health checks on all registered adapters.
-        
+
         Returns:
             Dict mapping adapter name to health status
         """
@@ -315,7 +315,14 @@ class PluginRegistry:
             try:
                 adapter = self.get_adapter(name)
                 results[name] = adapter.health_check()
+            except ValueError as e:
+                # Credentials not configured - expected for unused adapters, not an error
+                if "not configured" in str(e).lower():
+                    logger.debug(f"Adapter {name} not configured (skipping): {e}")
+                else:
+                    logger.warning(f"Health check failed for {name}: {e}")
+                results[name] = False
             except Exception as e:
-                logger.error(f"Health check failed for {name}: {e}")
+                logger.warning(f"Health check failed for {name}: {e}")
                 results[name] = False
         return results

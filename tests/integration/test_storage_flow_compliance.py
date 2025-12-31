@@ -26,7 +26,7 @@ class TestStorageFlowCompliance:
     def test_session_id(self):
         """Create a test session and return its ID"""
         result = subprocess.run(
-            ["empirica", "session-create", "--ai-id", "storage-flow-test", "--bootstrap-level", "2"],
+            ["empirica", "session-create", "--ai-id", "storage-flow-test", "--output", "json"],
             capture_output=True,
             text=True
         )

@@ -1,0 +1,159 @@
+# =============================================================================
+# EMPIRICA DRIFT DETECTION THRESHOLDS CONFIGURATION
+# =============================================================================
+#
+# Purpose: Define configurable thresholds for drift detection (over/under-confidence)
+# Usage: Loaded by DriftMonitor and detector classes for drift detection
+# 
+# Architecture: Part of MCO (Meta-Agent Configuration Object)
+#   - Drift thresholds (this file): config/mco/drift_thresholds.yaml
+#   - Loaded by: empirica/core/drift/drift_monitor.py
+#   - Used by: OverConfidenceDetector, UnderConfidenceDetector
+#
+# Why MCO: Allows MCP server to override thresholds per session/persona
+#   - Different agents may have different drift tolerances
+#   - Thresholds can be tuned based on empirical results
+#   - Configurable without code changes
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2025-12-31"
+  author: "Empirica Framework"
+  description: "Configurable thresholds for epistemic drift detection"
+  status: "production"
+
+# =============================================================================
+# OVERCONFIDENCE DETECTION THRESHOLDS
+# =============================================================================
+# Detects when AI claims high knowledge but achieves poor results
+# Severity: 0.8 (high - overconfidence causes expensive mistakes)
+
+overconfidence:
+  
+  # Heuristic 1: Know vs Completion Mismatch
+  # Detects: Predicted high know, but actual low completion
+  know_completion_mismatch:
+    predicted_know_threshold: 0.75        # If predicted know > this, check for mismatch
+    actual_completion_threshold: 0.60     # If actual completion < this, flag as overconfident
+    enabled: true
+    severity_weight: 0.8                  # How much to weight in overall drift
+    description: "Claimed high knowing, achieved low completion"
+  
+  # Heuristic 2: Uncertainty vs Findings Mismatch
+  # Detects: Predicted low uncertainty, but many unknowns discovered
+  uncertainty_findings_mismatch:
+    predicted_uncertainty_threshold: 0.30 # If predicted uncertainty < this, check for mismatch
+    unknowns_found_threshold: 5           # If unknowns discovered > this, flag as overconfident
+    enabled: true
+    severity_weight: 0.75
+    description: "Claimed low uncertainty, but discovered many unknowns"
+  
+  # Heuristic 3: Clarity vs Signal Mismatch
+  # Detects: Predicted high clarity, but weak actual signal
+  clarity_signal_mismatch:
+    predicted_clarity_threshold: 0.85     # If predicted clarity > this, check for mismatch
+    actual_signal_threshold: 0.50         # If actual signal < this, flag as overconfident
+    enabled: true
+    severity_weight: 0.75
+    description: "Claimed high clarity, achieved weak signal"
+
+  # Global overconfidence settings
+  global:
+    enabled: true
+    severity_weight: 0.8                  # Overall importance of overconfidence detection
+    alert_on_severity_above: 0.6          # Alert user if severity > this
+    block_praxic_on_severity_above: 0.8   # Force more NOETIC if severity > this
+
+# =============================================================================
+# UNDERCONFIDENCE DETECTION THRESHOLDS
+# =============================================================================
+# Detects when AI claims low knowledge but achieves good results (inefficiency)
+# Severity: 0.5 (medium - underconfidence is inefficiency, not wrong)
+
+underconfidence:
+  
+  # Heuristic 1: Know vs Completion Mismatch (Reversed)
+  # Detects: Predicted low know, but actual high completion
+  know_completion_mismatch:
+    predicted_know_threshold: 0.50        # If predicted know < this, check for mismatch
+    actual_completion_threshold: 0.80     # If actual completion > this, flag as underconfident
+    enabled: true
+    severity_weight: 0.50
+    description: "Claimed low knowing, achieved high completion"
+  
+  # Heuristic 2: Uncertainty vs Results Mismatch (Reversed)
+  # Detects: Predicted high uncertainty, but strong actual results
+  uncertainty_results_mismatch:
+    predicted_uncertainty_threshold: 0.70 # If predicted uncertainty > this, check for mismatch
+    result_strength_threshold: 0.75       # If (completion OR signal) > this, flag as underconfident
+    enabled: true
+    severity_weight: 0.50
+    description: "Claimed high uncertainty, achieved strong results"
+  
+  # Heuristic 3: Excessive Investigation
+  # Detects: Extensive exploration but high completion anyway (wasted effort)
+  excessive_investigation:
+    investigation_depth_threshold: 8      # If (findings + dead-ends) > this, check for mismatch
+    actual_completion_threshold: 0.75     # If actual completion > this, flag inefficiency
+    predicted_uncertainty_threshold: 0.60 # If predicted uncertainty > this, flag inefficiency
+    enabled: true
+    severity_weight: 0.50
+    description: "Over-investigated but achieved high completion (wasted time)"
+
+  # Global underconfidence settings
+  global:
+    enabled: true
+    severity_weight: 0.50                 # Overall importance of underconfidence detection
+    alert_on_severity_above: 0.6          # Alert user if severity > this
+    suggest_faster_investigation: true    # Suggest speeding up investigation
+
+# =============================================================================
+# CALIBRATION TRACKING THRESHOLDS
+# =============================================================================
+# Tracks how well AI self-assessments match actual results
+
+calibration:
+  
+  # Calibration accuracy thresholds
+  calibration_score_excellent: 0.90       # Score > 0.90 = excellent calibration
+  calibration_score_good: 0.75            # Score > 0.75 = good calibration
+  calibration_score_poor: 0.60            # Score > 0.60 = poor calibration
+  calibration_score_very_poor: 0.40       # Score < 0.40 = very poor calibration
+  
+  # Evidence threshold for calibration adjustments
+  min_evidence_for_adjustment: 3          # Need this many samples before applying adjustments
+  
+  # Adjustment cap (prevent over-correction)
+  max_calibration_adjustment: 0.15        # Max adjustment to apply (0.0-1.0 scale)
+
+# =============================================================================
+# SEVERITY SCORING SCALES
+# =============================================================================
+# Standard severity interpretation across all detectors
+
+severity_scales:
+  
+  overconfidence:
+    mild: {min: 0.0, max: 0.3, action: "note"}              # No action needed
+    moderate: {min: 0.3, max: 0.6, action: "alert"}         # Alert user
+    severe: {min: 0.6, max: 0.8, action: "restrict"}        # Suggest CHECK before PRAXIC
+    critical: {min: 0.8, max: 1.0, action: "block"}         # Force more NOETIC
+  
+  underconfidence:
+    mild: {min: 0.0, max: 0.2, action: "note"}              # No action needed
+    moderate: {min: 0.2, max: 0.4, action: "inform"}        # Informational
+    notable: {min: 0.4, max: 0.6, action: "suggest"}        # Suggest faster investigation
+    severe: {min: 0.6, max: 1.0, action: "recommend"}       # Recommend skipping investigation
+
+# =============================================================================
+# MCP SERVER INTEGRATION
+# =============================================================================
+# How the MCP server can override these thresholds per session
+
+mcp_overrides:
+  enabled: true
+  override_by_persona: true               # Allow per-persona thresholds
+  override_by_session: true               # Allow per-session thresholds
+  fallback_to_default: true               # If override missing, use defaults
+  cache_overrides: true                   # Cache MCP overrides for performance
+  cache_ttl_seconds: 3600                 # Re-fetch from MCP every hour

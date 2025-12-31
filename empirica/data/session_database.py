@@ -195,9 +195,7 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_time)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_cascades_session ON cascades(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_cascades_confidence ON cascades(final_confidence)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_divergence_cascade ON divergence_tracking(cascade_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_beliefs_cascade ON bayesian_beliefs(cascade_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tools_cascade ON investigation_tools(cascade_id)")
         # BEADS integration index (check if column exists first)
         cursor.execute("SELECT COUNT(*) FROM pragma_table_info('goals') WHERE name='beads_issue_id'")
         if cursor.fetchone()[0] > 0:
@@ -350,34 +348,6 @@ class SessionDatabase:
             metadata=metadata
         )
     
-    def log_divergence(self, cascade_id: str, turn_number: int, delegate: str, trustee: str,
-                      divergence_score: float, divergence_reason: str,
-                      synthesis_needed: bool, synthesis_data: Optional[Dict] = None):
-        """Track delegate vs trustee divergence"""
-        divergence_id = str(uuid.uuid4())
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO divergence_tracking (
-                divergence_id, cascade_id, turn_number,
-                delegate_perspective, trustee_perspective,
-                divergence_score, divergence_reason, synthesis_needed,
-                delegate_weight, trustee_weight, tension_acknowledged,
-                final_response, synthesis_strategy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            divergence_id, cascade_id, turn_number,
-            json.dumps(delegate), json.dumps(trustee),
-            divergence_score, divergence_reason, synthesis_needed,
-            synthesis_data.get('delegate_weight') if synthesis_data else None,
-            synthesis_data.get('trustee_weight') if synthesis_data else None,
-            synthesis_data.get('tension_acknowledged') if synthesis_data else None,
-            synthesis_data.get('final_response') if synthesis_data else None,
-            synthesis_data.get('strategy') if synthesis_data else None
-        ))
-        
-        self.conn.commit()
-    
     def log_bayesian_belief(self, cascade_id: str, vector_name: str, mean: float,
                            variance: float, evidence_count: int,
                            prior_mean: float, prior_variance: float):
@@ -398,29 +368,7 @@ class SessionDatabase:
         ))
         
         self.conn.commit()
-    
-    def log_tool_execution(self, cascade_id: str, round_number: int, tool_name: str,
-                          tool_purpose: str, target_vector: str, success: bool,
-                          confidence_gain: float, information: Dict,
-                          duration_ms: int):
-        """Track investigation tool usage"""
-        tool_id = str(uuid.uuid4())
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO investigation_tools (
-                tool_execution_id, cascade_id, round_number,
-                tool_name, tool_purpose, target_vector,
-                success, confidence_gain, information_gained, duration_ms
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            tool_id, cascade_id, round_number,
-            tool_name, tool_purpose, target_vector,
-            success, confidence_gain, json.dumps(information), duration_ms
-        ))
-        
-        self.conn.commit()
-    
+
     def get_session(self, session_id: str) -> Optional[Dict]:
         """Get session data (delegates to SessionRepository)"""
         return self.sessions.get_session(session_id)
@@ -526,99 +474,7 @@ class SessionDatabase:
             metadata=metadata,
             reasoning=learning_notes
         )
-    
-    def log_investigation_round(
-        self,
-        session_id: str,
-        cascade_id: Optional[str],
-        round_number: int,
-        tools_mentioned: Optional[str] = None,
-        findings: Optional[str] = None,
-        confidence_before: Optional[float] = None,
-        confidence_after: Optional[float] = None,
-        summary: Optional[str] = None
-    ) -> str:
-        """Log investigation round for transparency"""
-        log_id = str(uuid.uuid4())
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO investigation_logs (
-                log_id, session_id, cascade_id, round_number,
-                tools_mentioned, findings, confidence_before, confidence_after, summary
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            log_id, session_id, cascade_id, round_number,
-            tools_mentioned, findings, confidence_before, confidence_after, summary
-        ))
-        
-        self.conn.commit()
-        
-        # Export to reflex logs for dashboard
-        try:
-            export_to_reflex_logs(
-                session_id=session_id,
-                phase="investigate",
-                assessment_data={
-                    "log_id": log_id,
-                    "cascade_id": cascade_id,
-                    "round_number": round_number,
-                    "tools_mentioned": tools_mentioned,
-                    "findings": findings,
-                    "confidence_before": confidence_before,
-                    "confidence_after": confidence_after,
-                    "summary": summary or f"Investigation round {round_number}"
-                }
-            )
-        except Exception:
-            pass  # Silent fail - reflex export is not critical
-        
-        return log_id
-    
-    def log_act_phase(
-        self,
-        session_id: str,
-        cascade_id: Optional[str],
-        action_type: str,
-        action_rationale: Optional[str] = None,
-        final_confidence: Optional[float] = None,
-        goal_id: Optional[str] = None
-    ) -> str:
-        """Log ACT phase decision for transparency and audit trail"""
-        act_id = str(uuid.uuid4())
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO act_logs (
-                act_id, session_id, cascade_id, action_type,
-                action_rationale, final_confidence, goal_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            act_id, session_id, cascade_id, action_type,
-            action_rationale, final_confidence, goal_id
-        ))
-        
-        self.conn.commit()
-        
-        # Export to reflex logs for dashboard
-        try:
-            export_to_reflex_logs(
-                session_id=session_id,
-                phase="act",
-                assessment_data={
-                    "act_id": act_id,
-                    "cascade_id": cascade_id,
-                    "action_type": action_type,
-                    "action_rationale": action_rationale,
-                    "final_confidence": final_confidence,
-                    "goal_id": goal_id
-                }
-            )
-        except Exception:
-            pass  # Silent fail - reflex export is not critical
-        
-        return act_id
-    
+
     def get_preflight_assessment(self, session_id: str) -> Optional[Dict]:
         """
         DEPRECATED: Use get_latest_vectors(session_id, phase='PREFLIGHT') instead.
@@ -1194,6 +1050,57 @@ class SessionDatabase:
                 'engagement': vectors.get('engagement', 0.5)
             }
         }
+
+    def _load_feature_status(self, project_root: str) -> Optional[Dict]:
+        """
+        Load feature completion status from FEATURE_STATUS.md.
+
+        Parses the markdown file to extract:
+        - Completed features count
+        - In-progress goals count
+        - Completion percentage
+
+        Args:
+            project_root: Path to project root
+
+        Returns:
+            Dict with feature completion metrics or None if file not found
+        """
+        from pathlib import Path
+        import re
+
+        feature_file = Path(project_root) / "docs" / "FEATURE_STATUS.md"
+        if not feature_file.exists():
+            return None
+
+        try:
+            content = feature_file.read_text()
+
+            # Count completed features (lines with ✅ COMPLETE)
+            completed = len(re.findall(r'✅ COMPLETE', content))
+
+            # Count in-progress goals (lines starting with - ` in IN-PROGRESS section)
+            in_progress_match = re.search(r'In-Progress Goals \((\d+)\)', content)
+            in_progress = int(in_progress_match.group(1)) if in_progress_match else 0
+
+            # Count assigned goals
+            assigned_match = re.search(r'Assigned to Rovo \((\d+)\)', content)
+            assigned = int(assigned_match.group(1)) if assigned_match else 0
+
+            total = completed + in_progress
+            completion_pct = (completed / total * 100) if total > 0 else 0
+
+            return {
+                'completed': completed,
+                'in_progress': in_progress,
+                'assigned': assigned,
+                'total': total,
+                'completion_percentage': round(completion_pct, 1),
+                'status': 'healthy' if completion_pct >= 50 else 'developing'
+            }
+        except Exception as e:
+            logger.debug(f"Failed to parse FEATURE_STATUS.md: {e}")
+            return None
 
     def get_git_checkpoint(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict]:
         """
@@ -1904,9 +1811,15 @@ class SessionDatabase:
 
         # Capture or load live state
         if fresh_assess:
-            return self._capture_fresh_state(session_id, project_id)
+            result = self._capture_fresh_state(session_id, project_id)
         else:
-            return self._load_latest_checkpoint_state(session_id)
+            result = self._load_latest_checkpoint_state(session_id)
+
+        # CRITICAL: Include session_id in result so bootstrap can use it
+        if result:
+            result['session_id'] = session_id
+
+        return result
 
 
     def bootstrap_project_breadcrumbs(
@@ -2053,6 +1966,17 @@ class SessionDatabase:
         except Exception as e:
             logger.debug(f"Health score calculation skipped: {e}")
             # Health score is optional - don't fail bootstrap if calculation errors
+
+        # 12. Load feature status from FEATURE_STATUS.md
+        try:
+            feature_status = self._load_feature_status(project_root)
+            if feature_status:
+                breadcrumbs['feature_status'] = feature_status
+                # Integrate into health score if present
+                if 'health_score' in breadcrumbs:
+                    breadcrumbs['health_score']['feature_completion'] = feature_status
+        except Exception as e:
+            logger.debug(f"Feature status load skipped: {e}")
 
         return breadcrumbs
 

@@ -6,9 +6,8 @@ Provides genuine LLM-powered metacognitive self-assessment without heuristics or
 Core Components:
 - reflex_frame: Canonical data structures (VectorState, EpistemicAssessment, ReflexFrame)
 - reflex_logger: Temporal logging to JSON files (prevents recursion)
-- canonical_goal_orchestrator: Goal decomposition and orchestration
 
-NOTE: EpistemicAssessor moved to empirica-sentinel repo (separate module for orchestration/heuristics)
+NOTE: Goal orchestration moved to empirica/core/goals/ (explicit goals system with subtasks)
 
 Key Principles:
 1. Genuine reasoning: LLM self-assessment, not keyword matching
@@ -39,6 +38,11 @@ from .reflex_logger import (
     log_assessment_sync
 )
 
+from .git_enhanced_reflex_logger import GitEnhancedReflexLogger
+from .git_state_capture import GitStateCapture
+from .git_notes_storage import GitNotesStorage
+from .checkpoint_storage import CheckpointStorage
+
 __all__ = [
     # Data Structures
     'VectorState',
@@ -56,5 +60,11 @@ __all__ = [
     'log_assessment_sync',
     
     # NEW schema (main export)
-    'EpistemicAssessmentSchema'
+    'EpistemicAssessmentSchema',
+
+    # Git-enhanced checkpoint system (refactored)
+    'GitEnhancedReflexLogger',
+    'GitStateCapture',
+    'GitNotesStorage',
+    'CheckpointStorage'
 ]

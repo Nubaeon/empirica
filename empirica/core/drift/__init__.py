@@ -1,12 +1,17 @@
 """
-Drift Detection - Mirror Principle Based
+Drift Detection Module - Monitors epistemic drift via temporal self-validation
 
-Temporal self-validation for detecting epistemic drift.
-Compares current epistemic state to historical baselines from Git checkpoints.
+Uses Git checkpoints to compare current state to historical baselines.
+Detects memory corruption, context loss, and scope drift.
 
-No heuristics, no external LLMs - pure temporal comparison.
+Pattern detection:
+- TRUE_DRIFT: KNOW + CLARITY + CONTEXT all dropping (memory loss)
+- LEARNING: KNOW down but CLARITY up (discovering complexity - healthy)
+- SCOPE_DRIFT: KNOW down with scope expansion signals
+
+Calibration is handled separately by BayesianBeliefManager in bayesian_beliefs.py
 """
 
-from .mirror_drift_monitor import MirrorDriftMonitor
+from .mirror_drift_monitor import MirrorDriftMonitor, DriftReport
 
-__all__ = ['MirrorDriftMonitor']
+__all__ = ["MirrorDriftMonitor", "DriftReport"]

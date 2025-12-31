@@ -111,7 +111,7 @@ def extract_trajectory(session_id: str, db: SessionDatabase) -> Optional[Dict[st
     
     # Get mistakes count for this session
     mistakes = db.conn.execute(
-        "SELECT COUNT(*) FROM mistakes WHERE session_id = ?",
+        "SELECT COUNT(*) FROM mistakes_made WHERE session_id = ?",
         (session_id,)
     ).fetchone()[0]
     

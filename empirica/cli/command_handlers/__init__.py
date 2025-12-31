@@ -6,15 +6,9 @@ Organizes CLI command handlers by semantic function for maintainability.
 
 # Import all command handlers
 from .onboard import handle_onboard_command
-from .cascade_commands import (
-    handle_preflight_command,
-    handle_postflight_command,
-    handle_workflow_command
-)
-from .modality_commands import (
-    handle_modality_route_command,
-    handle_decision_command as handle_modality_decision_command
-)
+# noetic_praxic_commands removed - deprecated stubs
+from .modality_commands import handle_modality_route_command
+# handle_modality_decision_command removed - was using deprecated cascade
 from .action_commands import (
     handle_investigate_log_command,
     handle_act_log_command
@@ -111,7 +105,8 @@ from .skill_commands import (
 from .monitor_commands import (
     handle_monitor_command, handle_monitor_export_command,
     handle_monitor_reset_command, handle_monitor_cost_command,
-    handle_check_drift_command, handle_mco_load_command
+    handle_check_drift_command, handle_mco_load_command,
+    handle_assess_state_command
 )
 from .investigation_commands import (
     handle_investigate_command,
@@ -121,9 +116,7 @@ from .investigation_commands import (
     handle_investigate_merge_branches_command
 )
 from .performance_commands import handle_benchmark_command, handle_performance_command
-from .utility_commands import (
-    handle_goal_analysis_command
-)
+# handle_goal_analysis_command removed - was in noetic_praxic_commands (deprecated)
 from .ask_handler import handle_ask_command
 from .chat_handler import handle_chat_command
 from .dashboard import handle_dashboard_command
@@ -144,14 +137,8 @@ __all__ = [
     # Onboarding commands
     'handle_onboard_command',
 
-    # Cascade commands
-    'handle_preflight_command',
-    'handle_postflight_command',
-    'handle_workflow_command',
-    
     # Modality commands (EXPERIMENTAL)
     'handle_modality_route_command',
-    'handle_modality_decision_command',
     
     # Action commands (INVESTIGATE and ACT phase tracking)
     'handle_investigate_log_command',
@@ -255,6 +242,7 @@ __all__ = [
     'handle_monitor_cost_command',
     'handle_check_drift_command',
     'handle_mco_load_command',
+    'handle_assess_state_command',
 
     # Investigation commands
     'handle_investigate_command',
@@ -266,9 +254,6 @@ __all__ = [
     # Performance commands
     'handle_benchmark_command',
     'handle_performance_command',
-    
-    # Utility commands
-    'handle_goal_analysis_command',
     
     # Session commands
     'handle_sessions_list_command',
@@ -283,7 +268,7 @@ __all__ = [
     # Vision commands
     'handle_vision_analyze',
     'handle_vision_log',
-    '_add_vision_parsers',
+    # '_add_vision_parsers',  # Internal - not exported
     
     # Epistemic trajectory commands
     'handle_epistemics_search_command',

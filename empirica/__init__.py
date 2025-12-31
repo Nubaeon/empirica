@@ -1,17 +1,16 @@
 """
-Empirica - Metacognitive Reasoning Framework
+Empirica - Epistemic Vector-Based Functional Self-Awareness Framework
 
 A production-ready system for AI epistemic self-awareness and reasoning validation.
 
 Core Philosophy: "Measure and validate without interfering"
 
 Key Features:
-- 13D epistemic monitoring with Explicit Uncertainty vector
-- Enhanced cascade workflow (PREFLIGHT → Think → Plan → Investigate → Check → Act → POSTFLIGHT)
-- Evidence-based Bayesian calibration
-- Behavioral drift detection
-- Session database (SQLite + JSON exports)
-- Universal plugin extensibility
+- 13D epistemic vectors (know, uncertainty, context, clarity, coherence, etc.)
+- CASCADE workflow: PREFLIGHT → CHECK → POSTFLIGHT
+- Git-integrated reflex logging
+- Session database (SQLite) with breadcrumb tracking
+- Drift detection and signaling
 
 Version: 1.1.0
 """
@@ -22,7 +21,6 @@ __author__ = "Empirica Project"
 # Core imports
 try:
     from empirica.core.canonical import ReflexLogger
-    from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
 except ImportError as e:
     print(f"Warning: Core imports failed: {e}")
     pass
@@ -37,7 +35,6 @@ except ImportError as e:
 
 __all__ = [
     # Core components
-    'CanonicalEpistemicCascade',
     'ReflexLogger',
     'SessionDatabase',
     'SessionJSONHandler',

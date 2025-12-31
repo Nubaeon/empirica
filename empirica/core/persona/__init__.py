@@ -1,36 +1,29 @@
 """
-Empirica Phase 3: Multi-Persona Epistemic Intelligence
+Empirica Persona System - Epistemic Vector Profiles
 
-This module implements specialized AI personas with:
-- Epistemic priors (domain-specific starting knowledge)
-- Custom thresholds and weights
-- Cryptographic signing (Phase 2 integration)
-- Sentinel orchestration
-- Parallel CASCADE execution
-- Epistemic composition (COMPOSE operation)
+Personas are defined as epistemic vector configurations:
+- Priors: Starting knowledge/confidence in domain
+- Thresholds: Gates for uncertainty, confidence, signal quality
+- Weights: Balance between foundation/comprehension/execution/engagement
+- Focus domains: Semantic tags for domain expertise
+
+Personas are stored as JSON files in .empirica/personas/ and loaded
+via system prompts or MCP configuration. No runtime harness needed.
 
 Components:
-- PersonaProfile: Persona configuration and validation
-- PersonaManager: Create, load, validate personas
-- PersonaHarness: Runtime container for persona execution
-- SentinelOrchestrator: Manages multi-persona coordination
-- Protocol: Persona <-> Sentinel communication
+- PersonaProfile: Persona configuration schema
+- PersonaManager: Create, load, validate personas from JSON files
+- Validation: Schema validation for persona profiles
 
 Usage:
-    from empirica.core.persona import PersonaManager, PersonaHarness
+    from empirica.core.persona import PersonaManager
 
-    # Create security expert persona
+    # Load security expert persona
     manager = PersonaManager()
-    persona = manager.create_persona(
-        persona_id="security_expert",
-        name="Security Expert",
-        template="builtin:security"
-    )
-    manager.save_persona(persona)
+    persona = manager.load_persona("security_expert")
 
-    # Execute task with persona
-    harness = PersonaHarness("security_expert")
-    result = await harness.execute_task("Review authentication code")
+    # Use persona config in PREFLIGHT vectors
+    priors = persona.epistemic_config.priors
 """
 
 from .persona_profile import (
@@ -43,12 +36,6 @@ from .persona_profile import (
 )
 from .persona_manager import PersonaManager
 from .validation import validate_persona_profile, ValidationError
-from .harness import (
-    PersonaHarness,
-    PersonaMessage,
-    SentinelMessage,
-    MessageType
-)
 
 __all__ = [
     # Core
@@ -62,12 +49,6 @@ __all__ = [
     'PersonaManager',
     'validate_persona_profile',
     'ValidationError',
-    # Runtime
-    'PersonaHarness',
-    # Communication
-    'PersonaMessage',
-    'SentinelMessage',
-    'MessageType'
 ]
 
-__version__ = '3.0.0'  # Phase 3
+__version__ = '4.0.0'  # Phase 4 - Simplified (harness/sentinel removed)

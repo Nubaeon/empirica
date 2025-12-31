@@ -1,0 +1,229 @@
+{
+  "meta": {
+    "version": "0.1.0",
+    "description": "Ontological Semantic Translator - Initial Rosetta Stone",
+    "created": "2025-12-31",
+    "purpose": "Maps human 'sloppy' language to precise Empirica vector states"
+  },
+  "mappings": [
+    {
+      "human_input": ["it's just guessing", "making stuff up", "pulling answers from nowhere"],
+      "diagnosis": "HIGH_EPISTEMIC_ENTROPY",
+      "description": "Model lacks required artifact to anchor probability distribution",
+      "vector_signature": {
+        "know": {"range": [0.0, 0.4], "trend": "low"},
+        "uncertainty": {"range": [0.7, 1.0], "trend": "high"},
+        "context": {"range": [0.0, 0.4], "trend": "low"}
+      },
+      "remedy": "Provide grounding artifact (spec, schema, reference doc)"
+    },
+    {
+      "human_input": ["it's hallucinating", "making things up", "confabulating"],
+      "diagnosis": "LOW_EPISTEMIC_GROUNDING",
+      "description": "High confidence assertions without evidential support",
+      "vector_signature": {
+        "know": {"range": [0.6, 0.9], "trend": "falsely_high"},
+        "uncertainty": {"range": [0.0, 0.3], "trend": "falsely_low"},
+        "context": {"range": [0.2, 0.5], "trend": "insufficient"}
+      },
+      "remedy": "Challenge with CHECK gate, require evidence citation"
+    },
+    {
+      "human_input": ["can't finish the job", "stops halfway", "doesn't complete"],
+      "diagnosis": "PRAXIC_IMPAIRMENT",
+      "description": "Noetic grasp present but execution capability lacking",
+      "vector_signature": {
+        "know": {"range": [0.6, 0.9], "trend": "adequate"},
+        "completion": {"range": [0.0, 0.4], "trend": "stalled"},
+        "scope": {"range": [0.6, 1.0], "trend": "overextended"}
+      },
+      "remedy": "Decompose into subtasks, reduce scope, verify tool access"
+    },
+    {
+      "human_input": ["stuck in a loop", "going in circles", "keeps repeating"],
+      "diagnosis": "INVESTIGATION_LOOP",
+      "description": "CHECK gate not enforced, repeated noetic phase without praxic transition",
+      "vector_signature": {
+        "uncertainty": {"range": [0.4, 0.7], "trend": "static"},
+        "completion": {"range": [0.1, 0.3], "trend": "stalled"},
+        "density": {"range": [0.8, 1.0], "trend": "saturated"}
+      },
+      "remedy": "Force CHECK gate, clear attention with compact, reset investigation scope"
+    },
+    {
+      "human_input": ["doesn't listen", "ignores instructions", "won't follow directions"],
+      "diagnosis": "ENGAGEMENT_FAILURE",
+      "description": "Input prompt did not cross Tier 0 gate for consent/clarity",
+      "vector_signature": {
+        "engagement": {"range": [0.0, 0.4], "trend": "low"},
+        "context": {"range": [0.2, 0.5], "trend": "misaligned"},
+        "signal": {"range": [0.0, 0.4], "trend": "weak"}
+      },
+      "remedy": "Rephrase with explicit intent, verify shared context, check goal alignment"
+    },
+    {
+      "human_input": ["it's confused", "seems lost", "doesn't know what to do"],
+      "diagnosis": "HIGH_UNCERTAINTY_STATE",
+      "description": "Model uncertainty exceeds action threshold",
+      "vector_signature": {
+        "uncertainty": {"range": [0.6, 1.0], "trend": "high"},
+        "context": {"range": [0.2, 0.5], "trend": "insufficient"},
+        "know": {"range": [0.3, 0.5], "trend": "moderate"}
+      },
+      "remedy": "Load bootstrap context, provide reference artifacts, run CHECK"
+    },
+    {
+      "human_input": ["it's being stupid", "dumb answers", "obviously wrong"],
+      "diagnosis": "CALIBRATION_FAILURE",
+      "description": "Know vector misaligned with actual capability",
+      "vector_signature": {
+        "know": {"range": [0.5, 0.8], "trend": "overestimated"},
+        "uncertainty": {"range": [0.1, 0.4], "trend": "underestimated"}
+      },
+      "remedy": "Force recalibration via CHECK, review past calibration issues"
+    },
+    {
+      "human_input": ["knows what to do but can't do it", "explains but doesn't execute"],
+      "diagnosis": "NOETIC_PRAXIC_DISCONNECT",
+      "description": "High noetic capability, low praxic execution",
+      "vector_signature": {
+        "know": {"range": [0.7, 1.0], "trend": "high"},
+        "completion": {"range": [0.0, 0.3], "trend": "stalled"}
+      },
+      "remedy": "Verify tool access, check permissions, simplify execution path"
+    },
+    {
+      "human_input": ["forgot what we were doing", "lost context", "doesn't remember"],
+      "diagnosis": "CONTEXT_DEGRADATION",
+      "description": "Memory compact or context window overflow",
+      "vector_signature": {
+        "context": {"range": [0.0, 0.4], "trend": "degraded"},
+        "know": {"range": [0.3, 0.5], "trend": "reduced"}
+      },
+      "remedy": "Run CHECK post-compact, load bootstrap, semantic search for context"
+    },
+    {
+      "human_input": ["keeps making the same mistake", "repeating errors", "won't learn"],
+      "diagnosis": "DEADEND_PATTERN_UNCAPTURED",
+      "description": "Failed approach not logged, repeated praxic failures",
+      "vector_signature": {
+        "completion": {"range": [0.0, 0.3], "trend": "stalled"},
+        "impact": {"range": [0.0, 0.4], "trend": "negative"}
+      },
+      "remedy": "Log dead end explicitly, search for existing deadends, change approach"
+    },
+    {
+      "human_input": ["too slow", "taking forever", "inefficient"],
+      "diagnosis": "LOW_PRAXIC_VELOCITY",
+      "description": "Excessive noetic phase, insufficient action bias",
+      "vector_signature": {
+        "completion": {"range": [0.1, 0.4], "trend": "slow_growth"},
+        "scope": {"range": [0.6, 1.0], "trend": "overextended"}
+      },
+      "remedy": "Reduce investigation depth, enforce CHECK gate earlier, narrow scope"
+    },
+    {
+      "human_input": ["overconfident", "too sure of itself", "doesn't check"],
+      "diagnosis": "UNCERTAINTY_UNDERESTIMATION",
+      "description": "Calibration bias toward false confidence",
+      "vector_signature": {
+        "uncertainty": {"range": [0.0, 0.3], "trend": "falsely_low"},
+        "know": {"range": [0.7, 1.0], "trend": "overestimated"}
+      },
+      "remedy": "Apply calibration adjustment (+0.10 uncertainty), force CHECK before action"
+    },
+    {
+      "human_input": ["scared to act", "too cautious", "won't commit"],
+      "diagnosis": "UNCERTAINTY_OVERESTIMATION",
+      "description": "Calibration bias toward excessive doubt",
+      "vector_signature": {
+        "uncertainty": {"range": [0.6, 1.0], "trend": "falsely_high"},
+        "know": {"range": [0.5, 0.8], "trend": "underestimated"}
+      },
+      "remedy": "Apply calibration adjustment (-0.05 uncertainty), review evidence supporting action"
+    },
+    {
+      "human_input": ["doesn't understand the codebase", "unfamiliar with project"],
+      "diagnosis": "CONTEXT_DEFICIT",
+      "description": "Insufficient project-level grounding",
+      "vector_signature": {
+        "context": {"range": [0.0, 0.4], "trend": "low"},
+        "know": {"range": [0.3, 0.5], "trend": "domain_limited"}
+      },
+      "remedy": "Run project-bootstrap, load relevant findings, semantic search"
+    },
+    {
+      "human_input": ["good start but went off track", "started well then derailed"],
+      "diagnosis": "SCOPE_DRIFT",
+      "description": "Initial alignment followed by goal divergence",
+      "vector_signature": {
+        "context": {"range": [0.4, 0.6], "trend": "degrading"},
+        "scope": {"range": [0.5, 0.8], "trend": "expanding"}
+      },
+      "remedy": "Restate original goal, run CHECK against initial PREFLIGHT, narrow scope"
+    },
+    {
+      "human_input": ["it's being weird", "acting strange", "something's off"],
+      "diagnosis": "EPISTEMIC_ANOMALY",
+      "description": "Undiagnosed vector misalignment",
+      "vector_signature": {
+        "signal": {"range": [0.3, 0.6], "trend": "unstable"}
+      },
+      "remedy": "Run full check-drift diagnostic, examine recent checkpoints for anomaly"
+    },
+    {
+      "human_input": ["perfect explanation, wrong code", "understands but implements wrong"],
+      "diagnosis": "NOETIC_PRAXIC_TRANSLATION_ERROR",
+      "description": "Correct understanding, incorrect execution mapping",
+      "vector_signature": {
+        "know": {"range": [0.7, 0.9], "trend": "high"},
+        "completion": {"range": [0.2, 0.5], "trend": "misaligned"}
+      },
+      "remedy": "Verify understanding via CHECK, step-by-step praxic breakdown, test incrementally"
+    },
+    {
+      "human_input": ["giving up too easily", "stops at first problem"],
+      "diagnosis": "LOW_PERSISTENCE",
+      "description": "Premature investigation termination",
+      "vector_signature": {
+        "uncertainty": {"range": [0.5, 0.8], "trend": "unresolved"},
+        "completion": {"range": [0.1, 0.3], "trend": "abandoned"}
+      },
+      "remedy": "Log unknown explicitly, define investigation scope, encourage iteration"
+    },
+    {
+      "human_input": ["trying too many things", "unfocused", "scattered approach"],
+      "diagnosis": "EXCESSIVE_NOETIC_BRANCHING",
+      "description": "High entropy investigation without convergence",
+      "vector_signature": {
+        "density": {"range": [0.7, 1.0], "trend": "saturated"},
+        "signal": {"range": [0.2, 0.5], "trend": "diffuse"}
+      },
+      "remedy": "Force CHECK gate, require single hypothesis, narrow investigation"
+    },
+    {
+      "human_input": ["almost there", "so close", "just needs one more thing"],
+      "diagnosis": "COMPLETION_THRESHOLD",
+      "description": "Near-complete state requiring final push",
+      "vector_signature": {
+        "completion": {"range": [0.7, 0.9], "trend": "approaching"},
+        "know": {"range": [0.7, 0.9], "trend": "high"}
+      },
+      "remedy": "Identify specific blocker, run targeted CHECK, execute final praxic step"
+    }
+  ],
+  "bidirectional_templates": {
+    "ai_to_human": {
+      "high_uncertainty": "My UNCERTAINTY ({value}) is too high for this IMPACT ({impact}) task. Please provide {suggested_artifact}.",
+      "praxic_stall": "I understand the goal (KNOW: {know}) but cannot execute (COMPLETION: {completion}). Blocker: {blocker}.",
+      "context_loss": "Post-compact CONTEXT ({value}) is degraded. Loading bootstrap for recovery.",
+      "check_required": "Scope ({scope}) exceeds threshold. Running CHECK before proceeding."
+    },
+    "human_to_ai": {
+      "boost_signal": "Boost SIGNAL on {target} and ignore {exclude} for now.",
+      "narrow_scope": "Focus only on {target}, scope to {scope_value}.",
+      "force_action": "Proceed with current understanding, log uncertainties as unknowns.",
+      "reset_investigation": "Clear current approach, restart noetic phase from {starting_point}."
+    }
+  }
+}
