@@ -1,0 +1,32 @@
+{
+  "goal_id": "32dc70e3-39e6-4658-a887-b92965cfa685",
+  "session_id": "b45e7c08-33d7-4e14-b899-6f2ea08d439b",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-31T16:54:51.928119+00:00",
+  "goal_data": {
+    "objective": "Fix documentation gap: Explain NOETIC-PRAXIC loop mechanism - Empirica IS the autonomous loop, not just session tracking",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.7
+    },
+    "success_criteria": [
+      "{'description': 'Create NOETIC_PRAXIC_FRAMEWORK.md explaining the loop mechanism', 'is_required': True}",
+      "{'description': 'Update CLAUDE.md to emphasize loop nature over checkpoint nature', 'is_required': True}",
+      "{'description': 'Add practical examples showing the loop in action', 'is_required': True}",
+      "{'description': 'Clarify how findings/unknowns/deadends feed the loop', 'is_required': False}",
+      "{'description': 'Document the 5 core abstractions Rovo identified', 'is_required': False}"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-31T16:54:51.928131+00:00",
+      "action": "created"
+    }
+  ]
+}
