@@ -1,0 +1,30 @@
+{
+  "goal_id": "e24109c6-bd83-4203-9aca-02bbe4e2637a",
+  "session_id": "19852c50-f417-49a4-a613-f88cf1f6c45c",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-31T14:59:13.736394+00:00",
+  "goal_data": {
+    "objective": "Harmonize CLAUDE.md system prompt with docs and dynamic context",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "System prompt paths corrected",
+      "Redundant static context identified",
+      "Dynamic injection points documented"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-31T14:59:13.736411+00:00",
+      "action": "created"
+    }
+  ]
+}
