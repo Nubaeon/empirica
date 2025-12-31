@@ -6,6 +6,7 @@ def add_investigation_parsers(subparsers):
     # Main investigate command (consolidates investigate + analyze)
     investigate_parser = subparsers.add_parser('investigate', help='Investigate file/directory/concept')
     investigate_parser.add_argument('target', help='Target to investigate')
+    investigate_parser.add_argument('--session-id', help='Session ID (for noetic recalibration - loads context anchor via project-bootstrap)')
     investigate_parser.add_argument('--type', default='auto',
                                    choices=['auto', 'file', 'directory', 'concept', 'comprehensive'],
                                    help='Investigation type. Use "comprehensive" for deep analysis (replaces analyze command)')

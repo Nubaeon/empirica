@@ -7,6 +7,39 @@ import json
 from ..cli_utils import print_component_status, handle_cli_error, parse_json_safely
 
 
+def _get_recalibration_attempts(session_id: str) -> int:
+    """
+    Get the number of recalibration attempts in this session.
+    
+    Prevents infinite INVESTIGATE loops by tracking how many times
+    we've tried to recalibrate after drift detection.
+    
+    Returns: Number of attempts (0 if session not found)
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        session_data = db.get_session(session_id)
+        
+        if not session_data:
+            return 0
+        
+        # Count CHECK commands with 'investigate' decision in this session
+        # This is tracked in the reflexes table
+        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+        git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+        checkpoints = git_logger.list_checkpoints(limit=100)
+        
+        investigate_count = 0
+        for checkpoint in checkpoints:
+            if checkpoint and checkpoint.get('metadata', {}).get('decision') == 'investigate':
+                investigate_count += 1
+        
+        return investigate_count
+    except Exception:
+        return 0
+
+
 def _get_profile_thresholds():
     """Get thresholds from investigation profiles instead of using hardcoded values"""
     try:
@@ -42,13 +75,53 @@ def _get_profile_thresholds():
 
 
 def handle_investigate_command(args):
-    """Handle investigation command (consolidates investigate + analyze)"""
+    """Handle investigation command (consolidates investigate + analyze)
+    
+    For NOETIC RECALIBRATION:
+    - If session-id provided, automatically load project-bootstrap first
+    - Bootstrap provides context anchor (findings, unknowns, goals)
+    - Investigation then rebuilds understanding from that anchor
+    """
     try:
         # Check if this is a comprehensive analysis (replaces old 'analyze' command)
         investigation_type = getattr(args, 'type', 'auto')
         if investigation_type == 'comprehensive':
             # Redirect to comprehensive analysis
             return handle_analyze_command(args)
+
+        # For NOETIC RECALIBRATION: Load bootstrap context if session provided
+        session_id = getattr(args, 'session_id', None)
+        bootstrap_context = {}
+        recalibration_attempt = 0
+        
+        if session_id:
+            # Check recalibration attempt count to prevent infinite loops
+            recalibration_attempt = _get_recalibration_attempts(session_id)
+            
+            if recalibration_attempt >= 3:
+                print(f"⚠️  Recalibration attempt limit reached ({recalibration_attempt})")
+                print(f"   Consider: pausing investigation, taking a snapshot, or starting fresh")
+                print(f"   Further investigation may not resolve drift")
+                return None
+            
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ['empirica', 'project-bootstrap', '--session-id', session_id, '--output', 'json'],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                if result.returncode == 0:
+                    bootstrap_data = json.loads(result.stdout)
+                    bootstrap_context = bootstrap_data.get('breadcrumbs', {})
+                    print(f"📦 Loaded context anchor from bootstrap (attempt {recalibration_attempt + 1}/3)")
+                    print(f"   Findings: {len(bootstrap_context.get('findings', []))}")
+                    print(f"   Unknowns: {len(bootstrap_context.get('unknowns', []))}")
+                    print(f"   Goals: {len(bootstrap_context.get('goals', []))}")
+            except Exception as e:
+                # Bootstrap failure is non-fatal
+                pass
 
         from empirica.components.code_intelligence_analyzer import CodeIntelligenceAnalyzer
         from empirica.components.workspace_awareness import WorkspaceNavigator
