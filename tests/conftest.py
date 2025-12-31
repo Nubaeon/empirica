@@ -348,3 +348,7 @@ def assert_genuine_assessment():
             ], f"{vector} rationale appears to be template text"
     
     return _assert
+
+
+# Exclude archived tests from collection
+collect_ignore_glob = ['_archive/**']
