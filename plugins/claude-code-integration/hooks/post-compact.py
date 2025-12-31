@@ -87,13 +87,31 @@ def main():
     # CRITICAL: Detect phase state to route recovery correctly
     phase_state = _get_session_phase_state(empirica_session)
 
-    # Load pre-compact snapshot (what the AI thought it knew)
+    # Step 1: Capture FRESH epistemic state POST-compact (canonical via assess-state)
+    # This shows what the AI's epistemic state actually is NOW (after compacting)
+    fresh_vectors_post = {}
+    try:
+        assess_result = subprocess.run(
+            ['empirica', 'assess-state', '--session-id', empirica_session, '--output', 'json'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if assess_result.returncode == 0:
+            assess_data = json.loads(assess_result.stdout)
+            fresh_vectors_post = assess_data.get('state', {}).get('vectors', {})
+    except Exception:
+        pass  # Non-fatal
+
+    # Load pre-compact snapshot (what the AI thought it knew BEFORE compacting)
     pre_snapshot = _load_pre_snapshot()
     pre_vectors = {}
     pre_reasoning = None
 
     if pre_snapshot:
-        pre_vectors = pre_snapshot.get('checkpoint', {}) or \
+        # Use canonical vectors if available, fallback to live_state
+        pre_vectors = pre_snapshot.get('vectors_canonical', {}) or \
+                      pre_snapshot.get('checkpoint', {}) or \
                       (pre_snapshot.get('live_state') or {}).get('vectors', {})
         pre_reasoning = (pre_snapshot.get('live_state') or {}).get('reasoning')
 
@@ -135,6 +153,10 @@ def main():
             "vectors": pre_vectors,
             "reasoning": pre_reasoning,
             "timestamp": pre_snapshot.get('timestamp') if pre_snapshot else None
+        },
+        "post_compact_state": {
+            "vectors_fresh": fresh_vectors_post,  # TIER 2a: Fresh vectors POST-compact
+            "captured_via": "assess-state (canonical)"
         },
         "potential_drift_warning": potential_drift
     }

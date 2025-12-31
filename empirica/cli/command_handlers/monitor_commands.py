@@ -1205,19 +1205,51 @@ def handle_assess_state_command(args):
         # If session_id provided, load last checkpoint as reference
         vectors = {}
         checkpoint_data = {}
-        
+
         if session_id:
+            # Try git notes first (canonical source)
             try:
                 from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
                 git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
                 checkpoints = git_logger.list_checkpoints(limit=1)
-                
+
                 if checkpoints and checkpoints[0] is not None:
                     checkpoint_data = checkpoints[0]
                     vectors = checkpoint_data.get('vectors', {}) or {}
             except Exception as e:
                 if verbose:
-                    logger.warning(f"Could not load checkpoint for reference: {e}")
+                    logger.warning(f"Could not load checkpoint from git notes: {e}")
+
+            # Fallback to reflexes table if git notes empty
+            if not vectors:
+                try:
+                    from empirica.data.session_database import SessionDatabase
+                    db = SessionDatabase()
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT engagement, know, do, context, clarity, coherence,
+                               signal, density, state, change, completion, impact, uncertainty
+                        FROM reflexes
+                        WHERE session_id = ?
+                        ORDER BY timestamp DESC LIMIT 1
+                    """, (session_id,))
+                    row = cursor.fetchone()
+                    db.close()
+
+                    if row:
+                        vectors = {
+                            'engagement': row[0], 'know': row[1], 'do': row[2],
+                            'context': row[3], 'clarity': row[4], 'coherence': row[5],
+                            'signal': row[6], 'density': row[7], 'state': row[8],
+                            'change': row[9], 'completion': row[10], 'impact': row[11],
+                            'uncertainty': row[12]
+                        }
+                        # Filter None values
+                        vectors = {k: v for k, v in vectors.items() if v is not None}
+                        checkpoint_data = {'vectors': vectors, 'source': 'reflexes_table'}
+                except Exception as e:
+                    if verbose:
+                        logger.warning(f"Could not load checkpoint from reflexes: {e}")
 
         # Capture fresh state
         # In production, this would call into an LLM or use cached epistemic state

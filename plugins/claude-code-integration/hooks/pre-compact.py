@@ -129,16 +129,37 @@ def main():
         # Auto-commit failure is not fatal
         pass
 
-    # Run project-bootstrap with fresh assessment
+    # Step 1: Capture FRESH epistemic vectors (canonical via assess-state)
+    print(f"\n📊 Step 1: Capture fresh vectors (assess-state - canonical)")
+    assess_result = subprocess.run(
+        ['empirica', 'assess-state', '--session-id', empirica_session, '--output', 'json'],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        cwd=os.getcwd()
+    )
+    
+    fresh_vectors = {}
+    if assess_result.returncode == 0:
+        try:
+            assess_data = json.loads(assess_result.stdout)
+            fresh_vectors = assess_data.get('state', {}).get('vectors', {})
+            print(f"  ✓ Fresh vectors: {len(fresh_vectors)} vectors captured")
+        except Exception as e:
+            print(f"  ⚠️  Could not parse assess-state output: {e}")
+    else:
+        print(f"  ⚠️  assess-state failed: {assess_result.stderr}")
+
+    # Step 2: Run project-bootstrap for context anchor (findings, unknowns, goals)
     # CRITICAL: Must pass --ai-id to find the session
     ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
+    print(f"\n📦 Step 2: Capture context anchor (project-bootstrap)")
     try:
         result = subprocess.run(
             [
                 'empirica', 'project-bootstrap',
                 '--ai-id', ai_id,
                 '--include-live-state',
-                '--fresh-assess',
                 '--trigger', 'pre_compact',
                 '--output', 'json'
             ],
@@ -169,7 +190,8 @@ def main():
                 "session_id": breadcrumbs.get('session_id'),
                 "trigger": trigger,
                 "live_state": breadcrumbs.get('live_state'),
-                "checkpoint": breadcrumbs.get('live_state', {}).get('vectors', {}) if breadcrumbs.get('live_state') else {},
+                "vectors_canonical": fresh_vectors,  # TIER 2a: Canonical vectors from assess-state
+                "checkpoint": fresh_vectors or (breadcrumbs.get('live_state', {}).get('vectors', {}) if breadcrumbs.get('live_state') else {}),
                 "breadcrumbs_summary": {
                     "findings_count": len(breadcrumbs.get('findings', [])),
                     "unknowns_count": len(breadcrumbs.get('unknowns', [])),

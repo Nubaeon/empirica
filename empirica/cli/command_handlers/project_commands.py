@@ -276,7 +276,7 @@ def handle_project_bootstrap_command(args):
         # Get new parameters
         session_id = getattr(args, 'session_id', None)
         include_live_state = getattr(args, 'include_live_state', False)
-        fresh_assess = getattr(args, 'fresh_assess', False)
+        # DEPRECATED: fresh_assess removed - use 'empirica assess-state' for canonical vector capture
         trigger = getattr(args, 'trigger', None)
         depth = getattr(args, 'depth', 'auto')
         ai_id = getattr(args, 'ai_id', None)  # Get AI ID for epistemic handoff
@@ -341,7 +341,7 @@ def handle_project_bootstrap_command(args):
             subject=subject,
             session_id=session_id,
             include_live_state=include_live_state,
-            fresh_assess=fresh_assess,
+            # fresh_assess removed - use 'empirica assess-state' for canonical vector capture
             trigger=trigger,
             depth=depth,
             ai_id=ai_id  # Pass AI ID to bootstrap
