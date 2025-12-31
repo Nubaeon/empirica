@@ -96,14 +96,15 @@ class TestCheckpointCreation:
         # Verify note was added
         assert note_id is not None
         
-        # Verify note content
+        # Verify note content (using session-specific ref)
+        note_ref = "empirica/session/test-session/PREFLIGHT/1"
         result = subprocess.run(
-            ["git", "notes", "show", "HEAD"],
+            ["git", "notes", "--ref", note_ref, "show", "HEAD"],
             cwd=tmp_path,
             capture_output=True,
             text=True
         )
-        
+
         checkpoint = json.loads(result.stdout)
         assert checkpoint["session_id"] == "test-session"
         assert checkpoint["phase"] == "PREFLIGHT"
