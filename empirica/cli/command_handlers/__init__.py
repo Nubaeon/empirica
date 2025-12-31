@@ -7,10 +7,8 @@ Organizes CLI command handlers by semantic function for maintainability.
 # Import all command handlers
 from .onboard import handle_onboard_command
 # noetic_praxic_commands removed - deprecated stubs
-from .modality_commands import (
-    handle_modality_route_command,
-    handle_decision_command as handle_modality_decision_command
-)
+from .modality_commands import handle_modality_route_command
+# handle_modality_decision_command removed - was using deprecated cascade
 from .action_commands import (
     handle_investigate_log_command,
     handle_act_log_command
@@ -140,7 +138,6 @@ __all__ = [
 
     # Modality commands (EXPERIMENTAL)
     'handle_modality_route_command',
-    'handle_modality_decision_command',
     
     # Action commands (INVESTIGATE and ACT phase tracking)
     'handle_investigate_log_command',
