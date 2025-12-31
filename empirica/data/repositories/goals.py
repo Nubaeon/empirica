@@ -179,7 +179,17 @@ class GoalRepository(BaseRepository):
         goals = []
         for row in cursor.fetchall():
             goal_id = row[0]
-            scope_data = json.loads(row[3]) if row[3] else {}
+            # Handle legacy scope formats: could be JSON dict, float, or string like "project_wide"
+            scope_data = {}
+            if row[3]:
+                try:
+                    parsed = json.loads(row[3])
+                    if isinstance(parsed, dict):
+                        scope_data = parsed
+                    # If it's a float/int (legacy), ignore - scope_data stays {}
+                except (json.JSONDecodeError, TypeError):
+                    # Legacy string value like "project_wide" - ignore
+                    pass
 
             # Get subtasks for this goal
             subtask_cursor = self._execute("""

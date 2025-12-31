@@ -47,7 +47,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
                     'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
                     'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
-                    'Monitoring': ['monitor', 'check-drift', 'efficiency-report'],
+                    'Monitoring': ['monitor', 'check-drift', 'assess-state', 'efficiency-report'],
                     'Skills': ['skill-suggest', 'skill-fetch'],
                     'Utilities': ['log-token-saving', 'config', 'performance'],
                     'Vision': ['vision'],
@@ -234,6 +234,7 @@ def main(args=None):
             # Monitor commands
             'monitor': handle_monitor_command,
             'check-drift': handle_check_drift_command,
+            'assess-state': handle_assess_state_command,
             'mco-load': handle_mco_load_command,
 
             # Checkpoint commands

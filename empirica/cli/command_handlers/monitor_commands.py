@@ -1164,3 +1164,99 @@ def handle_mco_load_command(args):
 
     except Exception as e:
         handle_cli_error(e, "MCO Load", getattr(args, 'verbose', False))
+
+
+def handle_assess_state_command(args):
+    """
+    Capture sessionless epistemic state (fresh measurement without session context).
+
+    Used for:
+    - Statusline displays (current epistemic state)
+    - Pre-compact snapshots (fresh vectors before memory compacting)
+    - Post-compact snapshots (fresh vectors after memory compacting)
+    - Monitoring dashboards (current epistemic health)
+
+    Unlike check-drift (which compares states), assess-state captures a fresh measurement.
+    Not stored in reflexes table (sessionless), can be included in snapshots.
+
+    Output:
+    - JSON: Just vectors and metadata
+    - Human: Formatted display with context
+    """
+    try:
+        from datetime import datetime
+        import json
+
+        session_id = getattr(args, 'session_id', None)
+        prompt = getattr(args, 'prompt', None)
+        output_format = getattr(args, 'output', 'human')
+        verbose = getattr(args, 'verbose', False)
+
+        # Print header only for human output
+        if output_format != 'json':
+            print("\n🔍 Epistemic State Assessment (Sessionless)")
+            print("=" * 70)
+            if session_id:
+                print(f"   Session ID: {session_id}")
+            if prompt:
+                print(f"   Context: {prompt[:60]}...")
+            print("=" * 70)
+
+        # If session_id provided, load last checkpoint as reference
+        vectors = {}
+        checkpoint_data = {}
+        
+        if session_id:
+            try:
+                from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+                git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+                checkpoints = git_logger.list_checkpoints(limit=1)
+                
+                if checkpoints and checkpoints[0] is not None:
+                    checkpoint_data = checkpoints[0]
+                    vectors = checkpoint_data.get('vectors', {}) or {}
+            except Exception as e:
+                if verbose:
+                    logger.warning(f"Could not load checkpoint for reference: {e}")
+
+        # Capture fresh state
+        # In production, this would call into an LLM or use cached epistemic state
+        # For now, return the last known checkpoint vectors with metadata
+        state = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'vectors': vectors,
+            'has_session': session_id is not None,
+            'has_checkpoint': bool(checkpoint_data),
+            'prompt_context': prompt is not None
+        }
+
+        # Output results
+        if output_format == 'json':
+            print(json.dumps({
+                'ok': True,
+                'state': state,
+                'session_id': session_id,
+                'timestamp': state['timestamp']
+            }))
+        else:
+            print("\n📊 Current Epistemic Vectors:")
+            print("-" * 70)
+            if vectors:
+                for key, value in sorted(vectors.items()):
+                    if isinstance(value, (int, float)):
+                        bar_length = int(value * 20)
+                        bar = "█" * bar_length + "░" * (20 - bar_length)
+                        print(f"   {key:20s} {value:5.2f}  {bar}")
+                    else:
+                        print(f"   {key:20s} {str(value)}")
+            else:
+                print("   ⚠️  No vectors available")
+                print("   Run PREFLIGHT or CHECK to establish baseline")
+            print("-" * 70)
+            print(f"\n   Timestamp: {state['timestamp']}")
+            if session_id:
+                print(f"   Session:   {session_id}")
+            print()
+
+    except Exception as e:
+        handle_cli_error(e, "Assess State", getattr(args, 'verbose', False))

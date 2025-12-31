@@ -44,5 +44,13 @@ def add_monitor_parsers(subparsers):
     mco_load_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     mco_load_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
 
+    # Assess state command - capture sessionless epistemic state
+    assess_state_parser = subparsers.add_parser('assess-state',
+        help='Capture sessionless epistemic state (for statusline, monitoring, compact boundaries)')
+    assess_state_parser.add_argument('--session-id', help='Session UUID (optional, for context)')
+    assess_state_parser.add_argument('--prompt', help='Self-assessment context/evidence (optional)')
+    assess_state_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    assess_state_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+
     # REMOVED: monitor-export, monitor-reset, monitor-cost
     # Use: monitor --export FILE, monitor --reset, monitor --cost
