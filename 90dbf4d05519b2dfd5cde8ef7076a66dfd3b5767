@@ -1,0 +1,30 @@
+{
+  "goal_id": "eddd2ef3-540c-49b1-a4ef-d9ae7284c0fd",
+  "session_id": "19852c50-f417-49a4-a613-f88cf1f6c45c",
+  "ai_id": "empirica_cli",
+  "created_at": "2025-12-31T14:59:21.608197+00:00",
+  "goal_data": {
+    "objective": "Fix drift detection to exclude current checkpoint from baseline",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Baseline calculation excludes current",
+      "Drift detection properly catches know drops",
+      "Test confirms fix"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2025-12-31T14:59:21.608208+00:00",
+      "action": "created"
+    }
+  ]
+}
