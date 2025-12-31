@@ -1195,6 +1195,57 @@ class SessionDatabase:
             }
         }
 
+    def _load_feature_status(self, project_root: str) -> Optional[Dict]:
+        """
+        Load feature completion status from FEATURE_STATUS.md.
+
+        Parses the markdown file to extract:
+        - Completed features count
+        - In-progress goals count
+        - Completion percentage
+
+        Args:
+            project_root: Path to project root
+
+        Returns:
+            Dict with feature completion metrics or None if file not found
+        """
+        from pathlib import Path
+        import re
+
+        feature_file = Path(project_root) / "docs" / "FEATURE_STATUS.md"
+        if not feature_file.exists():
+            return None
+
+        try:
+            content = feature_file.read_text()
+
+            # Count completed features (lines with ✅ COMPLETE)
+            completed = len(re.findall(r'✅ COMPLETE', content))
+
+            # Count in-progress goals (lines starting with - ` in IN-PROGRESS section)
+            in_progress_match = re.search(r'In-Progress Goals \((\d+)\)', content)
+            in_progress = int(in_progress_match.group(1)) if in_progress_match else 0
+
+            # Count assigned goals
+            assigned_match = re.search(r'Assigned to Rovo \((\d+)\)', content)
+            assigned = int(assigned_match.group(1)) if assigned_match else 0
+
+            total = completed + in_progress
+            completion_pct = (completed / total * 100) if total > 0 else 0
+
+            return {
+                'completed': completed,
+                'in_progress': in_progress,
+                'assigned': assigned,
+                'total': total,
+                'completion_percentage': round(completion_pct, 1),
+                'status': 'healthy' if completion_pct >= 50 else 'developing'
+            }
+        except Exception as e:
+            logger.debug(f"Failed to parse FEATURE_STATUS.md: {e}")
+            return None
+
     def get_git_checkpoint(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict]:
         """
         Retrieve checkpoint from git notes with SQLite fallback (Phase 2).
@@ -2059,6 +2110,17 @@ class SessionDatabase:
         except Exception as e:
             logger.debug(f"Health score calculation skipped: {e}")
             # Health score is optional - don't fail bootstrap if calculation errors
+
+        # 12. Load feature status from FEATURE_STATUS.md
+        try:
+            feature_status = self._load_feature_status(project_root)
+            if feature_status:
+                breadcrumbs['feature_status'] = feature_status
+                # Integrate into health score if present
+                if 'health_score' in breadcrumbs:
+                    breadcrumbs['health_score']['feature_completion'] = feature_status
+        except Exception as e:
+            logger.debug(f"Feature status load skipped: {e}")
 
         return breadcrumbs
 
