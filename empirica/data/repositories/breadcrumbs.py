@@ -106,12 +106,27 @@ class BreadcrumbRepository(BaseRepository):
         return unknown_id
 
     def resolve_unknown(self, unknown_id: str, resolved_by: str):
-        """Mark an unknown as resolved"""
-        self._execute("""
-            UPDATE project_unknowns
-            SET is_resolved = TRUE, resolved_by = ?, resolved_timestamp = ?
-            WHERE id = ?
-        """, (resolved_by, time.time(), unknown_id))
+        """Mark an unknown as resolved
+
+        Args:
+            unknown_id: Full or partial UUID (minimum 8 chars)
+            resolved_by: Resolution explanation
+        """
+        # Support partial UUID matching (like git short hashes)
+        if len(unknown_id) < 36:
+            # Partial ID - use LIKE
+            self._execute("""
+                UPDATE project_unknowns
+                SET is_resolved = TRUE, resolved_by = ?, resolved_timestamp = ?
+                WHERE id LIKE ?
+            """, (resolved_by, time.time(), f"{unknown_id}%"))
+        else:
+            # Full ID - exact match
+            self._execute("""
+                UPDATE project_unknowns
+                SET is_resolved = TRUE, resolved_by = ?, resolved_timestamp = ?
+                WHERE id = ?
+            """, (resolved_by, time.time(), unknown_id))
 
         self.commit()
         logger.info(f"✅ Unknown resolved: {unknown_id[:8]}...")
