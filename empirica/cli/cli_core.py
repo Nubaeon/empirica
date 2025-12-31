@@ -52,7 +52,8 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Utilities': ['goal-analysis', 'log-token-saving', 'config', 'performance'],
                     'Vision': ['vision'],
                     'Epistemics': ['epistemics-list', 'epistemics-show'],
-                    'User Interface': ['chat']
+                    'User Interface': ['chat'],
+                    'Architecture': ['assess-component', 'assess-compare', 'assess-directory']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -87,6 +88,12 @@ from .parsers import (
     add_epistemics_parsers,
     add_edit_verification_parsers,
     add_issue_capture_parsers,
+    add_architecture_parsers,
+)
+from .command_handlers.architecture_commands import (
+    handle_assess_component_command,
+    handle_assess_compare_command,
+    handle_assess_directory_command,
 )
 
 
@@ -139,7 +146,8 @@ def create_argument_parser():
     add_epistemics_parsers(subparsers)
     add_edit_verification_parsers(subparsers)
     add_issue_capture_parsers(subparsers)
-    
+    add_architecture_parsers(subparsers)
+
     return parser
 
 
@@ -309,6 +317,11 @@ def main(args=None):
             'issue-resolve': handle_issue_resolve_command,
             'issue-export': handle_issue_export_command,
             'issue-stats': handle_issue_stats_command,
+
+            # Architecture assessment commands
+            'assess-component': handle_assess_component_command,
+            'assess-compare': handle_assess_compare_command,
+            'assess-directory': handle_assess_directory_command,
         }
         
         if parsed_args.command in command_handlers:
