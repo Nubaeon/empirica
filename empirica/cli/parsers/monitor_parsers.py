@@ -10,6 +10,7 @@ def add_monitor_parsers(subparsers):
     monitor_parser.add_argument('--cost', action='store_true', help='Show cost analysis (replaces monitor-cost)')
     monitor_parser.add_argument('--history', action='store_true', help='Show recent request history')
     monitor_parser.add_argument('--health', action='store_true', help='Include adapter health checks')
+    monitor_parser.add_argument('--turtle', action='store_true', help='Show epistemic health: flow state, CASCADE completeness, unknowns/findings')
     monitor_parser.add_argument('--project', action='store_true', help='Show cost projections (with --cost)')
     monitor_parser.add_argument('--output', choices=['json', 'csv'], default='json', help='Export format (with --export)')
     monitor_parser.add_argument('--yes', '-y', action='store_true', help='Skip confirmation (with --reset)')

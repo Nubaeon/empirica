@@ -247,11 +247,143 @@ def handle_monitor_command(args):
             for adapter, healthy in health_results.items():
                 status = "✅ Healthy" if healthy else "❌ Unhealthy"
                 print(f"   {adapter:10s}: {status}")
-        
+
+        # Turtle view - epistemic health
+        if getattr(args, 'turtle', False):
+            _display_turtle_health()
+
         print("\n" + "=" * 70)
-        
+
     except Exception as e:
         handle_cli_error(e, "Monitor", getattr(args, 'verbose', False))
+
+
+def _display_turtle_health():
+    """Display epistemic health metrics (the turtle view)."""
+    print("\n" + "=" * 70)
+    print("🐢 Epistemic Health (Turtles All The Way Down)")
+    print("=" * 70)
+
+    try:
+        from empirica.data.session_database import SessionDatabase
+        from empirica.data.flow_state_calculator import calculate_flow_score, classify_flow_state, identify_flow_blockers
+        from empirica.utils.session_resolver import get_latest_session_id
+
+        db = SessionDatabase()
+
+        # Get current session
+        try:
+            session_id = get_latest_session_id(ai_id='claude-code', active_only=True)
+        except ValueError:
+            session_id = None
+
+        if not session_id:
+            print("\n   ⚠️  No active session found")
+            print("   Run: empirica session-create --ai-id <your-id>")
+            return
+
+        # Get project_id for this session
+        cursor = db.conn.cursor()
+        cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+        row = cursor.fetchone()
+        project_id = row[0] if row else None
+
+        # Get latest vectors for flow calculation
+        cursor.execute("""
+            SELECT engagement, know, do, context, clarity, coherence,
+                   signal, density, state, change, completion, impact, uncertainty
+            FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
+        row = cursor.fetchone()
+
+        vectors = {}
+        if row:
+            vector_names = ['engagement', 'know', 'do', 'context', 'clarity', 'coherence',
+                           'signal', 'density', 'state', 'change', 'completion', 'impact', 'uncertainty']
+            vectors = {name: val for name, val in zip(vector_names, row) if val is not None}
+
+        # Flow State (using vector-based calculator)
+        print("\n   ✨ Flow State")
+        print("   " + "-" * 40)
+
+        if vectors:
+            flow_score = calculate_flow_score(vectors)
+            flow_state, flow_emoji = classify_flow_state(flow_score)
+            print(f"   Current: {flow_emoji} {flow_state} ({flow_score:.1f}/100)")
+
+            # Show blockers if any
+            blockers = identify_flow_blockers(vectors)
+            if blockers:
+                print(f"   Blockers: {blockers[0]}")
+        else:
+            print("   ⚠️  No vectors recorded - run PREFLIGHT first")
+
+        # CASCADE Completeness
+        print("\n   🔄 CASCADE Completeness")
+        print("   " + "-" * 40)
+        cursor.execute("""
+            SELECT phase, COUNT(*) as count
+            FROM reflexes
+            WHERE session_id = ?
+            GROUP BY phase
+        """, (session_id,))
+        phases = {row[0]: row[1] for row in cursor.fetchall()}
+
+        has_preflight = phases.get('PREFLIGHT', 0) > 0
+        has_check = phases.get('CHECK', 0) > 0
+        has_postflight = phases.get('POSTFLIGHT', 0) > 0
+
+        cascade_parts = []
+        cascade_parts.append("✅ PREFLIGHT" if has_preflight else "⬜ PREFLIGHT")
+        cascade_parts.append("✅ CHECK" if has_check else "⬜ CHECK")
+        cascade_parts.append("✅ POSTFLIGHT" if has_postflight else "⬜ POSTFLIGHT")
+        print(f"   {' → '.join(cascade_parts)}")
+
+        completeness = sum([has_preflight, has_postflight]) / 2 * 100
+        print(f"   Completeness: {completeness:.0f}%")
+
+        # Unknowns/Findings Ratio
+        if project_id:
+            print("\n   📊 Knowledge State")
+            print("   " + "-" * 40)
+            cursor.execute("SELECT COUNT(*) FROM project_findings WHERE project_id = ?", (project_id,))
+            findings_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM project_unknowns WHERE project_id = ? AND is_resolved = 0", (project_id,))
+            unknowns_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM project_unknowns WHERE project_id = ? AND is_resolved = 1", (project_id,))
+            resolved_count = cursor.fetchone()[0]
+
+            print(f"   Findings: {findings_count} | Unknowns: {unknowns_count} open, {resolved_count} resolved")
+
+            if unknowns_count + findings_count > 0:
+                knowledge_ratio = findings_count / (unknowns_count + findings_count) * 100
+                bar_len = int(knowledge_ratio / 5)
+                bar = "█" * bar_len + "░" * (20 - bar_len)
+                print(f"   Knowledge: [{bar}] {knowledge_ratio:.0f}%")
+
+        # Latest vectors
+        print("\n   📈 Latest Vectors")
+        print("   " + "-" * 40)
+        cursor.execute("""
+            SELECT know, uncertainty, engagement, completion
+            FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
+        row = cursor.fetchone()
+        if row:
+            know, unc, eng, comp = row
+            print(f"   know={know:.2f}  uncertainty={unc:.2f}  engagement={eng:.2f}  completion={comp:.2f}")
+        else:
+            print("   No vectors recorded yet")
+
+        db.close()
+
+    except Exception as e:
+        logger.warning(f"Turtle health check failed: {e}")
+        print(f"\n   ⚠️  Could not load epistemic health: {e}")
 
 
 def handle_monitor_export_command(args):
