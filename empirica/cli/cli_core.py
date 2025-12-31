@@ -37,7 +37,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
             if isinstance(action, argparse._SubParsersAction):
                 categories = {
                     'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
-                    'CASCADE Workflow': ['preflight', 'preflight-submit', 'check', 'check-submit', 'postflight', 'postflight-submit', 'workflow'],
+                    'CASCADE Workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
                     'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
                     'Project Management': ['project-init', 'project-create', 'project-list', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
                     'Workspace': ['workspace-init', 'workspace-map', 'workspace-overview'],
@@ -49,7 +49,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
                     'Monitoring': ['monitor', 'check-drift', 'efficiency-report'],
                     'Skills': ['skill-suggest', 'skill-fetch'],
-                    'Utilities': ['goal-analysis', 'log-token-saving', 'config', 'performance'],
+                    'Utilities': ['log-token-saving', 'config', 'performance'],
                     'Vision': ['vision'],
                     'Epistemics': ['epistemics-list', 'epistemics-show'],
                     'User Interface': ['chat'],
@@ -201,14 +201,11 @@ def main(args=None):
             'session-snapshot': handle_session_snapshot_command,
             'memory-compact': handle_memory_compact_command,
             
-            # CASCADE commands
-            'preflight': handle_preflight_command,
+            # CASCADE commands (working -submit variants only)
             'preflight-submit': handle_preflight_submit_command,
             'check': handle_check_command,
             'check-submit': handle_check_submit_command,
-            'postflight': handle_postflight_command,
             'postflight-submit': handle_postflight_submit_command,
-            'workflow': handle_workflow_command,
             
             # Investigation commands
             'investigate': handle_investigate_command,
@@ -228,7 +225,6 @@ def main(args=None):
             'skill-fetch': handle_skill_fetch_command,
             
             # Utility commands
-            'goal-analysis': handle_goal_analysis_command,
             'log-token-saving': handle_log_token_saving,
             'efficiency-report': handle_efficiency_report,
             
