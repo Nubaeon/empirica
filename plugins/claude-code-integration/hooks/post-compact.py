@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 """
-Empirica PostCompact Hook - Epistemic CHECK Gate
+Empirica PostCompact Hook - Phase-Aware Recovery
 
 After memory compaction, the AI has only a summary - not real knowledge.
-This hook injects DYNAMIC context and triggers a CHECK validation gate
-to determine whether the AI can proceed or needs to investigate more.
+This hook detects the CASCADE phase state and routes appropriately:
 
-Key insight: The AI's pre-compact vectors are meaningless post-compact.
-CHECK (not PREFLIGHT) is the right tool because:
-- PREFLIGHT = session start baseline (already exists, shouldn't overwrite)
-- CHECK = mid-session validation gate (proceed or investigate?)
+1. If old session is COMPLETE (has POSTFLIGHT) → New session + PREFLIGHT
+2. If old session is INCOMPLETE (mid-work) → CHECK gate on old session
 
-The original session PREFLIGHT remains the true baseline for learning measurement.
+Key insight: Compact can happen at ANY point in the CASCADE cycle.
+The recovery action depends on WHERE in the cycle compact occurred.
 """
 
 import json
@@ -36,42 +34,53 @@ def main():
 
     ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
 
+    # CRITICAL: Detect phase state to route recovery correctly
+    phase_state = _get_session_phase_state(empirica_session)
+
     # Load pre-compact snapshot (what the AI thought it knew)
     pre_snapshot = _load_pre_snapshot()
     pre_vectors = {}
     pre_reasoning = None
-    pre_goals = []
 
     if pre_snapshot:
         pre_vectors = pre_snapshot.get('checkpoint', {}) or \
                       (pre_snapshot.get('live_state') or {}).get('vectors', {})
         pre_reasoning = (pre_snapshot.get('live_state') or {}).get('reasoning')
-        # Extract goal context if available
-        summary = pre_snapshot.get('breadcrumbs_summary', {})
 
     # Load DYNAMIC context - only what's relevant for re-grounding
     dynamic_context = _load_dynamic_context(empirica_session, ai_id, pre_snapshot)
 
-    # Generate the CHECK gate prompt (not PREFLIGHT - session already has baseline)
-    check_prompt = _generate_check_prompt(
-        pre_vectors=pre_vectors,
-        pre_reasoning=pre_reasoning,
-        dynamic_context=dynamic_context
-    )
+    # Route based on phase state:
+    # - Session COMPLETE (has POSTFLIGHT) → New session + PREFLIGHT
+    # - Session INCOMPLETE (mid-work) → CHECK gate on old session
+    if phase_state.get('is_complete'):
+        recovery_prompt = _generate_new_session_prompt(
+            pre_vectors=pre_vectors,
+            dynamic_context=dynamic_context,
+            old_session_id=empirica_session,
+            ai_id=ai_id
+        )
+        action_required = "NEW_SESSION_PREFLIGHT"
+    else:
+        recovery_prompt = _generate_check_prompt(
+            pre_vectors=pre_vectors,
+            pre_reasoning=pre_reasoning,
+            dynamic_context=dynamic_context
+        )
+        action_required = "CHECK_GATE"
 
     # Calculate what drift WOULD be if vectors unchanged (to show the problem)
     potential_drift = _calculate_potential_drift(pre_vectors)
 
     # Build the injection payload using Claude Code's hook format
-    # CRITICAL: Use hookSpecificOutput.additionalContext for content injection
     output = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
-            "additionalContext": check_prompt
+            "additionalContext": recovery_prompt
         },
-        # Additional metadata (not injected, but useful for debugging)
         "empirica_session_id": empirica_session,
-        "action_required": "CHECK_GATE",
+        "action_required": action_required,
+        "phase_state": phase_state,
         "pre_compact_state": {
             "vectors": pre_vectors,
             "reasoning": pre_reasoning,
@@ -83,7 +92,7 @@ def main():
     print(json.dumps(output), file=sys.stdout)
 
     # User-visible message to stderr
-    _print_user_message(pre_vectors, dynamic_context, potential_drift)
+    _print_user_message(pre_vectors, dynamic_context, potential_drift, phase_state, ai_id)
 
     sys.exit(0)
 
@@ -100,6 +109,64 @@ def _get_empirica_session():
     except Exception:
         pass
     return None
+
+
+def _get_session_phase_state(session_id: str) -> dict:
+    """
+    Detect the CASCADE phase state of a session.
+
+    Returns:
+        {
+            "has_preflight": bool,
+            "has_postflight": bool,
+            "last_phase": str or None,
+            "is_complete": bool  # True if session has POSTFLIGHT
+        }
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Get all phases for this session
+        cursor.execute("""
+            SELECT phase, timestamp
+            FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC
+        """, (session_id,))
+        rows = cursor.fetchall()
+        db.close()
+
+        if not rows:
+            return {
+                "has_preflight": False,
+                "has_postflight": False,
+                "last_phase": None,
+                "is_complete": False
+            }
+
+        phases = [r[0] for r in rows]
+        last_phase = phases[0] if phases else None
+
+        # Session is "complete" if the LAST phase was POSTFLIGHT
+        # (not just if it ever had a POSTFLIGHT - could be in cycle 2+)
+        is_complete = last_phase == "POSTFLIGHT"
+
+        return {
+            "has_preflight": "PREFLIGHT" in phases,
+            "has_postflight": "POSTFLIGHT" in phases,
+            "last_phase": last_phase,
+            "is_complete": is_complete
+        }
+    except Exception as e:
+        return {
+            "has_preflight": False,
+            "has_postflight": False,
+            "last_phase": None,
+            "is_complete": False,
+            "error": str(e)
+        }
 
 
 def _load_pre_snapshot():
@@ -222,50 +289,124 @@ def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> di
         }
 
 
+def _generate_new_session_prompt(pre_vectors: dict, dynamic_context: dict, old_session_id: str, ai_id: str) -> str:
+    """
+    Generate prompt for NEW session + PREFLIGHT when old session was complete.
+
+    This is the correct path when compact happens AFTER POSTFLIGHT - the old
+    session is done, we need a fresh start with proper baseline.
+    """
+    goals_text = _format_goals(dynamic_context)
+    findings_text = _format_findings(dynamic_context)
+    unknowns_text = _format_unknowns(dynamic_context)
+
+    pre_know = pre_vectors.get('know', 'N/A')
+    pre_unc = pre_vectors.get('uncertainty', 'N/A')
+
+    return f"""
+## POST-COMPACT: NEW SESSION REQUIRED
+
+Your context was just compacted. The previous session ({old_session_id[:8]}...) was **COMPLETE**
+(had POSTFLIGHT), so you need a NEW session with fresh PREFLIGHT baseline.
+
+**Pre-compact vectors (NOW INVALID):** know={pre_know}, uncertainty={pre_unc}
+
+### Evidence from Database (Ground Truth):
+
+**Active Goals:**
+{goals_text}
+
+**Recent Findings (high-impact learnings):**
+{findings_text}
+
+**Open Unknowns (unresolved questions):**
+{unknowns_text}
+
+### Step 1: Create New Session
+
+```bash
+empirica session-create --ai-id {ai_id} --output json
+```
+
+### Step 2: Load Project Context
+
+```bash
+empirica project-bootstrap --session-id <NEW_SESSION_ID> --output json
+```
+
+### Step 3: Run PREFLIGHT (Baseline)
+
+```bash
+empirica preflight-submit - << 'EOF'
+{{
+  "session_id": "<NEW_SESSION_ID>",
+  "task_context": "<what you're working on>",
+  "vectors": {{
+    "know": <0.0-1.0: What do you ACTUALLY know now?>,
+    "uncertainty": <0.0-1.0: How uncertain are you?>,
+    "context": <0.0-1.0: How well do you understand current state?>,
+    "engagement": <0.0-1.0: How engaged are you with the task?>
+  }},
+  "reasoning": "Post-compact fresh session: <explain current epistemic state>"
+}}
+EOF
+```
+
+**Key principle:** Be HONEST about reduced knowledge. This is a FRESH START, not a continuation.
+"""
+
+
+def _format_goals(dynamic_context: dict) -> str:
+    """Format goals for prompt."""
+    if dynamic_context.get("active_goals"):
+        return "\n".join([
+            f"  - {g['objective']} ({g['status']})"
+            for g in dynamic_context["active_goals"]
+        ])
+    return "  (No active goals)"
+
+
+def _format_findings(dynamic_context: dict) -> str:
+    """Format findings for prompt."""
+    if dynamic_context.get("recent_findings"):
+        return "\n".join([
+            f"  - {f['finding'][:100]}..." if len(f['finding']) > 100 else f"  - {f['finding']}"
+            for f in dynamic_context["recent_findings"]
+        ])
+    return "  (No recent findings)"
+
+
+def _format_unknowns(dynamic_context: dict) -> str:
+    """Format unknowns for prompt."""
+    if dynamic_context.get("open_unknowns"):
+        return "\n".join([
+            f"  - {u['unknown'][:100]}..." if len(u['unknown']) > 100 else f"  - {u['unknown']}"
+            for u in dynamic_context["open_unknowns"]
+        ])
+    return "  (No open unknowns)"
+
+
+def _format_dead_ends(dynamic_context: dict) -> str:
+    """Format dead ends for prompt."""
+    if dynamic_context.get("critical_dead_ends"):
+        return "\n".join([
+            f"  - {d['approach']}: {d['why_failed']}"
+            for d in dynamic_context["critical_dead_ends"]
+        ])
+    return "  (None recorded)"
+
+
 def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_context: dict) -> str:
     """
     Generate a CHECK gate prompt for post-compact validation.
 
-    CHECK (not PREFLIGHT) is correct because:
-    - Session already has a PREFLIGHT baseline from start
-    - We need to GATE proceeding, not establish a new baseline
-    - CHECK returns proceed/investigate decision
+    CHECK is correct when session is INCOMPLETE (no POSTFLIGHT yet) -
+    we're continuing work and need to validate readiness.
     """
-    goals_text = ""
-    if dynamic_context.get("active_goals"):
-        goals_text = "\n".join([
-            f"  - {g['objective']} ({g['status']})"
-            for g in dynamic_context["active_goals"]
-        ])
-    else:
-        goals_text = "  (No active goals)"
-
-    findings_text = ""
-    if dynamic_context.get("recent_findings"):
-        findings_text = "\n".join([
-            f"  - {f['finding'][:100]}..." if len(f['finding']) > 100 else f"  - {f['finding']}"
-            for f in dynamic_context["recent_findings"]
-        ])
-    else:
-        findings_text = "  (No recent findings)"
-
-    unknowns_text = ""
-    if dynamic_context.get("open_unknowns"):
-        unknowns_text = "\n".join([
-            f"  - {u['unknown'][:100]}..." if len(u['unknown']) > 100 else f"  - {u['unknown']}"
-            for u in dynamic_context["open_unknowns"]
-        ])
-    else:
-        unknowns_text = "  (No open unknowns)"
-
-    dead_ends_text = ""
-    if dynamic_context.get("critical_dead_ends"):
-        dead_ends_text = "\n".join([
-            f"  - {d['approach']}: {d['why_failed']}"
-            for d in dynamic_context["critical_dead_ends"]
-        ])
-    else:
-        dead_ends_text = "  (None recorded)"
+    goals_text = _format_goals(dynamic_context)
+    findings_text = _format_findings(dynamic_context)
+    unknowns_text = _format_unknowns(dynamic_context)
+    dead_ends_text = _format_dead_ends(dynamic_context)
 
     pre_know = pre_vectors.get('know', 'N/A')
     pre_unc = pre_vectors.get('uncertainty', 'N/A')
@@ -367,7 +508,8 @@ def _calculate_potential_drift(pre_vectors: dict) -> dict:
     }
 
 
-def _print_user_message(pre_vectors: dict, dynamic_context: dict, potential_drift: dict):
+def _print_user_message(pre_vectors: dict, dynamic_context: dict, potential_drift: dict,
+                        phase_state: dict = None, ai_id: str = 'claude-code'):
     """Print user-visible summary to stderr"""
     pre_know = pre_vectors.get('know', 'N/A')
     pre_unc = pre_vectors.get('uncertainty', 'N/A')
@@ -376,14 +518,42 @@ def _print_user_message(pre_vectors: dict, dynamic_context: dict, potential_drif
     findings_count = len(dynamic_context.get('recent_findings', []))
     unknowns_count = len(dynamic_context.get('open_unknowns', []))
 
-    print(f"""
-🔄 Empirica: Post-Compact CHECK Gate
+    is_complete = phase_state.get('is_complete', False) if phase_state else False
+    last_phase = phase_state.get('last_phase', 'unknown') if phase_state else 'unknown'
+
+    if is_complete:
+        # Session was complete - need new session + PREFLIGHT
+        print(f"""
+🔄 Empirica: Post-Compact Recovery (Session Complete)
+
+📊 Previous Session State:
+   Last Phase: {last_phase} (COMPLETE)
+   Pre-compact vectors (NOW INVALID): know={pre_know}, uncertainty={pre_unc}
+
+⚠️  Previous session had POSTFLIGHT - it's COMPLETE.
+   You need a NEW session with fresh PREFLIGHT baseline.
+
+📚 Dynamic Context Available:
+   Active Goals: {goals_count}
+   Recent Findings: {findings_count}
+   Open Unknowns: {unknowns_count}
+
+🎯 ACTION REQUIRED:
+   1. Create new session: empirica session-create --ai-id {ai_id}
+   2. Load context: empirica project-bootstrap --session-id <NEW_ID>
+   3. Run PREFLIGHT: empirica preflight-submit (with honest baseline)
+""", file=sys.stderr)
+    else:
+        # Session incomplete - need CHECK to continue
+        print(f"""
+🔄 Empirica: Post-Compact CHECK Gate (Session Incomplete)
 
 📊 Pre-Compact State (NOW INVALID):
+   Last Phase: {last_phase}
    know={pre_know}, uncertainty={pre_unc}
 
 ⚠️  These vectors reflected FULL context knowledge.
-   You now have only a summary.
+   You now have only a summary. Session is INCOMPLETE.
 
 📚 Dynamic Context Loaded:
    Active Goals: {goals_count}

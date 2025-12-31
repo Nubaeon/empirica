@@ -168,34 +168,58 @@ def get_latest_vectors(db: SessionDatabase, session_id: str) -> tuple:
 
 
 def get_vector_deltas(db: SessionDatabase, session_id: str) -> dict:
-    """Get deltas between latest and previous vectors (PREFLIGHT vs POSTFLIGHT)."""
+    """
+    Get learning deltas: PREFLIGHT → POSTFLIGHT only.
+
+    This measures actual learning across the session, ignoring CHECK
+    phases which are for gating, not learning measurement.
+    """
     cursor = db.conn.cursor()
 
-    # Get the two most recent reflexes to compute deltas
+    # Get PREFLIGHT baseline (first PREFLIGHT in session)
     cursor.execute("""
-        SELECT phase, know, uncertainty, context, completion, engagement
+        SELECT know, uncertainty, context, completion, engagement
         FROM reflexes
-        WHERE session_id = ?
-        ORDER BY timestamp DESC
-        LIMIT 2
+        WHERE session_id = ? AND phase = 'PREFLIGHT'
+        ORDER BY timestamp ASC
+        LIMIT 1
     """, (session_id,))
-    rows = cursor.fetchall()
+    preflight = cursor.fetchone()
 
-    if len(rows) < 2:
-        return {}
+    # Get latest POSTFLIGHT (final state)
+    cursor.execute("""
+        SELECT know, uncertainty, context, completion, engagement
+        FROM reflexes
+        WHERE session_id = ? AND phase = 'POSTFLIGHT'
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """, (session_id,))
+    postflight = cursor.fetchone()
 
-    latest = rows[0]
-    previous = rows[1]
+    if not preflight or not postflight:
+        # Fallback: if no complete cycle, show sequential delta
+        cursor.execute("""
+            SELECT know, uncertainty, context, completion, engagement
+            FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC
+            LIMIT 2
+        """, (session_id,))
+        rows = cursor.fetchall()
+        if len(rows) < 2:
+            return {}
+        postflight = rows[0]
+        preflight = rows[1]
 
     deltas = {}
     keys = ['know', 'uncertainty', 'context', 'completion', 'engagement']
 
     for i, key in enumerate(keys):
-        curr_val = latest[i + 1]  # +1 to skip phase
-        prev_val = previous[i + 1]
+        post_val = postflight[i]
+        pre_val = preflight[i]
 
-        if curr_val is not None and prev_val is not None:
-            delta = curr_val - prev_val
+        if post_val is not None and pre_val is not None:
+            delta = post_val - pre_val
             if abs(delta) >= 0.05:  # Only show meaningful changes
                 deltas[key] = delta
 
