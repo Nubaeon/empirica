@@ -1,0 +1,30 @@
+{
+  "goal_id": "6c53cf4d-9d45-4ede-9311-b326c264ddf1",
+  "session_id": "c3739e8f-abe3-4ff5-843a-091b39e8a0bf",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-01T13:21:50.344322+00:00",
+  "goal_data": {
+    "objective": "Decouple issue-list from session scope - add project-level query",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "issue-list works without --session-id",
+      "issue-list --project-id shows all project issues",
+      "Consistent with findings/unknowns pattern"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-01T13:21:50.344340+00:00",
+      "action": "created"
+    }
+  ]
+}
