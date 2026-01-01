@@ -158,17 +158,17 @@ def _query_deadends(scope: str, session_id: str, project_id: str,
     db = SessionDatabase()
 
     if scope == 'session':
-        query = "SELECT * FROM session_dead_ends WHERE session_id = ? ORDER BY created_at DESC LIMIT ?"
+        query = "SELECT id, session_id, approach, why_failed, created_timestamp as created_at FROM session_dead_ends WHERE session_id = ? ORDER BY created_timestamp DESC LIMIT ?"
         params = [session_id, limit]
     elif scope == 'project':
-        query = "SELECT * FROM project_dead_ends WHERE project_id = ? ORDER BY created_at DESC LIMIT ?"
+        query = "SELECT id, project_id, approach, why_failed, created_timestamp as created_at FROM project_dead_ends WHERE project_id = ? ORDER BY created_timestamp DESC LIMIT ?"
         params = [project_id, limit]
     else:
         query = """
-            SELECT id, session_id, NULL as project_id, approach, why_failed, created_at, 'session' as source
+            SELECT id, session_id, NULL as project_id, approach, why_failed, created_timestamp as created_at, 'session' as source
             FROM session_dead_ends
             UNION ALL
-            SELECT id, NULL as session_id, project_id, approach, why_failed, created_at, 'project' as source
+            SELECT id, NULL as session_id, project_id, approach, why_failed, created_timestamp as created_at, 'project' as source
             FROM project_dead_ends
             ORDER BY created_at DESC LIMIT ?
         """
@@ -188,17 +188,20 @@ def _query_mistakes(scope: str, session_id: str, project_id: str,
     from empirica.data.session_database import SessionDatabase
     db = SessionDatabase()
 
-    # Check which tables exist
     cursor = db.conn.cursor()
 
     if scope == 'session':
-        query = "SELECT * FROM session_mistakes WHERE session_id = ? ORDER BY created_at DESC LIMIT ?"
+        query = "SELECT id, session_id, mistake as description, why_wrong, cost_estimate, prevention, created_timestamp as created_at FROM session_mistakes WHERE session_id = ? ORDER BY created_timestamp DESC LIMIT ?"
         params = [session_id, limit]
+    elif scope == 'project':
+        query = "SELECT id, session_id, project_id, mistake as description, why_wrong, cost_estimate, prevention, created_timestamp as created_at FROM mistakes_made WHERE project_id = ? ORDER BY created_timestamp DESC LIMIT ?"
+        params = [project_id, limit]
     else:
-        # Global - try both tables
+        # Global - use mistakes_made (includes project scope)
         query = """
-            SELECT * FROM mistakes_made
-            ORDER BY created_at DESC LIMIT ?
+            SELECT id, session_id, project_id, mistake as description, why_wrong, cost_estimate, prevention, created_timestamp as created_at
+            FROM mistakes_made
+            ORDER BY created_timestamp DESC LIMIT ?
         """
         params = [limit]
 

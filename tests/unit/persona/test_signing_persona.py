@@ -302,6 +302,8 @@ def test_export_public_persona(signing_persona):
 
 def test_signature_determinism(signing_persona):
     """Test that signing same state produces same signature"""
+    from datetime import datetime, timezone
+    
     state = {
         "engagement": 0.80,
         "know": 0.60,
@@ -318,9 +320,13 @@ def test_signature_determinism(signing_persona):
         "uncertainty": 0.75
     }
 
-    # Sign twice
-    signed1 = signing_persona.sign_epistemic_state(state, phase="PREFLIGHT")
-    signed2 = signing_persona.sign_epistemic_state(state, phase="PREFLIGHT")
+    # Use same timestamp for both signings to ensure determinism
+    # (timestamps change between calls, so we fix it for this test)
+    fixed_timestamp = "2025-12-31T20:39:44+00:00"
+    
+    # Sign twice with same timestamp
+    signed1 = signing_persona.sign_epistemic_state(state, phase="PREFLIGHT", timestamp=fixed_timestamp)
+    signed2 = signing_persona.sign_epistemic_state(state, phase="PREFLIGHT", timestamp=fixed_timestamp)
 
     # Signatures should be identical (Ed25519 is deterministic)
     assert signed1["signature"] == signed2["signature"]

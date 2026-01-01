@@ -102,7 +102,8 @@ class SigningPersona:
     def _create_canonical_state(
         self,
         epistemic_vectors: Dict[str, float],
-        phase: str
+        phase: str,
+        timestamp: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create canonical representation of epistemic state
@@ -113,6 +114,7 @@ class SigningPersona:
         Args:
             epistemic_vectors: The 13 epistemic vectors
             phase: CASCADE phase (PREFLIGHT, INVESTIGATE, CHECK, ACT, POSTFLIGHT)
+            timestamp: Optional timestamp (for testing determinism; defaults to now)
 
         Returns:
             Dict with canonical state representation
@@ -137,7 +139,7 @@ class SigningPersona:
             "persona_id": self.persona.persona_id,
             "persona_version": self.persona.version,
             "phase": phase,
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": timestamp or datetime.now(UTC).isoformat(),
             "vectors": {
                 k: epistemic_vectors[k]
                 for k in sorted(required_vectors)
@@ -151,7 +153,8 @@ class SigningPersona:
         self,
         epistemic_vectors: Dict[str, float],
         phase: str,
-        additional_data: Optional[Dict[str, Any]] = None
+        additional_data: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Sign an epistemic state with the persona's private key
@@ -160,6 +163,7 @@ class SigningPersona:
             epistemic_vectors: Dict with 13 epistemic vectors
             phase: CASCADE phase name
             additional_data: Optional extra data to include (not signed)
+            timestamp: Optional timestamp (for testing determinism; defaults to now)
 
         Returns:
             Dict with:
@@ -172,7 +176,7 @@ class SigningPersona:
             ValueError: If vectors invalid or key not loaded
         """
         # Create canonical representation
-        canonical_state = self._create_canonical_state(epistemic_vectors, phase)
+        canonical_state = self._create_canonical_state(epistemic_vectors, phase, timestamp=timestamp)
 
         # Serialize to JSON (sorted keys for determinism)
         message_json = json.dumps(canonical_state, sort_keys=True, separators=(',', ':'))
