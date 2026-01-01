@@ -1,0 +1,28 @@
+{
+  "goal_id": "8f98afb7-4bea-4889-86c8-074538a8d5f4",
+  "session_id": "f6b2d9a5-d403-49c4-91d5-614a2d38e585",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-01T12:14:05.884347+00:00",
+  "goal_data": {
+    "objective": "PRAXIC: Fix test suite failures (102 failed, 32 errors) using epistemic categorization",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-01T12:14:05.884360+00:00",
+      "action": "created"
+    }
+  ]
+}
