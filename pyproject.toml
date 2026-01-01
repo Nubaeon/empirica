@@ -107,8 +107,8 @@ empirica = "empirica.cli.cli_core:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["empirica*"]
-exclude = ["tests*", "_archive*", "_dev*"]
+include = ["empirica"]
+exclude = ["tests*", "_archive*", "_dev*", "empirica-mcp*"]
 
 [tool.setuptools.package-data]
 empirica = [
