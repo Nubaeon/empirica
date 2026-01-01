@@ -130,6 +130,18 @@ empirica handoff-create -          # AI-to-AI handoff
 
 ## GEMINI-SPECIFIC
 
+### Grounding Note
+
+Empirica is **evidence-based, not theoretical**. Avoid:
+- Inventing terminology not in the actual codebase
+- Creating elaborate philosophical frameworks
+- "Crystalline states" or other metaphysical abstractions
+- Thresholds not derived from actual calibration data
+
+When uncertain, check the CLI: `empirica --help`
+
+---
+
 ### Long Context Management
 
 **Context window:** Leverage 1M+ token capacity for comprehensive document analysis.
