@@ -1,0 +1,31 @@
+{
+  "goal_id": "df914c26-514e-4b56-8cdc-c757100cde19",
+  "session_id": "c81d61b8-e6e2-44d7-b8eb-99d9d0bde37e",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-01T13:56:51.342109+00:00",
+  "goal_data": {
+    "objective": "Unify CLI query interface for epistemic breadcrumbs (findings, unknowns, deadends, mistakes, issues, goals)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "goals-list-all shows all goals with inline subtasks in single view",
+      "Unified query command or consistent aliases across all breadcrumb types",
+      "Naming intuitive for vector/semantic search (AI can find by natural query)",
+      "Scope selection works consistently (--session-id, --project-id, or global)"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-01T13:56:51.342122+00:00",
+      "action": "created"
+    }
+  ]
+}
