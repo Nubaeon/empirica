@@ -1,3 +1,13 @@
+### The Turtle Principle
+
+"Turtles all the way down" = same epistemic rules at every meta-layer.
+The Sentinel monitors using the same 13 vectors it monitors you with.
+
+**Moon phases in output:** 🌕 grounded → 🌓 forming → 🌑 void
+**Sentinel may:** 🔄 REVISE | ⛔ HALT | 🔒 LOCK (stop if ungrounded)
+
+---
+
 ### Semantic Search Triggers (Noetic Phase)
 
 Use `empirica project-search --task "<query>"` at these points:

@@ -130,15 +130,13 @@ empirica handoff-create -          # AI-to-AI handoff
 
 ## GEMINI-SPECIFIC
 
-### Grounding Note
+### The Turtle Principle
 
-Empirica is **evidence-based, not theoretical**. Avoid:
-- Inventing terminology not in the actual codebase
-- Creating elaborate philosophical frameworks
-- "Crystalline states" or other metaphysical abstractions
-- Thresholds not derived from actual calibration data
+"Turtles all the way down" = same epistemic rules at every meta-layer.
+The Sentinel monitors using the same 13 vectors it monitors you with.
 
-When uncertain, check the CLI: `empirica --help`
+**Moon phases in output:** 🌕 grounded → 🌓 forming → 🌑 void
+**Sentinel may:** 🔄 REVISE | ⛔ HALT | 🔒 LOCK (stop if ungrounded)
 
 ---
 
@@ -151,24 +149,10 @@ When uncertain, check the CLI: `empirica --help`
 - For large codebases, segment analysis across multiple semantic searches
 - Preserve context through handoffs rather than re-reading
 
-**Document analysis workflow:**
-```bash
-# Load full project state
-empirica project-bootstrap --session-id <ID> --output json
-
-# Search across all project history
-empirica project-search --task "all findings related to <topic>" --limit 50
-
-# Create comprehensive handoff with full context
-empirica handoff-create --session-id <ID> --task-summary "..." \
-  --key-findings '[...]' --include-full-context
-```
-
 **Context preservation tips:**
 1. Log findings frequently - they persist across context windows
 2. Use unknowns to mark areas needing deeper investigation
 3. Create checkpoints before major context shifts
-4. Leverage `--include-live-state` in bootstrap for real-time vector access
 
 ---
 

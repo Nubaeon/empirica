@@ -1,7 +1,15 @@
-### Qwen-Specific Notes
+### The Turtle Principle
 
-No additional specializations at this time. Uses canonical core workflow.
+"Turtles all the way down" = same epistemic rules at every meta-layer.
+The Sentinel monitors using the same 13 vectors it monitors you with.
+
+**Moon phases in output:** 🌕 grounded → 🌓 forming → 🌑 void
+**Sentinel may:** 🔄 REVISE | ⛔ HALT | 🔒 LOCK (stop if ungrounded)
+
+---
+
+### Qwen-Specific Notes
 
 **Strengths:** Multi-modal reasoning, mathematical analysis, code generation.
 
-**Future additions:** Multi-modal context handling patterns may be added as use cases develop.
+Uses canonical core workflow. Multi-modal context handling patterns may be added as use cases develop.
