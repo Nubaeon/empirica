@@ -10,12 +10,39 @@
 
 ## What's New in 1.2.2
 
+- **🐢 Turtle Principle** - Recursive grounding documented in all model deltas
 - **🔧 MCP Server with 57 Tools** - Full Model Context Protocol integration with epistemic middleware
-- **👥 9 Human Copilot Tools** - Enhanced human oversight (monitor, check-drift, issue-handoff, etc.)
-- **🌙 3-Layer Signaling System** - Moon phase indicators for drift detection (basic/default/full)
+- **🌙 3-Layer Signaling System** - Moon phase indicators for drift detection
 - **🚦 Sentinel Gates** - Automatic safety gates (HALT/BRANCH/REVISE/LOCK) for memory drift
-- **🔄 Memory Compact Hooks** - Seamless Claude Code integration with pre/post compact hooks
 - **📊 Unified Statusline** - Real-time epistemic status with vector health indicators
+
+## ⚡ Quick Update (Copy-Paste)
+
+### Claude Code / Terminal
+```bash
+pip install --upgrade empirica empirica-mcp
+empirica --version  # Should show 1.2.2
+```
+
+### Claude Desktop (MCP)
+Add to your `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "empirica": {
+      "command": "empirica-mcp",
+      "env": {
+        "EMPIRICA_AI_ID": "claude-desktop"
+      }
+    }
+  }
+}
+```
+
+### Docker
+```bash
+docker pull nubaeon/empirica:1.2.2
+```
 
 ## What is Empirica?
 
