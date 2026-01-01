@@ -463,6 +463,16 @@ def add_checkpoint_parsers(subparsers):
     goals_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     goals_list_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
+    # Goals list-all command (shows all goals with inline subtasks)
+    goals_list_all_parser = subparsers.add_parser('goals-list-all',
+        help='List ALL goals with inline subtasks (no session required)')
+    goals_list_all_parser.add_argument('--status', choices=['active', 'completed', 'all'], default='active',
+        help='Filter by status (default: active)')
+    goals_list_all_parser.add_argument('--limit', type=int, default=20,
+        help='Maximum goals to show (default: 20)')
+    goals_list_all_parser.add_argument('--output', choices=['human', 'json'], default='human',
+        help='Output format')
+
     # goals-ready command (BEADS integration - Phase 1)
     goals_ready_parser = subparsers.add_parser('goals-ready', help='Query ready work (BEADS + epistemic filtering)')
     goals_ready_parser.add_argument('--session-id', required=False, help='Session UUID (auto-detects active session if not provided)')

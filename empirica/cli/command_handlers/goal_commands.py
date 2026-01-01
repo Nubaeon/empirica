@@ -1009,3 +1009,172 @@ def handle_sessions_resume_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Resume sessions", getattr(args, 'verbose', False))
+
+
+def handle_goals_list_all_command(args):
+    """Handle goals-list-all command - show ALL goals with inline subtasks"""
+    try:
+        from empirica.data.session_database import SessionDatabase
+
+        status_filter = getattr(args, 'status', 'active')
+        limit = getattr(args, 'limit', 20)
+        output = getattr(args, 'output', 'human')
+
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Build query based on status filter
+        # Schema: id, session_id, objective, scope, estimated_complexity, created_timestamp,
+        #         completed_timestamp, is_completed, goal_data, status, beads_issue_id, project_id
+        if status_filter == 'completed':
+            # Goals where all subtasks are completed (or no subtasks)
+            query = """
+                SELECT g.id, g.objective, g.status,
+                       g.created_timestamp, g.session_id, s.ai_id,
+                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
+                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed') as completed_subtasks
+                FROM goals g
+                LEFT JOIN sessions s ON g.session_id = s.session_id
+                WHERE g.status = 'completed'
+                   OR (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) =
+                      (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed')
+                   AND (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) > 0
+                ORDER BY g.created_timestamp DESC
+                LIMIT ?
+            """
+        elif status_filter == 'active':
+            # Goals that are not completed
+            query = """
+                SELECT g.id, g.objective, g.status,
+                       g.created_timestamp, g.session_id, s.ai_id,
+                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
+                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed') as completed_subtasks
+                FROM goals g
+                LEFT JOIN sessions s ON g.session_id = s.session_id
+                WHERE g.status != 'completed'
+                   AND NOT (
+                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) =
+                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed')
+                       AND (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) > 0
+                   )
+                ORDER BY g.created_timestamp DESC
+                LIMIT ?
+            """
+        else:  # 'all'
+            query = """
+                SELECT g.id, g.objective, g.status,
+                       g.created_timestamp, g.session_id, s.ai_id,
+                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
+                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed') as completed_subtasks
+                FROM goals g
+                LEFT JOIN sessions s ON g.session_id = s.session_id
+                ORDER BY g.created_timestamp DESC
+                LIMIT ?
+            """
+
+        cursor.execute(query, (limit,))
+        goals_rows = cursor.fetchall()
+
+        # Build result with inline subtasks
+        # Row indices: 0=id, 1=objective, 2=status, 3=created_timestamp, 4=session_id, 5=ai_id, 6=total, 7=completed
+        goals = []
+        for row in goals_rows:
+            goal_id = row[0]
+            total = row[6] or 0
+            completed = row[7] or 0
+            progress_pct = (completed / total * 100) if total > 0 else 0.0
+
+            # Get subtasks for this goal
+            cursor.execute("""
+                SELECT id, description, status, epistemic_importance, created_timestamp
+                FROM subtasks
+                WHERE goal_id = ?
+                ORDER BY
+                    CASE epistemic_importance
+                        WHEN 'critical' THEN 1
+                        WHEN 'high' THEN 2
+                        WHEN 'medium' THEN 3
+                        WHEN 'low' THEN 4
+                        ELSE 5
+                    END,
+                    created_timestamp
+            """, (goal_id,))
+            subtasks_rows = cursor.fetchall()
+
+            subtasks = []
+            for st in subtasks_rows:
+                subtasks.append({
+                    'id': st[0],
+                    'description': st[1],
+                    'status': st[2],
+                    'importance': st[3]  # Keep output key as 'importance' for simplicity
+                })
+
+            goals.append({
+                'id': goal_id,
+                'objective': row[1],
+                'status': row[2],
+                'created_at': row[3],
+                'session_id': row[4],
+                'ai_id': row[5],
+                'progress': {
+                    'total': total,
+                    'completed': completed,
+                    'percentage': round(progress_pct, 1)
+                },
+                'subtasks': subtasks
+            })
+
+        db.close()
+
+        result = {
+            'ok': True,
+            'filter': status_filter,
+            'count': len(goals),
+            'goals': goals
+        }
+
+        if output == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            # Human-readable format
+            status_label = {'active': 'ACTIVE', 'completed': 'COMPLETED', 'all': 'ALL'}
+            print(f"\n{'='*70}")
+            print(f"🎯 GOALS ({status_label.get(status_filter, status_filter)}) - {len(goals)} found")
+            print(f"{'='*70}\n")
+
+            if not goals:
+                print("  No goals found.")
+                return None
+
+            for i, goal in enumerate(goals, 1):
+                progress = goal['progress']
+                pct = progress['percentage']
+
+                # Status indicator
+                if pct == 100:
+                    status_icon = "✅"
+                elif pct > 0:
+                    status_icon = "🔄"
+                else:
+                    status_icon = "⏳"
+
+                print(f"{status_icon} {i}. {goal['objective']}")
+                print(f"   ID: {goal['id'][:8]}... | Progress: {progress['completed']}/{progress['total']} ({pct}%)")
+                if goal['ai_id']:
+                    print(f"   AI: {goal['ai_id']} | Session: {goal['session_id'][:8]}...")
+
+                # Inline subtasks
+                if goal['subtasks']:
+                    for st in goal['subtasks']:
+                        st_icon = "✓" if st['status'] == 'completed' else "○"
+                        imp_badge = f"[{st['importance'][:3]}]" if st['importance'] else ""
+                        print(f"      {st_icon} {imp_badge} {st['description'][:60]}")
+                print()
+
+        return None
+
+    except Exception as e:
+        result = {'ok': False, 'error': str(e)}
+        print(json.dumps(result))
+        return 1

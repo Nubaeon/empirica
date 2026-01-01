@@ -13,6 +13,7 @@ These commands provide JSON output for MCP v2 server integration.
 import json
 import logging
 from ..cli_utils import handle_cli_error, parse_json_safely
+from empirica.core.canonical.empirica_git.sentinel_hooks import SentinelHooks, SentinelDecision
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,20 @@ def handle_preflight_submit_command(args):
                 }
             )
 
+            # SENTINEL HOOK: Evaluate checkpoint for routing decisions
+            sentinel_decision = None
+            if SentinelHooks.is_enabled():
+                sentinel_decision = SentinelHooks.post_checkpoint_hook(
+                    session_id=session_id,
+                    ai_id=None,  # Will be fetched from session
+                    phase="PREFLIGHT",
+                    checkpoint_data={
+                        "vectors": vectors,
+                        "reasoning": reasoning,
+                        "checkpoint_id": checkpoint_id
+                    }
+                )
+
             # JUST create CASCADE record for historical tracking (this remains)
             db = SessionDatabase()
             cascade_id = str(uuid.uuid4())
@@ -155,7 +170,11 @@ def handle_preflight_submit_command(args):
                     "total_evidence": calibration_report.get('total_evidence', 0) if calibration_report else 0,
                     "summary": calibration_report.get('calibration_summary') if calibration_report else None,
                     "note": "Adjustments show historical bias (+ = underestimate, - = overestimate)"
-                } if calibration_adjustments or calibration_report else None
+                } if calibration_adjustments or calibration_report else None,
+                "sentinel": {
+                    "enabled": SentinelHooks.is_enabled(),
+                    "decision": sentinel_decision.value if sentinel_decision else None
+                } if SentinelHooks.is_enabled() else None
             }
         except Exception as e:
             logger.error(f"Failed to save preflight assessment: {e}")
@@ -509,6 +528,26 @@ def handle_check_submit_command(args):
                 }
             )
 
+            # SENTINEL HOOK: Evaluate checkpoint for routing decisions
+            # CHECK phase is especially important for Sentinel - it gates noetic→praxic transition
+            sentinel_decision = None
+            if SentinelHooks.is_enabled():
+                sentinel_decision = SentinelHooks.post_checkpoint_hook(
+                    session_id=session_id,
+                    ai_id=None,
+                    phase="CHECK",
+                    checkpoint_data={
+                        "vectors": vectors,
+                        "decision": decision,
+                        "reasoning": reasoning,
+                        "confidence": confidence,
+                        "gaps": gaps,
+                        "cycle": cycle,
+                        "round": round_num,
+                        "checkpoint_id": checkpoint_id
+                    }
+                )
+
             # AUTO-CHECKPOINT: Create git checkpoint if uncertainty > 0.5 (risky decision)
             # This preserves context if AI needs to investigate further
             auto_checkpoint_created = False
@@ -553,9 +592,14 @@ def handle_check_submit_command(args):
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True
-                }
+                },
+                "sentinel": {
+                    "enabled": SentinelHooks.is_enabled(),
+                    "decision": sentinel_decision.value if sentinel_decision else None,
+                    "note": "Sentinel can override AI decision (PROCEED→INVESTIGATE, etc.)"
+                } if SentinelHooks.is_enabled() else None
             }
-            
+
         except Exception as e:
             logger.error(f"Failed to save check assessment: {e}")
             result = {
@@ -864,6 +908,25 @@ def handle_postflight_submit_command(args):
                 }
             )
 
+            # SENTINEL HOOK: Evaluate checkpoint for routing decisions
+            # POSTFLIGHT is final assessment - Sentinel can flag calibration issues or recommend handoff
+            sentinel_decision = None
+            if SentinelHooks.is_enabled():
+                sentinel_decision = SentinelHooks.post_checkpoint_hook(
+                    session_id=session_id,
+                    ai_id=None,
+                    phase="POSTFLIGHT",
+                    checkpoint_data={
+                        "vectors": vectors,
+                        "reasoning": reasoning,
+                        "postflight_confidence": postflight_confidence,
+                        "calibration_accuracy": calibration_accuracy,
+                        "deltas": deltas,
+                        "calibration_issues": calibration_issues,
+                        "checkpoint_id": checkpoint_id
+                    }
+                )
+
             # NOTE: Removed auto-checkpoint after POSTFLIGHT
             # POSTFLIGHT already writes to all 3 storage layers (SQLite + Git Notes + JSON)
             # Creating an additional checkpoint was creating duplicate entries with default values
@@ -938,7 +1001,12 @@ def handle_postflight_submit_command(args):
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
                     "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False
-                }
+                },
+                "sentinel": {
+                    "enabled": SentinelHooks.is_enabled(),
+                    "decision": sentinel_decision.value if sentinel_decision else None,
+                    "note": "Session complete. Sentinel can recommend handoff or flag issues."
+                } if SentinelHooks.is_enabled() else None
             }
         except Exception as e:
             logger.error(f"Failed to save postflight assessment: {e}")

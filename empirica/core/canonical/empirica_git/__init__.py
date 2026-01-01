@@ -19,12 +19,15 @@ Design Principles:
 from .checkpoint_manager import CheckpointManager, auto_checkpoint
 from .goal_store import GitGoalStore
 from .session_sync import SessionSync
-from .sentinel_hooks import SentinelHooks
+from .sentinel_hooks import SentinelHooks, SentinelDecision, SentinelState, TurtleStatus
 
 __all__ = [
     'CheckpointManager',
     'auto_checkpoint',
     'GitGoalStore',
     'SessionSync',
-    'SentinelHooks'
+    'SentinelHooks',
+    'SentinelDecision',
+    'SentinelState',
+    'TurtleStatus'
 ]

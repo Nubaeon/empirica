@@ -1,6 +1,6 @@
 # Empirica Documentation
 
-**Current Version:** 1.1.0
+**Current Version:** 1.2.1
 **Status:** Production Ready
 
 ---
@@ -9,67 +9,49 @@
 
 ### 📖 Getting Started
 
-**Start here for accurate, up-to-date information:**
-
 - **[01_START_HERE.md](01_START_HERE.md)** - Complete getting started guide
-- **[02_QUICKSTART_CLI.md](02_QUICKSTART_CLI.md)** - CLI workflow basics
-- **[03_QUICKSTART_MCP.md](03_QUICKSTART_MCP.md)** - MCP integration guide
 - **[04_INSTALLATION.md](04_INSTALLATION.md)** - Installation instructions
-- **[05_EPISTEMIC_VECTORS_EXPLAINED.md](05_EPISTEMIC_VECTORS_EXPLAINED.md)** - Core concepts
 - **[06_TROUBLESHOOTING.md](06_TROUBLESHOOTING.md)** - Common issues and solutions
+- **[EMPIRICA_EXPLAINED_SIMPLE.md](EMPIRICA_EXPLAINED_SIMPLE.md)** - Plain-language overview
 
 ### 🧠 Core Concepts
 
-**Understand the "why" behind Empirica:**
-
-- **[Epistemic Health Documentation](EPISTEMIC_HEALTH_DOCUMENTATION.md)** - Understanding epistemic vectors
-- **[Epistemic Fact Checking Spec](EPISTEMIC_FACT_CHECKING_SPEC.md)** - Verification protocols
-- **[Cascade Workflow](CASCADE_WORKFLOW.md)** - Core workflow patterns
-- **[Complete Overview](EMPIRICA_COMPLETE_OVERVIEW.md)** - Comprehensive system overview
+- **[NOETIC_PRAXIC_FRAMEWORK.md](architecture/NOETIC_PRAXIC_FRAMEWORK.md)** - Understanding the dual-phase workflow
+- **[CASCADE Workflow](architecture/CHECK_SEMANTICS_FORMALIZATION.md)** - Core workflow patterns
+- **[Epistemic Vectors](architecture/EPISTEMIC_VECTOR_INTERPRETER.md)** - 13-dimensional vector space
 
 ### 📚 Documentation Categories
 
-#### [Reference Documentation](reference/) - Generated and curated technical references
+#### [Reference Documentation](reference/)
 - **[CLI Commands Reference](reference/CLI_COMMANDS_UNIFIED.md)** - Complete unified command reference
-- **[Python API Reference](reference/api/)** - Modular API documentation by category:
-  - **[Core Session Management](reference/api/core_session_management.md)** - Session and vector management
-  - **[Goals & Tasks](reference/api/goals_tasks.md)** - Goal and task management
-  - **[CASCADE Workflow](reference/api/cascade_workflow.md)** - Epistemic reasoning workflow
-  - **[Project Management](reference/api/project_management.md)** - Project and handoff management
-  - **[Investigation Tools](reference/api/investigation_tools.md)** - Investigation and branching tools
-  - **[Epistemic Tracking](reference/api/epistemic_tracking.md)** - Epistemic state tracking
-  - **[Knowledge Management](reference/api/knowledge_management.md)** - Knowledge artifacts and sources
-  - **[System Utilities](reference/api/system_utilities.md)** - System and utility functions
-- **[Database Schema Reference](reference/DATABASE_SCHEMA_UNIFIED.md)** - Complete unified schema documentation
-- **[Epistemic Health Quick Reference](reference/EPISTEMIC_HEALTH_QUICK_REFERENCE.md)** - One-page reference card
+- **[Python API Reference](reference/api/)** - Modular API documentation
+- **[Database Schema Reference](reference/DATABASE_SCHEMA_UNIFIED.md)** - Complete schema documentation
 
-#### [Architecture Documentation](architecture/) - System design and implementation details
-- **[Complete Architecture](architecture/EMPIRICA_COMPLETE_ARCHITECTURE.md)** - Full system architecture
-- **[System Overview](architecture/EMPIRICA_SYSTEM_OVERVIEW.md)** - High-level system view
+#### [Architecture Documentation](architecture/)
 - **[Storage Architecture](architecture/STORAGE_ARCHITECTURE_COMPLETE.md)** - Data persistence design
-- **[Doc-Code Intelligence](architecture/DOC_CODE_INTELLIGENCE.md)** - Documentation integrity system
-- **[Metacognitive Cascade](reference/epistemic/METACOGNITIVE_CASCADE.md)** - Epistemic workflow engine
+- **[CLI Design Philosophy](architecture/CLI_DESIGN_PHILOSOPHY.md)** - Context-aware architecture
+- **[Memory Compact Spec](architecture/MEMORY_COMPACT_SPEC.md)** - Session continuity
 
-#### [Guides](guides/) - Step-by-step instructions and best practices
-- **[Auto Issue Capture Guide](guides/AUTO_ISSUE_CAPTURE_GUIDE.md)** - Issue tracking automation
-- **[Bootstrap Output Guide](guides/BOOTSTRAP_OUTPUT_VISUAL_GUIDE.md)** - Understanding project bootstrap
-- **[MCP Configuration](guides/MCP_CONFIGURATION_UPDATED.md)** - MCP setup and configuration
-- **[Session-Goal Workflow](guides/SESSION_GOAL_WORKFLOW.md)** - Managing sessions and goals
+#### [Guides](guides/)
 - **[First Time Setup](guides/FIRST_TIME_SETUP.md)** - Initial configuration guide
+- **[Session-Goal Workflow](guides/SESSION_GOAL_WORKFLOW.md)** - Managing sessions and goals
+- **[MCP Installation](guides/MCP_INSTALLATION.md)** - MCP setup and configuration
+- **[Auto Issue Capture](guides/AUTO_ISSUE_CAPTURE_GUIDE.md)** - Issue tracking automation
+- **[Multi-Session Learning](guides/MULTI_SESSION_LEARNING.md)** - Cross-session knowledge
 
-#### [Integrations](integrations/) - External system integration guides
+#### [Integrations](integrations/)
 - **[BEADS Git Bridge](integrations/BEADS_GIT_BRIDGE.md)** - Git integration for AI agents
 - **[BEADS Integration Design](integrations/BEADS_INTEGRATION_DESIGN.md)** - Integration architecture
 
-#### [System Prompts](../docs/system-prompts/) - AI agent configuration and prompts
-- **[Canonical System Prompt](../docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md)** - Core AI behavior
-- **[Claude Configuration](../docs/system-prompts/CLAUDE.md)** - Claude-specific setup
-- **[Gemini Configuration](../docs/system-prompts/GEMINI.md)** - Gemini-specific setup
+#### [System Prompts](system-prompts/)
+- **[CANONICAL_CORE.md](system-prompts/CANONICAL_CORE.md)** - AI-agnostic source of truth
+- **[CLAUDE.md](system-prompts/CLAUDE.md)** - Claude-specific prompt
+- **[Architecture README](system-prompts/README.md)** - Multi-AI prompt management
 
 ### 🔍 Discovery
 
 - **[Semantic Index](SEMANTIC_INDEX.yaml)** - Find docs by concept, tag, or question
-- **[Documentation Index](reference/EMPIRICA_DOCUMENTATION_INDEX.md)** - Complete documentation map
+- **[Feature Status](FEATURE_STATUS.md)** - Current feature implementation status
 
 ---
 
@@ -78,41 +60,37 @@
 ```
 docs/
 ├── 01_START_HERE.md                  # Getting started
-├── 02_QUICKSTART_CLI.md              # CLI basics
-├── 03_QUICKSTART_MCP.md              # MCP integration
 ├── 04_INSTALLATION.md                # Installation
-├── 05_EPISTEMIC_VECTORS_EXPLAINED.md # Core concepts
 ├── 06_TROUBLESHOOTING.md             # Troubleshooting
+├── EMPIRICA_EXPLAINED_SIMPLE.md      # Plain-language overview
+├── FEATURE_STATUS.md                 # Feature status
 ├── README.md                         # This file
 ├── SEMANTIC_INDEX.yaml               # Concept search
 │
 ├── reference/                        # Technical references
-│   ├── CLI_COMMANDS_COMPLETE.md      # Complete command reference
-│   ├── PYTHON_API_GENERATED.md       # Python API
-│   ├── DATABASE_SCHEMA_GENERATED.md  # Database schema
-│   ├── EPISTEMIC_HEALTH_QUICK_REFERENCE.md # Quick reference
-│   └── epistemic/                    # Epistemic theory
-│       ├── UNIFIED_EPISTEMIC_THEORY.md
-│       ├── UNIFIED_EPISTEMIC_VECTORS.md
-│       └── METACOGNITIVE_CASCADE.md
+│   ├── CLI_COMMANDS_UNIFIED.md       # CLI reference
+│   ├── DATABASE_SCHEMA_UNIFIED.md    # Database schema
+│   └── api/                          # Python API docs
 │
 ├── architecture/                     # System design
-│   ├── EMPIRICA_COMPLETE_ARCHITECTURE.md
-│   ├── DOC_CODE_INTELLIGENCE.md
+│   ├── NOETIC_PRAXIC_FRAMEWORK.md    # Dual-phase workflow
+│   ├── STORAGE_ARCHITECTURE_COMPLETE.md
 │   └── ...
 │
 ├── guides/                           # Step-by-step guides
-│   ├── AUTO_ISSUE_CAPTURE_GUIDE.md
-│   ├── BOOTSTRAP_OUTPUT_VISUAL_GUIDE.md
+│   ├── FIRST_TIME_SETUP.md
+│   ├── SESSION_GOAL_WORKFLOW.md
 │   └── ...
 │
 ├── integrations/                     # External integrations
-│   └── BEADS_GIT_BRIDGE.md
+│   └── BEADS_*.md
 │
-├── system-prompts/                   # AI configuration (in parent dir)
+├── system-prompts/                   # AI configuration
+│   ├── CANONICAL_CORE.md             # Source of truth
+│   ├── CLAUDE.md, QWEN.md, etc.      # Model-specific
+│   └── model_deltas/                 # Model additions
 │
 └── _archive/                         # Archived documentation
-    └── ...
 ```
 
 ---
@@ -132,35 +110,20 @@ Instead:
 
 Edit freely! These explain concepts, philosophy, and design decisions.
 
-### For New Features:
+### For System Prompts:
 
-1. Implement in code
-2. Update relevant documentation
-3. Add examples and use cases
-
----
-
-## Documentation Integrity
-
-Check documentation integrity:
-
-```bash
-empirica project-bootstrap --check-integrity --output json
-```
-
-**Current status:**
-- Generated docs: 100% accurate (auto-synced with code)
-- Conceptual docs: Maintained with code changes
-- Overall: Production ready
+1. Edit `system-prompts/CANONICAL_CORE.md` for all AIs
+2. Edit `system-prompts/model_deltas/<model>.md` for specific AIs
+3. Run `python3 scripts/sync_system_prompts.py` to regenerate
 
 ---
 
 ## Support
 
 **Questions about the system?**
-- Read: [Canonical System Prompt](../system-prompts/CANONICAL_SYSTEM_PROMPT.md) (comprehensive)
-- Check: Generated reference docs (100% accurate)
-- Search: [Semantic Index](SEMANTIC_INDEX.yaml) (find by concept)
+- Read: [Canonical Core Prompt](system-prompts/CANONICAL_CORE.md)
+- Check: [CLI Commands Reference](reference/CLI_COMMANDS_UNIFIED.md)
+- Search: [Semantic Index](SEMANTIC_INDEX.yaml)
 
 **Found a bug in docs?**
 - If in generated docs → bug is in source code, fix there
@@ -169,5 +132,5 @@ empirica project-bootstrap --check-integrity --output json
 ---
 
 **System Status:** Production Ready ✅
-**Documentation Coverage:** Complete
-**Maintenance:** Active
+**Documentation Coverage:** Active maintenance
+**Version:** 1.2.1

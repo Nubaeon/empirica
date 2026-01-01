@@ -210,8 +210,22 @@ def handle_project_bootstrap_command(args):
         from empirica.cli.utils.project_resolver import resolve_project_id
         import subprocess
 
+        output_format = getattr(args, 'output', 'human')
         project_id = getattr(args, 'project_id', None)
-        
+
+        def _error_output(error_msg: str, hint: str = None):
+            """Output error in appropriate format"""
+            if output_format == 'json':
+                result = {'ok': False, 'error': error_msg}
+                if hint:
+                    result['hint'] = hint
+                print(json.dumps(result))
+            else:
+                print(f"❌ Error: {error_msg}")
+                if hint:
+                    print(f"\nTip: {hint}")
+            return None
+
         # Auto-detect project from git remote URL if not provided
         if not project_id:
             try:
@@ -233,19 +247,22 @@ def handle_project_bootstrap_command(args):
                     if row:
                         project_id = row['id']
                     db.close()
-                    
+
                     if not project_id:
-                        print(f"❌ Error: No project found for git remote: {git_url}")
-                        print(f"\nTip: Create a project or specify --project-id explicitly")
-                        return None
+                        return _error_output(
+                            f"No project found for git remote: {git_url}",
+                            "Create a project or specify --project-id explicitly"
+                        )
                 else:
-                    print(f"❌ Error: Not in a git repository or no remote 'origin' configured")
-                    print(f"\nTip: Run 'git remote add origin <url>' or use --project-id")
-                    return None
+                    return _error_output(
+                        "Not in a git repository or no remote 'origin' configured",
+                        "Run 'git remote add origin <url>' or use --project-id"
+                    )
             except Exception as e:
-                print(f"❌ Error auto-detecting project: {e}")
-                print(f"\nTip: Use --project-id to specify project explicitly")
-                return None
+                return _error_output(
+                    f"Auto-detecting project failed: {e}",
+                    "Use --project-id to specify project explicitly"
+                )
         else:
             # Resolve project name to UUID if needed
             db = SessionDatabase()

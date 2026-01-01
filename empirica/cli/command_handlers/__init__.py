@@ -26,6 +26,7 @@ from .goal_commands import (
     handle_goals_progress_command,
     handle_goals_get_subtasks_command,
     handle_goals_list_command,
+    handle_goals_list_all_command,
     handle_sessions_resume_command
 )
 from .goals_ready_command import handle_goals_ready_command
@@ -106,7 +107,7 @@ from .monitor_commands import (
     handle_monitor_command, handle_monitor_export_command,
     handle_monitor_reset_command, handle_monitor_cost_command,
     handle_check_drift_command, handle_mco_load_command,
-    handle_assess_state_command
+    handle_assess_state_command, handle_trajectory_project_command
 )
 from .investigation_commands import (
     handle_investigate_command,
@@ -157,6 +158,7 @@ __all__ = [
     'handle_goals_progress_command',
     'handle_goals_get_subtasks_command',
     'handle_goals_list_command',
+    'handle_goals_list_all_command',
     'handle_goals_discover_command',
     'handle_goals_resume_command',
     'handle_goals_ready_command',  # BEADS integration
@@ -243,6 +245,7 @@ __all__ = [
     'handle_check_drift_command',
     'handle_mco_load_command',
     'handle_assess_state_command',
+    'handle_trajectory_project_command',
 
     # Investigation commands
     'handle_investigate_command',

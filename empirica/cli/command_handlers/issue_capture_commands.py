@@ -22,40 +22,111 @@ from empirica.core.issue_capture import (
 
 
 def handle_issue_list_command(args):
-    """List captured issues with optional filtering"""
+    """List captured issues with optional filtering.
+
+    Supports three query modes (dual-scope like findings/unknowns):
+    - --session-id: Session-scoped (issues from one session)
+    - --project-id: Project-scoped (issues from all sessions in project)
+    - Neither: Global (recent issues across all projects)
+    """
     try:
+        import sqlite3
+        from empirica.data.session_database import SessionDatabase
+
         session_id = getattr(args, 'session_id', None)
+        project_id = getattr(args, 'project_id', None)
         status = getattr(args, 'status', None)
         category = getattr(args, 'category', None)
         severity = getattr(args, 'severity', None)
         output = getattr(args, 'output', 'json')
         limit = getattr(args, 'limit', 100)
-        
-        if not session_id:
-            result = {
-                "ok": False,
-                "error": "session_id is required"
-            }
-            print(json.dumps(result))
-            return 1
-        
-        # Initialize or get service
-        service = get_auto_capture()
-        if not service or service.session_id != session_id:
-            service = initialize_auto_capture(session_id)
-        
-        # List issues
-        issues = service.list_issues(
-            status=status,
-            category=category,
-            severity=severity,
-            limit=limit
-        )
-        
+
+        # Determine query scope
+        scope = 'session' if session_id else ('project' if project_id else 'global')
+
+        if session_id:
+            # Session-scoped: use existing service
+            service = get_auto_capture()
+            if not service or service.session_id != session_id:
+                service = initialize_auto_capture(session_id)
+
+            issues = service.list_issues(
+                status=status,
+                category=category,
+                severity=severity,
+                limit=limit
+            )
+        else:
+            # Project-scoped or global: direct database query
+            db = SessionDatabase()
+
+            # Build query with optional filters
+            query = """
+                SELECT i.id, i.session_id, i.severity, i.category, i.code_location,
+                       i.message, i.stack_trace, i.context, i.status, i.assigned_to_ai,
+                       i.root_cause_id, i.resolution, i.created_at, i.updated_at,
+                       i.issue_category, s.project_id
+                FROM auto_captured_issues i
+                JOIN sessions s ON i.session_id = s.session_id
+                WHERE 1=1
+            """
+            params = []
+
+            if project_id:
+                query += " AND s.project_id = ?"
+                params.append(project_id)
+
+            if status:
+                query += " AND i.status = ?"
+                params.append(status)
+
+            if category:
+                query += " AND i.category = ?"
+                params.append(category)
+
+            if severity:
+                query += " AND i.severity = ?"
+                params.append(severity)
+
+            query += " ORDER BY i.created_at DESC LIMIT ?"
+            params.append(limit)
+
+            try:
+                with sqlite3.connect(db.db_path) as conn:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute(query, params)
+                    rows = cursor.fetchall()
+
+                    issues = []
+                    for row in rows:
+                        issues.append({
+                            'id': row['id'],
+                            'session_id': row['session_id'],
+                            'project_id': row['project_id'],
+                            'severity': row['severity'],
+                            'category': row['category'],
+                            'code_location': row['code_location'],
+                            'message': row['message'],
+                            'stack_trace': row['stack_trace'],
+                            'context': row['context'],
+                            'status': row['status'],
+                            'assigned_to_ai': row['assigned_to_ai'],
+                            'root_cause_id': row['root_cause_id'],
+                            'resolution': row['resolution'],
+                            'created_at': row['created_at'],
+                            'updated_at': row['updated_at'],
+                            'issue_category': row['issue_category']
+                        })
+            except Exception as e:
+                issues = []
+
         if output == 'json':
             result = {
                 "ok": True,
+                "scope": scope,
                 "session_id": session_id,
+                "project_id": project_id,
                 "issue_count": len(issues),
                 "filters": {
                     "status": status,
@@ -67,14 +138,17 @@ def handle_issue_list_command(args):
             print(json.dumps(result))
         else:
             # Human-readable format
+            scope_label = f"session {session_id[:8]}..." if session_id else (
+                f"project {project_id[:8]}..." if project_id else "all projects"
+            )
             print(f"\n{'='*80}")
-            print(f"📋 CAPTURED ISSUES ({len(issues)} total)")
+            print(f"📋 CAPTURED ISSUES ({len(issues)} total) - {scope_label}")
             print(f"{'='*80}\n")
-            
+
             if not issues:
                 print("✅ No issues found")
                 return 0
-            
+
             for issue in issues:
                 severity_emoji = {
                     "blocker": "🚫",
@@ -82,17 +156,19 @@ def handle_issue_list_command(args):
                     "medium": "⚠️",
                     "low": "ℹ️"
                 }.get(issue['severity'], "❓")
-                
+
                 print(f"{severity_emoji} {issue['severity'].upper()} - {issue['category']}")
                 print(f"   {issue['message'][:100]}")
-                print(f"   Location: {issue['code_location']}")
+                print(f"   Location: {issue.get('code_location', 'unknown')}")
                 print(f"   Status: {issue['status']}")
-                if issue['assigned_to_ai']:
+                if scope != 'session':
+                    print(f"   Session: {issue.get('session_id', 'unknown')[:8]}...")
+                if issue.get('assigned_to_ai'):
                     print(f"   Assigned to: {issue['assigned_to_ai']}")
                 print()
-        
+
         return 0
-        
+
     except Exception as e:
         result = {
             "ok": False,

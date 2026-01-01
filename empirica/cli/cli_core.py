@@ -47,7 +47,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
                     'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
                     'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
-                    'Monitoring': ['monitor', 'check-drift', 'assess-state', 'efficiency-report'],
+                    'Monitoring': ['monitor', 'check-drift', 'assess-state', 'trajectory-project', 'efficiency-report'],
                     'Skills': ['skill-suggest', 'skill-fetch'],
                     'Utilities': ['log-token-saving', 'config', 'performance'],
                     'Vision': ['vision'],
@@ -89,12 +89,14 @@ from .parsers import (
     add_edit_verification_parsers,
     add_issue_capture_parsers,
     add_architecture_parsers,
+    add_query_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
     handle_assess_compare_command,
     handle_assess_directory_command,
 )
+from .command_handlers.query_commands import handle_query_command
 
 
 def _get_version():
@@ -147,6 +149,7 @@ def create_argument_parser():
     add_edit_verification_parsers(subparsers)
     add_issue_capture_parsers(subparsers)
     add_architecture_parsers(subparsers)
+    add_query_parsers(subparsers)
 
     return parser
 
@@ -236,6 +239,7 @@ def main(args=None):
             'check-drift': handle_check_drift_command,
             'assess-state': handle_assess_state_command,
             'mco-load': handle_mco_load_command,
+            'trajectory-project': handle_trajectory_project_command,
 
             # Checkpoint commands
             'checkpoint-create': handle_checkpoint_create_command,
@@ -283,6 +287,7 @@ def main(args=None):
             # Goals commands
             'goals-create': handle_goals_create_command,
             'goals-list': handle_goals_list_command,
+            'goals-list-all': handle_goals_list_all_command,
             'goals-complete': handle_goals_complete_command,
             'goals-claim': handle_goals_claim_command,
             'goals-add-subtask': handle_goals_add_subtask_command,
@@ -319,6 +324,9 @@ def main(args=None):
             'assess-component': handle_assess_component_command,
             'assess-compare': handle_assess_compare_command,
             'assess-directory': handle_assess_directory_command,
+
+            # Unified query command
+            'query': handle_query_command,
         }
         
         if parsed_args.command in command_handlers:

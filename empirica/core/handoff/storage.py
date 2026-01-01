@@ -148,36 +148,46 @@ class GitHandoffStorage:
     def list_handoffs(self) -> List[str]:
         """
         List all handoff session IDs stored in git notes
-        
+
+        Uses git for-each-ref to scan refs/notes/empirica/handoff/* pattern.
+        Each handoff is stored at refs/notes/empirica/handoff/{session_id}.
+
         Returns:
             List of session IDs
         """
         try:
+            # Use for-each-ref to find all handoff note refs
             result = subprocess.run(
-                ['git', 'notes', 'list'],
+                ['git', 'for-each-ref', '--format=%(refname)', 'refs/notes/empirica/handoff/'],
                 capture_output=True,
-                timeout=2,
+                timeout=5,
                 cwd=str(self.repo_path),
                 text=True
             )
-            
+
             if result.returncode != 0:
                 return []
-            
-            # Parse note refs for handoff sessions
+
+            # Parse session IDs from refs
+            # Format: refs/notes/empirica/handoff/{session_id}
+            # Or: refs/notes/empirica/handoff/{session_id}/markdown
             session_ids = set()
-            for line in result.stdout.splitlines():
-                if 'empirica/handoff/' in line:
-                    # Extract session ID from ref
-                    parts = line.split('empirica/handoff/')
-                    if len(parts) > 1:
-                        session_id = parts[1].split('/')[0]
+            for line in result.stdout.strip().splitlines():
+                if not line:
+                    continue
+                # Extract session ID (UUID after handoff/)
+                parts = line.split('refs/notes/empirica/handoff/')
+                if len(parts) > 1:
+                    # Take first part before any slash (handles /markdown suffix)
+                    session_id = parts[1].split('/')[0]
+                    # Validate it looks like a UUID (36 chars with dashes)
+                    if len(session_id) == 36 and session_id.count('-') == 4:
                         session_ids.add(session_id)
-            
+
             return sorted(list(session_ids))
-        
+
         except Exception as e:
-            logger.debug(f"Failed to list handoffs: {e}")
+            logger.debug(f"Failed to list handoffs from git: {e}")
             return []
     
     def _get_note_sha(self, note_ref: str) -> Optional[str]:
@@ -530,21 +540,43 @@ class HybridHandoffStorage:
         self,
         ai_id: Optional[str] = None,
         since: Optional[str] = None,
-        limit: int = 5
+        limit: int = 5,
+        include_git: bool = True
     ) -> List[Dict]:
         """
-        Query handoffs with filters (uses database for performance)
-        
+        Query handoffs with filters (merges database + git notes)
+
         Args:
             ai_id: Filter by AI ID
             since: Filter by timestamp (ISO format)
             limit: Max results to return
-        
+            include_git: Also scan git notes for handoffs not in database
+
         Returns:
             List of handoff report dicts
         """
-        # Always use database for queries (indexed, fast)
-        return self.db_storage.query_handoffs(ai_id, since, limit)
+        # Get database results (indexed, fast)
+        db_results = self.db_storage.query_handoffs(ai_id, since, limit * 2)  # Over-fetch for merge
+        db_session_ids = {h['session_id'] for h in db_results}
+
+        # Merge git notes not in database (for cross-repo portability)
+        if include_git:
+            git_session_ids = self.git_storage.list_handoffs()
+            for session_id in git_session_ids:
+                if session_id not in db_session_ids:
+                    handoff = self.git_storage.load_handoff(session_id)
+                    if handoff:
+                        # Apply filters
+                        if ai_id and handoff.get('ai') != ai_id and handoff.get('ai_id') != ai_id:
+                            continue
+                        if since and handoff.get('ts', '') < since and handoff.get('timestamp', '') < since:
+                            continue
+                        db_results.append(handoff)
+                        logger.debug(f"📝 Merged from git notes: {session_id[:8]}...")
+
+        # Sort by timestamp descending and apply limit
+        db_results.sort(key=lambda h: h.get('timestamp') or h.get('ts') or '', reverse=True)
+        return db_results[:limit]
     
     def list_handoffs(self, source: str = 'database') -> List[str]:
         """

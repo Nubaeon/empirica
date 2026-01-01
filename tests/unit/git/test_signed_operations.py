@@ -14,7 +14,7 @@ import tempfile
 import json
 from pathlib import Path
 
-import git
+from git import Repo, GitCommandError
 
 from empirica.core.persona.persona_profile import (
     PersonaProfile, SigningIdentityConfig, EpistemicConfig, PersonaMetadata
@@ -29,7 +29,7 @@ def temp_repo():
     """Create temporary git repository"""
     with tempfile.TemporaryDirectory() as tmpdir:
         # Initialize repo
-        repo = git.Repo.init(tmpdir)
+        repo = Repo.init(tmpdir)
 
         # Configure git user for commits
         repo.config_writer().set_value("user", "name", "Test User").release()
@@ -224,7 +224,7 @@ def test_verify_cascade_chain_multiple_phases(git_ops, test_signing_persona, tes
 
 def test_verify_cascade_chain_invalid_range(git_ops):
     """Test that invalid commit range raises error"""
-    with pytest.raises(git.GitCommandError):
+    with pytest.raises(GitCommandError):
         git_ops.verify_cascade_chain("invalid", "alsoInvalid")
 
 

@@ -1422,5 +1422,446 @@ def handle_assess_state_command(args):
                 print(f"   Session:   {session_id}")
             print()
 
+        # TURTLE MODE: Recursive grounding check (Noetic Handshake)
+        if getattr(args, 'turtle', False):
+            _display_turtle_stack(vectors, session_id, prompt)
+
     except Exception as e:
         handle_cli_error(e, "Assess State", getattr(args, 'verbose', False))
+
+
+def _display_turtle_stack(vectors: dict, session_id: str = None, prompt: str = None):
+    """
+    Display recursive grounding stack trace (the Noetic Handshake).
+
+    Verifies observer stability before observing by checking grounding layers:
+    - Layer 0: User Intent (can we parse the request?)
+    - Layer 1: Noetic Grasp (do we understand the concept?)
+    - Layer 2: Praxic Path (can we execute?)
+    - Layer 3: Epistemic Safety (is uncertainty below threshold?)
+    """
+    print("\n" + "=" * 70)
+    print("🐢 TURTLE STACK REPORT (Recursive Grounding Check)")
+    print("=" * 70)
+
+    # Moon phase indicators based on confidence levels
+    def get_moon_phase(score: float) -> tuple:
+        """Return (emoji, status) based on score."""
+        if score >= 0.85:
+            return "🌕", "CRYSTALLINE"
+        elif score >= 0.70:
+            return "🌔", "SOLID"
+        elif score >= 0.50:
+            return "🌓", "EMERGENT"
+        elif score >= 0.30:
+            return "🌒", "FORMING"
+        else:
+            return "🌑", "DARK"
+
+    # Calculate layer scores from vectors
+    layers = []
+    safe_to_proceed = True
+
+    # Layer 0: User Intent (based on context + signal)
+    context = vectors.get('context', 0.5)
+    signal = vectors.get('signal', 0.5)
+    layer0_score = (context + signal) / 2
+    moon0, status0 = get_moon_phase(layer0_score)
+    layers.append({
+        'layer': 0,
+        'name': 'USER INTENT',
+        'score': layer0_score,
+        'moon': moon0,
+        'status': status0,
+        'detail': f"Context={context:.2f}, Signal={signal:.2f}"
+    })
+
+    # Layer 1: Noetic Grasp (based on know + clarity + coherence)
+    know = vectors.get('know', 0.5)
+    clarity = vectors.get('clarity', 0.5)
+    coherence = vectors.get('coherence', 0.5)
+    layer1_score = (know + clarity + coherence) / 3
+    moon1, status1 = get_moon_phase(layer1_score)
+    layers.append({
+        'layer': 1,
+        'name': 'NOETIC GRASP',
+        'score': layer1_score,
+        'moon': moon1,
+        'status': status1,
+        'detail': f"Know={know:.2f}, Clarity={clarity:.2f}, Coherence={coherence:.2f}"
+    })
+
+    # Layer 2: Praxic Path (based on do + state + change)
+    do = vectors.get('do', 0.5)
+    state = vectors.get('state', 0.5)
+    change = vectors.get('change', 0.5)
+    layer2_score = (do + state + change) / 3
+    moon2, status2 = get_moon_phase(layer2_score)
+    layers.append({
+        'layer': 2,
+        'name': 'PRAXIC PATH',
+        'score': layer2_score,
+        'moon': moon2,
+        'status': status2,
+        'detail': f"Do={do:.2f}, State={state:.2f}, Change={change:.2f}"
+    })
+
+    # Layer 3: Epistemic Safety (based on uncertainty + engagement + impact)
+    uncertainty = vectors.get('uncertainty', 0.5)
+    engagement = vectors.get('engagement', 0.5)
+    impact = vectors.get('impact', 0.5)
+    # For safety, LOW uncertainty is GOOD, so we invert it
+    safety_score = ((1 - uncertainty) + engagement + impact) / 3
+    moon3, status3 = get_moon_phase(safety_score)
+    layers.append({
+        'layer': 3,
+        'name': 'EPISTEMIC SAFETY',
+        'score': safety_score,
+        'moon': moon3,
+        'status': status3,
+        'detail': f"Uncertainty={uncertainty:.2f} (inverted), Engagement={engagement:.2f}"
+    })
+
+    # Display each layer
+    for layer in layers:
+        print(f"\n  🐢 [LAYER {layer['layer']}: {layer['name']}] -> {layer['moon']} {layer['status']}")
+        print(f"     Score: {layer['score']:.2f} | {layer['detail']}")
+
+        # Check for warnings
+        if layer['score'] < 0.50:
+            print(f"     ⚠️  Warning: {layer['name']} is below grounding threshold")
+            safe_to_proceed = False
+        elif layer['score'] < 0.70:
+            print(f"     ⚡ Caution: {layer['name']} may need investigation")
+
+    # Overall status
+    print("\n" + "-" * 70)
+    overall_score = sum(l['score'] for l in layers) / len(layers)
+    overall_moon, overall_status = get_moon_phase(overall_score)
+
+    if safe_to_proceed and overall_score >= 0.70:
+        print(f"STATUS: {overall_moon} [{overall_status}] - SAFE TO PROCEED")
+        print("        Observer is stable. Grounding verified.")
+    elif safe_to_proceed and overall_score >= 0.50:
+        print(f"STATUS: {overall_moon} [{overall_status}] - PROCEED WITH CAUTION")
+        print("        Observer is forming. Consider CHECK before praxic action.")
+    else:
+        print(f"STATUS: {overall_moon} [{overall_status}] - HALT RECOMMENDED")
+        print("        Observer is unstable. Run PREFLIGHT or investigate unknowns.")
+
+    print("=" * 70)
+    print()
+
+
+def handle_trajectory_project_command(args):
+    """
+    Project viable epistemic paths forward based on current grounding.
+
+    The Turtle Telescope: Uses current turtle stack + context to project
+    which epistemic paths are viable given the observer's grounding state.
+
+    Paths:
+    - PRAXIC: Execute with confidence (grounding >= 0.70)
+    - NOETIC-SHALLOW: Quick investigation (grounding 0.50-0.70)
+    - NOETIC-DEEP: Thorough investigation (grounding < 0.50 or high unknowns)
+    - SCOPE-EXPAND: Broaden task scope (requires high grounding + low unknowns)
+    - HANDOFF: Transfer to different AI/session (unstable observer)
+    - HALT: Stop and seek human guidance (critical issues)
+    """
+    import sqlite3
+    from empirica.data.session_database import SessionDatabase
+    from empirica.core.canonical.empirica_git import SentinelHooks
+
+    try:
+        session_id = getattr(args, 'session_id', None)
+        output_format = getattr(args, 'output', 'human')
+        show_turtle = getattr(args, 'turtle', False)
+        depth = getattr(args, 'depth', 3)
+        verbose = getattr(args, 'verbose', False)
+
+        db = SessionDatabase()
+
+        # Get current vectors (same logic as assess-state)
+        vectors = {}
+        project_id = None
+
+        if session_id:
+            # Try to get vectors from last checkpoint
+            from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+
+            try:
+                reflex_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+                checkpoints = reflex_logger.list_checkpoints(session_id=session_id, limit=1)
+                if checkpoints:
+                    checkpoint = checkpoints[0]
+                    vectors = checkpoint.get('vectors', {})
+            except Exception:
+                pass
+
+            # Get project_id from session
+            session = db.get_session(session_id)
+            if session:
+                project_id = session.get('project_id')
+
+        # Fallback: get from reflexes table
+        if not vectors:
+            try:
+                with sqlite3.connect(db.db_path) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT know, do, context, clarity, coherence, signal, density,
+                               engagement, state, change, completion, impact, uncertainty
+                        FROM reflexes ORDER BY id DESC LIMIT 1
+                    """)
+                    row = cursor.fetchone()
+                    if row:
+                        vector_names = ['know', 'do', 'context', 'clarity', 'coherence', 'signal', 'density',
+                                       'engagement', 'state', 'change', 'completion', 'impact', 'uncertainty']
+                        vectors = {name: row[i] for i, name in enumerate(vector_names) if row[i] is not None}
+            except Exception:
+                pass
+
+        # If still no vectors, use defaults
+        if not vectors:
+            vectors = {
+                'know': 0.5, 'do': 0.5, 'context': 0.5, 'clarity': 0.5,
+                'coherence': 0.5, 'signal': 0.5, 'density': 0.5,
+                'engagement': 0.5, 'state': 0.5, 'change': 0.5,
+                'completion': 0.5, 'impact': 0.5, 'uncertainty': 0.5
+            }
+
+        # Calculate turtle stack layers
+        def get_moon_phase(score: float) -> tuple:
+            if score >= 0.85:
+                return "🌕", "CRYSTALLINE"
+            elif score >= 0.70:
+                return "🌔", "SOLID"
+            elif score >= 0.50:
+                return "🌓", "EMERGENT"
+            elif score >= 0.30:
+                return "🌒", "FORMING"
+            else:
+                return "🌑", "DARK"
+
+        # Layer calculations
+        layer0_score = (vectors.get('context', 0.5) + vectors.get('signal', 0.5)) / 2  # USER INTENT
+        layer1_score = (vectors.get('know', 0.5) + vectors.get('clarity', 0.5) + vectors.get('coherence', 0.5)) / 3  # NOETIC GRASP
+        layer2_score = (vectors.get('do', 0.5) + vectors.get('state', 0.5) + vectors.get('change', 0.5)) / 3  # PRAXIC PATH
+        uncertainty = vectors.get('uncertainty', 0.5)
+        layer3_score = ((1 - uncertainty) + vectors.get('engagement', 0.5) + vectors.get('impact', 0.5)) / 3  # EPISTEMIC SAFETY
+
+        overall_grounding = (layer0_score + layer1_score + layer2_score + layer3_score) / 4
+        overall_moon, overall_status = get_moon_phase(overall_grounding)
+
+        layers = [
+            {'name': 'USER INTENT', 'score': layer0_score, 'moon': get_moon_phase(layer0_score)},
+            {'name': 'NOETIC GRASP', 'score': layer1_score, 'moon': get_moon_phase(layer1_score)},
+            {'name': 'PRAXIC PATH', 'score': layer2_score, 'moon': get_moon_phase(layer2_score)},
+            {'name': 'EPISTEMIC SAFETY', 'score': layer3_score, 'moon': get_moon_phase(layer3_score)},
+        ]
+
+        # Get unknowns and findings count
+        unknowns_count = 0
+        findings_count = 0
+
+        if project_id:
+            try:
+                with sqlite3.connect(db.db_path) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT COUNT(*) FROM project_unknowns WHERE project_id = ? AND is_resolved = 0", (project_id,))
+                    unknowns_count = cursor.fetchone()[0]
+                    cursor.execute("SELECT COUNT(*) FROM project_findings WHERE project_id = ?", (project_id,))
+                    findings_count = cursor.fetchone()[0]
+            except Exception:
+                pass
+
+        # Get Sentinel status if available
+        sentinel_status = None
+        sentinel_moon = None
+        if SentinelHooks.is_enabled():
+            turtle_result = SentinelHooks.turtle_check()
+            sentinel_status = turtle_result.get('status')
+            sentinel_moon = turtle_result.get('moon')
+
+        # Calculate path viabilities
+        paths = []
+
+        # PRAXIC path - can we execute?
+        praxic_confidence = min(layer1_score, layer2_score, layer3_score)
+        praxic_viable = praxic_confidence >= 0.70 and unknowns_count <= 3
+        praxic_blockers = []
+        if layer1_score < 0.70:
+            praxic_blockers.append(f"NOETIC GRASP too low ({layer1_score:.2f})")
+        if layer2_score < 0.70:
+            praxic_blockers.append(f"PRAXIC PATH unclear ({layer2_score:.2f})")
+        if unknowns_count > 3:
+            praxic_blockers.append(f"{unknowns_count} unknowns blocking")
+
+        paths.append({
+            'name': 'PRAXIC',
+            'icon': '🟢' if praxic_viable else '🟡' if praxic_confidence >= 0.50 else '🔴',
+            'confidence': praxic_confidence,
+            'viable': praxic_viable,
+            'description': 'Execute with confidence. Grounding supports action.',
+            'blockers': praxic_blockers,
+            'action': 'Enter praxic phase, implement the planned changes'
+        })
+
+        # NOETIC-SHALLOW path - quick investigation
+        noetic_shallow_confidence = (layer0_score + layer1_score) / 2
+        noetic_shallow_viable = 0.50 <= overall_grounding < 0.70 or (unknowns_count > 0 and unknowns_count <= 5)
+        paths.append({
+            'name': 'NOETIC-SHALLOW',
+            'icon': '🟢' if noetic_shallow_viable else '🟡',
+            'confidence': noetic_shallow_confidence,
+            'viable': noetic_shallow_viable,
+            'description': 'Quick targeted investigation. Address specific unknowns.',
+            'blockers': [] if noetic_shallow_viable else ['Grounding too low for shallow investigation'],
+            'action': f'Investigate {min(unknowns_count, 3)} unknowns, then re-CHECK'
+        })
+
+        # NOETIC-DEEP path - thorough investigation
+        noetic_deep_confidence = layer0_score  # Only need USER INTENT to start deep investigation
+        noetic_deep_viable = overall_grounding < 0.50 or unknowns_count > 5
+        paths.append({
+            'name': 'NOETIC-DEEP',
+            'icon': '🟢' if noetic_deep_viable else '🟡',
+            'confidence': noetic_deep_confidence,
+            'viable': noetic_deep_viable,
+            'description': 'Thorough investigation required. Many unknowns or low grounding.',
+            'blockers': [] if noetic_deep_viable else ['Grounding sufficient for shallower path'],
+            'action': 'Deep exploration, log findings, resolve unknowns before proceeding'
+        })
+
+        # SCOPE-EXPAND path - broaden task scope
+        scope_expand_confidence = overall_grounding * (1 - (unknowns_count / 10)) if unknowns_count <= 10 else 0
+        scope_expand_viable = overall_grounding >= 0.75 and unknowns_count <= 2 and scope_expand_confidence is not None
+        scope_blockers = []
+        if overall_grounding < 0.75:
+            scope_blockers.append(f"Grounding ({overall_grounding:.2f}) < 0.75 threshold")
+        if unknowns_count > 2:
+            scope_blockers.append(f"{unknowns_count} unknowns would expand further")
+        paths.append({
+            'name': 'SCOPE-EXPAND',
+            'icon': '🟢' if scope_expand_viable else '🔴',
+            'confidence': max(0, scope_expand_confidence),
+            'viable': scope_expand_viable,
+            'description': 'Broaden task scope. Current grounding supports expansion.',
+            'blockers': scope_blockers,
+            'action': 'Add subtasks or related goals, then re-baseline with PREFLIGHT'
+        })
+
+        # HANDOFF path - transfer to different AI
+        handoff_confidence = 1 - overall_grounding  # Inverse - more confident to handoff when grounding low
+        handoff_viable = overall_grounding < 0.40 or (sentinel_status and sentinel_status in ['forming', 'dark'])
+        paths.append({
+            'name': 'HANDOFF',
+            'icon': '🟡' if handoff_viable else '⚪',
+            'confidence': handoff_confidence,
+            'viable': handoff_viable,
+            'description': 'Transfer to different AI/session. Observer stability questionable.',
+            'blockers': [] if handoff_viable else ['Observer stable enough to continue'],
+            'action': 'Create handoff artifact, transfer context to fresh session/AI'
+        })
+
+        # HALT path - stop and seek guidance
+        halt_confidence = 1 - min(layer3_score, overall_grounding)  # High when safety/grounding low
+        halt_viable = layer3_score < 0.30 or overall_grounding < 0.25
+        paths.append({
+            'name': 'HALT',
+            'icon': '🔴' if halt_viable else '⚪',
+            'confidence': halt_confidence,
+            'viable': halt_viable,
+            'description': 'Stop and seek human guidance. Critical grounding issues.',
+            'blockers': [] if halt_viable else ['No critical issues detected'],
+            'action': 'Escalate to human, do not proceed without guidance'
+        })
+
+        # Ensure all paths have valid viable values (defensive)
+        for p in paths:
+            if p['viable'] is None:
+                p['viable'] = False
+            if p['confidence'] is None:
+                p['confidence'] = 0.0
+
+        # Sort paths by viability first, then confidence (descending)
+        paths.sort(key=lambda p: (-int(bool(p['viable'])), -p['confidence']))
+
+        # Determine recommendation
+        recommendation = paths[0]['name']
+        recommendation_action = paths[0]['action']
+
+        # Build result
+        result = {
+            'ok': True,
+            'grounding': {
+                'overall': overall_grounding,
+                'moon': overall_moon,
+                'status': overall_status,
+                'layers': [{'name': l['name'], 'score': l['score'], 'moon': l['moon'][0], 'status': l['moon'][1]} for l in layers]
+            },
+            'context': {
+                'session_id': session_id,
+                'project_id': project_id,
+                'unknowns_count': unknowns_count,
+                'findings_count': findings_count
+            },
+            'sentinel': {
+                'status': sentinel_status,
+                'moon': sentinel_moon
+            } if sentinel_status else None,
+            'paths': [{
+                'name': p['name'],
+                'icon': p['icon'],
+                'confidence': round(p['confidence'], 2),
+                'viable': p['viable'],
+                'description': p['description'],
+                'blockers': p['blockers'],
+                'action': p['action']
+            } for p in paths[:depth + 2]],  # Show depth+2 paths
+            'recommendation': {
+                'path': recommendation,
+                'action': recommendation_action
+            }
+        }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            # Human-readable output
+            print("\n" + "=" * 70)
+            print("🔭 TRAJECTORY PROJECTION (Turtle Telescope)")
+            print("=" * 70)
+
+            print(f"\nCurrent Grounding: {overall_moon} {overall_status} ({overall_grounding:.2f})")
+
+            if show_turtle:
+                print("\n┌─ TURTLE STACK ─────────────────────────────────────────────────────┐")
+                for layer in layers:
+                    moon, status = layer['moon']
+                    print(f"│  Layer {layers.index(layer)}: {layer['name']:20} {moon} {status:12} ({layer['score']:.2f}) │")
+                print("└────────────────────────────────────────────────────────────────────┘")
+
+            print(f"\nContext: {unknowns_count} unknowns | {findings_count} findings")
+            if sentinel_status:
+                print(f"Sentinel: {sentinel_moon} {sentinel_status.upper()}")
+
+            print("\n┌─ VIABLE PATHS ─────────────────────────────────────────────────────┐")
+            for i, path in enumerate(paths[:depth + 2]):
+                viable_marker = "✓" if path['viable'] else "○"
+                print(f"│                                                                    │")
+                print(f"│  {path['icon']} {path['name']:15} (confidence: {path['confidence']:.2f}) [{viable_marker}]")
+                print(f"│     {path['description'][:60]}")
+                if verbose and path['blockers']:
+                    for blocker in path['blockers'][:2]:
+                        print(f"│     ⚠ {blocker[:55]}")
+            print("│                                                                    │")
+            print("└────────────────────────────────────────────────────────────────────┘")
+
+            print(f"\n📍 RECOMMENDATION: {recommendation}")
+            print(f"   {recommendation_action}")
+            print("=" * 70)
+            print()
+
+    except Exception as e:
+        handle_cli_error(e, "Trajectory Project", getattr(args, 'verbose', False))

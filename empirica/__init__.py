@@ -15,7 +15,7 @@ Key Features:
 Version: 1.1.0
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.1"
 __author__ = "Empirica Project"
 
 # Core imports

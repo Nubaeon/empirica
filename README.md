@@ -2,13 +2,13 @@
 
 > **AI agents that know what they know—and what they don't**
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.0)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.1)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)
 [![Docker](https://img.shields.io/badge/docker-nubaeon%2Fempirica-blue)](https://hub.docker.com/r/nubaeon/empirica)
 
-## What's New in 1.2.0
+## What's New in 1.2.1
 
 - **🔧 MCP Server with 57 Tools** - Full Model Context Protocol integration with epistemic middleware
 - **👥 9 Human Copilot Tools** - Enhanced human oversight (monitor, check-drift, issue-handoff, etc.)
@@ -68,20 +68,20 @@ pip install empirica[all]
 
 ```bash
 # Pull the latest image
-docker pull nubaeon/empirica:1.2.0
+docker pull nubaeon/empirica:1.2.1
 
 # Run a command
-docker run -it nubaeon/empirica:1.2.0 empirica --help
+docker run -it nubaeon/empirica:1.2.1 empirica --help
 
 # Interactive session with persistent data
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.2.0 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.2.1 /bin/bash
 ```
 
 #### From Source
 
 ```bash
 # Latest stable release
-pip install git+https://github.com/Nubaeon/empirica.git@v1.2.0
+pip install git+https://github.com/Nubaeon/empirica.git@v1.2.1
 
 # Development branch
 pip install git+https://github.com/Nubaeon/empirica.git@develop

@@ -17,13 +17,21 @@ def add_issue_list_parser(subparsers):
     parser = subparsers.add_parser(
         'issue-list',
         help='List captured issues',
-        description='List all auto-captured issues with optional filtering'
+        description='List all auto-captured issues with optional filtering. '
+                    'Supports session-scoped, project-scoped, or global queries.'
     )
-    
+
+    # Scope arguments (both optional - dual-scope like findings/unknowns)
     parser.add_argument(
         '--session-id',
-        required=True,
-        help='Session ID to list issues for'
+        required=False,
+        help='Session ID to list issues for (session-scoped)'
+    )
+
+    parser.add_argument(
+        '--project-id',
+        required=False,
+        help='Project ID to list issues for (project-scoped, shows all sessions)'
     )
     
     parser.add_argument(

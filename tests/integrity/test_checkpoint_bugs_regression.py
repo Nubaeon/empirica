@@ -276,13 +276,12 @@ class TestCheckpointVectorStorage:
     def session_with_vectors(self, tmp_path):
         """Create session with PREFLIGHT vectors submitted"""
         # This would normally be done via CLI, but we simulate
-        from empirica.core.reflex.session_db import SessionDB
-        
-        db = SessionDB(db_path=str(tmp_path / "test.db"))
-        session_id = "test-session-vectors"
-        
-        # Bootstrap session
-        db.create_session(session_id=session_id, ai_id="test-ai")
+        from empirica.data.session_database import SessionDatabase
+
+        db = SessionDatabase()
+
+        # Bootstrap session - create_session returns session_id
+        session_id = db.create_session(ai_id="test-ai")
         
         # Store PREFLIGHT vectors (simulating preflight-submit)
         vectors = {
@@ -328,13 +327,17 @@ class TestCheckpointVectorStorage:
         )
         
         # Load vectors from database
-        loaded_vectors = db.get_latest_vectors(session_id)
-        
-        assert loaded_vectors is not None, \
+        loaded_result = db.get_latest_vectors(session_id)
+
+        assert loaded_result is not None, \
             "Must be able to load vectors from database"
+        assert 'vectors' in loaded_result, \
+            "Result must contain vectors key"
+
+        loaded_vectors = loaded_result['vectors']
         assert loaded_vectors != {}, \
             "Loaded vectors must not be empty"
-        
+
         # Verify vector values
         for key, value in expected_vectors.items():
             assert key in loaded_vectors, f"Vector {key} must be present"

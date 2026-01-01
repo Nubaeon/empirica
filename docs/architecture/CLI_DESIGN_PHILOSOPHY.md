@@ -2,7 +2,7 @@
 
 **Status:** Active   
 **Last Updated:** 2025-12-28   
-**Applies To:** All CLI commands in Empirica v1.1.0+
+**Applies To:** All CLI commands in Empirica v1.2.1+
 
 ---
 

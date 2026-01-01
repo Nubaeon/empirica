@@ -98,36 +98,9 @@ def main():
         }))
         sys.exit(0)
 
-    # Auto-commit working directory before snapshot
-    # This ensures snapshot captures all recent work
-    try:
-        result = subprocess.run(
-            ['git', 'add', '-A'],
-            cwd=os.getcwd(),
-            capture_output=True,
-            timeout=5
-        )
-
-        # Only commit if there are changes staged
-        status_result = subprocess.run(
-            ['git', 'status', '--porcelain'],
-            cwd=os.getcwd(),
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-
-        if status_result.stdout.strip():
-            commit_result = subprocess.run(
-                ['git', 'commit', '-m', f'[auto] Pre-compact snapshot - {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'],
-                cwd=os.getcwd(),
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-    except Exception as e:
-        # Auto-commit failure is not fatal
-        pass
+    # NOTE: Auto-commit removed to prevent polluting git history
+    # Snapshots are saved to .empirica/ref-docs/ which is gitignored
+    # If you need to preserve state, manually commit before compact
 
     # Step 1: Capture FRESH epistemic vectors (canonical via assess-state)
     print(f"\n📊 Step 1: Capture fresh vectors (assess-state - canonical)")

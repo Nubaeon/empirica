@@ -88,3 +88,11 @@ memory_compact_spec.md
 tmp_investigation_*
 docs/tmp_*
 *_investigation_*.md
+
+# Development/internal docs (not for public repo)
+docs/research/
+docs/FEATURE_STATUS.md
+docs/SEMANTIC_INDEX.yaml
+
+# Auto-generated investigation branches (don't commit)
+# These are created by empirica investigate-create-branch

@@ -52,6 +52,21 @@ def add_monitor_parsers(subparsers):
     assess_state_parser.add_argument('--prompt', help='Self-assessment context/evidence (optional)')
     assess_state_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     assess_state_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+    assess_state_parser.add_argument('--turtle', action='store_true',
+        help='Recursive grounding check: verify observer stability before observing (Noetic Handshake)')
+
+    # Trajectory project command - the turtle telescope
+    trajectory_parser = subparsers.add_parser('trajectory-project',
+        help='Project viable epistemic paths forward based on current grounding (Turtle Telescope)')
+    trajectory_parser.add_argument('--session-id', help='Session UUID for context')
+    trajectory_parser.add_argument('--turtle', action='store_true',
+        help='Include full turtle stack in projection')
+    trajectory_parser.add_argument('--depth', type=int, default=3, choices=[1, 2, 3],
+        help='Projection depth: 1=immediate, 2=short-term, 3=strategic (default: 3)')
+    trajectory_parser.add_argument('--output', choices=['human', 'json'], default='human',
+        help='Output format')
+    trajectory_parser.add_argument('--verbose', action='store_true',
+        help='Show detailed reasoning for each path')
 
     # REMOVED: monitor-export, monitor-reset, monitor-cost
     # Use: monitor --export FILE, monitor --reset, monitor --cost

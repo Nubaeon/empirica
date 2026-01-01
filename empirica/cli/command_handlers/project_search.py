@@ -32,7 +32,8 @@ def handle_project_search_command(args):
                 print("\n🧠 Memory:")
                 for i, m in enumerate(results['memory'], 1):
                     print(f"  {i}. {m.get('type')}  (score: {m.get('score'):.3f})")
-        return results
+        # Do NOT return results - it gets printed to stdout as a dict
+        return None
     except Exception as e:
         handle_cli_error(e, "Project search", getattr(args, 'verbose', False))
         return None
