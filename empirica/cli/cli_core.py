@@ -284,6 +284,7 @@ def main(args=None):
             # Goals commands
             'goals-create': handle_goals_create_command,
             'goals-list': handle_goals_list_command,
+            'goals-list-all': handle_goals_list_all_command,
             'goals-complete': handle_goals_complete_command,
             'goals-claim': handle_goals_claim_command,
             'goals-add-subtask': handle_goals_add_subtask_command,

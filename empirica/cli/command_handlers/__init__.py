@@ -26,6 +26,7 @@ from .goal_commands import (
     handle_goals_progress_command,
     handle_goals_get_subtasks_command,
     handle_goals_list_command,
+    handle_goals_list_all_command,
     handle_sessions_resume_command
 )
 from .goals_ready_command import handle_goals_ready_command
@@ -157,6 +158,7 @@ __all__ = [
     'handle_goals_progress_command',
     'handle_goals_get_subtasks_command',
     'handle_goals_list_command',
+    'handle_goals_list_all_command',
     'handle_goals_discover_command',
     'handle_goals_resume_command',
     'handle_goals_ready_command',  # BEADS integration
