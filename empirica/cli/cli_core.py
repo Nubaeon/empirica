@@ -53,7 +53,8 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Vision': ['vision'],
                     'Epistemics': ['epistemics-list', 'epistemics-show'],
                     'User Interface': ['chat'],
-                    'Architecture': ['assess-component', 'assess-compare', 'assess-directory']
+                    'Architecture': ['assess-component', 'assess-compare', 'assess-directory'],
+                    'Agents': ['agent-spawn', 'agent-report', 'agent-aggregate']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -90,6 +91,7 @@ from .parsers import (
     add_issue_capture_parsers,
     add_architecture_parsers,
     add_query_parsers,
+    add_agent_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -97,6 +99,11 @@ from .command_handlers.architecture_commands import (
     handle_assess_directory_command,
 )
 from .command_handlers.query_commands import handle_query_command
+from .command_handlers.agent_commands import (
+    handle_agent_spawn_command,
+    handle_agent_report_command,
+    handle_agent_aggregate_command,
+)
 
 
 def _get_version():
@@ -150,6 +157,7 @@ def create_argument_parser():
     add_issue_capture_parsers(subparsers)
     add_architecture_parsers(subparsers)
     add_query_parsers(subparsers)
+    add_agent_parsers(subparsers)
 
     return parser
 
@@ -327,6 +335,11 @@ def main(args=None):
 
             # Unified query command
             'query': handle_query_command,
+
+            # Agent commands
+            'agent-spawn': handle_agent_spawn_command,
+            'agent-report': handle_agent_report_command,
+            'agent-aggregate': handle_agent_aggregate_command,
         }
         
         if parsed_args.command in command_handlers:

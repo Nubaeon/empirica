@@ -56,6 +56,7 @@ from .edit_verification_parsers import add_edit_verification_parsers
 from .issue_capture_parsers import add_issue_capture_parsers
 from .architecture_parsers import add_architecture_parsers
 from .query_parsers import add_query_parsers
+from .agent_parsers import add_agent_parsers
 
 __all__ = [
     'format_help_text',
@@ -76,4 +77,5 @@ __all__ = [
     'add_issue_capture_parsers',
     'add_architecture_parsers',
     'add_query_parsers',
+    'add_agent_parsers',
 ]
