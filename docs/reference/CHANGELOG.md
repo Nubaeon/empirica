@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - Preparing v1.0.0
 
+### Added
+- **Vector-based cognitive phase inference** (commit 768bc75d)
+  - Cognitive phase (NOETIC/THRESHOLD/PRAXIC) now inferred from vectors
+  - Implements Turtle Principle: phase is OBSERVED, not prescribed
+  - New `CognitivePhase` enum in `empirica/core/signaling.py`
+  - `infer_cognitive_phase_from_vectors()` using readiness + action metrics
+  - Statusline shows both emergent phase AND CASCADE gate
+  - Documented in `docs/architecture/NOETIC_PRAXIC_FRAMEWORK.md`
+
 ### Phase 4 (In Progress)
 - Documentation completion
 - End-to-end testing
