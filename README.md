@@ -16,24 +16,61 @@
 - **🚦 Sentinel Gates** - Automatic safety gates (HALT/BRANCH/REVISE/LOCK) for memory drift
 - **📊 Unified Statusline** - Real-time epistemic status with vector health indicators
 
-## ⚡ Quick Update (Copy-Paste)
+## ⚡ Quick Setup (Copy-Paste)
 
-### Claude Code / Terminal
+### Step 1: Install
 ```bash
-pip install --upgrade empirica empirica-mcp
-empirica --version  # Should show 1.2.2
+pip install empirica empirica-mcp
 ```
 
-### Claude Desktop (MCP)
-Add to your `claude_desktop_config.json`:
+### Step 2: Add System Prompt
+Copy this to `~/.claude/CLAUDE.md` (Claude Code) or your AI's system prompt:
+
+```markdown
+# Empirica - Epistemic Self-Assessment
+
+You have Empirica installed. Use it to track what you know and learn.
+
+## Quick Start
+```bash
+# Start session
+empirica session-create --ai-id claude-code --output json
+
+# Before work: What do I know?
+empirica preflight-submit -
+
+# After work: What did I learn?
+empirica postflight-submit -
+```
+
+## Core Vectors (0.0-1.0)
+- **know**: Domain knowledge (0.7+ = ready)
+- **uncertainty**: Doubt level (0.35- = ready)
+- **context**: Information access
+- **do**: Execution capability
+
+## Log As You Work
+```bash
+empirica finding-log --finding "Discovered X" --impact 0.7
+empirica unknown-log --unknown "Need to investigate Y"
+```
+
+## When Uncertain
+Run CHECK gate: `empirica check-submit -`
+
+Full docs: `empirica --help`
+```
+
+**For full system prompt:** See [CLAUDE.md](docs/system-prompts/CLAUDE.md) or [CANONICAL_CORE.md](docs/system-prompts/CANONICAL_CORE.md)
+
+### Step 3: (Optional) MCP for Claude Desktop
+Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "empirica": {
       "command": "empirica-mcp",
-      "env": {
-        "EMPIRICA_AI_ID": "claude-desktop"
-      }
+      "env": { "EMPIRICA_AI_ID": "claude-desktop" }
     }
   }
 }
