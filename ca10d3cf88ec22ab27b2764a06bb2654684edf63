@@ -1,0 +1,30 @@
+{
+  "goal_id": "93e88ba5-17f2-478a-b5cf-92ae74d7e37d",
+  "session_id": "c81d61b8-e6e2-44d7-b8eb-99d9d0bde37e",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-01T14:57:16.757430+00:00",
+  "goal_data": {
+    "objective": "Overhaul system prompts in docs: Unify canonical prompt with multi-AI variants, sync with CLAUDE.md v6",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Canonical prompt updated to v6 patterns",
+      "Multi-AI variants reviewed and synced",
+      "Resolution patterns documented across all"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-01T14:57:16.757444+00:00",
+      "action": "created"
+    }
+  ]
+}
