@@ -115,12 +115,15 @@ def handle_agent_report_command(args) -> dict:
     # Update branch
     db = SessionDatabase()
     try:
-        merge_score = db.branches.checkpoint_branch(
+        db.branches.checkpoint_branch(
             branch_id=branch_id,
             postflight_vectors=postflight_data['vectors'],
             tokens_spent=postflight_data.get('tokens_spent', 0),
             time_spent_minutes=postflight_data.get('time_spent_minutes', 0)
         )
+        # Calculate merge score after checkpoint
+        merge_result = db.branches.calculate_branch_merge_score(branch_id)
+        merge_score = merge_result.get('merge_score') if merge_result else None
 
         # Log findings if any
         findings = postflight_data.get('findings', [])
@@ -141,14 +144,14 @@ def handle_agent_report_command(args) -> dict:
             print(json.dumps(response, indent=2))
         else:
             print(f"Branch {branch_id[:8]}... updated")
-            print(f"Merge Score: {merge_score:.4f}" if merge_score else "Merge Score: pending")
+            print(f"Merge Score: {merge_score:.4f}" if isinstance(merge_score, (int, float)) else "Merge Score: pending")
             print(f"Findings: {len(findings)}, Unknowns: {len(unknowns)}")
             if findings:
                 print("\nFindings:")
                 for f in findings[:5]:
                     print(f"  - {f}")
 
-        return response
+        return 0  # Success exit code
 
     finally:
         db.close()
