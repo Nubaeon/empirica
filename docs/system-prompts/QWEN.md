@@ -1,7 +1,7 @@
-# Empirica System Prompt - QWEN v6.1
+# Empirica System Prompt - QWEN v1.1.5
 
 **Model:** QWEN | **Generated:** 2026-01-01
-**Date:** 2026-01-01
+**Syncs with:** Empirica v1.1.5
 **Status:** AUTHORITATIVE
 
 ---
