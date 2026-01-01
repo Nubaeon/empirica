@@ -1,0 +1,31 @@
+{
+  "goal_id": "9030d380-6089-47c8-90c3-5abb4b9f8b86",
+  "session_id": "f4d80e69-2c4d-4746-8744-4cb204e4dc50",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-01T15:23:11.159517+00:00",
+  "goal_data": {
+    "objective": "Documentation alignment with v1.1.5 architecture",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All docs reference current CLI commands correctly",
+      "System prompt architecture documented (CANONICAL_CORE + deltas)",
+      "README reflects v1.1.5 features",
+      "Stale content identified and flagged for removal"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-01T15:23:11.159530+00:00",
+      "action": "created"
+    }
+  ]
+}
