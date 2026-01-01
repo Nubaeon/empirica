@@ -61,7 +61,8 @@ Run CHECK gate: `empirica check-submit -`
 Full docs: `empirica --help`
 ```
 
-**For full system prompt:** See [CLAUDE.md](docs/system-prompts/CLAUDE.md) or [CANONICAL_CORE.md](docs/system-prompts/CANONICAL_CORE.md)
+**Full setup guide:** [CLAUDE_CODE_SETUP.md](docs/guides/CLAUDE_CODE_SETUP.md) (hooks, MCP, troubleshooting)
+**Full system prompt:** [CLAUDE.md](docs/system-prompts/CLAUDE.md) | [CANONICAL_CORE.md](docs/system-prompts/CANONICAL_CORE.md)
 
 ### Step 3: (Optional) MCP for Claude Desktop
 Add to `claude_desktop_config.json`:
