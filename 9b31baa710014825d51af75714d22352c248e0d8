@@ -1,0 +1,32 @@
+{
+  "goal_id": "cc4f12a3-6aaa-42b7-a6f0-0da4004f0570",
+  "session_id": "c81d61b8-e6e2-44d7-b8eb-99d9d0bde37e",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-01T13:49:24.793340+00:00",
+  "goal_data": {
+    "objective": "Implement Persona Duality: NOETIC Emergence + PRAXIC Selection",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "investigate-merge-branches extracts + stores winner as emerged persona",
+      "Non-winning branches auto-tagged as deadends with learnings",
+      "Praxic commands support --turtle flag for persona selection",
+      "Sentinel matches task context + grounding state to best-fit persona",
+      "Emerged personas stored and queryable alongside predefined MCO personas"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-01T13:49:24.793357+00:00",
+      "action": "created"
+    }
+  ]
+}
