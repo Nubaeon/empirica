@@ -164,8 +164,8 @@ graph TD
 ## Related Documentation
 
 - **[CLI Commands Reference](CLI_COMMANDS_UNIFIED.md)** - Complete command list
-- **[Session Management](02_QUICKSTART_CLI.md)** - Session workflows
-- **[Testing Guide](06_TROUBLESHOOTING.md)** - Test patterns
+- **[Getting Started](../01_START_HERE.md)** - Session workflows
+- **[Troubleshooting](../03_TROUBLESHOOTING.md)** - Test patterns
 
 ---
 
@@ -196,5 +196,5 @@ use_cases:
   - testing
   - automation
   - context-management
-related: ["CLI_COMMANDS_UNIFIED", "02_QUICKSTART_CLI", "SYSTEM_OVERVIEW"]
+related: ["CLI_COMMANDS_UNIFIED", "01_START_HERE", "SYSTEM_OVERVIEW"]
 ```

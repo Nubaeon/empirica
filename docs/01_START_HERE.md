@@ -198,8 +198,7 @@ submit_postflight_assessment(
 
 ### Need Help?
 - **Installation issues:** [`docs/02_INSTALLATION.md`](02_INSTALLATION.md)
-- **Troubleshooting:** [`docs/06_TROUBLESHOOTING.md`](06_TROUBLESHOOTING.md)
-- **Architecture overview:** [`docs/05_ARCHITECTURE.md`](05_ARCHITECTURE.md)
+- **Troubleshooting:** [`docs/03_TROUBLESHOOTING.md`](03_TROUBLESHOOTING.md)
 
 ---
 

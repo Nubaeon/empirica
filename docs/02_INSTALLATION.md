@@ -283,7 +283,7 @@ python -m empirica.vision.slide_processor --help
 # Already included in main install
 # Configure in Claude Desktop settings
 
-# See: 03_QUICKSTART_MCP.md
+# See: guides/MCP_INSTALLATION.md
 ```
 
 ---
@@ -306,8 +306,7 @@ rm -rf .empirica/
 
 ## Next Steps
 
-- **Try the CLI:** [02_QUICKSTART_CLI.md](02_QUICKSTART_CLI.md)
-- **Try MCP integration:** [03_QUICKSTART_MCP.md](03_QUICKSTART_MCP.md)
+- **Get started:** [01_START_HERE.md](01_START_HERE.md)
 - **Learn the concepts:** [EMPIRICA_EXPLAINED_SIMPLE.md](EMPIRICA_EXPLAINED_SIMPLE.md)
 - **See all commands:** [reference/CLI_COMMANDS_COMPLETE.md](reference/CLI_COMMANDS_COMPLETE.md)
 
@@ -315,10 +314,10 @@ rm -rf .empirica/
 
 ## Getting Help
 
-- **Issues:** Check [06_TROUBLESHOOTING.md](06_TROUBLESHOOTING.md)
+- **Issues:** Check [03_TROUBLESHOOTING.md](03_TROUBLESHOOTING.md)
 - **Documentation:** Browse `docs/` directory
 - **Source code:** See [reference/CANONICAL_DIRECTORY_STRUCTURE.md](reference/CANONICAL_DIRECTORY_STRUCTURE.md)
 
 ---
 
-**Installation complete!** Start with `empirica session-create --ai-id myai` and follow the [CLI Quick Start](02_QUICKSTART_CLI.md).
+**Installation complete!** Start with `empirica session-create --ai-id myai` and check [01_START_HERE.md](01_START_HERE.md) for next steps.

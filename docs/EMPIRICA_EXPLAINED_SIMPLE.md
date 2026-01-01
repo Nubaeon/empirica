@@ -442,7 +442,7 @@ empirica handoff-create --session-id <SESSION_ID>
 
 ## Next Steps
 
-- **For users:** See [02_QUICKSTART_CLI.md](02_QUICKSTART_CLI.md)
+- **For users:** See [01_START_HERE.md](01_START_HERE.md)
 - **For developers:** See [reference/CANONICAL_DIRECTORY_STRUCTURE.md](reference/CANONICAL_DIRECTORY_STRUCTURE.md)
 - **For AI agents:** See [system-prompts/CANONICAL_SYSTEM_PROMPT.md](system-prompts/CANONICAL_SYSTEM_PROMPT.md)
 

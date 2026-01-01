@@ -10,8 +10,8 @@
 ### 📖 Getting Started
 
 - **[01_START_HERE.md](01_START_HERE.md)** - Complete getting started guide
-- **[04_INSTALLATION.md](04_INSTALLATION.md)** - Installation instructions
-- **[06_TROUBLESHOOTING.md](06_TROUBLESHOOTING.md)** - Common issues and solutions
+- **[02_INSTALLATION.md](02_INSTALLATION.md)** - Installation instructions
+- **[03_TROUBLESHOOTING.md](03_TROUBLESHOOTING.md)** - Common issues and solutions
 - **[EMPIRICA_EXPLAINED_SIMPLE.md](EMPIRICA_EXPLAINED_SIMPLE.md)** - Plain-language overview
 
 ### 🧠 Core Concepts
@@ -60,8 +60,8 @@
 ```
 docs/
 ├── 01_START_HERE.md                  # Getting started
-├── 04_INSTALLATION.md                # Installation
-├── 06_TROUBLESHOOTING.md             # Troubleshooting
+├── 02_INSTALLATION.md                # Installation
+├── 03_TROUBLESHOOTING.md             # Troubleshooting
 ├── EMPIRICA_EXPLAINED_SIMPLE.md      # Plain-language overview
 ├── FEATURE_STATUS.md                 # Feature status
 ├── README.md                         # This file

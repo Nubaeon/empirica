@@ -36,4 +36,4 @@ empirica project-init
 
 - [Configuration Architecture](../development/session-summaries/CONFIG_ARCHITECTURE_EXPLAINED.md)
 - [Project Init Guide](../development/session-summaries/PROJECT_INIT_ONBOARDING.md)
-- [Installation Guide](../04_INSTALLATION.md)
+- [Installation Guide](../02_INSTALLATION.md)
