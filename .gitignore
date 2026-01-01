@@ -93,6 +93,10 @@ docs/tmp_*
 docs/research/
 docs/FEATURE_STATUS.md
 docs/SEMANTIC_INDEX.yaml
+docs/reference/epistemic/
+
+# Session data files (never commit)
+session_*.json
 
 # Auto-generated investigation branches (don't commit)
 # These are created by empirica investigate-create-branch
