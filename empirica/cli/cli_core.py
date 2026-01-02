@@ -96,6 +96,7 @@ from .parsers import (
     add_agent_parsers,
     add_sentinel_parsers,
     add_persona_parsers,
+    add_release_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -123,6 +124,7 @@ from .command_handlers.persona_commands import (
     handle_persona_promote_command,
     handle_persona_find_command,
 )
+from .command_handlers.release_commands import handle_release_ready_command
 
 
 def _get_version():
@@ -179,6 +181,7 @@ def create_argument_parser():
     add_agent_parsers(subparsers)
     add_sentinel_parsers(subparsers)
     add_persona_parsers(subparsers)
+    add_release_parsers(subparsers)
 
     return parser
 
@@ -379,6 +382,9 @@ def main(args=None):
             'persona-show': handle_persona_show_command,
             'persona-promote': handle_persona_promote_command,
             'persona-find': handle_persona_find_command,
+
+            # Release commands
+            'release-ready': handle_release_ready_command,
         }
         
         if parsed_args.command in command_handlers:
