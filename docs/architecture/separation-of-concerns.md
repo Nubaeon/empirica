@@ -206,8 +206,11 @@ PREFLIGHT → [noetic/praxic as needed] → CHECK → [noetic/praxic as needed] 
 - ✅ `project_{id}_memory` - Working (findings/unknowns auto-embedded)
 - ✅ `project_{id}_docs` - Working (via project-embed)
 - ✅ `project_{id}_epistemics` - Working (POSTFLIGHT deltas)
-- ⚠️ `global_learnings` - Collection not initialized
-- ⚠️ `personas` - Collection not initialized
+- ✅ `global_learnings` - Collection initialized (2026-01-02)
+- ✅ `personas` - Collection initialized, 8 pre-defined personas embedded (2026-01-02)
+
+**Note:** Current embeddings use local hash-based provider (limited semantic matching).
+For full semantic capability: `export EMPIRICA_EMBEDDINGS_PROVIDER=openai`
 
 **Persona Flow (Planned but not wired):**
 ```
