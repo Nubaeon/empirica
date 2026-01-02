@@ -13,7 +13,10 @@ These commands provide JSON output for MCP v2 server integration.
 import json
 import logging
 from ..cli_utils import handle_cli_error, parse_json_safely
-from empirica.core.canonical.empirica_git.sentinel_hooks import SentinelHooks, SentinelDecision
+from empirica.core.canonical.empirica_git.sentinel_hooks import SentinelHooks, SentinelDecision, auto_enable_sentinel
+
+# Auto-enable Sentinel with default evaluator on module load
+auto_enable_sentinel()
 
 logger = logging.getLogger(__name__)
 

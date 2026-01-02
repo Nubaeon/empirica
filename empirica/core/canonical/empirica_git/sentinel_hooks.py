@@ -31,6 +31,9 @@ class SentinelDecision(Enum):
     """Sentinel routing decisions"""
     PROCEED = "proceed"           # AI can continue
     INVESTIGATE = "investigate"   # Requires deeper investigation
+    BRANCH = "branch"            # Fork into parallel investigation paths
+    REVISE = "revise"            # Revise current approach
+    HALT = "halt"                # Stop and reassess
     HANDOFF = "handoff"          # Route to different AI
     ESCALATE = "escalate"        # Human review needed
     BLOCK = "block"              # Stop immediately
@@ -415,31 +418,63 @@ class SentinelHooks:
         )
 
 
-# Example evaluator for reference
-def example_uncertainty_evaluator(checkpoint_data: Dict[str, Any]) -> SentinelDecision:
+# Default evaluator for routing decisions
+def default_epistemic_evaluator(checkpoint_data: Dict[str, Any]) -> SentinelDecision:
     """
-    Example Sentinel evaluator - routes based on uncertainty
-    
+    Default Sentinel evaluator - routes based on epistemic vectors.
+
     Logic:
-    - UNCERTAINTY > 0.8 → INVESTIGATE
-    - KNOW < 0.5 and DO < 0.5 → HANDOFF (needs different AI)
-    - ENGAGEMENT < 0.6 → ESCALATE (human needed)
-    - Otherwise → PROCEED
+    - UNCERTAINTY > 0.7 → INVESTIGATE (too uncertain to proceed)
+    - KNOW < 0.5 and UNCERTAINTY > 0.5 → INVESTIGATE (low knowledge + doubt)
+    - ENGAGEMENT < 0.5 → ESCALATE (human needed)
+    - KNOW >= 0.7 and UNCERTAINTY <= 0.35 → PROCEED (readiness gate passed)
+    - Otherwise → PROCEED with caution
     """
     vectors = checkpoint_data.get('vectors', {})
-    
+
     uncertainty = vectors.get('uncertainty', 0.5)
     know = vectors.get('know', 0.5)
-    do = vectors.get('do', 0.5)
-    engagement = vectors.get('engagement', 0.6)
-    
-    if engagement < 0.6:
+    engagement = vectors.get('engagement', 0.7)
+
+    # Apply bias corrections (from CLAUDE.md)
+    corrected_uncertainty = uncertainty + 0.10
+    corrected_know = know - 0.05
+
+    # Escalate if engagement too low
+    if engagement < 0.5:
         return SentinelDecision.ESCALATE
-    
-    if uncertainty > 0.8:
+
+    # Investigate if too uncertain
+    if corrected_uncertainty > 0.7:
         return SentinelDecision.INVESTIGATE
-    
-    if know < 0.5 and do < 0.5:
-        return SentinelDecision.HANDOFF
-    
+
+    # Investigate if low knowledge with doubt
+    if corrected_know < 0.5 and corrected_uncertainty > 0.5:
+        return SentinelDecision.INVESTIGATE
+
+    # Check readiness gate
+    if corrected_know >= 0.70 and corrected_uncertainty <= 0.35:
+        return SentinelDecision.PROCEED
+
+    # Default: proceed (but Sentinel is watching)
     return SentinelDecision.PROCEED
+
+
+# Alias for backwards compatibility
+example_uncertainty_evaluator = default_epistemic_evaluator
+
+
+def auto_enable_sentinel() -> bool:
+    """
+    Auto-enable Sentinel with default evaluator.
+    Called automatically when CLI commands need Sentinel.
+
+    Returns:
+        bool: True if Sentinel was enabled, False if already enabled
+    """
+    if SentinelHooks.is_enabled():
+        return False
+
+    SentinelHooks.register_evaluator(default_epistemic_evaluator)
+    logger.info("🛡️ Sentinel auto-enabled with default epistemic evaluator")
+    return True

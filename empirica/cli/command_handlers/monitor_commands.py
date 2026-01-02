@@ -1571,6 +1571,8 @@ def handle_trajectory_project_command(args):
     import sqlite3
     from empirica.data.session_database import SessionDatabase
     from empirica.core.canonical.empirica_git import SentinelHooks
+    from empirica.core.canonical.empirica_git.sentinel_hooks import auto_enable_sentinel
+    auto_enable_sentinel()
 
     try:
         session_id = getattr(args, 'session_id', None)
