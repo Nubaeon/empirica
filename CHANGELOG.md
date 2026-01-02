@@ -5,6 +5,31 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-01-02
+
+### Added
+- **Epistemic Release Agent** (`empirica release-ready`) - Pre-release verification command with epistemic principles:
+  - Version sync check across pyproject.toml, __init__.py, CLAUDE.md prompt version
+  - Architecture turtle assessment on core/, cli/, data/ directories
+  - PyPI package verification for empirica and empirica-mcp
+  - Privacy/security scan for secrets, credentials, and dev files
+  - Documentation completeness check (README, CHANGELOG, docs/)
+  - Git status verification (branch, uncommitted changes, unpushed commits)
+  - Respects .gitignore patterns - only flags items NOT covered by gitignore
+  - Moon phase indicators (🌕🌔🌓🌒🌑) for visual status
+  - JSON output for CI/automation (`--output json`)
+  - Quick mode (`--quick`) to skip architecture assessment
+
+### Fixed
+- **Issue Resolution Bug** - `issue-resolve` command was filtering by session_id, preventing resolution of issues from different sessions. Removed session_id constraint from WHERE clause.
+- **Goal Completion Bug** - `goals-complete` command returned success but never updated goal status in database. Added missing UPDATE statement to set status='completed'.
+- **Ollama Auto-Detection** - Embeddings now auto-detect Ollama availability and use semantic embeddings when available, falling back to local hash when not.
+- **Sentinel Auto-Enable** - Sentinel now auto-enables with default epistemic evaluator on module load, appearing in CASCADE responses.
+
+### Changed
+- Added `.beads/` and `*.pem` to .gitignore for security
+- Reorganized .gitignore with "Security-sensitive files" section
+
 ## [1.1.3] - 2025-12-29
 
 ### Fixed
