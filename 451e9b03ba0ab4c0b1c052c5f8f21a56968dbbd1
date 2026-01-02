@@ -1,0 +1,31 @@
+{
+  "goal_id": "31bb264e-c624-4941-bfe8-d18679dd16cc",
+  "session_id": "c20eb448-ede2-4df0-82ed-4b62a632de26",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-02T08:20:34.057851+00:00",
+  "goal_data": {
+    "objective": "Assess and optimize skill injection: Anthropic vs Empirica approaches",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.7
+    },
+    "success_criteria": [
+      "{'description': 'Epistemically assess token efficiency of both approaches', 'weight': 0.3}",
+      "{'description': 'Update empirica-epistemic-framework.skill for Claude Chat', 'weight': 0.25}",
+      "{'description': 'Create plugin skill for Claude Code in empirica-integration', 'weight': 0.25}",
+      "{'description': 'Document maintainability tradeoffs', 'weight': 0.2}"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "claude-code",
+      "timestamp": "2026-01-02T08:20:34.057868+00:00",
+      "action": "created"
+    }
+  ]
+}
