@@ -1,0 +1,30 @@
+{
+  "goal_id": "06399167-6fba-4153-a85b-567725c66222",
+  "session_id": "12084d97-9717-4e7c-950c-9272d0a7dad3",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-02T14:28:36.889146+00:00",
+  "goal_data": {
+    "objective": "Fix CHECK gate metacognition: auto-compute decision from vectors, feed Sentinel decision back, auto-increment rounds",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "CHECK auto-computes proceed/investigate from know>=0.70 AND uncertainty<=0.35",
+      "Sentinel decision feeds back to override AI decision",
+      "Round number auto-increments based on session CHECK history"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-02T14:28:36.889158+00:00",
+      "action": "created"
+    }
+  ]
+}
