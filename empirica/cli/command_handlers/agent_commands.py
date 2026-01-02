@@ -282,11 +282,13 @@ def handle_agent_export_command(args) -> dict:
 
     Usage:
         empirica agent-export --branch-id <ID> --output-file agent.json
+        empirica agent-export --branch-id <ID> --register  # Register to sharing network
     """
     import time
 
     branch_id = getattr(args, 'branch_id', None)
     output_file = getattr(args, 'output_file', None)
+    register = getattr(args, 'register', False)
     output_format = getattr(args, 'output', 'json')
 
     if not branch_id:
@@ -341,6 +343,17 @@ def handle_agent_export_command(args) -> dict:
             "shareable": True,
             "reputation_seed": branch.get('merge_score') or 0.5
         }
+
+        # Register to PersonaRegistry if requested
+        registered_id = None
+        if register:
+            try:
+                from empirica.core.qdrant.persona_registry import PersonaRegistry
+                registry = PersonaRegistry()
+                registered_id = registry.register_agent(agent_package)
+                print(f"📡 Registered to sharing network (ID: {registered_id})")
+            except Exception as e:
+                print(f"⚠️  Registration failed (Qdrant unavailable?): {e}")
 
         # Output
         if output_file:
@@ -428,6 +441,71 @@ def handle_agent_import_command(args) -> dict:
 
     finally:
         db.close()
+
+
+def handle_agent_discover_command(args) -> dict:
+    """
+    Discover epistemic agents in the sharing network.
+
+    Search by domain expertise or reputation score.
+
+    Usage:
+        empirica agent-discover --domain security
+        empirica agent-discover --min-reputation 0.7
+    """
+
+    domain = getattr(args, 'domain', None)
+    min_reputation = getattr(args, 'min_reputation', None)
+    limit = getattr(args, 'limit', 10)
+    output_format = getattr(args, 'output', 'text')
+
+    try:
+        from empirica.core.qdrant.persona_registry import PersonaRegistry
+        registry = PersonaRegistry()
+
+        if domain:
+            agents = registry.find_agents_by_domain(domain, limit=limit)
+            search_type = f"domain: {domain}"
+        elif min_reputation is not None:
+            agents = registry.find_agents_by_reputation(min_reputation, limit=limit)
+            search_type = f"reputation >= {min_reputation}"
+        else:
+            # List all agents
+            agents = registry.find_agents_by_reputation(0.0, limit=limit)
+            search_type = "all agents"
+
+        response = {
+            "ok": True,
+            "search_type": search_type,
+            "agents_found": len(agents),
+            "agents": agents
+        }
+
+        if output_format == 'json':
+            print(json.dumps(response, indent=2))
+        else:
+            print(f"🔍 Searching: {search_type}")
+            print(f"   Found: {len(agents)} agents\n")
+
+            for agent in agents:
+                print(f"   [{agent.get('agent_id', 'unknown')}]")
+                print(f"      Type: {agent.get('persona_type', 'general')}")
+                print(f"      Domains: {', '.join(agent.get('focus_domains', []))}")
+                print(f"      Reputation: {agent.get('reputation_score', 0):.2f}")
+                delta = agent.get('learning_delta', {})
+                if delta:
+                    print(f"      Learning: know {delta.get('know', 0):+.2f}, uncertainty {delta.get('uncertainty', 0):+.2f}")
+                print()
+
+        return 0
+
+    except Exception as e:
+        error_msg = f"Discovery failed: {e}"
+        if output_format == 'json':
+            print(json.dumps({"ok": False, "error": error_msg}))
+        else:
+            print(f"❌ {error_msg}")
+        return 1
 
 
 def register_agent_parsers(subparsers):

@@ -54,7 +54,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Epistemics': ['epistemics-list', 'epistemics-show'],
                     'User Interface': ['chat'],
                     'Architecture': ['assess-component', 'assess-compare', 'assess-directory'],
-                    'Agents': ['agent-spawn', 'agent-report', 'agent-aggregate', 'agent-export', 'agent-import']
+                    'Agents': ['agent-spawn', 'agent-report', 'agent-aggregate', 'agent-export', 'agent-import', 'agent-discover']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -105,6 +105,7 @@ from .command_handlers.agent_commands import (
     handle_agent_aggregate_command,
     handle_agent_export_command,
     handle_agent_import_command,
+    handle_agent_discover_command,
 )
 
 
@@ -345,6 +346,7 @@ def main(args=None):
             'agent-aggregate': handle_agent_aggregate_command,
             'agent-export': handle_agent_export_command,
             'agent-import': handle_agent_import_command,
+            'agent-discover': handle_agent_discover_command,
         }
         
         if parsed_args.command in command_handlers:

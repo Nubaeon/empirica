@@ -8,6 +8,7 @@ from empirica.cli.command_handlers.agent_commands import (
     handle_agent_aggregate_command,
     handle_agent_export_command,
     handle_agent_import_command,
+    handle_agent_discover_command,
 )
 
 
@@ -53,6 +54,7 @@ def add_agent_parsers(subparsers):
     )
     export_parser.add_argument('--branch-id', required=True, help='Branch ID to export')
     export_parser.add_argument('--output-file', help='Output file path (prints to stdout if not specified)')
+    export_parser.add_argument('--register', action='store_true', help='Register to sharing network (Qdrant)')
     export_parser.add_argument('--output', choices=['text', 'json'], default='json')
     export_parser.set_defaults(func=handle_agent_export_command)
 
@@ -65,3 +67,14 @@ def add_agent_parsers(subparsers):
     import_parser.add_argument('--input-file', required=True, help='Agent JSON file to import')
     import_parser.add_argument('--output', choices=['text', 'json'], default='text')
     import_parser.set_defaults(func=handle_agent_import_command)
+
+    # agent-discover (search sharing network)
+    discover_parser = subparsers.add_parser(
+        'agent-discover',
+        help='Discover epistemic agents in sharing network'
+    )
+    discover_parser.add_argument('--domain', help='Search by domain expertise (e.g., security, multi-persona)')
+    discover_parser.add_argument('--min-reputation', type=float, help='Minimum reputation score (0.0-1.0)')
+    discover_parser.add_argument('--limit', type=int, default=10, help='Maximum results')
+    discover_parser.add_argument('--output', choices=['text', 'json'], default='text')
+    discover_parser.set_defaults(func=handle_agent_discover_command)

@@ -527,6 +527,61 @@ def handle_check_submit_command(args):
                     "round": round_num
                 }
             )
+            
+            # Wire Bayesian beliefs logging (TIER 3 Priority 2)
+            # Update AI's beliefs about epistemic vectors based on CHECK assessment
+            try:
+                from empirica.core.bayesian_beliefs import BayesianBeliefManager
+                from empirica.data.session_database import SessionDatabase
+                
+                db = SessionDatabase()
+                belief_manager = BayesianBeliefManager(db)
+                
+                # Update beliefs for each vector based on CHECK submission
+                for vector_name in ['engagement', 'know', 'do', 'context', 'clarity', 
+                                   'coherence', 'signal', 'density', 'state', 'change',
+                                   'completion', 'impact', 'uncertainty']:
+                    if vector_name in vectors:
+                        observation = vectors[vector_name]
+                        belief_manager.update_belief(
+                            session_id=session_id,
+                            vector_name=vector_name,
+                            observation=observation,
+                            phase="CHECK",
+                            round_num=round_num
+                        )
+            except Exception as e:
+                # Bayesian logging is non-critical - don't fail CHECK if it errors
+                logger.warning(f"Bayesian belief update failed: {e}")
+            
+            # Wire CHECK phase hooks (TIER 3 Priority 3)
+            # Capture fresh epistemic state before and after CHECK
+            try:
+                import subprocess
+                
+                # Pre-CHECK hook: Capture state BEFORE checkpoint storage
+                # (Note: In real flow, pre_check would run BEFORE check-submit)
+                # For now, document that this should be called by orchestration layer
+                
+                # Post-CHECK hook: Capture state AFTER checkpoint for comparison
+                if decision and decision.lower() != 'pending':
+                    try:
+                        result = subprocess.run(
+                            ['empirica', 'check-drift', '--trigger', 'post_check', 
+                             '--session-id', session_id],
+                            capture_output=True,
+                            text=True,
+                            timeout=10
+                        )
+                        if result.returncode == 0:
+                            logger.info(f"Post-CHECK hook executed for {session_id}")
+                    except subprocess.TimeoutExpired:
+                        logger.warning("Post-CHECK hook timed out")
+                    except Exception as e:
+                        logger.warning(f"Post-CHECK hook failed: {e}")
+            except Exception as e:
+                # Hook failures are non-critical
+                logger.warning(f"CHECK phase hooks error: {e}")
 
             # SENTINEL HOOK: Evaluate checkpoint for routing decisions
             # CHECK phase is especially important for Sentinel - it gates noetic→praxic transition
