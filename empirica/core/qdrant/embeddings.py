@@ -3,12 +3,13 @@ Provider-agnostic embeddings adapter.
 Reads provider/model from env (or defaults) and returns float vectors.
 
 ENV:
-- EMPIRICA_EMBEDDINGS_PROVIDER: openai|ollama|local (default: local)
+- EMPIRICA_EMBEDDINGS_PROVIDER: openai|ollama|local|auto (default: auto)
 - EMPIRICA_EMBEDDINGS_MODEL: model name (default varies by provider)
 - EMPIRICA_OLLAMA_URL: Ollama server URL (default: http://localhost:11434)
 - OPENAI_API_KEY (for provider=openai)
 
 Providers:
+- auto: Auto-detect best available (ollama if running, else local)
 - openai: OpenAI API (requires openai package + API key)
 - ollama: Local Ollama server (phi3, nomic-embed-text, etc.)
 - local: Hash-based fallback for testing (no external deps)
@@ -19,6 +20,9 @@ import logging
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
+
+# Cache for Ollama availability check
+_ollama_available: Optional[bool] = None
 
 try:
     from openai import OpenAI  # type: ignore
@@ -50,11 +54,59 @@ MODEL_DIMENSIONS = {
 }
 
 
+def _check_ollama_available(ollama_url: str = "http://localhost:11434") -> bool:
+    """Check if Ollama server is running and has embedding models."""
+    global _ollama_available
+
+    if _ollama_available is not None:
+        return _ollama_available
+
+    try:
+        import requests
+        # Quick health check
+        resp = requests.get(f"{ollama_url}/api/tags", timeout=2)
+        if resp.status_code == 200:
+            # Check if nomic-embed-text is available
+            models = resp.json().get("models", [])
+            model_names = [m.get("name", "").split(":")[0] for m in models]
+            if "nomic-embed-text" in model_names:
+                _ollama_available = True
+                logger.info("Ollama detected with nomic-embed-text - using semantic embeddings")
+                return True
+            # If nomic-embed-text not available, still use Ollama if any embedding model exists
+            for name in model_names:
+                if name in MODEL_DIMENSIONS:
+                    _ollama_available = True
+                    logger.info(f"Ollama detected with {name} - using semantic embeddings")
+                    return True
+        _ollama_available = False
+        return False
+    except Exception:
+        _ollama_available = False
+        return False
+
+
+def _resolve_auto_provider(ollama_url: str) -> str:
+    """Resolve 'auto' provider to actual provider based on availability."""
+    if _check_ollama_available(ollama_url):
+        return "ollama"
+    return "local"
+
+
 class EmbeddingsProvider:
     def __init__(self) -> None:
-        self.provider = os.getenv("EMPIRICA_EMBEDDINGS_PROVIDER", "local").lower()
-        self.model = os.getenv("EMPIRICA_EMBEDDINGS_MODEL", DEFAULT_MODELS.get(self.provider, "nomic-embed-text"))
         self.ollama_url = os.getenv("EMPIRICA_OLLAMA_URL", "http://localhost:11434")
+
+        # Get provider from env, default to "auto"
+        provider_env = os.getenv("EMPIRICA_EMBEDDINGS_PROVIDER", "auto").lower()
+
+        # Resolve "auto" to actual provider
+        if provider_env == "auto":
+            self.provider = _resolve_auto_provider(self.ollama_url)
+        else:
+            self.provider = provider_env
+
+        self.model = os.getenv("EMPIRICA_EMBEDDINGS_MODEL", DEFAULT_MODELS.get(self.provider, "nomic-embed-text"))
         self._client = None
         self._vector_size: Optional[int] = None
 
@@ -62,18 +114,18 @@ class EmbeddingsProvider:
             if OpenAI is None:
                 raise RuntimeError("openai package not available; install openai>=1.0")
             self._client = OpenAI()
-            self._vector_size = 1536
+            self._vector_size = MODEL_DIMENSIONS.get(self.model, 1536)
         elif self.provider == "ollama":
             # Ollama uses REST API - no special client needed
             self._client = None
-            # Vector size depends on model - will be determined on first embed
-            self._vector_size = None
+            # Vector size from MODEL_DIMENSIONS or determined on first embed
+            self._vector_size = MODEL_DIMENSIONS.get(self.model)
         elif self.provider == "local":
             # No external dependency; simple hashing-based embedding (for testing)
             self._client = None
             self._vector_size = 1536
         else:
-            raise RuntimeError(f"Unsupported provider '{self.provider}'. Set EMPIRICA_EMBEDDINGS_PROVIDER=openai|ollama|local")
+            raise RuntimeError(f"Unsupported provider '{self.provider}'. Set EMPIRICA_EMBEDDINGS_PROVIDER=openai|ollama|local|auto")
 
         logger.debug(f"Embeddings provider: {self.provider}, model: {self.model}")
 
