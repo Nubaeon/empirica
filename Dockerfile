@@ -31,7 +31,7 @@ RUN pip install --no-cache-dir /tmp/empirica-1.2.3-py3-none-any.whl \
 RUN mkdir -p /data/.empirica
 
 # Copy documentation to accessible location
-COPY docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md /app/docs/CANONICAL_SYSTEM_PROMPT.md
+COPY docs/system-prompts/CANONICAL_CORE.md /app/docs/CANONICAL_CORE.md
 COPY README.md /app/README.md
 
 # Set environment variables
