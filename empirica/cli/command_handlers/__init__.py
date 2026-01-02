@@ -22,6 +22,7 @@ from .workflow_commands import (
 from .goal_commands import (
     handle_goals_create_command,
     handle_goals_add_subtask_command,
+    handle_goals_add_dependency_command,
     handle_goals_complete_subtask_command,
     handle_goals_progress_command,
     handle_goals_get_subtasks_command,
@@ -156,6 +157,7 @@ __all__ = [
     # NEW: Goal Management Commands (MCP v2 Integration)
     'handle_goals_create_command',
     'handle_goals_add_subtask_command',
+    'handle_goals_add_dependency_command',
     'handle_goals_complete_subtask_command',
     'handle_goals_progress_command',
     'handle_goals_get_subtasks_command',

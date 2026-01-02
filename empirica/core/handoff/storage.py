@@ -248,7 +248,7 @@ class DatabaseHandoffStorage:
                 key_findings TEXT,
                 knowledge_gaps_filled TEXT,
                 remaining_unknowns TEXT,
-                investigation_tools TEXT,
+                noetic_tools TEXT,
                 next_session_context TEXT,
                 recommended_next_steps TEXT,
                 artifacts_created TEXT,
@@ -293,7 +293,7 @@ class DatabaseHandoffStorage:
                 INSERT OR REPLACE INTO handoff_reports
                 (session_id, ai_id, timestamp, task_summary, duration_seconds,
                  epistemic_deltas, key_findings, knowledge_gaps_filled,
-                 remaining_unknowns, investigation_tools, next_session_context,
+                 remaining_unknowns, noetic_tools, next_session_context,
                  recommended_next_steps, artifacts_created, calibration_status,
                  overall_confidence_delta, compressed_json, markdown_report, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -307,7 +307,7 @@ class DatabaseHandoffStorage:
                 json.dumps(report['key_findings']),
                 json.dumps(report['knowledge_gaps_filled']),
                 json.dumps(report['remaining_unknowns']),
-                json.dumps(report['investigation_tools']),
+                json.dumps(report['noetic_tools']),
                 report['next_session_context'],
                 json.dumps(report['recommended_next_steps']),
                 json.dumps(report['artifacts_created']),
@@ -394,7 +394,7 @@ class DatabaseHandoffStorage:
             'key_findings': json.loads(row['key_findings']) if row['key_findings'] else [],
             'knowledge_gaps_filled': json.loads(row['knowledge_gaps_filled']) if row['knowledge_gaps_filled'] else [],
             'remaining_unknowns': json.loads(row['remaining_unknowns']) if row['remaining_unknowns'] else [],
-            'investigation_tools': json.loads(row['investigation_tools']) if row['investigation_tools'] else [],
+            'noetic_tools': json.loads(row['noetic_tools']) if row['noetic_tools'] else [],
             'next_session_context': row['next_session_context'],
             'recommended_next_steps': json.loads(row['recommended_next_steps']) if row['recommended_next_steps'] else [],
             'artifacts_created': json.loads(row['artifacts_created']) if row['artifacts_created'] else [],

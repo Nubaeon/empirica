@@ -207,7 +207,7 @@ class SessionRepository(BaseRepository):
         if detail_level in ['detailed', 'full']:
             cursor = self._execute("""
                 SELECT tool_name, COUNT(*) as count
-                FROM investigation_tools
+                FROM noetic_tools
                 WHERE cascade_id IN (
                     SELECT cascade_id FROM cascades WHERE session_id = ?
                 )

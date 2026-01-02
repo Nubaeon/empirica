@@ -38,7 +38,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                 categories = {
                     'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
                     'CASCADE Workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
-                    'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
+                    'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-add-dependency', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
                     'Project Management': ['project-init', 'project-create', 'project-list', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
                     'Workspace': ['workspace-init', 'workspace-map', 'workspace-overview'],
                     'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
@@ -304,6 +304,7 @@ def main(args=None):
             'goals-complete': handle_goals_complete_command,
             'goals-claim': handle_goals_claim_command,
             'goals-add-subtask': handle_goals_add_subtask_command,
+            'goals-add-dependency': handle_goals_add_dependency_command,
             'goals-complete-subtask': handle_goals_complete_subtask_command,
             'goals-get-subtasks': handle_goals_get_subtasks_command,
             'goals-progress': handle_goals_progress_command,

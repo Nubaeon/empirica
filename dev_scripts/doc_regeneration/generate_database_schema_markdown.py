@@ -99,7 +99,7 @@ def generate_markdown(data: Dict) -> str:
     categories = {
         'Core': ['sessions', 'cascades', 'reflexes'],
         'Goals & Tasks': ['goals', 'subtasks'],
-        'Investigation': ['investigation_tools', 'investigation_logs', 'act_logs', 'investigation_branches', 'merge_decisions'],
+        'Investigation': ['noetic_tools', 'investigation_logs', 'praxic_logs', 'investigation_branches', 'merge_decisions'],
         'Project Tracking': ['projects', 'project_handoffs', 'project_findings', 'project_unknowns', 'project_dead_ends', 'project_reference_docs', 'epistemic_sources'],
         'Handoffs': ['handoff_reports'],
         'Monitoring': ['divergence_tracking', 'drift_monitoring', 'epistemic_snapshots'],
