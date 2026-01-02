@@ -293,6 +293,7 @@ class TestGoalsWorkflowE2E:
 class TestDatabaseIntegrity:
     """Test database schema and data integrity"""
     
+    @pytest.mark.skip(reason="Old reflexes table system - replaced by GitEnhancedReflexLogger")
     def test_reflexes_table_integration(self):
         """
         E2E: Submit PREFLIGHT → Verify Reflexes Table → Create Checkpoint

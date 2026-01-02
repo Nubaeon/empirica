@@ -1,0 +1,64 @@
+# Finance Domain Profile - SOX Compliance
+# Use with: empirica sentinel-load-profile --profile finance
+# Or load custom: empirica sentinel-load-profile --profile finance --file custom-finance.yaml
+
+name: finance
+description: SOX-compliant financial services domain with audit trail
+compliance_framework: SOX
+version: "1.0"
+
+# Epistemic thresholds
+thresholds:
+  uncertainty_trigger: 0.25  # Trigger investigation at 25% uncertainty
+  confidence_to_proceed: 0.9  # Need 90% confidence for financial decisions
+  max_unknowns: 2  # Very strict on unresolved questions
+
+# Audit settings
+audit:
+  enabled: true
+  log_all_actions: true
+  retention_days: 2555  # 7 years for SOX
+
+# Compliance gates
+gates:
+  - gate_id: financial_amount_threshold
+    condition: amount > 10000
+    action: require_human_review
+    priority: critical
+    description: "Human approval required for transactions over $10,000"
+
+  - gate_id: high_uncertainty
+    condition: uncertainty > 0.3
+    action: halt_and_audit
+    priority: critical
+    description: "Halt uncertain financial operations for audit"
+
+  - gate_id: insufficient_confidence
+    condition: know < 0.8
+    action: investigate
+    priority: high
+    description: "Require high knowledge for financial decisions"
+
+  - gate_id: calculation_verification
+    condition: requires_calculation
+    action: require_human_review
+    priority: high
+    description: "Human verification for financial calculations"
+
+  - gate_id: anomaly_detected
+    condition: anomaly_score > 0.7
+    action: escalate
+    priority: critical
+    description: "Escalate potential fraud or anomalies"
+
+# Persona preferences for finance
+persona_preferences:
+  required_domains:
+    - data
+    - security
+  preferred_domains:
+    - performance
+  min_reputation: 0.8
+
+# Merge strategy - require consensus for financial matters
+merge_strategy: consensus

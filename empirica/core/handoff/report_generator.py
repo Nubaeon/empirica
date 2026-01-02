@@ -85,7 +85,7 @@ class EpistemicHandoffReportGenerator:
                 'key_findings': List[str],
                 'knowledge_gaps_filled': List[Dict],
                 'remaining_unknowns': List[str],
-                'investigation_tools': List[str],
+                'noetic_tools': List[str],
                 'next_session_context': str,
                 'recommended_next_steps': List[str],
                 'artifacts_created': List[str],
@@ -136,7 +136,7 @@ class EpistemicHandoffReportGenerator:
         )
         
         # Extract investigation tools used
-        tools_used = self._extract_investigation_tools(session_id)
+        tools_used = self._extract_noetic_tools(session_id)
         
         # Generate recommendations
         recommendations = self._generate_recommendations(
@@ -163,7 +163,7 @@ class EpistemicHandoffReportGenerator:
             'key_findings': key_findings,
             'knowledge_gaps_filled': gaps_filled,
             'remaining_unknowns': remaining_unknowns,
-            'investigation_tools': tools_used,
+            'noetic_tools': tools_used,
             'next_session_context': next_session_context,
             'recommended_next_steps': recommendations,
             'artifacts_created': artifacts_created or [],
@@ -221,7 +221,7 @@ class EpistemicHandoffReportGenerator:
             'key_findings': key_findings,
             'knowledge_gaps_filled': [],  # Can't measure without assessments
             'remaining_unknowns': remaining_unknowns,
-            'investigation_tools': [],  # Not tracked in planning mode
+            'noetic_tools': [],  # Not tracked in planning mode
             'next_session_context': next_session_context,
             'recommended_next_steps': [],  # Can't recommend without epistemic data
             'artifacts_created': artifacts_created or [],
@@ -488,7 +488,7 @@ class EpistemicHandoffReportGenerator:
             })
         
         # Extract from key findings (heuristic)
-        for finding in key_findings[:3]:  # Top 3 findings
+        for finding in (key_findings or [])[:3]:  # Top 3 findings
             if any(keyword in finding.lower() for keyword in ['learned', 'discovered', 'found', 'validated']):
                 gaps.append({
                     'gap': 'Investigation finding',
@@ -499,7 +499,7 @@ class EpistemicHandoffReportGenerator:
         
         return gaps
     
-    def _extract_investigation_tools(self, session_id: str) -> List[str]:
+    def _extract_noetic_tools(self, session_id: str) -> List[str]:
         """
         Extract which investigation tools were used during session
         
@@ -510,15 +510,15 @@ class EpistemicHandoffReportGenerator:
         try:
             cursor = self.db.conn.cursor()
             
-            # Query investigation_tools table if it exists
+            # Query noetic_tools table if it exists
             cursor.execute("""
                 SELECT name FROM sqlite_master 
-                WHERE type='table' AND name='investigation_tools'
+                WHERE type='table' AND name='noetic_tools'
             """)
             
             if cursor.fetchone():
                 cursor.execute("""
-                    SELECT DISTINCT tool_name FROM investigation_tools
+                    SELECT DISTINCT tool_name FROM noetic_tools
                     WHERE session_id = ?
                 """, (session_id,))
                 
@@ -658,7 +658,7 @@ class EpistemicHandoffReportGenerator:
         recommendations_md = '\n'.join(f"- {r}" for r in report['recommended_next_steps'])
         gaps_md = self._format_gaps(report['knowledge_gaps_filled'])
         artifacts_md = '\n'.join(f"- `{a}`" for a in report['artifacts_created']) if report['artifacts_created'] else "- None tracked"
-        tools_md = ', '.join(report['investigation_tools'])
+        tools_md = ', '.join(report['noetic_tools'])
         
         # Calibration indicator
         cal_status = report['calibration_status']
@@ -826,7 +826,7 @@ class EpistemicHandoffReportGenerator:
             'next': report['next_session_context'][:300],
             'recommend': [r[:100] for r in report['recommended_next_steps'][:3]],
             'artifacts': [a[:100] for a in report['artifacts_created'][:10]],
-            'tools': report['investigation_tools'][:5],
+            'tools': report['noetic_tools'][:5],
             'cal': report['calibration_status']
         }
         

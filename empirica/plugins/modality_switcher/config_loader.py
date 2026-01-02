@@ -25,7 +25,8 @@ class ConfigLoader:
     """
     
     DEFAULT_CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "modality_config.yaml"
-    PROJECT_CONFIG_PATH = Path.cwd() / "empirica_config.yaml"
+    # Note: PROJECT_CONFIG_PATH is lazy-loaded in __init__ to avoid Path.cwd() failures
+    # when module is imported from non-standard directories (e.g., during tests)
     USER_CONFIG_PATH = Path.home() / ".empirica" / "config.yaml"
     
     def __init__(self, config_path: Optional[Path] = None):
@@ -36,6 +37,13 @@ class ConfigLoader:
             config_path: Optional explicit config file path
         """
         self.config_path = config_path
+        # Lazy-load PROJECT_CONFIG_PATH to avoid Path.cwd() errors at import time
+        try:
+            self.PROJECT_CONFIG_PATH = Path.cwd() / "empirica_config.yaml"
+        except (RuntimeError, FileNotFoundError):
+            # cwd() can fail if working directory was deleted
+            self.PROJECT_CONFIG_PATH = None
+        
         self.config = self.load_config()
     
     def load_config(self) -> Dict[str, Any]:
@@ -52,7 +60,7 @@ class ConfigLoader:
             config = self._get_minimal_defaults()
         
         # Overlay project config if exists
-        if self.PROJECT_CONFIG_PATH.exists():
+        if self.PROJECT_CONFIG_PATH and self.PROJECT_CONFIG_PATH.exists():
             project_config = self._load_yaml(self.PROJECT_CONFIG_PATH)
             if project_config:
                 config = self._merge_configs(config, project_config)

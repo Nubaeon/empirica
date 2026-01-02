@@ -444,6 +444,7 @@ def handle_investigate_merge_branches_command(args):
 
         session_id = args.session_id
         investigation_round = int(getattr(args, 'round', 1) or 1)
+        tag_losers = getattr(args, 'tag_losers', False)
 
         db = SessionDatabase()
 
@@ -453,14 +454,75 @@ def handle_investigate_merge_branches_command(args):
             investigation_round=investigation_round
         )
 
-        db.close()
-
         if "error" in merge_result:
+            db.close()
             result = {
                 "ok": False,
                 "error": merge_result["error"]
             }
         else:
+            # Tag losing branches as dead ends if --tag-losers flag
+            dead_ends_logged = 0
+            dead_ends_embedded = 0
+            if tag_losers and merge_result.get("other_branches"):
+                winning_name = merge_result["winning_branch_name"]
+                winning_score = merge_result["winning_score"]
+                winning_branch_id = merge_result["winning_branch_id"]
+
+                # Get project_id for Qdrant embedding
+                project_id = None
+                try:
+                    cursor = db.conn.cursor()
+                    cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+                    row = cursor.fetchone()
+                    if row:
+                        project_id = row[0]
+                except Exception:
+                    pass
+
+                for loser in merge_result["other_branches"]:
+                    loser_name = loser.get("branch_name", "unknown")
+                    loser_score = loser.get("score", 0)
+                    loser_branch_id = loser.get("branch_id")
+                    score_diff = winning_score - loser_score
+                    approach = f"Investigation branch: {loser_name}"
+                    why_failed = (f"Lost epistemic merge to {winning_name} (score diff: {score_diff:.4f}). "
+                                  f"Branch score: {loser_score:.4f} vs winner: {winning_score:.4f}")
+
+                    # Log as dead end to database
+                    dead_end_id = db.log_project_dead_end(
+                        project_id=None,  # Will be resolved from session
+                        session_id=session_id,
+                        approach=approach,
+                        why_failed=why_failed,
+                        goal_id=None,
+                        subtask_id=None
+                    )
+                    dead_ends_logged += 1
+
+                    # Also embed to Qdrant for similarity search
+                    if project_id:
+                        try:
+                            from empirica.core.qdrant.vector_store import embed_dead_end_with_branch_context
+                            embedded = embed_dead_end_with_branch_context(
+                                project_id=project_id,
+                                dead_end_id=str(dead_end_id) if dead_end_id else f"{session_id}_{loser_branch_id}",
+                                approach=approach,
+                                why_failed=why_failed,
+                                session_id=session_id,
+                                branch_id=loser_branch_id,
+                                winning_branch_id=winning_branch_id,
+                                score_diff=score_diff,
+                                preflight_vectors=loser.get("preflight_vectors"),
+                                postflight_vectors=loser.get("postflight_vectors")
+                            )
+                            if embedded:
+                                dead_ends_embedded += 1
+                        except ImportError:
+                            pass  # Qdrant not available
+
+            db.close()
+
             result = {
                 "ok": True,
                 "winning_branch_id": merge_result["winning_branch_id"],
@@ -469,7 +531,9 @@ def handle_investigate_merge_branches_command(args):
                 "merge_decision_id": merge_result["merge_decision_id"],
                 "other_branches": merge_result["other_branches"],
                 "rationale": merge_result["rationale"],
-                "message": f"Auto-merged {merge_result['winning_branch_name']} (score: {merge_result['winning_score']:.4f})"
+                "message": f"Auto-merged {merge_result['winning_branch_name']} (score: {merge_result['winning_score']:.4f})",
+                "dead_ends_logged": dead_ends_logged if tag_losers else None,
+                "dead_ends_embedded": dead_ends_embedded if tag_losers else None
             }
 
         # Format output
@@ -477,16 +541,127 @@ def handle_investigate_merge_branches_command(args):
             print(json.dumps(result, indent=2))
         else:
             if result.get("ok"):
-                print(f"✅ Epistemic Auto-Merge Complete")
+                print(f"Epistemic Auto-Merge Complete")
                 print(f"   Winner: {merge_result['winning_branch_name']}")
                 print(f"   Merge Score: {merge_result['winning_score']:.4f}")
                 print(f"   Decision ID: {merge_result['merge_decision_id'][:8]}...")
                 print(f"   Evaluated {len(merge_result['other_branches']) + 1} paths")
                 print(f"   Rationale: {merge_result['rationale']}")
+                if tag_losers and dead_ends_logged > 0:
+                    embedded_info = f" ({dead_ends_embedded} embedded to Qdrant)" if dead_ends_embedded > 0 else ""
+                    print(f"   Dead ends logged: {dead_ends_logged}{embedded_info}")
             else:
-                print(f"❌ Merge failed: {result.get('error')}")
+                print(f"Merge failed: {result.get('error')}")
 
         return result
 
     except Exception as e:
         handle_cli_error(e, "Merge investigation branches", getattr(args, 'verbose', False))
+
+
+def handle_investigate_multi_command(args):
+    """
+    Multi-persona parallel investigation with epistemic auto-merge.
+
+    Spawns parallel epistemic agents with different persona priors,
+    then aggregates results using merge scoring.
+
+    Usage:
+        empirica investigate-multi --task "Review auth code" --personas security,ux --session-id <ID>
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        from empirica.core.agents import EpistemicAgentConfig, spawn_epistemic_agent
+        from empirica.core.persona import PersonaManager
+
+        session_id = args.session_id
+        task = args.task
+        personas_str = args.personas
+        context = getattr(args, 'context', None)
+        strategy = getattr(args, 'aggregate_strategy', 'epistemic-score')
+        output_format = getattr(args, 'output', 'human')
+
+        # Parse personas
+        persona_ids = [p.strip() for p in personas_str.split(',')]
+
+        # Load personas
+        manager = PersonaManager()
+        loaded_personas = {}
+        for pid in persona_ids:
+            try:
+                loaded_personas[pid] = manager.load_persona(pid)
+            except FileNotFoundError:
+                # Fall back to general persona with modified name
+                loaded_personas[pid] = None  # Will use default
+
+        # Spawn agents for each persona
+        db = SessionDatabase()
+        branches = {}
+
+        for pid in persona_ids:
+            config = EpistemicAgentConfig(
+                session_id=session_id,
+                task=task,
+                persona_id=pid,
+                persona=loaded_personas.get(pid),
+                investigation_path=f"multi-{pid}",
+                parent_context=context
+            )
+            result = spawn_epistemic_agent(config, execute_fn=None)
+            branches[pid] = {
+                "branch_id": result.branch_id,
+                "persona_id": pid,
+                "preflight_vectors": result.preflight_vectors,
+                "prompt": result.output
+            }
+
+        # Build response
+        response = {
+            "ok": True,
+            "session_id": session_id,
+            "task": task,
+            "personas": persona_ids,
+            "branches": branches,
+            "aggregate_strategy": strategy,
+            "next_steps": [
+                f"Execute each agent's prompt (see branches[persona_id].prompt)",
+                f"Report results: empirica agent-report --branch-id <ID> --postflight '<json>'",
+                f"Aggregate: empirica agent-aggregate --session-id {session_id}"
+            ]
+        }
+
+        db.close()
+
+        # Output
+        if output_format == 'json':
+            # Don't include full prompts in JSON output (too verbose)
+            json_response = {**response}
+            for pid in json_response['branches']:
+                json_response['branches'][pid]['prompt'] = f"[{len(branches[pid]['prompt'])} chars - use --output human to see]"
+            print(json.dumps(json_response, indent=2))
+        else:
+            print(f"✅ Multi-Persona Investigation Started")
+            print(f"   Task: {task}")
+            print(f"   Personas: {', '.join(persona_ids)}")
+            print(f"   Strategy: {strategy}")
+            print(f"\n📋 Branches Created:")
+            for pid, branch in branches.items():
+                print(f"\n   [{pid}] Branch: {branch['branch_id'][:8]}...")
+                print(f"   Priors: know={branch['preflight_vectors'].get('know', 0.5):.2f}, uncertainty={branch['preflight_vectors'].get('uncertainty', 0.5):.2f}")
+
+            print(f"\n📝 Next Steps:")
+            print(f"   1. Execute each agent prompt (shown below)")
+            print(f"   2. Report: empirica agent-report --branch-id <ID> --postflight '<json>'")
+            print(f"   3. Aggregate: empirica agent-aggregate --session-id {session_id}")
+
+            # Show prompts
+            for pid, branch in branches.items():
+                print(f"\n{'='*60}")
+                print(f"PROMPT FOR [{pid}] (branch: {branch['branch_id'][:8]}...)")
+                print(f"{'='*60}")
+                print(branch['prompt'][:1500] + "..." if len(branch['prompt']) > 1500 else branch['prompt'])
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Multi-persona investigation", getattr(args, 'verbose', False))

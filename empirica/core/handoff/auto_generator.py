@@ -8,7 +8,7 @@ avoiding token bloat from storing full cascade data.
 import json
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -192,7 +192,7 @@ def auto_generate_handoff(session_id: str, db_path: str = "./.empirica/sessions/
             },
             "duration_seconds": duration_seconds,
             "cascades_completed": len(cascades),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
     finally:
@@ -251,7 +251,7 @@ def close_session(session_id: str, db_path: str = "./.empirica/sessions/sessions
             UPDATE sessions
             SET end_time = ?
             WHERE session_id = ?
-        """, (datetime.utcnow().isoformat(), session_id))
+        """, (datetime.now(timezone.utc).isoformat(), session_id))
         
         db.conn.commit()
         logger.info(f"Session {session_id} closed successfully")

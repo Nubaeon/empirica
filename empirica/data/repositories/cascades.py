@@ -3,7 +3,7 @@ import sqlite3
 import json
 import uuid
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from .base import BaseRepository
 
 
@@ -38,7 +38,7 @@ class CascadeRepository(BaseRepository):
             INSERT INTO cascades (
                 cascade_id, session_id, task, context_json, goal_id, goal_json, started_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (cascade_id, session_id, task, json.dumps(context), goal_id, goal_json, datetime.utcnow().isoformat()))
+        """, (cascade_id, session_id, task, json.dumps(context), goal_id, goal_json, datetime.now(timezone.utc).isoformat()))
 
         # Increment session cascade count
         self._execute("""
@@ -104,7 +104,7 @@ class CascadeRepository(BaseRepository):
             WHERE cascade_id = ?
         """, (
             final_action, final_confidence, investigation_rounds, duration_ms,
-            datetime.utcnow().isoformat(), engagement_gate_passed, bayesian_active,
+            datetime.now(timezone.utc).isoformat(), engagement_gate_passed, bayesian_active,
             drift_monitored, cascade_id
         ))
 

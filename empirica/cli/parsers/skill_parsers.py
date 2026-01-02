@@ -18,3 +18,30 @@ def add_skill_parsers(subparsers):
     skill_fetch_parser.add_argument('--tags', help='Comma-separated tags for the skill')
     skill_fetch_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
     skill_fetch_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+
+    # Skill extract command - extract decision frameworks from skill to YAML
+    skill_extract_parser = subparsers.add_parser(
+        'skill-extract',
+        help='Extract decision frameworks from skill to meta-agent-config.yaml'
+    )
+    skill_extract_parser.add_argument(
+        '--skill-dir',
+        help='Path to skill directory (with SKILL.md and/or references/)'
+    )
+    skill_extract_parser.add_argument(
+        '--skills-dir',
+        help='Path to directory containing multiple skills (extracts all)'
+    )
+    skill_extract_parser.add_argument(
+        '--output-file',
+        default='meta-agent-config.yaml',
+        help='Output YAML file path (default: meta-agent-config.yaml)'
+    )
+    skill_extract_parser.add_argument(
+        '--output', choices=['human', 'json'], default='json',
+        help='Output format'
+    )
+    skill_extract_parser.add_argument(
+        '--verbose', action='store_true',
+        help='Show detailed extraction progress'
+    )

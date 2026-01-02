@@ -1,0 +1,46 @@
+# General Domain Profile - Balanced Defaults
+# Use with: empirica sentinel-load-profile --profile general
+# This is the default profile for non-specialized domains
+
+name: general
+description: Balanced default profile for general software engineering
+compliance_framework: null
+version: "1.0"
+
+# Epistemic thresholds
+thresholds:
+  uncertainty_trigger: 0.5  # Standard 50% uncertainty trigger
+  confidence_to_proceed: 0.7  # 70% confidence to proceed
+  max_unknowns: 5  # Reasonable tolerance for unknowns
+
+# Audit settings
+audit:
+  enabled: false
+  log_all_actions: false
+  retention_days: 90  # 3 months
+
+# Compliance gates
+gates:
+  - gate_id: high_uncertainty
+    condition: uncertainty > 0.6
+    action: investigate
+    priority: medium
+    description: "Return to investigation at high uncertainty"
+
+  - gate_id: low_knowledge
+    condition: know < 0.5
+    action: investigate
+    priority: low
+    description: "Investigate when knowledge is insufficient"
+
+  - gate_id: scope_creep
+    condition: scope_breadth > 0.8
+    action: log_and_continue
+    priority: low
+    description: "Log potential scope creep but continue"
+
+# No specific persona preferences
+persona_preferences: {}
+
+# Merge strategy - union for general work
+merge_strategy: union

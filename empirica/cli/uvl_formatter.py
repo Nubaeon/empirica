@@ -229,7 +229,7 @@ def format_uvl_stream_message(
     
     Returns structured JSON that can be consumed by visualization AIs.
     """
-    from datetime import datetime
+    from datetime import datetime, timezone
     
     confidence = adapter_response.confidence
     vectors = adapter_response.vector_references
@@ -237,7 +237,7 @@ def format_uvl_stream_message(
     
     return {
         "type": "uvl_message",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         "session_id": session_id,
         "event": event_type,
         "agent": {

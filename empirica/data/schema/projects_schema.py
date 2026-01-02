@@ -59,7 +59,7 @@ SCHEMAS = [
                     key_findings TEXT,
                     knowledge_gaps_filled TEXT,
                     remaining_unknowns TEXT,
-                    investigation_tools TEXT,
+                    noetic_tools TEXT,
                     next_session_context TEXT,
                     recommended_next_steps TEXT,
                     artifacts_created TEXT,

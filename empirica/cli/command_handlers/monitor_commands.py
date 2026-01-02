@@ -7,7 +7,7 @@ Provides real-time visibility into adapter usage, costs, and performance.
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any
 import os
@@ -533,7 +533,7 @@ def handle_pre_summary_snapshot(session_id: str, output_format: str, cycle=None,
     """
     from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
     from empirica.data.session_database import SessionDatabase
-    from datetime import datetime
+    from datetime import datetime, timezone
     from pathlib import Path
     import json
 
@@ -998,7 +998,7 @@ def handle_check_drift_command(args):
         from empirica.core.drift.mirror_drift_monitor import MirrorDriftMonitor
         from empirica.core.canonical.empirica_git.checkpoint_manager import CheckpointManager
         from empirica.data.session_database import SessionDatabase
-        from datetime import datetime
+        from datetime import datetime, timezone
         from pathlib import Path
 
         session_id = args.session_id
@@ -1316,7 +1316,7 @@ def handle_assess_state_command(args):
     - Human: Formatted display with context
     """
     try:
-        from datetime import datetime
+        from datetime import datetime, timezone
         import json
 
         session_id = getattr(args, 'session_id', None)
@@ -1387,7 +1387,7 @@ def handle_assess_state_command(args):
         # In production, this would call into an LLM or use cached epistemic state
         # For now, return the last known checkpoint vectors with metadata
         state = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'vectors': vectors,
             'has_session': session_id is not None,
             'has_checkpoint': bool(checkpoint_data),
@@ -1571,6 +1571,8 @@ def handle_trajectory_project_command(args):
     import sqlite3
     from empirica.data.session_database import SessionDatabase
     from empirica.core.canonical.empirica_git import SentinelHooks
+    from empirica.core.canonical.empirica_git.sentinel_hooks import auto_enable_sentinel
+    auto_enable_sentinel()
 
     try:
         session_id = getattr(args, 'session_id', None)

@@ -111,6 +111,114 @@ Common words carry "human baggage" - consciousness assumptions that don't map cl
 
 > *"When your spell-checker flags these terms, it's exhibiting low-grounding agent behavior - seeing unknown input and assuming error. Adding them to your dictionary is a grounding act."*
 
+---
+
+## The Turtle Principle: Observed vs Prescribed Phase
+
+**Key Insight:** Cognitive phase (NOETIC/PRAXIC) should be **observed from vectors**, not **prescribed by sequence**.
+
+### Two Distinct Layers
+
+| Layer | Purpose | Components | Nature |
+|-------|---------|------------|--------|
+| **CASCADE Gates** | Compliance checkpoints | PREFLIGHT → CHECK → POSTFLIGHT | Prescribed (external oversight) |
+| **Cognitive Phase** | Actual cognitive state | NOETIC ↔ THRESHOLD ↔ PRAXIC | Emergent (observed from vectors) |
+
+```
+Statusline Display:
+[empirica] ⚡87% │ ⚡ PRAXIC │ POSTFLIGHT │ K:85% U:12% C:90% │ ✓ stable
+                  ^^^^^^^^     ^^^^^^^^^^
+                  emergent     compliance
+                  (observed)   (oversight)
+```
+
+**Analogy:** Like a pilot and ground control:
+- **Ground control** (CASCADE gates) provides mandatory checkpoints
+- **Instruments** (cognitive phase) show actual flight state
+- Both are needed - oversight doesn't replace observation
+
+### Vector-Based Phase Inference
+
+Cognitive phase is inferred from two composite metrics:
+
+**Epistemic Readiness** = (know + context + (1 - uncertainty)) / 3
+- Measures: How prepared am I to act?
+- High readiness = sufficient knowledge, low doubt, good context
+
+**Action Momentum** = (do + change + completion) / 3
+- Measures: Am I executing or exploring?
+- High momentum = active execution, making progress
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Phase Inference Logic                                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  IF epistemic_readiness < 0.5:                              │
+│      → ⊙ NOETIC (investigating, not ready to act)           │
+│                                                              │
+│  ELIF action_momentum < 0.4:                                │
+│      → ◐ THRESHOLD (ready but paused, at gate)              │
+│                                                              │
+│  ELSE:                                                       │
+│      → ⚡ PRAXIC (executing with confidence)                 │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### The Three Cognitive Phases
+
+| Phase | Symbol | Readiness | Action | Meaning |
+|-------|--------|-----------|--------|---------|
+| **NOETIC** | ⊙ | < 0.5 | any | Investigating - knowledge insufficient |
+| **THRESHOLD** | ◐ | ≥ 0.5 | < 0.4 | Ready but paused - at decision gate |
+| **PRAXIC** | ⚡ | ≥ 0.5 | ≥ 0.4 | Executing - confident and acting |
+
+### Why This Matters
+
+**Problem with prescribed phases:**
+- AI might be in PRAXIC (execution) sequence but actually uncertain
+- AI might be in NOETIC (investigation) sequence but already confident
+- Sequence ≠ state
+
+**Solution with observed phases:**
+- Phase reflects actual epistemic state
+- Can be NOETIC during POSTFLIGHT (discovered new unknowns)
+- Can be PRAXIC during PREFLIGHT (continuing confident work)
+- Same rules at every meta-layer (Turtle Principle)
+
+### Implementation
+
+```python
+# empirica/core/signaling.py
+from enum import Enum
+
+class CognitivePhase(Enum):
+    NOETIC = "NOETIC"        # ⊙ Investigating
+    THRESHOLD = "THRESHOLD"  # ◐ At gate
+    PRAXIC = "PRAXIC"        # ⚡ Executing
+
+def infer_cognitive_phase_from_vectors(vectors: Dict[str, float]) -> CognitivePhase:
+    know = vectors.get('know', 0.5)
+    uncertainty = vectors.get('uncertainty', 0.5)
+    context = vectors.get('context', 0.5)
+    do_vec = vectors.get('do', 0.5)
+    change = vectors.get('change', 0.0)
+    completion = vectors.get('completion', 0.0)
+
+    readiness = (know + context + (1.0 - uncertainty)) / 3.0
+    action = (do_vec + change + completion) / 3.0
+
+    if readiness < 0.5:
+        return CognitivePhase.NOETIC
+    elif action < 0.4:
+        return CognitivePhase.THRESHOLD
+    else:
+        return CognitivePhase.PRAXIC
+```
+
+---
+
 ## Why This Matters: Facts + Epistemic State = Powerful Loop
 
 ### 1. Learning Compounds Across Sessions

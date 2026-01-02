@@ -1,6 +1,6 @@
 """Reflex log exporter for dashboard visualization"""
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -161,7 +161,7 @@ def export_to_reflex_logs(
         # Create ReflexFrame structure
         frame_data = {
             "frameId": f"{session_id}_{phase}_{assessment_data.get('assessment_id', 'unknown')}",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "selfAwareFlag": True,
             "epistemicVector": {
                 **vectors,
@@ -186,11 +186,11 @@ def export_to_reflex_logs(
         }
 
         # Write JSON
-        log_date = datetime.utcnow().date()
+        log_date = datetime.now(timezone.utc).date()
         agent_dir = Path(log_dir) / session_id / log_date.isoformat()
         agent_dir.mkdir(parents=True, exist_ok=True)
 
-        timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
         filename = f"reflex_frame_{timestamp}_{phase}.json"
         log_path = agent_dir / filename
 

@@ -51,12 +51,23 @@ def handle_goals_complete_command(args):
         beads_issue_id = row[0] if row and row[0] else None
         db.close()
         
+        # Update goal status to completed
+        import time
+        db2 = SessionDatabase()
+        db2.conn.execute(
+            "UPDATE goals SET status = 'completed', is_completed = 1, completed_timestamp = ? WHERE id = ?",
+            (time.time(), goal_id)
+        )
+        db2.conn.commit()
+        db2.close()
+
         result = {
             "ok": True,
             "goal_id": goal_id,
             "objective": goal['objective'],
             "session_id": goal['session_id'],
-            "beads_issue_id": beads_issue_id
+            "beads_issue_id": beads_issue_id,
+            "status_updated": True
         }
         
         # Run POSTFLIGHT if requested

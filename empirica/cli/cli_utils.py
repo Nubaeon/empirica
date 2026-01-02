@@ -52,6 +52,16 @@ def handle_cli_error(error: Exception, command: str, verbose: bool = False, sess
         verbose: Whether to print detailed traceback
         session_id: Optional session ID for auto-capture (auto-detected if not provided)
     """
+    # Broken pipe is a normal condition when output is piped to `head`/`tail` and the reader exits early.
+    # Treat it as non-fatal and do NOT auto-capture as an issue.
+    # Depending on where it's raised, it may appear as BrokenPipeError or as OSError(errno=32).
+    if isinstance(error, BrokenPipeError):
+        return
+    if isinstance(error, OSError) and getattr(error, "errno", None) == 32:
+        return
+    if "Broken pipe" in str(error):
+        return
+
     print(f"❌ {command} error: {error}")
 
     if verbose:
@@ -79,7 +89,14 @@ def handle_cli_error(error: Exception, command: str, verbose: bool = False, sess
                         LIMIT 1
                     """)
                     row = cursor.fetchone()
-                    session_id = row['session_id'] if row else None
+                    if row:
+                        # Support both sqlite3.Row (dict-style) and tuple rows
+                        try:
+                            session_id = row['session_id']
+                        except Exception:
+                            session_id = row[0]
+                    else:
+                        session_id = None
                     db.close()
                 except:
                     pass

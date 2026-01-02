@@ -1,18 +1,52 @@
 id: empirica-epistemic-framework
 title: Empirica Epistemic Framework
 tags:
-- empirica
-- epistemics
-- framework
-preconditions: []
-steps: []
-gotchas: []
-references: []
-summary: "---\nname: empirica-epistemic-framework\ndescription: Empirica for Claude\
-  \ chat - Know what you know. Use CASCADE workflow (PREFLIGHT\u2192INVESTIGATE\u2192\
-  CHECK\u2192ACT\u2192POSTFLIGHT) to assess knowledge state before tasks and measure\
-  \ learning after. Tracks 4 core epistemic vectors (KNOW, DO, CONTEXT, UNCERTAINTY).\
-  \ Shows calibration improvement in real-time. This is the chat entry point\u2014\
-  the full system (CLI, IDE MCP, Python API) offers 13-vector assessment, goal orchestration,\
-  \ git checkpointing, and advanced governance. Try it now, explore the full framework\
-  \ at empirica.dev.\n---"
+  - empirica
+  - epistemics
+  - framework
+  - cascade
+  - vectors
+
+preconditions:
+  - Session created with empirica session-create --ai-id <id>
+  - Project bootstrapped with empirica project-bootstrap --session-id <ID>
+
+steps:
+  - "PREFLIGHT: Submit baseline vectors via empirica preflight-submit -"
+  - "NOETIC: Investigate - read, search, hypothesize, log findings/unknowns"
+  - "CHECK: Gate decision via empirica check-submit - (auto-computes proceed/investigate)"
+  - "PRAXIC: Execute - write, edit, commit, deploy"
+  - "POSTFLIGHT: Measure learning delta via empirica postflight-submit -"
+  - "COMMIT: Persist changes after each goal completion"
+
+gotchas:
+  - "CHECK gate auto-computes decision from vectors: know>=0.70 AND uncertainty<=0.35 (after bias correction)"
+  - "Bias corrections: know -0.05 (you overestimate), uncertainty +0.10 (you underestimate)"
+  - "One goal = one epistemic loop. Do NOT batch multiple goals"
+  - "Uncommitted work is a drift vector - commit after each goal"
+  - "Post-compact: run project-bootstrap then CHECK before continuing"
+
+references:
+  - "empirica --help for full command list"
+  - "empirica preflight-submit - (JSON stdin: session_id, vectors, reasoning)"
+  - "empirica check-submit - (JSON stdin: session_id, vectors, reasoning)"
+  - "empirica postflight-submit - (JSON stdin: session_id, vectors, reasoning)"
+  - "empirica finding-log --finding '...' --impact 0.7"
+  - "empirica unknown-log --unknown '...'"
+  - "empirica goals-create - (JSON stdin)"
+  - "empirica agent-spawn --session-id <ID> --task '...' --turtle"
+
+summary: |
+  Empirica Epistemic Framework - Know what you know.
+
+  CASCADE workflow: PREFLIGHT → NOETIC → CHECK → PRAXIC → POSTFLIGHT
+
+  13 epistemic vectors across 4 categories:
+  - Foundation: engagement, know, do, context
+  - Comprehension: clarity, coherence, signal, density
+  - Execution: state, change, completion, impact
+  - Meta: uncertainty
+
+  Readiness gate: know >= 0.70 AND uncertainty <= 0.35 (after bias correction)
+
+  Per-goal loops prevent drift. Commit after each goal.

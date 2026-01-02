@@ -468,6 +468,120 @@ def handle_goals_add_subtask_command(args):
         handle_cli_error(e, "Add subtask", getattr(args, 'verbose', False))
 
 
+def handle_goals_add_dependency_command(args):
+    """Handle goals-add-dependency command - add goal-to-goal dependency"""
+    try:
+        from empirica.data.session_database import SessionDatabase
+        import uuid
+
+        # Parse arguments
+        goal_id = args.goal_id
+        depends_on_goal_id = args.depends_on
+        dependency_type = getattr(args, 'type', 'blocks')
+        description = getattr(args, 'description', None)
+        output_format = getattr(args, 'output', 'human')
+
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Verify both goals exist
+        cursor.execute("SELECT id, objective FROM goals WHERE id = ?", (goal_id,))
+        goal_row = cursor.fetchone()
+        if not goal_row:
+            result = {
+                "ok": False,
+                "error": f"Goal not found: {goal_id}",
+                "hint": "Use 'empirica goals-list-all' to see available goals"
+            }
+            print(json.dumps(result, indent=2) if output_format == 'json' else f"Error: {result['error']}")
+            db.close()
+            return 1
+
+        cursor.execute("SELECT id, objective FROM goals WHERE id = ?", (depends_on_goal_id,))
+        depends_row = cursor.fetchone()
+        if not depends_row:
+            result = {
+                "ok": False,
+                "error": f"Dependency goal not found: {depends_on_goal_id}",
+                "hint": "Use 'empirica goals-list-all' to see available goals"
+            }
+            print(json.dumps(result, indent=2) if output_format == 'json' else f"Error: {result['error']}")
+            db.close()
+            return 1
+
+        # Check for circular dependency (simple check: A depends on B, B depends on A)
+        cursor.execute("""
+            SELECT id FROM goal_dependencies
+            WHERE goal_id = ? AND depends_on_goal_id = ?
+        """, (depends_on_goal_id, goal_id))
+        if cursor.fetchone():
+            result = {
+                "ok": False,
+                "error": "Circular dependency detected",
+                "detail": f"Goal {depends_on_goal_id[:8]}... already depends on {goal_id[:8]}..."
+            }
+            print(json.dumps(result, indent=2) if output_format == 'json' else f"Error: {result['error']}")
+            db.close()
+            return 1
+
+        # Check if dependency already exists
+        cursor.execute("""
+            SELECT id FROM goal_dependencies
+            WHERE goal_id = ? AND depends_on_goal_id = ?
+        """, (goal_id, depends_on_goal_id))
+        if cursor.fetchone():
+            result = {
+                "ok": False,
+                "error": "Dependency already exists",
+                "goal_id": goal_id,
+                "depends_on": depends_on_goal_id
+            }
+            print(json.dumps(result, indent=2) if output_format == 'json' else f"Error: {result['error']}")
+            db.close()
+            return 1
+
+        # Insert dependency
+        dep_id = str(uuid.uuid4())
+        cursor.execute("""
+            INSERT INTO goal_dependencies (id, goal_id, depends_on_goal_id, dependency_type, description)
+            VALUES (?, ?, ?, ?, ?)
+        """, (dep_id, goal_id, depends_on_goal_id, dependency_type, description))
+        db.conn.commit()
+
+        result = {
+            "ok": True,
+            "dependency_id": dep_id,
+            "goal_id": goal_id,
+            "goal_objective": goal_row[1][:50] + "..." if len(goal_row[1]) > 50 else goal_row[1],
+            "depends_on": depends_on_goal_id,
+            "depends_on_objective": depends_row[1][:50] + "..." if len(depends_row[1]) > 50 else depends_row[1],
+            "type": dependency_type,
+            "description": description,
+            "message": f"Dependency added: {goal_id[:8]}... {dependency_type} {depends_on_goal_id[:8]}..."
+        }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            type_labels = {
+                'blocks': 'is blocked by',
+                'informs': 'is informed by',
+                'extends': 'extends'
+            }
+            print(f"Goal dependency added")
+            print(f"  {result['goal_objective']}")
+            print(f"    {type_labels.get(dependency_type, dependency_type)}")
+            print(f"  {result['depends_on_objective']}")
+            if description:
+                print(f"  Reason: {description}")
+
+        db.close()
+        return None
+
+    except Exception as e:
+        handle_cli_error(e, "Add goal dependency", getattr(args, 'verbose', False))
+
+
 def handle_goals_complete_subtask_command(args):
     """Handle goals-complete-subtask command"""
     try:

@@ -29,13 +29,19 @@ def _read_file(path: str) -> str:
 
 def handle_project_embed_command(args):
     try:
-        from empirica.core.qdrant.vector_store import init_collections, upsert_docs, upsert_memory
+        from empirica.core.qdrant.vector_store import (
+            init_collections, upsert_docs, upsert_memory,
+            sync_high_impact_to_global, init_global_collection
+        )
         from empirica.data.session_database import SessionDatabase
 
         project_id = args.project_id
         root = os.getcwd()
+        sync_global = getattr(args, 'global_sync', False)
 
         init_collections(project_id)
+        if sync_global:
+            init_global_collection()
 
         # Prepare docs from semantic index
         idx = _load_semantic_index(root)
@@ -117,14 +123,30 @@ def handle_project_embed_command(args):
 
         upsert_memory(project_id, mem_items)
 
+        # Sync high-impact items to global collection if --global flag
+        global_synced = 0
+        if sync_global:
+            min_impact = getattr(args, 'min_impact', 0.7)
+            global_synced = sync_high_impact_to_global(project_id, min_impact)
+
+        result = {
+            'ok': True,
+            'docs': len(docs_to_upsert),
+            'memory': len(mem_items),
+            'global_synced': global_synced if sync_global else None
+        }
+
         if getattr(args, 'output', 'default') == 'json':
-            print(json.dumps({'ok': True, 'docs': len(docs_to_upsert), 'memory': len(mem_items)}, indent=2))
+            print(json.dumps(result, indent=2))
         else:
-            print(f"✅ Embedded docs: {len(docs_to_upsert)} | memory items: {len(mem_items)}")
+            msg = f"✅ Embedded docs: {len(docs_to_upsert)} | memory items: {len(mem_items)}"
+            if sync_global:
+                msg += f" | global: {global_synced}"
+            print(msg)
 
         # Note: Skills are structured metadata (project_skills/*.yaml), not vectors
         # They are referenced by project-bootstrap via tags and id lookup, not semantic search
-        return {'docs': len(docs_to_upsert), 'memory': len(mem_items)}
+        return result
     except Exception as e:
         handle_cli_error(e, "Project embed", getattr(args, 'verbose', False))
         return None

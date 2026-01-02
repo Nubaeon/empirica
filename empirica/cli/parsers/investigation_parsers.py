@@ -49,5 +49,25 @@ def add_investigation_parsers(subparsers):
     )
     merge_branches_parser.add_argument('--session-id', required=True, help='Session ID')
     merge_branches_parser.add_argument('--round', help='Investigation round number')
+    merge_branches_parser.add_argument('--tag-losers', action='store_true',
+        help='Auto-tag losing branches as dead ends with divergence reason')
     merge_branches_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     merge_branches_parser.add_argument('--verbose', action='store_true', help='Verbose output')
+
+    # ========== Multi-Persona Orchestration (CASCADE 2.1) ==========
+
+    # investigate-multi command - parallel epistemic agents with different personas
+    multi_parser = subparsers.add_parser(
+        'investigate-multi',
+        help='Multi-persona parallel investigation with epistemic auto-merge'
+    )
+    multi_parser.add_argument('--task', required=True, help='Task for all personas to investigate')
+    multi_parser.add_argument('--personas', required=True,
+        help='Comma-separated persona IDs (e.g., security,ux,performance)')
+    multi_parser.add_argument('--session-id', required=True, help='Session ID')
+    multi_parser.add_argument('--context', help='Additional context from parent investigation')
+    multi_parser.add_argument('--aggregate-strategy',
+        choices=['epistemic-score', 'consensus', 'all'],
+        default='epistemic-score',
+        help='How to merge results (default: epistemic-score)')
+    multi_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')

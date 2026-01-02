@@ -3,7 +3,7 @@ import sqlite3
 import uuid
 import json
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from .base import BaseRepository
 
 
@@ -37,7 +37,7 @@ class SessionRepository(BaseRepository):
                 session_id, ai_id, user_id, start_time, components_loaded, subject, bootstrap_level
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
-            session_id, ai_id, user_id, datetime.utcnow().isoformat(),
+            session_id, ai_id, user_id, datetime.now(timezone.utc).isoformat(),
             components_loaded, subject, bootstrap_level
         ))
         return session_id
@@ -207,7 +207,7 @@ class SessionRepository(BaseRepository):
         if detail_level in ['detailed', 'full']:
             cursor = self._execute("""
                 SELECT tool_name, COUNT(*) as count
-                FROM investigation_tools
+                FROM noetic_tools
                 WHERE cascade_id IN (
                     SELECT cascade_id FROM cascades WHERE session_id = ?
                 )

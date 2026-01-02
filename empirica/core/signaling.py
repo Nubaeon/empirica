@@ -40,6 +40,19 @@ class SentinelAction(Enum):
     LOCK = "LOCK"        # 🔒 Dangerous pattern (know↓ + uncertainty↑)
 
 
+class CognitivePhase(Enum):
+    """
+    Cognitive phase inferred from vectors (emergent, not prescribed).
+
+    NOETIC: Investigation/exploration mode - high uncertainty, building knowledge
+    THRESHOLD: Ready but not yet acting - at the CHECK gate
+    PRAXIC: Action/implementation mode - low uncertainty, executing with confidence
+    """
+    NOETIC = "NOETIC"        # ⊙ Investigating - know↓ or uncertainty↑
+    THRESHOLD = "THRESHOLD"  # ◐ At gate - ready but not acting
+    PRAXIC = "PRAXIC"        # ⚡ Executing - know↑ and uncertainty↓
+
+
 class VectorHealth(Enum):
     """Health state for individual vectors."""
     GOOD = "good"        # 🟢 Vector in healthy range
@@ -292,7 +305,7 @@ def format_vector_state(vector_name: str, value: Optional[float], show_value: bo
 
 def infer_cognitive_phase(cascade_phase: Optional[str]) -> str:
     """
-    Infer noetic/praxic phase from CASCADE phase.
+    Infer noetic/praxic phase from CASCADE phase (legacy, prescribed).
 
     NOETIC (investigation): PREFLIGHT, CHECK with investigate
     PRAXIC (action): CHECK with proceed, ACT, POSTFLIGHT
@@ -302,6 +315,8 @@ def infer_cognitive_phase(cascade_phase: Optional[str]) -> str:
 
     Returns:
         'NOETIC' or 'PRAXIC'
+
+    Note: Prefer infer_cognitive_phase_from_vectors() for emergent phase detection.
     """
     if cascade_phase is None:
         return 'NOETIC'  # Default to investigation
@@ -319,6 +334,82 @@ def infer_cognitive_phase(cascade_phase: Optional[str]) -> str:
         return 'PRAXIC'
     else:
         return 'NOETIC'
+
+
+def infer_cognitive_phase_from_vectors(vectors: Dict[str, float]) -> CognitivePhase:
+    """
+    Infer cognitive phase from vectors (emergent, not prescribed).
+
+    This is the Turtle Principle in action: phase is OBSERVED from epistemic state,
+    not declared or prescribed. The AI's cognitive mode emerges from its vectors.
+
+    Epistemic Readiness = (know + context + (1 - uncertainty)) / 3
+        Measures: Do I know enough to act?
+
+    Action Momentum = (do + change + completion) / 3
+        Measures: Am I executing?
+
+    Phase Logic:
+        - readiness < 0.5 → NOETIC (still investigating)
+        - readiness >= 0.5 AND action < 0.4 → THRESHOLD (ready but not acting)
+        - readiness >= 0.5 AND action >= 0.4 → PRAXIC (acting with confidence)
+
+    Args:
+        vectors: Dict of vector names to values (0.0-1.0)
+
+    Returns:
+        CognitivePhase enum value
+    """
+    # Get key vectors with defaults
+    know = vectors.get('know', 0.5)
+    uncertainty = vectors.get('uncertainty', 0.5)
+    context = vectors.get('context', 0.5)
+    do_vec = vectors.get('do', 0.5)
+    change = vectors.get('change', 0.0)
+    completion = vectors.get('completion', 0.0)
+
+    # Epistemic readiness: am I ready to act?
+    # High know, high context, low uncertainty = ready
+    readiness = (know + context + (1.0 - uncertainty)) / 3.0
+
+    # Action momentum: am I executing?
+    # High do, change, completion = acting
+    action = (do_vec + change + completion) / 3.0
+
+    # Phase inference
+    if readiness < 0.5:
+        # Not ready - still investigating
+        return CognitivePhase.NOETIC
+    elif action < 0.4:
+        # Ready but not yet acting - at the threshold/gate
+        return CognitivePhase.THRESHOLD
+    else:
+        # Ready and acting - implementation mode
+        return CognitivePhase.PRAXIC
+
+
+def format_cognitive_phase(phase: CognitivePhase, use_color: bool = True) -> str:
+    """Format cognitive phase with optional color and symbol."""
+    symbols = {
+        CognitivePhase.NOETIC: "⊙",      # Circle with dot - investigation
+        CognitivePhase.THRESHOLD: "◐",    # Half circle - at gate
+        CognitivePhase.PRAXIC: "⚡",      # Lightning - action
+    }
+    colors = {
+        CognitivePhase.NOETIC: "\033[36m",     # Cyan
+        CognitivePhase.THRESHOLD: "\033[33m",  # Yellow
+        CognitivePhase.PRAXIC: "\033[92m",     # Bright green
+    }
+    reset = "\033[0m"
+
+    symbol = symbols.get(phase, "?")
+    name = phase.value if phase else "?"
+
+    if use_color:
+        color = colors.get(phase, "")
+        return f"{symbol} {color}{name}{reset}"
+    else:
+        return f"{symbol} {name}"
 
 
 def format_vectors_compact(

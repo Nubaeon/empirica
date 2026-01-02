@@ -256,6 +256,7 @@ def add_checkpoint_parsers(subparsers):
     project_bootstrap_parser.add_argument('--depth', choices=['minimal', 'moderate', 'full', 'auto'], default='auto', help='Context depth: minimal (~500 tokens), moderate (~1500), full (~3000-5000), auto (drift-based)')
     project_bootstrap_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     project_bootstrap_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+    project_bootstrap_parser.add_argument('--global', dest='include_global', action='store_true', help='Include global cross-project learnings (requires --task-description)')
 
     # Workspace overview command
     workspace_overview_parser = subparsers.add_parser(
@@ -296,6 +297,7 @@ def add_checkpoint_parsers(subparsers):
     project_search_parser.add_argument('--limit', type=int, default=5, help='Number of results to return (default: 5)')
     project_search_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     project_search_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+    project_search_parser.add_argument('--global', dest='global_search', action='store_true', help='Include global cross-project learnings in search')
 
     # Project embed (build vectors) command
     project_embed_parser = subparsers.add_parser(
@@ -305,6 +307,8 @@ def add_checkpoint_parsers(subparsers):
     project_embed_parser.add_argument('--project-id', required=True, help='Project UUID')
     project_embed_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     project_embed_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+    project_embed_parser.add_argument('--global', dest='global_sync', action='store_true', help='Sync high-impact items to global learnings collection')
+    project_embed_parser.add_argument('--min-impact', type=float, default=0.7, help='Minimum impact for global sync (default: 0.7)')
 
     # Documentation completeness check
     doc_check_parser = subparsers.add_parser(
@@ -429,7 +433,17 @@ def add_checkpoint_parsers(subparsers):
     goals_add_subtask_parser.add_argument('--estimated-tokens', type=int, help='Estimated token usage')
     goals_add_subtask_parser.add_argument('--use-beads', action='store_true', help='Create BEADS subtask and link to goal')
     goals_add_subtask_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
-    
+
+    # Goals add-dependency command (NEW: Goal-to-goal dependencies)
+    goals_add_dep_parser = subparsers.add_parser('goals-add-dependency',
+        help='Add dependency between goals (Goal A depends on Goal B)')
+    goals_add_dep_parser.add_argument('--goal-id', required=True, help='Goal that has the dependency')
+    goals_add_dep_parser.add_argument('--depends-on', required=True, help='Goal that must complete first')
+    goals_add_dep_parser.add_argument('--type', choices=['blocks', 'informs', 'extends'], default='blocks',
+        help='Dependency type: blocks (must complete first), informs (provides context), extends (builds upon)')
+    goals_add_dep_parser.add_argument('--description', help='Description of dependency relationship')
+    goals_add_dep_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+
     # Goals complete-subtask command
     goals_complete_subtask_parser = subparsers.add_parser('goals-complete-subtask', help='Mark subtask as complete')
     # Use subtask-id as primary parameter, with task-id as deprecated alias for backward compatibility

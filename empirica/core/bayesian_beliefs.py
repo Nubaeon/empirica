@@ -140,6 +140,97 @@ class BayesianBeliefManager:
 
         return adjustments
 
+    def update_belief(self, session_id: str, vector_name: str, observation: float,
+                      phase: str = "CHECK", round_num: int = 1) -> Optional[Dict]:
+        """
+        Update belief for a single vector during CHECK phase.
+
+        This is the incremental update interface, used during mid-loop assessments.
+        For full PREFLIGHT→POSTFLIGHT comparison, use update_beliefs() instead.
+
+        Args:
+            session_id: The session ID
+            vector_name: The vector to update (e.g., 'know', 'uncertainty')
+            observation: The observed/assessed value
+            phase: The CASCADE phase (CHECK, POSTFLIGHT)
+            round_num: The round number within the phase
+
+        Returns:
+            Dict with belief update details, or None if update failed
+        """
+        if vector_name not in self.TRACKED_VECTORS:
+            return None
+
+        cursor = self.conn.cursor()
+
+        # Get AI ID for this session
+        cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        ai_id = row[0]
+
+        # Get current belief for this vector
+        current_beliefs = self.get_beliefs(ai_id)
+        belief = current_beliefs.get(vector_name)
+
+        if not belief:
+            prior_mean = self.DEFAULT_PRIOR_MEAN
+            prior_var = self.DEFAULT_PRIOR_VARIANCE
+            evidence_count = 0
+        else:
+            prior_mean = belief.mean
+            prior_var = belief.variance
+            evidence_count = belief.evidence_count
+
+        # Bayesian update
+        obs_var = self.OBSERVATION_VARIANCE
+
+        posterior_mean = (
+            (prior_var * observation + obs_var * prior_mean) /
+            (prior_var + obs_var)
+        )
+        posterior_var = 1.0 / (1.0/prior_var + 1.0/obs_var)
+        new_evidence_count = evidence_count + 1
+
+        # Get or create cascade_id for this session
+        cursor.execute("""
+            SELECT cascade_id FROM cascades
+            WHERE session_id = ?
+            ORDER BY started_at DESC LIMIT 1
+        """, (session_id,))
+        cascade_row = cursor.fetchone()
+        cascade_id = cascade_row[0] if cascade_row else str(uuid.uuid4())
+
+        # Store the update
+        belief_id = str(uuid.uuid4())
+        cursor.execute("""
+            INSERT INTO bayesian_beliefs (
+                belief_id, cascade_id, vector_name,
+                mean, variance, evidence_count,
+                prior_mean, prior_variance, last_updated
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            belief_id, cascade_id, vector_name,
+            posterior_mean, posterior_var, new_evidence_count,
+            observation, self.OBSERVATION_VARIANCE, datetime.now()
+        ))
+
+        self.conn.commit()
+
+        return {
+            'vector_name': vector_name,
+            'phase': phase,
+            'round_num': round_num,
+            'prior_mean': prior_mean,
+            'prior_variance': prior_var,
+            'observation': observation,
+            'posterior_mean': posterior_mean,
+            'posterior_variance': posterior_var,
+            'evidence_count': new_evidence_count,
+            'calibration_delta': observation - prior_mean
+        }
+
     def update_beliefs(self, cascade_id: str, session_id: str,
                        preflight_vectors: Dict[str, float],
                        postflight_vectors: Dict[str, float]) -> Dict[str, Dict]:

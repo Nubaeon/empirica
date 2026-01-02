@@ -5,7 +5,7 @@ Provides genuine LLM-powered metacognitive self-assessment without heuristics or
 
 Core Components:
 - reflex_frame: Canonical data structures (VectorState, EpistemicAssessment, ReflexFrame)
-- reflex_logger: Temporal logging to JSON files (prevents recursion)
+- reflex_logger: Removed (replaced by GitEnhancedReflexLogger)
 
 NOTE: Goal orchestration moved to empirica/core/goals/ (explicit goals system with subtasks)
 
@@ -32,11 +32,7 @@ from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
 # Alias for backwards compatibility (will be removed after all code is updated)
 EpistemicAssessment = EpistemicAssessmentSchema
 
-from .reflex_logger import (
-    ReflexLogger,
-    log_assessment,
-    log_assessment_sync
-)
+# reflex_logger removed - use GitEnhancedReflexLogger instead
 
 from .git_enhanced_reflex_logger import GitEnhancedReflexLogger
 from .git_state_capture import GitStateCapture

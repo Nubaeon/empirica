@@ -38,7 +38,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                 categories = {
                     'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
                     'CASCADE Workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
-                    'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
+                    'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-add-dependency', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
                     'Project Management': ['project-init', 'project-create', 'project-list', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
                     'Workspace': ['workspace-init', 'workspace-map', 'workspace-overview'],
                     'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
@@ -46,14 +46,17 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Handoffs': ['handoff-create', 'handoff-query'],
                     'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
                     'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
-                    'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
+                    'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches', 'investigate-multi'],
                     'Monitoring': ['monitor', 'check-drift', 'assess-state', 'trajectory-project', 'efficiency-report'],
-                    'Skills': ['skill-suggest', 'skill-fetch'],
+                    'Skills': ['skill-suggest', 'skill-fetch', 'skill-extract'],
                     'Utilities': ['log-token-saving', 'config', 'performance'],
                     'Vision': ['vision'],
                     'Epistemics': ['epistemics-list', 'epistemics-show'],
                     'User Interface': ['chat'],
-                    'Architecture': ['assess-component', 'assess-compare', 'assess-directory']
+                    'Architecture': ['assess-component', 'assess-compare', 'assess-directory'],
+                    'Agents': ['agent-spawn', 'agent-report', 'agent-aggregate', 'agent-export', 'agent-import', 'agent-discover'],
+                    'Sentinel': ['sentinel-orchestrate', 'sentinel-load-profile', 'sentinel-status', 'sentinel-check'],
+                    'Personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -90,6 +93,10 @@ from .parsers import (
     add_issue_capture_parsers,
     add_architecture_parsers,
     add_query_parsers,
+    add_agent_parsers,
+    add_sentinel_parsers,
+    add_persona_parsers,
+    add_release_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -97,6 +104,27 @@ from .command_handlers.architecture_commands import (
     handle_assess_directory_command,
 )
 from .command_handlers.query_commands import handle_query_command
+from .command_handlers.agent_commands import (
+    handle_agent_spawn_command,
+    handle_agent_report_command,
+    handle_agent_aggregate_command,
+    handle_agent_export_command,
+    handle_agent_import_command,
+    handle_agent_discover_command,
+)
+from .command_handlers.sentinel_commands import (
+    handle_sentinel_orchestrate_command,
+    handle_sentinel_load_profile_command,
+    handle_sentinel_status_command,
+    handle_sentinel_check_command,
+)
+from .command_handlers.persona_commands import (
+    handle_persona_list_command,
+    handle_persona_show_command,
+    handle_persona_promote_command,
+    handle_persona_find_command,
+)
+from .command_handlers.release_commands import handle_release_ready_command
 
 
 def _get_version():
@@ -150,6 +178,10 @@ def create_argument_parser():
     add_issue_capture_parsers(subparsers)
     add_architecture_parsers(subparsers)
     add_query_parsers(subparsers)
+    add_agent_parsers(subparsers)
+    add_sentinel_parsers(subparsers)
+    add_persona_parsers(subparsers)
+    add_release_parsers(subparsers)
 
     return parser
 
@@ -216,6 +248,7 @@ def main(args=None):
             'investigate-create-branch': handle_investigate_create_branch_command,
             'investigate-checkpoint-branch': handle_investigate_checkpoint_branch_command,
             'investigate-merge-branches': handle_investigate_merge_branches_command,
+            'investigate-multi': handle_investigate_multi_command,
             
             # Action commands
             'act-log': handle_act_log_command,
@@ -226,6 +259,7 @@ def main(args=None):
             # Skill commands
             'skill-suggest': handle_skill_suggest_command,
             'skill-fetch': handle_skill_fetch_command,
+            'skill-extract': handle_skill_extract_command,
             
             # Utility commands
             'log-token-saving': handle_log_token_saving,
@@ -291,6 +325,7 @@ def main(args=None):
             'goals-complete': handle_goals_complete_command,
             'goals-claim': handle_goals_claim_command,
             'goals-add-subtask': handle_goals_add_subtask_command,
+            'goals-add-dependency': handle_goals_add_dependency_command,
             'goals-complete-subtask': handle_goals_complete_subtask_command,
             'goals-get-subtasks': handle_goals_get_subtasks_command,
             'goals-progress': handle_goals_progress_command,
@@ -327,6 +362,29 @@ def main(args=None):
 
             # Unified query command
             'query': handle_query_command,
+
+            # Agent commands
+            'agent-spawn': handle_agent_spawn_command,
+            'agent-report': handle_agent_report_command,
+            'agent-aggregate': handle_agent_aggregate_command,
+            'agent-export': handle_agent_export_command,
+            'agent-import': handle_agent_import_command,
+            'agent-discover': handle_agent_discover_command,
+
+            # Sentinel orchestration commands
+            'sentinel-orchestrate': handle_sentinel_orchestrate_command,
+            'sentinel-load-profile': handle_sentinel_load_profile_command,
+            'sentinel-status': handle_sentinel_status_command,
+            'sentinel-check': handle_sentinel_check_command,
+
+            # Persona commands
+            'persona-list': handle_persona_list_command,
+            'persona-show': handle_persona_show_command,
+            'persona-promote': handle_persona_promote_command,
+            'persona-find': handle_persona_find_command,
+
+            # Release commands
+            'release-ready': handle_release_ready_command,
         }
         
         if parsed_args.command in command_handlers:

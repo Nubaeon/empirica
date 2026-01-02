@@ -3,7 +3,7 @@ import sqlite3
 import uuid
 import json
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from .base import BaseRepository
 
 
@@ -109,7 +109,7 @@ class CommandRepository(BaseRepository):
         """, (
             usage_id, session_id, command,
             json.dumps(args) if args else None,
-            success, error_msg, datetime.utcnow().isoformat()
+            success, error_msg, datetime.now(timezone.utc).isoformat()
         ))
         return usage_id
 

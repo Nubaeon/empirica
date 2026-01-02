@@ -59,10 +59,16 @@ test_goals_session
 .empirica_sessions/
 .agent_memory.json
 .qdrant_data/
-# AI identity keys (private)
-.empirica/identity/*.key
+.beads/
+
+# Security-sensitive files
+*.pem
+*.key
 .env
 .env.*
+
+# AI identity keys (already covered by *.key above)
+.empirica/identity/*.key
 
 # Build artifacts
 build/

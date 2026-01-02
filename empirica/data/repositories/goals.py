@@ -210,6 +210,10 @@ class GoalRepository(BaseRepository):
                     'dead_ends': subtask_data.get('dead_ends', [])
                 })
 
+            # Ensure scope_data is a dict before calling .get() (defensive check for legacy data)
+            if not isinstance(scope_data, dict):
+                scope_data = {}
+
             goals.append({
                 'goal_id': goal_id,
                 'objective': row[1],

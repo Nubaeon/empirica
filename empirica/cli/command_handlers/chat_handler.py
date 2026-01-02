@@ -392,7 +392,7 @@ def _save_chat_session(session_id: str, history: List[Dict]):
             # Save conversation as JSON file
             from pathlib import Path
             import json
-            from datetime import datetime
+            from datetime import datetime, timezone
             
             chat_dir = Path('.empirica/chat_sessions')
             chat_dir.mkdir(parents=True, exist_ok=True)
@@ -400,7 +400,7 @@ def _save_chat_session(session_id: str, history: List[Dict]):
             session_file = chat_dir / f"{session_id}.json"
             session_data = {
                 'session_id': session_id,
-                'created_at': datetime.utcnow().isoformat() + 'Z',
+                'created_at': datetime.now(timezone.utc).isoformat() + 'Z',
                 'message_count': len(history),
                 'conversation': history
             }

@@ -19,7 +19,7 @@ import os
 import json
 import subprocess
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 app = FastAPI(title="Empirica Session Server", version="1.0.0")
 
@@ -46,8 +46,8 @@ class SessionManager:
             "history": [],
             "files_accessed": [],
             "files_modified": [],
-            "created_at": datetime.utcnow().isoformat(),
-            "last_activity": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "last_activity": datetime.now(timezone.utc).isoformat()
         }
         
         return sid
@@ -58,7 +58,7 @@ class SessionManager:
             return {"error": f"Session {sid} not found"}
         
         session = self.sessions[sid]
-        session["last_activity"] = datetime.utcnow().isoformat()
+        session["last_activity"] = datetime.now(timezone.utc).isoformat()
         
         # Route command
         if cmd == "list_files":
@@ -87,7 +87,7 @@ class SessionManager:
             "cmd": cmd,
             "args": args,
             "result_type": "success" if "error" not in result else "error",
-            "at": datetime.utcnow().isoformat()
+            "at": datetime.now(timezone.utc).isoformat()
         })
         
         return {
@@ -174,7 +174,7 @@ class SessionManager:
                 "action": "move",
                 "from": str(from_full),
                 "to": str(to_full),
-                "at": datetime.utcnow().isoformat()
+                "at": datetime.now(timezone.utc).isoformat()
             })
             
             return {
@@ -265,7 +265,7 @@ Respond with submit_assessment command including your reasoning.
             "context": assessment.get("context", 0.5),
             "uncertainty": assessment.get("uncertainty", 0.5),
             "rationale": assessment.get("rationale", ""),
-            "assessed_at": datetime.utcnow().isoformat()
+            "assessed_at": datetime.now(timezone.utc).isoformat()
         }
         
         # Update phase based on assessment
@@ -290,7 +290,7 @@ Respond with submit_assessment command including your reasoning.
         
         session["proposed_plan"] = {
             "plan": plan,
-            "proposed_at": datetime.utcnow().isoformat(),
+            "proposed_at": datetime.now(timezone.utc).isoformat(),
             "status": "pending_review"
         }
         

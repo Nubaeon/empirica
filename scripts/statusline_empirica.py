@@ -33,6 +33,7 @@ from empirica.config.path_resolver import get_empirica_root
 from empirica.data.session_database import SessionDatabase
 from empirica.core.signaling import (
     SignalingState,
+    CognitivePhase,
     format_vectors_compact,
     format_drift_compact,
     format_drift_status,
@@ -40,6 +41,8 @@ from empirica.core.signaling import (
     detect_sentinel_action,
     read_drift_cache,
     infer_cognitive_phase,
+    infer_cognitive_phase_from_vectors,
+    format_cognitive_phase,
     DRIFT_CACHE_PATH,
 )
 
@@ -309,8 +312,9 @@ def format_statusline(
     confidence = calculate_confidence(vectors)
     conf_str = format_confidence(confidence)
 
-    # Infer cognitive phase (noetic/praxic)
-    cognitive_phase = infer_cognitive_phase(phase)
+    # Infer cognitive phase from VECTORS (emergent, not prescribed)
+    # This is the Turtle Principle: phase is observed from epistemic state
+    cognitive_phase = infer_cognitive_phase_from_vectors(vectors) if vectors else CognitivePhase.NOETIC
 
     parts = [f"{Colors.GREEN}[empirica]{Colors.RESET} {conf_str}"]
 
@@ -321,11 +325,11 @@ def format_statusline(
         return ' '.join(parts)
 
     elif mode == 'default':
-        # Cognitive phase + CASCADE phase + key vectors (%) + deltas + drift
-        if cognitive_phase:
-            phase_color = Colors.CYAN if cognitive_phase == 'NOETIC' else Colors.BRIGHT_GREEN
-            parts.append(f"{phase_color}{cognitive_phase}{Colors.RESET}")
+        # Cognitive phase (emergent) + CASCADE gate + key vectors (%) + deltas + drift
+        cog_str = format_cognitive_phase(cognitive_phase)
+        parts.append(cog_str)
 
+        # CASCADE gate (compliance checkpoint) - kept for oversight
         if phase:
             parts.append(f"{Colors.BLUE}{phase}{Colors.RESET}")
 
@@ -348,8 +352,8 @@ def format_statusline(
 
     elif mode == 'learning':
         # Focus on vectors with values and deltas
-        if cognitive_phase:
-            parts.append(f"{cognitive_phase}")
+        cog_str = format_cognitive_phase(cognitive_phase, use_color=False)
+        parts.append(cog_str)
 
         if phase:
             parts.append(f"{phase}")
@@ -378,7 +382,8 @@ def format_statusline(
         parts = [f"{Colors.BRIGHT_CYAN}[empirica:{ai_id}@{session_id}]{Colors.RESET}"]
 
         if cognitive_phase:
-            parts.append(f"{cognitive_phase}")
+            cog_str = format_cognitive_phase(cognitive_phase)
+            parts.append(cog_str)
 
         if phase:
             parts.append(f"{Colors.BLUE}{phase}{Colors.RESET}")

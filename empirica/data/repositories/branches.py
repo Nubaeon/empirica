@@ -69,6 +69,36 @@ class BranchRepository(BaseRepository):
         self.commit()
         return True
 
+    def get_branch(self, branch_id: str) -> Dict:
+        """Get branch by ID
+
+        Args:
+            branch_id: Branch UUID
+
+        Returns:
+            Dict with branch data or empty dict if not found
+        """
+        cursor = self._execute("""
+            SELECT id, session_id, branch_name, investigation_path,
+                   preflight_vectors, postflight_vectors, merge_score, status
+            FROM investigation_branches WHERE id = ?
+        """, (branch_id,))
+
+        row = cursor.fetchone()
+        if not row:
+            return {}
+
+        return {
+            "branch_id": row[0],
+            "session_id": row[1],
+            "branch_name": row[2],
+            "investigation_path": row[3],
+            "preflight_vectors": json.loads(row[4]) if row[4] else {},
+            "postflight_vectors": json.loads(row[5]) if row[5] else {},
+            "merge_score": row[6],
+            "status": row[7]
+        }
+
     def calculate_branch_merge_score(self, branch_id: str) -> Dict:
         """Calculate epistemic merge score for a branch
 

@@ -1,0 +1,58 @@
+# Healthcare Domain Profile - HIPAA Compliance
+# Use with: empirica sentinel-load-profile --profile healthcare
+# Or load custom: empirica sentinel-load-profile --profile healthcare --file custom-healthcare.yaml
+
+name: healthcare
+description: HIPAA-compliant healthcare domain with strict uncertainty thresholds
+compliance_framework: HIPAA
+version: "1.0"
+
+# Epistemic thresholds
+thresholds:
+  uncertainty_trigger: 0.30  # Trigger investigation at 30% uncertainty
+  confidence_to_proceed: 0.85  # Need 85% confidence to proceed
+  max_unknowns: 3  # Maximum unresolved unknowns before escalation
+
+# Audit settings
+audit:
+  enabled: true
+  log_all_actions: true
+  retention_days: 2555  # 7 years for HIPAA
+
+# Compliance gates
+gates:
+  - gate_id: pii_check
+    condition: pii_detected
+    action: halt_and_audit
+    priority: critical
+    description: "Halt and audit when PII is detected in output"
+
+  - gate_id: high_uncertainty
+    condition: uncertainty > 0.4
+    action: require_human_review
+    priority: high
+    description: "Require human review for uncertain medical decisions"
+
+  - gate_id: low_knowledge
+    condition: know < 0.7
+    action: investigate
+    priority: medium
+    description: "Return to investigation if knowledge is insufficient"
+
+  - gate_id: too_many_unknowns
+    condition: unknowns_count > 3
+    action: escalate
+    priority: high
+    description: "Escalate when too many unresolved questions"
+
+# Persona preferences for healthcare
+persona_preferences:
+  required_domains:
+    - security
+    - data
+  preferred_domains:
+    - documentation
+  min_reputation: 0.7
+
+# Merge strategy for multi-agent
+merge_strategy: consensus

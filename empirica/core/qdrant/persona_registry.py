@@ -497,6 +497,168 @@ class PersonaRegistry:
             logger.warning(f"Error getting registry stats: {e}")
             return {}
 
+    def register_agent(self, agent_package: Dict[str, Any]) -> str:
+        """
+        Register an epistemic agent from export package format.
+
+        This enables the sharing network - agents exported with agent-export
+        can be registered for discovery by other users.
+
+        Args:
+            agent_package: Dict from agent-export (format_version 1.0)
+
+        Returns:
+            str: Point ID in Qdrant
+
+        Example:
+            with open('agent.json') as f:
+                package = json.load(f)
+            registry.register_agent(package)
+        """
+        try:
+            agent_id = agent_package.get("agent_id", "unknown")
+            epistemic = agent_package.get("epistemic_profile", {})
+            provenance = agent_package.get("provenance", {})
+
+            # Use postflight vectors if available, else preflight
+            vectors = epistemic.get("postflight_vectors") or epistemic.get("preflight_vectors", {})
+
+            # Build 13D vector for Qdrant (fill missing with 0.5)
+            vector = [vectors.get(key, 0.5) for key in self.VECTOR_KEYS]
+
+            # Generate point ID
+            point_id = self._persona_id_to_point_id(agent_id)
+
+            # Prepare metadata for discovery
+            metadata = {
+                "persona_id": agent_id,
+                "name": f"Epistemic Agent: {agent_id}",
+                "version": agent_package.get("format_version", "1.0"),
+                "agent_type": "epistemic_agent",
+                "persona_type": agent_package.get("persona_id", "general"),
+                "focus_domains": [provenance.get("investigation_path", "general")],
+                "reputation_score": agent_package.get("reputation_seed", 0.5),
+                "merge_score": epistemic.get("merge_score"),
+                "learning_delta": epistemic.get("learning_delta", {}),
+                "source_project": provenance.get("project_id"),
+                "source_session": provenance.get("session_id"),
+                "branch_id": agent_package.get("branch_id"),
+                "export_timestamp": agent_package.get("export_timestamp"),
+                "tags": ["epistemic_agent", "imported", agent_package.get("persona_id", "general")]
+            }
+
+            # Create point
+            point = PointStruct(
+                id=point_id,
+                vector=vector,
+                payload=metadata
+            )
+
+            # Upsert
+            self.client.upsert(
+                collection_name=self.COLLECTION_NAME,
+                points=[point]
+            )
+
+            logger.info(f"✓ Registered agent: {agent_id} (point_id={point_id})")
+            return str(point_id)
+
+        except Exception as e:
+            logger.error(f"Failed to register agent: {e}")
+            raise ValueError(f"Cannot register agent: {e}")
+
+    def find_agents_by_domain(
+        self,
+        domain: str,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Find epistemic agents by investigation domain.
+
+        Args:
+            domain: Domain keyword (e.g., "security", "multi-persona")
+            limit: Maximum results
+
+        Returns:
+            List of agent dicts with metadata
+        """
+        try:
+            results = self.client.scroll(
+                collection_name=self.COLLECTION_NAME,
+                limit=limit * 2
+            )
+
+            matching = []
+            for point in results[0]:
+                # Check if it's an epistemic agent
+                if point.payload.get("agent_type") != "epistemic_agent":
+                    continue
+                # Check domain match
+                focus = point.payload.get("focus_domains", [])
+                if any(domain.lower() in d.lower() for d in focus):
+                    matching.append(self._point_to_agent_dict(point))
+
+            return matching[:limit]
+
+        except Exception as e:
+            logger.warning(f"Error finding agents: {e}")
+            return []
+
+    def find_agents_by_reputation(
+        self,
+        min_reputation: float = 0.5,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Find high-reputation epistemic agents.
+
+        Args:
+            min_reputation: Minimum reputation score
+            limit: Maximum results
+
+        Returns:
+            List of agents sorted by reputation
+        """
+        try:
+            results = self.client.scroll(
+                collection_name=self.COLLECTION_NAME,
+                limit=1000
+            )
+
+            agents = []
+            for point in results[0]:
+                if point.payload.get("agent_type") != "epistemic_agent":
+                    continue
+                rep = point.payload.get("reputation_score", 0.5)
+                if rep >= min_reputation:
+                    agent = self._point_to_agent_dict(point)
+                    agents.append(agent)
+
+            # Sort by reputation
+            agents.sort(key=lambda x: x.get("reputation_score", 0), reverse=True)
+            return agents[:limit]
+
+        except Exception as e:
+            logger.warning(f"Error finding agents by reputation: {e}")
+            return []
+
+    @staticmethod
+    def _point_to_agent_dict(point: Any) -> Dict[str, Any]:
+        """Convert Qdrant point to agent dict"""
+        return {
+            "agent_id": point.payload.get("persona_id"),
+            "name": point.payload.get("name"),
+            "persona_type": point.payload.get("persona_type"),
+            "focus_domains": point.payload.get("focus_domains", []),
+            "reputation_score": point.payload.get("reputation_score", 0.5),
+            "merge_score": point.payload.get("merge_score"),
+            "learning_delta": point.payload.get("learning_delta", {}),
+            "source_project": point.payload.get("source_project"),
+            "branch_id": point.payload.get("branch_id"),
+            "tags": point.payload.get("tags", []),
+            "vector": point.vector if hasattr(point, 'vector') else None
+        }
+
     # Helper methods
 
     @staticmethod

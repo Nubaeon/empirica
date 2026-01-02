@@ -465,16 +465,16 @@ class AutoIssueCaptureService:
             conn = self._get_connection()
             cursor = conn.cursor()
 
+            # Note: Don't filter by session_id - issues can be handed off from any session
             cursor.execute("""
                 UPDATE auto_captured_issues
                 SET status = ?, assigned_to_ai = ?, updated_at = ?
-                WHERE id = ? AND session_id = ?
+                WHERE id = ?
             """, (
                 IssueStatus.HANDOFF.value,
                 assigned_to_ai,
                 datetime.now(timezone.utc).isoformat(),
-                issue_id,
-                self.session_id
+                issue_id
             ))
             
             conn.commit()
@@ -501,16 +501,16 @@ class AutoIssueCaptureService:
             conn = self._get_connection()
             cursor = conn.cursor()
 
+            # Note: Don't filter by session_id - issues can be resolved from any session
             cursor.execute("""
                 UPDATE auto_captured_issues
                 SET status = ?, resolution = ?, updated_at = ?
-                WHERE id = ? AND session_id = ?
+                WHERE id = ?
             """, (
                 IssueStatus.RESOLVED.value,
                 resolution,
                 datetime.now(timezone.utc).isoformat(),
-                issue_id,
-                self.session_id
+                issue_id
             ))
             
             conn.commit()
@@ -583,47 +583,70 @@ _auto_capture_instance: Optional[AutoIssueCaptureService] = None
 
 class AutoCaptureLoggingHandler(logging.Handler):
     """
-    Logging handler that automatically captures ERROR/CRITICAL logs.
-    
+    Logging handler that automatically captures ERROR/CRITICAL logs
+    and warnings with error patterns.
+
     Integrates with Python's logging system to capture errors without
     modifying every try/except block.
     """
-    
+
+    # Patterns that indicate an error even at WARNING level
+    ERROR_PATTERNS = [
+        'failed', 'error', 'exception', 'traceback', 'attribute error',
+        'not found', 'missing', 'invalid', 'timeout', 'connection',
+        'pydantic', 'validation', 'type error', 'value error', 'key error',
+        'import error', 'module not found', 'no attribute', 'cannot', "doesn't exist"
+    ]
+
     def __init__(self, capture_service: AutoIssueCaptureService):
         """
-        Initialize handler for ERROR and above.
-        
+        Initialize handler for WARNING and above (with pattern filtering).
+
         Args:
             capture_service: AutoIssueCaptureService instance to use
         """
-        super().__init__(level=logging.ERROR)
+        super().__init__(level=logging.WARNING)  # Capture warnings too
         self.capture_service = capture_service
         
     def emit(self, record: logging.LogRecord) -> None:
         """
         Capture log record as an issue.
-        
+
+        For WARNING level, only captures if message matches error patterns.
+        For ERROR/CRITICAL, always captures.
+
         Args:
             record: LogRecord to capture
         """
         if not self.capture_service or not self.capture_service.enable:
             return
-        
+
         try:
+            message = record.getMessage().lower()
+
+            # For WARNING level, only capture if matches error patterns
+            if record.levelno == logging.WARNING:
+                if not any(pattern in message for pattern in self.ERROR_PATTERNS):
+                    return  # Skip non-error warnings
+
             # Map logging levels to severity
             severity_map = {
                 logging.ERROR: IssueSeverity.HIGH,
                 logging.CRITICAL: IssueSeverity.BLOCKER,
                 logging.WARNING: IssueSeverity.MEDIUM
             }
-            
-            # Determine category based on exception info
+
+            # Determine category based on exception info and message
             category = IssueCategory.ERROR
             if record.exc_info:
                 exc_type = record.exc_info[0]
                 if exc_type and issubclass(exc_type, DeprecationWarning):
                     category = IssueCategory.DEPRECATION
-            
+            elif 'pydantic' in message or 'validation' in message:
+                category = IssueCategory.COMPATIBILITY
+            elif 'not found' in message or 'missing' in message:
+                category = IssueCategory.BUG
+
             # Build context from log record
             context = {
                 'logger': record.name,
@@ -633,7 +656,7 @@ class AutoCaptureLoggingHandler(logging.Handler):
                 'thread': record.thread,
                 'process': record.process
             }
-            
+
             # Capture the error
             self.capture_service.capture_error(
                 message=record.getMessage(),

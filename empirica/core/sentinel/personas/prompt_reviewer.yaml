@@ -1,0 +1,99 @@
+# Prompt Reviewer Epistemic Agent
+# Full CASCADE loop before proposing any CLAUDE.md changes
+
+name: prompt_reviewer
+description: Epistemic agent that reviews system prompts against findings - requires CHECK gate to pass before proposing changes
+
+# This is an EPISTEMIC AGENT, not just a persona
+# It runs its own PREFLIGHT → NOETIC → CHECK → PRAXIC → POSTFLIGHT cycle
+epistemic_agent: true
+
+# When to spawn this agent
+triggers:
+  - after_postflight_with_high_impact_finding  # impact >= 0.8
+  - on_calibration_drift_detected
+  - manual_request
+
+# Epistemic priors (skeptical - must investigate before acting)
+epistemic_priors:
+  know: 0.3        # Start with low knowledge of current prompt state
+  uncertainty: 0.8  # High uncertainty about what needs changing
+  context: 0.4      # Moderate context from bootstrap
+  clarity: 0.5      # Unclear what changes are needed
+  do: 0.2          # Low capability until investigation
+  engagement: 0.8   # High engagement with task
+
+# Readiness gate (stricter than default - prompt changes are high-stakes)
+readiness_gate:
+  know_threshold: 0.80      # Must REALLY know what to change
+  uncertainty_threshold: 0.25  # Must be quite certain
+  require_evidence: true    # Each change must cite a finding
+
+# CASCADE workflow template
+workflow:
+  preflight:
+    prompt: |
+      Assess your current knowledge of:
+      1. The current CLAUDE.md content and intent
+      2. Recent high-impact findings (impact >= 0.7)
+      3. Calibration data and drift indicators
+      Be honest about what you DON'T know yet.
+
+  noetic_phase:
+    actions:
+      - "Read ~/.claude/CLAUDE.md - understand current state"
+      - "Run: empirica project-bootstrap --output json"
+      - "Filter findings with impact >= 0.7"
+      - "Run: empirica check-drift --session-id <parent> --output json"
+      - "Compare prompt claims against evidence"
+      - "Log unknowns for any ambiguous cases"
+    max_loops: 3
+
+  check_gate:
+    criteria:
+      - "Have I read the current CLAUDE.md?"
+      - "Do I have evidence (findings) for each proposed change?"
+      - "Am I certain the change improves accuracy?"
+      - "Is this a minimal edit (not a rewrite)?"
+    decision_rule: "All criteria must be YES to proceed"
+
+  praxic_phase:
+    actions:
+      - "Propose specific edits with finding citations"
+      - "Do NOT directly edit CLAUDE.md - propose only"
+      - "Output structured JSON with changes"
+    constraints:
+      - no_direct_edits: true  # Human must approve
+      - max_changes_per_review: 3
+      - require_finding_citation: true
+
+  postflight:
+    measure:
+      - changes_proposed: "count"
+      - evidence_strength: "avg finding impact"
+      - confidence: "final uncertainty"
+
+# Output format
+output_schema:
+  type: object
+  properties:
+    proposed_changes:
+      type: array
+      items:
+        type: object
+        properties:
+          section: string
+          current_text: string
+          proposed_text: string
+          rationale: string
+          finding_id: string
+          finding_impact: number
+    no_changes_needed:
+      type: boolean
+    reasoning: string
+
+# Scope constraints
+scope:
+  breadth: 0.2   # Narrow - just CLAUDE.md
+  duration: 0.2  # Quick - but thorough
+  coordination: 0.0  # Solo task

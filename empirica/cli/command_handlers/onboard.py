@@ -110,7 +110,7 @@ Step 6: Get calibration report
 
 Python API:
    from empirica.data.session_database import SessionDatabase
-   from empirica.core.canonical.reflex_logger import ReflexLogger
+   from empirica.core.canonical import GitEnhancedReflexLogger
    
    # Create session
    db = SessionDatabase()

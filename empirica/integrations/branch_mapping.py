@@ -14,7 +14,7 @@ import json
 import os
 from pathlib import Path
 from typing import Optional, Dict, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class BranchMapping:
@@ -95,7 +95,7 @@ class BranchMapping:
             "beads_issue_id": beads_issue_id,
             "ai_id": ai_id,
             "session_id": session_id,
-            "created_at": datetime.utcnow().isoformat() + "Z",
+            "created_at": datetime.now(timezone.utc).isoformat() + "Z",
             "status": "active"
         }
         
@@ -130,7 +130,7 @@ class BranchMapping:
         if archive:
             # Move to history
             mapping = self._mappings["mappings"][branch_name]
-            mapping["completed_at"] = datetime.utcnow().isoformat() + "Z"
+            mapping["completed_at"] = datetime.now(timezone.utc).isoformat() + "Z"
             mapping["status"] = "completed"
             self._mappings["history"].append({
                 "branch": branch_name,

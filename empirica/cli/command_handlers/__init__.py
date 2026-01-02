@@ -22,6 +22,7 @@ from .workflow_commands import (
 from .goal_commands import (
     handle_goals_create_command,
     handle_goals_add_subtask_command,
+    handle_goals_add_dependency_command,
     handle_goals_complete_subtask_command,
     handle_goals_progress_command,
     handle_goals_get_subtasks_command,
@@ -102,6 +103,7 @@ from .doc_commands import (
 from .skill_commands import (
     handle_skill_suggest_command,
     handle_skill_fetch_command,
+    handle_skill_extract_command,
 )
 from .monitor_commands import (
     handle_monitor_command, handle_monitor_export_command,
@@ -114,7 +116,8 @@ from .investigation_commands import (
     handle_analyze_command,
     handle_investigate_create_branch_command,
     handle_investigate_checkpoint_branch_command,
-    handle_investigate_merge_branches_command
+    handle_investigate_merge_branches_command,
+    handle_investigate_multi_command
 )
 from .performance_commands import handle_benchmark_command, handle_performance_command
 # handle_goal_analysis_command removed - was in noetic_praxic_commands (deprecated)
@@ -130,6 +133,12 @@ from .epistemics_commands import (
     handle_epistemics_search_command,
     handle_epistemics_stats_command,
     handle_epistemics_list_command
+)
+from .sentinel_commands import (
+    handle_sentinel_orchestrate_command,
+    handle_sentinel_load_profile_command,
+    handle_sentinel_status_command,
+    handle_sentinel_check_command,
 )
 
 
@@ -154,6 +163,7 @@ __all__ = [
     # NEW: Goal Management Commands (MCP v2 Integration)
     'handle_goals_create_command',
     'handle_goals_add_subtask_command',
+    'handle_goals_add_dependency_command',
     'handle_goals_complete_subtask_command',
     'handle_goals_progress_command',
     'handle_goals_get_subtasks_command',
@@ -236,7 +246,8 @@ __all__ = [
     'handle_doc_plan_suggest_command',
     'handle_skill_suggest_command',
     'handle_skill_fetch_command',
-    
+    'handle_skill_extract_command',
+
     # Monitor commands
     'handle_monitor_command',
     'handle_monitor_export_command',
@@ -253,6 +264,7 @@ __all__ = [
     'handle_investigate_create_branch_command',
     'handle_investigate_checkpoint_branch_command',
     'handle_investigate_merge_branches_command',
+    'handle_investigate_multi_command',
 
     # Performance commands
     'handle_benchmark_command',
@@ -277,7 +289,13 @@ __all__ = [
     'handle_epistemics_search_command',
     'handle_epistemics_stats_command',
     'handle_epistemics_list_command',
-    
+
+    # Sentinel orchestration commands
+    'handle_sentinel_orchestrate_command',
+    'handle_sentinel_load_profile_command',
+    'handle_sentinel_status_command',
+    'handle_sentinel_check_command',
+
     # Session-end command
     # 'handle_session_end_command',  # removed - use handoff-create
 ]

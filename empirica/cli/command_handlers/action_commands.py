@@ -9,7 +9,7 @@ import json
 import logging
 import subprocess
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from ..cli_utils import handle_cli_error, parse_json_safely
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ def handle_investigate_log_command(args):
 
         # Append to investigation log
         context.setdefault("investigation_log", []).append({
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "findings": findings,
             "evidence": evidence
         })
@@ -79,7 +79,7 @@ def handle_investigate_log_command(args):
                 "type": "investigate",
                 "findings": findings,
                 "evidence": evidence,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
             subprocess.run(
                 ['git', 'notes', '--ref', note_ref, 'append', '-m',
@@ -152,7 +152,7 @@ def handle_act_log_command(args):
         
         # Append to act log
         context.setdefault("act_log", []).append({
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "actions": actions,
             "artifacts": artifacts,
             "goal_id": goal_id
@@ -181,7 +181,7 @@ def handle_act_log_command(args):
                 "actions": actions,
                 "artifacts": artifacts,
                 "goal_id": goal_id,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
             subprocess.run(
                 ['git', 'notes', '--ref', note_ref, 'append', '-m',

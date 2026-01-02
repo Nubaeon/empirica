@@ -170,3 +170,61 @@ def handle_skill_fetch_command(args):
     except Exception as e:
         handle_cli_error(e, "Skill fetch", getattr(args, 'verbose', False))
         return None
+
+
+def handle_skill_extract_command(args):
+    """Extract decision frameworks from skill(s) to meta-agent-config.yaml."""
+    try:
+        from pathlib import Path
+        from empirica.core.skills.extractor import (
+            SkillExtractor, extract_all_skills, extract_single_skill
+        )
+
+        skill_dir = getattr(args, 'skill_dir', None)
+        skills_dir = getattr(args, 'skills_dir', None)
+        output_file = getattr(args, 'output_file', 'meta-agent-config.yaml')
+        verbose = getattr(args, 'verbose', False)
+        output_format = getattr(args, 'output', 'json')
+
+        if not skill_dir and not skills_dir:
+            raise ValueError("Either --skill-dir or --skills-dir is required")
+
+        if skills_dir:
+            # Extract all skills from directory
+            config = extract_all_skills(
+                Path(skills_dir),
+                Path(output_file),
+                verbose=verbose
+            )
+            result = {
+                'ok': True,
+                'mode': 'multi',
+                'skills_dir': str(skills_dir),
+                'output_file': str(output_file),
+                'domains': list(config.get('meta_agent', {}).get('domain_knowledge', {}).keys())
+            }
+        else:
+            # Extract single skill
+            domain_data = extract_single_skill(Path(skill_dir), verbose=verbose)
+            result = {
+                'ok': True,
+                'mode': 'single',
+                'skill_dir': str(skill_dir),
+                'extracted': domain_data
+            }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            if skills_dir:
+                print(f"Extracted {len(result['domains'])} skills to {output_file}")
+                for domain in result['domains']:
+                    print(f"  - {domain}")
+            else:
+                domain_name = list(domain_data.keys())[0] if domain_data else 'unknown'
+                print(f"Extracted skill: {domain_name}")
+
+        return result
+    except Exception as e:
+        handle_cli_error(e, "Skill extract", getattr(args, 'verbose', False))
+        return None
