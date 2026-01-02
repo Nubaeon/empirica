@@ -169,6 +169,48 @@ PREFLIGHT → [noetic/praxic as needed] → CHECK → [noetic/praxic as needed] 
 
 ---
 
+### Layer 6: Semantic Search (Qdrant Vector Store)
+**Queried on demand. Distributed memory across sessions.**
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                    QDRANT COLLECTIONS                      │
+├────────────────────────────────────────────────────────────┤
+│  project_{id}_docs      │ Documentation embeddings         │
+│  project_{id}_memory    │ Findings, unknowns, dead ends    │
+│  project_{id}_epistemics│ PREFLIGHT→POSTFLIGHT deltas      │
+│  global_learnings       │ Cross-project high-impact items  │
+│  personas               │ Epistemic agent profiles         │
+└────────────────────────────────────────────────────────────┘
+```
+
+| Belongs Here | Does NOT Belong Here |
+|--------------|---------------------|
+| Findings (auto-embedded on log) | Static config |
+| Unknowns (auto-embedded on log) | Workflow rules |
+| Dead ends with why-failed | Identity info |
+| Resolved unknowns with resolution | Command syntax |
+| High-impact learnings (impact ≥0.7) | |
+| Epistemic trajectories | |
+
+**Feedback Loop:**
+1. **Write path:** `finding-log`, `unknown-log` → auto-embed to `project_{id}_memory`
+2. **Read path:** `project-search --task "query"` → semantic search → relevant context
+3. **Bootstrap path:** `project-bootstrap --global` → `search_global()` → cross-project learnings
+
+**Token budget:** Variable (search returns top-k results, typically 5-10)
+
+**Update frequency:** Real-time (every breadcrumb logged)
+
+**Current Status:**
+- ✅ `project_{id}_memory` - Working (findings/unknowns auto-embedded)
+- ✅ `project_{id}_docs` - Working (via project-embed)
+- ✅ `project_{id}_epistemics` - Working (POSTFLIGHT deltas)
+- ⚠️ `global_learnings` - Collection not initialized
+- ⚠️ `personas` - Collection not initialized
+
+---
+
 ## Epistemic Subagent Spawning
 
 When spawning epistemic subagents for parallel investigation:
@@ -261,7 +303,12 @@ Is it about AI identity or core principles?
             └── NO
                 │
                 Is it compressed skill knowledge for bootstrapping?
-                └── YES → meta-agent-config.yaml
+                ├── YES → meta-agent-config.yaml
+                └── NO
+                    │
+                    Is it a learning that should persist across sessions?
+                    ├── YES → Qdrant (auto-embedded via finding-log/unknown-log)
+                    └── NO → Consider if it needs to be stored at all
 ```
 
 ---
@@ -308,4 +355,5 @@ Before committing changes, verify:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-01-02 | Added Layer 6: Semantic Search (Qdrant), updated decision tree |
 | 1.0.0 | 2026-01-02 | Initial separation of concerns spec |
