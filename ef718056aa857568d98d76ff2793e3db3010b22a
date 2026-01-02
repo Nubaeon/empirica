@@ -1,0 +1,31 @@
+{
+  "goal_id": "137b6c60-76ef-46f8-a6cc-043753162b78",
+  "session_id": "e17abb48-5047-4479-874d-11e025226b3b",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-02T07:54:19.060500+00:00",
+  "goal_data": {
+    "objective": "Document Epistemic Agent Architecture and Evolution Roadmap",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.6,
+      "coordination": 0.8
+    },
+    "success_criteria": [
+      "{'description': 'Architecture diagram showing turtle stack layers', 'weight': 0.25}",
+      "{'description': 'Command reference for all agent-* commands documented', 'weight': 0.25}",
+      "{'description': 'Evolution phases documented (Tier 4, 5, 6)', 'weight': 0.25}",
+      "{'description': 'Cross-org federation design sketched', 'weight': 0.25}"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "claude-code",
+      "timestamp": "2026-01-02T07:54:19.060512+00:00",
+      "action": "created"
+    }
+  ]
+}
