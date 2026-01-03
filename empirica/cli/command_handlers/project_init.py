@@ -225,12 +225,9 @@ def handle_project_init_command(args):
                 print(f"\n📖 Semantic index template created!")
                 print(f"   Edit docs/SEMANTIC_INDEX.yaml to add your documentation metadata")
         
-        return {
-            "project_id": project_id,
-            "git_root": str(git_root),
-            "files_created": [str(config_path), str(project_config_path)]
-        }
-    
+        # Return None to avoid exit code issues (output already printed)
+        return None
+
     except Exception as e:
         from ..cli_utils import handle_cli_error
         handle_cli_error(e, "Project init", getattr(args, 'verbose', False))

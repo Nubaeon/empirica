@@ -113,7 +113,7 @@ def handle_skill_fetch_command(args):
                     skill_obj = parse_markdown_to_skill(md_text, name=name, tags=tags)
                     result = _save_skill(skill_obj)
                     print(json.dumps(result, indent=2))
-                    return result
+                    return None  # Success - output already printed
                 # Parse candidate
                 with zf.open(candidate) as fh:
                     data = fh.read()
@@ -132,7 +132,7 @@ def handle_skill_fetch_command(args):
                         }
                         result = _save_skill(skill_obj)
                         print(json.dumps(result, indent=2))
-                        return result
+                        return None  # Success - output already printed
                     elif candidate.lower().endswith('.json'):
                         import json as _json
                         meta = _json.loads(data.decode('utf-8', errors='ignore'))
@@ -148,14 +148,14 @@ def handle_skill_fetch_command(args):
                         }
                         result = _save_skill(skill_obj)
                         print(json.dumps(result, indent=2))
-                        return result
+                        return None  # Success - output already printed
                     else:
                         # Markdown
                         md_text = data.decode('utf-8', errors='ignore')
                         skill_obj = parse_markdown_to_skill(md_text, name=name, tags=tags)
                         result = _save_skill(skill_obj)
                         print(json.dumps(result, indent=2))
-                        return result
+                        return None  # Success - output already printed
 
         # Case 2: URL fetch (markdown)
         if not url:
@@ -166,7 +166,7 @@ def handle_skill_fetch_command(args):
         skill_obj = parse_markdown_to_skill(md_text, name=name, tags=tags)
         result = _save_skill(skill_obj)
         print(json.dumps(result, indent=2))
-        return result
+        return None  # Success - output already printed
     except Exception as e:
         handle_cli_error(e, "Skill fetch", getattr(args, 'verbose', False))
         return None

@@ -304,7 +304,7 @@ def handle_agent_aggregate_command(args) -> dict:
             print(f"Score: {merge_result.get('winning_score', 0):.4f}")
             print(f"\nRationale: {merge_result.get('decision_rationale')}")
 
-        return response
+        return None  # Success - output already printed
 
     finally:
         db.close()
