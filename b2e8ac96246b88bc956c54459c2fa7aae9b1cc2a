@@ -1,0 +1,35 @@
+{
+  "goal_id": "1b5197c4-f191-499a-8840-ccf69a05b36c",
+  "session_id": "b294c987-2271-4ee4-aef5-2cee7d16e77d",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-03T15:32:46.822340+00:00",
+  "goal_data": {
+    "objective": "Build Empirica Privacy Agent - pre-push epistemic security scanner that prevents accidental exposure of internal project structure, strategies, and multi-platform operations through .gitignore, commit messages, and file names",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.6,
+      "coordination": 0.4
+    },
+    "success_criteria": [
+      "CLI command 'empirica privacy-scan' detects leaky patterns in .gitignore, commits, filenames",
+      "Auto-fix mode moves sensitive patterns from .gitignore to .git/info/exclude",
+      "Pre-push git hook installation with 'empirica privacy-install-hook'",
+      "Pattern detection includes: other platforms, internal docs, framework paths, strategy files",
+      "Educational warnings explain WHY patterns are risky (epistemic reasoning)",
+      "Zero false positives on generic patterns (__pycache__, *.pyc, .env)",
+      "Documentation covers .git/info/exclude best practices",
+      "Prevents 'automating stupidity' - blocks privacy leaks before they happen"
+    ],
+    "estimated_complexity": 0.65,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-03T15:32:46.822360+00:00",
+      "action": "created"
+    }
+  ]
+}
