@@ -41,7 +41,7 @@ import uuid
 import json
 
 # Import Empirica components
-from empirica.auto_tracker import EmpericaTracker
+from empirica.data.session_database import SessionDatabase
 from .epistemic_snapshot import EpistemicStateSnapshot, ContextSummary, create_snapshot
 
 
@@ -50,20 +50,18 @@ class EpistemicSnapshotProvider:
     Creates and manages epistemic snapshots
 
     Integrates with:
-    - EmpericaTracker (session state access)
     - SessionDatabase (persistence)
     - epistemic_snapshot.py (data structures)
     """
 
-    def __init__(self, tracker: Optional[EmpericaTracker] = None):
+    def __init__(self, db: Optional[SessionDatabase] = None):
         """
         Initialize snapshot provider
 
         Args:
-            tracker: EmpericaTracker instance (or get singleton)
+            db: SessionDatabase instance (or create new one)
         """
-        self.tracker = tracker or EmpericaTracker.get_instance()
-        self.db = self.tracker.db
+        self.db = db or SessionDatabase()
 
     def create_snapshot_from_session(self,
                                     session_id: str,

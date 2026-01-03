@@ -1098,6 +1098,53 @@ def handle_postflight_submit_command(args):
                 # Trajectory storage is optional (requires Qdrant)
                 logger.debug(f"Epistemic trajectory storage skipped: {e}")
 
+            # EPISTEMIC SNAPSHOT: Create replay-capable snapshot with delta chain
+            # This enables session replay by storing explicit deltas + previous_snapshot_id links
+            snapshot_created = False
+            snapshot_id = None
+            try:
+                from empirica.plugins.modality_switcher.snapshot_provider import EpistemicSnapshotProvider
+                from empirica.plugins.modality_switcher.epistemic_snapshot import ContextSummary
+
+                # Get session for ai_id
+                db = SessionDatabase()
+                session = db.get_session(session_id)
+
+                if session:
+                    # Create snapshot provider (uses its own tracker/db connection)
+                    snapshot_provider = EpistemicSnapshotProvider()
+
+                    # Build context summary from reasoning
+                    context_summary = ContextSummary(
+                        semantic={"phase": "POSTFLIGHT", "confidence": postflight_confidence},
+                        narrative=reasoning or "Session completed",
+                        evidence_refs=[checkpoint_id] if checkpoint_id else []
+                    )
+
+                    # Create snapshot - this auto-links to previous snapshot via previous_snapshot_id
+                    snapshot = snapshot_provider.create_snapshot_from_session(
+                        session_id=session_id,
+                        context_summary=context_summary,
+                        cascade_phase="POSTFLIGHT",
+                        domain_vectors={"deltas": deltas} if deltas else None
+                    )
+
+                    # Override vectors with actual POSTFLIGHT vectors (not preflight from db)
+                    snapshot.vectors = vectors
+                    snapshot.delta = deltas
+
+                    # Save to epistemic_snapshots table
+                    snapshot_provider.save_snapshot(snapshot)
+                    snapshot_id = snapshot.snapshot_id
+                    snapshot_created = True
+
+                    logger.debug(f"Created epistemic snapshot {snapshot_id} for session {session_id}")
+
+                db.close()
+            except Exception as e:
+                # Snapshot creation is non-fatal
+                logger.debug(f"Epistemic snapshot creation skipped: {e}")
+
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -1117,8 +1164,14 @@ def handle_postflight_submit_command(args):
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
-                    "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False
+                    "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False,
+                    "epistemic_snapshots": snapshot_created
                 },
+                "snapshot": {
+                    "created": snapshot_created,
+                    "snapshot_id": snapshot_id,
+                    "note": "Snapshot enables session replay with delta chains"
+                } if snapshot_created else None,
                 "sentinel": {
                     "enabled": SentinelHooks.is_enabled(),
                     "decision": sentinel_decision.value if sentinel_decision else None,
