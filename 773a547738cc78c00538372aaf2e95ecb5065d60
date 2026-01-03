@@ -1,0 +1,31 @@
+{
+  "goal_id": "0b572570-6992-466c-acef-7841da4e3c4d",
+  "session_id": "e0d68cfd-61ab-4665-b79f-5670695f6d5e",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-03T23:26:54.786408+00:00",
+  "goal_data": {
+    "objective": "Wire up epistemic_snapshots table for proper replay capability",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "epistemic_snapshots populated on POSTFLIGHT",
+      "delta field contains PREFLIGHT\u2192POSTFLIGHT diff",
+      "previous_snapshot_id chains snapshots together",
+      "Replay query returns full session arc"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-03T23:26:54.786427+00:00",
+      "action": "created"
+    }
+  ]
+}
