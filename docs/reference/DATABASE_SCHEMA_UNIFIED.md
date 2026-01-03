@@ -1,9 +1,10 @@
 # Empirica Database Schema (Unified)
 
-**Total Tables:** 23
+**Total Tables:** 19 (active)
 **Database Type:** SQLite (with PostgreSQL adapter support)
 **Architecture:** Modular with unified goal/task system
 **Every project (mapped to git repo) has its own SQLite database**
+**Last Updated:** 2026-01-03
 
 ---
 
@@ -21,17 +22,15 @@ sessions (1) ──> (N) reflexes
 cascades (1) ──> (N) reflexes (via cascade_id)
 ```
 
-### 2. Epistemic Tracking (3 tables)
+### 2. Epistemic Tracking (1 table)
 - **epistemic_snapshots** - Point-in-time epistemic state captures
-- **divergence_tracking** - Delegate vs trustee alignment tracking
-- **drift_monitoring** - Long-term behavioral pattern tracking
 
 **Relationships:**
 ```
 sessions (1) ──> (N) epistemic_snapshots
-sessions (1) ──> (N) drift_monitoring
-cascades (1) ──> (N) divergence_tracking
 ```
+
+> **Deprecated:** `divergence_tracking` and `drift_monitoring` tables were removed in v1.2.0. Drift detection now uses the signaling system with moon phase indicators.
 
 ### 3. Bayesian & Belief Tracking (1 table)
 - **bayesian_beliefs** - Evidence-based belief evolution
@@ -73,21 +72,17 @@ projects (1) ──> (N) epistemic_sources
 sessions (1) ──> (N) handoff_reports
 ```
 
-### 6. Investigation Tools (5 tables)
-- **investigation_tools** - Tool usage tracking
-- **investigation_logs** - Investigation event logs
-- **act_logs** - Action logging with confidence scores
+### 6. Investigation & Branching (2 tables)
 - **investigation_branches** - Multi-branch investigations
 - **merge_decisions** - Branch merge outcomes
 
 **Relationships:**
 ```
-sessions (1) ──> (N) investigation_tools
-sessions (1) ──> (N) investigation_logs
-sessions (1) ──> (N) act_logs
 sessions (1) ──> (N) investigation_branches
 investigation_branches (1) ──> (N) merge_decisions
 ```
+
+> **Deprecated:** `investigation_tools`, `investigation_logs`, and `act_logs` tables were removed in v1.2.0. Action logging now uses the `reflexes` table with structured JSON payloads.
 
 ### 7. Learning & Mistakes (1 table)
 - **mistakes_made** - Error tracking with root cause analysis

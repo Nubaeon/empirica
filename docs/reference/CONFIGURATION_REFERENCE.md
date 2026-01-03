@@ -573,17 +573,36 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 - `EMPIRICA_DATA_DIR`: Override `.empirica` location
 - `EMPIRICA_SESSION_DB`: Override session database
 - `EMPIRICA_LOG_LEVEL`: Override log level (`debug`, `info`, `warning`, `error`)
+- `EMPIRICA_WORKSPACE_ROOT`: Set workspace root for multi-project work
+- `PYTHONWARNINGS`: Control Python warning display (`ignore`, `default`, `error`)
 
 ### Profiles
 
 - `EMPIRICA_INVESTIGATION_PROFILE`: Force investigation profile
 - `EMPIRICA_PROFILE_MODE`: Override profile mode
+- `EMPIRICA_PERSONALITY`: Set AI personality/persona (`researcher`, `implementer`, `reviewer`, etc.)
+- `EMPIRICA_EPISTEMIC_MODE`: Set epistemic mode (`strict`, `balanced`, `exploratory`)
 
 ### Modality
 
 - `EMPIRICA_MODALITY_STRATEGY`: Override routing strategy
 - `MINIMAX_API_KEY`: MiniMax API key
 - `EMPIRICA_DEFAULT_ADAPTER`: Override default adapter
+
+### Sentinel (Safety Gates)
+
+- `SENTINEL_URL`: URL for external Sentinel service (optional)
+- `EMPIRICA_ENFORCE_CASCADE_PHASES`: Strictly enforce CASCADE phase ordering (`true`, `false`)
+
+### Vector Search & Embeddings
+
+- `EMPIRICA_ENABLE_EMBEDDINGS`: Enable/disable embedding generation (`true`, `false`)
+- `EMPIRICA_OLLAMA_URL`: URL for local Ollama instance (for local embeddings)
+- `OPENAI_API_KEY`: API key for OpenAI embeddings
+
+### Credentials
+
+- `EMPIRICA_CREDENTIALS_PATH`: Path to credentials file
 
 ### Features
 

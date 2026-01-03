@@ -10,11 +10,13 @@
 
 ## What's New in 1.2.3
 
-- **🐢 Turtle Principle** - Recursive grounding documented in all model deltas
-- **🔧 MCP Server with 57 Tools** - Full Model Context Protocol integration with epistemic middleware
-- **🌙 3-Layer Signaling System** - Moon phase indicators for drift detection
-- **🚦 Sentinel Gates** - Automatic safety gates (HALT/BRANCH/REVISE/LOCK) for memory drift
-- **📊 Unified Statusline** - Real-time epistemic status with vector health indicators
+- **🚦 Sentinel Safety Gates** - Human-in-the-loop gates (PROCEED/HALT/BRANCH/REVISE) that bound AI autonomy
+- **🤖 Multi-Agent Spawning** - Spawn epistemic sub-agents with `agent-spawn`, aggregate findings with `agent-aggregate`
+- **🎭 Persona System** - AI identity profiles that emerge from successful epistemic patterns (`persona-list`, `persona-promote`)
+- **🔧 108 CLI Commands** - Full coverage including assessment, trajectory projection, and drift detection
+- **🌙 3-Layer Signaling** - Moon phase indicators (🌑→🌕) for epistemic health at a glance
+- **📈 Trajectory Projection** - Project epistemic learning curves with `trajectory-project`
+- **🐢 Turtle Principle** - Recursive grounding: every claim must trace to verifiable source
 
 ## ⚡ Quick Setup (Copy-Paste)
 
@@ -249,6 +251,18 @@ empirica project-bootstrap --project-id <PROJECT_ID>
 
 ### 🤝 Multi-Agent Coordination
 
+**Spawn epistemic sub-agents:**
+```bash
+# Spawn a sub-agent for parallel investigation
+empirica agent-spawn --session-id <ID> --task "Investigate auth patterns" --depth medium
+
+# Sub-agent reports back
+empirica agent-report --session-id <SUB_ID> --findings '[...]' --confidence 0.8
+
+# Aggregate findings from multiple agents
+empirica agent-aggregate --parent-session-id <ID> --merge-strategy weighted
+```
+
 **Share epistemic state via git notes:**
 ```bash
 # Push your epistemic checkpoints
@@ -257,6 +271,60 @@ git push origin refs/notes/empirica/*
 # Pull team member's state
 git fetch origin refs/notes/empirica/*:refs/notes/empirica/*
 ```
+
+### 🚦 Sentinel Safety Gates
+
+**Bounded AI autonomy with human oversight:**
+```bash
+# Check if operation is safe to proceed
+empirica sentinel-check --operation '{"type": "code_generation", "scope": "high"}' --session-id <ID>
+
+# Returns: PROCEED | HALT | BRANCH | REVISE
+
+# Orchestrate multi-step workflow with gates
+empirica sentinel-orchestrate --workflow workflow.json --session-id <ID>
+```
+
+**Gate types:**
+- `PROCEED` - Safe to continue autonomously
+- `HALT` - Requires human approval before continuing
+- `BRANCH` - Spawn investigation before proceeding
+- `REVISE` - Modify approach and resubmit
+
+### 🎭 Persona System
+
+**AI identity profiles that emerge from successful patterns:**
+```bash
+# List available personas
+empirica persona-list
+
+# Find persona matching current task
+empirica persona-find --task "security audit" --session-id <ID>
+
+# Promote traits based on successful outcomes
+empirica persona-promote --persona-id researcher --trait thoroughness --evidence "Found 3 critical bugs"
+```
+
+### 📈 Drift Detection & Trajectory
+
+**Monitor epistemic health and project learning curves:**
+```bash
+# Check for behavioral drift
+empirica check-drift --session-id <ID>
+
+# Project epistemic trajectory
+empirica trajectory-project --session-id <ID> --horizon 5
+
+# Assess current epistemic state
+empirica assess-state --session-id <ID> --include-history
+```
+
+**Moon phase indicators for health at a glance:**
+- 🌑 Critical (coverage < 25%)
+- 🌒 Low (25-50%)
+- 🌓 Moderate (50-75%)
+- 🌔 Good (75-90%)
+- 🌕 Excellent (90%+)
 
 ## 📦 Optional Integrations
 

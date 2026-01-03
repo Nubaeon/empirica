@@ -1,8 +1,8 @@
 # Empirica CLI Commands - Unified Reference
 
-**Total Commands:** 86
-**Framework Version:** 1.2.2
-**Generated:** 2025-12-28
+**Total Commands:** 108
+**Framework Version:** 1.2.3
+**Generated:** 2026-01-03
 **Status:** Production Ready
 
 ---
@@ -104,25 +104,59 @@
 - **check-drift** - Check for behavioral drift
 - **efficiency-report** - Generate efficiency metrics
 
-### 13. Skills (2 commands)
+### 13. Skills (3 commands)
 - **skill-suggest** - Suggest skills based on current work
 - **skill-fetch** - Fetch skill from repository
+- **skill-extract** - Extract decision frameworks from skills to meta-agent config
 
-### 14. Utilities (4 commands)
+### 14. Agent Commands (6 commands)
+- **agent-spawn** - Spawn epistemic sub-agent for investigation
+- **agent-report** - Report findings from sub-agent back to parent
+- **agent-aggregate** - Aggregate findings from multiple sub-agents
+- **agent-discover** - Discover available agent capabilities
+- **agent-export** - Export agent state for handoff
+- **agent-import** - Import agent state from handoff
+
+### 15. Persona Commands (4 commands)
+- **persona-list** - List available personas for AI identity
+- **persona-show** - Show detailed persona configuration
+- **persona-promote** - Promote persona traits based on successful patterns
+- **persona-find** - Find persona matching task characteristics
+
+### 16. Assessment Commands (4 commands)
+- **assess-state** - Assess current epistemic state
+- **assess-component** - Assess specific component quality
+- **assess-compare** - Compare two assessments side by side
+- **assess-directory** - Assess documentation in a directory
+
+### 17. Sentinel Commands (4 commands)
+- **sentinel-status** - Show Sentinel gate status and health
+- **sentinel-check** - Run Sentinel safety check on current operation
+- **sentinel-load-profile** - Load Sentinel safety profile
+- **sentinel-orchestrate** - Orchestrate multi-agent workflow with Sentinel gates
+
+### 18. Trajectory Commands (1 command)
+- **trajectory-project** - Project epistemic trajectory based on current learning curve
+
+### 19. Utilities (4 commands)
 - **goal-analysis** - Analyze goal completion patterns
 - **log-token-saving** - Log token savings from compression
 - **config** - Configure Empirica settings
 - **performance** - Show performance metrics
 
-### 15. Vision (1 command)
+### 20. Vision (1 command)
 - **vision** - Vision processing and analysis
 
-### 16. Epistemics (2 commands)
+### 21. Epistemics (2 commands)
 - **epistemics-list** - List epistemic assessments
 - **epistemics-show** - Show detailed epistemic assessment
 
-### 17. User Interface (1 command)
+### 22. User Interface (1 command)
 - **chat** - Interactive chat interface
+
+### 23. Release & Docs (2 commands)
+- **release-ready** - Check if codebase is ready for release (6-point verification)
+- **docs-assess** - Assess documentation coverage using epistemic vectors
 
 ---
 
@@ -609,6 +643,219 @@ empirica unknown-resolve \
 #### `chat`
 **Purpose:** Interactive chat interface
 **Usage:** `empirica chat --session-id <session_id>`
+
+---
+
+### Agent Commands
+
+#### `agent-spawn`
+**Purpose:** Spawn an epistemic sub-agent for parallel investigation
+**Usage:** `empirica agent-spawn --session-id <session_id> --task <task_description> [options]`
+**Options:**
+- `--session-id`: Parent session ID
+- `--task`: Task description for the sub-agent
+- `--depth`: Investigation depth (shallow, medium, deep)
+- `--output`: Output format (json, human)
+
+#### `agent-report`
+**Purpose:** Report findings from sub-agent back to parent session
+**Usage:** `empirica agent-report --session-id <session_id> --findings <json> [options]`
+**Options:**
+- `--session-id`: Sub-agent session ID
+- `--findings`: JSON array of findings
+- `--unknowns`: JSON array of remaining unknowns
+- `--confidence`: Overall confidence score (0.0-1.0)
+
+#### `agent-aggregate`
+**Purpose:** Aggregate findings from multiple sub-agents into unified report
+**Usage:** `empirica agent-aggregate --parent-session-id <session_id> [options]`
+**Options:**
+- `--parent-session-id`: Parent session that spawned sub-agents
+- `--merge-strategy`: How to merge findings (union, intersection, weighted)
+- `--output`: Output format (json, human)
+
+#### `agent-discover`
+**Purpose:** Discover available agent capabilities and specializations
+**Usage:** `empirica agent-discover [options]`
+**Options:**
+- `--category`: Filter by capability category
+- `--verbose`: Show detailed capability descriptions
+
+#### `agent-export`
+**Purpose:** Export agent state for handoff to another system
+**Usage:** `empirica agent-export --session-id <session_id> --output-path <path>`
+
+#### `agent-import`
+**Purpose:** Import agent state from external handoff file
+**Usage:** `empirica agent-import --input-path <path> --session-id <session_id>`
+
+---
+
+### Persona Commands
+
+#### `persona-list`
+**Purpose:** List available personas that define AI identity and behavioral traits
+**Usage:** `empirica persona-list [options]`
+**Options:**
+- `--active-only`: Show only active personas
+- `--output`: Output format (json, human)
+
+#### `persona-show`
+**Purpose:** Show detailed configuration for a specific persona
+**Usage:** `empirica persona-show --persona-id <persona_id>`
+
+#### `persona-promote`
+**Purpose:** Promote persona traits based on successful epistemic patterns
+**Usage:** `empirica persona-promote --persona-id <persona_id> --trait <trait_name> --evidence <text>`
+**Options:**
+- `--persona-id`: Persona to update
+- `--trait`: Trait to promote (e.g., "caution", "curiosity", "thoroughness")
+- `--evidence`: Evidence from session that supports this promotion
+
+#### `persona-find`
+**Purpose:** Find persona matching current task characteristics
+**Usage:** `empirica persona-find --task <task_description> [options]`
+**Options:**
+- `--task`: Task description to match
+- `--session-id`: Session for context
+- `--top-k`: Return top K matching personas
+
+---
+
+### Assessment Commands
+
+#### `assess-state`
+**Purpose:** Assess current epistemic state of a session or project
+**Usage:** `empirica assess-state --session-id <session_id> [options]`
+**Options:**
+- `--session-id`: Session to assess
+- `--include-history`: Include historical trajectory
+- `--output`: Output format (json, human)
+
+#### `assess-component`
+**Purpose:** Assess quality of a specific codebase component
+**Usage:** `empirica assess-component --path <component_path> [options]`
+**Options:**
+- `--path`: Path to component (file or directory)
+- `--metrics`: Which metrics to include (quality, complexity, coverage)
+- `--output`: Output format (json, human)
+
+#### `assess-compare`
+**Purpose:** Compare two assessments side by side
+**Usage:** `empirica assess-compare --assessment-1 <id1> --assessment-2 <id2>`
+**Options:**
+- `--assessment-1`: First assessment ID
+- `--assessment-2`: Second assessment ID
+- `--show-delta`: Highlight differences
+
+#### `assess-directory`
+**Purpose:** Assess documentation coverage and quality in a directory
+**Usage:** `empirica assess-directory --path <directory_path> [options]`
+**Options:**
+- `--path`: Directory to assess
+- `--recursive`: Include subdirectories
+- `--output`: Output format (json, human)
+
+---
+
+### Sentinel Commands
+
+#### `sentinel-status`
+**Purpose:** Show Sentinel gate status and overall system health
+**Usage:** `empirica sentinel-status [options]`
+**Options:**
+- `--session-id`: Show status for specific session
+- `--verbose`: Include detailed gate history
+
+#### `sentinel-check`
+**Purpose:** Run Sentinel safety check on proposed operation
+**Usage:** `empirica sentinel-check --operation <operation_json> [options]`
+**Options:**
+- `--operation`: JSON description of proposed operation
+- `--session-id`: Session context
+- `--dry-run`: Check without recording result
+
+**Returns:**
+- `PROCEED`: Operation is safe to execute
+- `HALT`: Operation blocked, requires human review
+- `BRANCH`: Operation should spawn investigation first
+- `REVISE`: Operation needs modification before proceeding
+
+#### `sentinel-load-profile`
+**Purpose:** Load a Sentinel safety profile for current session
+**Usage:** `empirica sentinel-load-profile --profile <profile_name> --session-id <session_id>`
+**Options:**
+- `--profile`: Profile name (conservative, balanced, aggressive)
+- `--session-id`: Session to apply profile to
+
+#### `sentinel-orchestrate`
+**Purpose:** Orchestrate multi-agent workflow with Sentinel gates between phases
+**Usage:** `empirica sentinel-orchestrate --workflow <workflow_json> [options]`
+**Options:**
+- `--workflow`: JSON workflow definition
+- `--session-id`: Parent session
+- `--auto-proceed`: Automatically proceed on safe gates (dangerous)
+
+---
+
+### Trajectory Commands
+
+#### `trajectory-project`
+**Purpose:** Project epistemic trajectory based on current learning curve
+**Usage:** `empirica trajectory-project --session-id <session_id> [options]`
+**Options:**
+- `--session-id`: Session to analyze
+- `--horizon`: How far to project (sessions, hours, tasks)
+- `--include-confidence`: Include confidence intervals
+
+---
+
+### Skills Commands (Extended)
+
+#### `skill-extract`
+**Purpose:** Extract decision frameworks from skill definitions to meta-agent config
+**Usage:** `empirica skill-extract --skill-dir <path> --output-file <path> [options]`
+**Options:**
+- `--skill-dir`: Single skill directory to extract
+- `--skills-dir`: Directory containing multiple skills
+- `--output-file`: Output meta-agent config file (default: meta-agent-config.yaml)
+- `--verbose`: Show extraction details
+
+---
+
+### Release & Documentation Commands
+
+#### `release-ready`
+**Purpose:** Check if codebase is ready for release using 6-point epistemic verification
+**Usage:** `empirica release-ready [options]`
+**Options:**
+- `--output`: Output format (json, human)
+- `--verbose`: Show detailed check results
+
+**Checks performed:**
+1. **Version sync** - Verify version consistency across files
+2. **Architecture assessment** - Epistemic assessment of codebase structure
+3. **PyPI packages** - Check package configuration
+4. **Privacy/security** - Scan for credential exposure
+5. **Documentation** - Verify documentation coverage
+6. **Git status** - Check for uncommitted changes
+
+**Output:** Moon phase indicators for each check status
+
+#### `docs-assess`
+**Purpose:** Assess documentation coverage and quality using epistemic vectors
+**Usage:** `empirica docs-assess --path <directory> [options]`
+**Options:**
+- `--path`: Directory to assess (default: current directory)
+- `--output`: Output format (json, human)
+- `--recursive`: Include subdirectories
+- `--include-private`: Include private/internal docs
+
+**Returns:**
+- `know`: Documentation knowledge completeness (0.0-1.0)
+- `uncertainty`: Documentation gaps (0.0-1.0)
+- `coverage`: Percentage of features documented
+- `recommendations`: Specific documentation gaps to address
 
 ---
 

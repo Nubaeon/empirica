@@ -630,5 +630,126 @@ Methods typically raise:
 - `empirica/utils/git_integration.py`
 - `empirica/utils/performance_monitor.py`
 
+---
+
+## Data Layer Repositories
+
+The data layer uses the Repository pattern for database operations. All repositories extend `BaseRepository`.
+
+### `class BaseRepository`
+
+Abstract base class for all data repositories.
+
+**Location:** `empirica/data/repositories/base.py`
+
+```python
+from empirica.data.repositories.base import BaseRepository
+
+class CustomRepository(BaseRepository):
+    def __init__(self, db_path: str):
+        super().__init__(db_path)
+```
+
+**Methods:**
+- `execute(query: str, params: tuple) -> cursor` - Execute SQL query
+- `fetch_one(query: str, params: tuple) -> Optional[Dict]` - Fetch single row
+- `fetch_all(query: str, params: tuple) -> List[Dict]` - Fetch all rows
+- `insert(table: str, data: Dict) -> int` - Insert row, return ID
+- `update(table: str, data: Dict, where: Dict) -> int` - Update rows
+- `delete(table: str, where: Dict) -> int` - Delete rows
+
+---
+
+### `class SessionRepository`
+
+Manages session storage and retrieval.
+
+**Location:** `empirica/data/repositories/sessions.py`
+
+```python
+from empirica.data.repositories.sessions import SessionRepository
+
+repo = SessionRepository(db_path)
+session = repo.get_session(session_id)
+sessions = repo.list_sessions(ai_id="claude-code", limit=10)
+```
+
+**Key Methods:**
+- `create_session(ai_id, project_id, metadata) -> str` - Create new session
+- `get_session(session_id) -> Optional[Dict]` - Get session by ID
+- `list_sessions(ai_id, project_id, status, limit, offset) -> List[Dict]` - List sessions
+- `update_session(session_id, updates) -> bool` - Update session
+- `close_session(session_id, status) -> bool` - Close session with status
+
+---
+
+### `class CascadeRepository`
+
+Manages CASCADE workflow state persistence.
+
+**Location:** `empirica/data/repositories/cascades.py`
+
+```python
+from empirica.data.repositories.cascades import CascadeRepository
+
+repo = CascadeRepository(db_path)
+cascade = repo.create_cascade(session_id, task_context)
+repo.update_phase(cascade_id, "CHECK", vectors)
+```
+
+**Key Methods:**
+- `create_cascade(session_id, task_context, goal_id) -> str` - Create cascade
+- `get_cascade(cascade_id) -> Optional[Dict]` - Get cascade by ID
+- `update_phase(cascade_id, phase, vectors) -> bool` - Update to new phase
+- `get_current_phase(cascade_id) -> str` - Get current phase
+- `list_cascades(session_id) -> List[Dict]` - List cascades for session
+
+---
+
+### `class BranchRepository`
+
+Manages investigation branches for parallel exploration.
+
+**Location:** `empirica/data/repositories/branches.py`
+
+```python
+from empirica.data.repositories.branches import BranchRepository
+
+repo = BranchRepository(db_path)
+branch = repo.create_branch(session_id, hypothesis, parent_branch_id)
+repo.checkpoint_branch(branch_id, findings, confidence)
+```
+
+**Key Methods:**
+- `create_branch(session_id, hypothesis, parent_id) -> str` - Create branch
+- `get_branch(branch_id) -> Optional[Dict]` - Get branch details
+- `checkpoint_branch(branch_id, findings, confidence) -> bool` - Save checkpoint
+- `merge_branches(parent_id, child_ids, strategy) -> Dict` - Merge branches
+- `list_active_branches(session_id) -> List[Dict]` - List active branches
+
+---
+
+### `class TokenRepository`
+
+Tracks token usage and compression savings.
+
+**Location:** `empirica/data/repositories/tokens.py`
+
+```python
+from empirica.data.repositories.tokens import TokenRepository
+
+repo = TokenRepository(db_path)
+repo.log_token_usage(session_id, tokens_used, context)
+savings = repo.get_compression_savings(session_id)
+```
+
+**Key Methods:**
+- `log_token_usage(session_id, tokens, context) -> bool` - Log usage
+- `get_session_token_usage(session_id) -> Dict` - Get session totals
+- `log_compression_savings(session_id, original, compressed) -> bool` - Log savings
+- `get_compression_savings(session_id) -> Dict` - Get savings report
+
+---
+
 **API Stability:** Stable
-**Last Updated:** 2025-12-27
+**Last Updated:** 2026-01-03
