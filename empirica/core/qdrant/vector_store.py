@@ -1109,9 +1109,9 @@ def search_eidetic(
 
         query_filter = Filter(must=conditions) if conditions else None
 
-        results = client.search(
+        results = client.query_points(
             collection_name=coll,
-            query_vector=vector,
+            query=vector,
             query_filter=query_filter,
             limit=limit,
             with_payload=True,
@@ -1129,7 +1129,7 @@ def search_eidetic(
                 "source_sessions": r.payload.get("source_sessions", []),
                 "tags": r.payload.get("tags", []),
             }
-            for r in results
+            for r in results.points
         ]
     except Exception as e:
         logger.warning(f"Failed to search eidetic: {e}")
@@ -1341,9 +1341,9 @@ def search_episodic(
         query_filter = Filter(must=conditions) if conditions else None
 
         # Get more results than needed to apply recency filtering
-        results = client.search(
+        results = client.query_points(
             collection_name=coll,
-            query_vector=vector,
+            query=vector,
             query_filter=query_filter,
             limit=limit * 2,  # Get extra for filtering
             with_payload=True,
@@ -1353,7 +1353,7 @@ def search_episodic(
         now = time.time()
 
         processed = []
-        for r in results:
+        for r in results.points:
             timestamp = r.payload.get("timestamp", now)
 
             # Calculate recency weight based on age
