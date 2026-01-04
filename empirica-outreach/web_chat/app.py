@@ -673,6 +673,26 @@ async def get_chat():
     return HTMLResponse(HTML_PAGE)
 
 
+@app.get("/widget.js")
+async def get_widget():
+    """Serve the embeddable widget JavaScript."""
+    import os
+    widget_path = os.path.join(os.path.dirname(__file__), "widget.js")
+    with open(widget_path, "r") as f:
+        content = f.read()
+    return HTMLResponse(content=content, media_type="application/javascript")
+
+
+@app.get("/embed-demo")
+async def get_embed_demo():
+    """Serve the widget demo page."""
+    import os
+    demo_path = os.path.join(os.path.dirname(__file__), "embed-demo.html")
+    with open(demo_path, "r") as f:
+        content = f.read()
+    return HTMLResponse(content=content)
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
