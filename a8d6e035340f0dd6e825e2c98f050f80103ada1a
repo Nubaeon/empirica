@@ -1,0 +1,31 @@
+{
+  "goal_id": "ad385830-77da-4347-9e14-26652e320238",
+  "session_id": "fc851d91-f6d4-465b-aea1-a49bb57085ea",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-04T00:31:24.265102+00:00",
+  "goal_data": {
+    "objective": "Build Empirica Discord bot with epistemic tracking and Sentinel gates",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Bot connects to Discord",
+      "Creates Empirica session per conversation",
+      "Sentinel gates control response autonomy",
+      "Can draft responses for human approval"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-04T00:31:24.265115+00:00",
+      "action": "created"
+    }
+  ]
+}
