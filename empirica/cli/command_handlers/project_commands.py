@@ -1241,12 +1241,56 @@ def handle_finding_log_command(args):
                 # Non-fatal - log but continue
                 logger.warning(f"Auto-embed failed: {embed_err}")
 
+        # EIDETIC MEMORY: Extract fact and add to eidetic layer for confidence tracking
+        eidetic_result = None
+        if project_id and finding_ids:
+            try:
+                from empirica.core.qdrant.vector_store import (
+                    embed_eidetic,
+                    confirm_eidetic_fact,
+                )
+                import hashlib
+
+                # Content hash for deduplication
+                content_hash = hashlib.md5(finding.encode()).hexdigest()
+
+                # Try to confirm existing fact first
+                confirmed = confirm_eidetic_fact(project_id, content_hash, session_id)
+                if confirmed:
+                    eidetic_result = "confirmed"
+                    logger.debug(f"Confirmed existing eidetic fact: {content_hash[:8]}")
+                else:
+                    # Create new eidetic entry
+                    primary_id = next((fid for scope, fid in finding_ids if scope == 'project'), None)
+                    if not primary_id:
+                        primary_id = finding_ids[0][1] if finding_ids else None
+
+                    eidetic_created = embed_eidetic(
+                        project_id=project_id,
+                        fact_id=primary_id,
+                        content=finding,
+                        fact_type="fact",
+                        domain=subject,  # Use subject as domain hint
+                        confidence=0.5 + (impact * 0.2),  # Higher impact → higher initial confidence
+                        confirmation_count=1,
+                        source_sessions=[session_id] if session_id else [],
+                        source_findings=[primary_id] if primary_id else [],
+                        tags=[subject] if subject else [],
+                    )
+                    if eidetic_created:
+                        eidetic_result = "created"
+                        logger.debug(f"Created new eidetic fact: {primary_id}")
+            except Exception as eidetic_err:
+                # Non-fatal - log but continue
+                logger.warning(f"Eidetic ingestion failed: {eidetic_err}")
+
         result = {
             "ok": True,
             "scope": scope,
             "findings": [{"scope": s, "finding_id": fid} for s, fid in finding_ids],
             "project_id": project_id if project_id else None,
             "embedded": embedded,
+            "eidetic": eidetic_result,  # "created" | "confirmed" | None
             "message": f"Finding logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 

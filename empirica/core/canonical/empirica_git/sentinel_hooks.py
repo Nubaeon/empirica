@@ -113,28 +113,37 @@ class SentinelState:
 class SentinelHooks:
     """
     Sentinel integration hooks for epistemic decision-making
-    
+
     Usage:
         # In cognitive_vault Sentinel service
         from empirica.core.canonical.empirica_git import SentinelHooks
-        
+
         def my_sentinel_evaluator(checkpoint_data):
             # Analyze epistemic state
             if checkpoint_data['vectors']['uncertainty'] > 0.8:
                 return SentinelDecision.INVESTIGATE
             return SentinelDecision.PROCEED
-        
+
         SentinelHooks.register_evaluator(my_sentinel_evaluator)
-        
+
         # In CASCADE commands, this gets called automatically:
         decision = SentinelHooks.evaluate_checkpoint(checkpoint_data)
+
+        # Control epistemic looping:
+        SentinelHooks.enable_looping(True)   # Allow INVESTIGATE decisions
+        SentinelHooks.enable_looping(False)  # Suppress loops, only PROCEED/ESCALATE
     """
-    
+
     # Global registry of evaluator functions
     _evaluators: list[Callable] = []
 
     # Enable/disable Sentinel
     _enabled: bool = False
+
+    # Enable/disable epistemic looping (INVESTIGATE decisions)
+    # When False, INVESTIGATE decisions are converted to PROCEED
+    # This is the on/off switch for epistemic rounds
+    _looping_enabled: bool = True
 
     # Sentinel's own epistemic state (for turtle checks)
     _state: SentinelState = SentinelState()
@@ -147,6 +156,50 @@ class SentinelHooks:
         """Enable/disable recursive grounding checks."""
         cls._turtle_mode = enabled
         logger.info(f"🐢 Sentinel turtle mode: {'enabled' if enabled else 'disabled'}")
+
+    @classmethod
+    def enable_looping(cls, enabled: bool = True) -> None:
+        """
+        Enable/disable epistemic looping (INVESTIGATE decisions).
+
+        When looping is enabled (default):
+        - Sentinel can return INVESTIGATE decisions
+        - This triggers epistemic rounds where AI investigates before proceeding
+
+        When looping is disabled:
+        - INVESTIGATE decisions are converted to PROCEED
+        - AI proceeds without investigation rounds
+        - Useful for quick tasks or when looping is unwanted
+
+        Can also be controlled via environment:
+            EMPIRICA_SENTINEL_LOOPING=true|false
+
+        Args:
+            enabled: True to allow looping, False to suppress
+        """
+        import os
+        # Check env var first (allows runtime override)
+        env_val = os.getenv("EMPIRICA_SENTINEL_LOOPING", "").lower()
+        if env_val in ("true", "1", "yes"):
+            cls._looping_enabled = True
+        elif env_val in ("false", "0", "no"):
+            cls._looping_enabled = False
+        else:
+            cls._looping_enabled = enabled
+
+        logger.info(f"🔄 Sentinel epistemic looping: {'enabled' if cls._looping_enabled else 'disabled'}")
+
+    @classmethod
+    def is_looping_enabled(cls) -> bool:
+        """Check if epistemic looping is enabled."""
+        import os
+        # Check env var for dynamic override
+        env_val = os.getenv("EMPIRICA_SENTINEL_LOOPING", "").lower()
+        if env_val in ("true", "1", "yes"):
+            return True
+        elif env_val in ("false", "0", "no"):
+            return False
+        return cls._looping_enabled
 
     @classmethod
     def get_state(cls) -> SentinelState:
@@ -359,6 +412,14 @@ class SentinelHooks:
 
             for decision_type in priority:
                 if decision_type in decisions:
+                    # LOOPING CONTROL: If looping is disabled, convert INVESTIGATE to PROCEED
+                    if decision_type == SentinelDecision.INVESTIGATE and not cls.is_looping_enabled():
+                        logger.info(
+                            f"🔄 Sentinel: INVESTIGATE suppressed (looping disabled) → PROCEED"
+                        )
+                        cls._state.last_decision = SentinelDecision.PROCEED
+                        return SentinelDecision.PROCEED
+
                     cls._state.last_decision = decision_type
                     logger.info(f"🛡️ Sentinel decision: {decision_type.value}")
                     return decision_type

@@ -100,6 +100,21 @@ def _global_learnings_collection() -> str:
     return "global_learnings"
 
 
+def _eidetic_collection(project_id: str) -> str:
+    """Collection for eidetic memory (stable facts with confidence scoring)."""
+    return f"project_{project_id}_eidetic"
+
+
+def _episodic_collection(project_id: str) -> str:
+    """Collection for episodic memory (session narratives with temporal decay)."""
+    return f"project_{project_id}_episodic"
+
+
+def _global_eidetic_collection() -> str:
+    """Global eidetic facts (high-confidence cross-project knowledge)."""
+    return "global_eidetic"
+
+
 def init_collections(project_id: str) -> bool:
     """Initialize Qdrant collections. Returns False if Qdrant not available."""
     if not _check_qdrant_available():
@@ -109,7 +124,14 @@ def init_collections(project_id: str) -> bool:
         _, Distance, VectorParams, _ = _get_qdrant_imports()
         client = _get_qdrant_client()
         vector_size = _get_vector_size()
-        for name in (_docs_collection(project_id), _memory_collection(project_id), _epistemics_collection(project_id)):
+        collections = [
+            _docs_collection(project_id),
+            _memory_collection(project_id),
+            _epistemics_collection(project_id),
+            _eidetic_collection(project_id),
+            _episodic_collection(project_id),
+        ]
+        for name in collections:
             if not client.collection_exists(name):
                 client.create_collection(name, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
                 logger.info(f"Created collection {name} with vector size {vector_size}")
@@ -965,3 +987,508 @@ def get_collection_info() -> List[dict]:
     except Exception as e:
         logger.warning(f"Failed to get collection info: {e}")
         return []
+
+
+# =============================================================================
+# EIDETIC MEMORY (Stable Facts with Confidence Scoring)
+# =============================================================================
+
+def embed_eidetic(
+    project_id: str,
+    fact_id: str,
+    content: str,
+    fact_type: str = "fact",
+    domain: str = None,
+    confidence: float = 0.5,
+    confirmation_count: int = 1,
+    source_sessions: List[str] = None,
+    source_findings: List[str] = None,
+    tags: List[str] = None,
+    timestamp: str = None,
+) -> bool:
+    """
+    Embed an eidetic memory entry (stable fact with confidence).
+
+    Eidetic memory stores facts that persist across sessions:
+    - Facts confirmed multiple times have higher confidence
+    - Confidence grows with confirmation_count
+    - Domain tagging enables domain-specific retrieval
+
+    Returns True if successful, False if Qdrant not available.
+    """
+    if not _check_qdrant_available():
+        return False
+
+    try:
+        _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
+        client = _get_qdrant_client()
+        coll = _eidetic_collection(project_id)
+
+        # Ensure collection exists
+        if not client.collection_exists(coll):
+            vector_size = _get_vector_size()
+            client.create_collection(coll, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
+
+        vector = _get_embedding_safe(content)
+        if vector is None:
+            return False
+
+        import hashlib
+        import time
+
+        payload = {
+            "type": fact_type,  # fact, pattern, signature, behavior, constraint
+            "content": content[:500] if content else None,
+            "content_full": content if len(content) <= 500 else None,
+            "content_hash": hashlib.md5(content.encode()).hexdigest(),
+            "domain": domain,
+            "confidence": confidence,
+            "confirmation_count": confirmation_count,
+            "first_seen": timestamp or time.time(),
+            "last_confirmed": timestamp or time.time(),
+            "source_sessions": source_sessions or [],
+            "source_findings": source_findings or [],
+            "tags": tags or [],
+        }
+
+        point_id = int(hashlib.md5(fact_id.encode()).hexdigest()[:15], 16)
+        point = PointStruct(id=point_id, vector=vector, payload=payload)
+        client.upsert(collection_name=coll, points=[point])
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to embed eidetic: {e}")
+        return False
+
+
+def search_eidetic(
+    project_id: str,
+    query: str,
+    fact_type: str = None,
+    domain: str = None,
+    min_confidence: float = 0.0,
+    limit: int = 5,
+) -> List[Dict]:
+    """
+    Search eidetic memory for relevant facts.
+
+    Args:
+        project_id: Project UUID
+        query: Semantic search query
+        fact_type: Filter by type (fact, pattern, signature, etc.)
+        domain: Filter by domain (auth, api, db, etc.)
+        min_confidence: Minimum confidence threshold
+        limit: Max results
+
+    Returns:
+        List of matching eidetic entries with scores
+    """
+    if not _check_qdrant_available():
+        return []
+
+    try:
+        client = _get_qdrant_client()
+        coll = _eidetic_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return []
+
+        vector = _get_embedding_safe(query)
+        if vector is None:
+            return []
+
+        # Build filter conditions
+        from qdrant_client.models import Filter, FieldCondition, MatchValue, Range
+
+        conditions = []
+        if fact_type:
+            conditions.append(FieldCondition(key="type", match=MatchValue(value=fact_type)))
+        if domain:
+            conditions.append(FieldCondition(key="domain", match=MatchValue(value=domain)))
+        if min_confidence > 0:
+            conditions.append(FieldCondition(key="confidence", range=Range(gte=min_confidence)))
+
+        query_filter = Filter(must=conditions) if conditions else None
+
+        results = client.search(
+            collection_name=coll,
+            query_vector=vector,
+            query_filter=query_filter,
+            limit=limit,
+            with_payload=True,
+        )
+
+        return [
+            {
+                "id": str(r.id),
+                "score": r.score,
+                "content": r.payload.get("content_full") or r.payload.get("content"),
+                "type": r.payload.get("type"),
+                "domain": r.payload.get("domain"),
+                "confidence": r.payload.get("confidence"),
+                "confirmation_count": r.payload.get("confirmation_count"),
+                "source_sessions": r.payload.get("source_sessions", []),
+                "tags": r.payload.get("tags", []),
+            }
+            for r in results
+        ]
+    except Exception as e:
+        logger.warning(f"Failed to search eidetic: {e}")
+        return []
+
+
+def confirm_eidetic_fact(
+    project_id: str,
+    content_hash: str,
+    session_id: str,
+    confidence_boost: float = 0.1,
+) -> bool:
+    """
+    Confirm an existing eidetic fact, boosting its confidence.
+
+    When the same fact is observed again, we boost confidence
+    rather than creating a duplicate.
+
+    Args:
+        project_id: Project UUID
+        content_hash: MD5 hash of the fact content
+        session_id: Session confirming this fact
+        confidence_boost: Amount to increase confidence (default 0.1)
+
+    Returns:
+        True if fact was found and updated, False otherwise
+    """
+    if not _check_qdrant_available():
+        return False
+
+    try:
+        client = _get_qdrant_client()
+        coll = _eidetic_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return False
+
+        from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+        # Find existing fact by content hash
+        results = client.scroll(
+            collection_name=coll,
+            scroll_filter=Filter(
+                must=[FieldCondition(key="content_hash", match=MatchValue(value=content_hash))]
+            ),
+            limit=1,
+            with_payload=True,
+            with_vectors=True,
+        )
+
+        points, _ = results
+        if not points:
+            return False
+
+        point = points[0]
+        payload = point.payload
+
+        # Update confidence (max 0.95)
+        new_confidence = min(0.95, payload.get("confidence", 0.5) + confidence_boost)
+
+        # Update confirmation count
+        new_count = payload.get("confirmation_count", 1) + 1
+
+        # Add session to source list
+        sessions = payload.get("source_sessions", [])
+        if session_id not in sessions:
+            sessions.append(session_id)
+
+        import time
+        payload["confidence"] = new_confidence
+        payload["confirmation_count"] = new_count
+        payload["source_sessions"] = sessions
+        payload["last_confirmed"] = time.time()
+
+        from qdrant_client.models import PointStruct
+        updated_point = PointStruct(id=point.id, vector=point.vector, payload=payload)
+        client.upsert(collection_name=coll, points=[updated_point])
+
+        logger.info(f"Confirmed eidetic fact: confidence {new_confidence:.2f}, confirmations {new_count}")
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to confirm eidetic fact: {e}")
+        return False
+
+
+# =============================================================================
+# EPISODIC MEMORY (Session Narratives with Temporal Decay)
+# =============================================================================
+
+def embed_episodic(
+    project_id: str,
+    episode_id: str,
+    narrative: str,
+    episode_type: str = "session_arc",
+    session_id: str = None,
+    ai_id: str = None,
+    goal_id: str = None,
+    learning_delta: Dict[str, float] = None,
+    outcome: str = None,
+    key_moments: List[str] = None,
+    tags: List[str] = None,
+    timestamp: float = None,
+) -> bool:
+    """
+    Embed an episodic memory entry (session narrative with temporal decay).
+
+    Episodic memory stores contextual narratives:
+    - Session arcs, decisions, investigations, discoveries
+    - Includes learning delta (PREFLIGHT → POSTFLIGHT)
+    - Recency weight decays over time
+
+    Returns True if successful, False if Qdrant not available.
+    """
+    if not _check_qdrant_available():
+        return False
+
+    try:
+        _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
+        client = _get_qdrant_client()
+        coll = _episodic_collection(project_id)
+
+        if not client.collection_exists(coll):
+            vector_size = _get_vector_size()
+            client.create_collection(coll, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
+
+        vector = _get_embedding_safe(narrative)
+        if vector is None:
+            return False
+
+        import hashlib
+        import time
+
+        now = timestamp or time.time()
+
+        payload = {
+            "type": episode_type,  # session_arc, decision, investigation, discovery, mistake
+            "narrative": narrative[:1000] if narrative else None,
+            "narrative_full": narrative if len(narrative) <= 1000 else None,
+            "session_id": session_id,
+            "ai_id": ai_id,
+            "goal_id": goal_id,
+            "timestamp": now,
+            "learning_delta": learning_delta or {},
+            "outcome": outcome,  # success, partial, failure, abandoned
+            "key_moments": key_moments or [],
+            "tags": tags or [],
+            "recency_weight": 1.0,  # Starts at 1.0, decays over time
+        }
+
+        point_id = int(hashlib.md5(episode_id.encode()).hexdigest()[:15], 16)
+        point = PointStruct(id=point_id, vector=vector, payload=payload)
+        client.upsert(collection_name=coll, points=[point])
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to embed episodic: {e}")
+        return False
+
+
+def search_episodic(
+    project_id: str,
+    query: str,
+    episode_type: str = None,
+    ai_id: str = None,
+    outcome: str = None,
+    min_recency_weight: float = 0.0,
+    limit: int = 5,
+    apply_recency_decay: bool = True,
+) -> List[Dict]:
+    """
+    Search episodic memory for relevant narratives.
+
+    Args:
+        project_id: Project UUID
+        query: Semantic search query
+        episode_type: Filter by type (session_arc, decision, etc.)
+        ai_id: Filter by AI ID
+        outcome: Filter by outcome (success, failure, etc.)
+        min_recency_weight: Minimum recency threshold (filters old episodes)
+        limit: Max results
+        apply_recency_decay: If True, multiply score by recency weight
+
+    Returns:
+        List of matching episodic entries with scores
+    """
+    if not _check_qdrant_available():
+        return []
+
+    try:
+        client = _get_qdrant_client()
+        coll = _episodic_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return []
+
+        vector = _get_embedding_safe(query)
+        if vector is None:
+            return []
+
+        from qdrant_client.models import Filter, FieldCondition, MatchValue, Range
+
+        conditions = []
+        if episode_type:
+            conditions.append(FieldCondition(key="type", match=MatchValue(value=episode_type)))
+        if ai_id:
+            conditions.append(FieldCondition(key="ai_id", match=MatchValue(value=ai_id)))
+        if outcome:
+            conditions.append(FieldCondition(key="outcome", match=MatchValue(value=outcome)))
+
+        query_filter = Filter(must=conditions) if conditions else None
+
+        # Get more results than needed to apply recency filtering
+        results = client.search(
+            collection_name=coll,
+            query_vector=vector,
+            query_filter=query_filter,
+            limit=limit * 2,  # Get extra for filtering
+            with_payload=True,
+        )
+
+        import time
+        now = time.time()
+
+        processed = []
+        for r in results:
+            timestamp = r.payload.get("timestamp", now)
+
+            # Calculate recency weight based on age
+            age_days = (now - timestamp) / 86400  # seconds to days
+
+            # Decay formula: starts at 1.0, decays to 0.05 over ~1 year
+            if age_days <= 1:
+                recency = 1.0
+            elif age_days <= 7:
+                recency = 0.95 - (0.15 * (age_days - 1) / 6)  # 0.95 → 0.80
+            elif age_days <= 30:
+                recency = 0.80 - (0.30 * (age_days - 7) / 23)  # 0.80 → 0.50
+            elif age_days <= 90:
+                recency = 0.50 - (0.25 * (age_days - 30) / 60)  # 0.50 → 0.25
+            elif age_days <= 365:
+                recency = 0.25 - (0.15 * (age_days - 90) / 275)  # 0.25 → 0.10
+            else:
+                recency = max(0.05, 0.10 - (0.05 * (age_days - 365) / 365))  # → 0.05 min
+
+            if recency < min_recency_weight:
+                continue
+
+            # Apply recency to score if enabled
+            effective_score = r.score * recency if apply_recency_decay else r.score
+
+            processed.append({
+                "id": str(r.id),
+                "score": effective_score,
+                "raw_score": r.score,
+                "recency_weight": recency,
+                "narrative": r.payload.get("narrative_full") or r.payload.get("narrative"),
+                "type": r.payload.get("type"),
+                "session_id": r.payload.get("session_id"),
+                "ai_id": r.payload.get("ai_id"),
+                "goal_id": r.payload.get("goal_id"),
+                "learning_delta": r.payload.get("learning_delta", {}),
+                "outcome": r.payload.get("outcome"),
+                "key_moments": r.payload.get("key_moments", []),
+                "tags": r.payload.get("tags", []),
+                "timestamp": timestamp,
+            })
+
+        # Sort by effective score and limit
+        processed.sort(key=lambda x: x["score"], reverse=True)
+        return processed[:limit]
+    except Exception as e:
+        logger.warning(f"Failed to search episodic: {e}")
+        return []
+
+
+def create_session_episode(
+    project_id: str,
+    session_id: str,
+    ai_id: str,
+    goal_objective: str = None,
+    preflight_vectors: Dict[str, float] = None,
+    postflight_vectors: Dict[str, float] = None,
+    findings: List[str] = None,
+    unknowns: List[str] = None,
+    outcome: str = None,
+) -> bool:
+    """
+    Create an episodic entry from a completed session.
+
+    Called automatically after POSTFLIGHT to capture the session narrative.
+    Generates a narrative summary from the session data.
+
+    Args:
+        project_id: Project UUID
+        session_id: Session UUID
+        ai_id: AI identifier
+        goal_objective: What was being worked on
+        preflight_vectors: Starting epistemic state
+        postflight_vectors: Ending epistemic state
+        findings: Key findings from session
+        unknowns: Remaining unknowns
+        outcome: Session outcome (success, partial, failure)
+
+    Returns:
+        True if episode created successfully
+    """
+    import uuid
+    import time
+
+    # Calculate learning delta
+    learning_delta = {}
+    if preflight_vectors and postflight_vectors:
+        for key in ["know", "uncertainty", "context", "completion"]:
+            pre = preflight_vectors.get(key, 0.5)
+            post = postflight_vectors.get(key, 0.5)
+            delta = post - pre
+            if abs(delta) >= 0.05:  # Only track meaningful changes
+                learning_delta[key] = round(delta, 2)
+
+    # Generate narrative
+    narrative_parts = []
+
+    if goal_objective:
+        narrative_parts.append(f"Working on: {goal_objective}")
+
+    if learning_delta:
+        delta_str = ", ".join([f"{k}: {'+' if v > 0 else ''}{v}" for k, v in learning_delta.items()])
+        narrative_parts.append(f"Learning: {delta_str}")
+
+    if findings:
+        narrative_parts.append(f"Key findings: {'; '.join(findings[:3])}")
+
+    if unknowns:
+        narrative_parts.append(f"Open questions: {'; '.join(unknowns[:2])}")
+
+    if outcome:
+        narrative_parts.append(f"Outcome: {outcome}")
+
+    narrative = ". ".join(narrative_parts)
+
+    # Key moments from significant learning
+    key_moments = []
+    if learning_delta.get("know", 0) > 0.15:
+        key_moments.append("significant_knowledge_gain")
+    if learning_delta.get("uncertainty", 0) < -0.15:
+        key_moments.append("uncertainty_reduced")
+    if outcome == "failure":
+        key_moments.append("learning_from_failure")
+
+    return embed_episodic(
+        project_id=project_id,
+        episode_id=str(uuid.uuid4()),
+        narrative=narrative,
+        episode_type="session_arc",
+        session_id=session_id,
+        ai_id=ai_id,
+        goal_id=None,  # Could be linked if passed
+        learning_delta=learning_delta,
+        outcome=outcome,
+        key_moments=key_moments,
+        tags=[ai_id] if ai_id else [],
+        timestamp=time.time(),
+    )

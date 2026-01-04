@@ -254,6 +254,68 @@ def _load_pre_snapshot():
     return None
 
 
+def _load_memory_context(project_id: str, goals: list) -> dict:
+    """
+    Load MEMORY context from eidetic (facts) and episodic (narratives) layers.
+
+    This is the cognitive memory that should be surfaced automatically
+    based on epistemic state (high uncertainty triggers more retrieval).
+    """
+    memory_context = {
+        "eidetic_facts": [],
+        "episodic_narratives": [],
+        "memory_available": False
+    }
+
+    try:
+        from empirica.core.qdrant.vector_store import search_eidetic, search_episodic
+
+        # Query eidetic memory for relevant facts based on active goals
+        for goal in goals[:3]:  # Top 3 goals
+            objective = goal.get('objective', '')
+            if not objective:
+                continue
+
+            # Search eidetic facts
+            facts = search_eidetic(
+                project_id=project_id,
+                query=objective,
+                min_confidence=0.5,
+                limit=3
+            )
+            for fact in facts:
+                if fact not in memory_context["eidetic_facts"]:
+                    memory_context["eidetic_facts"].append({
+                        "content": fact.get('content', '')[:200],
+                        "confidence": fact.get('confidence', 0.5),
+                        "domain": fact.get('domain'),
+                        "type": fact.get('type', 'fact')
+                    })
+
+            # Search episodic narratives
+            episodes = search_episodic(
+                project_id=project_id,
+                query=objective,
+                limit=2
+            )
+            for episode in episodes:
+                if episode not in memory_context["episodic_narratives"]:
+                    memory_context["episodic_narratives"].append({
+                        "narrative": episode.get('narrative', '')[:200],
+                        "outcome": episode.get('outcome'),
+                        "session_id": episode.get('session_id', '')[:8]
+                    })
+
+        memory_context["memory_available"] = bool(
+            memory_context["eidetic_facts"] or memory_context["episodic_narratives"]
+        )
+
+    except Exception as e:
+        memory_context["error"] = str(e)
+
+    return memory_context
+
+
 def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> dict:
     """
     Load DYNAMIC context - only what's relevant for re-grounding.
@@ -263,6 +325,7 @@ def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> di
     2. Recent findings from THIS session (last learnings)
     3. Unresolved unknowns (open questions)
     4. Critical dead ends (mistakes to avoid)
+    5. Memory context (eidetic facts + episodic narratives)
     """
     try:
         from empirica.data.session_database import SessionDatabase
@@ -349,6 +412,11 @@ def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> di
         }
 
         db.close()
+
+        # 6. Memory context (eidetic facts + episodic narratives from vector store)
+        memory_context = _load_memory_context(project_id, context["active_goals"])
+        context["memory_context"] = memory_context
+
         return context
 
     except Exception as e:
@@ -371,6 +439,7 @@ def _generate_new_session_prompt(pre_vectors: dict, dynamic_context: dict, old_s
     goals_text = _format_goals(dynamic_context)
     findings_text = _format_findings(dynamic_context)
     unknowns_text = _format_unknowns(dynamic_context)
+    memory_text = _format_memory_context(dynamic_context)
 
     pre_know = pre_vectors.get('know', 'N/A')
     pre_unc = pre_vectors.get('uncertainty', 'N/A')
@@ -393,6 +462,10 @@ Your context was just compacted. The previous session ({old_session_id[:8]}...) 
 
 **Open Unknowns (unresolved questions):**
 {unknowns_text}
+
+### Memory Context (Auto-Retrieved):
+
+{memory_text}
 
 ### Step 1: Create New Session
 
@@ -468,6 +541,36 @@ def _format_dead_ends(dynamic_context: dict) -> str:
     return "  (None recorded)"
 
 
+def _format_memory_context(dynamic_context: dict) -> str:
+    """Format eidetic facts and episodic narratives from memory."""
+    memory = dynamic_context.get("memory_context", {})
+
+    if not memory.get("memory_available"):
+        return "  (No memory context available - Qdrant may not be running)"
+
+    parts = []
+
+    # Format eidetic facts
+    facts = memory.get("eidetic_facts", [])
+    if facts:
+        parts.append("**Relevant Facts (eidetic):**")
+        for f in facts[:5]:
+            conf = f.get('confidence', 0.5)
+            domain = f.get('domain', 'general')
+            parts.append(f"  - [{conf:.0%}] {f['content'][:100]}...")
+
+    # Format episodic narratives
+    episodes = memory.get("episodic_narratives", [])
+    if episodes:
+        parts.append("\n**Past Work (episodic):**")
+        for e in episodes[:3]:
+            session = e.get('session_id', '?')
+            outcome = e.get('outcome', 'unknown')
+            parts.append(f"  - Session {session}: {e['narrative'][:80]}... ({outcome})")
+
+    return "\n".join(parts) if parts else "  (No relevant memories found)"
+
+
 def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_context: dict) -> str:
     """
     Generate a CHECK gate prompt for post-compact validation.
@@ -479,6 +582,7 @@ def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_contex
     findings_text = _format_findings(dynamic_context)
     unknowns_text = _format_unknowns(dynamic_context)
     dead_ends_text = _format_dead_ends(dynamic_context)
+    memory_text = _format_memory_context(dynamic_context)
 
     pre_know = pre_vectors.get('know', 'N/A')
     pre_unc = pre_vectors.get('uncertainty', 'N/A')
@@ -506,6 +610,10 @@ are NO LONGER VALID - they reflected knowledge you had in full context.
 
 **Dead Ends (approaches that failed):**
 {dead_ends_text}
+
+### Memory Context (Auto-Retrieved):
+
+{memory_text}
 
 ### Step 1: Load Context (Recommended)
 

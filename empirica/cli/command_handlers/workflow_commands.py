@@ -1098,6 +1098,42 @@ def handle_postflight_submit_command(args):
                 # Trajectory storage is optional (requires Qdrant)
                 logger.debug(f"Epistemic trajectory storage skipped: {e}")
 
+            # EPISODIC MEMORY: Create session narrative from POSTFLIGHT data
+            episodic_stored = False
+            try:
+                db = SessionDatabase()
+                session = db.get_session(session_id)
+                if session and session.get('project_id'):
+                    from empirica.core.qdrant.vector_store import create_session_episode
+
+                    # Get session findings/unknowns for narrative richness
+                    findings = db.get_findings(session_id=session_id)
+                    unknowns = db.get_unknowns(session_id=session_id)
+
+                    # Determine outcome from deltas
+                    outcome = "success" if deltas.get("know", 0) > 0.1 else (
+                        "partial" if deltas.get("completion", 0) > 0 else "abandoned"
+                    )
+
+                    episodic_stored = create_session_episode(
+                        project_id=session['project_id'],
+                        session_id=session_id,
+                        ai_id=session.get('ai_id', 'claude-code'),
+                        episode_type="session_arc",
+                        narrative=reasoning or f"Session completed with {len(findings)} findings, {len(unknowns)} unknowns",
+                        learning_delta=deltas,
+                        outcome=outcome,
+                        emotional_valence=0.5 + (0.3 if deltas.get("know", 0) > 0 else -0.2),  # Positive if learned
+                        key_moments=[f.get('content', '')[:100] for f in findings[:3]] if findings else [],
+                        goal_id=session.get('current_goal_id'),
+                    )
+                    if episodic_stored:
+                        logger.debug(f"Created episodic memory for session {session_id[:8]}")
+                db.close()
+            except Exception as e:
+                # Episodic storage is optional (requires Qdrant)
+                logger.debug(f"Episodic memory creation skipped: {e}")
+
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -1117,7 +1153,8 @@ def handle_postflight_submit_command(args):
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
-                    "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False
+                    "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False,
+                    "episodic_memory": episodic_stored
                 },
                 "sentinel": {
                     "enabled": SentinelHooks.is_enabled(),
