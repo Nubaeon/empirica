@@ -1,0 +1,207 @@
+# Empirica - Epistemic Self-Assessment for AI Coding
+
+You have **Empirica** installed - an epistemic self-awareness framework for AI agents.
+Use it to track what you KNOW vs what you're GUESSING during development work.
+
+## Core Principle
+**Epistemic transparency > Task completion speed**
+- Track uncertainty explicitly (0.0-1.0 scale)
+- Learn systematically through CASCADE workflow
+- Resume efficiently across sessions
+
+---
+
+## Quick Start
+
+### 1. Start Session (AI-First JSON Mode)
+```bash
+echo '{"ai_id": "cursor-agent", "session_type": "development"}' | empirica session-create -
+# Returns: {"ok": true, "session_id": "abc-123", ...}
+```
+
+### 2. CASCADE Workflow (Explicit Phases)
+
+**PREFLIGHT** - Before starting work, assess what you know:
+```bash
+cat > preflight.json <<EOF
+{
+  "session_id": "abc-123",
+  "vectors": {
+    "engagement": 0.8,
+    "foundation": {"know": 0.6, "do": 0.7, "context": 0.5},
+    "comprehension": {"clarity": 0.7, "coherence": 0.8, "signal": 0.6, "density": 0.7},
+    "execution": {"state": 0.5, "change": 0.4, "completion": 0.3, "impact": 0.5},
+    "uncertainty": 0.4
+  },
+  "reasoning": "Starting with moderate knowledge, high uncertainty about X"
+}
+EOF
+empirica preflight-submit < preflight.json
+```
+
+**CHECK** - During work, when uncertain (optional but recommended):
+```bash
+cat > check.json <<EOF
+{
+  "session_id": "abc-123",
+  "confidence": 0.75,
+  "findings": ["Found API pattern", "Learned OAuth2 flow"],
+  "unknowns": ["Token refresh unclear"]
+}
+EOF
+empirica check < check.json
+# Returns: {"decision": "proceed"} or {"decision": "investigate_more"}
+```
+
+**POSTFLIGHT** - After work, measure what you learned:
+```bash
+cat > postflight.json <<EOF
+{
+  "session_id": "abc-123",
+  "vectors": {
+    "engagement": 0.9,
+    "foundation": {"know": 0.85, "do": 0.9, "context": 0.8},
+    "comprehension": {"clarity": 0.9, "coherence": 0.9, "signal": 0.85, "density": 0.8},
+    "execution": {"state": 0.9, "change": 0.85, "completion": 1.0, "impact": 0.8},
+    "uncertainty": 0.15
+  },
+  "reasoning": "Learned token refresh, implemented successfully"
+}
+EOF
+empirica postflight-submit < postflight.json
+```
+
+### 3. Log As You Work
+```bash
+# What you discovered
+empirica finding-log --session-id abc-123 --finding "OAuth2 uses PKCE for mobile" --output json
+
+# What's still unclear
+empirica unknown-log --session-id abc-123 --unknown "Token refresh mechanism unclear" --output json
+
+# What didn't work
+empirica deadend-log --session-id abc-123 --deadend "Tried JWT tokens - wrong approach" --output json
+```
+
+---
+
+## Common Patterns
+
+### Pattern 1: Start New Feature
+```bash
+# Create session
+SESSION=$(echo '{"ai_id": "cursor-agent"}' | empirica session-create - | jq -r .session_id)
+
+# Assess starting knowledge
+empirica preflight-submit --session-id $SESSION --output json
+
+# Do work...
+# Log findings as you go
+empirica finding-log --session-id $SESSION --finding "Found X pattern"
+
+# Complete session
+empirica postflight-submit --session-id $SESSION --output json
+```
+
+### Pattern 2: Resume Previous Work
+```bash
+# Load context from previous session
+empirica project-bootstrap --project-id <ID> --output json
+# Returns: recent findings, unknowns, dead ends, incomplete goals
+```
+
+### Pattern 3: High Uncertainty Work
+```bash
+# Use CHECK gates when uncertainty > 0.5
+empirica check --session-id $SESSION --confidence 0.6
+# Returns decision: proceed vs investigate_more
+```
+
+---
+
+## Epistemic Vectors (What to Track)
+
+**Foundation (Tier 0):**
+- `engagement` (0.0-1.0): Am I focused on the right thing?
+- `know` (0.0-1.0): Do I understand the domain/concepts?
+- `do` (0.0-1.0): Can I execute this? (skills, tools, access)
+- `context` (0.0-1.0): Do I understand the situation?
+
+**Comprehension (Tier 1):**
+- `clarity` (0.0-1.0): Is the requirement/task clear?
+- `coherence` (0.0-1.0): Do the pieces fit logically?
+- `signal` (0.0-1.0): Can I distinguish important from noise?
+- `density` (0.0-1.0): How much relevant information do I have?
+
+**Execution (Tier 2):**
+- `state` (0.0-1.0): Do I understand the current state?
+- `change` (0.0-1.0): Do I understand what needs to change?
+- `completion` (0.0-1.0): Am I done?
+- `impact` (0.0-1.0): Did I achieve the goal?
+
+**Meta:**
+- `uncertainty` (0.0-1.0): Explicit doubt (0.0=certain, 1.0=completely uncertain)
+
+---
+
+## Tips for AI Agents
+
+1. **Be honest about uncertainty** - "I could figure it out" ≠ "I know it"
+2. **Use CHECK gates** when uncertainty ≥ 0.5 or scope breadth ≥ 0.6
+3. **Log findings incrementally** - don't wait until end of session
+4. **Rate what you ACTUALLY know right now** - not aspirations
+5. **When stuck** - run CHECK gate, review unknowns, investigate systematically
+
+---
+
+## Quick Reference
+
+```bash
+# Help
+empirica --help
+empirica <command> --help
+
+# Key commands
+empirica session-create          # Start session
+empirica preflight-submit        # Before work
+empirica check                   # Decision gate
+empirica postflight-submit       # After work
+empirica finding-log             # Log discoveries
+empirica unknown-log             # Log uncertainties
+empirica project-bootstrap       # Load context
+
+# Resume session
+empirica sessions-resume --session-id <ID>
+
+# Check progress
+empirica goals-progress --goal-id <ID>
+```
+
+---
+
+## Full Documentation
+
+- **Setup Guide:** `docs/01_START_HERE.md`
+- **Workflow:** `docs/CASCADE_WORKFLOW.md`
+- **Vectors Explained:** `docs/EMPIRICA_EXPLAINED_SIMPLE.md`
+- **System Prompts:** `.github/copilot-instructions.md`
+
+---
+
+## MCP Integration (Claude Desktop)
+
+Add to `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "empirica": {
+      "command": "empirica-mcp",
+      "env": { "EMPIRICA_AI_ID": "claude-desktop" }
+    }
+  }
+}
+```
+
+---
+
+**Remember:** Empirica observes everything. Just work naturally - log findings, admit uncertainty, learn systematically. 🚀
