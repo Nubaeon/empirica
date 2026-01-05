@@ -117,8 +117,34 @@ def format_confidence(confidence: float) -> str:
 
 
 def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
-    """Get the active session for this AI."""
+    """
+    Get the active session, with smart fallback logic.
+
+    Priority:
+    1. Check ~/.empirica/active_session file for explicit session
+    2. Match exact ai_id
+    3. Match ai_id prefix (e.g., 'claude-code' matches 'claude-code-multimachine')
+    """
     cursor = db.conn.cursor()
+
+    # Priority 1: Check active_session file
+    active_session_file = Path.home() / '.empirica' / 'active_session'
+    if active_session_file.exists():
+        try:
+            session_id = active_session_file.read_text().strip()
+            if session_id:
+                cursor.execute("""
+                    SELECT session_id, ai_id, start_time
+                    FROM sessions
+                    WHERE session_id = ? AND end_time IS NULL
+                """, (session_id,))
+                row = cursor.fetchone()
+                if row:
+                    return dict(row)
+        except Exception:
+            pass  # Fall through to other methods
+
+    # Priority 2: Exact ai_id match
     cursor.execute("""
         SELECT session_id, ai_id, start_time
         FROM sessions
@@ -126,6 +152,18 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
         ORDER BY start_time DESC
         LIMIT 1
     """, (ai_id,))
+    row = cursor.fetchone()
+    if row:
+        return dict(row)
+
+    # Priority 3: Prefix match (e.g., 'claude-code' matches 'claude-code-xyz')
+    cursor.execute("""
+        SELECT session_id, ai_id, start_time
+        FROM sessions
+        WHERE end_time IS NULL AND ai_id LIKE ?
+        ORDER BY start_time DESC
+        LIMIT 1
+    """, (f"{ai_id}%",))
     row = cursor.fetchone()
     return dict(row) if row else None
 
