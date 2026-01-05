@@ -1,0 +1,30 @@
+{
+  "goal_id": "a0c0f4b5-f996-461e-b455-02313f2a315e",
+  "session_id": "745bd3f3-e780-4892-8d8b-2c6c97c9944e",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-05T14:20:33.626104+00:00",
+  "goal_data": {
+    "objective": "Update architecture diagrams to include Qdrant memory layer (eidetic/episodic) and Bayesian feedback",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "storage_architecture_flow.svg updated with Qdrant layer",
+      "epistemic_vs_git_diff.svg updated with memory feedback",
+      "Diagrams show 4-layer architecture"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-05T14:20:33.626123+00:00",
+      "action": "created"
+    }
+  ]
+}
