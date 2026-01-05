@@ -1,0 +1,33 @@
+{
+  "goal_id": "a6f83606-141a-489d-b35a-72bfca9dac64",
+  "session_id": "3a151eaf-477c-4b4c-9ced-2e9dfcfaa124",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-05T17:30:34.604505+00:00",
+  "goal_data": {
+    "objective": "Resolve 5 unresolved auto-captured issues (project-wide)",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Fix/resolve 4 high-severity error issues (agent-spawn schema, check-submit vectors)",
+      "Fix/resolve 1 medium performance issue (user_profiles query latency)",
+      "Mark issues resolved in issue tracker"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {
+      "tier": 3,
+      "theme": "issue-triage"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-05T17:30:34.604523+00:00",
+      "action": "created"
+    }
+  ]
+}
