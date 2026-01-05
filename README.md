@@ -463,6 +463,15 @@ pytest tests/integration/
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+### Security
+
+🔒 **Security is a priority.** See [SECURITY.md](SECURITY.md) for:
+- Vulnerability reporting process
+- Security best practices
+- Dependency security updates
+
+For dependency security audit results and implementation guides, see [DEPENDENCY_SECURITY_README.md](DEPENDENCY_SECURITY_README.md).
+
 ## 📊 System Requirements
 
 - **Python:** 3.11+

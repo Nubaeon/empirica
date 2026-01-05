@@ -1,0 +1,79 @@
+# GitHub Dependabot Configuration
+# Automatically checks for dependency updates and security vulnerabilities
+
+version: 2
+updates:
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    # Automatically open PRs for security updates
+    open-pull-requests-limit: 10
+    # Group updates by type
+    groups:
+      security:
+        patterns:
+          - "cryptography"
+          - "gitpython"
+          - "pyyaml"
+          - "requests"
+          - "setuptools"
+          - "pillow"
+          - "flask"
+          - "werkzeug"
+        update-types:
+          - "patch"
+          - "minor"
+      core-dependencies:
+        patterns:
+          - "pydantic*"
+          - "sqlalchemy"
+          - "jsonschema"
+        update-types:
+          - "patch"
+      api-dependencies:
+        patterns:
+          - "anthropic"
+          - "openai"
+          - "httpx"
+          - "fastapi"
+          - "uvicorn"
+        update-types:
+          - "patch"
+    # Security updates get higher priority
+    labels:
+      - "dependencies"
+      - "security"
+    # Commit message preferences
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    # Version constraints to respect
+    versioning-strategy: increase-if-necessary
+    # Assignees for security PRs
+    reviewers:
+      - "Nubaeon"
+    # Allow automatic rebasing
+    rebase-strategy: "auto"
+
+  # GitHub Actions dependencies (if you have workflows)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+
+# Notes:
+# - Security updates are prioritized automatically by GitHub
+# - PRs will include CHANGELOG entries and vulnerability details
+# - Review PRs promptly, especially for CRITICAL/HIGH severity
+# - Test thoroughly before merging
