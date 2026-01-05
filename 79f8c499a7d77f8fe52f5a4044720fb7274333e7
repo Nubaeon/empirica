@@ -1,0 +1,28 @@
+{
+  "goal_id": "03de9646-b57d-4dbe-a033-b938586100a7",
+  "session_id": "1a922bed-16f5-4651-b90c-42e0f68873ee",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-05T22:45:29.787904+00:00",
+  "goal_data": {
+    "objective": "Build Empirica Lessons - Procedural Knowledge Marketplace for AI Agents",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.7,
+      "coordination": 0.5
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-05T22:45:29.787923+00:00",
+      "action": "created"
+    }
+  ]
+}
