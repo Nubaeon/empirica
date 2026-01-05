@@ -1,49 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700" font-family="monospace, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" font-family="monospace, sans-serif">
   <!-- Title -->
   <text x="450" y="35" font-size="22" font-weight="bold" text-anchor="middle" fill="#2c3e50">
-    Epistemic State ≠ Git Diff
+    Epistemic State ≈ Git (Isomorphism)
   </text>
   <text x="450" y="55" font-size="13" text-anchor="middle" fill="#7f8c8d">
-    The critical distinction between content tracking and confidence tracking
+    Version control for code AND confidence - same infrastructure, different semantics
   </text>
-  
+
   <!-- Left side: Git Diff -->
   <rect x="50" y="80" width="380" height="280" fill="#e8f5e9" stroke="#4caf50" stroke-width="3" rx="10"/>
   <text x="240" y="110" font-size="16" font-weight="bold" text-anchor="middle" fill="#2e7d32">
     Git Diff (What Changed)
   </text>
-  
+
   <!-- Code diff box -->
   <rect x="70" y="125" width="340" height="80" fill="#263238" rx="5"/>
   <text x="80" y="145" font-size="12" fill="#ef5350" font-family="monospace">- const AUTH_TIMEOUT = 3600;</text>
   <text x="80" y="165" font-size="12" fill="#66bb6a" font-family="monospace">+ const AUTH_TIMEOUT = 7200;</text>
   <text x="80" y="190" font-size="11" fill="#90a4ae" font-family="monospace">@@ auth.js:15 @@</text>
-  
+
   <!-- Git diff info -->
   <text x="240" y="230" font-size="13" font-weight="bold" text-anchor="middle" fill="#1b5e20">
     Tells you:
   </text>
-  <text x="80" y="250" font-size="11" fill="#2e7d32">✓ WHAT: Timeout doubled</text>
-  <text x="80" y="270" font-size="11" fill="#2e7d32">✓ WHEN: Commit timestamp</text>
-  <text x="80" y="290" font-size="11" fill="#2e7d32">✓ WHO: Commit author</text>
-  
+  <text x="80" y="250" font-size="11" fill="#2e7d32">* WHAT: Timeout doubled</text>
+  <text x="80" y="270" font-size="11" fill="#2e7d32">* WHEN: Commit timestamp</text>
+  <text x="80" y="290" font-size="11" fill="#2e7d32">* WHO: Commit author</text>
+
   <text x="240" y="320" font-size="13" font-weight="bold" text-anchor="middle" fill="#c62828">
     Doesn't tell you:
   </text>
-  <text x="80" y="340" font-size="11" fill="#c62828">✗ WHY: Tested or speculative?</text>
-  
+  <text x="80" y="340" font-size="11" fill="#c62828">* WHY: Tested or speculative?</text>
+
   <!-- Token count -->
   <rect x="150" y="370" width="180" height="35" fill="#4caf50" rx="5"/>
   <text x="240" y="393" font-size="13" font-weight="bold" text-anchor="middle" fill="white">
     ~50 tokens
   </text>
-  
+
   <!-- Right side: Epistemic Vectors -->
   <rect x="470" y="80" width="380" height="280" fill="#e3f2fd" stroke="#2196f3" stroke-width="3" rx="10"/>
   <text x="660" y="110" font-size="16" font-weight="bold" text-anchor="middle" fill="#0d47a1">
     Epistemic Vectors (Why + Confidence)
   </text>
-  
+
   <!-- JSON box -->
   <rect x="490" y="125" width="340" height="125" fill="#263238" rx="5"/>
   <text x="500" y="145" font-size="11" fill="#81d4fa" font-family="monospace">{</text>
@@ -54,67 +54,82 @@
   <text x="520" y="220" font-size="11" fill="#ef9a9a" font-family="monospace">"gap": "distributed_sync",</text>
   <text x="520" y="235" font-size="11" fill="#90caf9" font-family="monospace">"basis": "tested_30_days"</text>
   <text x="510" y="245" font-size="11" fill="#81d4fa" font-family="monospace">}</text>
-  
+
   <!-- Epistemic info -->
   <text x="660" y="275" font-size="13" font-weight="bold" text-anchor="middle" fill="#0d47a1">
     Tells you:
   </text>
-  <text x="500" y="295" font-size="11" fill="#1565c0">✓ WHY: "Tested 30 days in staging"</text>
-  <text x="500" y="315" font-size="11" fill="#1565c0">✓ CONFIDENCE: 85% knowledge, 15% uncertainty</text>
-  <text x="500" y="335" font-size="11" fill="#1565c0">✓ GAPS: "distributed_sync not investigated"</text>
-  
+  <text x="500" y="295" font-size="11" fill="#1565c0">* WHY: "Tested 30 days in staging"</text>
+  <text x="500" y="315" font-size="11" fill="#1565c0">* CONFIDENCE: 85% knowledge, 15% uncertainty</text>
+  <text x="500" y="335" font-size="11" fill="#1565c0">* GAPS: "distributed_sync not investigated"</text>
+
   <!-- Token count -->
   <rect x="570" y="370" width="180" height="35" fill="#2196f3" rx="5"/>
   <text x="660" y="393" font-size="13" font-weight="bold" text-anchor="middle" fill="white">
-    ~450 tokens
+    ~450 tokens (git notes)
   </text>
-  
+
+  <!-- The Isomorphism - NEW SECTION -->
+  <rect x="50" y="430" width="800" height="120" fill="#fff3e0" stroke="#ff9800" stroke-width="3" rx="10"/>
+  <text x="450" y="455" font-size="16" font-weight="bold" text-anchor="middle" fill="#e65100">
+    The Git Isomorphism: Same Infrastructure, Different Semantics
+  </text>
+
+  <text x="70" y="480" font-size="11" fill="#e65100">Git tracks CODE changes:    commit abc123 -> def456 (file diff)</text>
+  <text x="70" y="500" font-size="11" fill="#e65100">Empirica tracks BELIEF changes: PREFLIGHT -> POSTFLIGHT (vector delta)</text>
+  <text x="70" y="520" font-size="11" fill="#e65100">Both stored in git notes -> versioned, distributed, crypto-signed</text>
+  <text x="70" y="540" font-size="11" fill="#e65100">Result: git log shows what you learned AND what you coded, side by side</text>
+
+  <!-- Memory Feedback Loop - NEW SECTION -->
+  <rect x="50" y="565" width="800" height="130" fill="#fce4ec" stroke="#e91e63" stroke-width="3" rx="10"/>
+  <text x="450" y="590" font-size="16" font-weight="bold" text-anchor="middle" fill="#880e4f">
+    Continuous Memory Feedback (Qdrant)
+  </text>
+
+  <rect x="70" y="605" width="350" height="75" fill="#f8bbd9" rx="5"/>
+  <text x="245" y="625" font-size="12" font-weight="bold" text-anchor="middle" fill="#880e4f">Eidetic (Facts)</text>
+  <text x="80" y="645" font-size="10" fill="#880e4f">finding-log -> check existing -> confirm (+0.1)</text>
+  <text x="80" y="660" font-size="10" fill="#880e4f">or create new (0.5 initial confidence)</text>
+  <text x="80" y="675" font-size="10" fill="#880e4f">Beliefs strengthen with evidence</text>
+
+  <rect x="480" y="605" width="350" height="75" fill="#f8bbd9" rx="5"/>
+  <text x="655" y="625" font-size="12" font-weight="bold" text-anchor="middle" fill="#880e4f">Episodic (Narratives)</text>
+  <text x="490" y="645" font-size="10" fill="#880e4f">postflight -> session arc with delta</text>
+  <text x="490" y="660" font-size="10" fill="#880e4f">Temporal decay (recent = more relevant)</text>
+  <text x="490" y="675" font-size="10" fill="#880e4f">"What worked last time I tried X?"</text>
+
   <!-- Comparison table -->
-  <text x="450" y="445" font-size="18" font-weight="bold" text-anchor="middle" fill="#2c3e50">
+  <text x="450" y="720" font-size="16" font-weight="bold" text-anchor="middle" fill="#2c3e50">
     Key Distinctions
   </text>
-  
-  <rect x="100" y="465" width="700" height="35" fill="#34495e"/>
-  <text x="200" y="487" font-size="12" font-weight="bold" fill="white">Aspect</text>
-  <text x="400" y="487" font-size="12" font-weight="bold" fill="white">Git Diff</text>
-  <text x="650" y="487" font-size="12" font-weight="bold" fill="white">Epistemic Vectors</text>
-  
-  <rect x="100" y="500" width="700" height="30" fill="#ecf0f1"/>
-  <text x="110" y="520" font-size="11" fill="#2c3e50">Tracks</text>
-  <text x="330" y="520" font-size="11" fill="#2c3e50">Content changes</text>
-  <text x="530" y="520" font-size="11" fill="#2c3e50">Confidence about content</text>
-  
-  <rect x="100" y="530" width="700" height="30" fill="#d5dbdb"/>
-  <text x="110" y="550" font-size="11" fill="#2c3e50">Compression</text>
-  <text x="330" y="550" font-size="11" fill="#2c3e50">Syntactic (min chars)</text>
-  <text x="530" y="550" font-size="11" fill="#2c3e50">Semantic (min meaning)</text>
-  
-  <rect x="100" y="560" width="700" height="30" fill="#ecf0f1"/>
-  <text x="110" y="580" font-size="11" fill="#2c3e50">Size</text>
-  <text x="330" y="580" font-size="11" fill="#2c3e50">~50 tokens</text>
-  <text x="530" y="580" font-size="11" fill="#2c3e50">~450 tokens (compressed)</text>
-  
-  <rect x="100" y="590" width="700" height="30" fill="#d5dbdb"/>
-  <text x="110" y="610" font-size="11" fill="#2c3e50">Query by</text>
-  <text x="330" y="610" font-size="11" fill="#2c3e50">File, line, author</text>
-  <text x="530" y="610" font-size="11" fill="#2c3e50">Phase, confidence, uncertainty</text>
-  
-  <rect x="100" y="620" width="700" height="30" fill="#ecf0f1"/>
-  <text x="110" y="640" font-size="11" fill="#2c3e50">Signed</text>
-  <text x="330" y="640" font-size="11" fill="#2c3e50">Commit SHA</text>
-  <text x="530" y="640" font-size="11" fill="#2c3e50">Git note SHA</text>
-  
-  <rect x="100" y="650" width="700" height="30" fill="#d5dbdb"/>
-  <text x="110" y="670" font-size="11" fill="#2c3e50">Purpose</text>
-  <text x="330" y="670" font-size="11" fill="#2c3e50">Version control</text>
-  <text x="530" y="670" font-size="11" fill="#2c3e50">Epistemic tracking</text>
-  
+
+  <rect x="100" y="735" width="700" height="30" fill="#34495e"/>
+  <text x="200" y="755" font-size="11" font-weight="bold" fill="white">Aspect</text>
+  <text x="400" y="755" font-size="11" font-weight="bold" fill="white">Git Diff</text>
+  <text x="650" y="755" font-size="11" font-weight="bold" fill="white">Epistemic Vectors</text>
+
+  <rect x="100" y="765" width="700" height="25" fill="#ecf0f1"/>
+  <text x="110" y="782" font-size="10" fill="#2c3e50">Tracks</text>
+  <text x="330" y="782" font-size="10" fill="#2c3e50">Content changes</text>
+  <text x="550" y="782" font-size="10" fill="#2c3e50">Confidence about content</text>
+
+  <rect x="100" y="790" width="700" height="25" fill="#d5dbdb"/>
+  <text x="110" y="807" font-size="10" fill="#2c3e50">Storage</text>
+  <text x="330" y="807" font-size="10" fill="#2c3e50">Git objects</text>
+  <text x="550" y="807" font-size="10" fill="#2c3e50">Git notes + Qdrant vectors</text>
+
+  <rect x="100" y="815" width="700" height="25" fill="#ecf0f1"/>
+  <text x="110" y="832" font-size="10" fill="#2c3e50">Evolution</text>
+  <text x="330" y="832" font-size="10" fill="#2c3e50">Append-only (immutable)</text>
+  <text x="550" y="832" font-size="10" fill="#2c3e50">Bayesian updates (mutable confidence)</text>
+
+  <rect x="100" y="840" width="700" height="25" fill="#d5dbdb"/>
+  <text x="110" y="857" font-size="10" fill="#2c3e50">Query</text>
+  <text x="330" y="857" font-size="10" fill="#2c3e50">git log, git diff</text>
+  <text x="550" y="857" font-size="10" fill="#2c3e50">Semantic search + SQL + git notes</text>
+
   <!-- Footer highlight -->
-  <rect x="100" y="690" width="700" height="50" fill="#fff3e0" stroke="#ff9800" stroke-width="2" rx="5"/>
-  <text x="450" y="710" font-size="12" font-weight="bold" text-anchor="middle" fill="#e65100">
-    Git diff tells you WHAT changed.
-  </text>
-  <text x="450" y="730" font-size="12" font-weight="bold" text-anchor="middle" fill="#e65100">
-    Epistemic vectors tell you WHY and HOW CONFIDENT you should be.
+  <text x="450" y="890" font-size="12" font-weight="bold" text-anchor="middle" fill="#2c3e50">
+    Git diff = WHAT changed. Epistemic vectors = WHY and HOW CONFIDENT. Both versioned in git.
   </text>
 </svg>
