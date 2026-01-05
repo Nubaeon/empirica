@@ -99,7 +99,13 @@ class SessionManager:
     def _list_files(self, session: dict, path: str) -> dict:
         """List files in directory"""
         try:
-            full_path = Path(session["cwd"]) / path
+            workspace = Path(session["workspace"]).resolve()
+            full_path = (Path(session["cwd"]) / path).resolve()
+            
+            # Path traversal protection
+            if not str(full_path).startswith(str(workspace)):
+                return {"error": f"Access denied: path outside workspace"}
+            
             if not full_path.exists():
                 return {"error": f"Path not found: {path}"}
             
@@ -128,7 +134,13 @@ class SessionManager:
     def _read_file(self, session: dict, path: str) -> dict:
         """Read file content"""
         try:
-            full_path = Path(session["cwd"]) / path
+            workspace = Path(session["workspace"]).resolve()
+            full_path = (Path(session["cwd"]) / path).resolve()
+            
+            # Path traversal protection
+            if not str(full_path).startswith(str(workspace)):
+                return {"error": f"Access denied: path outside workspace"}
+            
             if not full_path.exists():
                 return {"error": f"File not found: {path}"}
             
@@ -159,8 +171,15 @@ class SessionManager:
             }
         
         try:
-            from_full = Path(session["cwd"]) / from_path
-            to_full = Path(session["cwd"]) / to_path
+            workspace = Path(session["workspace"]).resolve()
+            from_full = (Path(session["cwd"]) / from_path).resolve()
+            to_full = (Path(session["cwd"]) / to_path).resolve()
+            
+            # Path traversal protection
+            if not str(from_full).startswith(str(workspace)):
+                return {"error": f"Access denied: source outside workspace"}
+            if not str(to_full).startswith(str(workspace)):
+                return {"error": f"Access denied: destination outside workspace"}
             
             if not from_full.exists():
                 return {"error": f"Source not found: {from_path}"}

@@ -7,6 +7,7 @@ Validates SessionDatabase checkpoint methods with git/SQLite fallback.
 import pytest
 import tempfile
 import os
+import subprocess
 from pathlib import Path
 
 from empirica.data.session_database import SessionDatabase
@@ -27,7 +28,12 @@ def git_repo():
     """Create temporary git repository"""
     with tempfile.TemporaryDirectory() as tmpdir:
         os.chdir(tmpdir)
-        os.system("git init > /dev/null 2>&1")
+        subprocess.run(
+            ["git", "init"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False
+        )
         yield tmpdir
 
 
