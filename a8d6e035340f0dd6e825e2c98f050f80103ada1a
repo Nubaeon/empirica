@@ -1,0 +1,32 @@
+{
+  "goal_id": "e7a7acac-3170-4848-b329-6a7a2b17ef5a",
+  "session_id": "525c999b-fd00-45b7-a576-231141b102be",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-05T09:41:25.576943+00:00",
+  "goal_data": {
+    "objective": "Resolve critical security vulnerabilities and establish security testing infrastructure per PR#12 specifications",
+    "scope": {
+      "breadth": 0.75,
+      "duration": 0.6,
+      "coordination": 0.5
+    },
+    "success_criteria": [
+      "Fix CRITICAL issue #5 (command injection)",
+      "Fix HIGH issue #6 (SQL injection)",
+      "Create security tests directory with initial tests",
+      "Document resolution approach and remaining work",
+      "Merge PR#12 security specifications"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-05T09:41:25.576962+00:00",
+      "action": "created"
+    }
+  ]
+}
