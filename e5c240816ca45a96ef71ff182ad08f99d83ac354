@@ -1,0 +1,36 @@
+{
+  "goal_id": "c7692ae6-b410-4313-a4d4-dac689ed5698",
+  "session_id": "9e802e9d-1f51-4c58-a6cf-8d490a83a666",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-06T13:43:23.749979+00:00",
+  "goal_data": {
+    "objective": "Extend docs-assess with audience-aware validation (ai/user/developer)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Detects audience type per doc",
+      "Validates against audience criteria",
+      "Reports coverage per audience"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {
+      "audience_types": [
+        "ai",
+        "user",
+        "developer"
+      ]
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-06T13:43:23.749992+00:00",
+      "action": "created"
+    }
+  ]
+}
