@@ -1,0 +1,33 @@
+{
+  "goal_id": "424d218a-1347-4b7b-a471-f1b779e55c66",
+  "session_id": "9e802e9d-1f51-4c58-a6cf-8d490a83a666",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-06T13:43:23.071594+00:00",
+  "goal_data": {
+    "objective": "Create /docs-generate skill with NotebookLM pipeline for human-friendly doc generation",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Skill invokes doc-making lesson",
+      "Generates slides from source docs",
+      "Outputs committed or linked"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {
+      "depends_on": "composed workflow layer",
+      "uses": "notebooklm atomics"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-06T13:43:23.071607+00:00",
+      "action": "created"
+    }
+  ]
+}
