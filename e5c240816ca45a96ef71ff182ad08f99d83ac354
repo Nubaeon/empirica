@@ -1,0 +1,33 @@
+{
+  "goal_id": "f70b8288-cd65-4acf-9656-ef3077b308d8",
+  "session_id": "9e802e9d-1f51-4c58-a6cf-8d490a83a666",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-06T14:03:27.833721+00:00",
+  "goal_data": {
+    "objective": "Create Empirica skill for interactive Claude docs guidance",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Skill invokes docs-explain and guides user interactively",
+      "Works in terminal and GUI contexts",
+      "Offers deeper exploration options"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {
+      "depends_on": "docs-explain",
+      "type": "skill"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-06T14:03:27.833735+00:00",
+      "action": "created"
+    }
+  ]
+}
