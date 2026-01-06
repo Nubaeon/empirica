@@ -447,3 +447,53 @@ def handle_lesson_stats_command(args: Namespace) -> Dict[str, Any]:
         'ok': True,
         'stats': stats
     }
+
+
+def handle_lesson_embed_command(args: Namespace) -> Dict[str, Any]:
+    """
+    Embed all lessons into Qdrant for semantic search.
+
+    Usage:
+        empirica lesson-embed
+        empirica lesson-embed --force  # Re-embed all
+    """
+    from empirica.core.lessons import get_lesson_storage
+    import empirica.core.lessons.storage as mod
+
+    # Clear singleton to force fresh Qdrant connection
+    mod._storage = None
+
+    storage = get_lesson_storage()
+
+    if not storage._qdrant:
+        return {'ok': False, 'error': 'Qdrant not available. Install qdrant-client.'}
+
+    force = getattr(args, 'force', False)
+    embedded = []
+    failed = []
+
+    # Get all lessons from WARM layer
+    cursor = storage._conn.cursor()
+    cursor.execute("SELECT id FROM lessons")
+    lesson_ids = [row[0] for row in cursor.fetchall()]
+
+    for lesson_id in lesson_ids:
+        lesson = storage.get_lesson(lesson_id)
+        if lesson:
+            try:
+                result = storage._write_search(lesson)
+                if result:
+                    embedded.append({'id': lesson_id, 'name': lesson.name})
+                else:
+                    failed.append({'id': lesson_id, 'error': 'write failed'})
+            except Exception as e:
+                failed.append({'id': lesson_id, 'error': str(e)})
+
+    return {
+        'ok': len(failed) == 0,
+        'embedded_count': len(embedded),
+        'failed_count': len(failed),
+        'embedded': embedded,
+        'failed': failed if failed else None,
+        'collection': storage._qdrant_collection
+    }

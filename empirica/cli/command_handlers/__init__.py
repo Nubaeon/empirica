@@ -150,6 +150,7 @@ from .lesson_commands import (
     handle_lesson_replay_start_command,
     handle_lesson_replay_end_command,
     handle_lesson_stats_command,
+    handle_lesson_embed_command,
 )
 
 
@@ -317,6 +318,7 @@ __all__ = [
     'handle_lesson_replay_start_command',
     'handle_lesson_replay_end_command',
     'handle_lesson_stats_command',
+    'handle_lesson_embed_command',
 
     # Session-end command
     # 'handle_session_end_command',  # removed - use handoff-create

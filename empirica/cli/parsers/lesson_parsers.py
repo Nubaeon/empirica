@@ -93,3 +93,11 @@ def add_lesson_parsers(subparsers):
         help='Show lesson storage statistics'
     )
     lesson_stats.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
+
+    # lesson-embed: Embed lessons into Qdrant
+    lesson_embed = subparsers.add_parser(
+        'lesson-embed',
+        help='Embed all lessons into Qdrant for semantic search'
+    )
+    lesson_embed.add_argument('--force', action='store_true', help='Force re-embed all')
+    lesson_embed.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')

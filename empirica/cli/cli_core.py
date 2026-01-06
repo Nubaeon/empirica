@@ -13,6 +13,7 @@ except Exception:
     pass  # Don't fail if fix can't be applied
 
 import argparse
+import json
 import sys
 import time
 from .cli_utils import handle_cli_error, print_header
@@ -401,30 +402,51 @@ def main(args=None):
             'lesson-replay-start': handle_lesson_replay_start_command,
             'lesson-replay-end': handle_lesson_replay_end_command,
             'lesson-stats': handle_lesson_stats_command,
+            'lesson-embed': handle_lesson_embed_command,
         }
         
         if parsed_args.command in command_handlers:
             handler = command_handlers[parsed_args.command]
             result = handler(parsed_args)
-            
+
+            # Handle result output and exit code
+            exit_code = 0
+            if isinstance(result, dict):
+                # Dict results: print as JSON, exit based on 'ok' field
+                output_format = getattr(parsed_args, 'output', 'json')
+                if output_format == 'json':
+                    print(json.dumps(result, indent=2, default=str))
+                else:
+                    # Human-readable format
+                    if result.get('ok', True):
+                        for key, value in result.items():
+                            if key != 'ok':
+                                print(f"{key}: {value}")
+                    else:
+                        print(f"❌ {result.get('error', 'Unknown error')}")
+                exit_code = 0 if result.get('ok', True) else 1
+            elif result is not None and result != 0:
+                # Non-dict non-zero result is an exit code
+                exit_code = result
+
             # Log successful execution
             elapsed_ms = int((time.time() - start_time) * 1000)
             if verbose:
                 print(f"[VERBOSE] Execution time: {elapsed_ms}ms", file=sys.stderr)
-            
+
             try:
                 db = SessionDatabase()
                 db.log_command_usage(
                     command_name=parsed_args.command,
                     execution_time_ms=elapsed_ms,
-                    success=True,
-                    error_message=None
+                    success=(exit_code == 0),
+                    error_message=None if exit_code == 0 else "Command returned error"
                 )
                 db.close()
             except Exception:
                 pass
-            
-            sys.exit(0 if result is None or result == 0 else result)
+
+            sys.exit(exit_code)
         else:
             print(f"❌ Unknown command: {parsed_args.command}")
             sys.exit(1)

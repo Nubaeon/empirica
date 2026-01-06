@@ -79,9 +79,30 @@ class LessonStorageManager:
         # SEARCH layer - Qdrant (optional)
         self._qdrant = qdrant_client
         self._qdrant_collection = 'empirica_lessons'
+        self._ensure_qdrant_collection()
 
         # Initialize hot cache from warm storage
         self._load_hot_cache()
+
+    def _ensure_qdrant_collection(self):
+        """Ensure the lessons collection exists in Qdrant"""
+        if not self._qdrant:
+            return
+        try:
+            from qdrant_client.models import Distance, VectorParams
+            # Check if collection exists
+            collections = self._qdrant.get_collections().collections
+            exists = any(c.name == self._qdrant_collection for c in collections)
+            if not exists:
+                # Create with 384 dimensions (for simple embeddings)
+                # In production, use model-specific size
+                self._qdrant.create_collection(
+                    collection_name=self._qdrant_collection,
+                    vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+                )
+                logger.info(f"Created Qdrant collection: {self._qdrant_collection}")
+        except Exception as e:
+            logger.warning(f"Could not ensure Qdrant collection: {e}")
 
     def _load_hot_cache(self) -> int:
         """Load all lessons into hot cache from warm storage"""
@@ -268,6 +289,8 @@ class LessonStorageManager:
     def _write_search(self, lesson: Lesson) -> Optional[str]:
         """Write lesson to Qdrant for semantic search"""
         try:
+            from qdrant_client.models import PointStruct
+
             # Generate embedding from lesson content
             embedding_text = f"{lesson.name} {lesson.description} {' '.join(lesson.tags)}"
             vector = self._generate_embedding(embedding_text)
@@ -276,10 +299,10 @@ class LessonStorageManager:
 
             self._qdrant.upsert(
                 collection_name=self._qdrant_collection,
-                points=[{
-                    'id': point_id,
-                    'vector': vector,
-                    'payload': {
+                points=[PointStruct(
+                    id=point_id,
+                    vector=vector,
+                    payload={
                         'lesson_id': lesson.id,
                         'name': lesson.name,
                         'description': lesson.description,
@@ -288,7 +311,7 @@ class LessonStorageManager:
                         'source_confidence': lesson.epistemic.source_confidence,
                         'teaching_quality': lesson.epistemic.teaching_quality
                     }
-                }]
+                )]
             )
             logger.debug(f"SEARCH: Wrote lesson {lesson.id} to Qdrant")
             return point_id
@@ -622,9 +645,28 @@ class LessonStorageManager:
 _storage: Optional[LessonStorageManager] = None
 
 
+def _try_get_qdrant_client():
+    """Try to get a Qdrant client, return None if unavailable"""
+    try:
+        import os
+        from qdrant_client import QdrantClient
+        url = os.getenv("EMPIRICA_QDRANT_URL")
+        path = os.getenv("EMPIRICA_QDRANT_PATH", "./.qdrant_data")
+        if url:
+            return QdrantClient(url=url)
+        return QdrantClient(path=path)
+    except ImportError:
+        logger.debug("qdrant-client not installed, SEARCH layer disabled")
+        return None
+    except Exception as e:
+        logger.debug(f"Could not connect to Qdrant: {e}")
+        return None
+
+
 def get_lesson_storage() -> LessonStorageManager:
     """Get or create the global lesson storage manager"""
     global _storage
     if _storage is None:
-        _storage = LessonStorageManager()
+        qdrant = _try_get_qdrant_client()
+        _storage = LessonStorageManager(qdrant_client=qdrant)
     return _storage

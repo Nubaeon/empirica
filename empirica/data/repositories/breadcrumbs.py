@@ -385,29 +385,45 @@ class BreadcrumbRepository(BaseRepository):
         """
         # Query findings from BOTH project_findings and session_findings (across all sessions in project)
         if subject:
+            # NOTE: created_timestamp has mixed formats (epoch float vs datetime string)
+            # Wrap in subquery to apply CASE-based sorting after UNION
             query = """
-                SELECT id, session_id, goal_id, subtask_id, finding, created_timestamp, finding_data, subject, impact, project_id, 'project' as scope 
-                FROM project_findings 
-                WHERE project_id = ? AND subject = ? 
-                UNION ALL
-                SELECT f.id, f.session_id, f.goal_id, f.subtask_id, f.finding, f.created_timestamp, f.finding_data, f.subject, f.impact, s.project_id, 'session' as scope 
-                FROM session_findings f
-                JOIN sessions s ON f.session_id = s.session_id
-                WHERE s.project_id = ? AND f.subject = ?
-                ORDER BY created_timestamp DESC
+                SELECT * FROM (
+                    SELECT id, session_id, goal_id, subtask_id, finding, created_timestamp, finding_data, subject, impact, project_id, 'project' as scope
+                    FROM project_findings
+                    WHERE project_id = ? AND subject = ?
+                    UNION ALL
+                    SELECT f.id, f.session_id, f.goal_id, f.subtask_id, f.finding, f.created_timestamp, f.finding_data, f.subject, f.impact, s.project_id, 'session' as scope
+                    FROM session_findings f
+                    JOIN sessions s ON f.session_id = s.session_id
+                    WHERE s.project_id = ? AND f.subject = ?
+                )
+                ORDER BY CASE
+                    WHEN created_timestamp GLOB '[0-9]*.[0-9]*' OR created_timestamp GLOB '[0-9]*'
+                    THEN CAST(created_timestamp AS REAL)
+                    ELSE strftime('%s', created_timestamp)
+                END DESC
             """
             params = (project_id, subject, project_id, subject)
         else:
+            # NOTE: created_timestamp has mixed formats (epoch float vs datetime string)
+            # Wrap in subquery to apply CASE-based sorting after UNION
             query = """
-                SELECT id, session_id, goal_id, subtask_id, finding, created_timestamp, finding_data, subject, impact, project_id, 'project' as scope 
-                FROM project_findings 
-                WHERE project_id = ? 
-                UNION ALL
-                SELECT f.id, f.session_id, f.goal_id, f.subtask_id, f.finding, f.created_timestamp, f.finding_data, f.subject, f.impact, s.project_id, 'session' as scope 
-                FROM session_findings f
-                JOIN sessions s ON f.session_id = s.session_id
-                WHERE s.project_id = ?
-                ORDER BY created_timestamp DESC
+                SELECT * FROM (
+                    SELECT id, session_id, goal_id, subtask_id, finding, created_timestamp, finding_data, subject, impact, project_id, 'project' as scope
+                    FROM project_findings
+                    WHERE project_id = ?
+                    UNION ALL
+                    SELECT f.id, f.session_id, f.goal_id, f.subtask_id, f.finding, f.created_timestamp, f.finding_data, f.subject, f.impact, s.project_id, 'session' as scope
+                    FROM session_findings f
+                    JOIN sessions s ON f.session_id = s.session_id
+                    WHERE s.project_id = ?
+                )
+                ORDER BY CASE
+                    WHEN created_timestamp GLOB '[0-9]*.[0-9]*' OR created_timestamp GLOB '[0-9]*'
+                    THEN CAST(created_timestamp AS REAL)
+                    ELSE strftime('%s', created_timestamp)
+                END DESC
             """
             params = (project_id, project_id)
         
