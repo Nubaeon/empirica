@@ -1,0 +1,33 @@
+{
+  "goal_id": "e9fc0e26-ce12-4804-a2d0-38f36fb76244",
+  "session_id": "9e802e9d-1f51-4c58-a6cf-8d490a83a666",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-06T14:03:27.133331+00:00",
+  "goal_data": {
+    "objective": "Add 'explain' command to docpistemic for generic project documentation retrieval",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "docpistemic explain --topic works on any project",
+      "Extracts relevant sections from project docs",
+      "Returns JSON with sources and suggestions"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {
+      "project": "docpistemic",
+      "relates_to": "docs-explain"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-06T14:03:27.133345+00:00",
+      "action": "created"
+    }
+  ]
+}
