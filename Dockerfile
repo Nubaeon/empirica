@@ -30,8 +30,7 @@ RUN pip install --no-cache-dir /tmp/empirica-1.2.4-py3-none-any.whl \
 # Create directory for user data
 RUN mkdir -p /data/.empirica
 
-# Copy documentation to accessible location
-COPY docs/system-prompts/CANONICAL_CORE.md /app/docs/CANONICAL_CORE.md
+# Copy documentation to accessible location (if exists)
 COPY README.md /app/README.md
 
 # Set environment variables
