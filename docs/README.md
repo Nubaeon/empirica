@@ -1,136 +1,67 @@
 # Empirica Documentation
 
-**Current Version:** 1.2.2
+**Current Version:** 1.2.3
 **Status:** Production Ready
 
 ---
 
-## Quick Navigation
+## Documentation Split
 
-### 📖 Getting Started
+Documentation is organized by audience:
 
-- **[01_START_HERE.md](01_START_HERE.md)** - Complete getting started guide
-- **[02_INSTALLATION.md](02_INSTALLATION.md)** - Installation instructions
-- **[03_TROUBLESHOOTING.md](03_TROUBLESHOOTING.md)** - Common issues and solutions
-- **[EMPIRICA_EXPLAINED_SIMPLE.md](EMPIRICA_EXPLAINED_SIMPLE.md)** - Plain-language overview
+### 🤖 AI-First Docs (This folder)
 
-### 🧠 Core Concepts
+Documentation designed for AI context loading - maps directly to code classes.
 
-- **[NOETIC_PRAXIC_FRAMEWORK.md](architecture/NOETIC_PRAXIC_FRAMEWORK.md)** - Understanding the dual-phase workflow
-- **[CASCADE Workflow](architecture/CHECK_SEMANTICS_FORMALIZATION.md)** - Core workflow patterns
-- **[Epistemic Vectors](architecture/EPISTEMIC_VECTOR_INTERPRETER.md)** - 13-dimensional vector space
+- **[architecture/](architecture/)** - Core system architecture (Sentinel, EpistemicBus, etc.)
+- **[reference/](reference/)** - API reference, database schemas, configuration
+- **[guides/](guides/)** - AI workflow guides
 
-### 📚 Documentation Categories
+### 👤 Human Docs
 
-#### [Reference Documentation](reference/)
-- **[CLI Commands Reference](reference/CLI_COMMANDS_UNIFIED.md)** - Complete unified command reference
-- **[Python API Reference](reference/api/)** - Modular API documentation
-- **[Database Schema Reference](reference/DATABASE_SCHEMA_UNIFIED.md)** - Complete schema documentation
+Documentation for human readers: [human/](human/)
 
-#### [Architecture Documentation](architecture/)
-- **[Storage Architecture](architecture/STORAGE_ARCHITECTURE_COMPLETE.md)** - Data persistence design
-- **[CLI Design Philosophy](architecture/CLI_DESIGN_PHILOSOPHY.md)** - Context-aware architecture
-- **[Memory Compact Spec](architecture/MEMORY_COMPACT_SPEC.md)** - Session continuity
-
-#### [Guides](guides/)
-- **[First Time Setup](guides/FIRST_TIME_SETUP.md)** - Initial configuration guide
-- **[Session-Goal Workflow](guides/SESSION_GOAL_WORKFLOW.md)** - Managing sessions and goals
-- **[MCP Installation](guides/MCP_INSTALLATION.md)** - MCP setup and configuration
-- **[Auto Issue Capture](guides/AUTO_ISSUE_CAPTURE_GUIDE.md)** - Issue tracking automation
-- **[Multi-Session Learning](guides/MULTI_SESSION_LEARNING.md)** - Cross-session knowledge
-
-#### [Integrations](integrations/)
-- **[BEADS Git Bridge](integrations/BEADS_GIT_BRIDGE.md)** - Git integration for AI agents
-- **[BEADS Integration Design](integrations/BEADS_INTEGRATION_DESIGN.md)** - Integration architecture
-
-#### [System Prompts](system-prompts/)
-- **[CANONICAL_CORE.md](system-prompts/CANONICAL_CORE.md)** - AI-agnostic source of truth
-- **[CLAUDE.md](system-prompts/CLAUDE.md)** - Claude-specific prompt
-- **[Architecture README](system-prompts/README.md)** - Multi-AI prompt management
-
-### 🔍 Discovery
-
-- **[Semantic Index](SEMANTIC_INDEX.yaml)** - Find docs by concept, tag, or question
-- **[Feature Status](FEATURE_STATUS.md)** - Current feature implementation status
+- **[human/end-users/](human/end-users/)** - Getting started, installation, conceptual guides
+- **[human/developers/](human/developers/)** - AI integration, system prompts, technical setup
 
 ---
 
-## Documentation Structure
+## Architecture (AI Limbs)
 
-```
-docs/
-├── 01_START_HERE.md                  # Getting started
-├── 02_INSTALLATION.md                # Installation
-├── 03_TROUBLESHOOTING.md             # Troubleshooting
-├── EMPIRICA_EXPLAINED_SIMPLE.md      # Plain-language overview
-├── FEATURE_STATUS.md                 # Feature status
-├── README.md                         # This file
-├── SEMANTIC_INDEX.yaml               # Concept search
-│
-├── reference/                        # Technical references
-│   ├── CLI_COMMANDS_UNIFIED.md       # CLI reference
-│   ├── DATABASE_SCHEMA_UNIFIED.md    # Database schema
-│   └── api/                          # Python API docs
-│
-├── architecture/                     # System design
-│   ├── NOETIC_PRAXIC_FRAMEWORK.md    # Dual-phase workflow
-│   ├── STORAGE_ARCHITECTURE_COMPLETE.md
-│   └── ...
-│
-├── guides/                           # Step-by-step guides
-│   ├── FIRST_TIME_SETUP.md
-│   ├── SESSION_GOAL_WORKFLOW.md
-│   └── ...
-│
-├── integrations/                     # External integrations
-│   └── BEADS_*.md
-│
-├── system-prompts/                   # AI configuration
-│   ├── CANONICAL_CORE.md             # Source of truth
-│   ├── CLAUDE.md, QWEN.md, etc.      # Model-specific
-│   └── model_deltas/                 # Model additions
-│
-└── _archive/                         # Archived documentation
-```
+These docs document actual code classes for AI context loading:
+
+| Doc | Classes Covered |
+|-----|-----------------|
+| [SENTINEL_ARCHITECTURE.md](architecture/SENTINEL_ARCHITECTURE.md) | Sentinel, GateAction, NoeticFilter, AxiologicGate |
+| [EPISTEMIC_BUS.md](architecture/EPISTEMIC_BUS.md) | EpistemicBus, EpistemicEvent, EpistemicObserver |
+| [CANONICAL_STORAGE.md](architecture/CANONICAL_STORAGE.md) | GitNotesStorage, CheckpointStorage, SessionSync |
+| [SELF_MONITORING.md](architecture/SELF_MONITORING.md) | MirrorDriftMonitor, MemoryGapDetector |
+| [HANDOFF_SYSTEM.md](architecture/HANDOFF_SYSTEM.md) | EpistemicHandoffReportGenerator |
+| [COMPLETION_TRACKING.md](architecture/COMPLETION_TRACKING.md) | CompletionTracker, GitProgressQuery |
+| [ASSESSMENT_AND_SIGNALING.md](architecture/ASSESSMENT_AND_SIGNALING.md) | ComponentAssessor, SignalingState |
+| [SUPPORTING_COMPONENTS.md](architecture/SUPPORTING_COMPONENTS.md) | CheckpointSigner, ContextLoadBalancer |
 
 ---
 
-## Contributing to Documentation
+## Reference
 
-### For Generated Docs (CLI, API, Schema):
-
-**Don't edit manually!** They're auto-generated.
-
-Instead:
-1. Make changes to the source code
-2. Regenerate docs with scripts in `dev_scripts/doc_regeneration/`
-3. Commit both code + generated docs
-
-### For Conceptual Docs:
-
-Edit freely! These explain concepts, philosophy, and design decisions.
-
-### For System Prompts:
-
-1. Edit `system-prompts/CANONICAL_CORE.md` for all AIs
-2. Edit `system-prompts/model_deltas/<model>.md` for specific AIs
-3. Run `python3 scripts/sync_system_prompts.py` to regenerate
+- **[reference/api/](reference/api/)** - Python API by module
+- **[reference/DATABASE_SCHEMA_UNIFIED.md](reference/DATABASE_SCHEMA_UNIFIED.md)** - Database schema
+- **[reference/CONFIGURATION_REFERENCE.md](reference/CONFIGURATION_REFERENCE.md)** - Config options
+- **[reference/CHANGELOG.md](reference/CHANGELOG.md)** - Version history
 
 ---
 
-## Support
+## Documentation Health
 
-**Questions about the system?**
-- Read: [Canonical Core Prompt](system-prompts/CANONICAL_CORE.md)
-- Check: [CLI Commands Reference](reference/CLI_COMMANDS_UNIFIED.md)
-- Search: [Semantic Index](SEMANTIC_INDEX.yaml)
+Run `python scripts/doc_health_audit.py` to check:
+- Code reference validity (do referenced classes exist?)
+- Staleness (how old?)
+- Redundancy (covered elsewhere?)
 
-**Found a bug in docs?**
-- If in generated docs → bug is in source code, fix there
-- If in conceptual docs → edit directly and submit PR
+Docs with <30% valid code references go to `human/` or `_archive/`.
 
 ---
 
 **System Status:** Production Ready ✅
-**Documentation Coverage:** Active maintenance
-**Version:** 1.2.2
+**AI Doc Coverage:** 86.9%
