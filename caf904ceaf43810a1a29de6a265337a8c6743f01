@@ -1,0 +1,28 @@
+{
+  "goal_id": "29ae58c9-4a28-4bbc-89ba-18a277cfd7d9",
+  "session_id": "1866545f-ce99-417b-b089-01450657f981",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-06T18:24:28.856169+00:00",
+  "goal_data": {
+    "objective": "Build Empirica Self-Model: Pattern extraction from session evidence to create actionable relationship graph",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Self-model can answer 'what works when X' queries with evidence-backed patterns"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-06T18:24:28.856185+00:00",
+      "action": "created"
+    }
+  ]
+}
