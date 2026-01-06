@@ -608,6 +608,131 @@ class LessonStorageManager:
 
         self._conn.commit()
 
+    # ==================== IMMUNE SYSTEM: CONFIDENCE DECAY ====================
+
+    def decay_related_lessons(
+        self,
+        finding_text: str,
+        decay_amount: float = 0.05,
+        min_confidence: float = 0.3,
+        keywords_threshold: int = 2
+    ) -> List[Dict]:
+        """
+        Decay confidence of lessons related to a finding.
+
+        When a finding is logged that corrects or supersedes lesson content,
+        the related lessons' confidence should decay. This implements the
+        "immune system" pattern for knowledge health.
+
+        Args:
+            finding_text: The finding content
+            decay_amount: How much to decay confidence (default 0.05)
+            min_confidence: Minimum confidence floor (default 0.3)
+            keywords_threshold: Minimum keyword matches to trigger decay
+
+        Returns:
+            List of affected lessons with decay info
+        """
+        import re
+
+        # Extract keywords from finding (simple tokenization)
+        # Remove common words and keep significant terms
+        stop_words = {
+            'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+            'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+            'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'to', 'of',
+            'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through',
+            'during', 'before', 'after', 'above', 'below', 'between', 'under',
+            'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where',
+            'why', 'how', 'all', 'each', 'few', 'more', 'most', 'other', 'some',
+            'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too',
+            'very', 'just', 'and', 'but', 'or', 'if', 'because', 'until', 'while',
+            'this', 'that', 'these', 'those', 'it', 'its', 'use', 'using', 'used'
+        }
+
+        # Tokenize and filter
+        words = re.findall(r'\b[a-zA-Z]{3,}\b', finding_text.lower())
+        keywords = [w for w in words if w not in stop_words]
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_keywords = []
+        for kw in keywords:
+            if kw not in seen:
+                seen.add(kw)
+                unique_keywords.append(kw)
+
+        if not unique_keywords:
+            return []
+
+        # Search for lessons with matching keywords
+        cursor = self._conn.cursor()
+        affected_lessons = []
+
+        # Build dynamic SQL for keyword matching
+        keyword_conditions = []
+        params = []
+        for kw in unique_keywords[:20]:  # Limit to top 20 keywords
+            keyword_conditions.append(
+                "(LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(tags) LIKE ?)"
+            )
+            pattern = f"%{kw}%"
+            params.extend([pattern, pattern, pattern])
+
+        if not keyword_conditions:
+            return []
+
+        # Query lessons that match keywords
+        query = f"""
+            SELECT id, name, description, source_confidence, tags
+            FROM lessons
+            WHERE {' OR '.join(keyword_conditions)}
+        """
+
+        cursor.execute(query, params)
+
+        for row in cursor.fetchall():
+            lesson_id, name, description, current_conf, tags = row
+
+            # Count keyword matches for this lesson
+            lesson_text = f"{name} {description} {tags or ''}".lower()
+            match_count = sum(1 for kw in unique_keywords if kw in lesson_text)
+
+            # Only decay if enough keywords match
+            if match_count >= keywords_threshold:
+                # Calculate new confidence (with floor)
+                new_conf = max(min_confidence, current_conf - decay_amount)
+
+                if new_conf < current_conf:
+                    # Update the confidence
+                    cursor.execute("""
+                        UPDATE lessons
+                        SET source_confidence = ?,
+                            updated_timestamp = ?
+                        WHERE id = ?
+                    """, (new_conf, time.time(), lesson_id))
+
+                    affected_lessons.append({
+                        'lesson_id': lesson_id,
+                        'name': name,
+                        'previous_confidence': current_conf,
+                        'new_confidence': new_conf,
+                        'decay_amount': current_conf - new_conf,
+                        'matched_keywords': match_count,
+                        'reason': 'finding_supersedes'
+                    })
+
+                    logger.info(
+                        f"IMMUNE: Decayed lesson '{name}' confidence "
+                        f"{current_conf:.2f} → {new_conf:.2f} "
+                        f"({match_count} keyword matches)"
+                    )
+
+        if affected_lessons:
+            self._conn.commit()
+
+        return affected_lessons
+
     # ==================== STATS ====================
 
     def stats(self) -> Dict:
