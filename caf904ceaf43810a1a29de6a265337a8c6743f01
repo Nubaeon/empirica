@@ -1,0 +1,28 @@
+{
+  "goal_id": "50ec16bd-cfbb-4a4b-b495-40fe215b4730",
+  "session_id": "1866545f-ce99-417b-b089-01450657f981",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-06T16:07:30.038551+00:00",
+  "goal_data": {
+    "objective": "Review and restructure Empirica licensing: Core (MIT supported) vs Experimental (MIT unsupported) vs Premium (corporate)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-06T16:07:30.038566+00:00",
+      "action": "created"
+    }
+  ]
+}
