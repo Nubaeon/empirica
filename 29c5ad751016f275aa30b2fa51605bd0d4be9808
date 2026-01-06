@@ -1,0 +1,28 @@
+{
+  "goal_id": "10297772-ebe1-42d4-a255-134eb23821ce",
+  "session_id": "fb029a71-d2ab-4de1-a91a-395aa348186a",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-06T20:26:27.314213+00:00",
+  "goal_data": {
+    "objective": "Research immune system architecture to inform cognitive immune system design",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Answered 5 unknowns: T-cell coordination, clonal selection, memory formation, tolerance threshold, autoimmune prevention. Mapped each to Empirica equivalent with design implications."
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-06T20:26:27.314227+00:00",
+      "action": "created"
+    }
+  ]
+}
