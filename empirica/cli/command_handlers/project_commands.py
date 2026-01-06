@@ -2065,3 +2065,197 @@ def handle_workspace_map_command(args):
     except Exception as e:
         handle_cli_error(e, "Workspace map", getattr(args, 'verbose', False))
         return 1
+"""
+Project Switch Command Handler
+Implements empirica project-switch for clear AI agent UX when changing projects
+"""
+
+import json
+import logging
+import os
+import subprocess
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+
+def handle_project_switch_command(args):
+    """
+    Handle project-switch command - Switch to a different project with context loading
+    
+    Provides clear UX for AI agents:
+    1. Resolves project by name or ID
+    2. Shows "you are here" banner
+    3. Automatically runs project-bootstrap
+    4. Shows next steps
+    
+    Does NOT create a session (explicit action for user)
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        
+        project_identifier = args.project_identifier
+        output_format = getattr(args, 'output', 'human')
+        
+        db = SessionDatabase()
+        
+        # 1. Resolve project (by name or ID)
+        project_id = db.projects.resolve_project_id(project_identifier)
+        
+        if not project_id:
+            error_msg = f"Project not found: {project_identifier}"
+            hint = "Run 'empirica project-list' to see available projects, or 'empirica project-init' to create one"
+            
+            if output_format == 'json':
+                print(json.dumps({
+                    'ok': False,
+                    'error': error_msg,
+                    'hint': hint
+                }))
+            else:
+                print(f"❌ {error_msg}")
+                print(f"\nTip: {hint}")
+            
+            db.close()
+            return None
+        
+        # 2. Get project details
+        project = db.projects.get_project(project_id)
+        if not project:
+            error_msg = f"Project ID {project_id} not found in database"
+            
+            if output_format == 'json':
+                print(json.dumps({'ok': False, 'error': error_msg}))
+            else:
+                print(f"❌ {error_msg}")
+            
+            db.close()
+            return None
+        
+        project_name = project['name']
+        repos = json.loads(project['repos']) if project.get('repos') else []
+        
+        # 3. Try to find project git root
+        project_path = None
+        cwd = Path.cwd()
+        
+        # Check if we're already in a project directory
+        try:
+            result = subprocess.run(
+                ['git', 'rev-parse', '--show-toplevel'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                git_root = Path(result.stdout.strip())
+                
+                # Check if this git root matches the project
+                try:
+                    result = subprocess.run(
+                        ['git', 'remote', 'get-url', 'origin'],
+                        cwd=git_root,
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if result.returncode == 0:
+                        current_remote = result.stdout.strip()
+                        # Check if current remote matches any project repo
+                        if any(repo in current_remote or current_remote in repo for repo in repos):
+                            project_path = git_root
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        
+        # If not in project dir, we can't change directory (shell limitation)
+        # Just show the context banner and bootstrap data
+        
+        db.close()
+        
+        # 4. Show context banner
+        if output_format == 'human':
+            print()
+            print("━" * 70)
+            print("🎯 PROJECT CONTEXT SWITCH")
+            print("━" * 70)
+            print()
+            print(f"📁 Project: {project_name}")
+            print(f"🆔 Project ID: {project_id[:8]}...")
+            if project_path:
+                print(f"📍 Location: {project_path}")
+            else:
+                print(f"📍 Repositories: {', '.join(repos) if repos else 'None configured'}")
+            print(f"📊 Database: .empirica/sessions/sessions.db (project-local)")
+            print()
+        
+        # 5. Run project-bootstrap automatically
+        if output_format == 'human':
+            print("📋 Loading project context...")
+            print()
+        
+        # Import and call bootstrap handler
+        from empirica.cli.command_handlers.project_commands import handle_project_bootstrap_command
+        
+        # Create bootstrap args
+        class BootstrapArgs:
+            def __init__(self):
+                self.project_id = project_id
+                self.output = output_format
+                self.session_id = None
+                self.context_to_inject = False
+                self.task_description = None
+                self.epistemic_state = None
+                self.subject = None
+                self.include_live_state = False
+                self.trigger = None
+                self.depth = 'moderate'  # Balanced depth for switching
+                self.ai_id = None
+        
+        bootstrap_result = handle_project_bootstrap_command(BootstrapArgs())
+        
+        # 6. Show next steps
+        if output_format == 'human':
+            print()
+            print("━" * 70)
+            print("💡 Next Steps")
+            print("━" * 70)
+            print()
+            print("  1. Create a session to start work:")
+            print(f"     empirica session-create --ai-id <your-id>")
+            print()
+            print("  2. Find work matching your capability:")
+            print(f"     empirica goals-ready")
+            print()
+            if project_path:
+                print(f"  3. Navigate to project directory:")
+                print(f"     cd {project_path}")
+                print()
+            print("⚠️  All commands now write to this project's database.")
+            print("    Findings, sessions, goals → stored in this project context.")
+            print()
+        elif output_format == 'json':
+            result = {
+                'ok': True,
+                'project_id': project_id,
+                'project_name': project_name,
+                'repos': repos,
+                'project_path': str(project_path) if project_path else None,
+                'next_steps': [
+                    'empirica session-create --ai-id <your-id>',
+                    'empirica goals-ready'
+                ],
+                'bootstrap_result': bootstrap_result
+            }
+            print(json.dumps(result, indent=2))
+        
+        return None
+        
+    except Exception as e:
+        logger.exception(f"Error in project-switch: {e}")
+        if output_format == 'json':
+            print(json.dumps({'ok': False, 'error': str(e)}))
+        else:
+            print(f"❌ Error switching project: {e}")
+        return None
