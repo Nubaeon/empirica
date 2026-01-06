@@ -1,0 +1,33 @@
+{
+  "goal_id": "e4b7ad00-af34-46d9-85fe-b427983de216",
+  "session_id": "9e802e9d-1f51-4c58-a6cf-8d490a83a666",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-06T13:43:22.375498+00:00",
+  "goal_data": {
+    "objective": "Build composed workflow lessons layer - chain atomics via lesson-path when direct use proves valuable",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Atomics used directly 5+ times",
+      "Repetition pain documented",
+      "Composed layer reduces manual chaining"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {
+      "trigger": "repeated manual atomic chaining",
+      "depends_on": "proven atomic value"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-06T13:43:22.375515+00:00",
+      "action": "created"
+    }
+  ]
+}
