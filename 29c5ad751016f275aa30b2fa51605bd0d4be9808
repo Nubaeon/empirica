@@ -1,0 +1,28 @@
+{
+  "goal_id": "966851ad-0082-46f5-b64f-9bc5db564606",
+  "session_id": "fb029a71-d2ab-4de1-a91a-395aa348186a",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-06T20:26:28.025593+00:00",
+  "goal_data": {
+    "objective": "Implement knowledge graph edge creation on lesson events",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Edges created on: lesson-load (enables), finding-log with decay (supersedes), lesson-replay success (strengthens). Graph populated with real relationships."
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-06T20:26:28.025607+00:00",
+      "action": "created"
+    }
+  ]
+}
