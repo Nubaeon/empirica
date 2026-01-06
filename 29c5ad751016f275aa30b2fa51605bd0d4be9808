@@ -1,0 +1,28 @@
+{
+  "goal_id": "6be20c8a-7864-4f17-b6ed-176923b61799",
+  "session_id": "fb029a71-d2ab-4de1-a91a-395aa348186a",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-06T20:26:28.748446+00:00",
+  "goal_data": {
+    "objective": "Implement adaptive feedback loop for edge weight updates",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Weights update on: replay success (+), decay event (-), goal completion (trace path, strengthen). Clonal selection pattern implemented for lesson recommendation."
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-06T20:26:28.748463+00:00",
+      "action": "created"
+    }
+  ]
+}
