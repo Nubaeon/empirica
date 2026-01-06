@@ -237,6 +237,14 @@ def add_checkpoint_parsers(subparsers):
     project_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     project_list_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
+    # Project switch command
+    project_switch_parser = subparsers.add_parser(
+        'project-switch',
+        help='Switch to a different project with clear context banner'
+    )
+    project_switch_parser.add_argument('project_identifier', help='Project name or UUID')
+    project_switch_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+
     # Project bootstrap command
     project_bootstrap_parser = subparsers.add_parser(
         'project-bootstrap',
