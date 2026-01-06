@@ -124,15 +124,22 @@ class EpistemicDocsAgent:
 
         return list(set(commands))
 
-    def _extract_core_modules(self) -> list[str]:
-        """Extract key classes/modules from core/."""
+    def _extract_core_modules(self) -> tuple[list[str], dict[str, list[str]]]:
+        """
+        Extract ALL classes/modules from core/ with their categories.
+
+        Returns:
+            tuple: (all_classes, category_map)
+                - all_classes: List of all discovered class names
+                - category_map: Dict mapping directory name -> list of classes
+        """
         core_dir = self.root / "empirica" / "core"
         modules = []
+        category_map = {}
 
         if not core_dir.exists():
-            return modules
+            return modules, category_map
 
-        # Key module patterns to look for
         for py_file in core_dir.rglob("*.py"):
             if "__pycache__" in str(py_file):
                 continue
@@ -142,14 +149,28 @@ class EpistemicDocsAgent:
                 # Find class definitions
                 class_pattern = r"^class\s+(\w+)\s*[\(:]"
                 matches = re.findall(class_pattern, content, re.MULTILINE)
+
+                # Get category from parent directory
+                rel_path = py_file.relative_to(core_dir)
+                if len(rel_path.parts) > 1:
+                    # e.g., lessons/storage.py -> "Lessons"
+                    category = rel_path.parts[0].replace("_", " ").title()
+                else:
+                    # e.g., sentinel.py -> "Sentinel"
+                    category = py_file.stem.replace("_", " ").title()
+
                 for match in matches:
                     # Filter out internal/private classes
                     if not match.startswith("_") and len(match) > 3:
                         modules.append(match)
+                        # Add to category map
+                        if category not in category_map:
+                            category_map[category] = []
+                        category_map[category].append(match)
             except Exception:
                 pass
 
-        return list(set(modules))
+        return list(set(modules)), category_map
 
     def _check_if_documented(self, term: str, docs_content: str) -> bool:
         """Check if a term appears in documentation."""
@@ -184,73 +205,70 @@ class EpistemicDocsAgent:
             undocumented=sorted(undocumented)
         )
 
-    def assess_core_coverage(self, docs_content: str) -> FeatureCoverage:
-        """Assess core module documentation coverage."""
-        modules = self._extract_core_modules()
+    def assess_core_coverage(self, docs_content: str) -> tuple[FeatureCoverage, dict[str, list[str]]]:
+        """
+        Assess core module documentation coverage - ALL discovered classes.
+
+        Returns:
+            tuple: (coverage, category_map) for use by assess_feature_categories
+        """
+        modules, category_map = self._extract_core_modules()
         documented = []
         undocumented = []
 
-        # Key user-facing modules to prioritize
-        priority_modules = [
-            "SessionDatabase", "GitEnhancedReflexLogger", "Sentinel",
-            "PersonaProfile", "PersonaManager", "EpistemicBus",
-            "BayesianBeliefManager", "ContextLoadBalancer", "MemoryGapDetector",
-            "MirrorDriftMonitor", "AIIdentity", "CheckpointSigner",
-            "EpistemicAgentConfig", "EmergedPersona", "AutoIssueCaptureService",
-            "CoherenceValidator", "CompletionTracker", "FindingsDeprecationEngine"
-        ]
-
-        # Focus on priority modules
-        for module in priority_modules:
-            if module in modules:
-                if self._check_if_documented(module, docs_content):
-                    documented.append(module)
-                else:
-                    undocumented.append(module)
+        # Check ALL discovered modules - no static filtering
+        for module in modules:
+            if self._check_if_documented(module, docs_content):
+                documented.append(module)
+            else:
+                undocumented.append(module)
 
         return FeatureCoverage(
             name="Core Modules",
-            total=len(priority_modules),
+            total=len(modules),
             documented=len(documented),
-            undocumented=undocumented
-        )
+            undocumented=sorted(undocumented)
+        ), category_map
 
-    def assess_feature_categories(self, docs_content: str) -> list[FeatureCoverage]:
-        """Assess coverage of major feature categories."""
-        categories = {
-            "Sentinel System": ["sentinel", "sentinel-orchestrate", "sentinel-status", "domain profile", "safety gate"],
-            "Persona System": ["persona", "persona-list", "emerged persona", "persona registry"],
-            "Identity/Signing": ["identity", "checkpoint sign", "ed25519", "cryptographic"],
-            "Investigation Branching": ["investigate-create-branch", "turtle", "multi-branch", "branch merge"],
-            "Issue Capture": ["issue-list", "issue-resolve", "auto-capture", "issue handoff"],
-            "Architecture Assessment": ["assess-component", "assess-directory", "architecture health"],
-            "Agent Spawning": ["agent-spawn", "agent-aggregate", "sub-agent"],
-            "Bayesian Calibration": ["bayesian", "belief calibration", "calibration loop"],
-            "Drift Detection": ["drift", "mirror drift", "check-drift"],
-            "Context Load Balancing": ["context load", "token reduction", "context routing"]
-        }
+    def assess_feature_categories(self, docs_content: str, category_map: dict[str, list[str]]) -> list[FeatureCoverage]:
+        """
+        Assess coverage of feature categories - DYNAMICALLY discovered from code.
 
+        Args:
+            docs_content: All documentation text
+            category_map: Dict from _extract_core_modules mapping directory -> classes
+        """
         results = []
-        for category, terms in categories.items():
-            found = sum(1 for term in terms if term.lower() in docs_content)
+
+        # Use dynamically discovered categories from code structure
+        for category_name, classes in sorted(category_map.items()):
+            documented = []
+            undocumented = []
+
+            for cls in classes:
+                if self._check_if_documented(cls, docs_content):
+                    documented.append(cls)
+                else:
+                    undocumented.append(cls)
+
             coverage = FeatureCoverage(
-                name=category,
-                total=len(terms),
-                documented=found,
-                undocumented=[t for t in terms if t.lower() not in docs_content]
+                name=category_name,
+                total=len(classes),
+                documented=len(documented),
+                undocumented=sorted(undocumented)
             )
             results.append(coverage)
 
         return results
 
     def run_assessment(self) -> dict[str, Any]:
-        """Run full documentation assessment."""
+        """Run full documentation assessment with DYNAMIC discovery."""
         docs_content = self._load_all_docs_content()
 
-        # Assess each category
+        # Assess each category - core_coverage now returns category_map for features
         cli_coverage = self.assess_cli_coverage(docs_content)
-        core_coverage = self.assess_core_coverage(docs_content)
-        feature_categories = self.assess_feature_categories(docs_content)
+        core_coverage, category_map = self.assess_core_coverage(docs_content)
+        feature_categories = self.assess_feature_categories(docs_content, category_map)
 
         self.categories = [cli_coverage, core_coverage] + feature_categories
 
