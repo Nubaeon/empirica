@@ -60,6 +60,7 @@ from .agent_parsers import add_agent_parsers
 from .sentinel_parsers import add_sentinel_parsers
 from .persona_parsers import add_persona_parsers
 from .release_parsers import add_release_parsers
+from .lesson_parsers import add_lesson_parsers
 
 __all__ = [
     'format_help_text',
@@ -84,4 +85,5 @@ __all__ = [
     'add_sentinel_parsers',
     'add_persona_parsers',
     'add_release_parsers',
+    'add_lesson_parsers',
 ]

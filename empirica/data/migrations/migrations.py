@@ -290,6 +290,183 @@ def migration_013_session_scoped_breadcrumbs(cursor: sqlite3.Cursor):
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_mistakes_goal ON session_mistakes(goal_id)")
 
 
+# Migration 14: Add lessons and knowledge graph tables
+def migration_014_lessons_and_knowledge_graph(cursor: sqlite3.Cursor):
+    """
+    Add tables for Empirica Lessons - Epistemic Procedural Knowledge.
+
+    4-layer architecture:
+    - HOT: In-memory (not stored)
+    - WARM: lessons, lesson_steps, lesson_epistemic_deltas (this migration)
+    - SEARCH: Qdrant vectors (external)
+    - COLD: YAML files (filesystem)
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # lessons - Core lesson metadata (WARM layer)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lessons (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            version TEXT NOT NULL,
+            description TEXT,
+            domain TEXT,
+            tags TEXT,  -- Comma-separated
+
+            -- Epistemic quality metrics
+            source_confidence REAL NOT NULL,
+            teaching_quality REAL NOT NULL,
+            reproducibility REAL NOT NULL,
+
+            -- Stats
+            step_count INTEGER DEFAULT 0,
+            prereq_count INTEGER DEFAULT 0,
+            replay_count INTEGER DEFAULT 0,
+            success_rate REAL DEFAULT 0.0,
+
+            -- Marketplace
+            suggested_tier TEXT DEFAULT 'free',  -- free, verified, pro, enterprise
+            suggested_price REAL DEFAULT 0.0,
+
+            -- Metadata
+            created_by TEXT,
+            created_timestamp REAL NOT NULL,
+            updated_timestamp REAL NOT NULL,
+
+            -- Full lesson data (JSON for cold storage reference)
+            lesson_data TEXT NOT NULL,
+
+            UNIQUE(name, version)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lessons_domain ON lessons(domain)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lessons_tier ON lessons(suggested_tier)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lessons_created ON lessons(created_timestamp)")
+    logger.info("✓ Created lessons table")
+
+    # lesson_steps - Procedural steps (for fast lookup without full YAML)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lesson_steps (
+            id TEXT PRIMARY KEY,
+            lesson_id TEXT NOT NULL,
+            step_order INTEGER NOT NULL,
+            phase TEXT NOT NULL,  -- 'noetic' or 'praxic'
+            action TEXT NOT NULL,
+            target TEXT,
+            code TEXT,
+            critical BOOLEAN DEFAULT 0,
+            expected_outcome TEXT,
+            error_recovery TEXT,
+            timeout_ms INTEGER,
+
+            FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE,
+            UNIQUE(lesson_id, step_order)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lesson_steps_lesson ON lesson_steps(lesson_id)")
+    logger.info("✓ Created lesson_steps table")
+
+    # lesson_epistemic_deltas - What vectors each lesson improves
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lesson_epistemic_deltas (
+            id TEXT PRIMARY KEY,
+            lesson_id TEXT NOT NULL,
+            vector_name TEXT NOT NULL,  -- 'know', 'do', 'context', etc.
+            delta_value REAL NOT NULL,  -- Positive = improvement, negative = reduction
+
+            FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE,
+            UNIQUE(lesson_id, vector_name)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lesson_deltas_lesson ON lesson_epistemic_deltas(lesson_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lesson_deltas_vector ON lesson_epistemic_deltas(vector_name)")
+    logger.info("✓ Created lesson_epistemic_deltas table")
+
+    # lesson_prerequisites - What's required before executing a lesson
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lesson_prerequisites (
+            id TEXT PRIMARY KEY,
+            lesson_id TEXT NOT NULL,
+            prereq_type TEXT NOT NULL,  -- 'lesson', 'skill', 'tool', 'context', 'epistemic'
+            prereq_id TEXT NOT NULL,
+            prereq_name TEXT NOT NULL,
+            required_level REAL DEFAULT 0.5,
+
+            FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lesson_prereqs_lesson ON lesson_prerequisites(lesson_id)")
+    logger.info("✓ Created lesson_prerequisites table")
+
+    # lesson_corrections - Human/AI corrections received during creation or replay
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lesson_corrections (
+            id TEXT PRIMARY KEY,
+            lesson_id TEXT NOT NULL,
+            step_order INTEGER NOT NULL,
+            original_action TEXT NOT NULL,
+            corrected_action TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            corrector_type TEXT NOT NULL,  -- 'human' or 'ai'
+            corrector_id TEXT,
+            created_timestamp REAL NOT NULL,
+
+            FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lesson_corrections_lesson ON lesson_corrections(lesson_id)")
+    logger.info("✓ Created lesson_corrections table")
+
+    # knowledge_graph - Relationships between all entities
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS knowledge_graph (
+            id TEXT PRIMARY KEY,
+            source_type TEXT NOT NULL,  -- 'lesson', 'skill', 'domain', 'goal', 'session'
+            source_id TEXT NOT NULL,
+            relation_type TEXT NOT NULL,  -- 'requires', 'enables', 'related_to', 'supersedes', 'derived_from', 'produced', 'discovered'
+            target_type TEXT NOT NULL,
+            target_id TEXT NOT NULL,
+            weight REAL DEFAULT 1.0,
+            created_timestamp REAL NOT NULL,
+            metadata TEXT,  -- JSON for additional context
+
+            UNIQUE(source_type, source_id, relation_type, target_type, target_id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_kg_source ON knowledge_graph(source_type, source_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_kg_target ON knowledge_graph(target_type, target_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_kg_relation ON knowledge_graph(relation_type)")
+    logger.info("✓ Created knowledge_graph table")
+
+    # lesson_replays - Track lesson execution history
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lesson_replays (
+            id TEXT PRIMARY KEY,
+            lesson_id TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            ai_id TEXT,
+            started_timestamp REAL NOT NULL,
+            completed_timestamp REAL,
+            success BOOLEAN,
+            steps_completed INTEGER DEFAULT 0,
+            total_steps INTEGER NOT NULL,
+            error_message TEXT,
+            epistemic_before TEXT,  -- JSON of vectors before
+            epistemic_after TEXT,   -- JSON of vectors after
+            replay_data TEXT,       -- JSON for additional context
+
+            FOREIGN KEY (lesson_id) REFERENCES lessons(id),
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lesson_replays_lesson ON lesson_replays(lesson_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lesson_replays_session ON lesson_replays(session_id)")
+    logger.info("✓ Created lesson_replays table")
+
+    logger.info("✅ Migration 014 complete: Lessons and knowledge graph tables created")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -304,4 +481,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("011_mistakes_project_id", "Add project_id to mistakes_made", migration_011_mistakes_project_id),
     ("012_unknowns_impact", "Add impact scoring to project_unknowns", migration_012_unknowns_impact),
     ("013_session_scoped_breadcrumbs", "Add session-scoped breadcrumb tables (dual-scope Phase 1)", migration_013_session_scoped_breadcrumbs),
+    ("014_lessons_and_knowledge_graph", "Add lessons and knowledge graph tables for epistemic procedural knowledge", migration_014_lessons_and_knowledge_graph),
 ]

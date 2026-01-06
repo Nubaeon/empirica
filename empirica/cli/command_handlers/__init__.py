@@ -140,6 +140,17 @@ from .sentinel_commands import (
     handle_sentinel_status_command,
     handle_sentinel_check_command,
 )
+from .lesson_commands import (
+    handle_lesson_create_command,
+    handle_lesson_load_command,
+    handle_lesson_list_command,
+    handle_lesson_search_command,
+    handle_lesson_recommend_command,
+    handle_lesson_path_command,
+    handle_lesson_replay_start_command,
+    handle_lesson_replay_end_command,
+    handle_lesson_stats_command,
+)
 
 
 # Export all handlers
@@ -295,6 +306,17 @@ __all__ = [
     'handle_sentinel_load_profile_command',
     'handle_sentinel_status_command',
     'handle_sentinel_check_command',
+
+    # Lesson commands (Epistemic Procedural Knowledge)
+    'handle_lesson_create_command',
+    'handle_lesson_load_command',
+    'handle_lesson_list_command',
+    'handle_lesson_search_command',
+    'handle_lesson_recommend_command',
+    'handle_lesson_path_command',
+    'handle_lesson_replay_start_command',
+    'handle_lesson_replay_end_command',
+    'handle_lesson_stats_command',
 
     # Session-end command
     # 'handle_session_end_command',  # removed - use handoff-create
