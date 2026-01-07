@@ -1,0 +1,30 @@
+{
+  "goal_id": "7cc71800-c0c9-4139-b659-0bb7c6dd9301",
+  "session_id": "6caf2b1a-5740-467c-b8f8-bb869ae24e9d",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-07T16:36:03.534345+00:00",
+  "goal_data": {
+    "objective": "Improve assess-directory pattern recognition: Add detection for facade patterns, empty __init__.py files, and other valid architectural patterns to reduce false positives in confidence scoring",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {
+      "target_project": "Docpistemic"
+    }
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-07T16:36:03.534359+00:00",
+      "action": "created"
+    }
+  ]
+}
