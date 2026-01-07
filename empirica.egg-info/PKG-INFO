@@ -67,21 +67,22 @@ Dynamic: license-file
 
 > **AI agents that know what they know—and what they don't**
 
-[![Version](https://img.shields.io/badge/version-1.2.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.3)
+[![Version](https://img.shields.io/badge/version-1.2.4-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.4)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)
 [![Docker](https://img.shields.io/badge/docker-nubaeon%2Fempirica-blue)](https://hub.docker.com/r/nubaeon/empirica)
 
-## What's New in 1.2.3
+## What's New in 1.2.4
 
+- **🔄 project-switch Command** - AI-friendly project switching with clear context banner and automatic bootstrap loading
+- **✅ Vector Format Fixes** - check-submit now accepts flat, structured, and wrapped vector formats
+- **🎭 Persona Schema Validation** - Fixed agent-spawn errors for public_key and focus_domains
+- **📋 Deduplication Fix** - Eliminated duplicate findings/unknowns/dead-ends in project-bootstrap output
 - **🚦 Sentinel Safety Gates** - Human-in-the-loop gates (PROCEED/HALT/BRANCH/REVISE) that bound AI autonomy
 - **🤖 Multi-Agent Spawning** - Spawn epistemic sub-agents with `agent-spawn`, aggregate findings with `agent-aggregate`
 - **🎭 Persona System** - AI identity profiles that emerge from successful epistemic patterns (`persona-list`, `persona-promote`)
 - **🔧 108 CLI Commands** - Full coverage including assessment, trajectory projection, and drift detection
-- **🌙 3-Layer Signaling** - Moon phase indicators (🌑→🌕) for epistemic health at a glance
-- **📈 Trajectory Projection** - Project epistemic learning curves with `trajectory-project`
-- **🐢 Turtle Principle** - Recursive grounding: every claim must trace to verifiable source
 
 ## ⚡ Claude Code Quick Start
 
@@ -157,7 +158,7 @@ Add to `claude_desktop_config.json`:
 
 ### Docker
 ```bash
-docker pull nubaeon/empirica:1.2.3
+docker pull nubaeon/empirica:1.2.4
 ```
 
 ### How It Works Day-to-Day
@@ -255,20 +256,20 @@ pip install empirica[all]
 
 ```bash
 # Pull the latest image
-docker pull nubaeon/empirica:1.2.3
+docker pull nubaeon/empirica:1.2.4
 
 # Run a command
-docker run -it nubaeon/empirica:1.2.3 empirica --help
+docker run -it nubaeon/empirica:1.2.4 empirica --help
 
 # Interactive session with persistent data
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.2.3 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.2.4 /bin/bash
 ```
 
 #### From Source
 
 ```bash
 # Latest stable release
-pip install git+https://github.com/Nubaeon/empirica.git@v1.2.3
+pip install git+https://github.com/Nubaeon/empirica.git@v1.2.4
 
 # Development branch
 pip install git+https://github.com/Nubaeon/empirica.git@develop
