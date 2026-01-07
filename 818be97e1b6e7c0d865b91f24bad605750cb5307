@@ -1,0 +1,28 @@
+{
+  "goal_id": "8c1308ee-3763-48a5-9340-ea5c37a916ed",
+  "session_id": "fad2242f-33f5-4666-b17e-4b1c52733c1b",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-07T15:55:09.049030+00:00",
+  "goal_data": {
+    "objective": "Create tests/ directory for empirica-corp with pytest suite covering CRUD operations, metrics computation, and CLI integration",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-07T15:55:09.049045+00:00",
+      "action": "created"
+    }
+  ]
+}
