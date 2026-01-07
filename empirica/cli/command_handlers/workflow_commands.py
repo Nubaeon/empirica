@@ -50,6 +50,7 @@ def handle_preflight_submit_command(args):
             session_id = config_data.get('session_id')
             vectors = config_data.get('vectors')
             reasoning = config_data.get('reasoning', '')
+            task_context = config_data.get('task_context', '')  # For pattern retrieval
             output_format = 'json'  # AI-first always uses JSON output
 
             # Validate required fields
@@ -65,6 +66,7 @@ def handle_preflight_submit_command(args):
             session_id = args.session_id
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
             reasoning = args.reasoning
+            task_context = getattr(args, 'task_context', '') or ''  # For pattern retrieval
             output_format = getattr(args, 'output', 'json')  # Default to JSON
 
             # Validate required fields for legacy mode
@@ -152,7 +154,31 @@ def handle_preflight_submit_command(args):
             except Exception as e:
                 logger.debug(f"Calibration loading failed (non-fatal): {e}")
 
+            # Get project_id for pattern retrieval
+            project_id = None
+            try:
+                cursor = db.conn.cursor()
+                cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                project_id = row[0] if row else None
+            except Exception:
+                pass
+
             db.close()
+
+            # PATTERN RETRIEVAL: Load relevant patterns based on task_context
+            # This arms the AI with lessons, dead_ends, and findings BEFORE starting work
+            patterns = None
+            if task_context and project_id:
+                try:
+                    from empirica.core.qdrant.pattern_retrieval import retrieve_task_patterns
+                    patterns = retrieve_task_patterns(project_id, task_context)
+                    if patterns and any(patterns.values()):
+                        logger.debug(f"Retrieved patterns: {len(patterns.get('lessons', []))} lessons, "
+                                   f"{len(patterns.get('dead_ends', []))} dead_ends, "
+                                   f"{len(patterns.get('relevant_findings', []))} findings")
+                except Exception as e:
+                    logger.debug(f"Pattern retrieval failed (optional): {e}")
 
             result = {
                 "ok": True,
@@ -177,7 +203,8 @@ def handle_preflight_submit_command(args):
                 "sentinel": {
                     "enabled": SentinelHooks.is_enabled(),
                     "decision": sentinel_decision.value if sentinel_decision else None
-                } if SentinelHooks.is_enabled() else None
+                } if SentinelHooks.is_enabled() else None,
+                "patterns": patterns if patterns and any(patterns.values()) else None
             }
         except Exception as e:
             logger.error(f"Failed to save preflight assessment: {e}")
@@ -374,6 +401,38 @@ def handle_check_command(args):
         else:
             drift_level = "low"
 
+        # PATTERN MATCHING: Check current approach against known failures
+        # This is REACTIVE validation - surfacing warnings before proceeding
+        pattern_warnings = None
+        if project_id:
+            try:
+                from empirica.core.qdrant.pattern_retrieval import check_against_patterns
+
+                # Get approach from config or checkpoint metadata
+                current_approach = None
+                if config_data:
+                    current_approach = config_data.get('approach') or config_data.get('reasoning')
+                if not current_approach and checkpoints:
+                    current_approach = checkpoints[0].get('metadata', {}).get('reasoning')
+
+                pattern_warnings = check_against_patterns(
+                    project_id,
+                    current_approach or "",
+                    current_vectors
+                )
+
+                if pattern_warnings and pattern_warnings.get('has_warnings'):
+                    # Add warnings to suggestions
+                    if pattern_warnings.get('dead_end_matches'):
+                        for de in pattern_warnings['dead_end_matches']:
+                            suggestions.append(f"⚠️ Similar to dead end: {de.get('approach', '')[:50]}... (why: {de.get('why_failed', '')[:50]})")
+                    if pattern_warnings.get('mistake_risk'):
+                        suggestions.append(f"⚠️ {pattern_warnings['mistake_risk']}")
+
+                    logger.debug(f"Pattern warnings: {len(pattern_warnings.get('dead_end_matches', []))} dead_end matches")
+            except Exception as e:
+                logger.debug(f"Pattern matching failed (optional): {e}")
+
         # 6. Create checkpoint with new assessment
         checkpoint_id = git_logger.add_checkpoint(
             phase="CHECK",
@@ -422,6 +481,7 @@ def handle_check_command(args):
                 "suggestions": suggestions,
                 "note": "This is an evidence-based suggestion. Override if task context warrants it."
             },
+            "pattern_warnings": pattern_warnings if pattern_warnings and pattern_warnings.get('has_warnings') else None,
             "timestamp": time.time()
         }
 
