@@ -1,0 +1,28 @@
+{
+  "goal_id": "19aa2db4-ee18-4716-9ae6-1162ce8a8517",
+  "session_id": "fad2242f-33f5-4666-b17e-4b1c52733c1b",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-07T15:55:08.278369+00:00",
+  "goal_data": {
+    "objective": "Add abstractions to client_memory.py - extract MemoryStore base class to improve abstractness/stability balance (medium risk component)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-07T15:55:08.278383+00:00",
+      "action": "created"
+    }
+  ]
+}
