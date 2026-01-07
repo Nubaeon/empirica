@@ -37,6 +37,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
         try:
             if isinstance(action, argparse._SubParsersAction):
                 categories = {
+                    'Getting Started': ['onboard'],
                     'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
                     'CASCADE Workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
                     'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-add-dependency', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
@@ -100,6 +101,7 @@ from .parsers import (
     add_persona_parsers,
     add_release_parsers,
     add_lesson_parsers,
+    add_onboarding_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -187,6 +189,7 @@ def create_argument_parser():
     add_persona_parsers(subparsers)
     add_release_parsers(subparsers)
     add_lesson_parsers(subparsers)
+    add_onboarding_parsers(subparsers)
 
     return parser
 
@@ -405,6 +408,9 @@ def main(args=None):
             'lesson-replay-end': handle_lesson_replay_end_command,
             'lesson-stats': handle_lesson_stats_command,
             'lesson-embed': handle_lesson_embed_command,
+
+            # Onboarding command
+            'onboard': handle_onboard_command,
         }
         
         if parsed_args.command in command_handlers:

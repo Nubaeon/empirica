@@ -73,12 +73,33 @@ def _get_vector_size() -> int:
 
 
 def _get_qdrant_client():
-    """Get Qdrant client with lazy imports."""
+    """Get Qdrant client with lazy imports.
+
+    Priority:
+    1. EMPIRICA_QDRANT_URL environment variable (explicit URL)
+    2. localhost:6333 if Qdrant server is running
+    3. EMPIRICA_QDRANT_PATH for file-based storage (fallback)
+    """
     QdrantClient, _, _, _ = _get_qdrant_imports()
+
+    # Priority 1: Explicit URL
     url = os.getenv("EMPIRICA_QDRANT_URL")
-    path = os.getenv("EMPIRICA_QDRANT_PATH", "./.qdrant_data")
     if url:
         return QdrantClient(url=url)
+
+    # Priority 2: Check if Qdrant server is running on localhost:6333
+    default_url = "http://localhost:6333"
+    try:
+        import urllib.request
+        req = urllib.request.Request(f"{default_url}/collections", method='GET')
+        with urllib.request.urlopen(req, timeout=1) as resp:
+            if resp.status == 200:
+                return QdrantClient(url=default_url)
+    except Exception:
+        pass  # Server not available, fall through to file storage
+
+    # Priority 3: File-based storage (fallback)
+    path = os.getenv("EMPIRICA_QDRANT_PATH", "./.qdrant_data")
     return QdrantClient(path=path)
 
 
