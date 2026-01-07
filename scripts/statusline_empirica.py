@@ -449,7 +449,13 @@ def main():
         mode = os.getenv('EMPIRICA_STATUS_MODE', 'default').lower()
         ai_id = get_ai_id()
 
-        db = SessionDatabase()
+        # Allow override of project path via env var (for multi-project setups)
+        project_path = os.getenv('EMPIRICA_PROJECT_PATH')
+        if project_path:
+            db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
+            db = SessionDatabase(db_path=str(db_path))
+        else:
+            db = SessionDatabase()
         session = get_active_session(db, ai_id)
 
         if not session:
