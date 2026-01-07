@@ -1,0 +1,28 @@
+{
+  "goal_id": "98429bfd-ed1d-4057-9300-fda74386d7a7",
+  "session_id": "6caf2b1a-5740-467c-b8f8-bb869ae24e9d",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-07T16:36:42.179892+00:00",
+  "goal_data": {
+    "objective": "Fix project-switch persistence: session-create ignores active project and uses working-directory detection instead. Sessions should be created in the currently switched project, not auto-detected from cwd.",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-07T16:36:42.179907+00:00",
+      "action": "created"
+    }
+  ]
+}
