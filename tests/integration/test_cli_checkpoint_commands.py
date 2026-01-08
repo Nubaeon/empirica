@@ -26,12 +26,14 @@ def run_cli_command(args):
 @pytest.fixture
 def git_repo():
     """Create temporary git repository for testing"""
+    original_cwd = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdir:
         os.chdir(tmpdir)
         subprocess.run(['git', 'init'], capture_output=True)
         subprocess.run(['git', 'config', 'user.email', 'test@test.com'], capture_output=True)
         subprocess.run(['git', 'config', 'user.name', 'Test User'], capture_output=True)
         yield tmpdir
+        os.chdir(original_cwd)  # Restore original directory
 
 
 def test_checkpoint_create_help():

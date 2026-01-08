@@ -26,6 +26,7 @@ def temp_db():
 @pytest.fixture
 def git_repo():
     """Create temporary git repository"""
+    original_cwd = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdir:
         os.chdir(tmpdir)
         subprocess.run(
@@ -35,6 +36,7 @@ def git_repo():
             check=False
         )
         yield tmpdir
+        os.chdir(original_cwd)  # Restore original directory
 
 
 def test_session_db_git_checkpoint_methods_exist(temp_db):
