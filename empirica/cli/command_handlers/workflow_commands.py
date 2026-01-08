@@ -1235,11 +1235,11 @@ def handle_postflight_submit_command(args):
             # This is incremental (just this session) vs full project-embed
             memory_synced = 0
             try:
-                from empirica.core.qdrant.vector_store import upsert_memory, init_collections, get_qdrant_url
+                from empirica.core.qdrant.vector_store import upsert_memory, init_collections, _check_qdrant_available
 
                 db = SessionDatabase()
                 session = db.get_session(session_id)
-                if get_qdrant_url() and session and session.get('project_id'):
+                if _check_qdrant_available() and session and session.get('project_id'):
                     project_id = session['project_id']
                     init_collections(project_id)
 

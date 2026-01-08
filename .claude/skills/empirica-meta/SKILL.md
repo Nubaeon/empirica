@@ -102,7 +102,8 @@ Each layer uses same 13 vectors. This skill operates at Layer 2-3.
 - Condensed skills go in project_skills/ (for bootstrap)
 - Check unknowns before logging new ones
 - Commit after each goal (prevent drift)
-- Sentinel is currently null in responses - MCP not wired
+- Sentinel is now wired via MCP (EMPIRICA_EPISTEMIC_MODE=true)
+- PreToolCall hooks gate Edit/Write/Bash via CHECK
 
 ## References
 

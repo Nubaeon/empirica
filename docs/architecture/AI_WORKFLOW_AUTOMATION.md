@@ -275,21 +275,76 @@ def run_preflight_checklist():
 
 ---
 
-## Recommended Implementation (Phased)
+## Implementation Status (Updated 2026-01-08)
 
-### Phase 1: Immediate (This Week)
-1. **Add hook examples** to `docs/examples/claude_code_hooks/`
-2. **Update CLAUDE.md** with explicit MANDATORY workflow section
-3. **Add statusline command** `empirica statusline` for integration
+### ✅ Phase 1: COMPLETE - Claude Code Hooks
 
-### Phase 2: Short-term (Next Sprint)
-4. **Implement auto-session creation** in frequently used commands (finding-log, unknown-log)
-5. **Create empirica-auto wrapper** as optional convenience tool
-6. **Add session warnings** when commands detect no active session
+**Location:** `~/.claude/plugins/local/empirica-integration/hooks/`
 
-### Phase 3: Long-term (Future)
-7. **MCP server auto-init** for seamless session management
-8. **Interactive checklist** for new users (opt-in)
+| Hook | Trigger | Function |
+|------|---------|----------|
+| `sentinel-gate.py` | PreToolCall (Edit/Write/Bash) | Blocks without valid CHECK |
+| `session-init.py` | SessionStart (new) | Auto session + bootstrap + PREFLIGHT prompt |
+| `post-compact.py` | SessionStart (compact) | Recovery with session + bootstrap |
+| `session-end-postflight.py` | SessionEnd | Auto-captures POSTFLIGHT |
+
+**Hook config:** `~/.claude/plugins/local/empirica-integration/hooks/hooks.json`
+
+### ✅ Phase 2: COMPLETE - MCP Epistemic Mode
+
+**Config:** `~/.claude/mcp.json`
+```json
+{
+  "env": {
+    "EMPIRICA_EPISTEMIC_MODE": "true",
+    "EMPIRICA_PERSONALITY": "balanced_architect"
+  }
+}
+```
+
+Enables VectorRouter for MCP tools - routes based on epistemic vectors.
+
+### ✅ Phase 3: COMPLETE - Statusline Integration
+
+**Config:** `~/.claude/settings.json`
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "python3 /path/to/statusline_empirica.py",
+    "refresh_ms": 5000
+  }
+}
+```
+
+Shows: `[empirica] ⚡75% | 🔬NOETIC | PREFLIGHT | K:80% U:25% C:85%`
+
+### Enforced Workflow
+
+```
+SessionStart (new) ──► session-init.py
+    │
+    ├── Creates session automatically
+    ├── Runs bootstrap automatically
+    └── Prompts: PREFLIGHT
+         │
+         ▼
+    PreToolCall (Edit/Write/Bash) ──► sentinel-gate.py
+         │
+         ├── Valid CHECK (proceed, <30min)? → Allow
+         │
+         └── No/Invalid CHECK? → Block + prompt CHECK
+              │
+              ▼
+    SessionEnd ──► session-end-postflight.py
+         │
+         └── Auto-submits POSTFLIGHT with final vectors
+```
+
+### Future Improvements
+- Add LSP integration for catching naming disconnects
+- Extend PreToolCall to more tool patterns
+- Add drift detection in hooks
 
 ---
 
