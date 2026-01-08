@@ -17,7 +17,9 @@ from typing import Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 # Defaults
-DEFAULT_THRESHOLD = 0.7
+# NOTE: Threshold lowered to 0.5 because placeholder embeddings (hash-based)
+# produce max scores of ~0.55-0.60. Real ML embeddings would score 0.7-0.9.
+DEFAULT_THRESHOLD = 0.5
 DEFAULT_LIMIT = 3
 
 

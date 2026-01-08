@@ -743,8 +743,16 @@ def handle_check_submit_command(args):
         else:
             computed_decision = "investigate"
 
-        # Use computed decision if none provided
-        if not decision:
+        # AUTOPILOT MODE: Check if decisions should be binding (enforced)
+        # When enabled, CHECK decisions are requirements, not suggestions
+        # Controlled by EMPIRICA_AUTOPILOT_MODE env var (default: false)
+        autopilot_mode = os.getenv('EMPIRICA_AUTOPILOT_MODE', 'false').lower() in ('true', '1', 'yes')
+        decision_binding = autopilot_mode  # Binding when autopilot is enabled
+
+        # Use computed decision if none provided OR if autopilot is enforcing
+        if not decision or (autopilot_mode and decision != computed_decision):
+            if autopilot_mode and decision and decision != computed_decision:
+                logger.info(f"AUTOPILOT override: {decision} → {computed_decision} (autopilot enforcement)")
             decision = computed_decision
             logger.info(f"CHECK auto-computed decision: {decision} (know={know:.2f}→{corrected_know:.2f}, uncertainty={uncertainty:.2f}→{corrected_uncertainty:.2f})")
 
@@ -857,7 +865,8 @@ def handle_check_submit_command(args):
                 )
 
                 # SENTINEL OVERRIDE: Feed Sentinel decision back to override AI decision
-                if sentinel_decision:
+                # NOTE: When autopilot is binding, autopilot takes precedence over Sentinel
+                if sentinel_decision and not decision_binding:
                     sentinel_map = {
                         SentinelDecision.PROCEED: "proceed",
                         SentinelDecision.INVESTIGATE: "investigate",
@@ -871,6 +880,8 @@ def handle_check_submit_command(args):
                             logger.info(f"Sentinel override: {decision} → {new_decision} (sentinel={sentinel_decision.value})")
                             decision = new_decision
                             sentinel_override = True
+                elif sentinel_decision and decision_binding:
+                    logger.info(f"Autopilot binding active - Sentinel override blocked (sentinel wanted: {sentinel_decision.value})")
 
             # AUTO-CHECKPOINT: Create git checkpoint if uncertainty > 0.5 (risky decision)
             # This preserves context if AI needs to investigate further
@@ -929,7 +940,12 @@ def handle_check_submit_command(args):
                     "raw_vectors": {"know": know, "uncertainty": uncertainty},
                     "corrected_vectors": {"know": corrected_know, "uncertainty": corrected_uncertainty},
                     "readiness_gate": "know>=0.70 AND uncertainty<=0.35 (after bias correction)",
-                    "gate_passed": computed_decision == "proceed"
+                    "gate_passed": computed_decision == "proceed",
+                    "autopilot": {
+                        "enabled": autopilot_mode,
+                        "binding": decision_binding,
+                        "note": "When binding=true, decision is enforced (not suggestive). Set EMPIRICA_AUTOPILOT_MODE=true to enable."
+                    }
                 },
                 "sentinel": {
                     "enabled": SentinelHooks.is_enabled(),
@@ -1457,8 +1473,7 @@ def handle_postflight_submit_command(args):
                     # Get project findings/unknowns for narrative richness (optional)
                     try:
                         findings = db.get_project_findings(project_id, limit=5)
-                        # Note: get_project_unknowns doesn't accept limit parameter
-                        unknowns = db.get_project_unknowns(project_id, resolved=False)[:5]
+                        unknowns = db.get_project_unknowns(project_id, resolved=False, limit=5)
                     except Exception:
                         findings = []
                         unknowns = []
@@ -1508,8 +1523,7 @@ def handle_postflight_submit_command(args):
                     # Get recent project findings/unknowns (session-specific filtering not available)
                     try:
                         session_findings = db.get_project_findings(project_id, limit=10)
-                        # Note: get_project_unknowns doesn't accept limit parameter
-                        session_unknowns = db.get_project_unknowns(project_id, resolved=False)[:10]
+                        session_unknowns = db.get_project_unknowns(project_id, resolved=False, limit=10)
                     except Exception:
                         session_findings = []
                         session_unknowns = []

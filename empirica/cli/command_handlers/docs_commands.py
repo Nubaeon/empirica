@@ -576,9 +576,13 @@ class DocsExplainAgent:
 
     Retrieves focused information about Empirica topics for users and AIs.
     Inverts docs-assess: instead of analyzing coverage, it retrieves answers.
+
+    Supports two search modes:
+    1. Qdrant semantic search (if available): Uses embeddings for better relevance
+    2. Keyword-based fallback: Uses topic aliases and keyword matching
     """
 
-    # Topic -> keywords mapping for better matching
+    # Topic -> keywords mapping for better matching (used in fallback mode)
     TOPIC_ALIASES = {
         "vectors": ["epistemic", "vectors", "know", "uncertainty", "engagement", "preflight", "postflight"],
         "session": ["session", "create", "start", "cascade", "workflow"],
@@ -591,12 +595,74 @@ class DocsExplainAgent:
         "investigation": ["investigation", "branch", "multi-branch", "turtle", "explore"],
         "persona": ["persona", "emerged", "profile", "identity"],
         "calibration": ["calibration", "bayesian", "bias", "accuracy"],
+        "env": ["environment", "variable", "config", "configuration", "setting"],
+        "autopilot": ["autopilot", "binding", "enforce", "mode", "sentinel"],
     }
 
-    def __init__(self, project_root: Path | None = None):
+    def __init__(self, project_root: Path | None = None, project_id: str | None = None):
         self.root = project_root or Path.cwd()
         self.docs_dir = self.root / "docs"
         self._docs_cache: dict[str, str] = {}
+        self.project_id = project_id or self._detect_project_id()
+        self._qdrant_available: bool | None = None
+
+    def _detect_project_id(self) -> str | None:
+        """Detect project ID from .empirica config or database."""
+        try:
+            # Try reading from .empirica/project.json
+            project_file = self.root / ".empirica" / "project.json"
+            if project_file.exists():
+                import json
+                data = json.loads(project_file.read_text())
+                return data.get("project_id")
+
+            # Try querying database for project matching this path
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT project_id FROM projects
+                WHERE root_path LIKE ? OR name = ?
+                ORDER BY created_timestamp DESC LIMIT 1
+            """, (f"%{self.root.name}%", self.root.name))
+            row = cursor.fetchone()
+            db.close()
+            if row:
+                return row[0]
+        except Exception:
+            pass
+        return None
+
+    def _check_qdrant_available(self) -> bool:
+        """Check if Qdrant is available for semantic search."""
+        if self._qdrant_available is not None:
+            return self._qdrant_available
+
+        try:
+            from empirica.core.qdrant.vector_store import _check_qdrant_available
+            self._qdrant_available = _check_qdrant_available()
+        except ImportError:
+            self._qdrant_available = False
+
+        return self._qdrant_available
+
+    def _semantic_search(self, query: str, limit: int = 5) -> list[dict]:
+        """
+        Perform semantic search using Qdrant if available.
+
+        Returns list of {doc_path, score, concepts, tags} or empty list if unavailable.
+        """
+        if not self.project_id or not self._check_qdrant_available():
+            return []
+
+        try:
+            from empirica.core.qdrant.vector_store import search
+            results = search(self.project_id, query, kind="docs", limit=limit)
+            return results.get("docs", [])
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).debug(f"Qdrant search failed: {e}")
+            return []
 
     def _load_docs(self) -> dict[str, str]:
         """Load all docs into memory with their content."""
@@ -687,6 +753,8 @@ class DocsExplainAgent:
         """
         Get focused explanation of an Empirica topic.
 
+        Uses Qdrant semantic search if available, falls back to keyword matching.
+
         Args:
             topic: Topic to explain (e.g., "vectors", "sessions")
             question: Question to answer (e.g., "How do I start a session?")
@@ -704,18 +772,33 @@ class DocsExplainAgent:
                 "explanation": None
             }
 
-        # Build search keywords
         search_text = topic or question or ""
-        keywords = self._expand_topic(search_text)
-
-        # Score all docs
+        search_mode = "keyword"  # Track which mode was used
         scored_docs = []
-        for path, content in docs.items():
-            score = self._score_doc(content, keywords)
-            if score > 0.1:  # Minimum relevance threshold
-                scored_docs.append((score, path, content))
 
-        scored_docs.sort(reverse=True)
+        # Try Qdrant semantic search first
+        semantic_results = self._semantic_search(search_text, limit=5)
+        if semantic_results:
+            search_mode = "semantic"
+            # Use semantic results, but need to load content from disk
+            for result in semantic_results:
+                doc_path = result.get("doc_path")
+                if doc_path and doc_path in docs:
+                    # Convert Qdrant score (0-1) to our scoring scale
+                    score = result.get("score", 0.5) * 2.0  # Scale to comparable range
+                    scored_docs.append((score, doc_path, docs[doc_path]))
+
+        # Fall back to keyword search if semantic search unavailable or returned nothing
+        if not scored_docs:
+            search_mode = "keyword"
+            keywords = self._expand_topic(search_text)
+
+            for path, content in docs.items():
+                score = self._score_doc(content, keywords)
+                if score > 0.1:  # Minimum relevance threshold
+                    scored_docs.append((score, path, content))
+
+            scored_docs.sort(reverse=True)
 
         if not scored_docs:
             return {
@@ -731,6 +814,9 @@ class DocsExplainAgent:
         top_docs = scored_docs[:5]
         all_sections = []
         sources = []
+
+        # For section extraction, use keywords from topic expansion
+        keywords = self._expand_topic(search_text)
 
         for score, path, content in top_docs:
             sections = self._extract_relevant_sections(content, keywords)
@@ -773,6 +859,7 @@ class DocsExplainAgent:
             "ok": True,
             "query": search_text,
             "audience": audience,
+            "search_mode": search_mode,  # "semantic" if Qdrant used, "keyword" otherwise
             "explanation": explanation,
             "sources": sources,
             "related_topics": related[:5],
@@ -784,6 +871,7 @@ def handle_docs_explain(args) -> int:
     """Handle the docs-explain command."""
     try:
         project_root = Path(args.project_root) if hasattr(args, 'project_root') and args.project_root else None
+        project_id = getattr(args, 'project_id', None)
         output_format = getattr(args, 'output', 'human')
         topic = getattr(args, 'topic', None)
         question = getattr(args, 'question', None)
@@ -793,7 +881,7 @@ def handle_docs_explain(args) -> int:
             print("Error: Please provide --topic or --question")
             return 1
 
-        agent = DocsExplainAgent(project_root=project_root)
+        agent = DocsExplainAgent(project_root=project_root, project_id=project_id)
         result = agent.explain(topic=topic, question=question, audience=audience)
 
         if output_format == 'json':
@@ -818,6 +906,11 @@ def _print_explain_human_output(result: dict):
         return
 
     print(f"\n🔍 Query: {result.get('query', 'N/A')}")
+
+    # Show search mode (semantic vs keyword)
+    search_mode = result.get("search_mode", "keyword")
+    mode_icon = "🧠" if search_mode == "semantic" else "🔤"
+    print(f"{mode_icon} Search: {search_mode}")
 
     if result.get("audience") != "all":
         print(f"👤 Audience: {result['audience']}")

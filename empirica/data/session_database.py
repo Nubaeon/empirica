@@ -2396,9 +2396,9 @@ class SessionDatabase:
             uncertainty=uncertainty
         )
     
-    def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None, subject: Optional[str] = None) -> List[Dict]:
+    def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None, subject: Optional[str] = None, limit: Optional[int] = None) -> List[Dict]:
         """Get unknowns for a project (delegates to BreadcrumbRepository)"""
-        return self.breadcrumbs.get_project_unknowns(project_id, resolved, subject)
+        return self.breadcrumbs.get_project_unknowns(project_id, resolved, subject, limit)
     
     def get_project_dead_ends(self, project_id: str, limit: Optional[int] = None, subject: Optional[str] = None) -> List[Dict]:
         """Get all dead ends for a project (delegates to BreadcrumbRepository)"""

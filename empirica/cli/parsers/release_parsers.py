@@ -74,6 +74,10 @@ def add_release_parsers(subparsers):
         help='Root directory of the project (default: current directory)'
     )
     explain_parser.add_argument(
+        '--project-id',
+        help='Project ID for Qdrant semantic search (auto-detected if not specified)'
+    )
+    explain_parser.add_argument(
         '--output',
         choices=['human', 'json'],
         default='human',

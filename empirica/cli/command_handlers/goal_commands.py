@@ -35,8 +35,7 @@ def handle_goals_create_command(args):
         if hasattr(args, 'config') and args.config:
             # Read config from file or stdin
             if args.config == '-':
-                # Read from stdin
-                import sys
+                # Read from stdin (sys imported at module level)
                 config_data = parse_json_safely(sys.stdin.read())
             else:
                 # Read from file
@@ -109,7 +108,7 @@ def handle_goals_create_command(args):
                     success_criteria_list = parse_json_safely(f.read())
             elif hasattr(args, 'success_criteria') and args.success_criteria:
                 if args.success_criteria == '-':
-                    import sys
+                    # sys imported at module level
                     success_criteria_list = parse_json_safely(sys.stdin.read())
                 elif args.success_criteria.strip().startswith('['):
                     success_criteria_list = parse_json_safely(args.success_criteria)

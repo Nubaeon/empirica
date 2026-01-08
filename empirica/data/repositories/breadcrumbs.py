@@ -462,7 +462,7 @@ class BreadcrumbRepository(BaseRepository):
         
         return filtered
 
-    def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None, subject: Optional[str] = None) -> List[Dict]:
+    def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None, subject: Optional[str] = None, limit: Optional[int] = None) -> List[Dict]:
         """Get unknowns for a project (DUAL-SCOPE: aggregates session + project unknowns)"""
         # Column list: id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, scope
         if subject:
@@ -515,7 +515,10 @@ class BreadcrumbRepository(BaseRepository):
                     WHERE s.project_id = ? AND u.is_resolved = ?
                     ORDER BY created_timestamp DESC
                 """, (project_id, resolved, project_id, resolved))
-        return [dict(row) for row in cursor.fetchall()]
+        results = [dict(row) for row in cursor.fetchall()]
+        if limit:
+            results = results[:limit]
+        return results
 
     def get_project_dead_ends(self, project_id: str, limit: Optional[int] = None, subject: Optional[str] = None) -> List[Dict]:
         """Get all dead ends for a project (DUAL-SCOPE: aggregates session + project)"""
