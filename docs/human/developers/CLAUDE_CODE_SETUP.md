@@ -157,9 +157,14 @@ Or if you installed from source:
 
 ---
 
-## Step 4: Install Memory Compact Plugin (Recommended)
+## Step 4: Install Empirica Plugin (Recommended)
 
-The plugin preserves epistemic state across memory compacts automatically.
+The plugin enforces the CASCADE workflow and preserves epistemic state automatically.
+
+**What it does:**
+- **PreToolCall hooks** (`sentinel-gate.py`): Gates Edit/Write/Bash until valid CHECK exists
+- **SessionStart hooks** (`session-init.py`, `post-compact.py`): Auto-creates session + bootstrap
+- **SessionEnd hooks** (`session-end-postflight.py`): Auto-captures POSTFLIGHT
 
 ### Option A: Full Plugin (Recommended)
 
@@ -255,7 +260,9 @@ Edit `~/.claude/claude_desktop_config.json`:
     "empirica": {
       "command": "empirica-mcp",
       "env": {
-        "EMPIRICA_AI_ID": "claude-desktop"
+        "EMPIRICA_AI_ID": "claude-desktop",
+        "EMPIRICA_EPISTEMIC_MODE": "true",
+        "EMPIRICA_PERSONALITY": "balanced_architect"
       }
     }
   }

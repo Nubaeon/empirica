@@ -100,7 +100,7 @@ PREFLIGHT → [noetic/praxic as needed] → CHECK → [noetic/praxic as needed] 
 | Epistemic subagent spawning | |
 | Handoff types (Investigation, Complete, Planning) | |
 | Semantic search triggers | |
-| Hook integration (PreCompact, SessionStart) | |
+| Hook integration (PreToolCall sentinel gate, SessionStart/End) | |
 
 **Token budget:** ~2KB SKILL.md + ~5KB per reference file
 
@@ -300,6 +300,12 @@ Sentinel controls the CHECK gate:
 - MCO model profiles (bias corrections)
 - Current epistemic vectors
 - Findings and unknowns from session
+
+**Enforcement layers (as of 2026-01-08):**
+- **PreToolCall hooks**: `sentinel-gate.py` blocks Edit/Write/Bash without valid CHECK
+- **SessionStart hooks**: `session-init.py` auto-creates session + bootstrap for new conversations
+- **SessionEnd hooks**: `session-end-postflight.py` auto-captures POSTFLIGHT
+- **MCP**: `EMPIRICA_EPISTEMIC_MODE=true` enables VectorRouter for MCP tools
 
 ---
 

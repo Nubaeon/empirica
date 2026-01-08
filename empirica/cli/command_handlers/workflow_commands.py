@@ -21,6 +21,84 @@ auto_enable_sentinel()
 logger = logging.getLogger(__name__)
 
 
+def _check_bootstrap_status(session_id: str) -> dict:
+    """
+    Check if project-bootstrap has been run for this session.
+
+    Returns:
+        {
+            "has_bootstrap": bool,
+            "project_id": str or None,
+            "session_exists": bool
+        }
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Check if session exists and has project_id
+        cursor.execute("""
+            SELECT session_id, project_id FROM sessions
+            WHERE session_id = ?
+        """, (session_id,))
+        row = cursor.fetchone()
+        db.close()
+
+        if not row:
+            return {
+                "has_bootstrap": False,
+                "project_id": None,
+                "session_exists": False
+            }
+
+        project_id = row[1] if row else None
+        return {
+            "has_bootstrap": project_id is not None,
+            "project_id": project_id,
+            "session_exists": True
+        }
+    except Exception as e:
+        return {
+            "has_bootstrap": False,
+            "project_id": None,
+            "session_exists": False,
+            "error": str(e)
+        }
+
+
+def _auto_bootstrap(session_id: str) -> dict:
+    """
+    Auto-run project-bootstrap for a session.
+
+    Returns:
+        {"ok": bool, "project_id": str, "message": str}
+    """
+    import subprocess
+    try:
+        result = subprocess.run(
+            ['empirica', 'project-bootstrap', '--session-id', session_id, '--output', 'json'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        if result.returncode == 0:
+            try:
+                output = json.loads(result.stdout)
+                return {
+                    "ok": True,
+                    "project_id": output.get('project_id'),
+                    "message": "Auto-bootstrap completed"
+                }
+            except json.JSONDecodeError:
+                return {"ok": True, "project_id": None, "message": "Bootstrap ran (non-JSON output)"}
+        else:
+            return {"ok": False, "error": result.stderr[:500]}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 def handle_preflight_submit_command(args):
     """Handle preflight-submit command - AI-first with config file support"""
     try:
@@ -554,6 +632,24 @@ def handle_check_submit_command(args):
             output_format = getattr(args, 'output', 'human')
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
 
+        # BOOTSTRAP GATE: Ensure project context is loaded before CHECK
+        # Without bootstrap, CHECK vectors are hollow (same bug as PREFLIGHT-before-bootstrap)
+        bootstrap_status = _check_bootstrap_status(session_id)
+        bootstrap_result = None
+
+        if not bootstrap_status.get('has_bootstrap'):
+            # Auto-run bootstrap to ensure CHECK has context
+            import sys as _sys
+            print("🔄 Auto-running project-bootstrap (CHECK requires context)...", file=_sys.stderr)
+            bootstrap_result = _auto_bootstrap(session_id)
+
+            if bootstrap_result.get('ok'):
+                print(f"✅ Bootstrap complete: project_id={bootstrap_result.get('project_id')}", file=_sys.stderr)
+            else:
+                # Bootstrap failed - warn but don't block (graceful degradation)
+                print(f"⚠️  Bootstrap failed: {bootstrap_result.get('error', 'unknown')}", file=_sys.stderr)
+                print("   CHECK will proceed but vectors may be hollow.", file=_sys.stderr)
+
         # AUTO-INCREMENT ROUND: Get next round from CHECK history
         try:
             from empirica.data.session_database import SessionDatabase
@@ -786,6 +882,11 @@ def handle_check_submit_command(args):
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True
                 },
+                "bootstrap": {
+                    "had_context": bootstrap_status.get('has_bootstrap', False),
+                    "auto_run": bootstrap_result is not None,
+                    "project_id": bootstrap_result.get('project_id') if bootstrap_result else bootstrap_status.get('project_id')
+                },
                 "metacog": {
                     "computed_decision": computed_decision,
                     "raw_vectors": {"know": know, "uncertainty": uncertainty},
@@ -801,6 +902,36 @@ def handle_check_submit_command(args):
                 } if SentinelHooks.is_enabled() else None
             }
 
+            # AUTO-POSTFLIGHT TRIGGER: Check if goal completion detected
+            # Uses completion and impact vectors to determine if a goal was completed
+            # This closes the epistemic loop automatically without user intervention
+            goal_completion = _check_goal_completion(vectors)
+            result["goal_completion"] = goal_completion
+
+            if goal_completion.get("triggered"):
+                import sys as _sys
+                print(f"🎯 Goal completion detected: {goal_completion.get('reason')}", file=_sys.stderr)
+                print("📊 Auto-triggering POSTFLIGHT to capture learning delta...", file=_sys.stderr)
+
+                postflight_result = _auto_postflight(
+                    session_id=session_id,
+                    vectors=vectors,
+                    trigger_reason=goal_completion.get('reason', 'completion threshold met')
+                )
+
+                result["auto_postflight"] = {
+                    "triggered": True,
+                    "success": postflight_result.get("ok", False),
+                    "reason": goal_completion.get("reason")
+                }
+
+                if postflight_result.get("ok"):
+                    print("✅ Auto-POSTFLIGHT captured successfully", file=_sys.stderr)
+                else:
+                    print(f"⚠️  Auto-POSTFLIGHT failed: {postflight_result.get('error', 'unknown')}", file=_sys.stderr)
+            else:
+                result["auto_postflight"] = {"triggered": False}
+
         except Exception as e:
             logger.error(f"Failed to save check assessment: {e}")
             result = {
@@ -810,7 +941,7 @@ def handle_check_submit_command(args):
                 "persisted": False,
                 "error": str(e)
             }
-        
+
         # Format output
         if output_format == 'json':
             print(json.dumps(result, indent=2))
@@ -829,6 +960,93 @@ def handle_check_submit_command(args):
         
     except Exception as e:
         handle_cli_error(e, "Check submit", getattr(args, 'verbose', False))
+
+
+def _check_goal_completion(vectors: dict, calibration_adjustments: dict = None) -> dict:
+    """
+    Check if vectors indicate goal completion.
+
+    Thresholds (raw, before calibration):
+    - completion >= 0.7 (we underestimate by +0.14, so 0.7 raw ≈ 0.84 actual)
+    - impact >= 0.5 (if present)
+
+    Returns:
+        {
+            "triggered": bool,
+            "raw_completion": float,
+            "calibrated_completion": float,
+            "raw_impact": float,
+            "reason": str
+        }
+    """
+    completion = vectors.get('completion', 0.0)
+    impact = vectors.get('impact', 0.0)
+
+    # Apply calibration adjustment if available
+    completion_adj = 0.14  # Default from historical data
+    if calibration_adjustments and 'completion' in calibration_adjustments:
+        completion_adj = calibration_adjustments['completion']
+
+    calibrated_completion = completion + completion_adj
+
+    # Thresholds
+    COMPLETION_THRESHOLD = 0.7  # Raw threshold
+    IMPACT_THRESHOLD = 0.5
+
+    triggered = completion >= COMPLETION_THRESHOLD and impact >= IMPACT_THRESHOLD
+
+    reason = None
+    if triggered:
+        reason = f"Goal completion detected (completion={completion:.2f}→{calibrated_completion:.2f}, impact={impact:.2f})"
+    elif completion >= COMPLETION_THRESHOLD:
+        reason = f"High completion but low impact (completion={completion:.2f}, impact={impact:.2f})"
+    elif impact >= IMPACT_THRESHOLD:
+        reason = f"High impact but low completion (completion={completion:.2f}, impact={impact:.2f})"
+
+    return {
+        "triggered": triggered,
+        "raw_completion": completion,
+        "calibrated_completion": calibrated_completion,
+        "raw_impact": impact,
+        "reason": reason
+    }
+
+
+def _auto_postflight(session_id: str, vectors: dict, trigger_reason: str) -> dict:
+    """
+    Auto-submit POSTFLIGHT when goal completion is detected.
+
+    This closes the epistemic loop automatically without user intervention.
+    """
+    import subprocess
+
+    # Build POSTFLIGHT payload
+    payload = {
+        "session_id": session_id,
+        "vectors": vectors,
+        "learnings": [f"Auto-POSTFLIGHT triggered: {trigger_reason}"],
+        "delta_summary": "Auto-captured on goal completion detection"
+    }
+
+    try:
+        result = subprocess.run(
+            ['empirica', 'postflight-submit', '-'],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        if result.returncode == 0:
+            try:
+                output = json.loads(result.stdout)
+                return {"ok": True, "output": output}
+            except json.JSONDecodeError:
+                return {"ok": True, "output": result.stdout[:500]}
+        else:
+            return {"ok": False, "error": result.stderr[:500]}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 def _extract_numeric_value(value):

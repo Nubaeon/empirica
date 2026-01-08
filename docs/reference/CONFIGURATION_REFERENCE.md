@@ -581,7 +581,7 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 - `EMPIRICA_INVESTIGATION_PROFILE`: Force investigation profile
 - `EMPIRICA_PROFILE_MODE`: Override profile mode
 - `EMPIRICA_PERSONALITY`: Set AI personality/persona (`researcher`, `implementer`, `reviewer`, etc.)
-- `EMPIRICA_EPISTEMIC_MODE`: Set epistemic mode (`strict`, `balanced`, `exploratory`)
+- `EMPIRICA_EPISTEMIC_MODE`: Enable VectorRouter in MCP server (`true`/`false`). When `true`, MCP tools route based on epistemic vectors (clarify/investigate/proceed)
 
 ### Modality
 
