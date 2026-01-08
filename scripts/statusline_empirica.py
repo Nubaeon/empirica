@@ -66,8 +66,8 @@ def get_active_goal(db: SessionDatabase, session_id: str) -> dict:
         {
             'goal_id': str,
             'objective': str,
-            'completion': float (0.0-1.0),
-            'subtask_progress': (completed, total)
+            'completion': float (0.0-1.0) - from vector state, not subtasks
+            'subtask_progress': (completed, total) - for reference only
         }
         or None if no active goal
     """
@@ -88,7 +88,19 @@ def get_active_goal(db: SessionDatabase, session_id: str) -> dict:
 
     goal_id, objective, _ = row  # _ for unused status
 
-    # Get subtask progress
+    # Get completion from latest vector state (epistemic measure)
+    # This is the AI's self-assessed completion, not mechanical subtask checkboxes
+    cursor.execute("""
+        SELECT completion
+        FROM reflexes
+        WHERE session_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """, (session_id,))
+    reflex_row = cursor.fetchone()
+    completion = reflex_row[0] if reflex_row and reflex_row[0] is not None else 0.0
+
+    # Get subtask progress (for reference, not primary measure)
     cursor.execute("""
         SELECT
             COUNT(*) as total,
@@ -100,12 +112,6 @@ def get_active_goal(db: SessionDatabase, session_id: str) -> dict:
 
     total_subtasks = subtask_row[0] if subtask_row else 0
     completed_subtasks = subtask_row[1] if subtask_row else 0
-
-    # Calculate completion: use subtask ratio if subtasks exist, else 0
-    if total_subtasks > 0:
-        completion = completed_subtasks / total_subtasks
-    else:
-        completion = 0.0
 
     return {
         'goal_id': goal_id,

@@ -636,11 +636,35 @@ def handle_check_submit_command(args):
         # Without bootstrap, CHECK vectors are hollow (same bug as PREFLIGHT-before-bootstrap)
         bootstrap_status = _check_bootstrap_status(session_id)
         bootstrap_result = None
+        reground_reason = None
 
+        # Parse vectors early to check for reground triggers
+        _vectors_for_check = vectors
+        if isinstance(_vectors_for_check, str):
+            _vectors_for_check = parse_json_safely(_vectors_for_check)
+        if isinstance(_vectors_for_check, dict) and 'vectors' in _vectors_for_check:
+            _vectors_for_check = _vectors_for_check['vectors']
+
+        # VECTOR-BASED REGROUND: Re-bootstrap if vectors indicate drift/uncertainty
+        # This ensures long-running sessions stay grounded
+        context_val = _vectors_for_check.get('context', 0.7) if isinstance(_vectors_for_check, dict) else 0.7
+        uncertainty_val = _vectors_for_check.get('uncertainty', 0.3) if isinstance(_vectors_for_check, dict) else 0.3
+
+        needs_reground = False
         if not bootstrap_status.get('has_bootstrap'):
+            needs_reground = True
+            reground_reason = "initial bootstrap"
+        elif context_val < 0.5:
+            needs_reground = True
+            reground_reason = f"low context ({context_val:.2f} < 0.50)"
+        elif uncertainty_val > 0.6:
+            needs_reground = True
+            reground_reason = f"high uncertainty ({uncertainty_val:.2f} > 0.60)"
+
+        if needs_reground:
             # Auto-run bootstrap to ensure CHECK has context
             import sys as _sys
-            print("🔄 Auto-running project-bootstrap (CHECK requires context)...", file=_sys.stderr)
+            print(f"🔄 Auto-running project-bootstrap ({reground_reason})...", file=_sys.stderr)
             bootstrap_result = _auto_bootstrap(session_id)
 
             if bootstrap_result.get('ok'):
@@ -885,6 +909,7 @@ def handle_check_submit_command(args):
                 "bootstrap": {
                     "had_context": bootstrap_status.get('has_bootstrap', False),
                     "auto_run": bootstrap_result is not None,
+                    "reground_reason": reground_reason,
                     "project_id": bootstrap_result.get('project_id') if bootstrap_result else bootstrap_status.get('project_id')
                 },
                 "metacog": {
