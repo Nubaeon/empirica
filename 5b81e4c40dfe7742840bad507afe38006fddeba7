@@ -1,0 +1,28 @@
+{
+  "goal_id": "c858476a-4c69-46f7-8c58-202521a219be",
+  "session_id": "815ccd33-2965-43ec-9232-a989411e0968",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-08T20:32:33.505148+00:00",
+  "goal_data": {
+    "objective": "Verify system prompt is properly documented",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-08T20:32:33.505163+00:00",
+      "action": "created"
+    }
+  ]
+}
