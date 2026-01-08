@@ -1,7 +1,7 @@
-# Empirica System Prompt - Canonical Core v1.2.3
+# Empirica System Prompt - Canonical Core v1.3.0
 
 **Model:** COPILOT | **Generated:** 2026-01-06
-**Syncs with:** Empirica v1.2.3
+**Syncs with:** Empirica v1.3.0
 **Status:** AUTHORITATIVE
 
 ---
@@ -183,7 +183,7 @@ empirica postflight-submit -  # What did I learn from this PR?
 empirica finding-log --finding "Committed OAuth implementation (abc1234)" --impact 0.7
 
 # Create checkpoint at release points
-empirica checkpoint-create --session-id <ID> --message "v1.2.0 release"
+empirica checkpoint-create --session-id <ID> --message "v1.3.0 release"
 ```
 
 **Code Review Patterns:**

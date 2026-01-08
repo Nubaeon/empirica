@@ -8,16 +8,17 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)
 [![Docker](https://img.shields.io/badge/docker-nubaeon%2Fempirica-blue)](https://hub.docker.com/r/nubaeon/empirica)
 
-## What's New in 1.2.4
+## What's New in 1.3.0
 
-- **🔄 project-switch Command** - AI-friendly project switching with clear context banner and automatic bootstrap loading
-- **✅ Vector Format Fixes** - check-submit now accepts flat, structured, and wrapped vector formats
-- **🎭 Persona Schema Validation** - Fixed agent-spawn errors for public_key and focus_domains
-- **📋 Deduplication Fix** - Eliminated duplicate findings/unknowns/dead-ends in project-bootstrap output
+- **🧠 Qdrant Memory Integration** - Full 4-collection memory system (eidetic, episodic, patterns, docs)
+- **🔌 Embedding Providers** - Jina AI, Voyage AI, expanded Ollama models (bge-m3, qwen3-embedding)
+- **📚 Lessons System** - Cold storage procedural knowledge with cognitive immune decay
+- **🔗 Git-Repo Project Resolution** - Single project per repo guarantee via `normalize_git_url()`
+- **🔍 docs-explain Semantic Search** - Qdrant-powered documentation retrieval
+- **📊 Statusline Goal Progress** - Shows active goal in terminal prompt
+- **🔄 Vector-based Reground** - CHECK auto-triggers bootstrap when context<0.5 or uncertainty>0.6
 - **🚦 Sentinel Safety Gates** - Human-in-the-loop gates (PROCEED/HALT/BRANCH/REVISE) that bound AI autonomy
 - **🤖 Multi-Agent Spawning** - Spawn epistemic sub-agents with `agent-spawn`, aggregate findings with `agent-aggregate`
-- **🎭 Persona System** - AI identity profiles that emerge from successful epistemic patterns (`persona-list`, `persona-promote`)
-- **🔧 108 CLI Commands** - Full coverage including assessment, trajectory projection, and drift detection
 
 ## ⚡ Claude Code Quick Start
 

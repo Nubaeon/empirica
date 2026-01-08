@@ -26,7 +26,7 @@ pip install empirica empirica-mcp
 Verify:
 ```bash
 empirica --version
-# Should show: 1.2.2
+# Should show: 1.3.0
 ```
 
 ---

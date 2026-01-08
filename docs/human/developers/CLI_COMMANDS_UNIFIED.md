@@ -1,7 +1,7 @@
 # Empirica CLI Commands - Unified Reference
 
 **Total Commands:** 108
-**Framework Version:** 1.2.3
+**Framework Version:** 1.3.0
 **Generated:** 2026-01-03
 **Status:** Production Ready
 
@@ -894,4 +894,4 @@ empirica --verbose check --session-id xyz # CHECK with debugging
 
 **Generated from:** empirica --help output (2025-12-28)
 **Total Commands:** 86
-**Framework Version:** 1.2.2
+**Framework Version:** 1.3.0

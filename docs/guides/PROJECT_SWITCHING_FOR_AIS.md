@@ -217,7 +217,7 @@ Now all `finding-log`, `unknown-log`, `goals-create`, etc. write to **this proje
 - [x] Add `_print_project_context()` utility function (via project-switch banner)
 - [ ] Call it at start of all command handlers (partial - in project-switch)
 - [x] Enhance bootstrap output with "you are here" banner (integrated in project-switch)
-- [x] Add project-switch command (IMPLEMENTED v1.2.4)
+- [x] Add project-switch command (IMPLEMENTED v1.3.0)
 - [ ] Add session-create project change warning (future enhancement)
 - [ ] Document in system prompt (in progress)
 - [x] Test with empirica-web (tested and working)
