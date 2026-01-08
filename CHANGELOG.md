@@ -5,6 +5,52 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-01-08
+
+### Added
+- **Qdrant Memory Integration** - Full 4-collection memory system:
+  - Eidetic memory (facts with confidence scoring)
+  - Episodic memory (session narratives with recency decay)
+  - Pattern retrieval for PREFLIGHT (lessons, dead_ends, findings)
+  - CHECK validation against known dead ends
+
+- **Embedding Providers** - Multi-provider embedding support:
+  - Jina AI (jina-embeddings-v3, jina-colbert-v2)
+  - Voyage AI (voyage-3.5, voyage-3-lite, voyage-code-3)
+  - Expanded Ollama models (bge-m3, qwen3-embedding, snowflake-arctic-embed2)
+  - Auto-detection with graceful fallback
+
+- **Lessons System** - Cold storage procedural knowledge:
+  - YAML-based lesson storage in `.empirica/lessons/`
+  - Hot cache for fast retrieval
+  - Cognitive immune system (findings decay lesson confidence)
+  - Domain-scoped central tolerance
+
+- **Git-Repo Project Resolution** - Single project per repo guarantee:
+  - `normalize_git_url()` canonicalizes SSH/HTTPS/local paths
+  - Sessions auto-map to correct project via git remote
+  - Eliminates project ID confusion
+
+- **docs-explain Semantic Search** - Qdrant-powered documentation retrieval
+- **Statusline Goal Progress** - Shows active goal in terminal prompt
+- **EMPIRICA_AUTO_POSTFLIGHT** - Environment variable to control auto-POSTFLIGHT
+- **Vector-based Reground** - CHECK auto-triggers bootstrap when context<0.5 or uncertainty>0.6
+
+### Changed
+- **Documentation Restructure** - Reorganized into `docs/human/developers/` and `docs/human/end-users/`
+- **Epistemic Snapshot** - Moved from plugins to `empirica/data/` for core accessibility
+- **Plugin Cleanup** - Removed deprecated modality_switcher plugin (functionality migrated to core)
+- Default PREFLIGHT pattern threshold lowered to 0.5 (from 0.7)
+
+### Fixed
+- `get_project_unknowns()` limit parameter (was causing silent POSTFLIGHT failures)
+- post-compact hook memory format handling (dict vs list)
+- Session project detection for statusline metacog signal
+
+### Tests
+- 351 tests passing, 2 skipped
+- Test suite interference issues documented (fixture cleanup)
+
 ## [1.2.4] - 2026-01-06
 
 ### Added
