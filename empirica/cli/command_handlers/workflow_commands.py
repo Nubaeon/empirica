@@ -1457,7 +1457,8 @@ def handle_postflight_submit_command(args):
                     # Get project findings/unknowns for narrative richness (optional)
                     try:
                         findings = db.get_project_findings(project_id, limit=5)
-                        unknowns = db.get_project_unknowns(project_id, limit=5)
+                        # Note: get_project_unknowns doesn't accept limit parameter
+                        unknowns = db.get_project_unknowns(project_id, resolved=False)[:5]
                     except Exception:
                         findings = []
                         unknowns = []
