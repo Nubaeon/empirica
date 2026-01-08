@@ -1,0 +1,31 @@
+{
+  "goal_id": "55b8b07a-bf14-4103-b964-af0a16bca102",
+  "session_id": "dbba2a97-7eb4-4fe5-9872-179ceb6dcce5",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-08T11:53:11.688230+00:00",
+  "goal_data": {
+    "objective": "Test Qdrant Memory Integration: HOT\u2194COLD Pipeline - Verify PREFLIGHT pattern retrieval, CHECK warnings, POSTFLIGHT auto-embed, and lesson storage layer connections",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "PREFLIGHT returns relevant patterns from Qdrant based on task_context",
+      "CHECK returns warnings when approaching dead_ends or past mistakes",
+      "POSTFLIGHT successfully embeds findings to Qdrant",
+      "Lessons load correctly from COLD (YAML) through HOT (in-memory) cache"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-08T11:53:11.688246+00:00",
+      "action": "created"
+    }
+  ]
+}
