@@ -22,23 +22,6 @@ except ImportError:
 class TestArgMapTranslations:
     """Test that arg_map correctly maps MCP parameters to CLI flags"""
 
-    @pytest.mark.skip(reason="bootstrap_level not yet implemented in MCP schema - planned feature")
-    def test_bootstrap_level_maps_to_level(self):
-        """Bootstrap MCP tool should map bootstrap_level to --level in CLI"""
-        async def _get_tools():
-            return await list_tools()
-
-        tools = asyncio.run(_get_tools())
-        session_create_tool = next((t for t in tools if t.name == 'session_create'), None)
-        assert session_create_tool is not None
-
-        # Check that bootstrap_level parameter exists in MCP schema
-        schema = session_create_tool.inputSchema
-        assert 'bootstrap_level' in schema['properties'], "bootstrap_level should exist in MCP schema"
-
-        # Verify the mapping would work (this is tested implicitly via CLI parsing)
-        # The actual mapping is handled by arg_map in the MCP server
-    
     def test_task_id_maps_to_task_id_hyphen(self):
         """Complete subtask MCP tool should map task_id to --task-id in CLI"""
         async def _get_tools():
@@ -157,19 +140,6 @@ class TestUnderscoreToHyphenConversion:
 class TestSpecialMappings:
     """Test special parameter mappings that deviate from standard patterns"""
 
-    @pytest.mark.skip(reason="bootstrap_level not yet implemented in MCP schema - planned feature")
-    def test_bootstrap_level_special_mapping(self):
-        """bootstrap_level has special mapping to --bootstrap-level (not --level)"""
-        async def _get_tools():
-            return await list_tools()
-
-        tools = asyncio.run(_get_tools())
-        session_create_tool = next((t for t in tools if t.name == 'session_create'), None)
-        assert session_create_tool is not None
-
-        schema = session_create_tool.inputSchema
-        assert 'bootstrap_level' in schema['properties'], "bootstrap_level should exist"
-    
     def test_remaining_unknowns_special_mapping(self):
         """remaining_unknowns has special mapping to --unknowns (not --remaining-unknowns)"""
         async def _get_tools():

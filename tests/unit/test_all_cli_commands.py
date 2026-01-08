@@ -13,55 +13,35 @@ For Gemini/Qwen to validate bug fixes and ensure no regressions.
 
 import pytest
 import subprocess
-import json
-from pathlib import Path
 
 class TestCoreWorkflowCommands:
     """Test Core Workflow commands (CASCADE phases)
-    
+
     NOTE: These are INTERFACE tests only - they verify commands exist and accept args.
     Epistemic assessment quality (preflight/check/postflight) requires INTEGRATION tests
     with real reasoning. DO NOT use dummy epistemic data here - AIs might think it's canonical.
+
+    Uses AI-first *-submit commands (config file or stdin JSON).
     """
-    
-    def test_preflight_help(self):
-        """Preflight command has working --help"""
-        result = subprocess.run(["empirica", "preflight", "--help"], capture_output=True)
-        assert result.returncode == 0
-    
-    def test_preflight_requires_args(self):
-        """Preflight requires prompt argument"""
-        result = subprocess.run(["empirica", "preflight"], capture_output=True, text=True)
-        assert "required" in result.stderr.lower() or result.returncode != 0
-    
+
     def test_check_help(self):
         """Check command has working --help"""
         result = subprocess.run(["empirica", "check", "--help"], capture_output=True)
         assert result.returncode == 0
-    
-    def test_postflight_help(self):
-        """Postflight command has working --help"""
-        result = subprocess.run(["empirica", "postflight", "--help"], capture_output=True)
-        assert result.returncode == 0
-    
+
     def test_preflight_submit_help(self):
         """Preflight-submit command has working --help"""
         result = subprocess.run(["empirica", "preflight-submit", "--help"], capture_output=True)
         assert result.returncode == 0
-    
+
     def test_check_submit_help(self):
         """Check-submit command has working --help"""
         result = subprocess.run(["empirica", "check-submit", "--help"], capture_output=True)
         assert result.returncode == 0
-    
+
     def test_postflight_submit_help(self):
         """Postflight-submit command has working --help"""
         result = subprocess.run(["empirica", "postflight-submit", "--help"], capture_output=True)
-        assert result.returncode == 0
-    
-    def test_workflow_help(self):
-        """Workflow command has working --help"""
-        result = subprocess.run(["empirica", "workflow", "--help"], capture_output=True)
         assert result.returncode == 0
 
 
@@ -252,16 +232,6 @@ class TestActionsCommands:
     def test_act_log_help(self):
         """Act-log command has working --help"""
         result = subprocess.run(["empirica", "act-log", "--help"], capture_output=True)
-        assert result.returncode == 0
-
-
-class TestUserInterfaceCommands:
-    """Test User Interface commands (2 commands)"""
-    
-    @pytest.mark.skip(reason="Interactive command - times out in test")
-    def test_chat_help(self):
-        """Chat command has working --help (KNOWN ISSUE: interactive mode)"""
-        result = subprocess.run(["empirica", "chat", "--help"], capture_output=True, timeout=5)
         assert result.returncode == 0
 
 

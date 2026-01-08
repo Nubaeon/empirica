@@ -63,14 +63,6 @@ def add_cascade_parsers(subparsers):
     check_submit_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     check_submit_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
     
-    # Postflight command (primary, non-blocking)
-    postflight_parser = subparsers.add_parser('postflight', help='Submit postflight epistemic assessment results')
-    postflight_parser.add_argument('--session-id', required=True, help='Session ID')
-    postflight_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict (reassessment of same 13 dimensions as preflight)')
-    postflight_parser.add_argument('--reasoning', help='Task summary or description of learning/changes from preflight')
-    postflight_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
-    postflight_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
-
     # Postflight submit command (AI-first with config file support)
     postflight_submit_parser = subparsers.add_parser('postflight-submit',
         help='Submit postflight assessment (AI-first: use config file, Legacy: use flags)')

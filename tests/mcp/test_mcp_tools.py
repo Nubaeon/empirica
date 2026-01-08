@@ -25,31 +25,6 @@ async def test_session_create():
     assert "session_id" in data
     assert data["ai_id"] == "test_agent"
 
-@pytest.mark.skip(reason="MCP tool mapping outdated: execute_preflight maps to 'preflight' CLI command which was deprecated. Need to update MCP server tool_map to use preflight-submit flow.")
-@pytest.mark.asyncio
-async def test_execute_preflight():
-    """execute_preflight returns meta-prompt"""
-    # This tool requires a session_id, so we'll call session_create first
-    bootstrap_result = await call_tool("session_create", {"ai_id": "test_agent"})
-    session_id = json.loads(bootstrap_result[0].text)["session_id"]
-
-    result = await call_tool("execute_preflight", {"session_id": session_id, "prompt": "Test prompt"})
-    assert isinstance(result, list)
-    assert len(result) == 1
-    content = result[0]
-    assert isinstance(content, types.TextContent)
-
-    data = json.loads(content.text)
-    # execute_preflight returns preflight data, not an "ok" status
-    assert "session_id" in data
-    assert "task" in data
-    assert "assessment_id" in data
-    assert "self_assessment_prompt" in data
-    assert "phase" in data
-    assert data["phase"] == "preflight"
-    assert data["session_id"] == session_id
-    assert data["task"] == "Test prompt"
-
 @pytest.mark.asyncio
 async def test_submit_postflight_assessment():
     """submit_postflight_assessment calls CLI command"""

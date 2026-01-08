@@ -61,21 +61,8 @@ class TestCheckpointWorkflowE2E:
         if result.returncode == 0:
             # Extract session ID from output if needed
             pass
-        
-        # Step 2: Execute PREFLIGHT (should create assessment)
-        result = subprocess.run(
-            ["empirica", "preflight",
-             "Test task for E2E workflow",
-             "--ai-id", "e2e-test"],
-            capture_output=True,
-            text=True,
-            cwd=test_repo
-        )
-        
-        assert "PREFLIGHT" in result.stdout or "preflight" in result.stdout.lower(), \
-            "PREFLIGHT should execute"
-        
-        # Step 3: Submit PREFLIGHT vectors
+
+        # Step 2: Submit PREFLIGHT vectors (using AI-first preflight-submit)
         vectors_json = json.dumps({
             "engagement": 0.85,
             "know": 0.65,
@@ -102,7 +89,7 @@ class TestCheckpointWorkflowE2E:
             cwd=test_repo
         )
         
-        # Step 4: Create checkpoint (should include vectors from database)
+        # Step 3: Create checkpoint (should include vectors from database)
         result = subprocess.run(
             ["empirica", "checkpoint-create",
              "--session-id", session_id,
@@ -123,7 +110,7 @@ class TestCheckpointWorkflowE2E:
         assert result.returncode == 0 or "created" in result.stdout.lower(), \
             "Checkpoint creation should succeed"
         
-        # Step 5: List checkpoints (tests missing method bug)
+        # Step 4: List checkpoints (tests missing method bug)
         result = subprocess.run(
             ["empirica", "checkpoint-list",
              "--session-id", session_id],
@@ -288,78 +275,6 @@ class TestGoalsWorkflowE2E:
                     "Progress should not be 100% with incomplete subtasks"
             except json.JSONDecodeError:
                 pass
-
-
-class TestDatabaseIntegrity:
-    """Test database schema and data integrity"""
-    
-    @pytest.mark.skip(reason="Old reflexes table system - replaced by GitEnhancedReflexLogger")
-    def test_reflexes_table_integration(self):
-        """
-        E2E: Submit PREFLIGHT → Verify Reflexes Table → Create Checkpoint
-        
-        Catches missing reflexes table bug
-        """
-        import sqlite3
-        from pathlib import Path
-        
-        # Check if database exists (project-local, not home directory)
-        db_path = Path.cwd() / ".empirica" / "sessions" / "sessions.db"
-        
-        if not db_path.exists():
-            pytest.skip("Database doesn't exist yet - expected during setup")
-        
-        # Connect to database
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # Verify reflexes table exists
-        cursor.execute("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name='reflexes'
-        """)
-        
-        table_exists = cursor.fetchone()
-        
-        if not table_exists:
-            conn.close()
-            pytest.fail(
-                "REGRESSION: reflexes table missing from database. "
-                "This causes checkpoints to be created with empty vectors."
-            )
-        
-        # Verify table has correct structure
-        cursor.execute("PRAGMA table_info(reflexes)")
-        columns = cursor.fetchall()
-        column_names = [col[1] for col in columns]
-        
-        required_columns = [
-            "session_id", "phase", "timestamp",
-            "know", "do", "context", "uncertainty"
-        ]
-        
-        missing_columns = [col for col in required_columns if col not in column_names]
-        
-        conn.close()
-        
-        if missing_columns:
-            pytest.fail(
-                f"REGRESSION: reflexes table missing columns: {missing_columns}"
-            )
-
-
-class TestMCPToolsIntegration:
-    """Test MCP tools integration with actual implementation"""
-    
-    def test_mcp_checkpoint_tools(self):
-        """Verify MCP checkpoint tools work end-to-end"""
-        # This would test MCP server integration
-        # For now, mark as integration test
-        pytest.skip("MCP server integration test - requires running server")
-    
-    def test_mcp_goals_tools(self):
-        """Verify MCP goals tools work end-to-end"""
-        pytest.skip("MCP server integration test - requires running server")
 
 
 if __name__ == "__main__":

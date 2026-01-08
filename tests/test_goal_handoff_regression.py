@@ -93,40 +93,6 @@ class TestGoalHandoffRegression:
         for i in range(original_lineage_count):
             assert updated_goal['lineage'][i] == goal['lineage'][i]
     
-    @pytest.mark.skip(reason="Environment-dependent: expects specific goals from GOALS_CREATED_SUMMARY.md which may not exist in all environments")
-    def test_specific_documentation_goals_discoverable(self):
-        """
-        Test that the 4 specific documentation goals mentioned in bug report are discoverable
-
-        Goal IDs from GOALS_CREATED_SUMMARY.md:
-        - 92848363-f66d-4320-a0af-0f4b6ae02410 (rovodev)
-        - 9facdb1b-3324-4976-8aec-0c847f0c91c4 (qwen)
-        - de18de49-6edf-40fc-95b5-96971fe8d5f5 (copilot-claude)
-        """
-        store = GitGoalStore()
-        all_goals = store.discover_goals()
-        found_ids = {g['goal_id'] for g in all_goals}
-        
-        expected_goals = {
-            '92848363-f66d-4320-a0af-0f4b6ae02410': 'rovodev',
-            '9facdb1b-3324-4976-8aec-0c847f0c91c4': 'qwen',
-            'de18de49-6edf-40fc-95b5-96971fe8d5f5': 'copilot-claude',
-        }
-        
-        # Check that we can find these specific goals
-        found_count = 0
-        for goal_id, expected_ai in expected_goals.items():
-            if goal_id in found_ids:
-                found_count += 1
-                # Verify the AI matches
-                goal = next(g for g in all_goals if g['goal_id'] == goal_id)
-                assert goal['ai_id'] == expected_ai, \
-                    f"Goal {goal_id[:8]} should be from {expected_ai}"
-        
-        # At least 2 of the 3 goals should be findable
-        # (some might have been cleaned up)
-        assert found_count >= 2, \
-            f"Should find at least 2 of the 3 documented goals, found {found_count}"
 
 
 if __name__ == '__main__':

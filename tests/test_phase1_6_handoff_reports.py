@@ -3,11 +3,10 @@
 Integration test for Phase 1.6: Epistemic Handoff Reports
 
 Tests:
-1. Report generation
-2. Git storage
-3. Database storage
-4. Handoff resumption
-5. Query functionality
+1. Git storage
+2. Database storage
+3. Handoff resumption
+4. Query functionality
 """
 
 import sys
@@ -19,121 +18,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from empirica.core.handoff import (
-    EpistemicHandoffReportGenerator,
     GitHandoffStorage,
     DatabaseHandoffStorage
 )
 from empirica.data.session_database import SessionDatabase
-import pytest
-
-
-@pytest.mark.skip(reason="Uses deprecated preflight_assessments/postflight_assessments tables - need to update to use reflexes table (migration_008)")
-def test_report_generation():
-    """Test basic handoff report generation"""
-    print("\n🧪 Test 1: Report Generation")
-    print("=" * 60)
-    
-    # Create test database
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "test.db"
-        db = SessionDatabase(str(db_path))
-        
-        # Create test session
-        session_id = "test-session-001"
-        cursor = db.conn.cursor()
-        
-        cursor.execute("""
-            INSERT INTO sessions 
-            (session_id, ai_id, start_time, bootstrap_level, components_loaded)
-            VALUES (?, ?, datetime('now'), 1, 5)
-        """, (session_id, "copilot-claude"))
-        
-        # Create test assessments
-        test_vectors = {
-            'know': 0.70, 'do': 0.80, 'context': 0.75,
-            'clarity': 0.85, 'coherence': 0.80, 'signal': 0.75, 'density': 0.70,
-            'state': 0.60, 'change': 0.65, 'completion': 0.30, 'impact': 0.50,
-            'engagement': 0.90, 'uncertainty': 0.45
-        }
-        
-        cursor.execute("""
-            INSERT INTO preflight_assessments
-            (assessment_id, session_id, prompt_summary, engagement, know, do, context,
-             clarity, coherence, signal, density, state, change, completion, impact,
-             uncertainty, initial_uncertainty_notes)
-            VALUES (?, ?, 'Test prompt', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Test preflight')
-        """, ('preflight-001', session_id, test_vectors['engagement'], test_vectors['know'],
-              test_vectors['do'], test_vectors['context'], test_vectors['clarity'],
-              test_vectors['coherence'], test_vectors['signal'], test_vectors['density'],
-              test_vectors['state'], test_vectors['change'], test_vectors['completion'],
-              test_vectors['impact'], test_vectors['uncertainty']))
-        
-        # Postflight with improvements
-        postflight_vectors = test_vectors.copy()
-        postflight_vectors['know'] = 0.95
-        postflight_vectors['uncertainty'] = 0.20
-        postflight_vectors['completion'] = 0.95
-        
-        cursor.execute("""
-            INSERT INTO postflight_assessments
-            (assessment_id, session_id, task_summary, engagement, know, do, context,
-             clarity, coherence, signal, density, state, change, completion, impact,
-             uncertainty, postflight_actual_confidence, calibration_accuracy, learning_notes)
-            VALUES (?, ?, 'Test task', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'well_calibrated', 'Test postflight')
-        """, ('postflight-001', session_id, postflight_vectors['engagement'], postflight_vectors['know'],
-              postflight_vectors['do'], postflight_vectors['context'], postflight_vectors['clarity'],
-              postflight_vectors['coherence'], postflight_vectors['signal'], postflight_vectors['density'],
-              postflight_vectors['state'], postflight_vectors['change'], postflight_vectors['completion'],
-              postflight_vectors['impact'], postflight_vectors['uncertainty'],
-              0.85))
-        
-        db.conn.commit()
-        
-        # Generate handoff report
-        generator = EpistemicHandoffReportGenerator(str(db_path))
-        
-        report = generator.generate_handoff_report(
-            session_id=session_id,
-            task_summary="Implemented Phase 1.6 Epistemic Handoff Reports",
-            key_findings=[
-                "Created report generator with vector delta calculation",
-                "Implemented dual storage (git + database)",
-                "Added 3 new MCP tools for handoff lifecycle"
-            ],
-            remaining_unknowns=[
-                "Long-term scalability with 100+ sessions",
-                "Cross-repository handoff coordination"
-            ],
-            next_session_context="Phase 1.6 complete. Ready for Phase 2 validation and documentation.",
-            artifacts_created=[
-                "empirica/core/handoff/report_generator.py",
-                "empirica/core/handoff/storage.py"
-            ]
-        )
-        
-        # Validate report structure
-        assert 'session_id' in report
-        assert 'epistemic_deltas' in report
-        assert 'markdown' in report
-        assert 'compressed_json' in report
-        
-        # Check deltas
-        assert report['epistemic_deltas']['know'] == 0.25
-        assert report['epistemic_deltas']['uncertainty'] == -0.25
-        
-        # Check token count
-        token_estimate = len(report['compressed_json']) // 4
-        
-        print(f"✅ Report generated successfully")
-        print(f"   Session: {session_id[:12]}...")
-        print(f"   Epistemic deltas: {len(report['epistemic_deltas'])} vectors")
-        print(f"   Key findings: {len(report['key_findings'])} items")
-        print(f"   Compressed JSON: {len(report['compressed_json'])} chars")
-        print(f"   Token estimate: ~{token_estimate} tokens")
-        print(f"   Markdown length: {len(report['markdown'])} chars")
-        print(f"   Calibration: {report['calibration_status']}")
-        
-        return report
 
 
 def test_git_storage():
@@ -346,31 +234,20 @@ def main():
     print("\n" + "=" * 60)
     print("🧪 Phase 1.6 Integration Tests")
     print("=" * 60)
-    
+
     try:
         # Run all tests
-        report = test_report_generation()
         test_git_storage()
         test_database_storage()
         test_handoff_resumption()
         test_query_functionality()
-        
+
         print("\n" + "=" * 60)
         print("✅ All tests passed!")
         print("=" * 60)
-        
-        # Show sample report
-        print("\n📋 Sample Handoff Report (Markdown):")
-        print("=" * 60)
-        print(report['markdown'][:1000] + "...\n")
-        
-        print("📊 Sample Compressed JSON:")
-        print("=" * 60)
-        compressed = json.loads(report['compressed_json'])
-        print(json.dumps(compressed, indent=2))
-        
+
         print("\n✅ Phase 1.6 implementation validated!")
-        
+
     except Exception as e:
         print(f"\n❌ Test failed: {e}")
         import traceback
