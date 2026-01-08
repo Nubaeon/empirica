@@ -1,0 +1,30 @@
+{
+  "goal_id": "66feecb2-50cf-4eb8-8d52-3840c6f91a7b",
+  "session_id": "goals-e2e-1767882010",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-08T14:20:10.774499+00:00",
+  "goal_data": {
+    "objective": "E2E test goal workflow",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Test goal creation",
+      "Test subtasks",
+      "Test completion"
+    ],
+    "estimated_complexity": 0.2,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-08T14:20:10.774517+00:00",
+      "action": "created"
+    }
+  ]
+}
