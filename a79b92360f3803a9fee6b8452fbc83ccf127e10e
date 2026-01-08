@@ -1,0 +1,28 @@
+{
+  "goal_id": "c91231e5-a20d-4a3c-b37c-c51cdd454d8c",
+  "session_id": "09cd8830-a029-4699-b872-4b1ad01cf155",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-08T20:47:36.421892+00:00",
+  "goal_data": {
+    "objective": "Test installer script and onboarding project for bugs",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-08T20:47:36.421910+00:00",
+      "action": "created"
+    }
+  ]
+}
