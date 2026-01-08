@@ -1,0 +1,28 @@
+{
+  "goal_id": "43bbc961-0596-4ed6-b29e-3e63c28299f7",
+  "session_id": "371232ef-559b-4205-b6ae-b3728e5fad32",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-08T20:48:48.478792+00:00",
+  "goal_data": {
+    "objective": "Assess and clean up documentation for v1.3.0 release - focus on architecture docs",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-08T20:48:48.478807+00:00",
+      "action": "created"
+    }
+  ]
+}
