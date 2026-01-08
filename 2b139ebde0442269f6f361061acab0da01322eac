@@ -2,7 +2,7 @@
   "goal_id": "b58fff37-7190-446a-bdd8-74ffd4946fae",
   "session_id": "goals-e2e-1767881500",
   "ai_id": "empirica_cli",
-  "created_at": "2026-01-08T14:11:41.069745+00:00",
+  "created_at": "2026-01-08T14:11:59.720095+00:00",
   "goal_data": {
     "objective": "E2E test goal workflow",
     "scope": {
@@ -25,6 +25,11 @@
       "ai_id": "empirica_cli",
       "timestamp": "2026-01-08T14:11:41.069759+00:00",
       "action": "created"
+    },
+    {
+      "ai_id": "test-ai-regression",
+      "timestamp": "2026-01-08T14:11:59.718947+00:00",
+      "action": "resumed"
     }
   ]
 }
