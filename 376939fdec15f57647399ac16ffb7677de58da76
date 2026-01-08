@@ -2,7 +2,7 @@
   "goal_id": "1a61c49f-ed2e-434a-815c-8e05583398fd",
   "session_id": "b567ba75-d921-4456-b2db-6c6032393a73",
   "ai_id": "empirica_cli",
-  "created_at": "2026-01-08T11:50:52.104144+00:00",
+  "created_at": "2026-01-08T11:50:59.529071+00:00",
   "goal_data": {
     "objective": "Test AI-first goal creation",
     "scope": {
@@ -25,6 +25,11 @@
       "ai_id": "empirica_cli",
       "timestamp": "2026-01-08T11:50:52.104160+00:00",
       "action": "created"
+    },
+    {
+      "ai_id": "test-ai-regression",
+      "timestamp": "2026-01-08T11:50:59.527851+00:00",
+      "action": "resumed"
     }
   ]
 }
