@@ -1,0 +1,30 @@
+{
+  "goal_id": "1b92e5aa-8b89-410f-be8f-18b8cf39008f",
+  "session_id": "14a35fa1-43b9-4bbb-98b7-cd767f7aefe6",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-08T14:02:54.330551+00:00",
+  "goal_data": {
+    "objective": "Test AI-first goal creation",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Config file interface works",
+      "JSON output validated",
+      "No shell quoting issues"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-08T14:02:54.330566+00:00",
+      "action": "created"
+    }
+  ]
+}
