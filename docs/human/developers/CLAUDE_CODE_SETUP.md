@@ -1,8 +1,8 @@
 # Claude Code + Empirica Setup Guide
 
-**Time:** 5 minutes | **No scripts** | **Just copy-paste**
+**Time:** 5 minutes | **Cross-platform** | **Automated or manual**
 
-This guide sets up Empirica for Claude Code users on regular systems (not Docker).
+This guide sets up Empirica for Claude Code users on Linux, macOS, or Windows.
 
 ---
 
@@ -11,16 +11,49 @@ This guide sets up Empirica for Claude Code users on regular systems (not Docker
 | Component | Purpose | Location |
 |-----------|---------|----------|
 | `empirica` | CLI + Python library | pip package |
-| `empirica-mcp` | MCP server (optional) | pip package |
+| Claude Code plugin | Epistemic hooks, CASCADE workflow | `~/.claude/plugins/local/` |
+| empirica-framework skill | Command reference for AI | `~/.claude/skills/` |
 | System prompt | Teaches Claude how to use Empirica | `~/.claude/CLAUDE.md` |
-| Hooks | Memory compact integration | `~/.claude/hooks/` |
+| Environment vars | Qdrant, Ollama, autopilot config | Shell profile |
 
 ---
 
-## Step 1: Install Packages
+## Quick Install (Recommended)
+
+Run the interactive installer from the Empirica repository:
 
 ```bash
-pip install empirica empirica-mcp
+# Clone or navigate to Empirica repo
+git clone https://github.com/YourOrg/empirica.git
+cd empirica
+
+# Run installer
+python scripts/install.py
+```
+
+The installer will:
+- Install the Empirica package if needed
+- Ask about autopilot, auto-postflight, sentinel looping preferences
+- Configure Qdrant URL (for semantic search)
+- Set up Ollama embeddings (recommends `nomic-embed-text`)
+- Install the Claude Code plugin and skill
+- Update your shell profile with environment variables
+
+**Non-interactive mode** (use defaults):
+```bash
+python scripts/install.py --non-interactive
+```
+
+---
+
+## Manual Installation
+
+If you prefer manual setup or the installer doesn't work:
+
+### Step 1: Install Package
+
+```bash
+pip install empirica
 ```
 
 Verify:
