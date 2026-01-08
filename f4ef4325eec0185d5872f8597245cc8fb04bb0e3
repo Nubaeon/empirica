@@ -1,0 +1,28 @@
+{
+  "goal_id": "2e018524-9d83-4b2c-a5f6-1aba324aa31c",
+  "session_id": "9b790c1e-d7a4-49fe-a600-1fd395a3c15c",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-08T14:51:23.120444+00:00",
+  "goal_data": {
+    "objective": "No output flag test",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "test"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-08T14:51:23.120462+00:00",
+      "action": "created"
+    }
+  ]
+}
