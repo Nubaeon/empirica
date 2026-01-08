@@ -1,0 +1,28 @@
+{
+  "goal_id": "4d3b891f-0c90-445a-8fc4-f1df2ac96d44",
+  "session_id": "9b790c1e-d7a4-49fe-a600-1fd395a3c15c",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-08T14:48:18.762123+00:00",
+  "goal_data": {
+    "objective": "Test goal",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "test"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-08T14:48:18.762140+00:00",
+      "action": "created"
+    }
+  ]
+}
