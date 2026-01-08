@@ -1,0 +1,28 @@
+{
+  "goal_id": "16edd6b8-3fb0-4eef-9324-cde831445f87",
+  "session_id": "815ccd33-2965-43ec-9232-a989411e0968",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-08T20:32:32.081225+00:00",
+  "goal_data": {
+    "objective": "Investigate installation requirements and Windows compatibility",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-08T20:32:32.081241+00:00",
+      "action": "created"
+    }
+  ]
+}
