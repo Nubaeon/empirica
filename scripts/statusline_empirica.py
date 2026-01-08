@@ -33,17 +33,9 @@ from empirica.config.path_resolver import get_empirica_root
 from empirica.data.session_database import SessionDatabase
 from empirica.core.signaling import (
     SignalingState,
-    CognitivePhase,
     format_vectors_compact,
-    format_drift_compact,
     format_drift_status,
-    get_drift_level,
-    detect_sentinel_action,
     read_drift_cache,
-    infer_cognitive_phase,
-    infer_cognitive_phase_from_vectors,
-    format_cognitive_phase,
-    DRIFT_CACHE_PATH,
 )
 
 
@@ -64,6 +56,123 @@ class Colors:
 def get_ai_id() -> str:
     """Get AI identifier from environment."""
     return os.getenv('EMPIRICA_AI_ID', 'claude-code').strip()
+
+
+def get_active_goal(db: SessionDatabase, session_id: str) -> dict:
+    """
+    Get the active goal for a session.
+
+    Returns:
+        {
+            'goal_id': str,
+            'objective': str,
+            'completion': float (0.0-1.0),
+            'subtask_progress': (completed, total)
+        }
+        or None if no active goal
+    """
+    cursor = db.conn.cursor()
+
+    # Get active (non-completed) goal for this session
+    cursor.execute("""
+        SELECT id, objective, status
+        FROM goals
+        WHERE session_id = ? AND status != 'completed'
+        ORDER BY created_timestamp DESC
+        LIMIT 1
+    """, (session_id,))
+    row = cursor.fetchone()
+
+    if not row:
+        return None
+
+    goal_id, objective, _ = row  # _ for unused status
+
+    # Get subtask progress
+    cursor.execute("""
+        SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+        FROM subtasks
+        WHERE goal_id = ?
+    """, (goal_id,))
+    subtask_row = cursor.fetchone()
+
+    total_subtasks = subtask_row[0] if subtask_row else 0
+    completed_subtasks = subtask_row[1] if subtask_row else 0
+
+    # Calculate completion: use subtask ratio if subtasks exist, else 0
+    if total_subtasks > 0:
+        completion = completed_subtasks / total_subtasks
+    else:
+        completion = 0.0
+
+    return {
+        'goal_id': goal_id,
+        'objective': objective,
+        'completion': completion,
+        'subtask_progress': (completed_subtasks, total_subtasks)
+    }
+
+
+def format_progress_bar(completion: float, width: int = 8) -> str:
+    """
+    Format completion as ASCII progress bar.
+
+    Args:
+        completion: 0.0 to 1.0
+        width: number of characters for the bar
+
+    Returns:
+        String like "████░░░░ 45%"
+    """
+    filled = int(completion * width)
+    empty = width - filled
+
+    bar = "█" * filled + "░" * empty
+    pct = int(completion * 100)
+
+    # Color based on progress
+    if completion >= 0.75:
+        color = Colors.BRIGHT_GREEN
+    elif completion >= 0.5:
+        color = Colors.GREEN
+    elif completion >= 0.25:
+        color = Colors.YELLOW
+    else:
+        color = Colors.GRAY
+
+    return f"{color}{bar}{Colors.RESET} {pct}%"
+
+
+def format_goal_progress(goal: dict, max_name_len: int = 12) -> str:
+    """
+    Format goal progress for statusline.
+
+    Returns:
+        String like "auth-fix ████░░░░ 45%" or "████░░░░ 45%" if no goal name
+    """
+    if not goal:
+        return f"{Colors.GRAY}no goal{Colors.RESET}"
+
+    objective = goal.get('objective', '')
+    completion = goal.get('completion', 0.0)
+
+    # Truncate objective for display
+    if len(objective) > max_name_len:
+        name = objective[:max_name_len-2] + ".."
+    else:
+        name = objective
+
+    # Simplify name: lowercase, replace spaces with dashes
+    name = name.lower().replace(' ', '-')[:max_name_len]
+
+    bar = format_progress_bar(completion, width=6)
+
+    if name:
+        return f"{name} {bar}"
+    else:
+        return bar
 
 
 def calculate_confidence(vectors: dict) -> float:
@@ -354,17 +463,14 @@ def format_statusline(
     mode: str = 'default',
     drift_detected: bool = False,
     drift_severity: str = None,
-    gate_decision: str = None
+    gate_decision: str = None,
+    goal: dict = None
 ) -> str:
     """Format the statusline based on mode."""
 
     # Calculate confidence score
     confidence = calculate_confidence(vectors)
     conf_str = format_confidence(confidence)
-
-    # Infer cognitive phase from VECTORS (emergent, not prescribed)
-    # This is the Turtle Principle: phase is observed from epistemic state
-    cognitive_phase = infer_cognitive_phase_from_vectors(vectors) if vectors else CognitivePhase.NOETIC
 
     parts = [f"{Colors.GREEN}[empirica]{Colors.RESET} {conf_str}"]
 
@@ -375,9 +481,10 @@ def format_statusline(
         return ' '.join(parts)
 
     elif mode == 'default':
-        # Cognitive phase (emergent) + CASCADE gate + key vectors (%) + deltas + drift
-        cog_str = format_cognitive_phase(cognitive_phase)
-        parts.append(cog_str)
+        # Goal progress + CASCADE gate + key vectors (%) + deltas + drift
+        # (Replaced NOETIC/PRAXIC - that's AI internal language, not useful for users)
+        goal_str = format_goal_progress(goal)
+        parts.append(goal_str)
 
         # CASCADE gate (compliance checkpoint) with metacog decision
         if phase:
@@ -408,9 +515,9 @@ def format_statusline(
         return ' │ '.join(parts)
 
     elif mode == 'learning':
-        # Focus on vectors with values and deltas
-        cog_str = format_cognitive_phase(cognitive_phase, use_color=False)
-        parts.append(cog_str)
+        # Focus on vectors with values and deltas (for developers)
+        goal_str = format_goal_progress(goal)
+        parts.append(goal_str)
 
         if phase:
             parts.append(f"{phase}")
@@ -433,14 +540,20 @@ def format_statusline(
         return ' │ '.join(parts)
 
     else:  # full
-        # Everything
+        # Everything (for developers/debugging)
         ai_id = session.get('ai_id', 'unknown')
         session_id = session.get('session_id', '????')[:4]
         parts = [f"{Colors.BRIGHT_CYAN}[empirica:{ai_id}@{session_id}]{Colors.RESET}"]
 
-        if cognitive_phase:
-            cog_str = format_cognitive_phase(cognitive_phase)
-            parts.append(cog_str)
+        # Goal progress with more detail
+        if goal:
+            completed, total = goal.get('subtask_progress', (0, 0))
+            goal_str = format_goal_progress(goal)
+            if total > 0:
+                goal_str += f" ({completed}/{total})"
+            parts.append(goal_str)
+        else:
+            parts.append(f"{Colors.GRAY}no goal{Colors.RESET}")
 
         if phase:
             parts.append(f"{Colors.BLUE}{phase}{Colors.RESET}")
@@ -492,6 +605,9 @@ def main():
         # Check drift from DB (compare recent reflexes)
         drift_detected, drift_severity = get_drift_from_db(db, session_id)
 
+        # Get active goal for this session
+        goal = get_active_goal(db, session_id)
+
         # Get drift from cache (updated by hooks) - fallback
         drift_state = read_drift_cache(str(Path.cwd()))
 
@@ -510,7 +626,7 @@ def main():
         output = format_statusline(
             session, phase, vectors, drift_state, deltas, mode,
             drift_detected=drift_detected, drift_severity=drift_severity,
-            gate_decision=gate_decision
+            gate_decision=gate_decision, goal=goal
         )
         print(output)
 
