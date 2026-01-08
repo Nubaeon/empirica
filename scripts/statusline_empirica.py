@@ -581,8 +581,16 @@ def main():
         mode = os.getenv('EMPIRICA_STATUS_MODE', 'default').lower()
         ai_id = get_ai_id()
 
-        # Allow override of project path via env var (for multi-project setups)
+        # Auto-detect project from current directory (like git does with .git/)
+        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) .empirica/ in cwd, 3) default
         project_path = os.getenv('EMPIRICA_PROJECT_PATH')
+
+        if not project_path:
+            # Check if current directory has .empirica/
+            cwd_db = Path.cwd() / '.empirica' / 'sessions' / 'sessions.db'
+            if cwd_db.exists():
+                project_path = str(Path.cwd())
+
         if project_path:
             db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
             db = SessionDatabase(db_path=str(db_path))
