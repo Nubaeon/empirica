@@ -1,0 +1,28 @@
+{
+  "goal_id": "5f7ea39f-5837-49bd-9ad4-981716236aff",
+  "session_id": "894fc920-cf5d-4dcf-b655-3444cc5c7c20",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-09T10:53:27.667806+00:00",
+  "goal_data": {
+    "objective": "Complete API Explorer and Refactor Decision READMEs for release",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-09T10:53:27.667823+00:00",
+      "action": "created"
+    }
+  ]
+}
