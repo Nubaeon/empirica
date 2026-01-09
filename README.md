@@ -168,14 +168,20 @@ empirica project-init
 ### Homebrew (macOS)
 
 ```bash
-brew tap nubaeon/empirica
+brew tap nubaeon/tap
 brew install empirica
 ```
 
 ### Docker
 
 ```bash
+# Standard image (Debian slim, ~414MB)
 docker pull nubaeon/empirica:1.3.0
+
+# Security-hardened Alpine image (~276MB, recommended)
+docker pull nubaeon/empirica:1.3.0-alpine
+
+# Run
 docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.3.0 /bin/bash
 ```
 
