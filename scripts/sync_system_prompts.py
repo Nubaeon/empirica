@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-PROMPTS_DIR = Path(__file__).parent.parent / "docs" / "system-prompts"
+PROMPTS_DIR = Path(__file__).parent.parent / "docs" / "human" / "developers" / "system-prompts"
 DELTAS_DIR = PROMPTS_DIR / "model_deltas"
 CORE_FILE = PROMPTS_DIR / "CANONICAL_CORE.md"
 

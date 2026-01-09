@@ -3,6 +3,11 @@
 **Status:** ✅ Production-Ready
 **Last Updated:** 2025-12-19
 
+**Related docs:**
+- [Qdrant API Reference](../reference/api/qdrant.md) - EmbeddingsProvider, QdrantMemory classes and methods
+- [CANONICAL_STORAGE.md](./CANONICAL_STORAGE.md) - Four-layer storage architecture overview
+- [STORAGE_ARCHITECTURE_COMPLETE.md](./STORAGE_ARCHITECTURE_COMPLETE.md) - Visual data flow diagrams
+
 ---
 
 ## Architecture Overview

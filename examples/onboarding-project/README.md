@@ -1,58 +1,51 @@
-# Empirica Onboarding Project
+# Empirica Onboarding - Choose Your Adventure
 
-Welcome to Empirica! This project walks you through the core workflow.
+Welcome to Empirica! Pick a mini-project that matches your interest.
+
+## Why Multiple Projects?
+
+Empirica shines when there's **genuine uncertainty** - when you don't know the answer upfront and must investigate. Each project is designed to give you a real epistemic journey where your confidence naturally changes.
+
+## Choose Your Project
+
+| Project | Difficulty | Time | Best For |
+|---------|------------|------|----------|
+| [Bug Hunt](projects/bug-hunt/) | ⭐⭐ | 20 min | Debugging, investigation |
+| [Code Archaeology](projects/code-archaeology/) | ⭐⭐⭐ | 30 min | Understanding unfamiliar code |
+| [API Explorer](projects/api-explorer/) | ⭐⭐ | 25 min | Learning new APIs |
+| [Refactor Decision](projects/refactor-decision/) | ⭐⭐⭐ | 30 min | Architecture decisions |
 
 ## What You'll Learn
 
-1. **Session Management** - Creating and tracking AI sessions
-2. **CASCADE Workflow** - PREFLIGHT -> CHECK -> POSTFLIGHT
-3. **Epistemic Breadcrumbs** - Logging findings, unknowns, dead-ends
-4. **Goals** - Breaking down work into trackable objectives
+All projects teach the same Empirica workflow:
 
-## The Task
+1. **PREFLIGHT** - Honest baseline: "What do I actually know?"
+2. **Breadcrumbs** - Log findings, unknowns, dead-ends as you work
+3. **CHECK** - Gate decisions with confidence vectors
+4. **POSTFLIGHT** - Measure your learning delta
 
-You'll implement a simple calculator module with tests. The task is intentionally straightforward so you can focus on learning Empirica, not struggling with code.
-
-## Time Required
-
-- First walkthrough: ~15 minutes
-- Just the code: ~5 minutes
-
-## Prerequisites
-
-- Python 3.10+
-- Empirica installed (`pip install empirica`)
-- Claude Code (or any AI assistant)
-
-## Getting Started
-
-Follow the guide in [WALKTHROUGH.md](WALKTHROUGH.md).
-
-## Files
-
-```
-onboarding-project/
-├── README.md           # This file
-├── WALKTHROUGH.md      # Step-by-step guide
-├── calculator.py       # Starter code (incomplete)
-├── test_calculator.py  # Tests to pass
-└── .empirica/          # Created during walkthrough
-```
-
-## After Completing
-
-You'll have:
-- A working calculator module
-- A complete Empirica session with:
-  - PREFLIGHT baseline
-  - Logged findings and unknowns
-  - Completed goal with subtasks
-  - POSTFLIGHT learning delta
-- Understanding of epistemic self-assessment
-
-## Need Help?
+## Quick Start
 
 ```bash
-empirica --help                    # All commands
-empirica docs-explain --topic X    # Topic lookup
+# 1. Install Empirica
+pip install empirica
+
+# 2. Create session
+empirica session-create --ai-id claude-code --output json
+
+# 3. Pick a project and follow its WALKTHROUGH.md
+cd examples/onboarding-project/projects/bug-hunt/
+cat WALKTHROUGH.md
 ```
+
+## The Epistemic Payoff
+
+After completing any project, you'll have:
+- A recorded learning journey with confidence progression
+- Findings you can search later (`empirica project-search`)
+- Dead-ends that prevent future mistakes
+- Calibration data showing how accurate your self-assessments were
+
+---
+
+**Tip:** Start with Bug Hunt if you're new. It's the most intuitive demonstration of epistemic tracking.

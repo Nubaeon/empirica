@@ -24,7 +24,7 @@ Run the interactive installer from the Empirica repository:
 
 ```bash
 # Clone or navigate to Empirica repo
-git clone https://github.com/YourOrg/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 
 # Run installer
@@ -54,6 +54,8 @@ If you prefer manual setup or the installer doesn't work:
 
 ```bash
 pip install empirica
+
+pip install empirica-mcp
 ```
 
 Verify:
@@ -85,14 +87,23 @@ empirica session-create --ai-id claude-code --output json
 # 2. Load project context
 empirica project-bootstrap --session-id <ID> --output json
 
-# 3. PREFLIGHT: Assess what you know BEFORE starting work
+# 3. Create goal (tracks what you're working on)
+empirica goals-create --session-id <ID> --objective "Implement feature X"
+
+# 4. PREFLIGHT: Assess what you know BEFORE starting work
 empirica preflight-submit -
 
-# 4. Do your work...
+# 5. Do your work...
 
-# 5. POSTFLIGHT: Measure what you learned AFTER completing work
+# 6. Complete goal when done
+empirica goals-complete --goal-id <GOAL_ID> --reason "Implemented and tested"
+
+# 7. POSTFLIGHT: Measure what you learned AFTER completing work
 empirica postflight-submit -
 ```
+
+**Per-goal loops:** Each goal gets its own PREFLIGHT → work → POSTFLIGHT cycle.
+Don't batch multiple goals - complete one loop before starting the next.
 
 ## Core Vectors (0.0-1.0)
 
@@ -103,7 +114,7 @@ empirica postflight-submit -
 | **context** | Information access | >= 0.60 |
 | **do** | Execution capability | >= 0.60 |
 
-**Bias correction:** Add +0.10 to uncertainty, subtract -0.05 from know (AIs overestimate).
+**Bias correction (from 995 observations):** Subtract 0.14 from uncertainty, add 0.10 to know (Claude overestimates doubt, underestimates knowledge).
 
 ## Log As You Work
 
@@ -183,9 +194,11 @@ Or if you installed from source:
 - `full`: Everything with raw values
 
 **Status indicators:**
-- `⚡82%` = confidence score
-- `NOETIC/PRAXIC` = cognitive phase
-- `K:85% U:15% C:90%` = know/uncertainty/context vectors
+- `⚡84%` = confidence score
+- `no goal` / `goal name` = active goal status
+- `PREFLIGHT/CHECK/POSTFLIGHT` = CASCADE workflow phase
+- `K:90% U:15% C:90%` = know/uncertainty/context vectors
+- `Δ K:+0.25 U:-0.25` = learning delta (vector changes)
 - `✓ stable` / `⚠ drifting` = drift status
 
 ---
@@ -284,22 +297,48 @@ chmod +x ~/.claude/hooks/post-compact.sh
 
 ## Step 5: Configure MCP Server (Optional)
 
-If you also use Claude Desktop and want MCP tools:
+For Claude Code MCP integration, edit `~/.claude/mcp.json`:
 
-Edit `~/.claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "empirica": {
       "command": "empirica-mcp",
+      "args": [],
+      "type": "stdio",
       "env": {
-        "EMPIRICA_AI_ID": "claude-desktop",
         "EMPIRICA_EPISTEMIC_MODE": "true",
         "EMPIRICA_PERSONALITY": "balanced_architect"
-      }
+      },
+      "tools": ["*"],
+      "description": "Empirica epistemic framework"
     }
   }
 }
+```
+
+**If installed from source** (not pip), use full path:
+```json
+{
+  "mcpServers": {
+    "empirica": {
+      "command": "/path/to/empirica/.venv-mcp/bin/empirica-mcp",
+      "args": [],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": "/path/to/empirica",
+        "EMPIRICA_EPISTEMIC_MODE": "true",
+        "EMPIRICA_PERSONALITY": "balanced_architect"
+      },
+      "tools": ["*"]
+    }
+  }
+}
+```
+
+**Test MCP server:**
+```bash
+empirica-mcp --help
 ```
 
 ---
@@ -314,7 +353,7 @@ empirica session-create --ai-id test-setup --output json
 
 # Verify statusline (if configured)
 python3 /path/to/empirica/scripts/statusline_empirica.py
-# Should show: [empirica] ⚡82% │ NOETIC │ PREFLIGHT │ K:85% U:15% C:90% │ ✓ stable
+# Should show: [empirica] ⚡84% │ no goal │ PREFLIGHT │ K:90% U:15% C:90% │ ✓ stable
 ```
 
 In Claude Code, ask:
@@ -349,9 +388,16 @@ source ~/.bashrc
 
 ### MCP server not working
 ```bash
-# Test MCP server directly
-empirica-mcp --help
+# Verify MCP server is installed
+which empirica-mcp
+
+# Check mcp.json config syntax
+python3 -c "import json; json.load(open('$HOME/.claude/mcp.json'))" && echo "Valid JSON"
+
+# Test underlying CLI (MCP wraps this)
+empirica --version
 ```
+Note: `empirica-mcp` runs as stdio server, not CLI with --help.
 
 ---
 
@@ -368,9 +414,11 @@ empirica-mcp --help
 ```
 SESSION:    empirica session-create --ai-id claude-code --output json
 BOOTSTRAP:  empirica project-bootstrap --session-id <ID> --output json
+GOAL:       empirica goals-create --session-id <ID> --objective "..."
 PREFLIGHT:  empirica preflight-submit -
-POSTFLIGHT: empirica postflight-submit -
 CHECK:      empirica check-submit -
+COMPLETE:   empirica goals-complete --goal-id <ID> --reason "..."
+POSTFLIGHT: empirica postflight-submit -
 FINDING:    empirica finding-log --finding "..." --impact 0.7
 UNKNOWN:    empirica unknown-log --unknown "..."
 HELP:       empirica --help

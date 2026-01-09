@@ -4,6 +4,12 @@
 
 The Sentinel is the gate controller of Empirica's cognitive architecture. It governs the transition between noetic (investigation) and praxic (action) phases, enforces compliance, and tracks epistemic loops.
 
+**Related docs:**
+- [NOETIC_PRAXIC_FRAMEWORK.md](./NOETIC_PRAXIC_FRAMEWORK.md) - The autonomous epistemic loop
+- [CASCADE Workflow](../../plugins/claude-code-integration/skills/empirica-framework/references/cascade-workflow.md) - PREFLIGHT→CHECK→POSTFLIGHT phases
+- [CONFIGURATION_REFERENCE.md](../reference/CONFIGURATION_REFERENCE.md) - EMPIRICA_SENTINEL_LOOPING and autopilot settings
+- [Architecture README](./README.md) - System overview
+
 ## Philosophy
 
 The Sentinel doesn't think for the AI - it provides governance:

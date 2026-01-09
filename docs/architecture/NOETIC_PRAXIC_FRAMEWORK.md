@@ -2,6 +2,12 @@
 
 **How AI Agents Learn, Decide, and Act**
 
+**Related docs:**
+- [SENTINEL_ARCHITECTURE.md](./SENTINEL_ARCHITECTURE.md) - Gate control (noetic→praxic transition)
+- [CASCADE Workflow](../../plugins/claude-code-integration/skills/empirica-framework/references/cascade-workflow.md) - Phase details and commands
+- [EPISTEMIC_STATE_COMPLETE_CAPTURE.md](./EPISTEMIC_STATE_COMPLETE_CAPTURE.md) - Full state capture design
+- [Architecture README](./README.md) - System overview
+
 ## Core Insight: Empirica IS the Loop
 
 This framework is NOT about checkpoints, snapshots, or memory management.
@@ -18,6 +24,7 @@ This framework is NOT about checkpoints, snapshots, or memory management.
 │  impact, engagement, uncertainty)                           │
 │                                                             │
 │ AI assesses: "What do I actually know/understand?"          │
+│ See: ../human/end-users/05_EPISTEMIC_VECTORS_EXPLAINED.md   │
 └─────────────────────────────────────────────────────────────┘
                         │
                         ▼

@@ -72,9 +72,16 @@ def handle_assess_directory_command(args):
     assessments.sort(key=lambda a: a.vectors.confidence_score())
 
     if args.output == 'json':
+        # Calculate average health from all assessments
+        avg_health = 0.0
+        if assessments:
+            health_scores = [a.vectors.confidence_score() for a in assessments]
+            avg_health = sum(health_scores) / len(health_scores)
+
         output = {
             'total_files': len(py_files),
             'assessed': len(assessments),
+            'average_health': avg_health,
             'worst_components': [a.to_dict() for a in assessments[:args.top]],
         }
         print(json.dumps(output, indent=2, default=str))

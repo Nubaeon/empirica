@@ -394,6 +394,45 @@ for goal in ready_goals:
 
 ---
 
+## CLI Commands
+
+### `goals-add-dependency`
+
+Add a goal-to-goal dependency relationship.
+
+```bash
+empirica goals-add-dependency --goal-id <GOAL_ID> --depends-on <DEPENDS_ON_GOAL_ID> [--type <TYPE>] [--description <DESC>]
+```
+
+**Parameters:**
+- `--goal-id` - Goal that has the dependency
+- `--depends-on` - Goal that must be completed first
+- `--type` - Dependency type: `blocks`, `enables`, `informs` (default: `blocks`)
+- `--description` - Optional description of the relationship
+
+**Example:**
+```bash
+# Goal B depends on Goal A (Goal A must complete before B can start)
+empirica goals-add-dependency \
+  --goal-id abc-456 \
+  --depends-on abc-123 \
+  --type blocks \
+  --description "Authentication must be complete before implementing user profiles"
+```
+
+**Output (JSON):**
+```json
+{
+  "ok": true,
+  "dependency_id": "dep-789",
+  "goal_id": "abc-456",
+  "depends_on_goal_id": "abc-123",
+  "type": "blocks"
+}
+```
+
+---
+
 ## Best Practices
 
 1. **Define clear success criteria** when creating goals to enable proper progress tracking.
@@ -419,6 +458,161 @@ Methods typically raise:
 
 ---
 
+---
+
+## Data Classes
+
+### ScopeVector
+
+Goal scope as epistemic vectors. AI self-assesses, Sentinel validates coherence.
+
+```python
+from empirica.core.goals.types import ScopeVector
+
+@dataclass
+class ScopeVector:
+    breadth: float      # 0.0-1.0: How wide (0=single function, 1=entire codebase)
+    duration: float     # 0.0-1.0: Expected lifetime (0=minutes, 1=months)
+    coordination: float # 0.0-1.0: Multi-agent coordination needed
+
+# Example
+scope = ScopeVector(breadth=0.6, duration=0.4, coordination=0.3)
+```
+
+| Field | Range | Low Value | High Value |
+|-------|-------|-----------|------------|
+| `breadth` | 0.0-1.0 | Single file/function | Entire codebase |
+| `duration` | 0.0-1.0 | Minutes/hours | Weeks/months |
+| `coordination` | 0.0-1.0 | Solo work | Heavy multi-agent |
+
+---
+
+### DependencyType (Enum)
+
+Dependency relationship types between goals.
+
+```python
+from empirica.core.goals.types import DependencyType
+
+class DependencyType(Enum):
+    PREREQUISITE = "prerequisite"     # Must complete before starting
+    CONCURRENT = "concurrent"         # Can work on simultaneously
+    INFORMATIONAL = "informational"   # Nice to have context
+```
+
+---
+
+### SuccessCriterion
+
+Measurable success criterion for goal completion.
+
+```python
+from empirica.core.goals.types import SuccessCriterion
+
+@dataclass
+class SuccessCriterion:
+    id: str
+    description: str
+    validation_method: str    # "completion", "quality_gate", "metric_threshold"
+    threshold: Optional[float] = None
+    is_required: bool = True
+    is_met: bool = False
+```
+
+**Validation Methods:**
+- `completion` - Binary done/not done
+- `quality_gate` - Passes quality checks
+- `metric_threshold` - Numeric value meets threshold
+
+---
+
+### GoalDecision
+
+Result of goal creation decision logic.
+
+```python
+from empirica.core.goals.decision_logic import GoalDecision, decide_goal_creation
+
+decision = decide_goal_creation(
+    clarity=0.8,
+    signal=0.7,
+    know=0.5,
+    context=0.4
+)
+
+print(decision.should_create_goal_now)  # False
+print(decision.suggested_action)        # 'investigate_first'
+print(decision.reasoning)               # Explanation
+```
+
+**Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `should_create_goal_now` | bool | Create goal immediately? |
+| `reasoning` | str | Human-readable explanation |
+| `suggested_action` | str | 'create_goal', 'investigate_first', 'ask_clarification' |
+| `confidence` | float | Confidence in decision |
+| `clarity_score` | float | Input clarity |
+| `signal_score` | float | Input signal quality |
+| `know_score` | float | Domain knowledge |
+| `context_score` | float | Environment context |
+
+**Decision Matrix:**
+
+| Condition | Suggested Action |
+|-----------|-----------------|
+| High clarity + signal + know + context | `create_goal` |
+| High clarity + signal, low know/context | `investigate_first` |
+| Low clarity or signal | `ask_clarification` |
+
+---
+
+## Implementation Files
+
+### TaskStatus (Enum)
+
+Task completion status.
+
+```python
+from empirica.core.tasks.types import TaskStatus
+
+class TaskStatus(Enum):
+    PENDING = "pending"           # Not started
+    IN_PROGRESS = "in_progress"   # Currently working
+    COMPLETED = "completed"       # Done
+    BLOCKED = "blocked"           # Blocked by dependency
+    SKIPPED = "skipped"           # Decided not to do
+```
+
+---
+
+### EpistemicImportance (Enum)
+
+Task importance from epistemic perspective.
+
+```python
+from empirica.core.tasks.types import EpistemicImportance
+
+class EpistemicImportance(Enum):
+    CRITICAL = "critical"   # Required for goal success
+    HIGH = "high"           # Important but not blocking
+    MEDIUM = "medium"       # Nice to have
+    LOW = "low"             # Optional enhancement
+```
+
+---
+
+## Implementation Files
+
+- `empirica/core/goals/types.py` - ScopeVector, DependencyType, SuccessCriterion, Goal
+- `empirica/core/goals/decision_logic.py` - GoalDecision, decide_goal_creation
+- `empirica/core/goals/repository.py` - GoalRepository
+- `empirica/core/tasks/repository.py` - TaskRepository
+- `empirica/core/tasks/types.py` - TaskStatus, EpistemicImportance, SubTask
+
+---
+
 **Module Location:** `empirica/core/goals/repository.py`, `empirica/core/tasks/repository.py`
 **API Stability:** Stable
-**Last Updated:** 2025-12-27
+**Last Updated:** 2026-01-09

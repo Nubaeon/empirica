@@ -1,21 +1,16 @@
 """
 Configuration Commands - CLI commands for managing Empirica configuration
+
+Uses MCO (Meta-Agent Configuration Object) loader for AI behavioral config.
+Legacy modality_switcher config is deprecated and no longer available.
 """
 
-import os
 import json
 import yaml
-from pathlib import Path
-from typing import Dict, Any
 
-# Modality switcher config is optional (commercial feature)
-try:
-    from empirica.plugins.modality_switcher.config_loader import ConfigLoader, get_config
-    CONFIG_AVAILABLE = True
-except ImportError:
-    CONFIG_AVAILABLE = False
-    ConfigLoader = None
-    get_config = None
+# MCO config loader (always available)
+from empirica.config.mco_loader import get_mco_config
+
 from ..cli_utils import handle_cli_error
 
 
@@ -40,36 +35,37 @@ def handle_config_command(args):
 def handle_config_init_command(args):
     """
     Initialize Empirica configuration.
-    
-    Creates user config file at ~/.empirica/config.yaml with default values.
+
+    MCO configuration is read from YAML files in the empirica/config/mco/ directory.
     """
     try:
-        print("\n🔧 Initializing Empirica Configuration")
+        print("\n🔧 Empirica Configuration")
         print("=" * 70)
-        
-        user_config_path = Path.home() / ".empirica" / "config.yaml"
-        
-        # Check if config already exists
-        if user_config_path.exists() and not getattr(args, 'force', False):
-            print(f"\n⚠️  Configuration file already exists:")
-            print(f"   {user_config_path}")
-            print(f"\nUse --force to overwrite")
-            return
-        
-        # Load default config
-        loader = ConfigLoader()
-        default_config = loader.to_dict()
-        
-        # Save to user config
-        loader.save_user_config(default_config)
-        
-        print(f"\n✅ Configuration initialized:")
-        print(f"   {user_config_path}")
-        print(f"\n📝 Edit this file to customize your Empirica settings")
-        print(f"\n💡 Quick commands:")
-        print(f"   empirica config show       - View current configuration")
-        print(f"   empirica config validate   - Validate configuration")
-        
+
+        mco = get_mco_config()
+
+        print("\n📂 MCO Configuration Location:")
+        print(f"   {mco.config_dir}")
+
+        print("\n📝 Configuration files:")
+        config_files = [
+            ("model_profiles.yaml", "Model-specific bias corrections"),
+            ("personas.yaml", "Investigation budgets and epistemic priors"),
+            ("cascade_styles.yaml", "Threshold profiles"),
+            ("epistemic_conduct.yaml", "Bidirectional accountability triggers"),
+            ("protocols.yaml", "Tool schemas"),
+        ]
+        for filename, description in config_files:
+            filepath = mco.config_dir / filename
+            exists = "✅" if filepath.exists() else "❌"
+            print(f"   {exists} {filename} - {description}")
+
+        print("\n💡 To customize configuration:")
+        print(f"   Edit YAML files in: {mco.config_dir}")
+        print("\n💡 Quick commands:")
+        print("   empirica config           - View current configuration")
+        print("   empirica config --validate - Validate configuration")
+
     except Exception as e:
         handle_cli_error(e, "Config Init", getattr(args, 'verbose', False))
 
@@ -77,50 +73,61 @@ def handle_config_init_command(args):
 def handle_config_show_command(args):
     """
     Show current Empirica configuration.
-    
-    Displays merged configuration from all sources with priority.
+
+    Displays MCO (Meta-Agent Configuration Object) configuration.
     """
     try:
         print("\n📋 Empirica Configuration")
         print("=" * 70)
-        
-        loader = get_config(reload=True)
-        
+
+        # Use MCO loader
+        mco = get_mco_config()
+
         # Determine output format
         output_format = getattr(args, 'format', 'yaml')
         section = getattr(args, 'section', None)
-        
+
+        # Build config dict
+        config = {
+            "model_profiles": mco.model_profiles,
+            "personas": mco.personas,
+            "epistemic_conduct": mco.epistemic_conduct,
+            "ask_before_investigate": mco.ask_before_investigate,
+            "protocols": mco.protocols,
+        }
+
         # Get config (full or section)
         if section:
-            config = loader.get(section)
-            if config is None:
+            if section in config:
+                config = config[section]
+                print(f"\nSection: {section}")
+            else:
                 print(f"❌ Section not found: {section}")
+                print(f"   Available sections: {', '.join(config.keys())}")
                 return
-            print(f"\nSection: {section}")
         else:
-            config = loader.to_dict()
-            print("\nFull Configuration")
-        
+            print("\nMCO Configuration (Model Profiles, Personas, Epistemic Conduct)")
+
         print("=" * 70)
-        
+
         # Display config
         if output_format == 'json':
             print(json.dumps(config, indent=2))
         else:  # yaml
             print(yaml.dump(config, default_flow_style=False, sort_keys=False))
-        
+
         # Show config sources
         if not section:
             print("\n" + "=" * 70)
-            print("📂 Configuration Sources (priority order):")
-            print("   1. Environment variables (EMPIRICA_*)")
-            print("   2. User config (~/.empirica/config.yaml)")
-            if loader.PROJECT_CONFIG_PATH.exists():
-                print("   3. Project config (./empirica_config.yaml) ✅")
-            else:
-                print("   3. Project config (./empirica_config.yaml) ❌")
-            print("   4. Default config (built-in)")
-        
+            print("📂 Configuration Sources:")
+            print(f"   MCO directory: {mco.config_dir}")
+            print("   Files loaded:")
+            print("     • model_profiles.yaml - Bias corrections per model")
+            print("     • personas.yaml - Investigation budgets")
+            print("     • epistemic_conduct.yaml - Bidirectional accountability")
+            print("     • ask_before_investigate.yaml - Query heuristics")
+            print("     • protocols.yaml - Tool schemas")
+
     except Exception as e:
         handle_cli_error(e, "Config Show", getattr(args, 'verbose', False))
 
@@ -128,70 +135,61 @@ def handle_config_show_command(args):
 def handle_config_validate_command(args):
     """
     Validate Empirica configuration.
-    
-    Checks for errors and warns about potential issues.
+
+    Checks MCO files for errors and warns about potential issues.
     """
     try:
         print("\n🔍 Validating Empirica Configuration")
         print("=" * 70)
-        
-        loader = get_config(reload=True)
+
+        mco = get_mco_config()
         issues = []
         warnings = []
-        
-        # Validate adapter configuration
-        print("\n📊 Checking Adapters...")
-        adapters = loader.config.get("adapters", {})
-        
-        if not adapters:
-            issues.append("No adapters configured")
-        
-        for name, config in adapters.items():
-            # Check required fields
-            if "cost_per_1k_tokens" not in config:
-                warnings.append(f"{name}: Missing cost_per_1k_tokens (using default)")
-            
-            if "estimated_latency_sec" not in config:
-                warnings.append(f"{name}: Missing estimated_latency_sec (using default)")
-            
-            # Check API key for adapters that need it
-            if config.get("requires_api_key", False):
-                api_key_env = config.get("api_key_env")
-                if api_key_env and not os.getenv(api_key_env):
-                    warnings.append(f"{name}: API key not found in environment ({api_key_env})")
-            
-            print(f"   ✅ {name}: Valid")
-        
-        # Validate routing configuration
-        print("\n🔄 Checking Routing...")
-        routing = loader.get_routing_config()
-        
-        if not routing:
-            issues.append("No routing configuration found")
+
+        # Validate model profiles
+        print("\n📊 Checking Model Profiles...")
+        if not mco.model_profiles:
+            warnings.append("No model profiles configured")
         else:
-            default_strategy = routing.get("default_strategy")
-            valid_strategies = ["epistemic", "cost", "latency", "quality", "balanced"]
-            
-            if default_strategy not in valid_strategies:
-                issues.append(f"Invalid default_strategy: {default_strategy}")
-            else:
-                print(f"   ✅ Default strategy: {default_strategy}")
-        
-        # Validate monitoring
-        print("\n📈 Checking Monitoring...")
-        monitoring = loader.config.get("monitoring", {})
-        if monitoring.get("enabled"):
-            export_path = Path(monitoring.get("export_path", "~/.empirica/usage_stats.json")).expanduser()
-            if not export_path.parent.exists():
-                warnings.append(f"Monitoring export directory doesn't exist: {export_path.parent}")
-            else:
-                print(f"   ✅ Export path: {export_path}")
+            for name, profile in mco.model_profiles.items():
+                bias = profile.get('bias_profile', {})
+                if not bias:
+                    warnings.append(f"{name}: Missing bias_profile")
+                else:
+                    print(f"   ✅ {name}: Valid (uncertainty_awareness={bias.get('uncertainty_awareness', 'N/A')})")
+
+        # Validate personas
+        print("\n👤 Checking Personas...")
+        if not mco.personas:
+            warnings.append("No personas configured")
         else:
-            print("   ⚠️  Monitoring disabled")
-        
+            for name, persona in mco.personas.items():
+                investigation = persona.get('investigation_style', {})
+                if not investigation:
+                    warnings.append(f"{name}: Missing investigation_style")
+                else:
+                    print(f"   ✅ {name}: Valid (max_rounds={investigation.get('max_rounds', 'N/A')})")
+
+        # Validate epistemic conduct
+        print("\n📜 Checking Epistemic Conduct...")
+        if not mco.epistemic_conduct:
+            warnings.append("No epistemic conduct configuration")
+        else:
+            print(f"   ✅ Epistemic conduct loaded")
+
+        # Check MCO files exist
+        print("\n📂 Checking MCO Files...")
+        required_files = ['model_profiles.yaml', 'personas.yaml', 'epistemic_conduct.yaml']
+        for filename in required_files:
+            filepath = mco.config_dir / filename
+            if filepath.exists():
+                print(f"   ✅ {filename}")
+            else:
+                issues.append(f"Missing MCO file: {filename}")
+
         # Summary
         print("\n" + "=" * 70)
-        
+
         if not issues and not warnings:
             print("✅ Configuration is valid with no issues")
         else:
@@ -199,14 +197,14 @@ def handle_config_validate_command(args):
                 print(f"❌ Found {len(issues)} issue(s):")
                 for issue in issues:
                     print(f"   • {issue}")
-            
+
             if warnings:
                 print(f"\n⚠️  Found {len(warnings)} warning(s):")
                 for warning in warnings:
                     print(f"   • {warning}")
-        
+
         print("=" * 70)
-        
+
     except Exception as e:
         handle_cli_error(e, "Config Validate", getattr(args, 'verbose', False))
 
@@ -214,97 +212,72 @@ def handle_config_validate_command(args):
 def handle_config_get_command(args):
     """
     Get a specific configuration value.
-    
-    Uses dot notation to access nested values.
+
+    Uses dot notation to access nested values from MCO config.
     """
     try:
         key = args.key
-        loader = get_config(reload=True)
-        
-        value = loader.get(key)
-        
-        if value is None:
-            print(f"❌ Configuration key not found: {key}")
-            return
-        
+        mco = get_mco_config()
+
+        # Build config dict
+        config = {
+            "model_profiles": mco.model_profiles,
+            "personas": mco.personas,
+            "epistemic_conduct": mco.epistemic_conduct,
+            "ask_before_investigate": mco.ask_before_investigate,
+            "protocols": mco.protocols,
+        }
+
+        # Navigate to value using dot notation
+        keys = key.split('.')
+        value = config
+        for k in keys:
+            if isinstance(value, dict) and k in value:
+                value = value[k]
+            else:
+                print(f"❌ Configuration key not found: {key}")
+                return
+
         print(f"✅ {key}: {value}")
-        
+
     except Exception as e:
         handle_cli_error(e, "Config Get", getattr(args, 'verbose', False))
 
 
 def handle_config_set_command(args):
     """
-    Set a configuration value in user config.
-    
-    Note: Only updates user config file, not environment or project config.
+    Set a configuration value.
+
+    Note: MCO configuration is read-only via CLI. Edit YAML files directly.
     """
     try:
         key = args.key
         value = args.value
-        
-        print(f"\n🔧 Setting Configuration")
+
+        print(f"\n⚠️  MCO Configuration is Read-Only via CLI")
         print("=" * 70)
-        
-        # Load current user config
-        user_config_path = Path.home() / ".empirica" / "config.yaml"
-        
-        if user_config_path.exists():
-            with open(user_config_path, 'r') as f:
-                user_config = yaml.safe_load(f) or {}
+
+        mco = get_mco_config()
+
+        print(f"\nTo set '{key}' = '{value}':")
+        print(f"\n1. Edit the appropriate YAML file in:")
+        print(f"   {mco.config_dir}")
+
+        # Suggest which file to edit based on key
+        if key.startswith('model_profiles'):
+            print(f"\n2. Edit: model_profiles.yaml")
+        elif key.startswith('personas'):
+            print(f"\n2. Edit: personas.yaml")
+        elif key.startswith('epistemic_conduct'):
+            print(f"\n2. Edit: epistemic_conduct.yaml")
+        elif key.startswith('ask_before_investigate'):
+            print(f"\n2. Edit: ask_before_investigate.yaml")
+        elif key.startswith('protocols'):
+            print(f"\n2. Edit: protocols.yaml")
         else:
-            print("⚠️  User config doesn't exist. Creating new config...")
-            user_config = {}
-        
-        # Parse key path
-        keys = key.split('.')
-        current = user_config
-        
-        # Navigate to parent
-        for k in keys[:-1]:
-            if k not in current:
-                current[k] = {}
-            current = current[k]
-        
-        # Parse value
-        parsed_value = _parse_value(value)
-        
-        # Set value
-        current[keys[-1]] = parsed_value
-        
-        # Save config
-        loader = ConfigLoader()
-        loader.save_user_config(user_config)
-        
-        print(f"\n✅ Configuration updated:")
-        print(f"   {key} = {parsed_value}")
-        print(f"\n📝 Saved to: {user_config_path}")
-        
+            print(f"\n2. Check available sections: model_profiles, personas, epistemic_conduct, protocols")
+
+        print("\n3. Restart your session to load the new configuration")
+
     except Exception as e:
         handle_cli_error(e, "Config Set", getattr(args, 'verbose', False))
-
-
-def _parse_value(value: str) -> Any:
-    """Parse string value to appropriate type."""
-    # Boolean
-    if value.lower() in ('true', 'yes'):
-        return True
-    if value.lower() in ('false', 'no'):
-        return False
-    
-    # Number
-    try:
-        if '.' in value:
-            return float(value)
-        return int(value)
-    except ValueError:
-        pass
-    
-    # Try JSON
-    try:
-        return json.loads(value)
-    except:
-        pass
-    
-    # String
-    return value

@@ -1,14 +1,18 @@
 # Empirica Storage Architecture - Complete Data Flow
 
-**Version:** 2.1  
-**Date:** 2025-12-12  
+**Version:** 2.2
+**Date:** 2026-01-09
 **Purpose:** Document complete storage flow for dashboard/crypto-signing integration
+
+**Related docs:**
+- [CANONICAL_STORAGE.md](./CANONICAL_STORAGE.md) - API reference for storage classes
+- [Qdrant API Reference](../reference/api/qdrant.md) - Embedding providers and semantic search
 
 ---
 
 ## Overview (Critical Infrastructure)
 
-This guide provides a comprehensive and visual explanation of Empirica's three-layer storage architecture and the critical distinction between git diffs (content tracking) and epistemic vectors (confidence tracking).
+This guide provides a comprehensive and visual explanation of Empirica's **four-layer storage architecture** and the critical distinction between git diffs (content tracking) and epistemic vectors (confidence tracking).
 
 ### Diagram 1: Complete Storage Architecture Flow
 
@@ -17,12 +21,12 @@ This guide provides a comprehensive and visual explanation of Empirica's three-l
 ![Storage Architecture Flow](./storage_architecture_flow.svg)
 
 **What This Shows:**
-- Complete data flow from epistemic event → three parallel storage layers: SQLite, Git Notes, and JSON Logs.
-- High-level overview of how data is compressed and accessed by different use cases (live dashboard, historical trends, debugging, crypto signing).
+- Complete data flow from epistemic event → four storage layers: SQLite (HOT), Git Notes (WARM), JSON Logs (AUDIT), and Qdrant (SEARCH).
+- High-level overview of how data is compressed and accessed by different use cases (live dashboard, historical trends, debugging, crypto signing, semantic search).
 
 **Key Takeaways:**
-1.  **Three parallel writes** from `GitEnhancedReflexLogger` ensure data redundancy and optimize for different use cases.
-2.  **Different storage for different use cases:** SQLite for fast SQL queries, Git Notes for compressed and distributed state, JSON Logs for full audit and debugging.
+1.  **Four-layer storage** ensures data redundancy, semantic search, and optimized access patterns.
+2.  **Different storage for different use cases:** SQLite for fast SQL queries, Git Notes for compressed and distributed state, JSON Logs for full audit and debugging, Qdrant for semantic retrieval.
 3.  **Significant token reduction** (e.g., 15,000 tokens → 450 tokens, 97% reduction) for efficient storage and transfer of epistemic state.
 
 ---
@@ -72,7 +76,7 @@ This guide provides a comprehensive and visual explanation of Empirica's three-l
 
 ---
 
-## Three Storage Layers (Comparison)
+## Four Storage Layers (Comparison)
 
 ### Quick Reference Table
 
@@ -80,9 +84,10 @@ This guide provides a comprehensive and visual explanation of Empirica's three-l
 
 | Layer | Location | Size | Purpose | Query Method |
 |-------|----------|------|---------|--------------|
-| **SQLite** | `.empirica/sessions/sessions.db` | 450 tokens | Fast queries, structured | SQL |
-| **Git Notes** | `refs/notes/empirica/session/...` | 450 tokens | Distributed, signed, compressed | Git commands |
-| **JSON Logs** | `.empirica_reflex_logs/...` | 6,500 tokens | Full audit, debugging | File read |
+| **SQLite** (HOT) | `.empirica/sessions/sessions.db` | 450 tokens | Fast queries, structured | SQL |
+| **Git Notes** (WARM) | `refs/notes/empirica/session/...` | 450 tokens | Distributed, signed, compressed | Git commands |
+| **JSON Logs** (AUDIT) | `.empirica_reflex_logs/...` | 6,500 tokens | Full audit, debugging | File read |
+| **Qdrant** (SEARCH) | `localhost:6333` | 768-dim vectors | Semantic search, pattern retrieval | Vector similarity |
 
 ### Token Compression Levels
 
@@ -278,6 +283,74 @@ refs/notes/empirica/session/abc-123/POSTFLIGHT/1
 - Audit trail (regulatory compliance)
 - Training data (future calibration)
 - Human review (understand AI reasoning)
+
+---
+
+### Layer 4: Qdrant Vector Database (Semantic Search)
+
+**Purpose:** Semantic retrieval of epistemic data (findings, unknowns, dead ends, lessons) across sessions and projects.
+
+**Location:** `localhost:6333` (local Qdrant instance)
+
+**Collections:**
+
+| Collection | Content | Embedding |
+|------------|---------|-----------|
+| `empirica_findings` | Learnings with impact scores | Text → 768-dim vector |
+| `empirica_unknowns` | Unresolved questions | Text → 768-dim vector |
+| `empirica_dead_ends` | Failed approaches | Text → 768-dim vector |
+| `empirica_lessons` | Cold storage procedural knowledge | Text → 768-dim vector |
+
+**Embedding Providers:**
+
+```python
+# Configure in environment
+export EMPIRICA_EMBEDDING_PROVIDER=jina  # or voyage, ollama, openai, local
+export EMPIRICA_EMBEDDING_MODEL=jina-embeddings-v3
+export JINA_API_KEY=your-key  # for Jina
+export VOYAGE_API_KEY=your-key  # for Voyage
+```
+
+| Provider | Model | Dimensions | Notes |
+|----------|-------|------------|-------|
+| **Jina AI** | jina-embeddings-v3 | 768 | Recommended for most use cases |
+| **Voyage AI** | voyage-3 | 1024 | High quality, code-aware |
+| **Ollama** | nomic-embed-text | 768 | Local, no API key |
+| **OpenAI** | text-embedding-3-small | 1536 | Popular, requires API key |
+| **Local** | sentence-transformers | 768 | Fully offline |
+
+**CLI Commands:**
+
+```bash
+# Semantic search across project memory
+empirica project-search --project-id <ID> --task "authentication patterns" --output json
+
+# Embed project to Qdrant (full sync)
+empirica project-embed --project-id <ID> --output json
+
+# Include global learnings in search
+empirica project-search --project-id <ID> --task "error handling" --global
+```
+
+**Auto-Embedding:**
+
+- `finding-log` → Embeds to `empirica_findings`
+- `unknown-log` → Embeds to `empirica_unknowns`
+- `deadend-log` → Embeds to `empirica_dead_ends`
+- `postflight-submit` → Auto-embeds session findings
+
+**Pattern Retrieval Hooks:**
+
+| Hook | Trigger | Returns |
+|------|---------|---------|
+| PREFLIGHT | `task_context` | lessons, dead_ends, relevant_findings |
+| CHECK | `approach` + vectors | warnings from dead_ends, mistake_risk |
+
+**Use Cases:**
+- Finding prior learnings before starting work
+- Avoiding repeated dead ends
+- Cross-project knowledge transfer
+- Lesson retrieval from cold storage
 
 ---
 

@@ -5,6 +5,8 @@
 **Generated:** 2026-01-03
 **Status:** Production Ready
 
+> **API Reference:** For Python API details, see [API Reference](../../reference/api/README.md). Each API doc includes relevant CLI commands.
+
 ---
 
 ## Command Categories

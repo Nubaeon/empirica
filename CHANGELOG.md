@@ -5,51 +5,34 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.0] - 2026-01-08
+## [1.3.0] - 2026-01-09
 
 ### Added
-- **Qdrant Memory Integration** - Full 4-collection memory system:
-  - Eidetic memory (facts with confidence scoring)
-  - Episodic memory (session narratives with recency decay)
-  - Pattern retrieval for PREFLIGHT (lessons, dead_ends, findings)
-  - CHECK validation against known dead ends
+- **Multi-Agent Epistemic Investigation** - Spawn parallel investigation agents with different personas to explore codebase corners:
+  ```bash
+  empirica agent-spawn --session-id <ID> --task "..." --turtle
+  ```
+  Features:
+  - Automatic persona selection with `--turtle` flag
+  - Parallel branch execution with POSTFLIGHT aggregation
+  - Findings/unknowns automatically logged to parent session
 
-- **Embedding Providers** - Multi-provider embedding support:
-  - Jina AI (jina-embeddings-v3, jina-colbert-v2)
-  - Voyage AI (voyage-3.5, voyage-3-lite, voyage-code-3)
-  - Expanded Ollama models (bge-m3, qwen3-embedding, snowflake-arctic-embed2)
-  - Auto-detection with graceful fallback
-
-- **Lessons System** - Cold storage procedural knowledge:
-  - YAML-based lesson storage in `.empirica/lessons/`
-  - Hot cache for fast retrieval
-  - Cognitive immune system (findings decay lesson confidence)
-  - Domain-scoped central tolerance
-
-- **Git-Repo Project Resolution** - Single project per repo guarantee:
-  - `normalize_git_url()` canonicalizes SSH/HTTPS/local paths
-  - Sessions auto-map to correct project via git remote
-  - Eliminates project ID confusion
-
-- **docs-explain Semantic Search** - Qdrant-powered documentation retrieval
-- **Statusline Goal Progress** - Shows active goal in terminal prompt
-- **EMPIRICA_AUTO_POSTFLIGHT** - Environment variable to control auto-POSTFLIGHT
-- **Vector-based Reground** - CHECK auto-triggers bootstrap when context<0.5 or uncertainty>0.6
+- **Onboarding Projects** - Two complete mini-projects for learning Empirica workflows:
+  - `api-explorer/` - Discovery exercise with intentionally incomplete API docs
+  - `refactor-decision/` - Decision-making exercise with multiple valid approaches
+  - Each includes WALKTHROUGH.md and SOLUTION.md for guided learning
 
 ### Changed
-- **Documentation Restructure** - Reorganized into `docs/human/developers/` and `docs/human/end-users/`
-- **Epistemic Snapshot** - Moved from plugins to `empirica/data/` for core accessibility
-- **Plugin Cleanup** - Removed deprecated modality_switcher plugin (functionality migrated to core)
-- Default PREFLIGHT pattern threshold lowered to 0.5 (from 0.7)
+- **Documentation Accuracy Audit** - Comprehensive updates via multi-agent investigation:
+  - DATABASE_SCHEMA_UNIFIED.md: Updated from 19 to 31 tables (added Session Breadcrumbs, Lessons System, Infrastructure sections)
+  - MCP_SERVER_REFERENCE.md: Updated tool count from 40 to 57 tools
+  - Added cross-references between Sentinel, CASCADE, and Noetic/Praxic docs
+  - Added navigation table to CONFIGURATION_REFERENCE.md for end-users
+  - Added cross-references to storage architecture and Qdrant integration docs
 
 ### Fixed
-- `get_project_unknowns()` limit parameter (was causing silent POSTFLIGHT failures)
-- post-compact hook memory format handling (dict vs list)
-- Session project detection for statusline metacog signal
-
-### Tests
-- 351 tests passing, 2 skipped
-- Test suite interference issues documented (fixture cleanup)
+- **Version Consistency** - Synchronized version numbers across all package files:
+  - pyproject.toml, empirica/__init__.py, empirica-mcp/pyproject.toml, chocolatey/empirica.nuspec
 
 ## [1.2.4] - 2026-01-06
 

@@ -1,67 +1,101 @@
 # Empirica Documentation
 
-**Current Version:** 1.3.0
-**Status:** Production Ready
+**Version:** 1.3.0 | **Status:** Production Ready
 
 ---
 
-## Documentation Split
+## Navigation
 
-Documentation is organized by audience:
+This folder contains technical documentation. For getting started:
 
-### 🤖 AI-First Docs (This folder)
-
-Documentation designed for AI context loading - maps directly to code classes.
-
-- **[architecture/](architecture/)** - Core system architecture (Sentinel, EpistemicBus, etc.)
-- **[reference/](reference/)** - API reference, database schemas, configuration
-- **[guides/](guides/)** - AI workflow guides
-
-### 👤 Human Docs
-
-Documentation for human readers: [human/](human/)
-
-- **[human/end-users/](human/end-users/)** - Getting started, installation, conceptual guides
-- **[human/developers/](human/developers/)** - AI integration, system prompts, technical setup
+| You Are | Go To |
+|---------|-------|
+| **New user** | [human/end-users/](human/end-users/) → Start with `01_START_HERE.md` |
+| **Developer integrating AI** | [human/developers/](human/developers/) → Start with `CLAUDE_CODE_SETUP.md` |
+| **AI loading context** | [architecture/](architecture/) → Start with `README.md` |
 
 ---
 
-## Architecture (AI Limbs)
+## Documentation Structure
 
-These docs document actual code classes for AI context loading:
-
-| Doc | Classes Covered |
-|-----|-----------------|
-| [SENTINEL_ARCHITECTURE.md](architecture/SENTINEL_ARCHITECTURE.md) | Sentinel, GateAction, NoeticFilter, AxiologicGate |
-| [EPISTEMIC_BUS.md](architecture/EPISTEMIC_BUS.md) | EpistemicBus, EpistemicEvent, EpistemicObserver |
-| [CANONICAL_STORAGE.md](architecture/CANONICAL_STORAGE.md) | GitNotesStorage, CheckpointStorage, SessionSync |
-| [SELF_MONITORING.md](architecture/SELF_MONITORING.md) | MirrorDriftMonitor, MemoryGapDetector |
-| [HANDOFF_SYSTEM.md](architecture/HANDOFF_SYSTEM.md) | EpistemicHandoffReportGenerator |
-| [COMPLETION_TRACKING.md](architecture/COMPLETION_TRACKING.md) | CompletionTracker, GitProgressQuery |
-| [ASSESSMENT_AND_SIGNALING.md](architecture/ASSESSMENT_AND_SIGNALING.md) | ComponentAssessor, SignalingState |
-| [SUPPORTING_COMPONENTS.md](architecture/SUPPORTING_COMPONENTS.md) | CheckpointSigner, ContextLoadBalancer |
+```
+docs/
+├── human/                    # For human readers
+│   ├── end-users/            # Installation, concepts, troubleshooting
+│   └── developers/           # Integration, system prompts, API
+│       └── system-prompts/   # Model-specific prompts (Claude, Copilot, etc.)
+│
+├── architecture/             # For AI context loading
+│   ├── README.md             # Architecture index
+│   ├── STORAGE_*             # Four-layer storage system
+│   ├── SENTINEL_*            # Gate controller
+│   ├── CASCADE_*             # Workflow documentation
+│   └── NOETIC_PRAXIC_*       # Thinking phases
+│
+├── reference/                # API and configuration reference
+│   ├── api/                  # Python API by module
+│   └── CONFIGURATION_*.md    # Environment variables
+│
+├── guides/                   # AI workflow guides
+└── examples/                 # Configuration examples
+```
 
 ---
 
-## Reference
+## Quick Links
 
-- **[reference/api/](reference/api/)** - Python API by module
-- **[reference/DATABASE_SCHEMA_UNIFIED.md](reference/DATABASE_SCHEMA_UNIFIED.md)** - Database schema
-- **[reference/CONFIGURATION_REFERENCE.md](reference/CONFIGURATION_REFERENCE.md)** - Config options
-- **[reference/CHANGELOG.md](reference/CHANGELOG.md)** - Version history
+### For Humans
+
+| Guide | Purpose |
+|-------|---------|
+| [Getting Started](human/end-users/01_START_HERE.md) | First-time setup |
+| [Empirica Explained Simply](human/end-users/EMPIRICA_EXPLAINED_SIMPLE.md) | Conceptual overview |
+| [Epistemic Vectors](human/end-users/05_EPISTEMIC_VECTORS_EXPLAINED.md) | Understanding the 13 vectors |
+| [Claude Code Setup](human/developers/CLAUDE_CODE_SETUP.md) | Developer integration |
+
+### For AI Systems
+
+| Doc | Purpose |
+|-----|---------|
+| [Architecture Index](architecture/README.md) | All architecture docs |
+| [Separation of Concerns](architecture/separation-of-concerns.md) | What goes where |
+| [Storage Architecture](architecture/STORAGE_ARCHITECTURE_COMPLETE.md) | Four-layer data flow |
+| [CLI Reference](human/developers/CLI_COMMANDS_UNIFIED.md) | All commands |
+
+---
+
+## Using docs-explain
+
+Query documentation semantically:
+
+```bash
+# Topic lookup
+empirica docs-explain --topic "epistemic vectors"
+empirica docs-explain --topic "CASCADE workflow"
+
+# Question answering
+empirica docs-explain --question "How do I create a session?"
+
+# Check coverage
+empirica docs-assess --summary-only
+```
 
 ---
 
 ## Documentation Health
 
-Run `python scripts/doc_health_audit.py` to check:
-- Code reference validity (do referenced classes exist?)
-- Staleness (how old?)
-- Redundancy (covered elsewhere?)
+Run audits to check documentation health:
 
-Docs with <30% valid code references go to `human/` or `_archive/`.
+```bash
+# Full health audit
+python scripts/doc_health_audit.py
+
+# Quick coverage check
+empirica docs-assess --summary-only
+```
+
+**Current Status:** 87% coverage across 76 docs
 
 ---
 
-**System Status:** Production Ready ✅
-**AI Doc Coverage:** 86.9%
+**Website:** [getempirica.com](https://getempirica.com)

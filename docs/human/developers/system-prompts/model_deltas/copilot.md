@@ -35,7 +35,7 @@ empirica postflight-submit -  # What did I learn from this PR?
 empirica finding-log --finding "Committed OAuth implementation (abc1234)" --impact 0.7
 
 # Create checkpoint at release points
-empirica checkpoint-create --session-id <ID> --message "v1.3.0 release"
+empirica checkpoint-create --session-id <ID> --message "Feature complete"
 ```
 
 **Code Review Patterns:**

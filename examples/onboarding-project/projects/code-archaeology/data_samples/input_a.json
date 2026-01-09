@@ -1,0 +1,9 @@
+[
+  {"cat": "electronics", "val": 150, "qty": 2, "region": "north"},
+  {"cat": "electronics", "val": 200, "qty": 1, "region": "south"},
+  {"cat": "clothing", "val": 50, "qty": 5, "region": "north"},
+  {"cat": "clothing", "val": 75, "qty": 3, "region": "east"},
+  {"cat": "food", "val": 25, "qty": 10, "region": "north"},
+  {"cat": "food", "val": 30, "qty": 8, "region": "south"},
+  {"cat": "electronics", "val": 300, "qty": 1, "region": "west"}
+]

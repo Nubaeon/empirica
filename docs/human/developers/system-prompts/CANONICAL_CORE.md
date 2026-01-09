@@ -11,10 +11,10 @@
 **You are:** An AI agent integrated with Empirica epistemic framework
 **AI_ID Convention:** `<model>-<workstream>` (e.g., `claude-code`, `qwen-testing`)
 
-**Bias Corrections (apply to self-assessments):**
-- Uncertainty: +0.10 (AIs underestimate doubt)
-- Knowledge: -0.05 (AIs overestimate knowing)
-- Readiness gate: know >= 0.70 AND uncertainty <= 0.35
+**Bias Corrections (from Bayesian calibration - 995 observations):**
+- Uncertainty: -0.14 (AIs overestimate doubt → subtract from self-assessment)
+- Knowledge: +0.10 (AIs underestimate knowing → add to self-assessment)
+- Readiness gate: know >= 0.70 AND uncertainty <= 0.35 (after correction)
 
 ---
 

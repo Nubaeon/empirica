@@ -1,7 +1,6 @@
 # Empirica Python API Reference
 
 **Framework Version:** 1.3.0
-**Generated:** 2026-01-08
 **Status:** Production Ready
 
 ---
@@ -18,30 +17,41 @@
 - **Subtask management** - Task breakdown and progress tracking
 - **Goal-tree operations** - Hierarchical goal management
 
-### [CASCADE Workflow](cascade_workflow.md)
-- **Cascade execution** - Reasoning cascade management
-- **Epistemic assessment** - Preflight, Check, Postflight phases
-- **Reflex logging** - Epistemic state capture
-
 ### [Project Management](project_management.md)
 - **ProjectRepository** - Project lifecycle management
 - **Handoff reports** - AI-to-AI handoff documentation
 - **Project tracking** - Cross-session project management
 
-### [Investigation Tools](investigation_tools.md)
-- **Branch management** - Investigation branch operations
-- **Tool execution tracking** - Investigation tool usage
-- **Merge decisions** - Branch comparison and selection
-
-### [Epistemic Tracking](epistemic_tracking.md)
-- **Epistemic snapshots** - Point-in-time state capture
-- **Bayesian beliefs** - Belief evolution tracking
-- **Divergence monitoring** - Delegate-trustee alignment
-
 ### [Knowledge Management](knowledge_management.md)
 - **BreadcrumbRepository** - Findings, unknowns, dead-ends
 - **Epistemic sources** - Source attribution and confidence
 - **Reference documents** - Project documentation links
+
+### [Qdrant Vector Storage](qdrant.md)
+- **EmbeddingsProvider** - Multi-provider embeddings (Ollama, OpenAI, Jina, Voyage)
+- **Vector store operations** - Memory upsert, search, delete
+- **Pattern retrieval** - CASCADE hook integration (PREFLIGHT/CHECK)
+
+### [Lessons System](lessons.md)
+- **LessonStorageManager** - 4-layer storage for procedural knowledge
+- **LessonHotCache** - In-memory graph for nanosecond queries
+- **Knowledge graph** - Prerequisites, enables, relations
+
+### [Signaling](signaling.md)
+- **DriftLevel** - Traffic light calibration for epistemic drift
+- **SentinelAction** - Gate actions (REVISE, BRANCH, HALT, LOCK)
+- **CognitivePhase** - Noetic/Threshold/Praxic phase detection
+- **VectorHealth** - Health state for individual vectors
+
+### [Identity & Persona](identity_persona.md)
+- **AIIdentity** - Cryptographic identity for AI agents
+- **PersonaMetadata** - Persona configuration
+- **EpistemicConfig** - Priors, thresholds, weights
+
+### [Architecture Assessment](architecture_assessment.md)
+- **CouplingAnalyzer** - Dependency and API surface analysis
+- **StabilityEstimator** - Git history stability metrics
+- **ArchitectureVectors** - Epistemic vectors for code quality
 
 ### [System Utilities](system_utilities.md)
 - **BranchMapping** - Git branch to goal mapping
@@ -58,6 +68,8 @@
 
 **Modular Architecture:** APIs organized in logical modules that can be used independently while maintaining consistency.
 
+**Four-Layer Storage:** Data flows through SQLite (hot), Git Notes (warm), JSON Logs (audit), and Qdrant (search).
+
 ---
 
 ## Getting Started
@@ -69,6 +81,5 @@ For new users, start with:
 
 ---
 
-**Total Classes:** 3
-**Total Functions:** 3+ (distributed across modules)
+**Total Modules:** 10 categories
 **API Stability:** Production ready

@@ -276,6 +276,39 @@ def install_empirica_package():
             print_info("Please install manually: pip install empirica")
 
 
+def install_empirica_mcp():
+    """Install Empirica MCP server for Claude Desktop/Cursor integration."""
+    print_header("Installing Empirica MCP Server")
+
+    python_cmd = get_python_command()
+
+    # Check if already installed
+    try:
+        result = subprocess.run(
+            [python_cmd, "-c", "import empirica_mcp; print(empirica_mcp.__version__)"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            version = result.stdout.strip()
+            print_success(f"Empirica MCP already installed (v{version})")
+            return True
+    except Exception:
+        pass
+
+    print_step(1, "Installing empirica-mcp via pip...")
+    try:
+        run_command([python_cmd, "-m", "pip", "install", "empirica-mcp"])
+        print_success("Empirica MCP server installed")
+        print_info("Configure in Claude Desktop: Settings > Developer > MCP Servers")
+        print_info("Server command: python -m empirica_mcp")
+        return True
+    except Exception as e:
+        print_warning(f"Failed to install empirica-mcp: {e}")
+        print_info("You can install manually later: pip install empirica-mcp")
+        return False
+
+
 def create_directory_structure():
     """Create necessary directories."""
     print_header("Creating Directory Structure")
@@ -784,6 +817,9 @@ def main():
         # Step 2: Install Empirica package
         if not status["empirica"]:
             install_empirica_package()
+
+        # Step 2b: Install Empirica MCP server
+        install_empirica_mcp()
 
         # Step 3: Create directories
         create_directory_structure()

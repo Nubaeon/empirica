@@ -378,6 +378,28 @@ if snapshot:
 
 ---
 
+## CLI Commands
+
+For command-line usage, see [CLI Commands Reference](../../human/developers/CLI_COMMANDS_UNIFIED.md).
+
+### Session Commands
+```bash
+empirica session-create --ai-id <AI_ID> --output json
+empirica sessions-list --output json
+empirica sessions-show --session-id <ID>
+empirica session-snapshot --session-id <ID>
+empirica memory-compact --session-id <ID>
+```
+
+### CASCADE Workflow Commands
+```bash
+empirica preflight-submit -    # Submit via stdin (JSON)
+empirica check-submit -        # Submit via stdin (JSON)
+empirica postflight-submit -   # Submit via stdin (JSON)
+```
+
+---
+
 ## Error Handling
 
 The SessionDatabase methods typically raise standard exceptions:

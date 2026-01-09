@@ -1,10 +1,10 @@
 # Empirica Database Schema (Unified)
 
-**Total Tables:** 19 (active)
+**Total Tables:** 36 (active)
 **Database Type:** SQLite (with PostgreSQL adapter support)
 **Architecture:** Modular with unified goal/task system
 **Every project (mapped to git repo) has its own SQLite database**
-**Last Updated:** 2026-01-03
+**Last Updated:** 2026-01-09
 
 ---
 
@@ -40,14 +40,22 @@ sessions (1) ──> (N) epistemic_snapshots
 cascades (1) ──> (N) bayesian_beliefs
 ```
 
-### 4. Goals & Tasks System (2 tables)
+### 4. Goals & Tasks System (6 tables)
 - **goals** - Goals with success criteria and status tracking
 - **subtasks** - Individual tasks associated with goals
+- **goal_dependencies** - Dependencies between goals
+- **subtask_dependencies** - Dependencies between subtasks
+- **success_criteria** - Measurable success criteria for goals
+- **task_decompositions** - Task breakdown hierarchy
 
 **Relationships:**
 ```
 sessions (1) ──> (N) goals
 goals (1) ──> (N) subtasks
+goals (1) ──> (N) goal_dependencies
+subtasks (1) ──> (N) subtask_dependencies
+goals (1) ──> (N) success_criteria
+goals (1) ──> (N) task_decompositions
 ```
 
 ### 5. Project Management (8 tables)
@@ -99,6 +107,58 @@ goals (1) ──> (N) mistakes_made
 **Relationships:**
 ```
 sessions (1) ──> (N) token_savings
+```
+
+### 9. Session-Level Breadcrumbs (4 tables)
+- **session_findings** - Findings logged during session
+- **session_unknowns** - Unknowns logged during session
+- **session_dead_ends** - Dead-end approaches logged during session
+- **session_mistakes** - Mistakes logged during session
+
+**Relationships:**
+```
+sessions (1) ──> (N) session_findings
+sessions (1) ──> (N) session_unknowns
+sessions (1) ──> (N) session_dead_ends
+sessions (1) ──> (N) session_mistakes
+```
+
+> These tables mirror the project-level tables but are scoped to individual sessions.
+
+### 10. Lessons System (6 tables)
+- **lessons** - Reusable learning units with procedural knowledge
+- **lesson_steps** - Individual steps within a lesson
+- **lesson_epistemic_deltas** - Expected vector changes per lesson
+- **lesson_prerequisites** - Lesson dependencies
+- **lesson_corrections** - Corrections applied to lessons over time
+- **lesson_replays** - Records of lesson application
+
+**Relationships:**
+```
+lessons (1) ──> (N) lesson_steps
+lessons (1) ──> (N) lesson_epistemic_deltas
+lessons (1) ──> (N) lesson_prerequisites
+lessons (1) ──> (N) lesson_corrections
+sessions (1) ──> (N) lesson_replays
+lessons (1) ──> (N) lesson_replays
+```
+
+### 11. Auto-Capture System (1 table)
+- **auto_captured_issues** - Issues auto-captured from CLI errors and exceptions
+
+**Relationships:**
+```
+sessions (1) ──> (N) auto_captured_issues
+projects (1) ──> (N) auto_captured_issues
+```
+
+### 12. Infrastructure (2 tables)
+- **knowledge_graph** - Concept relationships for semantic linking
+- **schema_migrations** - Database migration version tracking
+
+**Relationships:**
+```
+(standalone tables)
 ```
 
 ---

@@ -6,12 +6,18 @@ The Canonical storage layer provides the foundational persistence mechanisms for
 
 ## Philosophy
 
-Three-layer atomic writes:
-1. **SQLite** - Primary structured data (fast queries)
-2. **Git Notes** - Distributed, version-controlled (portability)
-3. **JSON Logs** - Human-readable audit trail (debugging)
+Four-layer storage architecture:
+1. **SQLite** (HOT) - Primary structured data (fast queries)
+2. **Git Notes** (WARM) - Distributed, version-controlled (portability)
+3. **JSON Logs** (AUDIT) - Human-readable audit trail (debugging)
+4. **Qdrant** (SEARCH) - Vector database for semantic retrieval
 
-Every epistemic operation writes to all three layers atomically.
+Every epistemic operation writes to appropriate layers based on data type.
+
+**Related docs:**
+- [STORAGE_ARCHITECTURE_COMPLETE.md](./STORAGE_ARCHITECTURE_COMPLETE.md) - Visual guide with diagrams and data flow
+- [Qdrant API Reference](../reference/api/qdrant.md) - Embedding providers and semantic search API
+- [QDRANT_EPISTEMIC_INTEGRATION.md](./QDRANT_EPISTEMIC_INTEGRATION.md) - Qdrant architecture and collections
 
 ---
 
@@ -23,17 +29,25 @@ Every epistemic operation writes to all three layers atomically.
                    │     (Unified Storage Interface)    │
                    └───────────────────────────────────┘
                               │
-           ┌──────────────────┼──────────────────┐
-           │                  │                  │
-           ▼                  ▼                  ▼
-    ┌──────────┐      ┌──────────────┐    ┌──────────┐
-    │  SQLite  │      │  Git Notes   │    │   JSON   │
-    │ Database │      │   Storage    │    │   Logs   │
-    └──────────┘      └──────────────┘    └──────────┘
-           │                  │                  │
-           ▼                  ▼                  ▼
-    sessions.db        refs/notes/        .empirica/logs/
-                       empirica/
+       ┌──────────────────────┼──────────────────────┐
+       │           │          │          │           │
+       ▼           ▼          ▼          ▼           │
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
+│  SQLite  │ │Git Notes │ │   JSON   │ │  Qdrant  │  │
+│   (HOT)  │ │  (WARM)  │ │ (AUDIT)  │ │ (SEARCH) │  │
+└──────────┘ └──────────┘ └──────────┘ └──────────┘  │
+       │           │          │          │           │
+       ▼           ▼          ▼          ▼           │
+  sessions.db  refs/notes/ .empirica/  localhost:    │
+               empirica/   logs/       6333          │
+                                                     │
+                   ┌─────────────────────────────────┘
+                   │  QdrantMemory (Semantic Layer)
+                   ▼
+            ┌──────────────────────────────────────┐
+            │  EmbeddingProvider                   │
+            │  (Jina, Voyage, Ollama, OpenAI)      │
+            └──────────────────────────────────────┘
 ```
 
 ---
@@ -254,6 +268,83 @@ allowed = hooks.check_commit(
 | Git Notes | `refs/notes/empirica/...` | Distributed, version-controlled |
 | JSON Logs | `.empirica/logs/*.jsonl` | Human-readable audit trail |
 | Lessons | `.empirica/lessons/*.yaml` | Cold storage for lessons |
+| Qdrant | `localhost:6333` | Semantic vector search |
+
+---
+
+## Qdrant Integration
+
+### QdrantMemory
+
+Semantic storage and retrieval for epistemic data.
+
+```python
+from empirica.core.canonical import QdrantMemory
+
+memory = QdrantMemory(
+    url="http://localhost:6333",
+    collection_prefix="empirica"
+)
+
+# Store finding with embedding
+memory.store_finding(
+    finding_id="abc123",
+    text="JWT tokens not validated on every request",
+    metadata={"impact": 0.8, "session_id": "xyz"}
+)
+
+# Semantic search
+results = memory.search_findings(
+    query="authentication vulnerabilities",
+    limit=5,
+    threshold=0.7
+)
+```
+
+### EmbeddingProvider
+
+Multi-provider embedding generation.
+
+```python
+from empirica.core.canonical import EmbeddingProvider
+
+# Configure via environment
+# EMPIRICA_EMBEDDING_PROVIDER=jina
+# EMPIRICA_EMBEDDING_MODEL=jina-embeddings-v3
+# JINA_API_KEY=...
+
+provider = EmbeddingProvider.from_env()
+
+# Generate embeddings
+embedding = provider.embed("JWT validation security pattern")
+# Returns: [0.123, 0.456, ...] (768-dim vector)
+
+# Batch embeddings
+embeddings = provider.embed_batch([
+    "Authentication patterns",
+    "Authorization flows",
+    "Token validation"
+])
+```
+
+### Supported Providers
+
+| Provider | Environment Variables | Model |
+|----------|----------------------|-------|
+| Jina AI | `JINA_API_KEY` | `jina-embeddings-v3` |
+| Voyage AI | `VOYAGE_API_KEY` | `voyage-3` |
+| Ollama | `OLLAMA_BASE_URL` | `nomic-embed-text` |
+| OpenAI | `OPENAI_API_KEY` | `text-embedding-3-small` |
+| Local | (none) | `sentence-transformers` |
+
+### Collections
+
+| Collection | Content | Auto-populated by |
+|------------|---------|-------------------|
+| `empirica_findings` | Learnings | `finding-log` |
+| `empirica_unknowns` | Questions | `unknown-log` |
+| `empirica_dead_ends` | Failed approaches | `deadend-log` |
+| `empirica_lessons` | Procedural knowledge | `lesson-create` |
 
 ---
 

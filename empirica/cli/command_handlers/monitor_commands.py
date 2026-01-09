@@ -1,28 +1,18 @@
 """
 Monitoring Commands - CLI commands for usage monitoring and cost tracking
 
-Provides real-time visibility into adapter usage, costs, and performance.
+NOTE: Modality switcher (adapter monitoring) is deprecated.
+This module provides basic session monitoring via Empirica core.
 """
 
 import json
 import logging
-import time
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any
-import os
 
-# Modality switcher is optional (commercial feature)
-try:
-    from empirica.plugins.modality_switcher.modality_switcher import ModalitySwitcher
-    from empirica.plugins.modality_switcher.register_adapters import get_registry
-    from empirica.plugins.modality_switcher.config_loader import get_config
-    MODALITY_AVAILABLE = True
-except ImportError:
-    MODALITY_AVAILABLE = False
-    ModalitySwitcher = None
-    get_registry = None
-    get_config = None
+# Modality switcher is DEPRECATED and no longer available
+MODALITY_AVAILABLE = False
+
 from ..cli_utils import handle_cli_error
 
 # Set up logging for monitor commands
@@ -157,110 +147,46 @@ def handle_monitor_command(args):
     """
     Unified monitor handler (consolidates all 4 monitor commands).
 
-    Shows current usage statistics with optional live updates.
+    NOTE: Adapter usage monitoring (modality switcher) is deprecated.
+    Use session and project commands for Empirica monitoring.
     """
-    # Route based on flags
-    if getattr(args, 'export', None):
-        return handle_monitor_export_command(args)
-    elif getattr(args, 'reset', False):
-        return handle_monitor_reset_command(args)
-    elif getattr(args, 'cost', False):
-        return handle_monitor_cost_command(args)
-
-    # Default: show dashboard
     try:
-        logger.info("Displaying monitoring dashboard")
         print("\n📊 Empirica Usage Monitor")
         print("=" * 70)
 
-        monitor = UsageMonitor()
-        stats = monitor.get_stats()
-        
-        logger.debug(f"Loaded stats: {stats.get('total_requests', 0)} total requests")
-        
-        # Get config for cost estimates
-        config = get_config()
-        adapter_costs = config.get_adapter_costs()
-        
-        # Display session info
-        session_start = stats.get("session_start", "Unknown")
-        print(f"\n⏰ Session Start: {session_start}")
-        print(f"📝 Stats File: {monitor.stats_file}")
-        
-        # Display total stats
-        print("\n" + "=" * 70)
-        print("📈 Overall Statistics")
-        print("=" * 70)
-        print(f"   Total Requests:  {stats.get('total_requests', 0):,}")
-        print(f"   Total Cost:      ${stats.get('total_cost', 0.0):.4f}")
-        print(f"   Fallbacks:       {stats.get('fallbacks', 0)}")
-        
-        # Display per-adapter stats
-        print("\n" + "=" * 70)
-        print("🤖 Adapter Statistics")
-        print("=" * 70)
-        
-        adapters_stats = stats.get("adapters", {})
-        
-        for adapter_name in ["minimax", "qwen", "local"]:
-            adapter_data = adapters_stats.get(adapter_name, {})
-            requests = adapter_data.get("requests", 0)
-            tokens = adapter_data.get("tokens", 0)
-            cost = adapter_data.get("cost", 0.0)
-            errors = adapter_data.get("errors", 0)
-            
-            if requests > 0:
-                error_rate = (errors / requests) * 100
-                print(f"\n🔹 {adapter_name.upper()}")
-                print(f"   Requests:   {requests:,}")
-                print(f"   Tokens:     {tokens:,}")
-                print(f"   Cost:       ${cost:.4f}")
-                print(f"   Errors:     {errors} ({error_rate:.1f}%)")
-                
-                if tokens > 0:
-                    avg_tokens = tokens / requests
-                    print(f"   Avg Tokens: {avg_tokens:.0f}/request")
+        print("\n⚠️  Adapter Monitoring Deprecated")
+        print("-" * 70)
+        print("The modality switcher (adapter routing) feature has been deprecated.")
+        print("Adapter usage statistics are no longer tracked.")
+
+        print("\n💡 Alternative Monitoring Commands:")
+        print("-" * 70)
+        print("   empirica sessions-list          - View session history")
+        print("   empirica project-bootstrap      - View project state")
+        print("   empirica efficiency-report      - View token efficiency")
+        print("   empirica query findings         - View learnings")
+        print("   empirica query issues           - View auto-captured issues")
+
+        print("\n📈 Session Statistics:")
+        print("-" * 70)
+
+        # Try to show basic session stats from Empirica core
+        try:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            sessions = db.get_all_sessions(limit=5)
+            db.close()
+
+            if sessions:
+                print(f"   Recent sessions: {len(sessions)}")
+                for s in sessions[:3]:
+                    print(f"     • {s.get('session_id', 'N/A')[:8]}... ({s.get('ai_id', 'unknown')})")
             else:
-                print(f"\n🔹 {adapter_name.upper()}")
-                print(f"   No usage recorded")
-        
-        # Display recent activity
-        if getattr(args, 'history', False):
-            history = stats.get("history", [])
-            recent = history[-10:] if len(history) > 10 else history
-            
-            if recent:
-                print("\n" + "=" * 70)
-                print("📜 Recent Activity (last 10 requests)")
-                print("=" * 70)
-                
-                for i, record in enumerate(reversed(recent), 1):
-                    timestamp = record.get("timestamp", "?")
-                    adapter = record.get("adapter", "?")
-                    success = "✅" if record.get("success") else "❌"
-                    cost = record.get("cost", 0.0)
-                    latency = record.get("latency", 0.0)
-                    
-                    print(f"   {i}. {timestamp} | {adapter:8s} {success} | ${cost:.4f} | {latency:.1f}s")
-        
-        # Health check
-        if getattr(args, 'health', False):
-            print("\n" + "=" * 70)
-            print("💓 Adapter Health Check")
-            print("=" * 70)
-            
-            registry = get_registry()
-            health_results = registry.health_check_all()
-            
-            for adapter, healthy in health_results.items():
-                status = "✅ Healthy" if healthy else "❌ Unhealthy"
-                print(f"   {adapter:10s}: {status}")
+                print("   No sessions recorded yet")
+        except Exception:
+            print("   Session data unavailable")
 
-        # Turtle view - epistemic health
-        if getattr(args, 'turtle', False):
-            _display_turtle_health()
-
-        print("\n" + "=" * 70)
+        print("=" * 70)
 
     except Exception as e:
         handle_cli_error(e, "Monitor", getattr(args, 'verbose', False))

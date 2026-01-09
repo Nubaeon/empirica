@@ -48,6 +48,8 @@ UNCERTAINTY(0.0-1.0) → Explicit doubt level
 
 **Total: 13 dimensions tracked per session**
 
+> **Deep Dive:** For detailed explanations of each vector with examples, see [Epistemic Vectors Explained](../end-users/05_EPISTEMIC_VECTORS_EXPLAINED.md)
+
 ---
 
 ## Project Bootstrap: What Gets Captured

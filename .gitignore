@@ -110,3 +110,4 @@ SECURITY_RESOLUTION_PLAN.md
 
 # Auto-generated investigation branches (don't commit)
 # These are created by empirica investigate-create-branch
+*.kate-swp

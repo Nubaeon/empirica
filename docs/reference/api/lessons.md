@@ -325,10 +325,236 @@ path = storage.get_learning_path(target_lesson_id="abc123")
 
 ---
 
+## Data Classes
+
+### LessonPhase (Enum)
+
+Epistemic phase of a lesson step.
+
+```python
+from empirica.core.lessons.schema import LessonPhase
+
+class LessonPhase(Enum):
+    NOETIC = "noetic"   # Investigation, reading, understanding
+    PRAXIC = "praxic"   # Action, execution, doing
+```
+
+| Phase | Description |
+|-------|-------------|
+| `noetic` | Investigation - look, read, verify state |
+| `praxic` | Action - click, type, execute |
+
+---
+
+### HotLessonEntry
+
+Minimal lesson data for in-memory HOT cache. Nanosecond access.
+
+```python
+from empirica.core.lessons.hot_cache import HotLessonEntry
+
+@dataclass
+class HotLessonEntry:
+    id: str
+    name: str
+    expected_delta: Dict[str, float]  # Vector improvements
+    prereq_ids: Set[str]              # Required lessons
+    enables_ids: Set[str]             # Lessons this enables
+    requires_ids: Set[str]            # Dependencies
+    domain: Optional[str] = None
+```
+
+**Purpose:** Fast graph traversal without loading full lesson data.
+
+---
+
+### LessonHotCache
+
+In-memory knowledge graph for nanosecond lesson queries.
+
+```python
+from empirica.core.lessons.hot_cache import get_hot_cache, LessonHotCache
+
+cache = get_hot_cache()
+
+# Find lessons that improve 'know' vector
+lessons = cache.lessons_that_improve('know', threshold=0.1, limit=10)
+
+# Get prerequisites for a lesson
+prereqs = cache.get_prerequisites(lesson_id)
+
+# Get optimal learning path
+path = cache.get_learning_path(
+    target_lesson_id="target",
+    completed_lessons={"done1", "done2"}
+)
+
+# Find lessons for epistemic gaps
+recommendations = cache.find_best_for_gap(
+    epistemic_state={"know": 0.5, "uncertainty": 0.7},
+    threshold=0.6
+)
+```
+
+**Key Methods:**
+
+| Method | Description | Performance |
+|--------|-------------|-------------|
+| `get_lesson(id)` | Get lesson by ID | O(1) |
+| `lessons_that_improve(vector)` | Lessons improving vector | O(n) |
+| `get_prerequisites(id)` | Direct prerequisites | O(1) |
+| `get_all_prerequisites(id)` | Transitive prerequisites | O(V+E) |
+| `get_learning_path(target, completed)` | Topological learning path | O(V+E) |
+| `can_execute(id, completed, state)` | Check if lesson can run | O(1) |
+| `find_best_for_gap(state)` | Lessons for epistemic gaps | O(n) |
+
+---
+
+### KnowledgeGraphNode
+
+A node in the epistemic procedural knowledge graph.
+
+```python
+from empirica.core.lessons.schema import KnowledgeGraphNode
+
+@dataclass
+class KnowledgeGraphNode:
+    id: str
+    node_type: Literal['lesson', 'skill', 'domain', 'tool', 'agent']
+    name: str
+    epistemic_delta: Optional[EpistemicDelta] = None
+```
+
+**Node Types:**
+- `lesson` - Individual lesson
+- `skill` - Composite of lessons
+- `domain` - Topic area (e.g., "notebooklm", "git")
+- `tool` - Required tool (e.g., "browser", "terminal")
+- `agent` - AI agent persona
+
+---
+
+### KnowledgeGraphEdge
+
+An edge in the epistemic procedural knowledge graph.
+
+```python
+from empirica.core.lessons.schema import KnowledgeGraphEdge, RelationType
+
+@dataclass
+class KnowledgeGraphEdge:
+    source_id: str
+    target_id: str
+    relation_type: RelationType
+    weight: float = 1.0
+```
+
+**Relation Types:**
+
+| RelationType | Meaning |
+|--------------|---------|
+| `REQUIRES` | Must complete source before target |
+| `ENABLES` | Completing source unlocks target |
+| `RELATED_TO` | Conceptually similar |
+| `SUPERSEDES` | Source is newer version of target |
+| `DERIVED_FROM` | Source was created from target |
+
+---
+
+### EpistemicDelta
+
+Expected change in epistemic vectors from completing a lesson.
+
+```python
+from empirica.core.lessons.schema import EpistemicDelta
+
+@dataclass
+class EpistemicDelta:
+    know: float = 0.0       # Domain knowledge improvement
+    do: float = 0.0         # Capability improvement
+    context: float = 0.0    # Situational understanding
+    clarity: float = 0.0    # Task clarity
+    coherence: float = 0.0  # Mental model coherence
+    signal: float = 0.0     # Signal/noise discrimination
+    uncertainty: float = 0.0  # Uncertainty reduction (negative = good)
+```
+
+**Key Insight:** Lessons don't just teach procedures - they predictably improve specific epistemic dimensions.
+
+---
+
+### StepCriticality (Enum)
+
+How critical is getting a step right.
+
+```python
+from empirica.core.lessons.schema import StepCriticality
+
+class StepCriticality(Enum):
+    CRITICAL = "critical"   # Failure here = lesson fails
+    IMPORTANT = "important" # Should get right, recoverable
+    OPTIONAL = "optional"   # Nice to have
+```
+
+---
+
+### PrerequisiteType (Enum)
+
+Types of prerequisites a lesson can have.
+
+```python
+from empirica.core.lessons.schema import PrerequisiteType
+
+class PrerequisiteType(Enum):
+    LESSON = "lesson"       # Must have completed another lesson
+    SKILL = "skill"         # Must have a skill (composite of lessons)
+    TOOL = "tool"           # Must have access to a tool
+    CONTEXT = "context"     # Must have certain context (file, repo, etc.)
+    EPISTEMIC = "epistemic" # Must have epistemic state (know >= X)
+```
+
+---
+
+### LessonRelation
+
+A relationship between a lesson and another entity.
+
+```python
+from empirica.core.lessons.schema import LessonRelation, RelationType
+
+@dataclass
+class LessonRelation:
+    relation_type: RelationType  # REQUIRES, ENABLES, RELATED_TO, etc.
+    target_type: str             # 'lesson', 'skill', 'domain'
+    target_id: str
+    weight: float = 1.0          # Relationship strength
+```
+
+---
+
+### LessonValidation
+
+Validation and quality metrics for a lesson.
+
+```python
+from empirica.core.lessons.schema import LessonValidation
+
+@dataclass
+class LessonValidation:
+    replay_count: int = 0            # Times successfully replayed
+    success_rate: float = 0.0        # Success rate (0-1)
+    avg_completion_time_ms: int = 0  # Average time to complete
+    test_cases: List[str] = field(default_factory=list)
+    success_criteria: str = ""
+    last_validated: Optional[float] = None
+```
+
+---
+
 ## Implementation Files
 
-- `empirica/core/lessons/schema.py` - Dataclasses
+- `empirica/core/lessons/schema.py` - Dataclasses (LessonPhase, HotLessonEntry, KnowledgeGraphNode, KnowledgeGraphEdge)
 - `empirica/core/lessons/storage.py` - 4-layer storage manager
-- `empirica/core/lessons/hot_cache.py` - In-memory graph
+- `empirica/core/lessons/hot_cache.py` - In-memory graph (LessonHotCache)
 - `empirica/cli/command_handlers/lesson_commands.py` - CLI handlers
 - `empirica/cli/parsers/lesson_parsers.py` - Argument parsers

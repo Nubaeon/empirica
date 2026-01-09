@@ -60,6 +60,7 @@ This visual overview describes the complete architecture of the Empirica system 
 │  │ TIER 3: state, change, completion, impact                     │    │
 │  │ META:   uncertainty (explicit tracking)                       │    │
 │  └───────────────────────────────────────────────────────────────┘    │
+│  See: [Epistemic Vectors Explained](../human/end-users/05_EPISTEMIC_VECTORS_EXPLAINED.md)
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
                                     ↓

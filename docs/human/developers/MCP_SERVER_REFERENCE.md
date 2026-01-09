@@ -1,7 +1,7 @@
 # Empirica MCP Server Reference (v5.0)
 
-**Last Updated:** 2025-12-20
-**Total Tools:** 40
+**Last Updated:** 2026-01-09
+**Total Tools:** 57
 **Architecture:** Thin wrappers around CLI commands
 
 ---
@@ -17,7 +17,7 @@ The Empirica MCP (Model Context Protocol) server exposes Empirica functionality 
 - **Command:** `empirica-mcp`
 - **Protocol:** MCP (Model Context Protocol)
 - **Transport:** stdio
-- **Tools:** 40 tools (3 stateless + 37 CLI wrappers)
+- **Tools:** 57 tools (stateless utilities + CLI wrappers)
 
 **For complete MCP ↔ CLI mapping:** See [`api/mcp_cli_mapping.md`](api/mcp_cli_mapping.md)
 

@@ -38,6 +38,7 @@ The Epistemic Agent architecture follows a recursive self-similar pattern. Each 
 │                      LAYER 1: CASCADE Workflow                       │
 │  (Foundation: PREFLIGHT → CHECK → POSTFLIGHT)                        │
 │  Epistemic State: 13 vectors (know, uncertainty, context, etc.)      │
+│  See: ../human/end-users/05_EPISTEMIC_VECTORS_EXPLAINED.md           │
 │  Commands: preflight-submit, check-submit, postflight-submit         │
 └──────────────────────────────────────────────────────────────────────┘
                                    ↓
