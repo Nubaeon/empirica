@@ -171,20 +171,7 @@ async def list_tools() -> List[types.Tool]:
             }
         ),
 
-        types.Tool(
-            name="execute_check",
-            description="Execute CHECK phase assessment after investigation",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "session_id": {"type": "string", "description": "Session ID or alias"},
-                    "findings": {"type": "array", "items": {"type": "string"}, "description": "Investigation findings"},
-                    "remaining_unknowns": {"type": "array", "items": {"type": "string"}, "description": "Remaining unknowns (maps to --unknowns)"},
-                    "confidence_to_proceed": {"type": "number", "description": "Confidence score 0.0-1.0 (maps to --confidence)"}
-                },
-                "required": ["session_id", "findings", "remaining_unknowns", "confidence_to_proceed"]
-            }
-        ),
+        # NOTE: execute_check removed - it blocks on stdin. Use submit_check_assessment directly.
 
         types.Tool(
             name="submit_check_assessment",
@@ -1611,7 +1598,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "session_create": ["session-create"],
         "execute_preflight": ["preflight", "--prompt-only"],  # Non-blocking: returns prompt only
         "submit_preflight_assessment": ["preflight-submit"],
-        "execute_check": ["check"],
+        # "execute_check" removed - blocks on stdin
         "submit_check_assessment": ["check-submit"],
         # Note: execute_postflight doesn't map to CLI - it returns context programmatically
         # AI should call submit_postflight_assessment directly after reviewing context
@@ -1893,15 +1880,14 @@ MUST execute when UNCERTAINTY >0.6 or KNOW/DO/CONTEXT are low.
 MUST execute after INVESTIGATE to validate readiness before ACT.
 
 **Action items:**
-1. Call `execute_check(session_id, findings, remaining_unknowns, confidence)`
-2. Self-assess updated epistemic state:
+1. Self-assess updated epistemic state:
    - Did KNOW/DO increase from PREFLIGHT?
    - Did UNCERTAINTY decrease from PREFLIGHT?
    - Are remaining unknowns acceptable?
    - Is confidence ≥0.7 to proceed?
-3. Call `submit_check_assessment(session_id, vectors, decision)`
-4. Decision = "investigate" → loop back to INVESTIGATE
-5. Decision = "proceed" → continue to ACT
+2. Call `submit_check_assessment(session_id, vectors, decision, reasoning)`
+3. Decision = "investigate" → loop back to INVESTIGATE
+4. Decision = "proceed" → continue to ACT
 
 **Critical:** Honesty prevents rushing into action unprepared.""",
 

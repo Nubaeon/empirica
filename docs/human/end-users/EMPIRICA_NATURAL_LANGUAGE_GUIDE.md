@@ -151,16 +151,9 @@ echo '{
 # Use CHECK gates for decision points
 echo '{
   "session_id": "<session-id>",
-  "confidence": 0.75,
-  "findings": [
-    "Understood OAuth2 token flow",
-    "Learned about refresh token patterns"
-  ],
-  "unknowns": [
-    "Token lifetime configuration",
-    "Refresh token rotation policy"
-  ]
-}' | empirica check -
+  "vectors": {"know": 0.75, "uncertainty": 0.25, "context": 0.8},
+  "reasoning": "Understood OAuth2 token flow and refresh patterns, but still need to confirm lifetime config"
+}' | empirica check-submit -
 ```
 
 **Natural Language Mapping:**
@@ -384,7 +377,7 @@ echo '{"session_id": "$SESSION", "vectors": {"know": 0.7, "do": 0.8, "uncertaint
 # Implementation work...
 
 # Check decision point
-echo '{"session_id": "$SESSION", "confidence": 0.85, "findings": ["Implemented PREFLIGHT phase", "Designed CHECK gates"]}' | empirica check -
+echo '{"session_id": "$SESSION", "vectors": {"know": 0.85, "uncertainty": 0.15, "context": 0.9}, "reasoning": "Implemented PREFLIGHT phase and designed CHECK gates"}' | empirica check-submit -
 
 # Complete implementation
 
