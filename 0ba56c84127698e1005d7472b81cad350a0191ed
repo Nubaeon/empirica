@@ -1,0 +1,28 @@
+{
+  "goal_id": "a7c6bca5-69f1-4e61-91fe-05c8eb1be7fb",
+  "session_id": "7338894c-8d2a-4bbb-b5c5-97cfc54513f9",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-09T11:26:28.513530+00:00",
+  "goal_data": {
+    "objective": "Audit Empirica MCP Server documentation for accuracy and completeness",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-09T11:26:28.513549+00:00",
+      "action": "created"
+    }
+  ]
+}
