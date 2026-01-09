@@ -1,0 +1,28 @@
+{
+  "goal_id": "248756ad-23c8-46e6-8218-e5cc70300894",
+  "session_id": "b8b86ef0-5200-447b-b88c-cf0bb3c76058",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-09T11:05:05.562038+00:00",
+  "goal_data": {
+    "objective": "Add configuration navigation for end-users linking to CONFIGURATION_REFERENCE.md",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-09T11:05:05.562055+00:00",
+      "action": "created"
+    }
+  ]
+}
