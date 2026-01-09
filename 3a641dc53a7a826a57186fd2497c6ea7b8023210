@@ -1,0 +1,28 @@
+{
+  "goal_id": "76007226-a961-4a13-8629-48259ccfa172",
+  "session_id": "de08d3cb-157e-4e88-bde6-10177c2f3cfd",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-09T11:10:39.565808+00:00",
+  "goal_data": {
+    "objective": "Consolidate storage architecture docs (fb564552)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-09T11:10:39.565824+00:00",
+      "action": "created"
+    }
+  ]
+}
