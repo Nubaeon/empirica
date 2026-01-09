@@ -1,0 +1,28 @@
+{
+  "goal_id": "10769645-69b0-48e9-8c3b-9eb1c1937cea",
+  "session_id": "0b4ea743-2138-4e4b-87ad-c375ce97f2b8",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-09T10:28:49.830938+00:00",
+  "goal_data": {
+    "objective": "Test Bug Hunt onboarding project",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-09T10:28:49.830957+00:00",
+      "action": "created"
+    }
+  ]
+}
