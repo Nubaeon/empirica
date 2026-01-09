@@ -483,6 +483,74 @@ class EpistemicDelta:
 
 ---
 
+### StepCriticality (Enum)
+
+How critical is getting a step right.
+
+```python
+from empirica.core.lessons.schema import StepCriticality
+
+class StepCriticality(Enum):
+    CRITICAL = "critical"   # Failure here = lesson fails
+    IMPORTANT = "important" # Should get right, recoverable
+    OPTIONAL = "optional"   # Nice to have
+```
+
+---
+
+### PrerequisiteType (Enum)
+
+Types of prerequisites a lesson can have.
+
+```python
+from empirica.core.lessons.schema import PrerequisiteType
+
+class PrerequisiteType(Enum):
+    LESSON = "lesson"       # Must have completed another lesson
+    SKILL = "skill"         # Must have a skill (composite of lessons)
+    TOOL = "tool"           # Must have access to a tool
+    CONTEXT = "context"     # Must have certain context (file, repo, etc.)
+    EPISTEMIC = "epistemic" # Must have epistemic state (know >= X)
+```
+
+---
+
+### LessonRelation
+
+A relationship between a lesson and another entity.
+
+```python
+from empirica.core.lessons.schema import LessonRelation, RelationType
+
+@dataclass
+class LessonRelation:
+    relation_type: RelationType  # REQUIRES, ENABLES, RELATED_TO, etc.
+    target_type: str             # 'lesson', 'skill', 'domain'
+    target_id: str
+    weight: float = 1.0          # Relationship strength
+```
+
+---
+
+### LessonValidation
+
+Validation and quality metrics for a lesson.
+
+```python
+from empirica.core.lessons.schema import LessonValidation
+
+@dataclass
+class LessonValidation:
+    replay_count: int = 0            # Times successfully replayed
+    success_rate: float = 0.0        # Success rate (0-1)
+    avg_completion_time_ms: int = 0  # Average time to complete
+    test_cases: List[str] = field(default_factory=list)
+    success_criteria: str = ""
+    last_validated: Optional[float] = None
+```
+
+---
+
 ## Implementation Files
 
 - `empirica/core/lessons/schema.py` - Dataclasses (LessonPhase, HotLessonEntry, KnowledgeGraphNode, KnowledgeGraphEdge)
