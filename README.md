@@ -331,15 +331,16 @@ Each session starts higher because learnings persist. No more re-investigating t
 With Claude Code hooks enabled, you see epistemic state in your terminal:
 
 ```
-[empirica] ⚡79% │ ⚡ PRAXIC │ POSTFLIGHT │ K:80% U:20% │ Δ K:+0.30 U:-0.30 │ ✓ stable
+[empirica] 💫49% │ no goal │ PREFLIGHT │ K:50% U:50% C:50% │ Δ K:+0.25 U:-0.25 C:+0.20 │ △ drift
 ```
 
 **What this tells you:**
-- **⚡79%** — Overall epistemic confidence
-- **PRAXIC** — AI is in action mode (vs NOETIC = investigation mode)
-- **K:80% U:20%** — 80% knowledge, 20% uncertainty
-- **Δ K:+0.30** — Gained 30% knowledge this session
-- **✓ stable** — No epistemic drift detected
+- **💫49%** — Overall epistemic confidence
+- **no goal** — Current goal status (or goal name when active)
+- **PREFLIGHT** — CASCADE phase (PREFLIGHT → CHECK → POSTFLIGHT)
+- **K:50% U:50% C:50%** — Knowledge, Uncertainty, Context scores
+- **Δ K:+0.25** — Learning delta since session start
+- **△ drift** — Drift indicator (✓ stable when calibrated)
 
 ---
 
