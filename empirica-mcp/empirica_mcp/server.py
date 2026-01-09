@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 """
-Empirica MCP Server v2 - Thin CLI Wrapper
+Empirica MCP Server - Epistemic Middleware for AI Agents
 
-Architecture: Routes all stateful operations through Empirica CLI for reliability
-- Stateless tools (3): Handle directly in MCP (introduction, guidance, help)
-- Stateful tools (37): Route to CLI via subprocess (single source of truth)
+Full-featured MCP server providing:
+- **57 tools** wrapping Empirica CLI commands
+- **Epistemic middleware** for confidence-gated actions
+- **Sentinel integration** for CHECK gate decisions
+- **CASCADE workflow** (PREFLIGHT → CHECK → POSTFLIGHT)
+- **Memory persistence** via Qdrant semantic search
 
-Benefits:
-- 90% code reduction (500 vs 5000 lines)
-- 75% token reduction (CLI docs vs MCP schemas)
-- No async bugs (subprocess in executor)
-- Easy testing (empirica <cmd> --output json)
-- Single source of truth (CLI implementation)
+Architecture:
+- Stateful tools route through CLI subprocess (single source of truth)
+- EpistemicMiddleware intercepts tool calls for confidence gating
+- Sentinel evaluates vectors and returns proceed/investigate decisions
+- Session state persists across tool invocations
 
 CASCADE Philosophy:
 - validate_input=False: Schemas are GUIDANCE, not enforcement
 - No rigid validation: AI agents self-assess what parameters make sense
 - Scope is vectorial (self-assessed): {"breadth": 0-1, "duration": 0-1, "coordination": 0-1}
-- Trust AI reasoning: Let agents assess epistemic state → scope vectors (see goal_scopes.yaml)
+- Trust AI reasoning: Let agents assess epistemic state → scope vectors
 
-Author: Claude Code
-Date: 2025-01-18
 Version: 1.3.0
 """
 

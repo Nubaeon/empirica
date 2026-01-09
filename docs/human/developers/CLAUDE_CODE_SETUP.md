@@ -297,22 +297,48 @@ chmod +x ~/.claude/hooks/post-compact.sh
 
 ## Step 5: Configure MCP Server (Optional)
 
-If you also use Claude Desktop and want MCP tools:
+For Claude Code MCP integration, edit `~/.claude/mcp.json`:
 
-Edit `~/.claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "empirica": {
       "command": "empirica-mcp",
+      "args": [],
+      "type": "stdio",
       "env": {
-        "EMPIRICA_AI_ID": "claude-desktop",
         "EMPIRICA_EPISTEMIC_MODE": "true",
         "EMPIRICA_PERSONALITY": "balanced_architect"
-      }
+      },
+      "tools": ["*"],
+      "description": "Empirica epistemic framework"
     }
   }
 }
+```
+
+**If installed from source** (not pip), use full path:
+```json
+{
+  "mcpServers": {
+    "empirica": {
+      "command": "/path/to/empirica/.venv-mcp/bin/empirica-mcp",
+      "args": [],
+      "type": "stdio",
+      "env": {
+        "PYTHONPATH": "/path/to/empirica",
+        "EMPIRICA_EPISTEMIC_MODE": "true",
+        "EMPIRICA_PERSONALITY": "balanced_architect"
+      },
+      "tools": ["*"]
+    }
+  }
+}
+```
+
+**Test MCP server:**
+```bash
+empirica-mcp --help
 ```
 
 ---
@@ -362,9 +388,16 @@ source ~/.bashrc
 
 ### MCP server not working
 ```bash
-# Test MCP server directly
-empirica-mcp --help
+# Verify MCP server is installed
+which empirica-mcp
+
+# Check mcp.json config syntax
+python3 -c "import json; json.load(open('$HOME/.claude/mcp.json'))" && echo "Valid JSON"
+
+# Test underlying CLI (MCP wraps this)
+empirica --version
 ```
+Note: `empirica-mcp` runs as stdio server, not CLI with --help.
 
 ---
 
