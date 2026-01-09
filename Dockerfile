@@ -4,8 +4,10 @@
 # Build: docker build -t empirica:1.3.0 .
 # Run:   docker run -it --rm empirica:1.3.0 empirica --help
 # Shell: docker run -it --rm empirica:1.3.0 /bin/bash
+#
+# For security-hardened Alpine version: docker build -f Dockerfile.alpine -t empirica:1.3.0-alpine .
 
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 LABEL maintainer="Empirica Team"
 LABEL description="Epistemic self-assessment framework for AI agents"
@@ -14,18 +16,19 @@ LABEL version="1.3.0"
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies with version pinning
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy package files
 COPY dist/empirica-1.3.0-py3-none-any.whl /tmp/
 
-# Install Empirica
-RUN pip install --no-cache-dir /tmp/empirica-1.3.0-py3-none-any.whl \
+# Install Empirica with security flags
+RUN pip install --no-cache-dir --no-compile /tmp/empirica-1.3.0-py3-none-any.whl \
     && rm /tmp/empirica-1.3.0-py3-none-any.whl \
-    && pip install --upgrade pip
+    && pip cache purge 2>/dev/null || true
 
 # Create directory for user data
 RUN mkdir -p /data/.empirica

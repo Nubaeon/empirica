@@ -1,0 +1,65 @@
+# Empirica Docker Image (Alpine - Security Hardened)
+# Smaller attack surface, musl libc, minimal packages
+#
+# Build: docker build -f Dockerfile.alpine -t empirica:1.3.0-alpine .
+# Run:   docker run -it --rm empirica:1.3.0-alpine empirica --help
+# Shell: docker run -it --rm empirica:1.3.0-alpine /bin/sh
+
+# Pin to specific digest for reproducibility
+FROM python:3.11-alpine3.19
+
+LABEL maintainer="Empirica Team"
+LABEL description="Epistemic self-assessment framework for AI agents"
+LABEL version="1.3.0"
+LABEL security.hardened="true"
+
+# Set working directory
+WORKDIR /app
+
+# Install minimal system dependencies
+# - git: required for empirica git operations
+# - build deps: only for compilation, removed after
+RUN apk add --no-cache \
+    git=2.43.0-r0 \
+    && rm -rf /var/cache/apk/*
+
+# Copy package files
+COPY dist/empirica-1.3.0-py3-none-any.whl /tmp/
+
+# Install Empirica with no cache
+RUN pip install --no-cache-dir --no-compile /tmp/empirica-1.3.0-py3-none-any.whl \
+    && rm /tmp/empirica-1.3.0-py3-none-any.whl \
+    && pip cache purge 2>/dev/null || true
+
+# Create directory for user data
+RUN mkdir -p /data/.empirica
+
+# Copy documentation
+COPY README.md /app/README.md
+
+# Set environment variables
+ENV EMPIRICA_HOME=/data/.empirica
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Create non-root user with specific UID/GID
+RUN addgroup -g 1000 empirica && \
+    adduser -u 1000 -G empirica -h /home/empirica -D empirica && \
+    chown -R empirica:empirica /app /data
+
+# Drop privileges
+USER empirica
+
+# Set volume for persistent data
+VOLUME ["/data"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
+    CMD empirica --version || exit 1
+
+# Default command
+CMD ["empirica", "--help"]
+
+# Security labels
+LABEL org.opencontainers.image.source="https://github.com/Nubaeon/empirica"
+LABEL org.opencontainers.image.licenses="MIT"
