@@ -1,0 +1,28 @@
+{
+  "goal_id": "8108050e-a178-4ad6-adca-090cec464ca1",
+  "session_id": "b8b86ef0-5200-447b-b88c-cf0bb3c76058",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-09T11:03:57.548708+00:00",
+  "goal_data": {
+    "objective": "Consolidate 13 epistemic vectors documentation - keep 05_EPISTEMIC_VECTORS_EXPLAINED.md as canonical, add cross-links to 5 other files",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-09T11:03:57.548725+00:00",
+      "action": "created"
+    }
+  ]
+}
