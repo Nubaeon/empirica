@@ -1,0 +1,28 @@
+{
+  "goal_id": "c18c5292-6627-44b8-8006-df080fa12165",
+  "session_id": "de08d3cb-157e-4e88-bde6-10177c2f3cfd",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-09T11:10:40.310992+00:00",
+  "goal_data": {
+    "objective": "Consolidate Qdrant integration docs (bdb57a35)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-09T11:10:40.311007+00:00",
+      "action": "created"
+    }
+  ]
+}
