@@ -1,10 +1,10 @@
 # Empirica Database Schema (Unified)
 
-**Total Tables:** 19 (active)
+**Total Tables:** 31 (active)
 **Database Type:** SQLite (with PostgreSQL adapter support)
 **Architecture:** Modular with unified goal/task system
 **Every project (mapped to git repo) has its own SQLite database**
-**Last Updated:** 2026-01-03
+**Last Updated:** 2026-01-09
 
 ---
 
@@ -99,6 +99,49 @@ goals (1) ──> (N) mistakes_made
 **Relationships:**
 ```
 sessions (1) ──> (N) token_savings
+```
+
+### 9. Session-Level Breadcrumbs (4 tables)
+- **session_findings** - Findings logged during session
+- **session_unknowns** - Unknowns logged during session
+- **session_dead_ends** - Dead-end approaches logged during session
+- **session_mistakes** - Mistakes logged during session
+
+**Relationships:**
+```
+sessions (1) ──> (N) session_findings
+sessions (1) ──> (N) session_unknowns
+sessions (1) ──> (N) session_dead_ends
+sessions (1) ──> (N) session_mistakes
+```
+
+> These tables mirror the project-level tables but are scoped to individual sessions.
+
+### 10. Lessons System (6 tables)
+- **lessons** - Reusable learning units with procedural knowledge
+- **lesson_steps** - Individual steps within a lesson
+- **lesson_epistemic_deltas** - Expected vector changes per lesson
+- **lesson_prerequisites** - Lesson dependencies
+- **lesson_corrections** - Corrections applied to lessons over time
+- **lesson_replays** - Records of lesson application
+
+**Relationships:**
+```
+lessons (1) ──> (N) lesson_steps
+lessons (1) ──> (N) lesson_epistemic_deltas
+lessons (1) ──> (N) lesson_prerequisites
+lessons (1) ──> (N) lesson_corrections
+sessions (1) ──> (N) lesson_replays
+lessons (1) ──> (N) lesson_replays
+```
+
+### 11. Infrastructure (2 tables)
+- **knowledge_graph** - Concept relationships for semantic linking
+- **schema_migrations** - Database migration version tracking
+
+**Relationships:**
+```
+(standalone tables)
 ```
 
 ---
