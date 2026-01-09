@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [
-    {name = "Empirica Team"}
+    {name = "David S. L. Van Assche"}
 ]
 keywords = ["ai", "llm", "epistemic", "self-assessment", "metacognition", "calibration"]
 classifiers = [

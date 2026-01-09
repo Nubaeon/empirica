@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [
-    {name = "Empirica Team"},
+    {name = "David S. L. Van Assche"},
 ]
 keywords = ["mcp", "empirica", "epistemic", "ai", "metacognition"]
 classifiers = [
