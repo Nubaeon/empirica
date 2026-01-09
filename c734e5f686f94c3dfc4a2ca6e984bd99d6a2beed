@@ -1,0 +1,28 @@
+{
+  "goal_id": "e94f534c-3f4b-4433-87de-548b8860ee94",
+  "session_id": "734c80d2-eab3-4cb3-be25-557a5ab9b8c8",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-09T11:22:46.385171+00:00",
+  "goal_data": {
+    "objective": "Add cross-links to Noetic/Praxic docs (f113f04f)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-09T11:22:46.385185+00:00",
+      "action": "created"
+    }
+  ]
+}
