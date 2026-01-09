@@ -4,6 +4,10 @@
 **Date:** 2026-01-09
 **Purpose:** Document complete storage flow for dashboard/crypto-signing integration
 
+**Related docs:**
+- [CANONICAL_STORAGE.md](./CANONICAL_STORAGE.md) - API reference for storage classes
+- [Qdrant API Reference](../reference/api/qdrant.md) - Embedding providers and semantic search
+
 ---
 
 ## Overview (Critical Infrastructure)

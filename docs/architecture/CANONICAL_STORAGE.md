@@ -14,6 +14,11 @@ Four-layer storage architecture:
 
 Every epistemic operation writes to appropriate layers based on data type.
 
+**Related docs:**
+- [STORAGE_ARCHITECTURE_COMPLETE.md](./STORAGE_ARCHITECTURE_COMPLETE.md) - Visual guide with diagrams and data flow
+- [Qdrant API Reference](../reference/api/qdrant.md) - Embedding providers and semantic search API
+- [QDRANT_EPISTEMIC_INTEGRATION.md](./QDRANT_EPISTEMIC_INTEGRATION.md) - Qdrant architecture and collections
+
 ---
 
 ## Architecture

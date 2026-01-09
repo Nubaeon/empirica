@@ -4,6 +4,10 @@
 **Category:** Vector Storage & Semantic Search
 **Stability:** Beta
 
+**Related docs:**
+- [QDRANT_EPISTEMIC_INTEGRATION.md](../../architecture/QDRANT_EPISTEMIC_INTEGRATION.md) - Architecture and collections design
+- [STORAGE_ARCHITECTURE_COMPLETE.md](../../architecture/STORAGE_ARCHITECTURE_COMPLETE.md) - Four-layer storage flow
+
 ---
 
 ## Overview

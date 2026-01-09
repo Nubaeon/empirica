@@ -3,6 +3,18 @@
 **Generated:** 2026-01-09
 **Status:** Complete configuration guide
 
+**Quick Navigation:**
+| If you want to... | See... |
+|-------------------|--------|
+| Get started quickly | [01_START_HERE.md](../human/end-users/01_START_HERE.md) |
+| Install Empirica | [02_INSTALLATION.md](../human/end-users/02_INSTALLATION.md) |
+| Troubleshoot issues | [03_TROUBLESHOOTING.md](../human/end-users/03_TROUBLESHOOTING.md) |
+| Learn CLI basics | [04_QUICKSTART_CLI.md](../human/end-users/04_QUICKSTART_CLI.md) |
+| Understand vectors | [05_EPISTEMIC_VECTORS_EXPLAINED.md](../human/end-users/05_EPISTEMIC_VECTORS_EXPLAINED.md) |
+| Set up first time | [FIRST_TIME_SETUP.md](../human/end-users/FIRST_TIME_SETUP.md) |
+
+*This reference is technical. For end-user guides, see links above.*
+
 ---
 
 ## Overview

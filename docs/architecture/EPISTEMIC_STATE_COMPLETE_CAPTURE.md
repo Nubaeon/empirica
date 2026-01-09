@@ -3,6 +3,12 @@
 **Purpose:** Define ALL data that should be captured in epistemic state snapshots
 **Date:** 2025-12-26
 
+**Related docs:**
+- [05_EPISTEMIC_VECTORS_EXPLAINED.md](../human/end-users/05_EPISTEMIC_VECTORS_EXPLAINED.md) - End-user guide to vectors
+- [STORAGE_ARCHITECTURE_COMPLETE.md](./STORAGE_ARCHITECTURE_COMPLETE.md) - How state is stored
+- [QDRANT_EPISTEMIC_INTEGRATION.md](./QDRANT_EPISTEMIC_INTEGRATION.md) - Semantic search of epistemic artifacts
+- [CLI_COMMANDS_UNIFIED.md](../human/developers/CLI_COMMANDS_UNIFIED.md) - Commands: finding-log, unknown-log, deadend-log
+
 ---
 
 ## Current Vectors (13) ✅
