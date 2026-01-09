@@ -47,7 +47,7 @@ pip install --upgrade empirica
 ### Option 2: From Source
 ```bash
 # Clone repository
-git clone https://github.com/YourOrg/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 
 # Install in development mode
@@ -238,7 +238,7 @@ For contributors or advanced users:
 
 ```bash
 # Clone repository
-git clone https://github.com/YourOrg/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 
 # Create virtual environment
