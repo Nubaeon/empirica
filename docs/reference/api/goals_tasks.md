@@ -394,6 +394,45 @@ for goal in ready_goals:
 
 ---
 
+## CLI Commands
+
+### `goals-add-dependency`
+
+Add a goal-to-goal dependency relationship.
+
+```bash
+empirica goals-add-dependency --goal-id <GOAL_ID> --depends-on <DEPENDS_ON_GOAL_ID> [--type <TYPE>] [--description <DESC>]
+```
+
+**Parameters:**
+- `--goal-id` - Goal that has the dependency
+- `--depends-on` - Goal that must be completed first
+- `--type` - Dependency type: `blocks`, `enables`, `informs` (default: `blocks`)
+- `--description` - Optional description of the relationship
+
+**Example:**
+```bash
+# Goal B depends on Goal A (Goal A must complete before B can start)
+empirica goals-add-dependency \
+  --goal-id abc-456 \
+  --depends-on abc-123 \
+  --type blocks \
+  --description "Authentication must be complete before implementing user profiles"
+```
+
+**Output (JSON):**
+```json
+{
+  "ok": true,
+  "dependency_id": "dep-789",
+  "goal_id": "abc-456",
+  "depends_on_goal_id": "abc-123",
+  "type": "blocks"
+}
+```
+
+---
+
 ## Best Practices
 
 1. **Define clear success criteria** when creating goals to enable proper progress tracking.
