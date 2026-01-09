@@ -593,6 +593,32 @@ export_data = project_repo.export_project_data(
 
 ---
 
+## CLI Commands
+
+For command-line usage, see [CLI Commands Reference](../../human/developers/CLI_COMMANDS_UNIFIED.md).
+
+### Project Management
+```bash
+empirica project-init --name "Project Name"
+empirica project-create --name "Project Name" --output json
+empirica project-list --output json
+empirica project-bootstrap --session-id <ID> --output json
+```
+
+### Handoffs
+```bash
+empirica handoff-create --session-id <ID> --task-summary "..." --key-findings '[...]'
+empirica handoff-query --output json
+```
+
+### Semantic Search (requires Qdrant)
+```bash
+empirica project-search --project-id <ID> --task "query" --output json
+empirica project-embed --project-id <ID> --output json
+```
+
+---
+
 ## Best Practices
 
 1. **Create comprehensive handoff reports** - Include sufficient context for seamless AI-to-AI transitions.

@@ -564,6 +564,28 @@ print(f"Cleaned up {cleaned} stale references")
 
 ---
 
+## CLI Commands
+
+For command-line usage, see [CLI Commands Reference](../../human/developers/CLI_COMMANDS_UNIFIED.md).
+
+### Breadcrumb Logging
+```bash
+empirica finding-log --session-id <ID> --finding "..." --impact 0.7
+empirica unknown-log --session-id <ID> --unknown "..."
+empirica unknown-resolve --unknown-id <UUID> --resolved-by "..."
+empirica deadend-log --session-id <ID> --approach "..." --why-failed "..."
+empirica mistake-log --session-id <ID> --mistake "..." --recovery "..."
+```
+
+### Querying
+```bash
+empirica query findings --session-id <ID> --output json
+empirica query unknowns --session-id <ID> --output json
+empirica query dead-ends --session-id <ID> --output json
+```
+
+---
+
 ## Error Handling
 
 Methods typically raise:
