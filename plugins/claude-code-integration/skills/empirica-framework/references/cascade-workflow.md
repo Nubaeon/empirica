@@ -1,5 +1,11 @@
 # CASCADE Workflow: Detailed Guide
 
+**Related docs:**
+- [SENTINEL_ARCHITECTURE.md](../../../../docs/architecture/SENTINEL_ARCHITECTURE.md) - Gate control between phases
+- [NOETIC_PRAXIC_FRAMEWORK.md](../../../../docs/architecture/NOETIC_PRAXIC_FRAMEWORK.md) - Noetic (investigate) vs Praxic (act) phases
+- [Architecture README](../../../../docs/architecture/README.md) - System overview with CASCADE in context
+- [Vector Guide](./vector-guide.md) - Epistemic vectors used in assessments
+
 ## Overview
 
 CASCADE is the epistemic workflow that ensures you measure what you know before and after tasks.
