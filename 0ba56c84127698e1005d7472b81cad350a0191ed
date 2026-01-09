@@ -1,0 +1,28 @@
+{
+  "goal_id": "20c74609-50bd-4549-8983-986d27f15a32",
+  "session_id": "7338894c-8d2a-4bbb-b5c5-97cfc54513f9",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-09T11:26:27.773976+00:00",
+  "goal_data": {
+    "objective": "Audit Database Schema documentation for accuracy and completeness",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-09T11:26:27.773991+00:00",
+      "action": "created"
+    }
+  ]
+}
