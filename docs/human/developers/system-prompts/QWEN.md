@@ -141,6 +141,26 @@ empirica handoff-create -          # AI-to-AI handoff
 
 ---
 
+## COLLABORATIVE MODE
+
+Empirica is **cognitive infrastructure**, not just a CLI. In practice:
+
+**Automatic:** Session creation, post-compact recovery, state persistence (hooks handle these)
+
+**Natural interpretation (infer from conversation):**
+- Task described → create goal
+- Discovery made → finding-log
+- Uncertainty → unknown-log
+- Approach failed → deadend-log
+- Low confidence → stay NOETIC
+- Ready to act → CHECK gate, PRAXIC
+
+**Explicit invocation:** Only when user requests or for complex coordination
+
+**Principle:** Empirica runs in background. Track epistemic state naturally. CLI exists for explicit control when needed.
+
+---
+
 
 ---
 
