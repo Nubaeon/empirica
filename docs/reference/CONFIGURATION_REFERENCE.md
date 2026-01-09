@@ -1,6 +1,6 @@
 # Empirica Configuration Reference (v4.0)
 
-**Generated:** 2025-12-16  
+**Generated:** 2026-01-09
 **Status:** Complete configuration guide
 
 ---
@@ -595,21 +595,33 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 - `EMPIRICA_ENFORCE_CASCADE_PHASES`: Strictly enforce CASCADE phase ordering (`true`, `false`)
 - `EMPIRICA_SENTINEL_LOOPING`: Enable/disable sentinel CHECK-investigate loop (`true`, `false`, default: `true`). When `false`, CHECK decisions bypass investigate requirement
 
-### Vector Search & Embeddings
+### Vector Search & Embeddings (Qdrant)
 
+- `EMPIRICA_QDRANT_URL`: URL for Qdrant server (e.g., `http://localhost:6333`). Required for semantic search.
+- `EMPIRICA_QDRANT_PATH`: Path for file-based Qdrant storage (default: `./.qdrant_data`). Used as fallback when URL not set.
 - `EMPIRICA_ENABLE_EMBEDDINGS`: Enable/disable embedding generation (`true`, `false`)
-- `EMPIRICA_OLLAMA_URL`: URL for local Ollama instance (for local embeddings)
+- `EMPIRICA_EMBEDDINGS_PROVIDER`: Embeddings provider (`openai`, `ollama`, `jina`, `voyage`, `local`, `auto`). Default: `auto` (uses Ollama if available, else local hash)
+- `EMPIRICA_EMBEDDINGS_MODEL`: Model for embeddings (varies by provider). Defaults: `text-embedding-3-small` (OpenAI), `nomic-embed-text` (Ollama), `jina-embeddings-v3` (Jina), `voyage-3-lite` (Voyage)
+- `EMPIRICA_OLLAMA_URL`: URL for local Ollama instance (default: `http://localhost:11434`)
 - `OPENAI_API_KEY`: API key for OpenAI embeddings
+- `JINA_API_KEY`: API key for Jina AI embeddings
+- `VOYAGE_API_KEY`: API key for Voyage AI embeddings
 
 ### Credentials
 
 - `EMPIRICA_CREDENTIALS_PATH`: Path to credentials file
 
+### Session & Instance
+
+- `EMPIRICA_INSTANCE_ID`: Explicit override for session instance identification. Used for multi-Claude environments.
+- `EMPIRICA_AUTOPILOT_MODE`: Enable binding Sentinel decisions (`true`, `false`, default: `false`). When `true`, CHECK decisions are enforced (not suggestive).
+- `EMPIRICA_STATUS_MODE`: Status display mode for statusline (`balanced`, `minimal`, `verbose`)
+
 ### Features
 
 - `EMPIRICA_AUTO_CHECKPOINT`: Enable/disable auto checkpoints (`true`, `false`)
 - `EMPIRICA_GIT_INTEGRATION`: Enable/disable git integration
-- `EMPIRICA_MODALITY_ENABLED`: Enable/disable modality switching
+- `EMPIRICA_ENABLE_MODALITY_SWITCHER`: Enable/disable modality switching (`true`, `false`, default: `false`)
 - `EMPIRICA_AUTO_POSTFLIGHT`: Enable/disable automatic POSTFLIGHT trigger on goal completion (`true`, `false`, default: `true`). When `true`, CHECK auto-triggers POSTFLIGHT when completion >= 0.7 AND impact >= 0.5
 
 ---
@@ -762,9 +774,9 @@ EMPIRICA_LOG_LEVEL=debug empirica session-create --ai-id test
 
 ---
 
-**Last Updated:** 2025-12-16  
-**Configuration System Version:** v4.0  
-**Total Lines Documented:** 3186 lines
+**Last Updated:** 2026-01-09
+**Configuration System Version:** v4.1
+**Total Lines Documented:** 3200+ lines
 
 ---
 
