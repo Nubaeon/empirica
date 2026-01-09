@@ -18,6 +18,7 @@ This framework is NOT about checkpoints, snapshots, or memory management.
 │  impact, engagement, uncertainty)                           │
 │                                                             │
 │ AI assesses: "What do I actually know/understand?"          │
+│ See: ../human/end-users/05_EPISTEMIC_VECTORS_EXPLAINED.md   │
 └─────────────────────────────────────────────────────────────┘
                         │
                         ▼
