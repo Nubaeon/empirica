@@ -1,0 +1,30 @@
+{
+  "goal_id": "41d7b8de-fd04-41b5-a790-14176a70124d",
+  "session_id": "31c52a73-3c97-416a-8c9d-67fc572f6d7b",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-09T18:16:31.724591+00:00",
+  "goal_data": {
+    "objective": "Integrate Chat UI widget into getempirica.com website",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Chat widget visible on website",
+      "Widget connects to backend server",
+      "Users can interact with Empirica assistant"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-09T18:16:31.724609+00:00",
+      "action": "created"
+    }
+  ]
+}
