@@ -1,0 +1,28 @@
+{
+  "goal_id": "7ba763b0-d327-4b1c-98eb-6a38b7f7cfee",
+  "session_id": "0b4ea743-2138-4e4b-87ad-c375ce97f2b8",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-09T10:28:50.552167+00:00",
+  "goal_data": {
+    "objective": "Test Code Archaeology onboarding project",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-09T10:28:50.552183+00:00",
+      "action": "created"
+    }
+  ]
+}
