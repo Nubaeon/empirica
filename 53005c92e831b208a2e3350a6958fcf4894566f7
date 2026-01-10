@@ -1,0 +1,31 @@
+{
+  "goal_id": "d6cebb19-b3b2-4a4c-ac21-6945f3b7ac6a",
+  "session_id": "d6779f5f-c56e-40b0-aa46-0f324652160e",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-10T12:45:02.687323+00:00",
+  "goal_data": {
+    "objective": "Deploy Empirica Chat backend to Railway and configure chat.getempirica.com subdomain",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Chat backend running on Railway",
+      "chat.getempirica.com resolves to Railway deployment",
+      "WebSocket connections working",
+      "Environment variables configured"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-10T12:45:02.687332+00:00",
+      "action": "created"
+    }
+  ]
+}
