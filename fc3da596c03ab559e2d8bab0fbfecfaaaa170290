@@ -1,0 +1,33 @@
+{
+  "goal_id": "e7022eab-9fec-4a23-8c78-e6c97157a92c",
+  "session_id": "ebb20d2e-0dde-456f-969f-032bd23a1824",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-10T20:51:21.338545+00:00",
+  "goal_data": {
+    "objective": "Set up ZimaBoard with OPNsense as AI-friendly firewall/router",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.6,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "OPNsense installed and bootable on ZimaBoard",
+      "WAN/LAN interfaces configured",
+      "Cloudflare tunnel ports (7844 TCP/UDP) allowed",
+      "AI service ports whitelisted",
+      "Basic security rules in place",
+      "Password documented securely"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-10T20:51:21.338553+00:00",
+      "action": "created"
+    }
+  ]
+}
