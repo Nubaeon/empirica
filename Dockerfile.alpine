@@ -5,8 +5,8 @@
 # Run:   docker run -it --rm empirica:1.3.0-alpine empirica --help
 # Shell: docker run -it --rm empirica:1.3.0-alpine /bin/sh
 
-# Pin to specific digest for reproducibility
-FROM python:3.11-alpine3.19
+# Use latest Alpine for security patches
+FROM python:3.11-alpine3.23
 
 LABEL maintainer="Empirica Team"
 LABEL description="Epistemic self-assessment framework for AI agents"
@@ -25,6 +25,9 @@ RUN apk add --no-cache \
 
 # Copy package files
 COPY dist/empirica-1.3.0-py3-none-any.whl /tmp/
+
+# Upgrade pip and setuptools first (CVE-2025-47273, CVE-2024-6345)
+RUN pip install --no-cache-dir --upgrade pip setuptools
 
 # Install Empirica with no cache
 RUN pip install --no-cache-dir --no-compile /tmp/empirica-1.3.0-py3-none-any.whl \

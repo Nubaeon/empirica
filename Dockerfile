@@ -22,6 +22,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Upgrade pip and setuptools first (CVE-2025-47273, CVE-2024-6345)
+RUN pip install --no-cache-dir --upgrade pip setuptools
+
 # Copy package files
 COPY dist/empirica-1.3.0-py3-none-any.whl /tmp/
 
