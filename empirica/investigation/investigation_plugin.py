@@ -128,20 +128,78 @@ class InvestigationPlugin:
 class PluginRegistry:
     """
     Registry for managing investigation plugins
-    
+
     Provides convenient methods for registering, discovering, and using plugins.
+
+    Auto-discovery: Call discover_plugins() to load plugins from installed packages
+    that declare entry points in [project.entry-points."empirica.plugins"].
     """
-    
-    def __init__(self):
+
+    def __init__(self, auto_discover: bool = False):
         self.plugins: Dict[str, InvestigationPlugin] = {}
-    
+        self._discovered = False
+        if auto_discover:
+            self.discover_plugins()
+
     def register(self, plugin: InvestigationPlugin) -> None:
         """Register a plugin"""
         if plugin.name in self.plugins:
             raise ValueError(f"Plugin '{plugin.name}' already registered")
-        
+
         self.plugins[plugin.name] = plugin
         logger.info(f"📦 Registered plugin: {plugin.name}")
+
+    def discover_plugins(self) -> int:
+        """
+        Auto-discover and load plugins from installed packages.
+
+        Looks for entry points in group 'empirica.plugins'. Each entry point
+        should be a callable that accepts a PluginRegistry and registers plugins.
+
+        Example pyproject.toml in extension package:
+            [project.entry-points."empirica.plugins"]
+            my_ext = "my_extension:register_plugins"
+
+        Where register_plugins is:
+            def register_plugins(registry: PluginRegistry):
+                registry.register(MyPlugin(...))
+
+        Returns:
+            Number of plugins discovered and loaded
+        """
+        if self._discovered:
+            return 0
+
+        count = 0
+        try:
+            from importlib.metadata import entry_points
+
+            # Python 3.10+ returns SelectableGroups, 3.9 returns dict
+            eps = entry_points()
+            if hasattr(eps, 'select'):
+                # Python 3.10+
+                plugin_eps = eps.select(group='empirica.plugins')
+            else:
+                # Python 3.9 fallback
+                plugin_eps = eps.get('empirica.plugins', [])
+
+            for ep in plugin_eps:
+                try:
+                    register_fn = ep.load()
+                    before_count = len(self.plugins)
+                    register_fn(self)
+                    added = len(self.plugins) - before_count
+                    count += added
+                    logger.info(f"🔌 Loaded {added} plugin(s) from {ep.name}")
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to load plugin entry point {ep.name}: {e}")
+
+            self._discovered = True
+
+        except ImportError:
+            logger.debug("importlib.metadata not available, skipping plugin discovery")
+
+        return count
     
     def unregister(self, plugin_name: str) -> None:
         """Unregister a plugin"""
@@ -267,6 +325,33 @@ def create_common_plugins() -> Dict[str, InvestigationPlugin]:
         'slack_search': create_slack_plugin(),
         'github_search': create_github_plugin()
     }
+
+
+# Global plugin registry (lazy-initialized with auto-discovery)
+_global_registry: Optional[PluginRegistry] = None
+
+
+def get_global_registry(auto_discover: bool = True) -> PluginRegistry:
+    """
+    Get or create the global plugin registry.
+
+    Args:
+        auto_discover: If True, automatically discover plugins from installed packages
+                      on first call. Set to False for testing or manual control.
+
+    Returns:
+        The global PluginRegistry instance
+    """
+    global _global_registry
+    if _global_registry is None:
+        _global_registry = PluginRegistry(auto_discover=auto_discover)
+    return _global_registry
+
+
+def reset_global_registry() -> None:
+    """Reset the global registry (useful for testing)"""
+    global _global_registry
+    _global_registry = None
 
 
 if __name__ == "__main__":
