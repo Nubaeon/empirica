@@ -1,0 +1,33 @@
+{
+  "goal_id": "4ab02b16-dbb5-4575-9679-7ecb9bc3bf88",
+  "session_id": "4622084d-93d6-4edb-80e9-1e7dfe3e0b5f",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-12T19:59:43.551092+00:00",
+  "goal_data": {
+    "objective": "Implement Epistemic Prompt Builder v2 with modular architecture, turtle recursion, extended vectors for visual AI types",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Modular FastAPI app with separated routes, templates, static assets",
+      "Turtle recursion buttons (1x, 3x, 5x iterations) with turtles-all-the-way-down tooltip",
+      "CONTEXT vector added to KNOW/DO/UNCERTAIN framework with gap-filling UI",
+      "Clarity and Density vectors for visual AI types (image, video, 3D)",
+      "Confidence bar showing before/after epistemic scores",
+      "Category-only AI type selector (no model dropdown)"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-12T19:59:43.551105+00:00",
+      "action": "created"
+    }
+  ]
+}
