@@ -226,53 +226,69 @@ def handle_project_bootstrap_command(args):
                     print(f"\nTip: {hint}")
             return None
 
-        # Auto-detect project from git remote URL if not provided
-        # Uses normalized git repo URL for single-project-per-repo guarantee
+        # Auto-detect project if not provided
+        # Priority: 1) local .empirica/project.yaml, 2) git remote URL
         if not project_id:
+            # Method 1: Read from local .empirica/project.yaml (highest priority)
+            # This is what project-init creates - no git remote required
             try:
-                from empirica.cli.utils.project_resolver import (
-                    get_current_git_repo, resolve_project_by_git_repo, normalize_git_url
-                )
+                import yaml
+                import os
+                project_yaml = os.path.join(os.getcwd(), '.empirica', 'project.yaml')
+                if os.path.exists(project_yaml):
+                    with open(project_yaml, 'r') as f:
+                        project_config = yaml.safe_load(f)
+                        if project_config and project_config.get('project_id'):
+                            project_id = project_config['project_id']
+            except Exception:
+                pass  # Fall through to git remote method
 
-                git_repo = get_current_git_repo()
-                if git_repo:
-                    db = SessionDatabase()
-                    project_id = resolve_project_by_git_repo(git_repo, db)
-
-                    if not project_id:
-                        # Fallback: try substring match for legacy projects
-                        result = subprocess.run(
-                            ['git', 'remote', 'get-url', 'origin'],
-                            capture_output=True, text=True, timeout=5
-                        )
-                        if result.returncode == 0:
-                            git_url = result.stdout.strip()
-                            cursor = db.adapter.conn.cursor()
-                            cursor.execute("""
-                                SELECT id FROM projects WHERE repos LIKE ?
-                                ORDER BY last_activity_timestamp DESC LIMIT 1
-                            """, (f'%{git_url}%',))
-                            row = cursor.fetchone()
-                            if row:
-                                project_id = row['id']
-
-                    db.close()
-
-                    if not project_id:
-                        return _error_output(
-                            f"No project found for git repo: {git_repo}",
-                            "Create a project with: empirica project-create --name <name>"
-                        )
-                else:
-                    return _error_output(
-                        "Not in a git repository or no remote 'origin' configured",
-                        "Run 'git remote add origin <url>' or use --project-id"
+            # Method 2: Match git remote URL (fallback for repos without project-init)
+            if not project_id:
+                try:
+                    from empirica.cli.utils.project_resolver import (
+                        get_current_git_repo, resolve_project_by_git_repo, normalize_git_url
                     )
-            except Exception as e:
-                return _error_output(
-                    f"Auto-detecting project failed: {e}",
-                    "Use --project-id to specify project explicitly"
-                )
+
+                    git_repo = get_current_git_repo()
+                    if git_repo:
+                        db = SessionDatabase()
+                        project_id = resolve_project_by_git_repo(git_repo, db)
+
+                        if not project_id:
+                            # Fallback: try substring match for legacy projects
+                            result = subprocess.run(
+                                ['git', 'remote', 'get-url', 'origin'],
+                                capture_output=True, text=True, timeout=5
+                            )
+                            if result.returncode == 0:
+                                git_url = result.stdout.strip()
+                                cursor = db.adapter.conn.cursor()
+                                cursor.execute("""
+                                    SELECT id FROM projects WHERE repos LIKE ?
+                                    ORDER BY last_activity_timestamp DESC LIMIT 1
+                                """, (f'%{git_url}%',))
+                                row = cursor.fetchone()
+                                if row:
+                                    project_id = row['id']
+
+                        db.close()
+
+                        if not project_id:
+                            return _error_output(
+                                f"No project found for git repo: {git_repo}",
+                                "Create a project with: empirica project-create --name <name>"
+                            )
+                    else:
+                        return _error_output(
+                            "Not in a git repository or no remote 'origin' configured",
+                            "Run 'git remote add origin <url>' or use --project-id"
+                        )
+                except Exception as e:
+                    return _error_output(
+                        f"Auto-detecting project failed: {e}",
+                        "Use --project-id to specify project explicitly"
+                    )
         else:
             # Resolve project name to UUID if needed
             db = SessionDatabase()
