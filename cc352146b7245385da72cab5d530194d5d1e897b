@@ -1,0 +1,28 @@
+{
+  "goal_id": "d02a3bb3-fd17-4650-a29f-5da5c666daea",
+  "session_id": "b23147d9-871f-48b1-9b62-c5c4d697fb74",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-12T15:48:59.401333+00:00",
+  "goal_data": {
+    "objective": "Implement Epistemic Prompt Builder - Phase 1 Quick Mode MVP",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-12T15:48:59.401349+00:00",
+      "action": "created"
+    }
+  ]
+}
