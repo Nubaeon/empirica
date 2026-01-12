@@ -1,0 +1,28 @@
+{
+  "goal_id": "0baab97b-0589-4f02-aac7-756bd9dc49f8",
+  "session_id": "dbe7097c-e584-4350-bd7f-7f2a13f2d6f0",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-12T10:30:11.310848+00:00",
+  "goal_data": {
+    "objective": "Build Sentinel-gated containerized chat with dual-brain (Ollama+Claude) architecture",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.8,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-12T10:30:11.310866+00:00",
+      "action": "created"
+    }
+  ]
+}
