@@ -1,0 +1,31 @@
+{
+  "goal_id": "8298cefe-2c01-42fa-8fb7-da423897567f",
+  "session_id": "c84a91e8-dffa-407a-b9d9-dd624aaddf60",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-13T15:33:21.381145+00:00",
+  "goal_data": {
+    "objective": "Verify OAuth flow works end-to-end after sessions table schema fix",
+    "scope": {
+      "breadth": 0.1,
+      "duration": 0.1,
+      "coordination": 0
+    },
+    "success_criteria": [
+      "OAuth redirects to Google",
+      "Callback creates session in SQLite",
+      "Auth status returns authenticated=true",
+      "Preview button appears with quota"
+    ],
+    "estimated_complexity": 0.1,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-13T15:33:21.381155+00:00",
+      "action": "created"
+    }
+  ]
+}
