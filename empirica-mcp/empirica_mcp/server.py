@@ -3,7 +3,7 @@
 Empirica MCP Server - Epistemic Middleware for AI Agents
 
 Full-featured MCP server providing:
-- **57 tools** wrapping Empirica CLI commands
+- **56 tools** wrapping Empirica CLI commands
 - **Epistemic middleware** for confidence-gated actions
 - **Sentinel integration** for CHECK gate decisions
 - **CASCADE workflow** (PREFLIGHT → CHECK → POSTFLIGHT)
@@ -144,18 +144,8 @@ async def list_tools() -> List[types.Tool]:
             }
         ),
 
-        types.Tool(
-            name="execute_preflight",
-            description="Execute PREFLIGHT epistemic assessment before task engagement. Returns self-assessment prompt as JSON (non-blocking). AI performs genuine self-assessment and calls submit_preflight_assessment with vectors.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "session_id": {"type": "string", "description": "Session ID or alias (e.g., 'latest:active:ai-id')"},
-                    "prompt": {"type": "string", "description": "Task description to assess"}
-                },
-                "required": ["session_id", "prompt"]
-            }
-        ),
+        # NOTE: execute_preflight removed - unnecessary theater. AI calls submit_preflight_assessment directly.
+        # PREFLIGHT is mechanistic: assess 13 vectors honestly, record them. No template needed.
 
         types.Tool(
             name="submit_preflight_assessment",
@@ -1301,7 +1291,7 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
                     "ok": False,
                     "error": "No PREFLIGHT assessment found",
                     "session_id": session_id,
-                    "suggestion": "Execute PREFLIGHT first using execute_preflight and submit_preflight_assessment"
+                    "suggestion": "Execute PREFLIGHT first using submit_preflight_assessment"
                 }, indent=2)
             )]
         
@@ -1564,7 +1554,7 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
                 "message": "Session created successfully",
                 "session_id": session_id,
                 "ai_id": ai_id,
-                "next_step": "Use this session_id with execute_preflight to begin a cascade"
+                "next_step": "Use this session_id with submit_preflight_assessment to begin a cascade"
             }
 
             return json.dumps(result, indent=2)
@@ -1576,7 +1566,7 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
                 "message": "Session created but database operations failed",
                 "session_id": session_id or "unknown",
                 "error": str(e),
-                "next_step": "Call execute_preflight",
+                "next_step": "Call submit_preflight_assessment",
                 "note": "Session may have been created but database sync failed"
             }
 
@@ -1596,7 +1586,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     tool_map = {
         # Workflow
         "session_create": ["session-create"],
-        "execute_preflight": ["preflight", "--prompt-only"],  # Non-blocking: returns prompt only
+        # "execute_preflight" removed - unnecessary theater. AI calls submit_preflight_assessment directly.
         "submit_preflight_assessment": ["preflight-submit"],
         # "execute_check" removed - blocks on stdin
         "submit_check_assessment": ["check-submit"],
@@ -1844,22 +1834,18 @@ def handle_guidance(arguments: dict) -> List[types.TextContent]:
     phase = arguments.get("phase", "overview")
 
     guidance = {
-        "preflight": """**PREFLIGHT: Assess BEFORE starting**
+        "preflight": """**PREFLIGHT: Record baseline epistemic state**
 
-MUST execute epistemic self-assessment across 13 vectors before engaging with task.
+Mechanistic self-assessment: record current knowledge state across 13 vectors.
 
 **Action items:**
-1. Call `execute_preflight(session_id, prompt)` to get assessment template
-2. HONESTLY rate your current state (0-1 scale):
-   - ENGAGEMENT: Am I engaged with this? (must be ≥0.6)
-   - KNOW: What do I actually know? (not aspirational)
-   - DO: What can I proven-ly do? (capability evidence)
-   - CONTEXT: What environmental factors exist?
-   - UNCERTAINTY: What don't I know? (HIGH = need investigation)
-3. Call `submit_preflight_assessment(session_id, vectors, reasoning)`
-4. If UNCERTAINTY >0.6 → proceed to INVESTIGATE phase
+1. Assess your 13 vectors honestly (0-1 scale):
+   - ENGAGEMENT, KNOW, DO, CONTEXT, CLARITY, COHERENCE
+   - SIGNAL, DENSITY, STATE, CHANGE, COMPLETION, IMPACT, UNCERTAINTY
+2. Call `submit_preflight_assessment(session_id, vectors, reasoning)`
+3. If UNCERTAINTY >0.6 or KNOW <0.5 → investigate before acting
 
-**Critical:** Be honest, not aspirational. Overconfidence breaks calibration.""",
+**Critical:** Measure what's in context, not experience. Honest assessment enables calibration.""",
 
         "investigate": """**INVESTIGATE: Fill knowledge gaps systematically**
 
@@ -2048,7 +2034,7 @@ export EMPIRICA_PERSONALITY=balanced_architect  # Optional: default personality
 - **All commands support `--output json` for programmatic use**
 - Session aliases work with: sessions-show, checkpoint-load, and all workflow commands
 - For detailed help: `empirica <command> --help`
-- For MCP tool usage: Use tool names (session_create, execute_preflight, etc.)
+- For MCP tool usage: Use tool names (session_create, submit_preflight_assessment, etc.)
 
 ## Troubleshooting
 

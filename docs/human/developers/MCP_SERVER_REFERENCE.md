@@ -1,7 +1,7 @@
 # Empirica MCP Server Reference (v5.0)
 
 **Last Updated:** 2026-01-09
-**Total Tools:** 57
+**Total Tools:** 56
 **Architecture:** Thin wrappers around CLI commands
 
 ---
@@ -17,7 +17,7 @@ The Empirica MCP (Model Context Protocol) server exposes Empirica functionality 
 - **Command:** `empirica-mcp`
 - **Protocol:** MCP (Model Context Protocol)
 - **Transport:** stdio
-- **Tools:** 57 tools (stateless utilities + CLI wrappers)
+- **Tools:** 56 tools (stateless utilities + CLI wrappers)
 
 **For complete MCP ↔ CLI mapping:** See [`api/mcp_cli_mapping.md`](api/mcp_cli_mapping.md)
 
@@ -218,24 +218,7 @@ Resume previous session(s).
 
 **Purpose:** Epistemic self-assessment workflow
 
-### `execute_preflight`
-
-Execute PREFLIGHT epistemic assessment before task engagement.
-
-**Parameters:**
-- `session_id` (required): Session UUID or alias
-- `prompt` (required): Task description to assess
-
-**Returns:** Self-assessment prompt as JSON (non-blocking)
-
-**Flow:**
-1. AI receives assessment prompt
-2. AI performs genuine self-assessment
-3. AI calls `submit_preflight_assessment` with 13 vectors
-
-**Use when:** Starting new task, need baseline assessment
-
----
+> **Note:** `execute_preflight` has been removed. PREFLIGHT is mechanistic - assess 13 vectors honestly and call `submit_preflight_assessment` directly. No template needed.
 
 ### `submit_preflight_assessment`
 
@@ -811,12 +794,10 @@ Query logged mistakes for learning.
 7. `resume_previous_session` - Resume sessions
 
 ### CASCADE Workflow
-8. `execute_preflight` - PREFLIGHT assessment
-9. `submit_preflight_assessment` - Submit PREFLIGHT
-10. `execute_check` - CHECK gate
-11. `submit_check_assessment` - Submit CHECK
-12. `execute_postflight` - POSTFLIGHT assessment
-13. `submit_postflight_assessment` - Submit POSTFLIGHT
+8. `submit_preflight_assessment` - Submit PREFLIGHT (no execute_preflight - assess directly)
+9. `submit_check_assessment` - Submit CHECK (no execute_check - assess directly)
+10. `execute_postflight` - POSTFLIGHT context
+11. `submit_postflight_assessment` - Submit POSTFLIGHT
 
 ### Goals & Tasks
 14. `create_goal` - Create goal
@@ -869,13 +850,7 @@ session_id = result["session_id"]
 # 2. Load project context (optional)
 breadcrumbs = project_bootstrap(project_id="myproject")
 
-# 3. Run PREFLIGHT
-preflight = execute_preflight(
-    session_id=session_id,
-    prompt="Implement OAuth2 authentication"
-)
-
-# 4. Submit assessment
+# 3. Run PREFLIGHT - assess your 13 vectors and submit directly
 submit_preflight_assessment(
     session_id=session_id,
     vectors={...},
