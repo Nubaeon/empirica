@@ -1,0 +1,28 @@
+{
+  "goal_id": "9383a646-d3fb-4d07-8485-4a6524150511",
+  "session_id": "091386e0-81d8-4413-a007-039d0845ebdd",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-13T21:05:05.100163+00:00",
+  "goal_data": {
+    "objective": "Implement tiered access model for Prompt Builder: Free (2/day assess), Auth (5/day assess+enhance), Paid (unlimited+preview)",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-13T21:05:05.100177+00:00",
+      "action": "created"
+    }
+  ]
+}
