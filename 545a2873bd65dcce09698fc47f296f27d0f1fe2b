@@ -1,0 +1,32 @@
+{
+  "goal_id": "422e8f6c-ceca-488d-adc3-4b4a590ae358",
+  "session_id": "83dffc7c-0971-4a23-8f4c-923c259ec3c8",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-13T10:16:43.201424+00:00",
+  "goal_data": {
+    "objective": "Refresh Empirica paper data and statistics for publication",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Fresh data extracted from live database",
+      "Polluted sessions filtered (50-50-50 defaults, missing postflight)",
+      "Statistical analysis re-run with updated numbers",
+      "Data manifest updated with current counts",
+      "Git remote fixed to Nubaeon/empirica-paper"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-13T10:16:43.201441+00:00",
+      "action": "created"
+    }
+  ]
+}
