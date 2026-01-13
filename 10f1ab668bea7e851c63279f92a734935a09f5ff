@@ -1,0 +1,31 @@
+{
+  "goal_id": "cbf2b97e-7a33-48f7-ad63-f7be881ecb0e",
+  "session_id": "c84a91e8-dffa-407a-b9d9-dd624aaddf60",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-13T15:33:21.296607+00:00",
+  "goal_data": {
+    "objective": "Integrate Sentinel uncertainty thresholds into Prompt Builder - if prompt lacks substance (low KNOW/DO/CONTEXT), trigger investigation phase via Claude search OR epistemic questions to user before enhancement",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Uncertainty threshold gate (e.g. confidence < 0.5) triggers investigation",
+      "Ollama can request Claude search for context OR ask user clarifying questions",
+      "Sentinel investigate/act pattern implemented in prompt flow",
+      "UI shows investigation phase before enhancement when triggered"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-13T15:33:21.296622+00:00",
+      "action": "created"
+    }
+  ]
+}
