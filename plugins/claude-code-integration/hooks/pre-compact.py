@@ -138,7 +138,6 @@ def main():
                 'empirica', 'project-bootstrap',
                 '--ai-id', ai_id,
                 '--include-live-state',
-                '--fresh-assess',
                 '--trigger', 'pre_compact',
                 '--output', 'json'
             ],
