@@ -4,13 +4,8 @@ Empirica Experimental Module
 Contains experimental features that are not yet ready for production.
 These modules are NOT imported by default - they must be explicitly requested.
 
-Usage:
-    # Only import if experimental features are enabled
-    if os.getenv('EMPIRICA_EXPERIMENTAL'):
-        from empirica.experimental.epistemic_prediction import PredictionEngine
-
-Current experiments:
-- epistemic_prediction: Predictive epistemic learning via noetic pattern matching
+NOTE: epistemic_prediction has been moved to the empirica-prediction package.
+Install with: pip install empirica-prediction
 
 WARNING: APIs in this module are unstable and may change without notice.
 """

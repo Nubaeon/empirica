@@ -3,11 +3,26 @@ Trajectory analysis command handlers (experimental).
 
 Part of the epistemic prediction system for analyzing
 vector trajectories and detecting patterns.
+
+NOTE: Implementation moved to empirica-prediction package.
+Install with: pip install empirica-prediction
 """
 
 import json
 import sqlite3
 from pathlib import Path
+
+
+def _get_historical_backfill():
+    """Import HistoricalBackfill from empirica-prediction package."""
+    try:
+        from empirica_prediction.trajectory.backfill import HistoricalBackfill
+        return HistoricalBackfill
+    except ImportError:
+        print("Error: empirica-prediction package not installed.")
+        print("Install with: pip install empirica-prediction")
+        print("Or from source: pip install -e /path/to/empirica-prediction")
+        return None
 
 
 def get_db_path():
@@ -179,7 +194,9 @@ def handle_trajectory_stats(args):
 
 def handle_trajectory_backfill(args):
     """Backfill trajectories from historical git notes."""
-    from empirica.experimental.epistemic_prediction.backfill import HistoricalBackfill
+    HistoricalBackfill = _get_historical_backfill()
+    if not HistoricalBackfill:
+        return
 
     backfill = HistoricalBackfill(repo_path=Path.cwd())
 

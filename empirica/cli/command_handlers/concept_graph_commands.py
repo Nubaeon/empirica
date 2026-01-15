@@ -2,10 +2,25 @@
 Concept graph command handlers (experimental).
 
 Part of Phase 2: Epistemic Prediction System - Concept Co-occurrence Graphs.
+
+NOTE: Implementation moved to empirica-prediction package.
+Install with: pip install empirica-prediction
 """
 
 import json
 from pathlib import Path
+
+
+def _get_concept_graph():
+    """Import ConceptGraph from empirica-prediction package."""
+    try:
+        from empirica_prediction.concepts.graph import ConceptGraph
+        return ConceptGraph
+    except ImportError:
+        print("Error: empirica-prediction package not installed.")
+        print("Install with: pip install empirica-prediction")
+        print("Or from source: pip install -e /path/to/empirica-prediction")
+        return None
 
 
 def _get_project_id(args):
@@ -47,7 +62,9 @@ def _get_db_path():
 
 def handle_concept_build(args):
     """Build concept graph from findings/unknowns."""
-    from empirica.experimental.epistemic_prediction.concept_graph import ConceptGraph
+    ConceptGraph = _get_concept_graph()
+    if not ConceptGraph:
+        return
 
     project_id = _get_project_id(args)
     if not project_id:
@@ -78,7 +95,9 @@ def handle_concept_build(args):
 
 def handle_concept_stats(args):
     """Show concept graph statistics."""
-    from empirica.experimental.epistemic_prediction.concept_graph import ConceptGraph
+    ConceptGraph = _get_concept_graph()
+    if not ConceptGraph:
+        return
 
     project_id = _get_project_id(args)
     if not project_id:
@@ -117,7 +136,9 @@ def handle_concept_stats(args):
 
 def handle_concept_top(args):
     """Show top concepts by frequency."""
-    from empirica.experimental.epistemic_prediction.concept_graph import ConceptGraph
+    ConceptGraph = _get_concept_graph()
+    if not ConceptGraph:
+        return
 
     project_id = _get_project_id(args)
     if not project_id:
@@ -163,7 +184,9 @@ def handle_concept_top(args):
 
 def handle_concept_related(args):
     """Find concepts related to a search term."""
-    from empirica.experimental.epistemic_prediction.concept_graph import ConceptGraph
+    ConceptGraph = _get_concept_graph()
+    if not ConceptGraph:
+        return
 
     project_id = _get_project_id(args)
     if not project_id:
