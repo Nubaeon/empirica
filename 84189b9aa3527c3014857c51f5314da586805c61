@@ -1,0 +1,32 @@
+{
+  "goal_id": "d5d7fe4c-53b4-41c1-8898-4c0cc30c383e",
+  "session_id": "c4e8694e-aeec-46df-8d78-4c512bc2f0a9",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-15T09:51:20.495335+00:00",
+  "goal_data": {
+    "objective": "Security verification and merge to main for v1.3.2 release",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "SECURITY_RESOLUTION_PLAN.md in gitignore",
+      "empirica-outreach removed from tracking",
+      "Security scan passes (no secrets, no vulnerabilities)",
+      "All tests pass",
+      "Merged to main"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-15T09:51:20.495354+00:00",
+      "action": "created"
+    }
+  ]
+}
