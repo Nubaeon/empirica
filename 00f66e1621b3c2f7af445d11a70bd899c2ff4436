@@ -1,0 +1,31 @@
+{
+  "goal_id": "72c9179b-3402-41e9-a77d-b75a7def7e3f",
+  "session_id": "c6a3b9c1-e762-456b-bf0d-c16dd54f2b91",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-15T18:11:21.479472+00:00",
+  "goal_data": {
+    "objective": "Implement Phase 1: Vector Trajectory Tracking with Historical Backfill",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Backfill extracts vectors from 1168 git note records",
+      "Trajectories stored in SQLite table",
+      "Pattern matching detects breakthrough/dead-end patterns",
+      "CLI command displays trajectory analysis"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-15T18:11:21.479488+00:00",
+      "action": "created"
+    }
+  ]
+}
