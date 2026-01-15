@@ -102,6 +102,7 @@ from .parsers import (
     add_release_parsers,
     add_lesson_parsers,
     add_onboarding_parsers,
+    add_trajectory_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -131,6 +132,11 @@ from .command_handlers.persona_commands import (
 )
 from .command_handlers.release_commands import handle_release_ready_command
 from .command_handlers.docs_commands import handle_docs_assess, handle_docs_explain
+from .command_handlers.trajectory_commands import (
+    handle_trajectory_show as handle_trajectory_show_command,
+    handle_trajectory_stats as handle_trajectory_stats_command,
+    handle_trajectory_backfill as handle_trajectory_backfill_command,
+)
 
 
 def _get_version():
@@ -190,6 +196,7 @@ def create_argument_parser():
     add_release_parsers(subparsers)
     add_lesson_parsers(subparsers)
     add_onboarding_parsers(subparsers)
+    add_trajectory_parsers(subparsers)
 
     return parser
 
@@ -411,6 +418,11 @@ def main(args=None):
 
             # Onboarding command
             'onboard': handle_onboard_command,
+
+            # Trajectory commands (experimental epistemic prediction)
+            'trajectory-show': handle_trajectory_show_command,
+            'trajectory-stats': handle_trajectory_stats_command,
+            'trajectory-backfill': handle_trajectory_backfill_command,
         }
         
         if parsed_args.command in command_handlers:

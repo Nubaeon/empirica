@@ -162,11 +162,45 @@ class HistoricalBackfill:
 
     def scan_available_data(self) -> BackfillStats:
         """
-        Scan SQLite for available historical data.
+        Scan git notes and SQLite for available historical data.
         Returns statistics about what can be backfilled.
         """
-        # TODO: Implement data scanning
-        raise NotImplementedError("Backfill implementation pending")
+        # Count git note refs by phase
+        all_refs = self.list_git_note_refs()
+        preflight_refs = self.list_git_note_refs("PREFLIGHT")
+        check_refs = self.list_git_note_refs("CHECK")
+        postflight_refs = self.list_git_note_refs("POSTFLIGHT")
+
+        # Extract all records to get session count and date range
+        records = self.extract_from_git_notes()
+
+        # Get unique sessions
+        sessions = set(r.session_id for r in records)
+
+        # Get date range from timestamps
+        timestamps = []
+        for r in records:
+            try:
+                # Parse ISO timestamp
+                from datetime import datetime
+                ts = datetime.fromisoformat(r.timestamp.replace('Z', '+00:00'))
+                timestamps.append(ts.timestamp())
+            except (ValueError, AttributeError):
+                pass
+
+        date_range = (min(timestamps), max(timestamps)) if timestamps else (0.0, 0.0)
+
+        return BackfillStats(
+            sessions_processed=len(sessions),
+            epistemics_found=len(records),
+            trajectories_created=0,  # Not yet created
+            patterns_detected={
+                "PREFLIGHT": len(preflight_refs),
+                "CHECK": len(check_refs),
+                "POSTFLIGHT": len(postflight_refs),
+            },
+            date_range=date_range,
+        )
 
     def extract_epistemics(
         self,
@@ -186,11 +220,20 @@ class HistoricalBackfill:
 
     def group_by_session(
         self,
-        epistemics: List[HistoricalEpistemic]
-    ) -> Dict[str, List[HistoricalEpistemic]]:
-        """Group epistemics by session_id for trajectory construction"""
-        # TODO: Implement grouping
-        raise NotImplementedError("Backfill implementation pending")
+        records: List[GitNoteEpistemic]
+    ) -> Dict[str, List[GitNoteEpistemic]]:
+        """Group epistemic records by session_id for trajectory construction"""
+        from collections import defaultdict
+
+        grouped = defaultdict(list)
+        for record in records:
+            grouped[record.session_id].append(record)
+
+        # Sort each session's records by timestamp
+        for session_id in grouped:
+            grouped[session_id].sort(key=lambda r: r.timestamp)
+
+        return dict(grouped)
 
     def construct_trajectory(
         self,
@@ -205,32 +248,151 @@ class HistoricalBackfill:
 
     def extract_trajectories(
         self,
-        project_id: str = None,
+        ai_id_filter: str = None,
         min_phases: int = 2
-    ) -> List:
+    ) -> List['Trajectory']:
         """
-        Extract all valid trajectories from historical data.
+        Extract all valid trajectories from historical git notes.
 
         Args:
-            project_id: Filter to specific project (None = all)
+            ai_id_filter: Filter to specific AI ID (None = all)
             min_phases: Minimum phases required (default: 2)
 
         Returns:
             List of Trajectory objects
         """
-        # TODO: Implement full extraction pipeline
-        raise NotImplementedError("Backfill implementation pending")
+        from .trajectory_tracker import Trajectory, VectorSnapshot, TrajectoryPattern
+
+        # Extract all records
+        records = self.extract_from_git_notes()
+
+        # Group by session
+        grouped = self.group_by_session(records)
+
+        trajectories = []
+        for session_id, session_records in grouped.items():
+            # Filter by minimum phases
+            if len(session_records) < min_phases:
+                continue
+
+            # Convert to VectorSnapshots
+            snapshots = []
+            for record in session_records:
+                # Parse timestamp to float
+                try:
+                    from datetime import datetime
+                    ts = datetime.fromisoformat(record.timestamp.replace('Z', '+00:00'))
+                    timestamp_float = ts.timestamp()
+                except (ValueError, AttributeError):
+                    timestamp_float = 0.0
+
+                snapshot = VectorSnapshot(
+                    session_id=record.session_id,
+                    timestamp=timestamp_float,
+                    phase=record.phase,
+                    vectors=record.vectors,
+                    concept_tags=list(record.meta.get("gaps", [])) if record.meta else [],
+                    reasoning=record.meta.get("reasoning", "") if record.meta else None,
+                )
+                snapshots.append(snapshot)
+
+            # Create trajectory
+            trajectory = Trajectory(
+                trajectory_id=f"traj_{session_id[:8]}",
+                session_id=session_id,
+                snapshots=snapshots,
+                pattern=TrajectoryPattern.UNKNOWN,
+                pattern_confidence=0.0,
+                phase_detected=None,
+            )
+            trajectories.append(trajectory)
+
+        return trajectories
 
     def analyze_historical_patterns(
         self,
-        trajectories: List
+        trajectories: List['Trajectory'] = None
     ) -> Dict[str, int]:
         """
         Run pattern detection on historical trajectories.
-        Returns pattern frequency counts.
+        Updates trajectories in database and returns pattern frequency counts.
+
+        Pattern Detection Rules:
+        - BREAKTHROUGH: know increases significantly (>0.2), uncertainty drops (>0.15)
+        - DEAD_END: know stagnates or decreases, uncertainty stays high (>0.5)
+        - STABLE: gradual improvement, low uncertainty throughout
+        - OSCILLATING: know fluctuates up/down across phases
         """
-        # TODO: Implement pattern analysis
-        raise NotImplementedError("Backfill implementation pending")
+        import sqlite3
+        from .trajectory_tracker import TrajectoryPattern
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Load all trajectories with their snapshots
+        cursor.execute("""
+            SELECT t.trajectory_id, t.session_id, t.snapshot_count,
+                   t.start_vectors, t.end_vectors, t.vector_deltas
+            FROM vector_trajectories t
+            WHERE t.snapshot_count >= 2
+        """)
+
+        pattern_counts = {p.value: 0 for p in TrajectoryPattern}
+        updates = []
+
+        for row in cursor.fetchall():
+            traj_id = row[0]
+            start_vectors = json.loads(row[3]) if row[3] else {}
+            end_vectors = json.loads(row[4]) if row[4] else {}
+            deltas = json.loads(row[5]) if row[5] else {}
+
+            # Extract key metrics
+            start_know = start_vectors.get('know', 0.5)
+            end_know = end_vectors.get('know', 0.5)
+            start_uncertainty = start_vectors.get('uncertainty', 0.5)
+            end_uncertainty = end_vectors.get('uncertainty', 0.5)
+
+            delta_know = deltas.get('know', 0)
+            delta_uncertainty = deltas.get('uncertainty', 0)
+
+            # Pattern detection
+            pattern = TrajectoryPattern.UNKNOWN
+            confidence = 0.0
+
+            # BREAKTHROUGH: Big know gain + uncertainty drop
+            if delta_know > 0.2 and delta_uncertainty < -0.15:
+                pattern = TrajectoryPattern.BREAKTHROUGH
+                confidence = min(1.0, (delta_know + abs(delta_uncertainty)) / 0.5)
+
+            # DEAD_END: Know stagnates/drops + high uncertainty persists
+            elif delta_know <= 0.05 and end_uncertainty > 0.5:
+                pattern = TrajectoryPattern.DEAD_END
+                confidence = min(1.0, end_uncertainty)
+
+            # STABLE: Gradual improvement, low uncertainty
+            elif delta_know > 0 and end_uncertainty < 0.3:
+                pattern = TrajectoryPattern.STABLE
+                confidence = min(1.0, (1 - end_uncertainty) * 0.8 + delta_know)
+
+            # OSCILLATING: Small net change but likely fluctuation
+            elif abs(delta_know) < 0.1 and abs(delta_uncertainty) < 0.1:
+                pattern = TrajectoryPattern.OSCILLATING
+                confidence = 0.5
+
+            pattern_counts[pattern.value] += 1
+            updates.append((pattern.value, confidence, traj_id))
+
+        # Update database
+        cursor.executemany("""
+            UPDATE vector_trajectories
+            SET pattern = ?, pattern_confidence = ?, analyzed_at = CURRENT_TIMESTAMP
+            WHERE trajectory_id = ?
+        """, updates)
+
+        conn.commit()
+        conn.close()
+
+        return pattern_counts
 
     def extract_concept_relationships(
         self,
@@ -262,7 +424,7 @@ class HistoricalBackfill:
 
     def populate_trajectory_store(
         self,
-        trajectories: List,
+        trajectories: List['Trajectory'],
         overwrite: bool = False
     ) -> int:
         """
@@ -275,8 +437,94 @@ class HistoricalBackfill:
         Returns:
             Number of trajectories stored
         """
-        # TODO: Implement storage population
-        raise NotImplementedError("Backfill implementation pending")
+        import sqlite3
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        if overwrite:
+            cursor.execute("DELETE FROM trajectory_snapshots")
+            cursor.execute("DELETE FROM vector_trajectories")
+
+        stored = 0
+        for traj in trajectories:
+            # Calculate summary data
+            start_vectors = traj.snapshots[0].vectors if traj.snapshots else {}
+            end_vectors = traj.snapshots[-1].vectors if traj.snapshots else {}
+
+            first_ts = traj.snapshots[0].timestamp if traj.snapshots else 0
+            last_ts = traj.snapshots[-1].timestamp if traj.snapshots else 0
+            duration = last_ts - first_ts
+
+            # Calculate deltas (only for numeric values)
+            deltas = {}
+            for key in start_vectors:
+                if key in end_vectors:
+                    sv = start_vectors[key]
+                    ev = end_vectors[key]
+                    if isinstance(sv, (int, float)) and isinstance(ev, (int, float)):
+                        deltas[key] = ev - sv
+
+            # Insert trajectory
+            cursor.execute("""
+                INSERT OR REPLACE INTO vector_trajectories
+                (trajectory_id, session_id, snapshot_count, first_timestamp,
+                 last_timestamp, duration_seconds, pattern, pattern_confidence,
+                 phase_detected, start_vectors, end_vectors, vector_deltas)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                traj.trajectory_id,
+                traj.session_id,
+                len(traj.snapshots),
+                first_ts,
+                last_ts,
+                duration,
+                traj.pattern.value if traj.pattern else 'unknown',
+                traj.pattern_confidence,
+                traj.phase_detected,
+                json.dumps(start_vectors),
+                json.dumps(end_vectors),
+                json.dumps(deltas),
+            ))
+
+            # Insert snapshots
+            for snapshot in traj.snapshots:
+                cursor.execute("""
+                    INSERT INTO trajectory_snapshots
+                    (trajectory_id, session_id, phase, round_num, timestamp,
+                     engagement, know, do_vector, context, clarity, coherence,
+                     signal, density, state, change, completion, impact, uncertainty,
+                     vectors_json, concept_tags, reasoning)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    traj.trajectory_id,
+                    snapshot.session_id,
+                    snapshot.phase,
+                    1,  # round_num
+                    snapshot.timestamp,
+                    snapshot.vectors.get('engagement'),
+                    snapshot.vectors.get('know'),
+                    snapshot.vectors.get('do'),
+                    snapshot.vectors.get('context'),
+                    snapshot.vectors.get('clarity'),
+                    snapshot.vectors.get('coherence'),
+                    snapshot.vectors.get('signal'),
+                    snapshot.vectors.get('density'),
+                    snapshot.vectors.get('state'),
+                    snapshot.vectors.get('change'),
+                    snapshot.vectors.get('completion'),
+                    snapshot.vectors.get('impact'),
+                    snapshot.vectors.get('uncertainty'),
+                    json.dumps(snapshot.vectors),
+                    json.dumps(snapshot.concept_tags),
+                    snapshot.reasoning,
+                ))
+
+            stored += 1
+
+        conn.commit()
+        conn.close()
+        return stored
 
     def run_full_backfill(
         self,
