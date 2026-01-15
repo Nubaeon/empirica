@@ -1,0 +1,31 @@
+{
+  "goal_id": "a629f86b-bfbc-4b83-89e2-ce181d306283",
+  "session_id": "9a197d00-5892-48fa-a7a0-f247b437b379",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-15T20:52:01.315426+00:00",
+  "goal_data": {
+    "objective": "Phase 4: Suggestion Engine - Implement recommendation engine for next steps based on epistemic state",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.6,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Generate suggestions from gaps and patterns",
+      "Rank suggestions by impact and feasibility",
+      "Integrate with CASCADE workflow",
+      "CLI command: empirica-predict suggest"
+    ],
+    "estimated_complexity": 0.75,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-15T20:52:01.315436+00:00",
+      "action": "created"
+    }
+  ]
+}
