@@ -1,0 +1,31 @@
+{
+  "goal_id": "b3566e70-9942-4f2b-a41c-eeaab06bac6b",
+  "session_id": "9a197d00-5892-48fa-a7a0-f247b437b379",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-15T20:51:54.713607+00:00",
+  "goal_data": {
+    "objective": "Phase 3: Gap Detection - Implement knowledge gap detection from trajectory patterns and concept graph analysis",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.5,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Detect gaps from low-density concept regions",
+      "Identify stalled trajectories suggesting knowledge blocks",
+      "Provide actionable gap descriptions",
+      "CLI command: empirica-predict gap-detect"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-15T20:51:54.713617+00:00",
+      "action": "created"
+    }
+  ]
+}
