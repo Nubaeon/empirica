@@ -3,7 +3,11 @@
 Empirica PreCompact Hook - Capture epistemic state before memory compacting
 
 This hook runs automatically before Claude Code compacts the conversation.
-It saves a checkpoint as a ref-doc to enable drift detection post-compact.
+It captures:
+1. CANONICAL vectors via assess-state (fresh self-assessment)
+2. Context anchor via project-bootstrap (findings, unknowns, goals)
+
+This enables drift detection: compare pre-compact vectors with post-compact vectors.
 """
 
 import json
@@ -62,13 +66,11 @@ def main():
     # Read hook input from stdin (provided by Claude Code)
     hook_input = json.loads(sys.stdin.read())
 
-    session_id = hook_input.get('session_id')
     trigger = hook_input.get('trigger', 'auto')  # 'auto' or 'manual'
 
     # CRITICAL: Find and change to project root BEFORE importing empirica
     # This ensures SessionDatabase uses the correct database path
     project_root = find_project_root()
-    original_cwd = os.getcwd()
     os.chdir(project_root)
 
     # Auto-detect latest Empirica session (no env var needed)
@@ -99,9 +101,9 @@ def main():
         sys.exit(0)
 
     # Auto-commit working directory before snapshot
-    # This ensures snapshot captures all recent work
+    # This ensures snapshot captures all recent work (uncommitted changes would be lost on compact)
     try:
-        result = subprocess.run(
+        subprocess.run(
             ['git', 'add', '-A'],
             cwd=os.getcwd(),
             capture_output=True,
@@ -118,20 +120,50 @@ def main():
         )
 
         if status_result.stdout.strip():
-            commit_result = subprocess.run(
+            subprocess.run(
                 ['git', 'commit', '-m', f'[auto] Pre-compact snapshot - {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'],
                 cwd=os.getcwd(),
                 capture_output=True,
                 text=True,
                 timeout=10
             )
-    except Exception as e:
+    except Exception:
         # Auto-commit failure is not fatal
         pass
 
-    # Run project-bootstrap with fresh assessment
-    # CRITICAL: Must pass --ai-id to find the session
+    # =========================================================================
+    # STEP 1: Capture FRESH epistemic vectors (canonical via assess-state)
+    # =========================================================================
+    # This is the AI's self-assessed state BEFORE compaction.
+    # assess-state queries the latest reflexes/calibration data for the session.
+    fresh_vectors = {}
+    assess_error = None
+
+    try:
+        assess_result = subprocess.run(
+            ['empirica', 'assess-state', '--session-id', empirica_session, '--output', 'json'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=os.getcwd()
+        )
+
+        if assess_result.returncode == 0:
+            assess_data = json.loads(assess_result.stdout)
+            fresh_vectors = assess_data.get('state', {}).get('vectors', {})
+        else:
+            assess_error = assess_result.stderr
+    except subprocess.TimeoutExpired:
+        assess_error = "assess-state timed out (>10s)"
+    except Exception as e:
+        assess_error = str(e)
+
+    # =========================================================================
+    # STEP 2: Run project-bootstrap for context anchor (findings, unknowns, goals)
+    # =========================================================================
+    # This provides the breadcrumbs context - what was learned, what's unclear, active goals.
     ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
+
     try:
         result = subprocess.run(
             [
@@ -144,7 +176,7 @@ def main():
             capture_output=True,
             text=True,
             timeout=30,
-            cwd=os.getcwd()  # Run in current directory (project root)
+            cwd=os.getcwd()
         )
 
         if result.returncode == 0:
@@ -154,21 +186,28 @@ def main():
             # Extract breadcrumbs (CLI wraps in {"ok", "project_id", "breadcrumbs"})
             breadcrumbs = bootstrap.get('breadcrumbs', bootstrap)
 
-            # Save snapshot to .empirica/ref-docs (Path already imported at top)
+            # Save snapshot to .empirica/ref-docs
             ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
             ref_docs_dir.mkdir(parents=True, exist_ok=True)
 
             timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
             snapshot_path = ref_docs_dir / f"pre_summary_{timestamp}.json"
 
-            # session_id and live_state are in breadcrumbs
+            # Build snapshot with CANONICAL vectors from assess-state
+            # Fallback to live_state vectors if assess-state failed
+            live_state = breadcrumbs.get('live_state', {})
+            fallback_vectors = live_state.get('vectors', {}) if live_state else {}
+
             snapshot = {
                 "type": "pre_summary_snapshot",
                 "timestamp": timestamp,
                 "session_id": breadcrumbs.get('session_id'),
                 "trigger": trigger,
-                "live_state": breadcrumbs.get('live_state'),
-                "checkpoint": breadcrumbs.get('live_state', {}).get('vectors', {}) if breadcrumbs.get('live_state') else {},
+                "vectors_canonical": fresh_vectors,  # From assess-state (canonical)
+                "vectors_source": "assess-state" if fresh_vectors else "live_state_fallback",
+                "checkpoint": fresh_vectors or fallback_vectors,  # Best available vectors
+                "live_state": live_state,
+                "assess_error": assess_error,  # Track if assess-state failed
                 "breadcrumbs_summary": {
                     "findings_count": len(breadcrumbs.get('findings', [])),
                     "unknowns_count": len(breadcrumbs.get('unknowns', [])),
@@ -180,27 +219,32 @@ def main():
             with open(snapshot_path, 'w') as f:
                 json.dump(snapshot, f, indent=2)
 
+            # Determine which vectors to display
+            display_vectors = fresh_vectors or fallback_vectors
+            vector_source = "canonical" if fresh_vectors else "fallback"
+
             print(json.dumps({
                 "ok": True,
                 "trigger": trigger,
                 "empirica_session_id": breadcrumbs.get('session_id'),
                 "snapshot_saved": True,
                 "snapshot_path": str(snapshot_path),
-                "message": f"Pre-compact snapshot saved ({trigger} compact)"
+                "vectors_source": vector_source,
+                "vectors_captured": len(display_vectors),
+                "message": f"Pre-compact snapshot saved ({trigger} compact, {vector_source} vectors)"
             }), file=sys.stdout)
 
             # Also print user-visible message to stderr
             session_id_str = breadcrumbs.get('session_id', 'Unknown')
             session_display = session_id_str[:8] if session_id_str else 'Unknown'
-            live_state = breadcrumbs.get('live_state', {})
-            vectors = live_state.get('vectors', {}) if live_state else {}
 
             print(f"""
 📸 Empirica: Pre-compact snapshot saved
    Session: {session_display}...
    Trigger: {trigger}
+   Vectors: {vector_source} ({len(display_vectors)} captured)
+   know={display_vectors.get('know', 'N/A')}, unc={display_vectors.get('uncertainty', 'N/A')}
    Snapshot: {snapshot_path.name}
-   Vectors: know={vectors.get('know', 'N/A')}, unc={vectors.get('uncertainty', 'N/A')}
 """, file=sys.stderr)
 
             sys.exit(0)
