@@ -2,7 +2,7 @@
   "goal_id": "2e291efc-502c-4fab-b115-b582f813cb05",
   "session_id": "bf846b4d-b7e6-436f-9b07-019b0f7fabfb",
   "ai_id": "empirica_cli",
-  "created_at": "2026-01-14T13:11:58.873779+00:00",
+  "created_at": "2026-01-15T09:52:36.928600+00:00",
   "goal_data": {
     "objective": "OAuth-gated Prompt Builder: View examples without auth, OAuth required to use tool, paid tier for outputs/connectors",
     "scope": {
@@ -23,6 +23,11 @@
       "ai_id": "empirica_cli",
       "timestamp": "2026-01-14T13:11:58.873795+00:00",
       "action": "created"
+    },
+    {
+      "ai_id": "test-ai-regression",
+      "timestamp": "2026-01-15T09:52:36.927327+00:00",
+      "action": "resumed"
     }
   ]
 }
