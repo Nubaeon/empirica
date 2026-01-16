@@ -1,0 +1,28 @@
+{
+  "goal_id": "3f8883bb-29b5-4731-a3f0-2ad640f9fb4d",
+  "session_id": "4e5f1c4a-dd85-4e48-a7e1-59f125d2b454",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-16T11:21:27.890864+00:00",
+  "goal_data": {
+    "objective": "Test fuzzy duplicate detection feature",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-16T11:21:27.890879+00:00",
+      "action": "created"
+    }
+  ]
+}
