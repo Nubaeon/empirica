@@ -557,6 +557,27 @@ def add_checkpoint_parsers(subparsers):
     goals_complete_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     goals_complete_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
+    # Goals mark-stale command (used by pre-compact hooks)
+    goals_mark_stale_parser = subparsers.add_parser('goals-mark-stale',
+        help='Mark in_progress goals as stale during memory compaction')
+    goals_mark_stale_parser.add_argument('--session-id', required=True, help='Session UUID')
+    goals_mark_stale_parser.add_argument('--reason', default='memory_compact',
+        help='Reason for marking stale (default: memory_compact)')
+    goals_mark_stale_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+
+    # Goals get-stale command (retrieve stale goals needing re-evaluation)
+    goals_get_stale_parser = subparsers.add_parser('goals-get-stale',
+        help='Get stale goals that need re-evaluation after compaction')
+    goals_get_stale_parser.add_argument('--session-id', help='Filter by session ID')
+    goals_get_stale_parser.add_argument('--project-id', help='Filter by project ID')
+    goals_get_stale_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+
+    # Goals refresh command (mark stale goal as in_progress after regaining context)
+    goals_refresh_parser = subparsers.add_parser('goals-refresh',
+        help='Refresh a stale goal back to in_progress (AI has regained context)')
+    goals_refresh_parser.add_argument('--goal-id', required=True, help='Goal UUID to refresh')
+    goals_refresh_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+
     # Identity commands (NEW: Phase 2 - Cryptographic Trust / EEP-1)
     identity_create_parser = subparsers.add_parser('identity-create', help='Create new AI identity with Ed25519 keypair')
     identity_create_parser.add_argument('--ai-id', required=True, help='AI identifier')

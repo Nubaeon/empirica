@@ -29,7 +29,10 @@ from .goal_commands import (
     handle_goals_list_command,
     handle_goals_list_all_command,
     handle_goals_search_command,
-    handle_sessions_resume_command
+    handle_sessions_resume_command,
+    handle_goals_mark_stale_command,
+    handle_goals_get_stale_command,
+    handle_goals_refresh_command
 )
 from .goals_ready_command import handle_goals_ready_command
 from .goal_claim_command import handle_goals_claim_command
@@ -190,6 +193,9 @@ __all__ = [
     'handle_goals_claim_command',  # Phase 3a - Git bridge
     'handle_goals_complete_command',  # Phase 3a - Git bridge
     'handle_sessions_resume_command',
+    'handle_goals_mark_stale_command',  # Pre-compact hook - mark goals stale
+    'handle_goals_get_stale_command',   # Get stale goals needing re-evaluation
+    'handle_goals_refresh_command',     # Refresh stale goal back to in_progress
     
     # NEW: Identity Management Commands (Phase 2 - EEP-1)
     'handle_identity_create_command',

@@ -1478,3 +1478,144 @@ def handle_goals_search_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Search goals", getattr(args, 'verbose', False))
+
+
+def handle_goals_mark_stale_command(args):
+    """Handle goals-mark-stale command - Mark in_progress goals as stale during compaction
+
+    Used by pre-compact hooks to signal that AI context about goals has been lost.
+    Post-compact AI should re-evaluate these goals before continuing work.
+    """
+    try:
+        from empirica.core.goals.repository import GoalRepository
+
+        session_id = getattr(args, 'session_id', None)
+        reason = getattr(args, 'reason', 'memory_compact')
+        output_format = getattr(args, 'output', 'json')
+
+        if not session_id:
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": "Session ID required (--session-id)"}))
+            else:
+                print("Error: Session ID required (--session-id)")
+            return 1
+
+        # Mark goals stale
+        repo = GoalRepository()
+        try:
+            count = repo.mark_goals_stale(session_id, stale_reason=reason)
+        finally:
+            repo.close()
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": True,
+                "session_id": session_id,
+                "goals_marked_stale": count,
+                "reason": reason,
+                "message": f"Marked {count} in_progress goal(s) as stale"
+            }))
+        else:
+            if count > 0:
+                print(f"✅ Marked {count} in_progress goal(s) as stale")
+                print(f"   Reason: {reason}")
+                print(f"   Session: {session_id[:8]}...")
+            else:
+                print(f"ℹ️  No in_progress goals to mark stale for session {session_id[:8]}...")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Mark goals stale", getattr(args, 'verbose', False))
+
+
+def handle_goals_get_stale_command(args):
+    """Handle goals-get-stale command - Get stale goals for session or project
+
+    Returns goals that were marked stale during compaction and need re-evaluation.
+    """
+    try:
+        from empirica.core.goals.repository import GoalRepository
+
+        session_id = getattr(args, 'session_id', None)
+        project_id = getattr(args, 'project_id', None)
+        output_format = getattr(args, 'output', 'json')
+
+        if not session_id and not project_id:
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": "Session ID or Project ID required"}))
+            else:
+                print("Error: Session ID (--session-id) or Project ID (--project-id) required")
+            return 1
+
+        repo = GoalRepository()
+        try:
+            stale_goals = repo.get_stale_goals(session_id=session_id, project_id=project_id)
+        finally:
+            repo.close()
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": True,
+                "stale_goals": stale_goals,
+                "count": len(stale_goals)
+            }))
+        else:
+            if stale_goals:
+                print(f"⚠️  Found {len(stale_goals)} stale goal(s) needing re-evaluation:\n")
+                for g in stale_goals:
+                    print(f"  📋 {g['objective'][:60]}...")
+                    print(f"     ID: {g['goal_id'][:8]}...")
+                    if g.get('stale_reason'):
+                        print(f"     Reason: {g['stale_reason']}")
+                    print()
+            else:
+                print("✅ No stale goals found")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Get stale goals", getattr(args, 'verbose', False))
+
+
+def handle_goals_refresh_command(args):
+    """Handle goals-refresh command - Mark a stale goal as in_progress
+
+    Called when AI has regained context about a stale goal and is ready to work on it.
+    """
+    try:
+        from empirica.core.goals.repository import GoalRepository
+
+        goal_id = getattr(args, 'goal_id', None)
+        output_format = getattr(args, 'output', 'json')
+
+        if not goal_id:
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": "Goal ID required (--goal-id)"}))
+            else:
+                print("Error: Goal ID required (--goal-id)")
+            return 1
+
+        repo = GoalRepository()
+        try:
+            refreshed = repo.refresh_goal(goal_id)
+        finally:
+            repo.close()
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": refreshed,
+                "goal_id": goal_id,
+                "refreshed": refreshed,
+                "message": "Goal refreshed to in_progress" if refreshed else "Goal not found or not stale"
+            }))
+        else:
+            if refreshed:
+                print(f"✅ Goal {goal_id[:8]}... refreshed to in_progress")
+            else:
+                print(f"❌ Goal {goal_id[:8]}... not found or not stale")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Refresh goal", getattr(args, 'verbose', False))

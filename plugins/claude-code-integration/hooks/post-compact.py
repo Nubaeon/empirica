@@ -431,6 +431,20 @@ def _create_session_and_bootstrap(ai_id: str, project_id: str = None) -> dict:
             except Exception:
                 pass  # Goal search is optional - Qdrant may not have goals yet
 
+        # Step 5: Get stale goals (marked during pre-compact)
+        if project_id:
+            try:
+                stale_cmd = subprocess.run(
+                    ['empirica', 'goals-get-stale', '--project-id', project_id, '--output', 'json'],
+                    capture_output=True, text=True, timeout=10
+                )
+                if stale_cmd.returncode == 0:
+                    stale_result = json.loads(stale_cmd.stdout)
+                    if stale_result.get('stale_goals'):
+                        result["stale_goals"] = stale_result['stale_goals']
+            except Exception:
+                pass  # Stale goal check is optional
+
     except subprocess.TimeoutExpired:
         result["error"] = "Command timed out"
     except Exception as e:
@@ -602,8 +616,18 @@ def _format_memory_context(memory_context: dict) -> str:
 
 
 def _format_goals(dynamic_context: dict) -> str:
-    """Format goals for prompt, including semantic search results."""
+    """Format goals for prompt, including semantic search results and stale goals."""
     lines = []
+
+    # Stale goals (marked during pre-compact) - show first as they need attention
+    if dynamic_context.get("stale_goals"):
+        lines.append("  **⚠️ STALE (context lost during compaction - re-evaluate before continuing):**")
+        for g in dynamic_context["stale_goals"]:
+            obj = g.get('objective', 'Unknown')
+            reason = g.get('stale_reason', 'memory_compact')
+            lines.append(f"  - ⚠️ {obj[:80]}... (stale: {reason})")
+            lines.append(f"       Refresh with: empirica goals-refresh --goal-id {g['goal_id']}")
+        lines.append("  ")  # separator
 
     # Active goals from project-bootstrap
     if dynamic_context.get("active_goals"):

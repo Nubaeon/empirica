@@ -319,3 +319,114 @@ class GoalRepository(BaseRepository):
             'incomplete_work': incomplete_goals,
             'goals': active_goals
         }
+
+    def mark_goals_stale(self, session_id: str, stale_reason: str = "memory_compact") -> int:
+        """Mark all in_progress goals for a session as stale
+
+        Called during memory compaction to signal that the AI's full context
+        about these goals has been lost. Post-compact AI should re-evaluate
+        these goals before continuing work.
+
+        Args:
+            session_id: Session UUID
+            stale_reason: Why goals are being marked stale (e.g., "memory_compact")
+
+        Returns:
+            Number of goals marked stale
+        """
+        # Update status and add stale metadata to goal_data
+        cursor = self._execute("""
+            SELECT id, goal_data FROM goals
+            WHERE session_id = ? AND status = 'in_progress'
+        """, (session_id,))
+
+        count = 0
+        for row in cursor.fetchall():
+            goal_id = row[0]
+            goal_data = json.loads(row[1]) if row[1] else {}
+
+            # Add stale metadata
+            goal_data['stale_since'] = time.time()
+            goal_data['stale_reason'] = stale_reason
+
+            self._execute("""
+                UPDATE goals
+                SET status = 'stale', goal_data = ?
+                WHERE id = ?
+            """, (json.dumps(goal_data), goal_id))
+            count += 1
+
+        self.commit()
+        return count
+
+    def get_stale_goals(self, session_id: str = None, project_id: str = None) -> List[Dict]:
+        """Get stale goals for a session or project
+
+        Args:
+            session_id: Optional session UUID filter
+            project_id: Optional project UUID filter (checks all sessions in project)
+
+        Returns:
+            List of stale goal dicts with stale_since metadata
+        """
+        if session_id:
+            cursor = self._execute("""
+                SELECT id, objective, status, scope, goal_data, created_timestamp
+                FROM goals
+                WHERE session_id = ? AND status = 'stale'
+                ORDER BY created_timestamp DESC
+            """, (session_id,))
+        elif project_id:
+            cursor = self._execute("""
+                SELECT g.id, g.objective, g.status, g.scope, g.goal_data, g.created_timestamp
+                FROM goals g
+                JOIN sessions s ON g.session_id = s.session_id
+                WHERE s.project_id = ? AND g.status = 'stale'
+                ORDER BY g.created_timestamp DESC
+            """, (project_id,))
+        else:
+            return []
+
+        stale_goals = []
+        for row in cursor.fetchall():
+            goal_data = json.loads(row[4]) if row[4] else {}
+            stale_goals.append({
+                'goal_id': row[0],
+                'objective': row[1],
+                'status': row[2],
+                'scope': json.loads(row[3]) if row[3] else {},
+                'stale_since': goal_data.get('stale_since'),
+                'stale_reason': goal_data.get('stale_reason'),
+                'created_timestamp': row[5]
+            })
+
+        return stale_goals
+
+    def refresh_goal(self, goal_id: str) -> bool:
+        """Mark a stale goal as in_progress (AI has regained context)
+
+        Args:
+            goal_id: Goal UUID to refresh
+
+        Returns:
+            True if refreshed, False if goal not found or not stale
+        """
+        cursor = self._execute("""
+            SELECT goal_data FROM goals WHERE id = ? AND status = 'stale'
+        """, (goal_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            return False
+
+        goal_data = json.loads(row[0]) if row[0] else {}
+        goal_data['refreshed_at'] = time.time()
+
+        self._execute("""
+            UPDATE goals
+            SET status = 'in_progress', goal_data = ?
+            WHERE id = ?
+        """, (json.dumps(goal_data), goal_id))
+
+        self.commit()
+        return True
