@@ -602,13 +602,27 @@ def _format_memory_context(memory_context: dict) -> str:
 
 
 def _format_goals(dynamic_context: dict) -> str:
-    """Format goals for prompt."""
+    """Format goals for prompt, including semantic search results."""
+    lines = []
+
+    # Active goals from project-bootstrap
     if dynamic_context.get("active_goals"):
-        return "\n".join([
-            f"  - {g['objective']} ({g['status']})"
-            for g in dynamic_context["active_goals"]
-        ])
-    return "  (No active goals)"
+        for g in dynamic_context["active_goals"]:
+            lines.append(f"  - {g['objective']} ({g['status']})")
+
+    # Related goals from semantic search (goals-search)
+    if dynamic_context.get("related_goals"):
+        if lines:
+            lines.append("  ")  # separator
+            lines.append("  **Semantically related (from Qdrant):**")
+        for g in dynamic_context["related_goals"]:
+            obj = g.get('objective') or g.get('description', 'Unknown')
+            status = g.get('status', 'unknown')
+            score = g.get('score', 0)
+            goal_type = g.get('type', 'goal')
+            lines.append(f"  - [{goal_type}] {obj[:80]} ({status}, score={score:.2f})")
+
+    return "\n".join(lines) if lines else "  (No active goals)"
 
 
 def _format_findings(dynamic_context: dict) -> str:
