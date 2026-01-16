@@ -1,0 +1,28 @@
+{
+  "goal_id": "cccd81df-faba-4bb2-aa69-4f81b1c41603",
+  "session_id": "1a241227-f95c-415a-b085-91bcd384a23e",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-16T14:54:35.514292+00:00",
+  "goal_data": {
+    "objective": "Test breadcrumbs plugin in Docker container: verify hooks work without Empirica",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-16T14:54:35.514311+00:00",
+      "action": "created"
+    }
+  ]
+}
