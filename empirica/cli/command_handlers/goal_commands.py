@@ -21,6 +21,117 @@ from ..cli_utils import handle_cli_error, parse_json_safely
 logger = logging.getLogger(__name__)
 
 
+def _check_for_similar_goals(objective: str, session_id: str = None, threshold: float = 0.85) -> list:
+    """Check for similar existing goals using text matching and semantic search.
+
+    Args:
+        objective: The new goal's objective text
+        session_id: Optional session ID for context
+        threshold: Similarity threshold (0.0-1.0)
+
+    Returns:
+        List of similar goals found, empty if none
+    """
+    import subprocess
+    import os
+    import re
+
+    similar = []
+
+    # Normalize objective text for comparison
+    def normalize(text: str) -> str:
+        return re.sub(r'[^\w\s]', '', text.lower().strip())
+
+    normalized_objective = normalize(objective)
+
+    # Strategy 1: Check database for exact/near-exact text matches
+    try:
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        cursor = db.conn.execute("""
+            SELECT id, objective, session_id, is_completed, created_timestamp
+            FROM goals
+            WHERE is_completed = 0
+            ORDER BY created_timestamp DESC
+            LIMIT 50
+        """)
+        for row in cursor.fetchall():
+            existing_obj = normalize(row[1] or '')
+            # Check for exact match or high substring overlap
+            if existing_obj == normalized_objective:
+                similar.append({
+                    'goal_id': row[0],
+                    'objective': row[1],
+                    'session_id': row[2],
+                    'match_type': 'exact',
+                    'score': 1.0
+                })
+            elif normalized_objective in existing_obj or existing_obj in normalized_objective:
+                # Substring match - one contains the other
+                similar.append({
+                    'goal_id': row[0],
+                    'objective': row[1],
+                    'session_id': row[2],
+                    'match_type': 'substring',
+                    'score': 0.9
+                })
+        db.close()
+    except Exception as e:
+        logger.debug(f"Database duplicate check failed: {e}")
+
+    # Strategy 2: Semantic search via Qdrant (if available)
+    if not similar:
+        try:
+            # Auto-detect project ID from session
+            project_id = None
+            try:
+                from empirica.data.session_database import SessionDatabase
+                db = SessionDatabase()
+                cursor = db.conn.execute(
+                    "SELECT project_id FROM sessions WHERE session_id = ?",
+                    (session_id,)
+                )
+                row = cursor.fetchone()
+                if row:
+                    project_id = row[0]
+                db.close()
+            except Exception:
+                pass
+
+            if project_id:
+                result = subprocess.run(
+                    ['empirica', 'goals-search', objective[:100],
+                     '--project-id', project_id, '--status', 'in_progress',
+                     '--limit', '3', '--threshold', str(threshold), '--output', 'json'],
+                    capture_output=True, text=True, timeout=10,
+                    cwd=os.getcwd()
+                )
+                if result.returncode == 0:
+                    search_result = json.loads(result.stdout)
+                    for goal in search_result.get('results', []):
+                        score = goal.get('score', 0)
+                        if score >= threshold:
+                            similar.append({
+                                'goal_id': goal.get('id'),
+                                'objective': goal.get('objective'),
+                                'session_id': goal.get('session_id'),
+                                'match_type': 'semantic',
+                                'score': score
+                            })
+        except Exception as e:
+            logger.debug(f"Semantic duplicate check failed: {e}")
+
+    # Deduplicate by goal_id
+    seen = set()
+    unique = []
+    for s in similar:
+        if s['goal_id'] not in seen:
+            seen.add(s['goal_id'])
+            unique.append(s)
+
+    return unique
+
+
 def handle_goals_create_command(args):
     """Handle goals-create command - AI-first with legacy flag support"""
     try:
@@ -125,7 +236,27 @@ def handle_goals_create_command(args):
             duration=scope_duration,
             coordination=scope_coordination
         )
-        
+
+        # Fuzzy duplicate detection (unless --force is used)
+        force_create = getattr(args, 'force', False) or (config_data and config_data.get('force', False))
+        if not force_create:
+            similar_goals = _check_for_similar_goals(objective, session_id)
+            if similar_goals:
+                if output_format == 'json':
+                    print(json.dumps({
+                        "ok": False,
+                        "error": "Similar goal(s) already exist",
+                        "similar_goals": similar_goals,
+                        "hint": "Use --force to create anyway, or use goals-refresh to resume a stale goal",
+                        "objective": objective
+                    }))
+                else:
+                    print(f"⚠️  Similar goal(s) found:")
+                    for sg in similar_goals:
+                        print(f"   - {sg['objective'][:60]}... (score: {sg.get('score', 'N/A')})")
+                    print(f"\n   Use --force to create anyway")
+                sys.exit(1)
+
         # Validate success criteria (make it optional now)
         if not success_criteria_list:
             # Make a default success criterion if none provided

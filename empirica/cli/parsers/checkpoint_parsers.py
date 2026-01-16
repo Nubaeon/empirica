@@ -429,6 +429,7 @@ def add_checkpoint_parsers(subparsers):
     goals_create_parser.add_argument('--constraints', help='Constraints as JSON object')
     goals_create_parser.add_argument('--metadata', help='Metadata as JSON object')
     goals_create_parser.add_argument('--use-beads', action='store_true', help='Create BEADS issue and link to goal')
+    goals_create_parser.add_argument('--force', action='store_true', help='Create goal even if similar goal exists')
     goals_create_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     goals_create_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
