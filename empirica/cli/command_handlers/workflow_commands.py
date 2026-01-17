@@ -727,6 +727,8 @@ def handle_check_submit_command(args):
                 print("   CHECK will proceed but vectors may be hollow.", file=_sys.stderr)
 
         # AUTO-INCREMENT ROUND: Get next round from CHECK history
+        # Also retrieve previous CHECK vectors for diminishing returns detection
+        previous_check_vectors = []
         try:
             from empirica.data.session_database import SessionDatabase
             db = SessionDatabase()
@@ -737,6 +739,28 @@ def handle_check_submit_command(args):
             """, (session_id,))
             check_count = cursor.fetchone()[0]
             round_num = check_count + 1  # Next round
+
+            # DIMINISHING RETURNS: Get last 3 CHECK vectors for delta analysis
+            # Note: reflexes table stores vectors as individual columns, not JSON
+            if check_count > 0:
+                cursor.execute("""
+                    SELECT engagement, know, do, context, clarity, coherence,
+                           signal, density, state, change, completion, impact, uncertainty
+                    FROM reflexes
+                    WHERE session_id = ? AND phase = 'CHECK'
+                    ORDER BY timestamp DESC
+                    LIMIT 3
+                """, (session_id,))
+                rows = cursor.fetchall()
+                vector_names = ['engagement', 'know', 'do', 'context', 'clarity', 'coherence',
+                               'signal', 'density', 'state', 'change', 'completion', 'impact', 'uncertainty']
+                for row in rows:
+                    prev_vectors = {}
+                    for i, name in enumerate(vector_names):
+                        if row[i] is not None:
+                            prev_vectors[name] = row[i]
+                    if prev_vectors:  # Only add if we got any vectors
+                        previous_check_vectors.append(prev_vectors)
             db.close()
         except Exception:
             round_num = getattr(args, 'round', 1)  # Fallback to arg or 1
@@ -777,9 +801,72 @@ def handle_check_submit_command(args):
         corrected_know = know - 0.05  # AI overestimates knowing
         corrected_uncertainty = uncertainty + 0.10  # AI underestimates doubt
 
+        # DIMINISHING RETURNS DETECTION: Analyze if investigation is still improving
+        # Key insight: Speed and correctness are ALIGNED when calibration is good.
+        # If investigation stops improving know/reducing uncertainty, proceeding IS correct.
+        diminishing_returns = {
+            "detected": False,
+            "rounds_analyzed": 0,
+            "know_deltas": [],
+            "uncertainty_deltas": [],
+            "reason": None,
+            "recommend_proceed": False
+        }
+
+        if len(previous_check_vectors) >= 2:
+            # Compute deltas between consecutive rounds (newest first)
+            # previous_check_vectors[0] = last round, [1] = round before that, etc.
+            for i in range(len(previous_check_vectors)):
+                if i == 0:
+                    # Current vs last round
+                    prev_know = previous_check_vectors[i].get('know', 0.5)
+                    prev_uncertainty = previous_check_vectors[i].get('uncertainty', 0.5)
+                    delta_know = know - prev_know
+                    delta_uncertainty = uncertainty - prev_uncertainty  # Negative is good
+                    diminishing_returns["know_deltas"].append(delta_know)
+                    diminishing_returns["uncertainty_deltas"].append(delta_uncertainty)
+                elif i < len(previous_check_vectors):
+                    # Between previous rounds
+                    curr = previous_check_vectors[i - 1]
+                    prev = previous_check_vectors[i]
+                    delta_know = curr.get('know', 0.5) - prev.get('know', 0.5)
+                    delta_uncertainty = curr.get('uncertainty', 0.5) - prev.get('uncertainty', 0.5)
+                    diminishing_returns["know_deltas"].append(delta_know)
+                    diminishing_returns["uncertainty_deltas"].append(delta_uncertainty)
+
+            diminishing_returns["rounds_analyzed"] = len(previous_check_vectors) + 1
+
+            # Detect diminishing returns: if last 2 rounds show minimal improvement
+            if len(diminishing_returns["know_deltas"]) >= 2:
+                recent_know_deltas = diminishing_returns["know_deltas"][:2]
+                recent_uncertainty_deltas = diminishing_returns["uncertainty_deltas"][:2]
+
+                # Minimal improvement threshold
+                DELTA_THRESHOLD = 0.05  # Less than 5% improvement per round
+
+                know_stagnant = all(abs(d) < DELTA_THRESHOLD for d in recent_know_deltas)
+                uncertainty_stagnant = all(d >= -DELTA_THRESHOLD for d in recent_uncertainty_deltas)  # Not decreasing
+
+                if know_stagnant and uncertainty_stagnant:
+                    diminishing_returns["detected"] = True
+                    diminishing_returns["reason"] = f"know stagnant ({recent_know_deltas}), uncertainty not decreasing ({recent_uncertainty_deltas})"
+
+                    # Recommend proceed if baseline is reasonable (know >= 0.60, uncertainty <= 0.45)
+                    # Relaxed thresholds because investigation has plateaued
+                    if know >= 0.60 and uncertainty <= 0.45:
+                        diminishing_returns["recommend_proceed"] = True
+                        diminishing_returns["reason"] += " - baseline adequate, investigation plateaued"
+                    else:
+                        diminishing_returns["reason"] += " - baseline insufficient for proceed override"
+
+        # Compute decision with diminishing returns factored in
         computed_decision = None
         if corrected_know >= 0.70 and corrected_uncertainty <= 0.35:
             computed_decision = "proceed"
+        elif diminishing_returns["recommend_proceed"]:
+            # Override: investigation plateaued with adequate baseline
+            computed_decision = "proceed"
+            logger.info(f"CHECK decision override: proceed due to diminishing returns ({diminishing_returns['reason']})")
         else:
             computed_decision = "investigate"
 
@@ -1006,6 +1093,7 @@ def handle_check_submit_command(args):
                     "corrected_vectors": {"know": corrected_know, "uncertainty": corrected_uncertainty},
                     "readiness_gate": "know>=0.70 AND uncertainty<=0.35 (after bias correction)",
                     "gate_passed": computed_decision == "proceed",
+                    "diminishing_returns": diminishing_returns,
                     "autopilot": {
                         "enabled": autopilot_mode,
                         "binding": decision_binding,
