@@ -1,1 +1,27 @@
-test note
+🍞 BREADCRUMBS - 2026-01-17T16:22:31+01:00
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BRANCH: main
+
+LAST_TASK:
+yup indeed, I love the proactiveness Claude and your thinking across project boundaries, seems like your memory and focus are improving. Lets get back to the breadcrumbs project then and fix those tasks -- we can come back to test it in empirica after unless its already fixed here
+
+MODIFIED_FILES: [Working tree clean]
+
+RECENT_COMMITS:
+  282c3a67 feat: Add calibration export to .breadcrumbs.yaml on POSTFLIGHT
+  d48236ac feat: Add EMPIRICA_SENTINEL_MODE for observer/controller oversight
+  2b3612a4 feat: Add fuzzy duplicate detection for goals-create
+  e239c182 feat: Add stale goal lifecycle for memory compaction continuity
+  aaf4bf69 [auto] Pre-compact snapshot - 2026-01-16 12:09:33
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EPISTEMIC STATE (self-assess on resume)
+
+Please assess your current epistemic state:
+- CONFIDENCE: Rate 1-5 (1=guessing, 3=reasonable, 5=certain) where you are on understanding this codebase/task
+- UNCERTAINTIES: What are you unsure about? What needs verification?
+- KEY_DECISIONS: What important decisions were made that you should remember?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Continue from where you left off.
