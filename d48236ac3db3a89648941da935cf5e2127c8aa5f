@@ -1,0 +1,28 @@
+{
+  "goal_id": "2b5387a8-b4b3-4c2c-b666-9639beda75e8",
+  "session_id": "9c573c38-4274-435d-b21c-931bbe86e450",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-17T13:23:56.308963+00:00",
+  "goal_data": {
+    "objective": "Wire Empirica POSTFLIGHT to inject Bayesian calibration into .breadcrumbs.yaml for instant session-start availability",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-17T13:23:56.308986+00:00",
+      "action": "created"
+    }
+  ]
+}
