@@ -385,3 +385,150 @@ def apply_calibration_to_vectors(vectors: Dict[str, float],
         calibrated[vector] = max(0.0, min(1.0, value + adjustment))
 
     return calibrated
+
+
+def export_calibration_to_breadcrumbs(ai_id: str, db, git_root: str = None) -> bool:
+    """
+    Export calibration data to .breadcrumbs.yaml for instant session-start availability.
+
+    This creates a calibration cache layer that doesn't require DB queries.
+    Called automatically after POSTFLIGHT to keep calibration fresh.
+
+    Args:
+        ai_id: The AI identifier (e.g., 'claude-code')
+        db: Database connection with bayesian_beliefs access
+        git_root: Git repository root (auto-detects if None)
+
+    Returns:
+        True if calibration was written successfully
+    """
+    import os
+    import subprocess
+    from datetime import datetime
+
+    # Auto-detect git root if not provided
+    if not git_root:
+        try:
+            result = subprocess.run(
+                ['git', 'rev-parse', '--show-toplevel'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                git_root = result.stdout.strip()
+            else:
+                return False
+        except Exception:
+            return False
+
+    breadcrumbs_path = os.path.join(git_root, '.breadcrumbs.yaml')
+
+    # Get calibration data
+    try:
+        belief_manager = BayesianBeliefManager(db)
+        adjustments = belief_manager.get_calibration_adjustments(ai_id)
+        report = belief_manager.get_calibration_report(ai_id)
+
+        if not adjustments and not report:
+            return False
+    except Exception:
+        return False
+
+    # Read existing .breadcrumbs.yaml if present
+    existing_lines = []
+    calibration_start = -1
+    calibration_end = -1
+
+    if os.path.exists(breadcrumbs_path):
+        with open(breadcrumbs_path, 'r') as f:
+            existing_lines = f.readlines()
+
+        # Find existing calibration section (if any)
+        # Include the comment line "# Bayesian calibration..." in the replacement range
+        in_calibration = False
+        for i, line in enumerate(existing_lines):
+            # Check for comment that precedes calibration section
+            if '# Bayesian calibration' in line and calibration_start == -1:
+                calibration_start = i
+            elif line.strip().startswith('calibration:'):
+                if calibration_start == -1:
+                    calibration_start = i
+                in_calibration = True
+            elif in_calibration and line.strip() and not line.startswith(' ') and not line.startswith('\t'):
+                # End of calibration section
+                calibration_end = i
+                break
+
+        if in_calibration and calibration_end == -1:
+            calibration_end = len(existing_lines)
+
+    # Build calibration YAML block
+    timestamp = datetime.now().isoformat()
+    total_evidence = report.get('total_evidence', 0) if report else 0
+    summary = report.get('calibration_summary', {}) if report else {}
+
+    # Sort adjustments by magnitude (most impactful first)
+    sorted_adjustments = sorted(adjustments.items(), key=lambda x: abs(x[1]), reverse=True)
+
+    calibration_yaml = f"""
+# Bayesian calibration (auto-updated by Empirica POSTFLIGHT)
+calibration:
+  last_updated: "{timestamp}"
+  ai_id: {ai_id}
+  observations: {total_evidence}
+  bias_corrections:
+"""
+
+    for vector, adj in sorted_adjustments:
+        sign = '+' if adj >= 0 else ''
+        calibration_yaml += f"    {vector}: {sign}{adj:.2f}\n"
+
+    calibration_yaml += """  readiness:
+    min_know: 0.70
+    max_uncertainty: 0.35
+  summary:
+"""
+
+    overestimates = summary.get('overestimates', [])
+    underestimates = summary.get('underestimates', [])
+    well_calibrated = summary.get('well_calibrated', [])
+
+    calibration_yaml += f"    overestimates: [{', '.join(overestimates)}]\n"
+    calibration_yaml += f"    underestimates: [{', '.join(underestimates)}]\n"
+    calibration_yaml += f"    well_calibrated: [{', '.join(well_calibrated[:5])}]\n"
+
+    # Write updated file
+    try:
+        if calibration_start >= 0:
+            # Replace existing calibration section
+            new_lines = existing_lines[:calibration_start] + [calibration_yaml] + existing_lines[calibration_end:]
+        elif existing_lines:
+            # Append to existing file
+            new_lines = existing_lines + ['\n', calibration_yaml]
+        else:
+            # New file with default breadcrumbs config + calibration
+            new_lines = [
+                "# Breadcrumbs Configuration\n",
+                "# Auto-generated with Empirica calibration\n",
+                "\n",
+                "git:\n",
+                "  recent_commits: 5\n",
+                "  modified_files: true\n",
+                "  current_branch: true\n",
+                "\n",
+                "epistemic:\n",
+                "  enabled: true\n",
+                "  scale: \"1-5 (1=guessing, 3=reasonable, 5=certain)\"\n",
+                "  track_uncertainties: true\n",
+                "  track_decisions: true\n",
+                "\n",
+                "task:\n",
+                "  extract_last_task: 500\n",
+                calibration_yaml
+            ]
+
+        with open(breadcrumbs_path, 'w') as f:
+            f.writelines(new_lines)
+
+        return True
+    except Exception:
+        return False

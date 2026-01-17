@@ -1480,6 +1480,7 @@ def handle_postflight_submit_command(args):
             # BAYESIAN BELIEF UPDATE: Update AI calibration priors based on PREFLIGHT → POSTFLIGHT deltas
             # This enables the AI to learn from its own performance over time
             belief_updates = {}
+            calibration_exported = False
             try:
                 if preflight_vectors:
                     from empirica.core.bayesian_beliefs import BayesianBeliefManager
@@ -1487,7 +1488,7 @@ def handle_postflight_submit_command(args):
                     db = SessionDatabase()
                     belief_manager = BayesianBeliefManager(db)
 
-                    # Get cascade_id for this session
+                    # Get cascade_id and ai_id for this session
                     cursor = db.conn.cursor()
                     cursor.execute("""
                         SELECT cascade_id FROM cascades
@@ -1496,6 +1497,11 @@ def handle_postflight_submit_command(args):
                     """, (session_id,))
                     cascade_row = cursor.fetchone()
                     cascade_id = cascade_row[0] if cascade_row else str(uuid.uuid4())
+
+                    # Get ai_id for calibration export
+                    cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
+                    ai_row = cursor.fetchone()
+                    ai_id = ai_row[0] if ai_row else 'claude-code'
 
                     # Update beliefs with PREFLIGHT → POSTFLIGHT comparison
                     belief_updates = belief_manager.update_beliefs(
@@ -1507,6 +1513,16 @@ def handle_postflight_submit_command(args):
 
                     if belief_updates:
                         logger.debug(f"Updated Bayesian beliefs for {len(belief_updates)} vectors")
+
+                        # BREADCRUMBS CALIBRATION EXPORT: Write to .breadcrumbs.yaml for instant session-start
+                        # This creates a calibration cache layer - no DB queries needed at startup
+                        try:
+                            from empirica.core.bayesian_beliefs import export_calibration_to_breadcrumbs
+                            calibration_exported = export_calibration_to_breadcrumbs(ai_id, db)
+                            if calibration_exported:
+                                logger.debug(f"Exported calibration to .breadcrumbs.yaml for {ai_id}")
+                        except Exception as cal_e:
+                            logger.debug(f"Calibration export to breadcrumbs skipped: {cal_e}")
 
                     db.close()
             except Exception as e:
@@ -1723,11 +1739,16 @@ def handle_postflight_submit_command(args):
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
                     "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False,
+                    "breadcrumbs_calibration": calibration_exported,
                     "episodic_memory": episodic_stored,
                     "epistemic_snapshots": snapshot_created,
                     "qdrant_memory": memory_synced > 0,
                     "noetic_eidetic": noetic_result.get('concepts_embedded', 0) > 0 if noetic_result else False
                 },
+                "breadcrumbs": {
+                    "calibration_exported": calibration_exported,
+                    "note": "Calibration written to .breadcrumbs.yaml for instant session-start availability"
+                } if calibration_exported else None,
                 "memory_synced": memory_synced,
                 "noetic_concepts": noetic_result.get('concepts_embedded', 0) if noetic_result else 0,
                 "snapshot": {
