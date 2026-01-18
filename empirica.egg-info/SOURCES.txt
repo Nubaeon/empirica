@@ -282,13 +282,6 @@ empirica/data/schema/sessions_schema.py
 empirica/data/schema/tracking_schema.py
 empirica/data/schema/trajectory_schema.py
 empirica/experimental/__init__.py
-empirica/experimental/epistemic_prediction/__init__.py
-empirica/experimental/epistemic_prediction/backfill.py
-empirica/experimental/epistemic_prediction/concept_graph.py
-empirica/experimental/epistemic_prediction/gap_detector.py
-empirica/experimental/epistemic_prediction/sequence_tracker.py
-empirica/experimental/epistemic_prediction/suggestion_engine.py
-empirica/experimental/epistemic_prediction/trajectory_tracker.py
 empirica/integration/__init__.py
 empirica/integration/empirica_action_hooks.py
 empirica/integrations/branch_mapping.py

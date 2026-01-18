@@ -178,6 +178,59 @@ def get_last_check_decision(session_id: str, max_age_minutes: int = 30) -> dict:
         }
 
 
+def get_sentinel_mode() -> str:
+    """
+    Get sentinel operating mode from environment.
+
+    Modes:
+    - observer: Log warnings but don't block (passive oversight)
+    - controller: Actively block when appropriate (active oversight)
+    - auto: Same as controller (default)
+
+    Returns:
+        Mode string: 'observer', 'controller', or 'auto'
+    """
+    mode = os.getenv('EMPIRICA_SENTINEL_MODE', 'auto').lower()
+    if mode in ('observer', 'controller', 'auto'):
+        return mode
+    return 'auto'
+
+
+def maybe_allow_in_observer_mode(original_decision: dict, mode: str, tool_name: str) -> dict:
+    """
+    If in observer mode, convert block to allow with warning.
+
+    Observer mode provides passive oversight - logs concerns but doesn't
+    block AI actions. Useful for:
+    - Debugging/development
+    - Building trust gradually
+    - Analyzing AI behavior patterns
+
+    Args:
+        original_decision: The decision dict that would be returned
+        mode: Current sentinel mode
+        tool_name: Name of the tool being called
+
+    Returns:
+        Modified decision dict (allow in observer mode, original otherwise)
+    """
+    if mode == 'observer' and original_decision.get('decision') == 'block':
+        # Convert block to allow but preserve the warning
+        reason = original_decision.get('reason', 'Sentinel would block')
+        return {
+            "decision": "allow",
+            "reason": f"[OBSERVER MODE] Would block: {reason}",
+            "observer_mode": True,
+            "original_decision": "block",
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolCall",
+                "warning": f"⚠️ OBSERVER: Sentinel would block {tool_name} - {reason}",
+                "mode": "observer"
+            }
+        }
+    return original_decision
+
+
 def main():
     """Main hook logic."""
     # Parse hook input
@@ -187,6 +240,9 @@ def main():
         hook_input = {}
 
     tool_name = hook_input.get('tool_name', 'unknown')
+
+    # Get sentinel mode
+    sentinel_mode = get_sentinel_mode()
 
     # Find project root and change to it
     project_root = find_project_root()
@@ -240,12 +296,24 @@ Then run CHECK to proceed with this action.
             }
         }
 
-        print(f"""
+        # Apply observer mode override if needed
+        output = maybe_allow_in_observer_mode(output, sentinel_mode, tool_name)
+
+        if output.get('decision') == 'block':
+            print(f"""
 🚫 Sentinel Gate: {tool_name} blocked
 
 {reason}
 
 Run project-bootstrap first. See guidance in context.
+""", file=sys.stderr)
+        else:
+            print(f"""
+⚠️ Sentinel Gate: {tool_name} would be blocked (OBSERVER MODE)
+
+{reason}
+
+[OBSERVER MODE: Action allowed but should run project-bootstrap first]
 """, file=sys.stderr)
 
         print(json.dumps(output))
@@ -368,13 +436,25 @@ EOF
         }
     }
 
+    # Apply observer mode override if needed
+    output = maybe_allow_in_observer_mode(output, sentinel_mode, tool_name)
+
     # Print guidance to stderr for user visibility
-    print(f"""
+    if output.get('decision') == 'block':
+        print(f"""
 🚫 Sentinel Gate: {tool_name} blocked
 
 {reason}
 
 Run CHECK to proceed. See guidance in context.
+""", file=sys.stderr)
+    else:
+        print(f"""
+⚠️ Sentinel Gate: {tool_name} would be blocked (OBSERVER MODE)
+
+{reason}
+
+[OBSERVER MODE: Action allowed but should run CHECK first]
 """, file=sys.stderr)
 
     print(json.dumps(output))

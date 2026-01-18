@@ -132,6 +132,27 @@ def main():
         pass
 
     # =========================================================================
+    # STEP 0.5: Mark active goals as stale (context will be lost on compact)
+    # =========================================================================
+    # Goals created in this session should be marked stale since the AI's
+    # full context about them will be compressed in the summary.
+    stale_goals_count = 0
+    try:
+        stale_result = subprocess.run(
+            ['empirica', 'goals-mark-stale', '--session-id', empirica_session, '--reason', 'memory_compact', '--output', 'json'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=os.getcwd()
+        )
+        if stale_result.returncode == 0:
+            stale_data = json.loads(stale_result.stdout)
+            stale_goals_count = stale_data.get('goals_marked_stale', 0)
+    except Exception:
+        # Non-fatal - continue with compaction
+        pass
+
+    # =========================================================================
     # STEP 1: Capture FRESH epistemic vectors (canonical via assess-state)
     # =========================================================================
     # This is the AI's self-assessed state BEFORE compaction.
@@ -231,18 +252,20 @@ def main():
                 "snapshot_path": str(snapshot_path),
                 "vectors_source": vector_source,
                 "vectors_captured": len(display_vectors),
-                "message": f"Pre-compact snapshot saved ({trigger} compact, {vector_source} vectors)"
+                "goals_marked_stale": stale_goals_count,
+                "message": f"Pre-compact snapshot saved ({trigger} compact, {vector_source} vectors, {stale_goals_count} goals stale)"
             }), file=sys.stdout)
 
             # Also print user-visible message to stderr
             session_id_str = breadcrumbs.get('session_id', 'Unknown')
             session_display = session_id_str[:8] if session_id_str else 'Unknown'
 
+            stale_msg = f", {stale_goals_count} goals marked stale" if stale_goals_count > 0 else ""
             print(f"""
 📸 Empirica: Pre-compact snapshot saved
    Session: {session_display}...
    Trigger: {trigger}
-   Vectors: {vector_source} ({len(display_vectors)} captured)
+   Vectors: {vector_source} ({len(display_vectors)} captured){stale_msg}
    know={display_vectors.get('know', 'N/A')}, unc={display_vectors.get('uncertainty', 'N/A')}
    Snapshot: {snapshot_path.name}
 """, file=sys.stderr)

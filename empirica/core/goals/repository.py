@@ -304,3 +304,148 @@ class GoalRepository:
     def close(self):
         """Close database connection"""
         self.db.close()
+
+    def mark_goals_stale(self, session_id: str, stale_reason: str = "memory_compact") -> int:
+        """Mark all in_progress goals for a session as stale
+
+        Called during memory compaction to signal that the AI's full context
+        about these goals has been lost. Post-compact AI should re-evaluate
+        these goals before continuing work.
+
+        Args:
+            session_id: Session UUID
+            stale_reason: Why goals are being marked stale (e.g., "memory_compact")
+
+        Returns:
+            Number of goals marked stale
+        """
+        import time
+        try:
+            # Find all in_progress goals for this session
+            cursor = self.db.conn.execute("""
+                SELECT id, goal_data FROM goals
+                WHERE session_id = ? AND is_completed = 0
+            """, (session_id,))
+
+            count = 0
+            for row in cursor.fetchall():
+                goal_id = row[0]
+                goal_data = json.loads(row[1]) if row[1] else {}
+
+                # Add stale metadata to goal_data
+                if 'metadata' not in goal_data:
+                    goal_data['metadata'] = {}
+                goal_data['metadata']['stale_since'] = time.time()
+                goal_data['metadata']['stale_reason'] = stale_reason
+
+                self.db.conn.execute("""
+                    UPDATE goals
+                    SET goal_data = ?
+                    WHERE id = ?
+                """, (json.dumps(goal_data), goal_id))
+                count += 1
+
+            self.db.conn.commit()
+            logger.info(f"Marked {count} goals as stale for session {session_id[:8]}...")
+            return count
+
+        except Exception as e:
+            logger.error(f"Error marking goals stale: {e}")
+            self.db.conn.rollback()
+            return 0
+
+    def get_stale_goals(self, session_id: Optional[str] = None, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get stale goals for a session or project
+
+        Args:
+            session_id: Optional session UUID filter
+            project_id: Optional project UUID filter (checks all sessions in project)
+
+        Returns:
+            List of stale goal dicts with stale_since metadata
+        """
+        try:
+            if session_id:
+                cursor = self.db.conn.execute("""
+                    SELECT id, objective, scope, goal_data, created_timestamp
+                    FROM goals
+                    WHERE session_id = ? AND is_completed = 0
+                    ORDER BY created_timestamp DESC
+                """, (session_id,))
+            elif project_id:
+                cursor = self.db.conn.execute("""
+                    SELECT g.id, g.objective, g.scope, g.goal_data, g.created_timestamp
+                    FROM goals g
+                    JOIN sessions s ON g.session_id = s.session_id
+                    WHERE s.project_id = ? AND g.is_completed = 0
+                    ORDER BY g.created_timestamp DESC
+                """, (project_id,))
+            else:
+                return []
+
+            stale_goals = []
+            for row in cursor.fetchall():
+                goal_data = json.loads(row[3]) if row[3] else {}
+                metadata = goal_data.get('metadata', {})
+
+                # Only include goals that have stale metadata
+                if metadata.get('stale_since'):
+                    stale_goals.append({
+                        'goal_id': row[0],
+                        'objective': row[1],
+                        'scope': json.loads(row[2]) if row[2] else {},
+                        'stale_since': metadata.get('stale_since'),
+                        'stale_reason': metadata.get('stale_reason'),
+                        'created_timestamp': row[4]
+                    })
+
+            return stale_goals
+
+        except Exception as e:
+            logger.error(f"Error getting stale goals: {e}")
+            return []
+
+    def refresh_goal(self, goal_id: str) -> bool:
+        """Mark a stale goal as refreshed (AI has regained context)
+
+        Args:
+            goal_id: Goal UUID to refresh
+
+        Returns:
+            True if refreshed, False if goal not found or not stale
+        """
+        import time
+        try:
+            cursor = self.db.conn.execute("""
+                SELECT goal_data FROM goals WHERE id = ? AND is_completed = 0
+            """, (goal_id,))
+            row = cursor.fetchone()
+
+            if not row:
+                return False
+
+            goal_data = json.loads(row[0]) if row[0] else {}
+            metadata = goal_data.get('metadata', {})
+
+            # Check if goal was stale
+            if not metadata.get('stale_since'):
+                return False
+
+            # Clear stale flag and add refresh timestamp
+            metadata['refreshed_at'] = time.time()
+            metadata.pop('stale_since', None)
+            metadata.pop('stale_reason', None)
+            goal_data['metadata'] = metadata
+
+            self.db.conn.execute("""
+                UPDATE goals SET goal_data = ? WHERE id = ?
+            """, (json.dumps(goal_data), goal_id))
+
+            self.db.conn.commit()
+            logger.info(f"Refreshed goal {goal_id[:8]}...")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error refreshing goal: {e}")
+            self.db.conn.rollback()
+            return False

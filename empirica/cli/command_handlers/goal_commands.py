@@ -21,6 +21,117 @@ from ..cli_utils import handle_cli_error, parse_json_safely
 logger = logging.getLogger(__name__)
 
 
+def _check_for_similar_goals(objective: str, session_id: str = None, threshold: float = 0.85) -> list:
+    """Check for similar existing goals using text matching and semantic search.
+
+    Args:
+        objective: The new goal's objective text
+        session_id: Optional session ID for context
+        threshold: Similarity threshold (0.0-1.0)
+
+    Returns:
+        List of similar goals found, empty if none
+    """
+    import subprocess
+    import os
+    import re
+
+    similar = []
+
+    # Normalize objective text for comparison
+    def normalize(text: str) -> str:
+        return re.sub(r'[^\w\s]', '', text.lower().strip())
+
+    normalized_objective = normalize(objective)
+
+    # Strategy 1: Check database for exact/near-exact text matches
+    try:
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        cursor = db.conn.execute("""
+            SELECT id, objective, session_id, is_completed, created_timestamp
+            FROM goals
+            WHERE is_completed = 0
+            ORDER BY created_timestamp DESC
+            LIMIT 50
+        """)
+        for row in cursor.fetchall():
+            existing_obj = normalize(row[1] or '')
+            # Check for exact match or high substring overlap
+            if existing_obj == normalized_objective:
+                similar.append({
+                    'goal_id': row[0],
+                    'objective': row[1],
+                    'session_id': row[2],
+                    'match_type': 'exact',
+                    'score': 1.0
+                })
+            elif normalized_objective in existing_obj or existing_obj in normalized_objective:
+                # Substring match - one contains the other
+                similar.append({
+                    'goal_id': row[0],
+                    'objective': row[1],
+                    'session_id': row[2],
+                    'match_type': 'substring',
+                    'score': 0.9
+                })
+        db.close()
+    except Exception as e:
+        logger.debug(f"Database duplicate check failed: {e}")
+
+    # Strategy 2: Semantic search via Qdrant (if available)
+    if not similar:
+        try:
+            # Auto-detect project ID from session
+            project_id = None
+            try:
+                from empirica.data.session_database import SessionDatabase
+                db = SessionDatabase()
+                cursor = db.conn.execute(
+                    "SELECT project_id FROM sessions WHERE session_id = ?",
+                    (session_id,)
+                )
+                row = cursor.fetchone()
+                if row:
+                    project_id = row[0]
+                db.close()
+            except Exception:
+                pass
+
+            if project_id:
+                result = subprocess.run(
+                    ['empirica', 'goals-search', objective[:100],
+                     '--project-id', project_id, '--status', 'in_progress',
+                     '--limit', '3', '--threshold', str(threshold), '--output', 'json'],
+                    capture_output=True, text=True, timeout=10,
+                    cwd=os.getcwd()
+                )
+                if result.returncode == 0:
+                    search_result = json.loads(result.stdout)
+                    for goal in search_result.get('results', []):
+                        score = goal.get('score', 0)
+                        if score >= threshold:
+                            similar.append({
+                                'goal_id': goal.get('id'),
+                                'objective': goal.get('objective'),
+                                'session_id': goal.get('session_id'),
+                                'match_type': 'semantic',
+                                'score': score
+                            })
+        except Exception as e:
+            logger.debug(f"Semantic duplicate check failed: {e}")
+
+    # Deduplicate by goal_id
+    seen = set()
+    unique = []
+    for s in similar:
+        if s['goal_id'] not in seen:
+            seen.add(s['goal_id'])
+            unique.append(s)
+
+    return unique
+
+
 def handle_goals_create_command(args):
     """Handle goals-create command - AI-first with legacy flag support"""
     try:
@@ -125,7 +236,27 @@ def handle_goals_create_command(args):
             duration=scope_duration,
             coordination=scope_coordination
         )
-        
+
+        # Fuzzy duplicate detection (unless --force is used)
+        force_create = getattr(args, 'force', False) or (config_data and config_data.get('force', False))
+        if not force_create:
+            similar_goals = _check_for_similar_goals(objective, session_id)
+            if similar_goals:
+                if output_format == 'json':
+                    print(json.dumps({
+                        "ok": False,
+                        "error": "Similar goal(s) already exist",
+                        "similar_goals": similar_goals,
+                        "hint": "Use --force to create anyway, or use goals-refresh to resume a stale goal",
+                        "objective": objective
+                    }))
+                else:
+                    print(f"⚠️  Similar goal(s) found:")
+                    for sg in similar_goals:
+                        print(f"   - {sg['objective'][:60]}... (score: {sg.get('score', 'N/A')})")
+                    print(f"\n   Use --force to create anyway")
+                sys.exit(1)
+
         # Validate success criteria (make it optional now)
         if not success_criteria_list:
             # Make a default success criterion if none provided
@@ -1478,3 +1609,144 @@ def handle_goals_search_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Search goals", getattr(args, 'verbose', False))
+
+
+def handle_goals_mark_stale_command(args):
+    """Handle goals-mark-stale command - Mark in_progress goals as stale during compaction
+
+    Used by pre-compact hooks to signal that AI context about goals has been lost.
+    Post-compact AI should re-evaluate these goals before continuing work.
+    """
+    try:
+        from empirica.core.goals.repository import GoalRepository
+
+        session_id = getattr(args, 'session_id', None)
+        reason = getattr(args, 'reason', 'memory_compact')
+        output_format = getattr(args, 'output', 'json')
+
+        if not session_id:
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": "Session ID required (--session-id)"}))
+            else:
+                print("Error: Session ID required (--session-id)")
+            return 1
+
+        # Mark goals stale
+        repo = GoalRepository()
+        try:
+            count = repo.mark_goals_stale(session_id, stale_reason=reason)
+        finally:
+            repo.close()
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": True,
+                "session_id": session_id,
+                "goals_marked_stale": count,
+                "reason": reason,
+                "message": f"Marked {count} in_progress goal(s) as stale"
+            }))
+        else:
+            if count > 0:
+                print(f"✅ Marked {count} in_progress goal(s) as stale")
+                print(f"   Reason: {reason}")
+                print(f"   Session: {session_id[:8]}...")
+            else:
+                print(f"ℹ️  No in_progress goals to mark stale for session {session_id[:8]}...")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Mark goals stale", getattr(args, 'verbose', False))
+
+
+def handle_goals_get_stale_command(args):
+    """Handle goals-get-stale command - Get stale goals for session or project
+
+    Returns goals that were marked stale during compaction and need re-evaluation.
+    """
+    try:
+        from empirica.core.goals.repository import GoalRepository
+
+        session_id = getattr(args, 'session_id', None)
+        project_id = getattr(args, 'project_id', None)
+        output_format = getattr(args, 'output', 'json')
+
+        if not session_id and not project_id:
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": "Session ID or Project ID required"}))
+            else:
+                print("Error: Session ID (--session-id) or Project ID (--project-id) required")
+            return 1
+
+        repo = GoalRepository()
+        try:
+            stale_goals = repo.get_stale_goals(session_id=session_id, project_id=project_id)
+        finally:
+            repo.close()
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": True,
+                "stale_goals": stale_goals,
+                "count": len(stale_goals)
+            }))
+        else:
+            if stale_goals:
+                print(f"⚠️  Found {len(stale_goals)} stale goal(s) needing re-evaluation:\n")
+                for g in stale_goals:
+                    print(f"  📋 {g['objective'][:60]}...")
+                    print(f"     ID: {g['goal_id'][:8]}...")
+                    if g.get('stale_reason'):
+                        print(f"     Reason: {g['stale_reason']}")
+                    print()
+            else:
+                print("✅ No stale goals found")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Get stale goals", getattr(args, 'verbose', False))
+
+
+def handle_goals_refresh_command(args):
+    """Handle goals-refresh command - Mark a stale goal as in_progress
+
+    Called when AI has regained context about a stale goal and is ready to work on it.
+    """
+    try:
+        from empirica.core.goals.repository import GoalRepository
+
+        goal_id = getattr(args, 'goal_id', None)
+        output_format = getattr(args, 'output', 'json')
+
+        if not goal_id:
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": "Goal ID required (--goal-id)"}))
+            else:
+                print("Error: Goal ID required (--goal-id)")
+            return 1
+
+        repo = GoalRepository()
+        try:
+            refreshed = repo.refresh_goal(goal_id)
+        finally:
+            repo.close()
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": refreshed,
+                "goal_id": goal_id,
+                "refreshed": refreshed,
+                "message": "Goal refreshed to in_progress" if refreshed else "Goal not found or not stale"
+            }))
+        else:
+            if refreshed:
+                print(f"✅ Goal {goal_id[:8]}... refreshed to in_progress")
+            else:
+                print(f"❌ Goal {goal_id[:8]}... not found or not stale")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Refresh goal", getattr(args, 'verbose', False))

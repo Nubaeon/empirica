@@ -40,7 +40,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Getting Started': ['onboard'],
                     'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
                     'CASCADE Workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
-                    'Goals & Tasks': ['goals-create', 'goals-list', 'goals-search', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-add-dependency', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
+                    'Goals & Tasks': ['goals-create', 'goals-list', 'goals-search', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-add-dependency', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume', 'goals-mark-stale', 'goals-get-stale', 'goals-refresh'],
                     'Project Management': ['project-init', 'project-create', 'project-list', 'project-switch', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
                     'Workspace': ['workspace-init', 'workspace-map', 'workspace-overview'],
                     'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
@@ -357,7 +357,10 @@ def main(args=None):
             'goals-discover': handle_goals_discover_command,
             'goals-ready': handle_goals_ready_command,
             'goals-resume': handle_goals_resume_command,
-            
+            'goals-mark-stale': handle_goals_mark_stale_command,
+            'goals-get-stale': handle_goals_get_stale_command,
+            'goals-refresh': handle_goals_refresh_command,
+
             # User interface commands
             'chat': handle_chat_command,
             'dashboard': handle_dashboard_command,

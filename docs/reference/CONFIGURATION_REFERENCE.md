@@ -610,6 +610,10 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 - `SENTINEL_URL`: URL for external Sentinel service (optional)
 - `EMPIRICA_ENFORCE_CASCADE_PHASES`: Strictly enforce CASCADE phase ordering (`true`, `false`)
 - `EMPIRICA_SENTINEL_LOOPING`: Enable/disable sentinel CHECK-investigate loop (`true`, `false`, default: `true`). When `false`, CHECK decisions bypass investigate requirement
+- `EMPIRICA_SENTINEL_MODE`: Sentinel operating mode (`observer`, `controller`, `auto`, default: `auto`)
+  - `observer`: Passive oversight - log warnings but don't block AI actions
+  - `controller`: Active oversight - block actions when appropriate
+  - `auto`: Same as controller (default behavior)
 
 ### Vector Search & Embeddings (Qdrant)
 
