@@ -43,6 +43,12 @@
             "type": "command",
             "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/post-compact.py",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash ${BREADCRUMBS_ROOT:-/home/yogapad/empirical-ai/breadcrumbs}/hooks/session-start.sh",
+            "timeout": 10,
+            "allowFailure": true
           }
         ]
       },
