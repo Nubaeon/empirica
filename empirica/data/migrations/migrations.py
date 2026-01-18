@@ -490,6 +490,48 @@ def migration_015_sessions_instance_id(cursor: sqlite3.Cursor):
     logger.info("✓ Added instance_id column and index to sessions table")
 
 
+# Migration 16: Add auto_captured_issues table
+def migration_016_auto_captured_issues(cursor: sqlite3.Cursor):
+    """
+    Add auto_captured_issues table for automatic issue detection.
+
+    This table was previously only created when IssueCapture service initialized,
+    causing 'no such table' errors during project-bootstrap for users upgrading
+    from older versions. Now created via migration for all users.
+
+    Fixes: GitHub Issue #21 (Issue 1: Missing Database Migration)
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS auto_captured_issues (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            category TEXT NOT NULL,
+            code_location TEXT,
+            message TEXT NOT NULL,
+            stack_trace TEXT,
+            context TEXT,
+            status TEXT DEFAULT 'new',
+            assigned_to_ai TEXT,
+            root_cause_id TEXT,
+            resolution TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_issues_session_status
+        ON auto_captured_issues(session_id, status)
+    """)
+
+    logger.info("✓ Created auto_captured_issues table and index")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -506,4 +548,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("013_session_scoped_breadcrumbs", "Add session-scoped breadcrumb tables (dual-scope Phase 1)", migration_013_session_scoped_breadcrumbs),
     ("014_lessons_and_knowledge_graph", "Add lessons and knowledge graph tables for epistemic procedural knowledge", migration_014_lessons_and_knowledge_graph),
     ("015_sessions_instance_id", "Add instance_id to sessions for multi-instance isolation", migration_015_sessions_instance_id),
+    ("016_auto_captured_issues", "Add auto_captured_issues table for issue tracking", migration_016_auto_captured_issues),
 ]
