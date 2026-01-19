@@ -1,0 +1,32 @@
+{
+  "goal_id": "cdefc257-9d50-4f27-9d16-4d88f13f61b5",
+  "session_id": "a4daf1de-689f-4c95-9091-01661aded1be",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-19T17:02:46.930729+00:00",
+  "goal_data": {
+    "objective": "Implement Noetic RAG: Epistemic artifact confidence scoring and autodecay for focused, token-efficient retrieval",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "All epistemic artifacts (findings, dead-ends, unknowns, mistakes) have confidence scores",
+      "Autodecay mechanism extended from lessons to all artifact types",
+      "Type-specific decay rates configurable",
+      "Retrieval filters by confidence threshold",
+      "Token efficiency measurable (fewer artifacts retrieved, higher signal)"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-19T17:02:46.930745+00:00",
+      "action": "created"
+    }
+  ]
+}
