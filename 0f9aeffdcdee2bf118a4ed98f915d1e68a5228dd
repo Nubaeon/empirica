@@ -1,0 +1,28 @@
+{
+  "goal_id": "e336b2c4-02da-4f88-948c-4c4a1f8e361d",
+  "session_id": "8552125a-265d-41d8-b749-cb7b3220ecdc",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-19T20:08:34.899794+00:00",
+  "goal_data": {
+    "objective": "Design earned autonomy system: suggestion-log, domain-specific trust, authority calculation, graduated Sentinel modes based on calibration accuracy",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.6,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-19T20:08:34.899808+00:00",
+      "action": "created"
+    }
+  ]
+}
