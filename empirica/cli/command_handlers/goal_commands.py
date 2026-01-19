@@ -1478,12 +1478,13 @@ def handle_goals_list_all_command(args):
                 if goal['ai_id']:
                     print(f"   AI: {goal['ai_id']} | Session: {goal['session_id'][:8]}...")
 
-                # Inline subtasks
+                # Inline subtasks (full description for AI context)
                 if goal['subtasks']:
                     for st in goal['subtasks']:
                         st_icon = "✓" if st['status'] == 'completed' else "○"
                         imp_badge = f"[{st['importance'][:3]}]" if st['importance'] else ""
-                        print(f"      {st_icon} {imp_badge} {st['description'][:60]}")
+                        # Show full description - truncation loses AI context
+                        print(f"      {st_icon} {imp_badge} {st['description']}")
                 print()
 
         return None
