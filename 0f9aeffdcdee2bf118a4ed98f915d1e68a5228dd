@@ -1,0 +1,31 @@
+{
+  "goal_id": "e976d192-017c-4ded-9259-c8b8776abdda",
+  "session_id": "3f0846ea-6b73-4213-8cd8-6b578b64df9c",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-19T20:06:45.488264+00:00",
+  "goal_data": {
+    "objective": "Implement epistemically-weighted post-compact summaries: Replace chronological narrative with confidence-scored, relevance-ranked context injection",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Post-compact context shows epistemic scores (0.0-1.0) on each fact",
+      "Facts ranked by (impact \u00d7 confidence \u00d7 recency) not chronologically",
+      "Tested over 3+ compacts with measurable improvement in context recovery",
+      "Chronological summary still accessible if user needs it"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-19T20:06:45.488282+00:00",
+      "action": "created"
+    }
+  ]
+}
