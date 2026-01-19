@@ -1,0 +1,28 @@
+{
+  "goal_id": "1efbb92b-1c87-475f-995b-6ded4c0c61c2",
+  "session_id": "bd7423a3-3003-45a5-afff-a910076c0a16",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-19T14:16:06.861317+00:00",
+  "goal_data": {
+    "objective": "Research R&D subsidies, patenting strategy, and company positioning for Empirica - considering MIT license, Austrian company formation with Philipp, and viable IP protection paths",
+    "scope": {
+      "breadth": 0.9,
+      "duration": 0.6,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.8,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-19T14:16:06.861338+00:00",
+      "action": "created"
+    }
+  ]
+}
