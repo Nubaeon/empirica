@@ -1,0 +1,28 @@
+{
+  "goal_id": "38af4e05-520e-41c1-a833-870164da4320",
+  "session_id": "bd7423a3-3003-45a5-afff-a910076c0a16",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-19T15:34:14.064358+00:00",
+  "goal_data": {
+    "objective": "CLI Phase 2: Add hierarchical aliases and remove deprecated execute_preflight/postflight tools",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-19T15:34:14.064378+00:00",
+      "action": "created"
+    }
+  ]
+}
