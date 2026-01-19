@@ -84,7 +84,7 @@ class VectorValues(BaseModel):
     density: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Information density")
     state: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Current state")
     change: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Rate of change")
-    completion: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Task completion")
+    completion: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Phase-aware completion: NOETIC='Have I learned enough?' PRAXIC='Have I implemented enough?'")
     impact: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Expected impact")
     do: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Execution capability")
 

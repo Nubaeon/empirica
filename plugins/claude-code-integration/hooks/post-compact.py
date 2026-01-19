@@ -19,6 +19,13 @@ import os
 from pathlib import Path
 from datetime import datetime
 
+# Import epistemic summarizer for confidence-weighted context
+try:
+    from epistemic_summarizer import format_epistemic_focus
+    EPISTEMIC_SUMMARIZER_AVAILABLE = True
+except ImportError:
+    EPISTEMIC_SUMMARIZER_AVAILABLE = False
+
 
 def find_project_root() -> Path:
     """
@@ -464,9 +471,28 @@ def _generate_new_session_prompt(pre_vectors: dict, dynamic_context: dict, old_s
     If session_bootstrap is provided, the session was already created and bootstrapped
     by the hook - AI just needs to do PREFLIGHT with the loaded context.
     """
-    goals_text = _format_goals(dynamic_context)
-    findings_text = _format_findings(dynamic_context)
-    unknowns_text = _format_unknowns(dynamic_context)
+    # Use epistemic summarizer for confidence-weighted ranking (no chronological fallback)
+    if EPISTEMIC_SUMMARIZER_AVAILABLE:
+        epistemic_focus = format_epistemic_focus(
+            findings=dynamic_context.get('recent_findings', []),
+            unknowns=dynamic_context.get('open_unknowns', []),
+            dead_ends=dynamic_context.get('critical_dead_ends', []),
+            goals=dynamic_context.get('active_goals', []),
+            max_items=15
+        )
+    else:
+        # Fallback to legacy formatting if summarizer not available
+        goals_text = _format_goals(dynamic_context)
+        findings_text = _format_findings(dynamic_context)
+        unknowns_text = _format_unknowns(dynamic_context)
+        epistemic_focus = f"""**Active Goals:**
+{goals_text}
+
+**Recent Findings (high-impact learnings):**
+{findings_text}
+
+**Open Unknowns (unresolved questions):**
+{unknowns_text}"""
 
     pre_know = pre_vectors.get('know', 'N/A')
     pre_unc = pre_vectors.get('uncertainty', 'N/A')
@@ -487,16 +513,7 @@ Your context was just compacted. The previous session ({old_session_id[:8]}...) 
 
 **Pre-compact vectors (NOW INVALID):** know={pre_know}, uncertainty={pre_unc}
 
-### Evidence from Database (Ground Truth):
-
-**Active Goals:**
-{goals_text}
-
-**Recent Findings (high-impact learnings):**
-{findings_text}
-
-**Open Unknowns (unresolved questions):**
-{unknowns_text}
+{epistemic_focus}
 
 ### Memory Context (Auto-Retrieved):
 {memory_text}
@@ -534,16 +551,7 @@ Your context was just compacted. The previous session ({old_session_id[:8]}...) 
 
 **Pre-compact vectors (NOW INVALID):** know={pre_know}, uncertainty={pre_unc}
 
-### Evidence from Database (Ground Truth):
-
-**Active Goals:**
-{goals_text}
-
-**Recent Findings (high-impact learnings):**
-{findings_text}
-
-**Open Unknowns (unresolved questions):**
-{unknowns_text}
+{epistemic_focus}
 
 ### Step 1: Create New Session
 
@@ -686,10 +694,32 @@ def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_contex
     CHECK is correct when session is INCOMPLETE (no POSTFLIGHT yet) -
     we're continuing work and need to validate readiness.
     """
-    goals_text = _format_goals(dynamic_context)
-    findings_text = _format_findings(dynamic_context)
-    unknowns_text = _format_unknowns(dynamic_context)
-    dead_ends_text = _format_dead_ends(dynamic_context)
+    # Use epistemic summarizer for confidence-weighted ranking (no chronological fallback)
+    if EPISTEMIC_SUMMARIZER_AVAILABLE:
+        epistemic_focus = format_epistemic_focus(
+            findings=dynamic_context.get('recent_findings', []),
+            unknowns=dynamic_context.get('open_unknowns', []),
+            dead_ends=dynamic_context.get('critical_dead_ends', []),
+            goals=dynamic_context.get('active_goals', []),
+            max_items=15
+        )
+    else:
+        # Fallback to legacy formatting if summarizer not available
+        goals_text = _format_goals(dynamic_context)
+        findings_text = _format_findings(dynamic_context)
+        unknowns_text = _format_unknowns(dynamic_context)
+        dead_ends_text = _format_dead_ends(dynamic_context)
+        epistemic_focus = f"""**Active Goals:**
+{goals_text}
+
+**Recent Findings (high-impact learnings):**
+{findings_text}
+
+**Open Unknowns (unresolved questions):**
+{unknowns_text}
+
+**Dead Ends (approaches that failed):**
+{dead_ends_text}"""
 
     pre_know = pre_vectors.get('know', 'N/A')
     pre_unc = pre_vectors.get('uncertainty', 'N/A')
@@ -704,19 +734,7 @@ are NO LONGER VALID - they reflected knowledge you had in full context.
 
 **You now have only a summary. Run CHECK to validate readiness before proceeding.**
 
-### Evidence from Database (Ground Truth):
-
-**Active Goals:**
-{goals_text}
-
-**Recent Findings (high-impact learnings):**
-{findings_text}
-
-**Open Unknowns (unresolved questions):**
-{unknowns_text}
-
-**Dead Ends (approaches that failed):**
-{dead_ends_text}
+{epistemic_focus}
 
 ### Step 1: Load Context (Recommended)
 

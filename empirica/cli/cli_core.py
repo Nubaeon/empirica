@@ -95,6 +95,7 @@ from .parsers import (
     add_epistemics_parsers,
     add_edit_verification_parsers,
     add_issue_capture_parsers,
+    add_autonomy_parsers,
     add_architecture_parsers,
     add_query_parsers,
     add_agent_parsers,
@@ -154,6 +155,11 @@ from .command_handlers.concept_graph_commands import (
     handle_concept_top,
     handle_concept_related,
 )
+from .command_handlers.autonomy_commands import (
+    handle_suggestion_log_command,
+    handle_suggestion_list_command,
+    handle_suggestion_review_command,
+)
 
 
 def _get_version():
@@ -205,6 +211,7 @@ def create_argument_parser():
     add_epistemics_parsers(subparsers)
     add_edit_verification_parsers(subparsers)
     add_issue_capture_parsers(subparsers)
+    add_autonomy_parsers(subparsers)
     add_architecture_parsers(subparsers)
     add_query_parsers(subparsers)
     add_agent_parsers(subparsers)
@@ -447,6 +454,11 @@ def main(args=None):
             'mcp-list-tools': handle_mcp_list_tools_command,
             'mcp-call': handle_mcp_call_command,
 
+            # Autonomy / Earned Authority commands
+            'suggestion-log': handle_suggestion_log_command,
+            'suggestion-list': handle_suggestion_list_command,
+            'suggestion-review': handle_suggestion_review_command,
+
             # === ALIASES ===
             # Argparse registers aliases for --help, but handler lookup needs them too
             # CASCADE aliases
@@ -475,6 +487,8 @@ def main(args=None):
             'fl': handle_finding_log_command,
             'ul': handle_unknown_log_command,
             'de': handle_deadend_log_command,
+            # Suggestion alias
+            'sug': handle_suggestion_log_command,
             # Project aliases
             'pb': handle_project_bootstrap_command,
             'bootstrap': handle_project_bootstrap_command,
