@@ -1,0 +1,28 @@
+{
+  "goal_id": "4fe64afb-646c-4d41-84c6-272ca0a8a4c0",
+  "session_id": "6282b2bb-9857-4c0b-b0e6-d38e7ede990b",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-19T19:22:06.757506+00:00",
+  "goal_data": {
+    "objective": "Improve docs-assess: Add content validation, env var cross-check, and complete alias detection",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-19T19:22:06.757525+00:00",
+      "action": "created"
+    }
+  ]
+}
