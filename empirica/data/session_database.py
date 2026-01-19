@@ -1954,11 +1954,7 @@ class SessionDatabase:
             context_markdown = generate_context_markdown(breadcrumbs)
             breadcrumbs['context_markdown'] = context_markdown
 
-        # 9. Apply adaptive depth filtering if needed
-        if depth != "auto" or trigger == "post_compact":
-            breadcrumbs = self._apply_depth_filter(breadcrumbs, depth, trigger)
-
-        # 10. Calculate flow state metrics (AI productivity patterns)
+        # 9. Calculate flow state metrics (AI productivity patterns)
         try:
             flow_metrics = self.calculate_flow_metrics(resolved_id, limit=5)
             if flow_metrics and flow_metrics.get('current_flow'):
@@ -1986,6 +1982,9 @@ class SessionDatabase:
                     breadcrumbs['health_score']['feature_completion'] = feature_status
         except Exception as e:
             logger.debug(f"Feature status load skipped: {e}")
+
+        # 13. Apply adaptive depth filtering (LAST STEP - after all sections populated)
+        breadcrumbs = self._apply_depth_filter(breadcrumbs, depth, trigger)
 
         return breadcrumbs
 
@@ -2162,63 +2161,166 @@ class SessionDatabase:
 
     def _apply_depth_filter(self, breadcrumbs: Dict, depth: str, trigger: Optional[str]) -> Dict:
         """
-        Apply adaptive depth filtering to breadcrumbs based on drift or explicit depth.
+        Apply adaptive depth filtering to breadcrumbs based on size, drift, or explicit depth.
 
         Depth levels:
         - minimal: Last 5 findings/unknowns, current goal only (~500 tokens)
         - moderate: Last 10 findings/unknowns, all active goals (~1500 tokens)
         - full: All findings/unknowns, all goals, all ref-docs (~3000-5000 tokens)
-        - auto: Determine depth based on drift (if post_compact trigger)
+        - auto: Determine depth based on:
+          - SIZE (default): Estimate output size and choose appropriate depth
+          - DRIFT (post_compact only): Use epistemic drift to calibrate depth
         """
-        if depth == "auto" and trigger == "post_compact":
-            # Calculate drift from pre-snapshot to current
-            try:
-                from pathlib import Path
-                import json
-                ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
-                snapshots = sorted(ref_docs_dir.glob("pre_summary_*.json"), reverse=True)
+        import json
 
-                if snapshots and breadcrumbs.get('live_state'):
-                    with open(snapshots[0], 'r') as f:
-                        pre_snapshot = json.load(f)
+        if depth == "auto":
+            if trigger == "post_compact":
+                # POST-COMPACT: Calculate drift from pre-snapshot to current
+                try:
+                    from pathlib import Path
+                    ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+                    snapshots = sorted(ref_docs_dir.glob("pre_summary_*.json"), reverse=True)
 
-                    pre_vectors = pre_snapshot.get('checkpoint', {}).get('vectors', {})
-                    post_vectors = breadcrumbs['live_state'].get('vectors', {})
+                    if snapshots and breadcrumbs.get('live_state'):
+                        with open(snapshots[0], 'r') as f:
+                            pre_snapshot = json.load(f)
 
-                    # Calculate drift (simple average of vector changes)
-                    drift = 0.0
-                    count = 0
-                    for key in ['know', 'uncertainty', 'engagement', 'impact', 'completion']:
-                        if key in pre_vectors and key in post_vectors:
-                            drift += abs(pre_vectors[key] - post_vectors[key])
-                            count += 1
+                        pre_vectors = pre_snapshot.get('checkpoint', {}).get('vectors', {})
+                        post_vectors = breadcrumbs['live_state'].get('vectors', {})
 
-                    drift = drift / count if count > 0 else 0.0
+                        # Calculate drift (simple average of vector changes)
+                        drift = 0.0
+                        count = 0
+                        for key in ['know', 'uncertainty', 'engagement', 'impact', 'completion']:
+                            if key in pre_vectors and key in post_vectors:
+                                drift += abs(pre_vectors[key] - post_vectors[key])
+                                count += 1
 
-                    # Choose depth based on drift
-                    if drift > 0.3:
-                        depth = "full"
-                    elif drift > 0.1:
+                        drift = drift / count if count > 0 else 0.0
+
+                        # Choose depth based on drift
+                        if drift > 0.3:
+                            depth = "full"
+                        elif drift > 0.1:
+                            depth = "moderate"
+                        else:
+                            depth = "minimal"
+                except:
+                    depth = "moderate"  # Fallback to moderate on error
+            else:
+                # NON-POST-COMPACT: Use size-based depth selection
+                try:
+                    estimated_size = len(json.dumps(breadcrumbs, default=str))
+                    if estimated_size > 50000:  # >50k chars = very large
+                        depth = "minimal"
+                    elif estimated_size > 20000:  # >20k chars = large
                         depth = "moderate"
                     else:
-                        depth = "minimal"
-            except:
-                depth = "moderate"  # Fallback to moderate on error
+                        depth = "full"  # <20k is manageable
+                except:
+                    depth = "moderate"  # Fallback on serialization error
 
         # Apply depth filter
         if depth == "minimal":
-            breadcrumbs['findings'] = breadcrumbs.get('findings', [])[:5]
-            breadcrumbs['unknowns'] = breadcrumbs.get('unknowns', [])[:5]
+            breadcrumbs['findings'] = self._truncate_breadcrumbs(breadcrumbs.get('findings', [])[:5], max_text_len=100)
+            breadcrumbs['unknowns'] = self._truncate_breadcrumbs(breadcrumbs.get('unknowns', [])[:5], max_text_len=100)
+            breadcrumbs['dead_ends'] = self._truncate_breadcrumbs(breadcrumbs.get('dead_ends', [])[:3], max_text_len=100)
+            breadcrumbs['mistakes_to_avoid'] = breadcrumbs.get('mistakes_to_avoid', [])[:3]
+            breadcrumbs['incomplete_work'] = breadcrumbs.get('incomplete_work', [])[:3]
             breadcrumbs['goals'] = [g for g in breadcrumbs.get('goals', []) if 'current' in str(g).lower()][:1]
             breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:3]
+            # Remove bulky sections for minimal depth - can be fetched on demand
+            breadcrumbs.pop('file_tree', None)
+            breadcrumbs.pop('flow_metrics', None)
         elif depth == "moderate":
-            breadcrumbs['findings'] = breadcrumbs.get('findings', [])[:10]
-            breadcrumbs['unknowns'] = breadcrumbs.get('unknowns', [])[:10]
+            breadcrumbs['findings'] = self._truncate_breadcrumbs(breadcrumbs.get('findings', [])[:10], max_text_len=200)
+            breadcrumbs['unknowns'] = self._truncate_breadcrumbs(breadcrumbs.get('unknowns', [])[:10], max_text_len=200)
+            breadcrumbs['dead_ends'] = self._truncate_breadcrumbs(breadcrumbs.get('dead_ends', [])[:5], max_text_len=150)
+            breadcrumbs['incomplete_work'] = breadcrumbs.get('incomplete_work', [])[:5]
             breadcrumbs['goals'] = breadcrumbs.get('goals', [])[:5]
             breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:5]
-        # depth == "full": no filtering
+            # Truncate file_tree to top-level only for moderate
+            if 'file_tree' in breadcrumbs:
+                breadcrumbs['file_tree'] = self._truncate_file_tree(breadcrumbs['file_tree'], max_depth=2)
+        # depth == "full": no truncation
 
         return breadcrumbs
+
+    def _truncate_breadcrumbs(self, items: List[Dict], max_text_len: int = 150) -> List[Dict]:
+        """
+        Truncate breadcrumb text fields to serve as epistemic springboards.
+
+        Preserves metadata (id, timestamp, impact, goal_id, subject) for lookups
+        but truncates text content to prevent context explosion.
+
+        Args:
+            items: List of breadcrumb dicts (findings, unknowns, etc.)
+            max_text_len: Maximum characters for text fields (default 150)
+
+        Returns:
+            List with truncated text fields and preserved metadata
+        """
+        truncated = []
+        for item in items:
+            if not isinstance(item, dict):
+                truncated.append(item)
+                continue
+
+            new_item = item.copy()
+
+            # Text fields that should be truncated
+            text_fields = ['finding', 'unknown', 'text', 'description', 'content']
+            for field in text_fields:
+                if field in new_item and isinstance(new_item[field], str):
+                    text = new_item[field]
+                    if len(text) > max_text_len:
+                        new_item[field] = text[:max_text_len] + '...'
+                        new_item['_truncated'] = True  # Signal for AI to query full text if needed
+
+            # Remove full data fields that duplicate the truncated text
+            # These can be fetched on-demand via project-search or direct DB query
+            data_fields_to_remove = ['finding_data', 'unknown_data', 'raw_data']
+            for field in data_fields_to_remove:
+                if field in new_item:
+                    del new_item[field]
+
+            truncated.append(new_item)
+        return truncated
+
+    def _truncate_file_tree(self, tree: str, max_depth: int = 2) -> str:
+        """
+        Truncate file tree to top-level directories only.
+
+        Args:
+            tree: Full file tree string
+            max_depth: Maximum directory depth to include
+
+        Returns:
+            Truncated file tree showing only top-level structure
+        """
+        if not tree or not isinstance(tree, str):
+            return tree
+
+        lines = tree.split('\n')
+        truncated_lines = []
+        dirs_shown = set()
+
+        for line in lines:
+            # Count leading spaces/tree chars to determine depth
+            stripped = line.lstrip('│├└ ─')
+            depth = (len(line) - len(stripped)) // 4  # Approx 4 chars per indent level
+
+            if depth <= max_depth:
+                truncated_lines.append(line)
+                # Track directories to summarize
+                if '/' in line or (stripped and not '.' in stripped.split()[-1] if stripped.split() else False):
+                    dirs_shown.add(stripped.strip())
+
+        # Add summary if we truncated
+        if len(truncated_lines) < len(lines):
+            truncated_lines.append(f"... ({len(lines) - len(truncated_lines)} more files, use project-search for details)")
+
+        return '\n'.join(truncated_lines)
 
     def _get_latest_impact_score(self, session_id: str) -> float:
         """Get impact score from latest CASCADE assessment (PREFLIGHT/CHECK/POSTFLIGHT)"""
