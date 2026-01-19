@@ -232,6 +232,82 @@ def handle_suggestion_list_command(args):
         return result
 
 
+def handle_trust_status_command(args):
+    """
+    Handle trust-status command - show domain-specific trust levels.
+
+    Usage:
+        empirica trust-status
+        empirica trust-status --domain architecture
+    """
+    try:
+        from empirica.core.autonomy.trust_calculator import TrustCalculator
+
+        domain = getattr(args, 'domain', None)
+        project_id = getattr(args, 'project_id', None)
+        output_format = getattr(args, 'output', 'text')
+
+        calculator = TrustCalculator(project_id=project_id)
+
+        if domain:
+            # Get trust for specific domain
+            trust = calculator.get_domain_trust(domain)
+            trusts = {domain: trust}
+        else:
+            # Get all domain trusts
+            trusts = calculator.get_all_domain_trust()
+
+        calculator.close()
+
+        # Format result
+        result = {
+            "ok": True,
+            "domains": {}
+        }
+
+        for name, trust in trusts.items():
+            result["domains"][name] = {
+                "score": round(trust.score, 3),
+                "level": trust.level.value,
+                "factors": {k: round(v, 3) for k, v in trust.factors.items()},
+                "suggestions_accepted": trust.suggestions_accepted,
+                "suggestions_rejected": trust.suggestions_rejected,
+                "recent_mistakes": trust.recent_mistakes,
+                "calibration_accuracy": round(trust.calibration_accuracy, 3)
+            }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print("🔐 Domain Trust Status\n")
+            for name, data in result["domains"].items():
+                level_emoji = {
+                    "none": "⚫",
+                    "low": "🔴",
+                    "medium": "🟡",
+                    "high": "🟢",
+                    "very_high": "💚"
+                }.get(data["level"], "❓")
+
+                display_name = "Overall" if name == "_overall" else name.title()
+                print(f"  {level_emoji} {display_name}: {data['level'].upper()} ({data['score']:.1%})")
+                print(f"     Calibration: {data['calibration_accuracy']:.1%} | "
+                      f"Suggestions: {data['suggestions_accepted']}✓ {data['suggestions_rejected']}✗ | "
+                      f"Mistakes: {data['recent_mistakes']}")
+                print()
+
+        return result
+
+    except Exception as e:
+        logger.exception("Error in trust-status command")
+        result = {"ok": False, "error": str(e)}
+        if getattr(args, 'output', 'text') == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"❌ Error: {e}")
+        return result
+
+
 def handle_suggestion_review_command(args):
     """
     Handle suggestion-review command - accept, reject, or modify a suggestion.

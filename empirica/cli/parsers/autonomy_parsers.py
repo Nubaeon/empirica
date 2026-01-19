@@ -13,6 +13,7 @@ def add_autonomy_parsers(subparsers):
     add_suggestion_log_parser(subparsers)
     add_suggestion_list_parser(subparsers)
     add_suggestion_review_parser(subparsers)
+    add_trust_status_parser(subparsers)
 
 
 def add_suggestion_log_parser(subparsers):
