@@ -1,0 +1,28 @@
+{
+  "goal_id": "b189f5d2-e287-4a89-bf5e-57ad26a0b951",
+  "session_id": "bd7423a3-3003-45a5-afff-a910076c0a16",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-19T16:14:15.188773+00:00",
+  "goal_data": {
+    "objective": "Fix test failures and verify MCP-CLI mapping after deprecated tool removal",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-19T16:14:15.188796+00:00",
+      "action": "created"
+    }
+  ]
+}
