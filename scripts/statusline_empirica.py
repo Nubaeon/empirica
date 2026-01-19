@@ -58,9 +58,59 @@ def get_ai_id() -> str:
     return os.getenv('EMPIRICA_AI_ID', 'claude-code').strip()
 
 
+def get_open_counts(db: SessionDatabase, session_id: str) -> dict:
+    """
+    Get counts of open goals and unknowns for a session.
+
+    These are actionable items that need to be closed - useful for
+    "peeking into AI reality" and understanding what work remains.
+
+    Returns:
+        {
+            'open_goals': int,      # Goals not yet completed
+            'open_unknowns': int,   # Unknowns not yet resolved
+            'completion': float,    # Latest completion vector (0.0-1.0)
+        }
+    """
+    cursor = db.conn.cursor()
+
+    # Count open goals for this session
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM goals
+        WHERE session_id = ? AND status != 'completed'
+    """, (session_id,))
+    open_goals = cursor.fetchone()[0] or 0
+
+    # Count unresolved unknowns for this session
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM session_unknowns
+        WHERE session_id = ? AND is_resolved = FALSE
+    """, (session_id,))
+    open_unknowns = cursor.fetchone()[0] or 0
+
+    # Get completion from latest vector state
+    cursor.execute("""
+        SELECT completion
+        FROM reflexes
+        WHERE session_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """, (session_id,))
+    reflex_row = cursor.fetchone()
+    completion = reflex_row[0] if reflex_row and reflex_row[0] is not None else 0.0
+
+    return {
+        'open_goals': open_goals,
+        'open_unknowns': open_unknowns,
+        'completion': completion,
+    }
+
+
 def get_active_goal(db: SessionDatabase, session_id: str) -> dict:
     """
-    Get the active goal for a session.
+    Get the active goal for a session (legacy, kept for 'full' mode).
 
     Returns:
         {
@@ -151,9 +201,42 @@ def format_progress_bar(completion: float, width: int = 8) -> str:
     return f"{color}{bar}{Colors.RESET} {pct}%"
 
 
+def format_open_counts(open_counts: dict) -> str:
+    """
+    Format open goals and unknowns as actionable counts.
+
+    Shows what needs to be closed - useful for peeking into AI reality.
+
+    Returns:
+        String like "🎯3 ❓6" (3 open goals, 6 open unknowns)
+    """
+    if not open_counts:
+        return f"{Colors.GRAY}--{Colors.RESET}"
+
+    goals = open_counts.get('open_goals', 0)
+    unknowns = open_counts.get('open_unknowns', 0)
+
+    # Color code based on counts
+    if goals == 0:
+        goal_color = Colors.GREEN
+    elif goals <= 2:
+        goal_color = Colors.YELLOW
+    else:
+        goal_color = Colors.CYAN
+
+    if unknowns == 0:
+        unknown_color = Colors.GREEN
+    elif unknowns <= 3:
+        unknown_color = Colors.YELLOW
+    else:
+        unknown_color = Colors.CYAN
+
+    return f"{goal_color}🎯{goals}{Colors.RESET} {unknown_color}❓{unknowns}{Colors.RESET}"
+
+
 def format_goal_progress(goal: dict, max_name_len: int = 12) -> str:
     """
-    Format goal progress for statusline.
+    Format goal progress for statusline (legacy, used in 'full' mode).
 
     Returns:
         String like "auth-fix ████░░░░ 45%" or "████░░░░ 45%" if no goal name
@@ -498,7 +581,8 @@ def format_statusline(
     drift_detected: bool = False,
     drift_severity: str = None,
     gate_decision: str = None,
-    goal: dict = None
+    goal: dict = None,
+    open_counts: dict = None
 ) -> str:
     """Format the statusline based on mode."""
 
@@ -515,10 +599,10 @@ def format_statusline(
         return ' '.join(parts)
 
     elif mode == 'default':
-        # Goal progress + CASCADE gate + key vectors (%) + deltas + drift
-        # (Replaced NOETIC/PRAXIC - that's AI internal language, not useful for users)
-        goal_str = format_goal_progress(goal)
-        parts.append(goal_str)
+        # Open counts (goals/unknowns to close) + CASCADE gate + key vectors (%) + deltas + drift
+        # Shows actionable items: what needs to be resolved
+        counts_str = format_open_counts(open_counts)
+        parts.append(counts_str)
 
         # CASCADE gate (compliance checkpoint) with metacog decision
         if phase:
@@ -550,8 +634,8 @@ def format_statusline(
 
     elif mode == 'learning':
         # Focus on vectors with values and deltas (for developers)
-        goal_str = format_goal_progress(goal)
-        parts.append(goal_str)
+        counts_str = format_open_counts(open_counts)
+        parts.append(counts_str)
 
         if phase:
             parts.append(f"{phase}")
@@ -647,8 +731,11 @@ def main():
         # Check drift from DB (compare recent reflexes)
         drift_detected, drift_severity = get_drift_from_db(db, session_id)
 
-        # Get active goal for this session
+        # Get active goal for this session (used in 'full' mode)
         goal = get_active_goal(db, session_id)
+
+        # Get open counts (goals/unknowns to close) - used in default/learning modes
+        open_counts = get_open_counts(db, session_id)
 
         # Get drift from cache (updated by hooks) - fallback
         drift_state = read_drift_cache(str(Path.cwd()))
@@ -668,7 +755,7 @@ def main():
         output = format_statusline(
             session, phase, vectors, drift_state, deltas, mode,
             drift_detected=drift_detected, drift_severity=drift_severity,
-            gate_decision=gate_decision, goal=goal
+            gate_decision=gate_decision, goal=goal, open_counts=open_counts
         )
         print(output)
 
