@@ -168,23 +168,6 @@ class TestSpecialMappings:
         schema = handoff_tool.inputSchema
         assert 'artifacts_created' in schema['properties'], "artifacts_created should exist"
     
-    def test_confidence_to_proceed_special_mapping(self):
-        """confidence_to_proceed has special mapping to --confidence (not --confidence-to-proceed)"""
-        async def _get_tools():
-            return await list_tools()
-        
-        tools = asyncio.run(_get_tools())
-        
-        # Find tools that use confidence_to_proceed
-        tools_with_confidence = [t for t in tools if 'confidence_to_proceed' in t.inputSchema['properties']]
-        assert len(tools_with_confidence) > 0, "Should have tools with confidence_to_proceed parameter"
-        
-        # Check first tool as example
-        for tool in tools_with_confidence[:1]:
-            schema = tool.inputSchema
-            assert 'confidence_to_proceed' in schema['properties'], "confidence_to_proceed should exist"
-
-
 class TestArgMapCompleteness:
     """Test that arg_map covers all necessary mappings"""
     
@@ -205,7 +188,7 @@ class TestArgMapCompleteness:
             'artifacts_created',  # Should map to --artifacts
             'reasoning',  # Should map to --reasoning
             'remaining_unknowns',  # Should map to --unknowns
-            'confidence_to_proceed',  # Should map to --confidence
+            # 'confidence_to_proceed' removed - execute_check tool deprecated
         ]
         
         # Check that these parameters exist in the appropriate tools

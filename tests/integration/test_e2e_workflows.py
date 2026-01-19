@@ -174,7 +174,7 @@ class TestGoalsWorkflowE2E:
             text=True
         )
         
-        # Step 2: Create goal
+        # Step 2: Create goal (--force bypasses fuzzy duplicate detection for tests)
         result = subprocess.run(
             ["empirica", "goals-create",
              "--session-id", session_id,
@@ -183,7 +183,9 @@ class TestGoalsWorkflowE2E:
              "--scope-duration", "0.2",
              "--scope-coordination", "0.1",
              "--estimated-complexity", "0.2",
-             "--success-criteria", '["Test goal creation", "Test subtasks", "Test completion"]'],
+             "--success-criteria", '["Test goal creation", "Test subtasks", "Test completion"]',
+             "--force",
+             "--output", "json"],
             capture_output=True,
             text=True
         )
@@ -210,7 +212,8 @@ class TestGoalsWorkflowE2E:
                 ["empirica", "goals-add-subtask",
                  "--goal-id", goal_id,
                  "--description", desc,
-                 "--importance", "high"],
+                 "--importance", "high",
+                 "--output", "json"],
                 capture_output=True,
                 text=True
             )
@@ -230,7 +233,8 @@ class TestGoalsWorkflowE2E:
         # Step 4: Check progress (should be 0%)
         result = subprocess.run(
             ["empirica", "goals-progress",
-             "--goal-id", goal_id],
+             "--goal-id", goal_id,
+             "--output", "json"],
             capture_output=True,
             text=True
         )
@@ -260,7 +264,8 @@ class TestGoalsWorkflowE2E:
         # Step 6: Check progress again (should be >0%)
         result = subprocess.run(
             ["empirica", "goals-progress",
-             "--goal-id", goal_id],
+             "--goal-id", goal_id,
+             "--output", "json"],
             capture_output=True,
             text=True
         )
