@@ -1,4 +1,9 @@
-"""CASCADE workflow command parsers."""
+"""CASCADE workflow command parsers.
+
+Aliases:
+- preflight-submit → pre, preflight
+- postflight-submit → post, postflight
+"""
 
 def add_cascade_parsers(subparsers):
     """Add cascade command parsers (Primary CLI interface for epistemic assessments)
@@ -12,8 +17,11 @@ def add_cascade_parsers(subparsers):
     This function provides the core CLI interface for epistemic self-assessment.
     """
     # Preflight submit command (AI-first with config file support)
-    preflight_submit_parser = subparsers.add_parser('preflight-submit',
-        help='Submit preflight assessment (AI-first: use config file, Legacy: use flags)')
+    preflight_submit_parser = subparsers.add_parser(
+        'preflight-submit',
+        aliases=['pre', 'preflight'],
+        help='Submit preflight assessment (AI-first: use config file, Legacy: use flags)'
+    )
 
     # AI-FIRST: Positional config file argument
     preflight_submit_parser.add_argument('config', nargs='?',
@@ -64,8 +72,11 @@ def add_cascade_parsers(subparsers):
     check_submit_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
     
     # Postflight submit command (AI-first with config file support)
-    postflight_submit_parser = subparsers.add_parser('postflight-submit',
-        help='Submit postflight assessment (AI-first: use config file, Legacy: use flags)')
+    postflight_submit_parser = subparsers.add_parser(
+        'postflight-submit',
+        aliases=['post', 'postflight'],
+        help='Submit postflight assessment (AI-first: use config file, Legacy: use flags)'
+    )
 
     # AI-FIRST: Positional config file argument
     postflight_submit_parser.add_argument('config', nargs='?',

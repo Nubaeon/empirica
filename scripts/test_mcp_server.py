@@ -29,11 +29,8 @@ STATELESS_TOOLS = [
 
 STATEFUL_TOOLS = [
     "bootstrap_session",
-    "execute_preflight",
     "submit_preflight_assessment",
-    "execute_check",
     "submit_check_assessment",
-    "execute_postflight",
     "submit_postflight_assessment",
     "create_goal",
     "add_subtask",
@@ -192,11 +189,8 @@ class MCPServerTester:
         # Expected mappings (tool_name → cli_command)
         expected_mappings = {
             "bootstrap_session": "bootstrap",
-            "execute_preflight": "preflight",
             "submit_preflight_assessment": "preflight-submit",
-            "execute_check": "check",
             "submit_check_assessment": "check-submit",
-            "execute_postflight": "postflight",
             "submit_postflight_assessment": "postflight-submit",
             "create_goal": "goals-create",
             "add_subtask": "goals-add-subtask",

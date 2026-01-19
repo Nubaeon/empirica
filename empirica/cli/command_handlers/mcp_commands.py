@@ -194,11 +194,9 @@ def handle_mcp_list_tools_command(args):
         # Core workflow tools
         print("\n📋 Core Workflow Tools:")
         core_tools = [
-            ("execute_preflight", "Assess epistemic state before task"),
-            ("submit_preflight_assessment", "Log preflight scores"),
-            ("execute_check", "Decision point validation"),
-            ("execute_postflight", "Reassess after completion"),
-            ("submit_postflight_assessment", "Log postflight + calculate deltas"),
+            ("submit_preflight_assessment", "Baseline epistemic assessment (PREFLIGHT)"),
+            ("submit_check_assessment", "Decision point validation (CHECK)"),
+            ("submit_postflight_assessment", "Final assessment + calculate deltas (POSTFLIGHT)"),
         ]
         for name, desc in core_tools:
             print(f"   • {name:35s} - {desc}")

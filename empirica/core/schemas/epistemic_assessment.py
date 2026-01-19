@@ -4,8 +4,8 @@ Canonical Epistemic Assessment Schema
 This is THE single source of truth for the 13-vector epistemic assessment format.
 
 Used by:
-- CLI parser (empirica preflight, check, postflight)
-- MCP tools (execute_preflight, submit_preflight_assessment)
+- CLI parser (empirica preflight-submit, check-submit, postflight-submit)
+- MCP tools (submit_preflight_assessment, submit_check_assessment, submit_postflight_assessment)
 - PersonaHarness (apply persona priors)
 - SentinelOrchestrator (merge multi-persona assessments)
 - Validation layer (ensure format correctness)

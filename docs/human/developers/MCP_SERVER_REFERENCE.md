@@ -218,7 +218,7 @@ Resume previous session(s).
 
 **Purpose:** Epistemic self-assessment workflow
 
-> **Note:** `execute_preflight` has been removed. PREFLIGHT is mechanistic - assess 13 vectors honestly and call `submit_preflight_assessment` directly. No template needed.
+> **Note:** CASCADE phases (PREFLIGHT, CHECK, POSTFLIGHT) are now **direct submission tools**. Assess your 13 vectors honestly and submit directly - no template generation needed.
 
 ### `submit_preflight_assessment`
 
@@ -260,27 +260,6 @@ submit_preflight_assessment(
 
 ---
 
-### `execute_check`
-
-Execute CHECK phase assessment after investigation.
-
-**Parameters:**
-- `session_id` (required): Session UUID or alias
-- `findings` (required): Array of investigation findings
-- `remaining_unknowns` (required): Array of remaining unknowns
-- `confidence_to_proceed` (required): Confidence score (0.0-1.0)
-
-**Returns:** CHECK assessment prompt
-
-**Flow:**
-1. AI provides findings/unknowns
-2. System assesses readiness
-3. AI calls `submit_check_assessment` with decision
-
-**Use when:** Completed investigation, deciding whether to proceed
-
----
-
 ### `submit_check_assessment`
 
 Submit CHECK phase assessment.
@@ -294,20 +273,6 @@ Submit CHECK phase assessment.
 **Returns:** Confirmation + decision validation
 
 **Use when:** After CHECK execution, making gate decision
-
----
-
-### `execute_postflight`
-
-Execute POSTFLIGHT pure self-assessment after task completion.
-
-**Parameters:**
-- `session_id` (required): Session UUID or alias
-- `task_summary` (required): Summary of ALL work completed
-
-**Returns:** Session context (WITHOUT baseline vectors)
-
-**Purpose:** Assess CURRENT state genuinely; system calculates deltas
 
 ---
 
@@ -893,12 +858,7 @@ finding_log(
 # Complete subtasks
 complete_subtask(task_id="uuid", evidence="auth/oauth.py:45-120")
 
-# Run POSTFLIGHT
-execute_postflight(
-    session_id=session_id,
-    task_summary="Implemented OAuth2 with PKCE"
-)
-
+# Run POSTFLIGHT - assess your 13 vectors and submit directly
 submit_postflight_assessment(
     session_id=session_id,
     vectors={...},  # Current state

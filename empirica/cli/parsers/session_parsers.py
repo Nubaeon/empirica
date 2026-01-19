@@ -1,17 +1,32 @@
-"""Session management command parsers."""
+"""Session management command parsers.
+
+Aliases:
+- sessions-list → session-list, sl
+- sessions-show → session-show
+- sessions-export → session-export
+- session-create → sc (added in cascade_parsers.py)
+"""
 
 
 def add_session_parsers(subparsers):
     """Add session management command parsers"""
-    # Sessions list command
-    sessions_list_parser = subparsers.add_parser('sessions-list', help='List all sessions')
+    # Sessions list command (with aliases for singular/short forms)
+    sessions_list_parser = subparsers.add_parser(
+        'sessions-list',
+        aliases=['session-list', 'sl'],
+        help='List all sessions'
+    )
     sessions_list_parser.add_argument('--ai-id', help='Filter by AI identifier')
     sessions_list_parser.add_argument('--limit', type=int, default=50, help='Maximum sessions to show')
     sessions_list_parser.add_argument('--verbose', action='store_true', help='Show detailed info')
     sessions_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     
     # Sessions show command
-    sessions_show_parser = subparsers.add_parser('sessions-show', help='Show detailed session info')
+    sessions_show_parser = subparsers.add_parser(
+        'sessions-show',
+        aliases=['session-show'],
+        help='Show detailed session info'
+    )
     sessions_show_parser.add_argument('session_id', nargs='?', help='Session ID or alias (latest, latest:active, latest:<ai_id>, latest:active:<ai_id>)')
     sessions_show_parser.add_argument('--session-id', dest='session_id_named', help='Session ID (alternative to positional argument)')
     sessions_show_parser.add_argument('--verbose', action='store_true', help='Show all vectors and cascades')
@@ -23,7 +38,11 @@ def add_session_parsers(subparsers):
     session_snapshot_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
 
     # Sessions export command
-    sessions_export_parser = subparsers.add_parser('sessions-export', help='Export session to JSON')
+    sessions_export_parser = subparsers.add_parser(
+        'sessions-export',
+        aliases=['session-export'],
+        help='Export session to JSON'
+    )
     sessions_export_parser.add_argument('session_id', nargs='?', help='Session ID or alias (latest, latest:active, latest:<ai_id>)')
     sessions_export_parser.add_argument('--session-id', dest='session_id_named', help='Session ID (alternative to positional argument)')
     sessions_export_parser.add_argument('--output', '-o', help='Output file path (default: session_<id>.json)')

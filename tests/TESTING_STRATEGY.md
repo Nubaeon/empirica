@@ -42,22 +42,22 @@ def test_preflight_submit_help(self):
 ```python
 def test_cascade_workflow_with_real_reasoning(tmp_session):
     """Test full CASCADE workflow with genuine epistemic assessment"""
-    # PREFLIGHT - genuine self-assessment
-    preflight = empirica.execute_preflight(
+    # PREFLIGHT - genuine self-assessment (direct submission)
+    preflight = empirica.submit_preflight_assessment(
         session_id=tmp_session,
-        task="Implement OAuth2"
+        vectors={...},  # 13 epistemic vectors
+        reasoning="Initial assessment for OAuth2 implementation"
     )
-    assert preflight['vectors']['uncertainty'] > 0.5  # High uncertainty expected
-    
+
     # Work happens here...
-    
-    # POSTFLIGHT - verify learning occurred
-    postflight = empirica.execute_postflight(
+
+    # POSTFLIGHT - assess CURRENT state, system calculates deltas
+    postflight = empirica.submit_postflight_assessment(
         session_id=tmp_session,
-        task_summary="OAuth2 implemented"
+        vectors={...},  # Current 13 epistemic vectors
+        reasoning="Completed OAuth2 implementation"
     )
-    assert postflight['vectors']['uncertainty'] < preflight['vectors']['uncertainty']
-    assert postflight['vectors']['know'] > preflight['vectors']['know']
+    # System automatically calculates learning deltas from PREFLIGHT vs POSTFLIGHT
 ```
 
 ### 3. Production Tests (tests/production/)
