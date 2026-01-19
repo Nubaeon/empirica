@@ -503,6 +503,155 @@ class GraduatedSentinel:
             "factors": trust.factors
         }
 
+    def check_escalation_ready(self) -> Dict[str, Any]:
+        """
+        Check if trust level warrants escalation to higher autonomy mode.
+
+        Returns:
+            Dict with ready status, from/to modes, and recommendation
+        """
+        trust = self.get_domain_trust()
+        current_mode = self.get_effective_mode()
+
+        # Define escalation thresholds
+        escalation_map = {
+            SentinelMode.CONTROLLER: (0.4, SentinelMode.OBSERVER),
+            SentinelMode.OBSERVER: (0.6, SentinelMode.ADVISORY),
+            SentinelMode.ADVISORY: (0.8, SentinelMode.AUTONOMOUS),
+            SentinelMode.AUTONOMOUS: (1.1, None)  # Can't escalate further
+        }
+
+        threshold, next_mode = escalation_map.get(current_mode, (1.1, None))
+
+        # Check if ready for escalation
+        ready = trust.score >= threshold and next_mode is not None
+
+        # Additional requirements for escalation
+        requirements_met = {
+            "score_threshold": trust.score >= threshold,
+            "min_suggestions": trust.suggestions_accepted >= 3,
+            "low_rejection_rate": (
+                trust.suggestions_rejected == 0 or
+                trust.suggestions_accepted / (trust.suggestions_accepted + trust.suggestions_rejected) >= 0.7
+            ),
+            "no_recent_mistakes": trust.recent_mistakes == 0
+        }
+
+        all_requirements_met = all(requirements_met.values())
+
+        return {
+            "ready": ready and all_requirements_met,
+            "current_mode": current_mode.value,
+            "next_mode": next_mode.value if next_mode else None,
+            "trust_score": trust.score,
+            "threshold": threshold,
+            "requirements": requirements_met,
+            "recommendation": (
+                f"Ready to escalate from {current_mode.value} to {next_mode.value}"
+                if ready and all_requirements_met else
+                f"Not ready: {', '.join(k for k, v in requirements_met.items() if not v)}"
+            )
+        }
+
+    def check_deescalation_warranted(self) -> Dict[str, Any]:
+        """
+        Check if recent performance warrants de-escalation to lower autonomy mode.
+
+        De-escalation triggers:
+        - Multiple rejected suggestions
+        - Recent critical mistakes
+        - Sudden drop in calibration accuracy
+
+        Returns:
+            Dict with warranted status, from/to modes, and reasoning
+        """
+        trust = self.get_domain_trust()
+        current_mode = self.get_effective_mode()
+
+        # Define de-escalation triggers
+        triggers = {
+            "high_rejection_rate": (
+                trust.suggestions_accepted + trust.suggestions_rejected >= 5 and
+                trust.suggestions_rejected / (trust.suggestions_accepted + trust.suggestions_rejected) > 0.5
+            ),
+            "multiple_mistakes": trust.recent_mistakes >= 3,
+            "low_calibration": trust.calibration_accuracy < 0.4,
+            "trust_score_dropped": trust.score < self._get_mode_floor(current_mode)
+        }
+
+        # Any trigger warrants de-escalation
+        warranted = any(triggers.values())
+
+        # Determine target mode
+        deescalation_map = {
+            SentinelMode.AUTONOMOUS: SentinelMode.ADVISORY,
+            SentinelMode.ADVISORY: SentinelMode.OBSERVER,
+            SentinelMode.OBSERVER: SentinelMode.CONTROLLER,
+            SentinelMode.CONTROLLER: SentinelMode.CONTROLLER  # Can't go lower
+        }
+
+        previous_mode = deescalation_map.get(current_mode, SentinelMode.CONTROLLER)
+
+        active_triggers = [k for k, v in triggers.items() if v]
+
+        return {
+            "warranted": warranted,
+            "current_mode": current_mode.value,
+            "previous_mode": previous_mode.value,
+            "trust_score": trust.score,
+            "triggers": triggers,
+            "active_triggers": active_triggers,
+            "reasoning": (
+                f"De-escalation recommended: {', '.join(active_triggers)}"
+                if warranted else
+                "Performance within acceptable range"
+            )
+        }
+
+    def _get_mode_floor(self, mode: SentinelMode) -> float:
+        """Get minimum trust score to maintain a mode"""
+        floors = {
+            SentinelMode.CONTROLLER: 0.0,
+            SentinelMode.OBSERVER: 0.3,
+            SentinelMode.ADVISORY: 0.5,
+            SentinelMode.AUTONOMOUS: 0.7
+        }
+        return floors.get(mode, 0.0)
+
+    def get_trust_evolution_summary(self) -> Dict[str, Any]:
+        """
+        Get complete trust evolution summary with escalation/de-escalation status.
+
+        Returns:
+            Dict with current state, escalation readiness, and de-escalation check
+        """
+        trust = self.get_domain_trust()
+        mode = self.get_effective_mode()
+        escalation = self.check_escalation_ready()
+        deescalation = self.check_deescalation_warranted()
+
+        return {
+            "domain": self.domain or "_overall",
+            "current_state": {
+                "mode": mode.value,
+                "trust_level": trust.level.value,
+                "trust_score": trust.score,
+                "factors": trust.factors
+            },
+            "escalation": escalation,
+            "deescalation": deescalation,
+            "recommendation": (
+                "ESCALATE" if escalation["ready"] else
+                "DE-ESCALATE" if deescalation["warranted"] else
+                "MAINTAIN"
+            ),
+            "thresholds": {
+                "controller_to_observer": 0.4,
+                "observer_to_advisory": 0.6,
+                "advisory_to_autonomous": 0.8
+            }
+        }
+
     def close(self):
         """Close calculator connection"""
         if self._trust_calculator:

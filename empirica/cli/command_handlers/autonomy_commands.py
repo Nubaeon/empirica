@@ -560,3 +560,96 @@ def handle_evaluate_action_command(args):
         else:
             print(f"❌ Error: {e}")
         return result
+
+
+def handle_trust_evolution_command(args):
+    """
+    Handle trust-evolution command - show escalation/de-escalation recommendations.
+
+    Usage:
+        empirica trust-evolution --domain architecture
+        empirica trust-evolution --output json
+    """
+    try:
+        from empirica.core.autonomy import GraduatedSentinel
+
+        domain = getattr(args, 'domain', None)
+        project_id = getattr(args, 'project_id', None)
+        output_format = getattr(args, 'output', 'text')
+
+        sentinel = GraduatedSentinel(
+            session_id="evolution-check",
+            domain=domain,
+            project_id=project_id
+        )
+
+        summary = sentinel.get_trust_evolution_summary()
+        sentinel.close()
+
+        result = {"ok": True, **summary}
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            current = summary["current_state"]
+            escalation = summary["escalation"]
+            deescalation = summary["deescalation"]
+            rec = summary["recommendation"]
+
+            rec_emoji = {
+                "ESCALATE": "📈",
+                "DE-ESCALATE": "📉",
+                "MAINTAIN": "📊"
+            }.get(rec, "❓")
+
+            print(f"\n{rec_emoji} Trust Evolution Report")
+            print("=" * 50)
+            print(f"\n  Domain: {summary['domain']}")
+            print(f"  Current Mode: {current['mode'].upper()}")
+            print(f"  Trust Score: {current['trust_score']:.1%}")
+            print(f"  Trust Level: {current['trust_level'].upper()}")
+
+            print(f"\n  📊 Trust Factors:")
+            for factor, value in current['factors'].items():
+                bar = "▓" * int(value * 10) + "░" * (10 - int(value * 10))
+                print(f"     {factor:12s}: {bar} {value:.1%}")
+
+            print(f"\n  📈 Escalation Check:")
+            if escalation["next_mode"]:
+                print(f"     Target: {escalation['current_mode']} → {escalation['next_mode']}")
+                print(f"     Threshold: {escalation['threshold']:.0%}")
+                print(f"     Requirements:")
+                for req, met in escalation["requirements"].items():
+                    emoji = "✅" if met else "❌"
+                    print(f"        {emoji} {req.replace('_', ' ')}")
+                print(f"     Ready: {'YES' if escalation['ready'] else 'NO'}")
+            else:
+                print(f"     Already at maximum autonomy level")
+
+            print(f"\n  📉 De-escalation Check:")
+            if deescalation["warranted"]:
+                print(f"     Target: {deescalation['current_mode']} → {deescalation['previous_mode']}")
+                print(f"     Active Triggers:")
+                for trigger in deescalation["active_triggers"]:
+                    print(f"        ⚠️  {trigger.replace('_', ' ')}")
+            else:
+                print(f"     No de-escalation warranted")
+
+            print(f"\n  🎯 Recommendation: {rec}")
+            print(f"     {escalation['recommendation'] if rec == 'ESCALATE' else deescalation['reasoning']}")
+
+            print(f"\n  📏 Thresholds:")
+            for transition, threshold in summary["thresholds"].items():
+                print(f"     {transition.replace('_', ' → ')}: {threshold:.0%}")
+            print()
+
+        return result
+
+    except Exception as e:
+        logger.exception("Error in trust-evolution command")
+        result = {"ok": False, "error": str(e)}
+        if getattr(args, 'output', 'text') == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"❌ Error: {e}")
+        return result

@@ -19,6 +19,7 @@ def add_autonomy_parsers(subparsers):
     add_trust_status_parser(subparsers)
     add_autonomy_status_parser(subparsers)
     add_evaluate_action_parser(subparsers)
+    add_trust_evolution_parser(subparsers)
 
 
 def add_suggestion_log_parser(subparsers):
@@ -282,3 +283,34 @@ def add_evaluate_action_parser(subparsers):
     )
 
     parser.set_defaults(handler='evaluate_action')
+
+
+def add_trust_evolution_parser(subparsers):
+    """Parser for: empirica trust-evolution"""
+    parser = subparsers.add_parser(
+        'trust-evolution',
+        help='Show escalation/de-escalation recommendations',
+        description='Analyze trust evolution and provide recommendations for '
+                    'escalation to higher autonomy or de-escalation based on performance.'
+    )
+
+    parser.add_argument(
+        '--domain',
+        required=False,
+        help='Domain to check (e.g., architecture, testing, security)'
+    )
+
+    parser.add_argument(
+        '--project-id',
+        required=False,
+        help='Project ID to scope trust calculation'
+    )
+
+    parser.add_argument(
+        '--output',
+        choices=['json', 'text'],
+        default='text',
+        help='Output format (default: text)'
+    )
+
+    parser.set_defaults(handler='trust_evolution')
