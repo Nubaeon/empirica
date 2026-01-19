@@ -60,7 +60,8 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Sentinel': ['sentinel-orchestrate', 'sentinel-load-profile', 'sentinel-status', 'sentinel-check'],
                     'Personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find'],
                     'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats'],
-                    'MCP Server': ['mcp-start', 'mcp-stop', 'mcp-status', 'mcp-test', 'mcp-list-tools', 'mcp-call']
+                    'MCP Server': ['mcp-start', 'mcp-stop', 'mcp-status', 'mcp-test', 'mcp-list-tools', 'mcp-call'],
+                    'Autonomy': ['suggestion-log', 'suggestion-list', 'suggestion-review', 'trust-status']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -159,6 +160,7 @@ from .command_handlers.autonomy_commands import (
     handle_suggestion_log_command,
     handle_suggestion_list_command,
     handle_suggestion_review_command,
+    handle_trust_status_command,
 )
 
 
@@ -458,6 +460,7 @@ def main(args=None):
             'suggestion-log': handle_suggestion_log_command,
             'suggestion-list': handle_suggestion_list_command,
             'suggestion-review': handle_suggestion_review_command,
+            'trust-status': handle_trust_status_command,
 
             # === ALIASES ===
             # Argparse registers aliases for --help, but handler lookup needs them too

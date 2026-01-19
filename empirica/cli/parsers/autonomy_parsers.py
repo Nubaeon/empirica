@@ -159,3 +159,34 @@ def add_suggestion_review_parser(subparsers):
     )
 
     parser.set_defaults(handler='suggestion_review')
+
+
+def add_trust_status_parser(subparsers):
+    """Parser for: empirica trust-status"""
+    parser = subparsers.add_parser(
+        'trust-status',
+        help='Show domain-specific trust levels',
+        description='Display earned trust levels per domain based on calibration accuracy, '
+                    'suggestion outcomes, and recent mistakes.'
+    )
+
+    parser.add_argument(
+        '--domain',
+        required=False,
+        help='Specific domain to check (e.g., architecture, testing, security)'
+    )
+
+    parser.add_argument(
+        '--project-id',
+        required=False,
+        help='Project ID to scope trust calculation'
+    )
+
+    parser.add_argument(
+        '--output',
+        choices=['json', 'text'],
+        default='text',
+        help='Output format (default: text)'
+    )
+
+    parser.set_defaults(handler='trust_status')
