@@ -1,0 +1,28 @@
+{
+  "goal_id": "d1ee70d8-e1f9-4d47-acea-65db343f1afa",
+  "session_id": "6282b2bb-9857-4c0b-b0e6-d38e7ede990b",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-19T19:36:37.336177+00:00",
+  "goal_data": {
+    "objective": "Update CLAUDE.md system prompt with proactive agentic behaviors and tune calibration parameters",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.3,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-19T19:36:37.336199+00:00",
+      "action": "created"
+    }
+  ]
+}
