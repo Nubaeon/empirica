@@ -60,26 +60,26 @@ def get_ai_id() -> str:
 
 def get_open_counts(db: SessionDatabase, session_id: str) -> dict:
     """
-    Get counts of open goals and unknowns for a session.
+    Get counts of open goals (project-wide) and unknowns (session-specific).
 
-    These are actionable items that need to be closed - useful for
-    "peeking into AI reality" and understanding what work remains.
+    Goals are project-wide because work spans sessions.
+    Unknowns are session-specific as they're contextual to current work.
 
     Returns:
         {
-            'open_goals': int,      # Goals not yet completed
-            'open_unknowns': int,   # Unknowns not yet resolved
+            'open_goals': int,      # Goals not yet completed (project-wide)
+            'open_unknowns': int,   # Unknowns not yet resolved (session)
             'completion': float,    # Latest completion vector (0.0-1.0)
         }
     """
     cursor = db.conn.cursor()
 
-    # Count open goals for this session
+    # Count open goals PROJECT-WIDE (goals span sessions)
     cursor.execute("""
         SELECT COUNT(*)
         FROM goals
-        WHERE session_id = ? AND status != 'completed'
-    """, (session_id,))
+        WHERE status != 'completed'
+    """)
     open_goals = cursor.fetchone()[0] or 0
 
     # Count unresolved unknowns for this session
