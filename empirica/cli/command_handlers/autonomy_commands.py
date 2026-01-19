@@ -387,3 +387,176 @@ def handle_suggestion_review_command(args):
         else:
             print(f"❌ Error: {e}")
         return result
+
+
+def handle_autonomy_status_command(args):
+    """
+    Handle autonomy-status command - show graduated Sentinel mode and escalation path.
+
+    Usage:
+        empirica autonomy-status --session-id <ID>
+        empirica autonomy-status --domain architecture
+    """
+    try:
+        from empirica.core.autonomy import GraduatedSentinel
+
+        session_id = getattr(args, 'session_id', None)
+        domain = getattr(args, 'domain', None)
+        project_id = getattr(args, 'project_id', None)
+        output_format = getattr(args, 'output', 'text')
+
+        sentinel = GraduatedSentinel(
+            session_id=session_id or "status-check",
+            domain=domain,
+            project_id=project_id
+        )
+
+        # Get status info
+        requirements = sentinel.get_mode_requirements()
+        escalation = sentinel.get_escalation_thresholds()
+
+        sentinel.close()
+
+        result = {
+            "ok": True,
+            "mode": requirements,
+            "escalation": escalation
+        }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            mode = requirements["mode"]
+            score = requirements["trust_score"]
+            level = requirements["trust_level"]
+            domain_name = requirements["domain"]
+
+            mode_emoji = {
+                "controller": "🔒",
+                "observer": "👁️",
+                "advisory": "💡",
+                "autonomous": "🚀"
+            }.get(mode, "❓")
+
+            print(f"\n{mode_emoji} Graduated Sentinel Status")
+            print("=" * 50)
+            print(f"\n  Domain: {domain_name}")
+            print(f"  Trust Level: {level.upper()} ({score:.1%})")
+            print(f"  Active Mode: {mode.upper()}")
+            print(f"  Description: {requirements['description']}")
+
+            if requirements.get("override_active"):
+                print(f"\n  ⚠️  Mode overridden by environment variable")
+
+            print(f"\n  📋 Mode Requirements:")
+            print(f"     Human approval: {', '.join(requirements['requires_human_for']) or 'none'}")
+            print(f"     Logged actions: {', '.join(requirements['logs_but_allows']) or 'none'}")
+            print(f"     Auto-applies:   {', '.join(requirements['auto_applies']) or 'none'}")
+            print(f"     Confidence threshold: {requirements['confidence_threshold']:.0%}")
+
+            # Escalation path
+            if escalation["next_mode"]:
+                print(f"\n  📈 Escalation to {escalation['next_mode'].upper()}:")
+                print(f"     Required score: {escalation['required_score']:.0%}")
+                print(f"     Current gap:    {escalation['gap']:.1%}")
+                print(f"     Progress:       {'▓' * int(escalation['progress'] * 10)}{'░' * (10 - int(escalation['progress'] * 10))} {escalation['progress']:.0%}")
+                print(f"\n     💡 Hints:")
+                for hint in escalation["hints"]:
+                    print(f"        • {hint}")
+            else:
+                print(f"\n  🏆 Maximum autonomy level reached!")
+
+            print()
+
+        return result
+
+    except Exception as e:
+        logger.exception("Error in autonomy-status command")
+        result = {"ok": False, "error": str(e)}
+        if getattr(args, 'output', 'text') == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"❌ Error: {e}")
+        return result
+
+
+def handle_evaluate_action_command(args):
+    """
+    Handle evaluate-action command - check if an action would be allowed.
+
+    Usage:
+        empirica evaluate-action --action "refactor authentication" --domain security
+        empirica evaluate-action --action "fix typo" --confidence 0.9
+    """
+    try:
+        from empirica.core.autonomy import GraduatedSentinel
+
+        action = args.action
+        domain = getattr(args, 'domain', None)
+        project_id = getattr(args, 'project_id', None)
+        confidence = getattr(args, 'confidence', 0.7)
+        target = getattr(args, 'target', None)
+        output_format = getattr(args, 'output', 'text')
+
+        sentinel = GraduatedSentinel(
+            session_id="action-eval",
+            domain=domain,
+            project_id=project_id
+        )
+
+        action_context = {
+            "action": action,
+            "target": target or "",
+            "metadata": {}
+        }
+
+        decision = sentinel.evaluate_action(action_context, ai_confidence=confidence)
+        sentinel.close()
+
+        result = {
+            "ok": True,
+            "action": decision.action,
+            "category": decision.category.value,
+            "mode": decision.mode.value,
+            "allowed": decision.allowed,
+            "requires_human": decision.requires_human,
+            "auto_applied": decision.auto_applied,
+            "rationale": decision.rationale,
+            "trust_level": decision.trust_level.value,
+            "trust_score": decision.trust_score
+        }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            emoji = "✅" if decision.allowed else "❌"
+            category_emoji = {
+                "trivial": "📝",
+                "tactical": "🔧",
+                "strategic": "🏗️",
+                "critical": "⚠️"
+            }.get(decision.category.value, "❓")
+
+            print(f"\n{emoji} Action Evaluation")
+            print("=" * 50)
+            print(f"\n  Action: {action}")
+            print(f"  Category: {category_emoji} {decision.category.value.upper()}")
+            print(f"  Mode: {decision.mode.value.upper()} (trust: {decision.trust_score:.1%})")
+            print(f"\n  Decision: {'ALLOWED' if decision.allowed else 'BLOCKED'}")
+            if decision.requires_human:
+                print(f"  ⚡ Requires human approval")
+            if decision.auto_applied:
+                print(f"  🤖 Would be auto-applied")
+            print(f"\n  Rationale: {decision.rationale}")
+            print()
+
+        return result
+
+    except Exception as e:
+        logger.exception("Error in evaluate-action command")
+        result = {"ok": False, "error": str(e)}
+        if getattr(args, 'output', 'text') == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"❌ Error: {e}")
+        return result
