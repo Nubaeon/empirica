@@ -59,7 +59,8 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Agents': ['agent-spawn', 'agent-report', 'agent-aggregate', 'agent-export', 'agent-import', 'agent-discover'],
                     'Sentinel': ['sentinel-orchestrate', 'sentinel-load-profile', 'sentinel-status', 'sentinel-check'],
                     'Personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find'],
-                    'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats']
+                    'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats'],
+                    'MCP Server': ['mcp-start', 'mcp-stop', 'mcp-status', 'mcp-test', 'mcp-list-tools', 'mcp-call']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -104,6 +105,7 @@ from .parsers import (
     add_onboarding_parsers,
     add_trajectory_parsers,
     add_concept_graph_parsers,
+    add_mcp_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -133,6 +135,14 @@ from .command_handlers.persona_commands import (
 )
 from .command_handlers.release_commands import handle_release_ready_command
 from .command_handlers.docs_commands import handle_docs_assess, handle_docs_explain
+from .command_handlers.mcp_commands import (
+    handle_mcp_start_command,
+    handle_mcp_stop_command,
+    handle_mcp_status_command,
+    handle_mcp_test_command,
+    handle_mcp_list_tools_command,
+    handle_mcp_call_command,
+)
 from .command_handlers.trajectory_commands import (
     handle_trajectory_show as handle_trajectory_show_command,
     handle_trajectory_stats as handle_trajectory_stats_command,
@@ -205,6 +215,7 @@ def create_argument_parser():
     add_onboarding_parsers(subparsers)
     add_trajectory_parsers(subparsers)
     add_concept_graph_parsers(subparsers)
+    add_mcp_parsers(subparsers)
 
     return parser
 
@@ -232,20 +243,6 @@ def main(args=None):
             db.close()
         except Exception as e:
             print(f"[VERBOSE] Database: (unavailable: {e})", file=sys.stderr)
-    
-    # Log command usage for telemetry
-    try:
-        from empirica.data.session_database import SessionDatabase
-        db = SessionDatabase()
-        db.log_command_usage(
-            command_name=parsed_args.command,
-            execution_time_ms=0,  # Will update at end
-            success=None,  # Will update based on execution
-            error_message=None
-        )
-        db.close()
-    except Exception:
-        pass  # Don't fail if telemetry fails
     
     # Command handler mapping
     try:
@@ -441,6 +438,14 @@ def main(args=None):
             'concept-stats': handle_concept_stats,
             'concept-top': handle_concept_top,
             'concept-related': handle_concept_related,
+
+            # MCP server management commands
+            'mcp-start': handle_mcp_start_command,
+            'mcp-stop': handle_mcp_stop_command,
+            'mcp-status': handle_mcp_status_command,
+            'mcp-test': handle_mcp_test_command,
+            'mcp-list-tools': handle_mcp_list_tools_command,
+            'mcp-call': handle_mcp_call_command,
         }
         
         if parsed_args.command in command_handlers:
@@ -467,22 +472,10 @@ def main(args=None):
                 # Non-dict non-zero result is an exit code
                 exit_code = result
 
-            # Log successful execution
+            # Log execution time
             elapsed_ms = int((time.time() - start_time) * 1000)
             if verbose:
                 print(f"[VERBOSE] Execution time: {elapsed_ms}ms", file=sys.stderr)
-
-            try:
-                db = SessionDatabase()
-                db.log_command_usage(
-                    command_name=parsed_args.command,
-                    execution_time_ms=elapsed_ms,
-                    success=(exit_code == 0),
-                    error_message=None if exit_code == 0 else "Command returned error"
-                )
-                db.close()
-            except Exception:
-                pass
 
             sys.exit(exit_code)
         else:
@@ -490,20 +483,6 @@ def main(args=None):
             sys.exit(1)
             
     except Exception as e:
-        # Log failed execution
-        elapsed_ms = int((time.time() - start_time) * 1000)
-        try:
-            db = SessionDatabase()
-            db.log_command_usage(
-                command_name=parsed_args.command,
-                execution_time_ms=elapsed_ms,
-                success=False,
-                error_message=str(e)
-            )
-            db.close()
-        except Exception:
-            pass
-        
         handle_cli_error(e, parsed_args.command)
         sys.exit(1)
 
