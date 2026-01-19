@@ -1,0 +1,31 @@
+{
+  "goal_id": "32d3ffec-3477-47e9-b6b6-9935fb56fa16",
+  "session_id": "64898ccf-82d6-46dc-9b0a-4bd3b0c8024d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-19T13:10:13.263032+00:00",
+  "goal_data": {
+    "objective": "Fix project-bootstrap auto depth to prevent context explosion - estimate output size, return metadata+summaries for large bootstraps, enable AI to pull details on-demand",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Auto depth estimates output size before returning",
+      "Large bootstraps (>20k chars) return summaries not full text",
+      "AI can use project-search or direct queries to get full content",
+      "project_commands.py modularized for maintainability"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-19T13:10:13.263041+00:00",
+      "action": "created"
+    }
+  ]
+}
