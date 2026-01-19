@@ -76,7 +76,9 @@ if not EMPIRICA_CLI:
         )
 
 # Create MCP server instance
-app = Server("empirica-v2")
+# Version should match pyproject.toml
+EMPIRICA_MCP_VERSION = "1.3.3"
+app = Server("empirica-v2", version=EMPIRICA_MCP_VERSION)
 
 # ============================================================================
 # Epistemic Middleware (Optional)
