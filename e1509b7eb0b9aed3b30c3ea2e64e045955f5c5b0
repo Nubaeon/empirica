@@ -1,0 +1,28 @@
+{
+  "goal_id": "6416eaa2-37e1-4ce1-b00d-5c20eb439634",
+  "session_id": "bd7423a3-3003-45a5-afff-a910076c0a16",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-19T14:19:52.204811+00:00",
+  "goal_data": {
+    "objective": "Restructure Empirica CLI into hierarchical command groups for AI-centric usage",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.6,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-19T14:19:52.204828+00:00",
+      "action": "created"
+    }
+  ]
+}
