@@ -446,6 +446,38 @@ def main(args=None):
             'mcp-test': handle_mcp_test_command,
             'mcp-list-tools': handle_mcp_list_tools_command,
             'mcp-call': handle_mcp_call_command,
+
+            # === ALIASES ===
+            # Argparse registers aliases for --help, but handler lookup needs them too
+            # CASCADE aliases
+            'pre': handle_preflight_submit_command,
+            'preflight': handle_preflight_submit_command,
+            'post': handle_postflight_submit_command,
+            'postflight': handle_postflight_submit_command,
+            # Session aliases
+            'sc': handle_session_create_command,
+            'sl': handle_sessions_list_command,
+            'sr': handle_sessions_resume_command,
+            'session-list': handle_sessions_list_command,
+            'session-show': handle_sessions_show_command,
+            'session-export': handle_sessions_export_command,
+            'session-resume': handle_sessions_resume_command,
+            # Goal aliases
+            'gc': handle_goals_create_command,
+            'gl': handle_goals_list_command,
+            'goal-create': handle_goals_create_command,
+            'goal-list': handle_goals_list_command,
+            'goal-complete': handle_goals_complete_command,
+            'goal-progress': handle_goals_progress_command,
+            'goal-add-subtask': handle_goals_add_subtask_command,
+            'goal-complete-subtask': handle_goals_complete_subtask_command,
+            # Logging aliases
+            'fl': handle_finding_log_command,
+            'ul': handle_unknown_log_command,
+            'de': handle_deadend_log_command,
+            # Project aliases
+            'pb': handle_project_bootstrap_command,
+            'bootstrap': handle_project_bootstrap_command,
         }
         
         if parsed_args.command in command_handlers:
