@@ -90,17 +90,18 @@ class LessonStorageManager:
             return
         try:
             from qdrant_client.models import Distance, VectorParams
+            from empirica.core.qdrant.embeddings import get_vector_size
             # Check if collection exists
             collections = self._qdrant.get_collections().collections
             exists = any(c.name == self._qdrant_collection for c in collections)
             if not exists:
-                # Create with 384 dimensions (for simple embeddings)
-                # In production, use model-specific size
+                # Use vector size from embeddings provider (auto-detects model)
+                vector_size = get_vector_size()
                 self._qdrant.create_collection(
                     collection_name=self._qdrant_collection,
-                    vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+                    vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE)
                 )
-                logger.info(f"Created Qdrant collection: {self._qdrant_collection}")
+                logger.info(f"Created Qdrant collection: {self._qdrant_collection} (dim={vector_size})")
         except Exception as e:
             logger.warning(f"Could not ensure Qdrant collection: {e}")
 
@@ -339,17 +340,9 @@ class LessonStorageManager:
         self._conn.commit()
 
     def _generate_embedding(self, text: str) -> List[float]:
-        """Generate embedding vector for text (placeholder - uses hash expansion)"""
-        # Simple deterministic embedding for now
-        # In production, use OpenAI/local embeddings
-        h = hashlib.md5(text.encode()).digest()
-        vector = []
-        for i in range(0, 384, 16):
-            # Expand hash to 384 dimensions
-            idx = i % 16
-            val = (h[idx] - 128) / 128.0
-            vector.extend([val] * min(24, 384 - len(vector)))
-        return vector[:384]
+        """Generate embedding vector for text using the core embeddings provider"""
+        from empirica.core.qdrant.embeddings import get_embedding
+        return get_embedding(text)
 
     # ==================== READ ====================
 
