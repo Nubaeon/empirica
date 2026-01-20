@@ -1,0 +1,28 @@
+{
+  "goal_id": "cab039cc-02df-4ad2-85d1-a2ef3c34b77a",
+  "session_id": "38526e07-6108-4c2b-9dde-5ec761506b9e",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-20T13:04:42.387219+00:00",
+  "goal_data": {
+    "objective": "Separate git notes refs: breadcrumbs (task context) vs empirica-precompact (epistemic state)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-20T13:04:42.387244+00:00",
+      "action": "created"
+    }
+  ]
+}
