@@ -1,4 +1,4 @@
-# System Prompts - Architecture v1.3.2
+# System Prompts - Architecture v1.3.3
 
 **Multi-AI system prompt management for Empirica**
 
@@ -122,11 +122,11 @@ empirica deadend-log --approach "..." --why-failed "..."
 | Version | Date | Changes |
 |---------|------|---------|
 | v7.2 | 2026-01-09 | **CRITICAL:** Fixed bias corrections (were backwards), updated calibration to 995 obs, added goals commands, four-layer storage architecture |
-| v1.3.2 | 2026-01-09 | Qdrant memory, lessons system, cognitive immune decay |
+| v1.3.3 | 2026-01-09 | Qdrant memory, lessons system, cognitive immune decay |
 | v1.2.3 | 2026-01-06 | Add self-serve knowledge (docs-explain), Claude calibration data |
 | v1.2.2 | 2026-01-01 | Canonical core + model deltas architecture |
 | v4.0 | 2025-12 | Single canonical prompt (deprecated) |
 
 ---
 
-**Syncs with:** Empirica v1.3.2
+**Syncs with:** Empirica v1.3.3
