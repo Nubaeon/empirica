@@ -1,4 +1,4 @@
-🍞 BREADCRUMBS - 2026-01-20T16:37:41+01:00
+🍞 BREADCRUMBS - 2026-01-20T16:38:35+01:00
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 BRANCH: develop
@@ -8,6 +8,7 @@ LAST_TASK:
 
 MODIFIED_FILES:
    M .breadcrumbs.yaml
+   M scripts/statusline_empirica.py
 
 RECENT_COMMITS:
   4cc21c67 [auto] Pre-compact snapshot - 2026-01-20 15:25:31
