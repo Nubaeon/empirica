@@ -626,6 +626,33 @@ class DocsExplainAgent:
         self.project_id = project_id or self._detect_project_id()
         self._qdrant_available: bool | None = None
 
+        # Fallback: if docs_dir doesn't exist, try to find Empirica's package docs
+        # This enables docs-explain to work from any directory, not just within the project
+        if not self.docs_dir.exists():
+            self.docs_dir = self._find_empirica_package_docs()
+
+    def _find_empirica_package_docs(self) -> Path:
+        """Find Empirica's installed package docs directory as fallback."""
+        try:
+            # Method 1: Use the package's __file__ location
+            import empirica
+            package_dir = Path(empirica.__file__).parent.parent
+            docs_candidate = package_dir / "docs"
+            if docs_candidate.exists():
+                return docs_candidate
+
+            # Method 2: Check common installation patterns
+            # For editable installs, the package is often in a 'empirica' subdir
+            if (package_dir / "empirica" / "__init__.py").exists():
+                docs_candidate = package_dir / "docs"
+                if docs_candidate.exists():
+                    return docs_candidate
+        except Exception:
+            pass
+
+        # Return original (non-existent) path if fallback fails
+        return self.root / "docs"
+
     def _detect_project_id(self) -> str | None:
         """Detect project ID from .empirica config or database."""
         try:
