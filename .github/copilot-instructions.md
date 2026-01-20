@@ -108,7 +108,7 @@ empirica session-create --ai-id myai --output json
 ```
 
 **What happens:**
-- Session UUID created in SQLite (`~/.empirica/sessions.db`)
+- Session UUID created in SQLite (project-local `.empirica/sessions/sessions.db`, falls back to `~/.empirica/` if no local dir)
 - Auto-maps to project via git remote URL
 - No component pre-loading (all lazy-load on-demand)
 - Ready for CASCADE workflow
