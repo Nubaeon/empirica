@@ -333,11 +333,27 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
         current_instance_id = None
 
     # Priority 1: Check LOCAL active_session file first (project-specific)
+    # Search UPWARD from CWD like git does for .git/
     # This prevents cross-pane bleeding in tmux when working on different projects
-    local_active_session = Path.cwd() / '.empirica' / 'active_session'
+    local_active_session = None
+    current = Path.cwd()
+    for parent in [current] + list(current.parents):
+        candidate = parent / '.empirica' / 'active_session'
+        if candidate.exists():
+            local_active_session = candidate
+            break
+        if parent == Path.home() or parent == parent.parent:
+            break  # Stop at home or filesystem root
+
     global_active_session = Path.home() / '.empirica' / 'active_session'
 
-    for active_session_file in [local_active_session, global_active_session]:
+    # Build list of files to check (local first if found)
+    files_to_check = []
+    if local_active_session:
+        files_to_check.append(local_active_session)
+    files_to_check.append(global_active_session)
+
+    for active_session_file in files_to_check:
         if active_session_file.exists():
             try:
                 session_id = active_session_file.read_text().strip()
@@ -704,14 +720,19 @@ def main():
         ai_id = get_ai_id()
 
         # Auto-detect project from current directory (like git does with .git/)
-        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) .empirica/ in cwd, 3) default
+        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) .empirica/ in cwd or parents, 3) global
         project_path = os.getenv('EMPIRICA_PROJECT_PATH')
 
         if not project_path:
-            # Check if current directory has .empirica/
-            cwd_db = Path.cwd() / '.empirica' / 'sessions' / 'sessions.db'
-            if cwd_db.exists():
-                project_path = str(Path.cwd())
+            # Search UPWARD for .empirica/ like git does for .git/
+            current = Path.cwd()
+            for parent in [current] + list(current.parents):
+                candidate_db = parent / '.empirica' / 'sessions' / 'sessions.db'
+                if candidate_db.exists():
+                    project_path = str(parent)
+                    break
+                if parent == Path.home() or parent == parent.parent:
+                    break
 
         if project_path:
             db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
@@ -725,8 +746,18 @@ def main():
                 db = SessionDatabase()
         session = get_active_session(db, ai_id)
 
+        # Always get project-level counts (goals are project-wide)
+        cursor = db.conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM goals WHERE status != 'completed'")
+        open_goals = cursor.fetchone()[0] or 0
+
         if not session:
-            print(f"{Colors.GRAY}[empirica:{ai_id}:inactive]{Colors.RESET}")
+            # No active session, but still show project-level data
+            if open_goals > 0:
+                print(f"{Colors.GRAY}[empirica]{Colors.RESET} {Colors.CYAN}🎯{open_goals}{Colors.RESET} │ {Colors.GRAY}no session{Colors.RESET}")
+            else:
+                print(f"{Colors.GRAY}[empirica:{ai_id}:inactive]{Colors.RESET}")
+            db.close()
             return
 
         session_id = session['session_id']
