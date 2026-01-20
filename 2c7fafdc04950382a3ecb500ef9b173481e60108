@@ -1,0 +1,27 @@
+🍞 BREADCRUMBS - 2026-01-20T14:13:33+01:00
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BRANCH: develop
+
+LAST_TASK:
+[Could not extract from transcript]
+
+MODIFIED_FILES: [Working tree clean]
+
+RECENT_COMMITS:
+  2c7fafdc [auto] Pre-compact snapshot - 2026-01-20 14:09:47
+  a4c4519b [auto] Pre-compact snapshot - 2026-01-20 10:58:55
+  ab198072 feat(autonomy): Add trust evolution with auto-escalation thresholds
+  7c139241 feat(autonomy): Add graduated Sentinel with trust-based autonomy modes
+  80dd4d15 feat(autonomy): Add trust-status command for domain-specific trust levels
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EPISTEMIC STATE (self-assess on resume)
+
+Please assess your current epistemic state:
+- CONFIDENCE: Rate 1-5 (1=guessing, 3=reasonable, 5=certain) where you are on understanding this codebase/task
+- UNCERTAINTIES: What are you unsure about? What needs verification?
+- KEY_DECISIONS: What important decisions were made that you should remember?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Continue from where you left off.
