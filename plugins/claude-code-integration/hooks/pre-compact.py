@@ -18,6 +18,85 @@ from pathlib import Path
 from datetime import datetime
 
 
+def write_git_notes(
+    session_id: str,
+    timestamp: str,
+    vectors: dict,
+    snapshot_filename: str,
+    breadcrumbs_summary: dict
+) -> bool:
+    """
+    Write epistemic state to git notes for post-compact reconstruction.
+
+    Contains:
+    1. Pre-compact vectors (for calibration comparison)
+    2. Timestamp linking to snapshot file
+    3. Session ID for retrieval
+    4. Retrieval hints (SQLite, Qdrant, git notes)
+    5. Self-assessment prompt (for calibration)
+    """
+    # Format key vectors for display
+    know = vectors.get('know', 'N/A')
+    uncertainty = vectors.get('uncertainty', 'N/A')
+    completion = vectors.get('completion', 'N/A')
+    context = vectors.get('context', 'N/A')
+
+    # Build the note content
+    note = f"""🧠 EMPIRICA PRE-COMPACT STATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Timestamp: {timestamp}
+Session: {session_id}
+Snapshot: {snapshot_filename}
+
+PRE-COMPACT VECTORS (compare with your post-compact self-assessment):
+  know={know}, uncertainty={uncertainty}
+  completion={completion}, context={context}
+
+BREADCRUMBS AVAILABLE:
+  Findings: {breadcrumbs_summary.get('findings_count', 0)}
+  Unknowns: {breadcrumbs_summary.get('unknowns_count', 0)}
+  Goals: {breadcrumbs_summary.get('goals_count', 0)}
+  Dead-ends: {breadcrumbs_summary.get('dead_ends_count', 0)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RETRIEVAL (if context feels incomplete):
+
+  # Full epistemic load
+  empirica project-bootstrap --session-id {session_id[:8]}...
+
+  # Semantic search (requires Qdrant)
+  empirica project-search --task "<what you need>"
+
+  # This snapshot
+  cat .empirica/ref-docs/{snapshot_filename}
+
+  # Recent git notes
+  git notes --ref=breadcrumbs show HEAD
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SELF-ASSESSMENT (for calibration):
+
+After reviewing the injected context, assess your epistemic state:
+- How does your current know/uncertainty compare to pre-compact?
+- What's missing that you expected to remember?
+- What retrieval would help fill gaps?
+
+This enables drift detection between pre and post compact states.
+"""
+
+    try:
+        subprocess.run(
+            ['git', 'notes', '--ref=empirica-precompact', 'add', '-f', '-m', note, 'HEAD'],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=os.getcwd()
+        )
+        return True
+    except Exception:
+        return False
+
+
 def find_project_root() -> Path:
     """
     Find the Empirica project root by searching for .empirica/ directory with valid database.
@@ -240,6 +319,16 @@ def main():
             with open(snapshot_path, 'w') as f:
                 json.dump(snapshot, f, indent=2)
 
+            # Write git notes with vectors, timestamp linkage, retrieval hints
+            session_id_for_notes = breadcrumbs.get('session_id') or empirica_session
+            git_notes_written = write_git_notes(
+                session_id=session_id_for_notes,
+                timestamp=timestamp,
+                vectors=fresh_vectors or fallback_vectors,
+                snapshot_filename=snapshot_path.name,
+                breadcrumbs_summary=snapshot['breadcrumbs_summary']
+            )
+
             # Determine which vectors to display
             display_vectors = fresh_vectors or fallback_vectors
             vector_source = "canonical" if fresh_vectors else "fallback"
@@ -250,10 +339,11 @@ def main():
                 "empirica_session_id": breadcrumbs.get('session_id'),
                 "snapshot_saved": True,
                 "snapshot_path": str(snapshot_path),
+                "git_notes_written": git_notes_written,
                 "vectors_source": vector_source,
                 "vectors_captured": len(display_vectors),
                 "goals_marked_stale": stale_goals_count,
-                "message": f"Pre-compact snapshot saved ({trigger} compact, {vector_source} vectors, {stale_goals_count} goals stale)"
+                "message": f"Pre-compact snapshot saved ({trigger} compact, {vector_source} vectors, git_notes={'yes' if git_notes_written else 'no'})"
             }), file=sys.stdout)
 
             # Also print user-visible message to stderr
@@ -261,6 +351,7 @@ def main():
             session_display = session_id_str[:8] if session_id_str else 'Unknown'
 
             stale_msg = f", {stale_goals_count} goals marked stale" if stale_goals_count > 0 else ""
+            notes_msg = "✓" if git_notes_written else "✗"
             print(f"""
 📸 Empirica: Pre-compact snapshot saved
    Session: {session_display}...
@@ -268,6 +359,7 @@ def main():
    Vectors: {vector_source} ({len(display_vectors)} captured){stale_msg}
    know={display_vectors.get('know', 'N/A')}, unc={display_vectors.get('uncertainty', 'N/A')}
    Snapshot: {snapshot_path.name}
+   Git notes: {notes_msg}
 """, file=sys.stderr)
 
             sys.exit(0)

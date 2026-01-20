@@ -29,6 +29,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash ${BREADCRUMBS_ROOT:-/home/yogapad/empirical-ai/breadcrumbs}/hooks/pre-compact.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
             "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.py",
             "timeout": 30
           }

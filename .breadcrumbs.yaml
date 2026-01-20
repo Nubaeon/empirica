@@ -29,29 +29,32 @@ task:
 
 
 
+
+
+
 # Bayesian calibration (auto-updated by Empirica POSTFLIGHT)
 calibration:
-  last_updated: "2026-01-20T10:57:07.987613"
+  last_updated: "2026-01-20T14:06:08.854259"
   ai_id: claude-code
-  observations: 1688
+  observations: 1727
   bias_corrections:
-    completion: +0.68
-    know: +0.25
-    uncertainty: -0.24
-    clarity: +0.23
-    state: +0.22
-    density: +0.19
-    context: +0.17
-    change: +0.15
-    do: +0.13
-    coherence: +0.13
-    signal: +0.03
+    completion: +0.73
+    know: -0.10
+    context: -0.08
+    clarity: -0.06
+    signal: -0.06
+    density: -0.06
+    uncertainty: +0.06
+    change: -0.05
+    engagement: -0.04
+    state: -0.02
+    coherence: -0.02
+    do: -0.02
     impact: -0.01
-    engagement: +0.01
   readiness:
     min_know: 0.70
     max_uncertainty: 0.35
   summary:
-    overestimates: [uncertainty]
-    underestimates: [completion, change, state, density, coherence, clarity, context, do, know]
-    well_calibrated: [impact, signal, engagement]
+    overestimates: []
+    underestimates: [completion]
+    well_calibrated: [uncertainty, impact, change, state, density]
