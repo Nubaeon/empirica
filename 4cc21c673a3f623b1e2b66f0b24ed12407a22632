@@ -1,0 +1,28 @@
+{
+  "goal_id": "4c40b456-b0dd-41bf-8323-35bcb73f710a",
+  "session_id": "371db463-0585-4bcf-9eb8-bb12190665f4",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-20T15:37:09.529951+00:00",
+  "goal_data": {
+    "objective": "Investigate why breadcrumbs pre-compact.sh hook doesn't execute during Claude Code compact despite working when run manually",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-20T15:37:09.529969+00:00",
+      "action": "created"
+    }
+  ]
+}
