@@ -60,16 +60,17 @@ def get_ai_id() -> str:
 
 def get_open_counts(db: SessionDatabase, session_id: str) -> dict:
     """
-    Get counts of open goals (project-wide) and unknowns (session-specific).
+    Get counts of open goals and unknowns (project-wide).
 
-    Goals are project-wide because work spans sessions.
-    Unknowns are session-specific as they're contextual to current work.
+    Goals and unknowns are project-wide because work spans sessions.
+    Goal-linked unknowns indicate blockers that need resolution.
 
     Returns:
         {
-            'open_goals': int,      # Goals not yet completed (project-wide)
-            'open_unknowns': int,   # Unknowns not yet resolved (session)
-            'completion': float,    # Latest completion vector (0.0-1.0)
+            'open_goals': int,           # Goals not yet completed (project-wide)
+            'open_unknowns': int,        # Unknowns not yet resolved (project-wide)
+            'goal_linked_unknowns': int, # Unresolved unknowns linked to goals (blockers)
+            'completion': float,         # Latest completion vector (0.0-1.0)
         }
     """
     cursor = db.conn.cursor()
@@ -82,13 +83,21 @@ def get_open_counts(db: SessionDatabase, session_id: str) -> dict:
     """)
     open_goals = cursor.fetchone()[0] or 0
 
-    # Count unresolved unknowns for this session
+    # Count unresolved unknowns PROJECT-WIDE (not session-specific)
     cursor.execute("""
         SELECT COUNT(*)
         FROM session_unknowns
-        WHERE session_id = ? AND is_resolved = FALSE
-    """, (session_id,))
+        WHERE is_resolved = FALSE
+    """)
     open_unknowns = cursor.fetchone()[0] or 0
+
+    # Count goal-linked unresolved unknowns (blockers)
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM session_unknowns
+        WHERE is_resolved = FALSE AND goal_id IS NOT NULL
+    """)
+    goal_linked_unknowns = cursor.fetchone()[0] or 0
 
     # Get completion from latest vector state
     cursor.execute("""
@@ -104,6 +113,7 @@ def get_open_counts(db: SessionDatabase, session_id: str) -> dict:
     return {
         'open_goals': open_goals,
         'open_unknowns': open_unknowns,
+        'goal_linked_unknowns': goal_linked_unknowns,
         'completion': completion,
     }
 
@@ -208,13 +218,14 @@ def format_open_counts(open_counts: dict) -> str:
     Shows what needs to be closed - useful for peeking into AI reality.
 
     Returns:
-        String like "🎯3 ❓6" (3 open goals, 6 open unknowns)
+        String like "🎯3 ❓6/4" (3 goals, 6 unknowns total, 4 goal-linked blockers)
     """
     if not open_counts:
         return f"{Colors.GRAY}--{Colors.RESET}"
 
     goals = open_counts.get('open_goals', 0)
     unknowns = open_counts.get('open_unknowns', 0)
+    goal_linked = open_counts.get('goal_linked_unknowns', 0)
 
     # Color code based on counts
     if goals == 0:
@@ -224,14 +235,21 @@ def format_open_counts(open_counts: dict) -> str:
     else:
         goal_color = Colors.CYAN
 
-    if unknowns == 0:
+    # Color unknowns based on goal-linked (blockers) count
+    if goal_linked == 0:
         unknown_color = Colors.GREEN
-    elif unknowns <= 3:
+    elif goal_linked <= 5:
         unknown_color = Colors.YELLOW
     else:
         unknown_color = Colors.CYAN
 
-    return f"{goal_color}🎯{goals}{Colors.RESET} {unknown_color}❓{unknowns}{Colors.RESET}"
+    # Format: ❓total/blockers (e.g., ❓119/70 means 119 unresolved, 70 blocking goals)
+    if goal_linked > 0 and goal_linked != unknowns:
+        unknown_str = f"❓{unknowns}/{goal_linked}"
+    else:
+        unknown_str = f"❓{unknowns}"
+
+    return f"{goal_color}🎯{goals}{Colors.RESET} {unknown_color}{unknown_str}{Colors.RESET}"
 
 
 def format_goal_progress(goal: dict, max_name_len: int = 12) -> str:
