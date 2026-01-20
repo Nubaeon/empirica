@@ -1,0 +1,28 @@
+🍞 BREADCRUMBS - 2026-01-20T16:37:32+01:00
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BRANCH: develop
+
+LAST_TASK:
+[Could not extract from transcript]
+
+MODIFIED_FILES:
+   M .breadcrumbs.yaml
+
+RECENT_COMMITS:
+  4cc21c67 [auto] Pre-compact snapshot - 2026-01-20 15:25:31
+  65e7d22e Merge pull request #23 from pschwinger/fix/docs-explain-fallback-to-package-docs
+  34bd5a96 Merge pull request #24 from pschwinger/develop
+  006090ff fix(storage): Use core embeddings provider instead of hardcoded 384-dim
+  116d31f3 docs: Update system prompts to v1.3.3
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EPISTEMIC STATE (self-assess on resume)
+
+Please assess your current epistemic state:
+- CONFIDENCE: Rate 1-5 (1=guessing, 3=reasonable, 5=certain) where you are on understanding this codebase/task
+- UNCERTAINTIES: What are you unsure about? What needs verification?
+- KEY_DECISIONS: What important decisions were made that you should remember?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Continue from where you left off.
