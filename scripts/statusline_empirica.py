@@ -713,7 +713,12 @@ def main():
             db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
             db = SessionDatabase(db_path=str(db_path))
         else:
-            db = SessionDatabase()
+            # Fallback to global hub at ~/.empirica/ instead of creating in CWD
+            global_db = Path.home() / '.empirica' / 'sessions' / 'sessions.db'
+            if global_db.exists():
+                db = SessionDatabase(db_path=str(global_db))
+            else:
+                db = SessionDatabase()
         session = get_active_session(db, ai_id)
 
         if not session:

@@ -153,17 +153,65 @@ mcp.submit_preflight_assessment(session_id, vectors, reasoning)
       "matcher": "compact",
       "hooks": [
         {"command": "python3 .../post-compact.py"},
-        {"command": "bash ${BREADCRUMBS_ROOT}/hooks/session-start.sh"}  // NEW
+        {"command": "bash ${BREADCRUMBS_ROOT}/hooks/session-start.sh"}
       ]
     }
   ]
 }
 ```
 
+### Breadcrumbs-Empirica Integration Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PRE-COMPACT FLOW                             │
+├─────────────────────────────────────────────────────────────────┤
+│  1. Empirica pre-compact.py captures:                           │
+│     - Current epistemic vectors                                 │
+│     - Session ID                                                │
+│     - Breadcrumbs summary (findings, unknowns, goals)           │
+│     → Saves to git notes: empirica-precompact                   │
+│                                                                 │
+│  2. Breadcrumbs pre-compact.sh captures:                        │
+│     - Task context from transcript                              │
+│     - Git state (branch, modified files)                        │
+│     - PR context (if applicable)                                │
+│     → Saves to git notes: breadcrumbs                           │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+                    [CONTEXT COMPACTED]
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                   POST-COMPACT FLOW                             │
+├─────────────────────────────────────────────────────────────────┤
+│  1. Empirica post-compact.py:                                   │
+│     - Detects phase state (COMPLETE vs INCOMPLETE)              │
+│     - Routes recovery (new session vs CHECK gate)               │
+│     - Loads confidence-weighted context                         │
+│     → Outputs: session instructions + epistemic focus           │
+│                                                                 │
+│  2. Breadcrumbs session-start.sh loads:                         │
+│     - Calibration from .breadcrumbs.yaml                        │
+│     - Task context from git notes (breadcrumbs)                 │
+│     - Epistemic state from git notes (empirica-precompact)      │
+│     → Outputs: context boxes + assessment prompt                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Files for Integration
+
+| File | Purpose |
+|------|---------|
+| `.breadcrumbs.yaml` | Calibration data (Empirica exports on POSTFLIGHT) |
+| `git notes --ref=breadcrumbs` | Task context (breadcrumbs captures) |
+| `git notes --ref=empirica-precompact` | Epistemic vectors (Empirica captures) |
+
 ### Migration
-If using custom hooks, add breadcrumbs integration:
+If using custom hooks, set the environment variable:
 ```bash
 export BREADCRUMBS_ROOT=/path/to/breadcrumbs
+# Or for installed plugin:
+export BREADCRUMBS_ROOT=~/.claude/plugins/local/breadcrumbs
 ```
 
 ---
@@ -257,6 +305,37 @@ empirica trust-status --output json
 # Test alias
 empirica pre --help
 # Should show preflight-submit help
+```
+
+---
+
+## 11. Statusline Fix
+
+### Issue
+Statusline was creating new `.empirica/` in CWD instead of falling back to global hub when not in a project directory.
+
+### Fix Applied
+When no local `.empirica/` exists, statusline now checks for global hub at `~/.empirica/`:
+
+```python
+# Old (broken)
+else:
+    db = SessionDatabase()  # Creates in CWD
+
+# New (fixed)
+else:
+    global_db = Path.home() / '.empirica' / 'sessions' / 'sessions.db'
+    if global_db.exists():
+        db = SessionDatabase(db_path=str(global_db))
+    else:
+        db = SessionDatabase()
+```
+
+### Verification
+```bash
+# From any directory
+python3 ~/empirical-ai/empirica/scripts/statusline_empirica.py
+# Should show session info from global hub
 ```
 
 ---
