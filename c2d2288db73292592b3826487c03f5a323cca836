@@ -1,0 +1,28 @@
+{
+  "goal_id": "1a4a3101-26c9-4a21-a042-18fa815b4ff2",
+  "session_id": "21ceaa7d-77f9-4d4e-93ff-e1ec725a5b39",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-20T19:19:56.980056+00:00",
+  "goal_data": {
+    "objective": "Fix documentation drift: Update docs referencing ~/.empirica/sessions.db to clarify hub vs spoke storage model (project-local .empirica/ is primary, ~/.empirica/ is global fallback)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-20T19:19:56.980080+00:00",
+      "action": "created"
+    }
+  ]
+}
