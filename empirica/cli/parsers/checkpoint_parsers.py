@@ -302,7 +302,7 @@ def add_checkpoint_parsers(subparsers):
     )
     project_search_parser.add_argument('--project-id', required=True, help='Project UUID')
     project_search_parser.add_argument('--task', required=True, help='Task description to search for')
-    project_search_parser.add_argument('--type', choices=['all', 'docs', 'memory'], default='all', help='Result type (default: all)')
+    project_search_parser.add_argument('--type', choices=['all', 'docs', 'memory', 'eidetic', 'episodic'], default='all', help='Result type: all, docs, memory, eidetic (facts), episodic (session arcs)')
     project_search_parser.add_argument('--limit', type=int, default=5, help='Number of results to return (default: 5)')
     project_search_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     project_search_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')

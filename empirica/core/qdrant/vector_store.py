@@ -337,10 +337,18 @@ def _rest_search(collection: str, vector: List[float], limit: int) -> List[Dict]
 
 def search(project_id: str, query_text: str, kind: str = "all", limit: int = 5) -> Dict[str, List[Dict]]:
     """
-    Semantic search over project docs and memory.
+    Semantic search over project docs, memory, eidetic facts, and episodic arcs.
+
+    Args:
+        project_id: Project UUID
+        query_text: Search query
+        kind: "all", "docs", "memory", "eidetic", or "episodic"
+        limit: Max results per collection
+
     Returns empty results if Qdrant not available.
     """
-    empty_result = {"docs": [], "memory": []} if kind == "all" else {kind: []}
+    all_kinds = ["docs", "memory", "eidetic", "episodic"]
+    empty_result = {k: [] for k in all_kinds} if kind == "all" else {kind: []}
 
     if not _check_qdrant_available():
         return empty_result
@@ -403,6 +411,58 @@ def search(project_id: str, query_text: str, kind: str = "all", limit: int = 5) 
         except Exception as e:
             logger.debug(f"memory query failed: {e}")
             results["memory"] = []
+
+    if kind in ("all", "eidetic"):
+        try:
+            eidetic_coll = _eidetic_collection(project_id)
+            if client.collection_exists(eidetic_coll):
+                re = client.query_points(
+                    collection_name=eidetic_coll,
+                    query=qvec,
+                    limit=limit,
+                    with_payload=True
+                )
+                results["eidetic"] = [
+                    {
+                        "score": getattr(r, 'score', 0.0) or 0.0,
+                        "type": (r.payload or {}).get("type"),
+                        "content": (r.payload or {}).get("content"),
+                        "confidence": (r.payload or {}).get("confidence"),
+                        "domain": (r.payload or {}).get("domain"),
+                    }
+                    for r in re.points
+                ]
+            else:
+                results["eidetic"] = []
+        except Exception as e:
+            logger.debug(f"eidetic query failed: {e}")
+            results["eidetic"] = []
+
+    if kind in ("all", "episodic"):
+        try:
+            episodic_coll = _episodic_collection(project_id)
+            if client.collection_exists(episodic_coll):
+                rep = client.query_points(
+                    collection_name=episodic_coll,
+                    query=qvec,
+                    limit=limit,
+                    with_payload=True
+                )
+                results["episodic"] = [
+                    {
+                        "score": getattr(r, 'score', 0.0) or 0.0,
+                        "type": (r.payload or {}).get("type"),
+                        "narrative": (r.payload or {}).get("narrative"),
+                        "session_id": (r.payload or {}).get("session_id"),
+                        "outcome": (r.payload or {}).get("outcome"),
+                    }
+                    for r in rep.points
+                ]
+            else:
+                results["episodic"] = []
+        except Exception as e:
+            logger.debug(f"episodic query failed: {e}")
+            results["episodic"] = []
 
     if results:
         return results

@@ -51,6 +51,7 @@ empirica/cli/command_handlers/action_commands.py
 empirica/cli/command_handlers/agent_commands.py
 empirica/cli/command_handlers/architecture_commands.py
 empirica/cli/command_handlers/ask_handler.py
+empirica/cli/command_handlers/autonomy_commands.py
 empirica/cli/command_handlers/chat_handler.py
 empirica/cli/command_handlers/checkpoint_commands.py
 empirica/cli/command_handlers/checkpoint_signing_commands.py
@@ -79,6 +80,7 @@ empirica/cli/command_handlers/onboard.py
 empirica/cli/command_handlers/onboard_handler.py
 empirica/cli/command_handlers/performance_commands.py
 empirica/cli/command_handlers/persona_commands.py
+empirica/cli/command_handlers/project_bootstrap.py
 empirica/cli/command_handlers/project_commands.py
 empirica/cli/command_handlers/project_config_enrichment.py
 empirica/cli/command_handlers/project_embed.py
@@ -99,6 +101,7 @@ empirica/cli/parsers/__init__.py
 empirica/cli/parsers/action_parsers.py
 empirica/cli/parsers/agent_parsers.py
 empirica/cli/parsers/architecture_parsers.py
+empirica/cli/parsers/autonomy_parsers.py
 empirica/cli/parsers/cascade_parsers.py
 empirica/cli/parsers/checkpoint_parsers.py
 empirica/cli/parsers/concept_graph_parsers.py
@@ -108,6 +111,7 @@ empirica/cli/parsers/epistemics_parsers.py
 empirica/cli/parsers/investigation_parsers.py
 empirica/cli/parsers/issue_capture_parsers.py
 empirica/cli/parsers/lesson_parsers.py
+empirica/cli/parsers/mcp_parsers.py
 empirica/cli/parsers/monitor_parsers.py
 empirica/cli/parsers/onboarding_parsers.py
 empirica/cli/parsers/performance_parsers.py
@@ -177,6 +181,9 @@ empirica/core/architecture_assessment/assessor.py
 empirica/core/architecture_assessment/coupling_analyzer.py
 empirica/core/architecture_assessment/schema.py
 empirica/core/architecture_assessment/stability_estimator.py
+empirica/core/autonomy/__init__.py
+empirica/core/autonomy/graduated_sentinel.py
+empirica/core/autonomy/trust_calculator.py
 empirica/core/canonical/__init__.py
 empirica/core/canonical/checkpoint_storage.py
 empirica/core/canonical/git_enhanced_reflex_logger.py
