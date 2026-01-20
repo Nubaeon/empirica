@@ -1,0 +1,27 @@
+🍞 BREADCRUMBS - 2026-01-20T16:16:34+01:00
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BRANCH: develop
+
+LAST_TASK:
+[Could not extract from transcript]
+
+MODIFIED_FILES: [Working tree clean]
+
+RECENT_COMMITS:
+  1d676101 [auto] Pre-compact snapshot - 2026-01-20 15:25:31
+  116d31f3 docs: Update system prompts to v1.3.3
+  342ef8cc feat(search): Make 'focused' (eidetic+episodic) the default
+  78e7f8b2 feat(qdrant): Add eidetic and episodic to unified search
+  2c7fafdc [auto] Pre-compact snapshot - 2026-01-20 14:09:47
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EPISTEMIC STATE (self-assess on resume)
+
+Please assess your current epistemic state:
+- CONFIDENCE: Rate 1-5 (1=guessing, 3=reasonable, 5=certain) where you are on understanding this codebase/task
+- UNCERTAINTIES: What are you unsure about? What needs verification?
+- KEY_DECISIONS: What important decisions were made that you should remember?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Continue from where you left off.
