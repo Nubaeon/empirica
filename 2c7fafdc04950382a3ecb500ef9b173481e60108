@@ -1,0 +1,28 @@
+{
+  "goal_id": "8ee1aaca-9ca3-4839-a5e5-83d98c0e93fd",
+  "session_id": "61a01ea2-c6c8-4d63-837f-56a145c9b8c5",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-20T13:38:09.115289+00:00",
+  "goal_data": {
+    "objective": "Add eidetic and episodic collections to search() function for unified semantic retrieval",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-20T13:38:09.115312+00:00",
+      "action": "created"
+    }
+  ]
+}
