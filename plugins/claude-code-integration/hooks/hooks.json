@@ -1,7 +1,7 @@
 {
   "description": "Empirica epistemic hooks - Sentinel gating + continuity management",
   "hooks": {
-    "PreToolCall": [
+    "PreToolUse": [
       {
         "matcher": "Edit|Write",
         "hooks": [

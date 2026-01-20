@@ -332,22 +332,26 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     except ImportError:
         current_instance_id = None
 
-    # Priority 1: Check active_session file
-    active_session_file = Path.home() / '.empirica' / 'active_session'
-    if active_session_file.exists():
-        try:
-            session_id = active_session_file.read_text().strip()
-            if session_id:
-                cursor.execute("""
-                    SELECT session_id, ai_id, start_time
-                    FROM sessions
-                    WHERE session_id = ? AND end_time IS NULL
-                """, (session_id,))
-                row = cursor.fetchone()
-                if row:
-                    return dict(row)
-        except Exception:
-            pass  # Fall through to other methods
+    # Priority 1: Check LOCAL active_session file first (project-specific)
+    # This prevents cross-pane bleeding in tmux when working on different projects
+    local_active_session = Path.cwd() / '.empirica' / 'active_session'
+    global_active_session = Path.home() / '.empirica' / 'active_session'
+
+    for active_session_file in [local_active_session, global_active_session]:
+        if active_session_file.exists():
+            try:
+                session_id = active_session_file.read_text().strip()
+                if session_id:
+                    cursor.execute("""
+                        SELECT session_id, ai_id, start_time
+                        FROM sessions
+                        WHERE session_id = ? AND end_time IS NULL
+                    """, (session_id,))
+                    row = cursor.fetchone()
+                    if row:
+                        return dict(row)
+            except Exception:
+                pass  # Try next file
 
     # Priority 2: Exact ai_id match (with instance isolation)
     if current_instance_id:

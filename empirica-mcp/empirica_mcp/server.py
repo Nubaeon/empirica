@@ -1460,8 +1460,13 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
                 db.close()
 
             # Update active_session file for statusline
+            # Prefer LOCAL .empirica/active_session if project exists (prevents tmux cross-pane bleeding)
             from pathlib import Path
-            active_session_file = Path.home() / '.empirica' / 'active_session'
+            local_empirica = Path.cwd() / '.empirica'
+            if local_empirica.exists():
+                active_session_file = local_empirica / 'active_session'
+            else:
+                active_session_file = Path.home() / '.empirica' / 'active_session'
             active_session_file.parent.mkdir(parents=True, exist_ok=True)
             active_session_file.write_text(session_id)
 
