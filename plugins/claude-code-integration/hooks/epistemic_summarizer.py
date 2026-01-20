@@ -16,8 +16,17 @@ TYPE_CONFIDENCE = {
     'finding': 0.9,      # Validated learnings - high confidence
     'dead_end': 0.85,    # Important to avoid - cost was paid
     'mistake': 0.85,     # Cost was paid, lesson is real
+    'subtask': 0.80,     # Structured work items - actionable
     'goal': 0.75,        # Structural, but context-dependent
     'unknown': 0.6,      # Questions, inherently uncertain
+}
+
+# Importance to impact mapping for subtasks (they don't have explicit impact scores)
+IMPORTANCE_TO_IMPACT = {
+    'critical': 0.95,
+    'high': 0.80,
+    'medium': 0.60,
+    'low': 0.40,
 }
 
 # Recency decay parameters
@@ -34,13 +43,18 @@ def calculate_weight(item: Dict, item_type: str) -> float:
 
     Args:
         item: Dictionary with 'impact' and timestamp fields
-        item_type: One of 'finding', 'dead_end', 'mistake', 'goal', 'unknown'
+        item_type: One of 'finding', 'dead_end', 'mistake', 'subtask', 'goal', 'unknown'
 
     Returns:
         Weight score between 0.0 and 1.0
     """
     # Impact from database, default 0.5 if not set
-    impact = item.get('impact', 0.5)
+    # Subtasks use importance field instead of impact
+    if item_type == 'subtask':
+        importance = item.get('importance', 'medium')
+        impact = IMPORTANCE_TO_IMPACT.get(importance, 0.6)
+    else:
+        impact = item.get('impact', 0.5)
 
     # Type-based confidence multiplier
     type_conf = TYPE_CONFIDENCE.get(item_type, 0.5)
@@ -102,6 +116,14 @@ def format_item(weight: float, item: Dict, item_type: str) -> str:
         text = item.get('objective', 'Unknown goal')
         status = item.get('status', 'pending')
         text = f"{text} ({status})"
+    elif item_type == 'subtask':
+        text = item.get('description', 'Unknown subtask')
+        importance = item.get('importance', 'medium')
+        goal_context = item.get('goal_objective', '')
+        if goal_context:
+            text = f"[{importance}] {text} (→ {goal_context})"
+        else:
+            text = f"[{importance}] {text}"
     elif item_type == 'mistake':
         text = item.get('mistake', 'Unknown mistake')
     else:
@@ -120,7 +142,9 @@ def format_epistemic_focus(
     dead_ends: List[Dict],
     goals: List[Dict],
     mistakes: Optional[List[Dict]] = None,
-    max_items: int = 15
+    subtasks: Optional[List[Dict]] = None,
+    max_items: int = 15,
+    session_id: Optional[str] = None
 ) -> str:
     """
     Format epistemically-weighted summary for injection.
@@ -134,7 +158,9 @@ def format_epistemic_focus(
         dead_ends: List of dead_end dicts with 'approach', 'why_failed', timestamp
         goals: List of goal dicts with 'objective', 'status', timestamp
         mistakes: Optional list of mistake dicts
+        subtasks: Optional list of subtask dicts with 'description', 'importance', timestamp
         max_items: Maximum items to include in output
+        session_id: Optional session ID for retrieval guidance
 
     Returns:
         Markdown-formatted epistemic focus section
@@ -153,6 +179,9 @@ def format_epistemic_focus(
     if mistakes:
         for m in mistakes:
             all_items.append((m, 'mistake'))
+    if subtasks:
+        for st in subtasks:
+            all_items.append((st, 'subtask'))
 
     if not all_items:
         return "## EPISTEMIC FOCUS\n\n*No breadcrumbs logged yet.*\n"
@@ -186,7 +215,13 @@ def format_epistemic_focus(
         lines.append("")
 
     lines.append("---")
-    lines.append(f"📊 **{len(ranked)} items ranked** | If context feels incomplete, ask for specific topics\n")
+
+    # Retrieval guidance footer
+    session_hint = f" --session-id {session_id}" if session_id else ""
+    lines.append(f"📊 **{len(ranked)} items ranked** | For deeper context:")
+    lines.append(f"- `empirica project-bootstrap{session_hint}` (full load + subtasks)")
+    lines.append(f"- `empirica project-search --task \"<query>\"` (Qdrant semantic)")
+    lines.append(f"- `git notes show --ref=breadcrumbs HEAD` (session narrative)\n")
 
     return "\n".join(lines)
 

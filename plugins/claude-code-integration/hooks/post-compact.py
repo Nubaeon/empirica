@@ -285,7 +285,7 @@ def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> di
 
         # 1. Active goals (incomplete, high priority)
         cursor.execute("""
-            SELECT id, objective, status, scope
+            SELECT id, objective, status, scope, created_timestamp
             FROM goals
             WHERE project_id = ? AND status IN ('active', 'in_progress', 'blocked')
             ORDER BY created_timestamp DESC LIMIT 3
@@ -295,8 +295,42 @@ def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> di
                 "id": row[0],
                 "objective": row[1],
                 "status": row[2],
-                "scope": row[3]
+                "scope": row[3],
+                "created_timestamp": row[4]
             })
+
+        # 1b. Load subtasks for each active goal (for continuity across sessions)
+        context["pending_subtasks"] = []
+        for goal in context["active_goals"]:
+            cursor.execute("""
+                SELECT id, description, status, importance, created_timestamp
+                FROM subtasks
+                WHERE goal_id = ? AND status != 'completed'
+                ORDER BY
+                    CASE importance
+                        WHEN 'critical' THEN 1
+                        WHEN 'high' THEN 2
+                        WHEN 'medium' THEN 3
+                        ELSE 4
+                    END,
+                    created_timestamp DESC
+                LIMIT 5
+            """, (goal["id"],))
+            subtasks = []
+            for st_row in cursor.fetchall():
+                subtask = {
+                    "id": st_row[0],
+                    "description": st_row[1],
+                    "status": st_row[2],
+                    "importance": st_row[3],
+                    "created_timestamp": st_row[4],
+                    "goal_id": goal["id"],
+                    "goal_objective": goal["objective"][:50]  # Truncate for context
+                }
+                subtasks.append(subtask)
+                # Also add to flat list for epistemic ranking
+                context["pending_subtasks"].append(subtask)
+            goal["subtasks"] = subtasks
 
         # 2. Recent findings from THIS session (last session's learnings)
         cursor.execute("""
@@ -471,6 +505,14 @@ def _generate_new_session_prompt(pre_vectors: dict, dynamic_context: dict, old_s
     If session_bootstrap is provided, the session was already created and bootstrapped
     by the hook - AI just needs to do PREFLIGHT with the loaded context.
     """
+    pre_know = pre_vectors.get('know', 'N/A')
+    pre_unc = pre_vectors.get('uncertainty', 'N/A')
+
+    # Determine session_id for retrieval guidance
+    new_session_id = None
+    if session_bootstrap and session_bootstrap.get('session_id'):
+        new_session_id = session_bootstrap['session_id']
+
     # Use epistemic summarizer for confidence-weighted ranking (no chronological fallback)
     if EPISTEMIC_SUMMARIZER_AVAILABLE:
         epistemic_focus = format_epistemic_focus(
@@ -478,7 +520,9 @@ def _generate_new_session_prompt(pre_vectors: dict, dynamic_context: dict, old_s
             unknowns=dynamic_context.get('open_unknowns', []),
             dead_ends=dynamic_context.get('critical_dead_ends', []),
             goals=dynamic_context.get('active_goals', []),
-            max_items=15
+            subtasks=dynamic_context.get('pending_subtasks', []),
+            max_items=15,
+            session_id=new_session_id
         )
     else:
         # Fallback to legacy formatting if summarizer not available
@@ -494,12 +538,8 @@ def _generate_new_session_prompt(pre_vectors: dict, dynamic_context: dict, old_s
 **Open Unknowns (unresolved questions):**
 {unknowns_text}"""
 
-    pre_know = pre_vectors.get('know', 'N/A')
-    pre_unc = pre_vectors.get('uncertainty', 'N/A')
-
     # If hook already created session and ran bootstrap, use that
-    if session_bootstrap and session_bootstrap.get('session_id'):
-        new_session_id = session_bootstrap['session_id']
+    if new_session_id:
         memory_text = _format_memory_context(session_bootstrap.get('memory_context'))
 
         return f"""
@@ -694,6 +734,10 @@ def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_contex
     CHECK is correct when session is INCOMPLETE (no POSTFLIGHT yet) -
     we're continuing work and need to validate readiness.
     """
+    pre_know = pre_vectors.get('know', 'N/A')
+    pre_unc = pre_vectors.get('uncertainty', 'N/A')
+    session_id = dynamic_context.get('session_context', {}).get('session_id', 'unknown')
+
     # Use epistemic summarizer for confidence-weighted ranking (no chronological fallback)
     if EPISTEMIC_SUMMARIZER_AVAILABLE:
         epistemic_focus = format_epistemic_focus(
@@ -701,7 +745,9 @@ def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_contex
             unknowns=dynamic_context.get('open_unknowns', []),
             dead_ends=dynamic_context.get('critical_dead_ends', []),
             goals=dynamic_context.get('active_goals', []),
-            max_items=15
+            subtasks=dynamic_context.get('pending_subtasks', []),
+            max_items=15,
+            session_id=session_id if session_id != 'unknown' else None
         )
     else:
         # Fallback to legacy formatting if summarizer not available
@@ -720,11 +766,6 @@ def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_contex
 
 **Dead Ends (approaches that failed):**
 {dead_ends_text}"""
-
-    pre_know = pre_vectors.get('know', 'N/A')
-    pre_unc = pre_vectors.get('uncertainty', 'N/A')
-
-    session_id = dynamic_context.get('session_context', {}).get('session_id', 'unknown')
 
     prompt = f"""
 ## POST-COMPACT CHECK GATE
