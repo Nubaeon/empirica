@@ -1,8 +1,8 @@
 🧠 EMPIRICA PRE-COMPACT STATE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Timestamp: 2026-01-20T15-25-32
+Timestamp: 2026-01-20T15-26-16
 Session: 61a01ea2-c6c8-4d63-837f-56a145c9b8c5
-Snapshot: pre_summary_2026-01-20T15-25-32.json
+Snapshot: pre_summary_2026-01-20T15-26-16.json
 
 PRE-COMPACT VECTORS (compare with your post-compact self-assessment):
   know=0.82, uncertainty=0.15
@@ -24,7 +24,7 @@ RETRIEVAL (if context feels incomplete):
   empirica project-search --task "<what you need>"
 
   # This snapshot
-  cat .empirica/ref-docs/pre_summary_2026-01-20T15-25-32.json
+  cat .empirica/ref-docs/pre_summary_2026-01-20T15-26-16.json
 
   # Recent git notes
   git notes --ref=breadcrumbs show HEAD
