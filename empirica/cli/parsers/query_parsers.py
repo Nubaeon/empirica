@@ -11,7 +11,7 @@ def add_query_parsers(subparsers):
 
     query_parser = subparsers.add_parser(
         'query',
-        help='Query epistemic breadcrumbs (findings, unknowns, deadends, mistakes, issues, handoffs)',
+        help='Query epistemic breadcrumbs (findings, unknowns, deadends, mistakes, issues, handoffs, blockers)',
         description='''
 Unified query interface for all epistemic breadcrumbs.
 
@@ -23,14 +23,15 @@ Examples:
   empirica query issues --status new
   empirica query handoffs --ai-id claude-code
   empirica query goals --status active
+  empirica query blockers --limit 10         # Goal-linked unknowns (blockers)
         '''
     )
 
     # Required: what to query
     query_parser.add_argument(
         'type',
-        choices=['findings', 'unknowns', 'deadends', 'mistakes', 'issues', 'handoffs', 'goals'],
-        help='Type of breadcrumb to query'
+        choices=['findings', 'unknowns', 'deadends', 'mistakes', 'issues', 'handoffs', 'goals', 'blockers'],
+        help='Type of breadcrumb to query (blockers = goal-linked unknowns)'
     )
 
     # Scope selection (consistent across all types)

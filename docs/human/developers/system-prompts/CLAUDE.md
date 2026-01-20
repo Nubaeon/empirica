@@ -76,9 +76,29 @@ empirica postflight-submit -    # Learning delta
 empirica finding-log --session-id <ID> --finding "..." --impact 0.7
 empirica unknown-log --session-id <ID> --unknown "..."
 empirica deadend-log --session-id <ID> --approach "..." --why-failed "..."
+
+# Blocker awareness
+empirica query blockers --limit 10   # Goal-linked unknowns blocking progress
 ```
 
 **IMPORTANT:** Don't infer flags - run `empirica <command> --help` when unsure.
+
+---
+
+## BLOCKER AWARENESS
+
+Before starting significant work, check what's blocking goals:
+
+```bash
+empirica query blockers --limit 10
+```
+
+This shows goal-linked unknowns sorted by impact. High-impact blockers should be:
+1. **Resolved** if you have the information
+2. **Investigated** if they're blocking your current goal
+3. **Logged with `--goal-id`** when creating new unknowns that block goals
+
+**Principle:** Don't create new goals while existing blockers remain unresolved.
 
 ---
 
