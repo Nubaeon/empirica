@@ -1,0 +1,28 @@
+{
+  "goal_id": "824ba5e3-e2ab-4dac-9ab6-0fc1ed407b23",
+  "session_id": "96d62eda-fc0d-42b6-94d7-6b9689a3d8cc",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-20T12:50:07.320722+00:00",
+  "goal_data": {
+    "objective": "Add git notes writing to pre-compact.py with vectors, timestamp linkage, and retrieval hints",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-20T12:50:07.320740+00:00",
+      "action": "created"
+    }
+  ]
+}
