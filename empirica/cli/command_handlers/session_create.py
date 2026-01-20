@@ -80,6 +80,12 @@ def handle_session_create_command(args):
         )
         db.close()  # Close connection before auto-capture (prevents lock)
 
+        # Update active_session file for statusline
+        from pathlib import Path
+        active_session_file = Path.home() / '.empirica' / 'active_session'
+        active_session_file.parent.mkdir(parents=True, exist_ok=True)
+        active_session_file.write_text(session_id)
+
         # NOTE: PREFLIGHT must be user-submitted with genuine vectors
         # Do NOT auto-generate - breaks continuity and learning metrics
         # Users must submit: empirica preflight-submit - < preflight.json
