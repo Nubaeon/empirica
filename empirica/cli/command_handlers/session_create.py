@@ -80,15 +80,23 @@ def handle_session_create_command(args):
         )
         db.close()  # Close connection before auto-capture (prevents lock)
 
-        # Update active_session file for statusline
-        # Prefer LOCAL .empirica/active_session if project exists (prevents tmux cross-pane bleeding)
-        # Fall back to global ~/.empirica/active_session
+        # Update active_session file for statusline (instance-specific)
+        # Uses instance_id (e.g., tmux:%0) to prevent cross-pane bleeding
         from pathlib import Path
+        from empirica.utils.session_resolver import get_instance_id
+
+        instance_id = get_instance_id()
+        instance_suffix = ""
+        if instance_id:
+            # Sanitize instance_id for filename (replace special chars)
+            safe_instance = instance_id.replace(":", "_").replace("%", "")
+            instance_suffix = f"_{safe_instance}"
+
         local_empirica = Path.cwd() / '.empirica'
         if local_empirica.exists():
-            active_session_file = local_empirica / 'active_session'
+            active_session_file = local_empirica / f'active_session{instance_suffix}'
         else:
-            active_session_file = Path.home() / '.empirica' / 'active_session'
+            active_session_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
         active_session_file.parent.mkdir(parents=True, exist_ok=True)
         active_session_file.write_text(session_id)
 

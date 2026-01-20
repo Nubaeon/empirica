@@ -350,26 +350,41 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     except ImportError:
         current_instance_id = None
 
-    # Priority 1: Check LOCAL active_session file first (project-specific)
+    # Priority 1: Check instance-specific active_session file
+    # Uses instance_id (e.g., tmux:%0) to prevent cross-pane bleeding
     # Search UPWARD from CWD like git does for .git/
-    # This prevents cross-pane bleeding in tmux when working on different projects
+
+    # Get instance_id for per-pane isolation
+    instance_suffix = ""
+    if current_instance_id:
+        # Sanitize instance_id for filename (replace special chars)
+        safe_instance = current_instance_id.replace(":", "_").replace("%", "")
+        instance_suffix = f"_{safe_instance}"
+
     local_active_session = None
     current = Path.cwd()
     for parent in [current] + list(current.parents):
-        candidate = parent / '.empirica' / 'active_session'
-        if candidate.exists():
-            local_active_session = candidate
+        # Try instance-specific file first, then generic
+        for filename in [f'active_session{instance_suffix}', 'active_session']:
+            candidate = parent / '.empirica' / filename
+            if candidate.exists():
+                local_active_session = candidate
+                break
+        if local_active_session:
             break
         if parent == Path.home() or parent == parent.parent:
             break  # Stop at home or filesystem root
 
-    global_active_session = Path.home() / '.empirica' / 'active_session'
+    global_active_session = Path.home() / '.empirica' / f'active_session{instance_suffix}'
+    global_active_session_fallback = Path.home() / '.empirica' / 'active_session'
 
-    # Build list of files to check (local first if found)
+    # Build list of files to check (instance-specific first)
     files_to_check = []
     if local_active_session:
         files_to_check.append(local_active_session)
     files_to_check.append(global_active_session)
+    if global_active_session != global_active_session_fallback:
+        files_to_check.append(global_active_session_fallback)
 
     for active_session_file in files_to_check:
         if active_session_file.exists():
