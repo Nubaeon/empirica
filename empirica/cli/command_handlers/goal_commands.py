@@ -40,6 +40,7 @@ def _check_for_similar_goals(objective: str, session_id: str = None, threshold: 
 
     # Normalize objective text for comparison
     def normalize(text: str) -> str:
+        """Normalize text for comparison by removing special characters and lowercasing."""
         return re.sub(r'[^\w\s]', '', text.lower().strip())
 
     normalized_objective = normalize(objective)

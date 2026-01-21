@@ -56,6 +56,7 @@ class FeatureCoverage:
             return "🌑"
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert coverage data to dictionary representation."""
         return {
             "name": self.name,
             "total": self.total,
@@ -75,6 +76,7 @@ class EpistemicDocsAgent:
     """
 
     def __init__(self, project_root: Path | None = None, verbose: bool = False):
+        """Initialize docs agent with optional project root and verbosity setting."""
         self.root = project_root or self._detect_project_root()
         self.verbose = verbose
         self.categories: list[FeatureCoverage] = []
@@ -915,6 +917,7 @@ class DocsExplainAgent:
     }
 
     def __init__(self, project_root: Path | None = None, project_id: str | None = None):
+        """Initialize explain agent with optional project root and project ID."""
         self.root = project_root or EpistemicDocsAgent._detect_project_root()
         self.docs_dir = self.root / "docs"
         self._docs_cache: dict[str, str] = {}

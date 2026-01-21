@@ -786,6 +786,7 @@ def handle_post_summary_drift_check(session_id: str, output_format: str, signali
     # Human-readable output
     # Traffic light emoji based on drift
     def get_drift_display(score):
+        """Return emoji and level label for a drift score."""
         if score is None:
             return "⚪", "Unknown"
         elif score < 0.1:
@@ -1383,7 +1384,7 @@ def _display_turtle_stack(vectors: dict, session_id: str = None, prompt: str = N
 
     # Moon phase indicators based on confidence levels
     def get_moon_phase(score: float) -> tuple:
-        """Return (emoji, status) based on score."""
+        """Return (emoji, status) tuple based on confidence score."""
         if score >= 0.85:
             return "🌕", "CRYSTALLINE"
         elif score >= 0.70:
