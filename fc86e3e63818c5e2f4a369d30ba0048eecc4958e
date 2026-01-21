@@ -1,0 +1,28 @@
+{
+  "goal_id": "44571dd6-13b2-453d-a4bb-f094266903b5",
+  "session_id": "a71fb003-d808-477a-9942-abc6d5525af0",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T20:31:02.734603+00:00",
+  "goal_data": {
+    "objective": "Remove sentinel-gate-minimal.py: Delete from both repo (plugins/claude-code-integration/hooks/) and local (~/.claude/plugins/local/empirica-integration/hooks/), update hooks.json to only use sentinel-gate.py, ensure local plugin uses the updated version",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.3,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T20:31:02.734621+00:00",
+      "action": "created"
+    }
+  ]
+}
