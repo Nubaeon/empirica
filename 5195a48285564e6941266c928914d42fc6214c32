@@ -1,0 +1,28 @@
+{
+  "goal_id": "364f086a-08c8-4d2c-aa92-4ad9eaa11167",
+  "session_id": "f9d9e666-0596-4334-8a9f-2d64cce418a1",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T19:28:33.995883+00:00",
+  "goal_data": {
+    "objective": "Reduce architecture risk in critical hotspots (session_database.py, git_enhanced_reflex_logger.py) before next release",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T19:28:33.995898+00:00",
+      "action": "created"
+    }
+  ]
+}
