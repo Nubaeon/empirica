@@ -1,8 +1,8 @@
 # Empirica CLI Commands - Unified Reference
 
-**Total Commands:** 108
-**Framework Version:** 1.3.2
-**Generated:** 2026-01-03
+**Total Commands:** 126
+**Framework Version:** 1.3.3
+**Generated:** 2026-01-21
 **Status:** Production Ready
 
 > **API Reference:** For Python API details, see [API Reference](../../reference/api/README.md). Each API doc includes relevant CLI commands.
@@ -29,9 +29,10 @@
 - **postflight-submit** - Submit postflight assessment results
 - **workflow** - Execute complete CASCADE workflow (preflight→think→plan→investigate→act→postflight)
 
-### 3. Goals & Tasks (11 commands)
+### 3. Goals & Tasks (16 commands)
 - **goals-create** - Create new goal with objective and scope
 - **goals-list** - List all goals for a session or project
+- **goals-list-all** - List all goals across all sessions
 - **goals-complete** - Mark a goal as completed
 - **goals-claim** - Claim a goal for work
 - **goals-add-subtask** - Add subtask to an existing goal
@@ -41,6 +42,10 @@
 - **goals-discover** - Discover new goals based on current state
 - **goals-ready** - List ready goals for immediate work
 - **goals-resume** - Resume work on a paused goal
+- **goals-search** - Semantic search across goals and subtasks
+- **goals-refresh** - Refresh goal activity timestamp
+- **goals-mark-stale** - Mark session goals as stale (for memory compaction)
+- **goals-get-stale** - Get list of stale goals
 
 ### 4. Project Management (8 commands)
 - **project-init** - Initialize new project with configuration
@@ -137,26 +142,43 @@
 - **sentinel-load-profile** - Load Sentinel safety profile
 - **sentinel-orchestrate** - Orchestrate multi-agent workflow with Sentinel gates
 
-### 18. Trajectory Commands (1 command)
+### 18. Trajectory Commands (4 commands)
 - **trajectory-project** - Project epistemic trajectory based on current learning curve
+- **trajectory-show** - Show epistemic trajectories with pattern analysis
+- **trajectory-stats** - Show trajectory statistics across sessions
+- **trajectory-backfill** - Backfill trajectory data from historic sessions
 
-### 19. Utilities (4 commands)
+### 19. MCP Server Commands (5 commands)
+- **mcp-start** - Start the Empirica MCP server
+- **mcp-stop** - Stop the Empirica MCP server
+- **mcp-status** - Show MCP server status
+- **mcp-test** - Test MCP server connectivity
+- **mcp-list-tools** - List available MCP tools
+
+### 20. Concept Commands (4 commands)
+- **concept-build** - Build concept index from project memory
+- **concept-stats** - Show concept statistics for project
+- **concept-top** - Show top concepts by frequency
+- **concept-related** - Find semantically related concepts
+
+### 21. Utilities (5 commands)
 - **goal-analysis** - Analyze goal completion patterns
 - **log-token-saving** - Log token savings from compression
 - **config** - Configure Empirica settings
 - **performance** - Show performance metrics
+- **compact-analysis** - Analyze epistemic loss during memory compaction
 
-### 20. Vision (1 command)
+### 22. Vision (1 command)
 - **vision** - Vision processing and analysis
 
-### 21. Epistemics (2 commands)
+### 23. Epistemics (2 commands)
 - **epistemics-list** - List epistemic assessments
 - **epistemics-show** - Show detailed epistemic assessment
 
-### 22. User Interface (1 command)
+### 24. User Interface (1 command)
 - **chat** - Interactive chat interface
 
-### 23. Release & Docs (2 commands)
+### 25. Release & Docs (2 commands)
 - **release-ready** - Check if codebase is ready for release (6-point verification)
 - **docs-assess** - Assess documentation coverage using epistemic vectors
 
@@ -310,6 +332,49 @@
 #### `goals-resume`
 **Purpose:** Resume work on a paused goal
 **Usage:** `empirica goals-resume --goal-id <goal_id>`
+
+#### `goals-list-all`
+**Purpose:** List all goals across all sessions (project-wide view)
+**Usage:** `empirica goals-list-all [options]`
+**Options:**
+- `--status`: Filter by status (active, completed, all) - default: active
+- `--limit`: Maximum goals to show (default: 20)
+- `--output`: Output format (json, human)
+
+#### `goals-search`
+**Purpose:** Semantic search across goals and subtasks using Qdrant
+**Usage:** `empirica goals-search <query> [options]`
+**Options:**
+- `--project-id`: Project ID (auto-detects if not provided)
+- `--type`: Filter by type (goal, subtask)
+- `--status`: Filter by status (in_progress, complete, pending)
+- `--ai-id`: Filter by AI identifier
+- `--limit`: Maximum results (default: 10)
+- `--sync`: Sync SQLite goals to Qdrant before searching
+- `--output`: Output format (json, human)
+
+#### `goals-refresh`
+**Purpose:** Refresh goal activity timestamp (mark as recently active)
+**Usage:** `empirica goals-refresh --goal-id <goal_id> [options]`
+**Options:**
+- `--goal-id`: Goal UUID to refresh (required)
+- `--output`: Output format (json, human)
+
+#### `goals-mark-stale`
+**Purpose:** Mark session goals as stale (called during memory compaction)
+**Usage:** `empirica goals-mark-stale --session-id <session_id> [options]`
+**Options:**
+- `--session-id`: Session UUID (required)
+- `--reason`: Reason for marking stale (default: memory_compact)
+- `--output`: Output format (json, human)
+
+#### `goals-get-stale`
+**Purpose:** Get list of goals marked as stale
+**Usage:** `empirica goals-get-stale [options]`
+**Options:**
+- `--session-id`: Filter by session ID
+- `--project-id`: Filter by project ID
+- `--output`: Output format (json, human)
 
 ---
 
@@ -618,6 +683,23 @@ empirica unknown-resolve \
 **Purpose:** Show performance metrics
 **Usage:** `empirica performance --session-id <session_id>`
 
+#### `compact-analysis`
+**Purpose:** Analyze epistemic loss during memory compaction
+**Usage:** `empirica compact-analysis [options]`
+**Options:**
+- `--include-tests`: Include test sessions (normally filtered)
+- `--min-findings`: Minimum findings count to include session (default: 0)
+- `--limit`: Maximum compact events to analyze (default: 20)
+- `--output`: Output format (json, human)
+
+**Notes:**
+Retroactively analyzes pre-compact snapshots vs post-compact assessments to measure knowledge loss and recovery during Claude Code memory compaction.
+
+Data Quality Filtering (default):
+- Excludes test sessions (ai_id: test*, *-test, storage-*)
+- Requires sessions with actual work evidence (findings/unknowns)
+- Filters rapid-fire sessions (< 5 min duration)
+
 ---
 
 ### Vision Commands
@@ -810,6 +892,99 @@ empirica unknown-resolve \
 - `--horizon`: How far to project (sessions, hours, tasks)
 - `--include-confidence`: Include confidence intervals
 
+#### `trajectory-show`
+**Purpose:** Show epistemic trajectories with pattern analysis
+**Usage:** `empirica trajectory-show [options]`
+**Options:**
+- `--session-id`: Filter by session ID
+- `--pattern`: Filter by pattern type (breakthrough, dead_end, stable, oscillating, unknown)
+- `--limit`: Maximum trajectories to show (default: 10)
+- `--output`: Output format (json, human)
+
+#### `trajectory-stats`
+**Purpose:** Show trajectory statistics across sessions
+**Usage:** `empirica trajectory-stats [options]`
+**Options:**
+- `--output`: Output format (json, human)
+
+#### `trajectory-backfill`
+**Purpose:** Backfill trajectory data from historic sessions
+**Usage:** `empirica trajectory-backfill [options]`
+**Options:**
+- `--min-phases`: Minimum phases required (default: 2)
+- `--analyze`: Run pattern analysis after backfill
+- `--output`: Output format (json, human)
+
+---
+
+### MCP Server Commands
+
+#### `mcp-start`
+**Purpose:** Start the Empirica MCP server
+**Usage:** `empirica mcp-start [options]`
+**Options:**
+- `--verbose, -v`: Show detailed output
+
+#### `mcp-stop`
+**Purpose:** Stop the Empirica MCP server
+**Usage:** `empirica mcp-stop [options]`
+**Options:**
+- `--verbose, -v`: Show detailed output
+
+#### `mcp-status`
+**Purpose:** Show MCP server status and process info
+**Usage:** `empirica mcp-status [options]`
+**Options:**
+- `--verbose, -v`: Show detailed process info
+
+#### `mcp-test`
+**Purpose:** Test MCP server connectivity
+**Usage:** `empirica mcp-test [options]`
+**Options:**
+- `--verbose, -v`: Show detailed output
+
+#### `mcp-list-tools`
+**Purpose:** List available MCP tools exposed by the server
+**Usage:** `empirica mcp-list-tools [options]`
+**Options:**
+- `--verbose, -v`: Show usage examples
+- `--show-all`: Include disabled/optional tools
+
+---
+
+### Concept Commands
+
+#### `concept-build`
+**Purpose:** Build concept index from project memory (findings, unknowns, etc.)
+**Usage:** `empirica concept-build [options]`
+**Options:**
+- `--project-id`: Project ID (auto-detects if not provided)
+- `--overwrite`: Overwrite existing concept data
+- `--output`: Output format (json, human)
+
+#### `concept-stats`
+**Purpose:** Show concept statistics for project
+**Usage:** `empirica concept-stats [options]`
+**Options:**
+- `--project-id`: Project ID (auto-detects if not provided)
+- `--output`: Output format (json, human)
+
+#### `concept-top`
+**Purpose:** Show top concepts by frequency
+**Usage:** `empirica concept-top [options]`
+**Options:**
+- `--project-id`: Project ID (auto-detects if not provided)
+- `--limit`: Maximum concepts to show (default: 20)
+- `--output`: Output format (json, human)
+
+#### `concept-related`
+**Purpose:** Find semantically related concepts
+**Usage:** `empirica concept-related <search_term> [options]`
+**Options:**
+- `--project-id`: Project ID (auto-detects if not provided)
+- `--limit`: Maximum related concepts to show (default: 10)
+- `--output`: Output format (json, human)
+
 ---
 
 ### Skills Commands (Extended)
@@ -894,6 +1069,6 @@ empirica --verbose check --session-id xyz # CHECK with debugging
 
 ---
 
-**Generated from:** empirica --help output (2025-12-28)
-**Total Commands:** 86
-**Framework Version:** 1.3.2
+**Generated from:** empirica --help output (2026-01-21)
+**Total Commands:** 126
+**Framework Version:** 1.3.3

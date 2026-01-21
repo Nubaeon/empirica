@@ -2057,11 +2057,7 @@ class SessionDatabase:
             context_markdown = generate_context_markdown(breadcrumbs)
             breadcrumbs['context_markdown'] = context_markdown
 
-        # 9. Apply adaptive depth filtering if needed
-        if depth != "auto" or trigger == "post_compact":
-            breadcrumbs = self._apply_depth_filter(breadcrumbs, depth, trigger)
-
-        # 10. Calculate flow state metrics (AI productivity patterns)
+        # 9. Calculate flow state metrics (AI productivity patterns)
         try:
             flow_metrics = self.calculate_flow_metrics(resolved_id, limit=5)
             if flow_metrics and flow_metrics.get('current_flow'):
@@ -2070,7 +2066,7 @@ class SessionDatabase:
             logger.debug(f"Flow metrics calculation skipped: {e}")
             # Flow metrics are optional - don't fail bootstrap if calculation errors
 
-        # 11. Calculate health score (epistemic quality and completeness)
+        # 10. Calculate health score (epistemic quality and completeness)
         try:
             health_score = self.calculate_health_score(resolved_id, limit=5)
             if health_score:
@@ -2079,7 +2075,7 @@ class SessionDatabase:
             logger.debug(f"Health score calculation skipped: {e}")
             # Health score is optional - don't fail bootstrap if calculation errors
 
-        # 12. Load feature status from FEATURE_STATUS.md
+        # 11. Load feature status from FEATURE_STATUS.md
         try:
             feature_status = self._load_feature_status(project_root)
             if feature_status:
@@ -2089,6 +2085,10 @@ class SessionDatabase:
                     breadcrumbs['health_score']['feature_completion'] = feature_status
         except Exception as e:
             logger.debug(f"Feature status load skipped: {e}")
+
+        # 12. Apply adaptive depth filtering LAST (after all fields populated)
+        if depth != "auto" or trigger == "post_compact":
+            breadcrumbs = self._apply_depth_filter(breadcrumbs, depth, trigger)
 
         return breadcrumbs
 
@@ -2268,10 +2268,16 @@ class SessionDatabase:
         Apply adaptive depth filtering to breadcrumbs based on drift or explicit depth.
 
         Depth levels:
-        - minimal: Last 5 findings/unknowns, current goal only (~500 tokens)
-        - moderate: Last 10 findings/unknowns, all active goals (~1500 tokens)
-        - full: All findings/unknowns, all goals, all ref-docs (~3000-5000 tokens)
+        - minimal: Essentials only (~2k tokens) - findings/unknowns/goals limited, no file_tree
+        - moderate: Balanced context (~8k tokens) - limited lists, no verbose metadata
+        - full: Complete context (unlimited) - all fields included
         - auto: Determine depth based on drift (if post_compact trigger)
+
+        Key optimizations:
+        - Strip redundant 'finding_data' JSON from findings (duplicates text)
+        - Remove file_tree for minimal/moderate (expensive, rarely needed by MCP)
+        - Remove verbose metadata like database_summary, structure_health
+        - Limit active_goals (often stale accumulation)
         """
         if depth == "auto" and trigger == "post_compact":
             # Calculate drift from pre-snapshot to current
@@ -2308,18 +2314,63 @@ class SessionDatabase:
             except:
                 depth = "moderate"  # Fallback to moderate on error
 
+        # Shared slimming helpers for depth filtering
+        def _slim_finding(f: dict) -> dict:
+            return {'finding': f.get('finding'), 'impact': f.get('impact')}
+
+        def _slim_unknown(u: dict) -> dict:
+            return {'unknown': u.get('unknown'), 'is_resolved': u.get('is_resolved', False)}
+
+        def _slim_goal(g: dict) -> dict:
+            return {
+                'id': g.get('id', '')[:8],  # Short ID
+                'objective': g.get('objective'),
+                'status': g.get('status')
+            }
+
+        def _slim_dead_end(d: dict) -> dict:
+            return {'approach': d.get('approach'), 'why_failed': d.get('why_failed')}
+
         # Apply depth filter
         if depth == "minimal":
-            breadcrumbs['findings'] = breadcrumbs.get('findings', [])[:5]
-            breadcrumbs['unknowns'] = breadcrumbs.get('unknowns', [])[:5]
-            breadcrumbs['goals'] = [g for g in breadcrumbs.get('goals', []) if 'current' in str(g).lower()][:1]
-            breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:3]
+            # ~2k tokens target: essentials only
+            breadcrumbs['findings'] = [_slim_finding(f) for f in breadcrumbs.get('findings', [])[:5]]
+            breadcrumbs['unknowns'] = [_slim_unknown(u) for u in breadcrumbs.get('unknowns', [])[:5]]
+            breadcrumbs['dead_ends'] = [_slim_dead_end(d) for d in breadcrumbs.get('dead_ends', [])[:3]]
+            breadcrumbs['mistakes_to_avoid'] = breadcrumbs.get('mistakes_to_avoid', [])[:2]
+            breadcrumbs['goals'] = [_slim_goal(g) for g in breadcrumbs.get('goals', [])[:1]]
+            breadcrumbs['active_goals'] = [_slim_goal(g) for g in breadcrumbs.get('active_goals', [])[:2]]
+            breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:2]
+            # Remove expensive/verbose fields entirely
+            for key in ['file_tree', 'git_status', 'database_summary', 'structure_health',
+                       'flow_metrics', 'health_score', 'recent_artifacts', 'active_sessions',
+                       'integrity_analysis', 'feature_status', 'findings_with_goals',
+                       'epistemic_artifacts', 'ai_activity', 'semantic_docs', 'available_skills',
+                       'key_decisions', 'incomplete_work', 'auto_captured_issues', 'truncation_warnings']:
+                breadcrumbs.pop(key, None)
+
         elif depth == "moderate":
-            breadcrumbs['findings'] = breadcrumbs.get('findings', [])[:10]
-            breadcrumbs['unknowns'] = breadcrumbs.get('unknowns', [])[:10]
-            breadcrumbs['goals'] = breadcrumbs.get('goals', [])[:5]
+            # ~8k tokens target: balanced context for MCP
+            breadcrumbs['findings'] = [_slim_finding(f) for f in breadcrumbs.get('findings', [])[:10]]
+            breadcrumbs['unknowns'] = [_slim_unknown(u) for u in breadcrumbs.get('unknowns', [])[:10]]
+            breadcrumbs['dead_ends'] = [_slim_dead_end(d) for d in breadcrumbs.get('dead_ends', [])[:5]]
+            breadcrumbs['mistakes_to_avoid'] = breadcrumbs.get('mistakes_to_avoid', [])[:5]
+            breadcrumbs['goals'] = [_slim_goal(g) for g in breadcrumbs.get('goals', [])[:5]]
+            breadcrumbs['active_goals'] = [_slim_goal(g) for g in breadcrumbs.get('active_goals', [])[:5]]
             breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:5]
-        # depth == "full": no filtering
+            breadcrumbs['incomplete_work'] = breadcrumbs.get('incomplete_work', [])[:3]
+            breadcrumbs['auto_captured_issues'] = breadcrumbs.get('auto_captured_issues', [])[:3]
+            # Remove expensive/verbose fields
+            for key in ['file_tree', 'database_summary', 'structure_health',
+                       'integrity_analysis', 'epistemic_artifacts', 'semantic_docs',
+                       'available_skills', 'findings_with_goals', 'recent_artifacts',
+                       'active_sessions', 'ai_activity', 'key_decisions']:
+                breadcrumbs.pop(key, None)
+            # Remove flow_metrics/health_score entirely for moderate (still verbose)
+            breadcrumbs.pop('flow_metrics', None)
+            breadcrumbs.pop('health_score', None)
+
+        # depth == "full": no filtering (keep everything)
 
         return breadcrumbs
 
