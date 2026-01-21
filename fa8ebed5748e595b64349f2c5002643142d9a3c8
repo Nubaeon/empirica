@@ -1,0 +1,32 @@
+{
+  "goal_id": "6e2cf5e1-8ab3-4320-bc95-3fd9f74b4b22",
+  "session_id": "0545c8c3-975b-496e-8400-62e5b15c716b",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-21T19:31:56.533706+00:00",
+  "goal_data": {
+    "objective": "Create calibration-report CLI command that generates clean calibration analysis from vector_trajectories (gap from expected, excludes tests, shows trends)",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "empirica calibration-report command exists",
+      "Uses vector_trajectories as source (not polluted bayesian_beliefs)",
+      "Shows per-vector gaps from expected, sample sizes, trends over time",
+      "Filters out test sessions and default 0.5 values",
+      "Output can be used to update system prompts"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-21T19:31:56.533717+00:00",
+      "action": "created"
+    }
+  ]
+}
