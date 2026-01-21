@@ -239,6 +239,7 @@ Use this to maintain context continuity without full conversation history.
         meta = ['UNCERTAINTY']
 
         def format_group(name: str, vectors: List[str]) -> str:
+            """Format a group of vectors with name, scores, and visual bars."""
             lines = [f"\n**{name}:**"]
             for v in vectors:
                 score = self.vectors.get(v, 0.0)

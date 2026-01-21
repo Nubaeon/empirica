@@ -20,55 +20,6 @@ T = TypeVar('T', bound=BaseModel)
 
 
 # =============================================================================
-# Noetic Concept Model (AI-provided semantic concepts)
-# =============================================================================
-
-class NoeticConcept(BaseModel):
-    """
-    A noetic concept explicitly provided by AI during CASCADE phases.
-
-    Instead of post-hoc regex extraction, AI semantically selects what's
-    eidetically relevant and provides structured concepts for embedding.
-
-    Valid fact_types:
-    - task_understanding: PREFLIGHT - Why this task matters, constraints, stakeholders
-    - decision_rationale: CHECK - Why proceed/investigate, approach selection reasoning
-    - learning_insight: POSTFLIGHT - Patterns discovered, generalizable knowledge
-    - rejected_alternative: Path considered but not taken - preserves decision context
-    - conditional_knowledge: Knowledge with validity conditions - when/where it applies
-    - concept_link: Relationship between concepts - enables graph traversal
-    - reasoning_chain: Hypothesis → Evidence → Conclusion - preserves inference path
-    """
-    fact_type: str = Field(
-        description="Type of noetic concept (task_understanding, decision_rationale, etc.)"
-    )
-    content: str = Field(
-        min_length=10, max_length=500,
-        description="The concept content - what you learned/decided/understood"
-    )
-    confidence: float = Field(
-        default=0.7, ge=0.0, le=1.0,
-        description="How confident you are in this concept (0.0-1.0)"
-    )
-    tags: Optional[List[str]] = Field(
-        default=None,
-        description="Additional context tags (e.g., ['architecture', 'performance'])"
-    )
-
-    @field_validator('fact_type')
-    @classmethod
-    def validate_fact_type(cls, v: str) -> str:
-        valid_types = {
-            'task_understanding', 'decision_rationale', 'learning_insight',
-            'epistemic_principle', 'rejected_alternative', 'conditional_knowledge',
-            'concept_link', 'reasoning_chain'
-        }
-        if v not in valid_types:
-            raise ValueError(f'Invalid fact_type: {v}. Must be one of: {valid_types}')
-        return v
-
-
-# =============================================================================
 # CASCADE Workflow Input Models
 # =============================================================================
 
@@ -84,7 +35,7 @@ class VectorValues(BaseModel):
     density: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Information density")
     state: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Current state")
     change: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Rate of change")
-    completion: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Task completion")
+    completion: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Phase-aware completion: NOETIC='Have I learned enough?' PRAXIC='Have I implemented enough?'")
     impact: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Expected impact")
     do: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Execution capability")
 
@@ -95,10 +46,6 @@ class PreflightInput(BaseModel):
     vectors: Dict[str, float] = Field(description="Epistemic vector values")
     reasoning: Optional[str] = Field(default="", max_length=5000, description="Reasoning for assessment")
     task_context: Optional[str] = Field(default="", max_length=2000, description="Context for pattern retrieval")
-    noetic_concepts: Optional[List[Dict]] = Field(
-        default=None,
-        description="AI-provided noetic concepts (semantic selection, not regex extraction)"
-    )
 
     @field_validator('session_id')
     @classmethod
@@ -140,14 +87,11 @@ class CheckInput(BaseModel):
     vectors: Optional[Dict[str, float]] = Field(default=None, description="Updated vector values")
     approach: Optional[str] = Field(default="", max_length=2000, description="Planned approach")
     reasoning: Optional[str] = Field(default="", max_length=5000, description="Reasoning for check")
-    noetic_concepts: Optional[List[Dict]] = Field(
-        default=None,
-        description="AI-provided noetic concepts (decision rationale, rejected alternatives)"
-    )
 
     @field_validator('session_id')
     @classmethod
     def validate_session_id(cls, v: str) -> str:
+        """Validate session_id is non-empty."""
         if not v or not v.strip():
             raise ValueError('session_id cannot be empty')
         return v.strip()
@@ -155,6 +99,7 @@ class CheckInput(BaseModel):
     @field_validator('vectors')
     @classmethod
     def validate_vectors(cls, v: Optional[Dict[str, float]]) -> Optional[Dict[str, float]]:
+        """Validate optional vector values are in valid 0.0-1.0 range."""
         if v is None:
             return v
         for key, value in v.items():
@@ -172,14 +117,11 @@ class PostflightInput(BaseModel):
     reasoning: Optional[str] = Field(default="", max_length=5000, description="Reasoning for assessment")
     learnings: Optional[str] = Field(default="", max_length=5000, description="Key learnings from session")
     goal_id: Optional[str] = Field(default=None, max_length=100, description="Associated goal ID")
-    noetic_concepts: Optional[List[Dict]] = Field(
-        default=None,
-        description="AI-provided noetic concepts (learning insights, causal patterns)"
-    )
 
     @field_validator('session_id')
     @classmethod
     def validate_session_id(cls, v: str) -> str:
+        """Validate session_id is non-empty."""
         if not v or not v.strip():
             raise ValueError('session_id cannot be empty')
         return v.strip()
@@ -187,6 +129,7 @@ class PostflightInput(BaseModel):
     @field_validator('vectors')
     @classmethod
     def validate_vectors(cls, v: Dict[str, float]) -> Dict[str, float]:
+        """Validate required vector values are in valid 0.0-1.0 range."""
         if not v:
             raise ValueError('vectors cannot be empty')
         for key, value in v.items():

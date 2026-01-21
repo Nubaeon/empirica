@@ -106,4 +106,37 @@ SCHEMAS = [
                 )
     """,
 
+    # Schema 5: AI suggestions for earned autonomy
+    # Tracks suggestions made by AI, their domain, confidence, and review status
+    # Used for calculating domain-specific trust and graduated autonomy
+    """
+    CREATE TABLE IF NOT EXISTS suggestions (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    project_id TEXT,
+
+                    -- Suggestion content
+                    suggestion TEXT NOT NULL,
+                    domain TEXT,
+                    confidence REAL NOT NULL,
+                    rationale TEXT,
+
+                    -- Lifecycle: pending -> reviewed -> accepted/rejected/modified
+                    status TEXT DEFAULT 'pending',
+                    reviewed_by TEXT,
+                    review_notes TEXT,
+                    review_outcome TEXT,
+
+                    -- Timestamps
+                    created_timestamp REAL NOT NULL,
+                    reviewed_timestamp REAL,
+
+                    -- Metadata
+                    suggestion_data TEXT,
+
+                    FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+                    FOREIGN KEY (project_id) REFERENCES projects(id)
+                )
+    """,
+
 ]

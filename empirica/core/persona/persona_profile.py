@@ -23,6 +23,7 @@ class SigningIdentityConfig:
     reputation_score: float = 0.5
 
     def to_dict(self) -> Dict:
+        """Convert to dictionary representation."""
         return asdict(self)
 
 @dataclass
@@ -74,6 +75,7 @@ class EpistemicConfig:
             raise ValueError(f"Weights must sum to 1.0, got {weight_sum}")
 
     def to_dict(self) -> Dict:
+        """Convert to dictionary representation."""
         return asdict(self)
 
 @dataclass
@@ -88,6 +90,7 @@ class CapabilitiesConfig:
     restricted_operations: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict:
+        """Convert to dictionary representation."""
         return asdict(self)
 
 @dataclass
@@ -98,6 +101,7 @@ class EscalationTrigger:
     priority: str = "medium"  # low, medium, high, critical
 
     def to_dict(self) -> Dict:
+        """Convert to dictionary representation."""
         return asdict(self)
 
 @dataclass
@@ -110,6 +114,7 @@ class SentinelConfig:
     requires_sentinel_approval_before_act: bool = False
 
     def to_dict(self) -> Dict:
+        """Convert sentinel config to dictionary representation."""
         result = asdict(self)
         # Convert escalation triggers
         result['escalation_triggers'] = [t.to_dict() for t in self.escalation_triggers]
@@ -135,6 +140,7 @@ class PersonaMetadata:
             self.modified_at = self.created_at
 
     def to_dict(self) -> Dict:
+        """Convert to dictionary representation."""
         return asdict(self)
 
 @dataclass

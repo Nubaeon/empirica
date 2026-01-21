@@ -339,7 +339,52 @@ sentinel.start_loop()    sentinel.check_compliance()   sentinel.complete_loop()
 
 ---
 
+## Claude Code Hook Integration
+
+The Sentinel also integrates with Claude Code via a PreToolUse hook that gates praxic tools (Edit, Write, certain Bash commands).
+
+### Hook: sentinel-gate.py
+
+Location: `plugins/claude-code-integration/hooks/sentinel-gate.py`
+
+**Behavior:**
+1. Intercepts Edit, Write, and non-read-only Bash commands
+2. Checks for valid CHECK with `decision="proceed"`
+3. Blocks if no CHECK or CHECK returned "investigate"
+4. Validates vector thresholds (know >= 0.70, uncertainty <= 0.35)
+
+**Environment Variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EMPIRICA_SENTINEL_LOOPING` | `true` | Set to `false` to disable Sentinel gating entirely |
+| `EMPIRICA_SENTINEL_CHECK_EXPIRY` | `false` | Set to `true` to enable 30-minute CHECK expiry |
+
+**Note on CHECK Expiry:** The age-based expiry is disabled by default because users may pause work and resume later. Wall-clock time doesn't reflect actual session activity. Enable with caution.
+
+### hooks.json Configuration
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{
+          "type": "command",
+          "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/sentinel-gate.py",
+          "timeout": 10
+        }]
+      }
+    ]
+  }
+}
+```
+
+---
+
 ## Source Files
 
 - `empirica/core/sentinel/orchestrator.py` - Main Sentinel class
 - `empirica/core/sentinel/decision_logic.py` - Persona selection logic
+- `plugins/claude-code-integration/hooks/sentinel-gate.py` - Claude Code hook

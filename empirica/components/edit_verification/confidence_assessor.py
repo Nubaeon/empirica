@@ -24,6 +24,7 @@ class EditConfidenceAssessor:
     """
     
     def __init__(self):
+        """Initialize confidence assessor with default thresholds and cache."""
         self.context_freshness_cache: Dict[str, datetime] = {}
         self.confidence_threshold_atomic = 0.70  # Use atomic edit if >= 0.70
         self.confidence_threshold_fallback = 0.40  # Use bash if < 0.70, >= 0.40

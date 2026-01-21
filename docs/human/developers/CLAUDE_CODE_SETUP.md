@@ -61,7 +61,7 @@ pip install empirica-mcp
 Verify:
 ```bash
 empirica --version
-# Should show: 1.3.2
+# Should show: 1.4.0
 ```
 
 ---
@@ -353,7 +353,9 @@ empirica session-create --ai-id test-setup --output json
 
 # Verify statusline (if configured)
 python3 /path/to/empirica/scripts/statusline_empirica.py
-# Should show: [empirica] ⚡84% │ no goal │ PREFLIGHT │ K:90% U:15% C:90% │ ✓ stable
+# Should show: [empirica] ⚡84% │ 🎯3 ❓2 │ PREFLIGHT │ K:90% U:15% C:90% │ ✓ stable
+#                                 ↑     ↑
+#                           open goals  open unknowns (project-wide)
 ```
 
 In Claude Code, ask:

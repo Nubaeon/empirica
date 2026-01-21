@@ -30,7 +30,8 @@ REALTIME_DIR = Path("/tmp/empirica_realtime")
 class CascadeMonitor:
     """Minimalist CASCADE monitor for tmux dashboard"""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize CASCADE monitor with database connection."""
         self.db = SessionDatabase()
         self.last_cascade_id = None
         self.last_update = 0

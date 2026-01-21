@@ -16,7 +16,8 @@ from datetime import datetime, timedelta
 class DeprecationDetector:
     """Detect deprecated features using multiple signals"""
     
-    def __init__(self, project_root: Optional[str] = None):
+    def __init__(self, project_root: Optional[str] = None) -> None:
+        """Initialize detector with project root directory."""
         self.project_root = Path(project_root) if project_root else Path.cwd()
         self.docs_dir = self.project_root / "docs"
         

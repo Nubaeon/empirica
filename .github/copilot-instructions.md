@@ -1,7 +1,7 @@
 # Empirica System Prompt - Lean v7.1
 
 **Single Source of Truth for Empirica Cognitive OS**
-**Syncs with:** Empirica v1.3.2
+**Syncs with:** Empirica v1.4.0
 **Status:** AUTHORITATIVE
 
 ---
@@ -108,7 +108,7 @@ empirica session-create --ai-id myai --output json
 ```
 
 **What happens:**
-- Session UUID created in SQLite (`~/.empirica/sessions.db`)
+- Session UUID created in SQLite (project-local `.empirica/sessions/sessions.db`, falls back to `~/.empirica/` if no local dir)
 - Auto-maps to project via git remote URL
 - No component pre-loading (all lazy-load on-demand)
 - Ready for CASCADE workflow

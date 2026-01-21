@@ -1,16 +1,16 @@
 # Empirica Docker Image (Alpine - Security Hardened)
 # Smaller attack surface, musl libc, minimal packages
 #
-# Build: docker build -f Dockerfile.alpine -t empirica:1.3.2-alpine .
-# Run:   docker run -it --rm empirica:1.3.2-alpine empirica --help
-# Shell: docker run -it --rm empirica:1.3.2-alpine /bin/sh
+# Build: docker build -f Dockerfile.alpine -t empirica:1.4.0-alpine .
+# Run:   docker run -it --rm empirica:1.4.0-alpine empirica --help
+# Shell: docker run -it --rm empirica:1.4.0-alpine /bin/sh
 
 # Use latest Alpine for security patches
 FROM python:3.11-alpine3.23
 
 LABEL maintainer="Empirica Team"
 LABEL description="Epistemic self-assessment framework for AI agents"
-LABEL version="1.3.2"
+LABEL version="1.4.0"
 LABEL security.hardened="true"
 
 # Set working directory
@@ -24,14 +24,14 @@ RUN apk add --no-cache \
     && rm -rf /var/cache/apk/*
 
 # Copy package files
-COPY dist/empirica-1.3.2-py3-none-any.whl /tmp/
+COPY dist/empirica-1.4.0-py3-none-any.whl /tmp/
 
 # Upgrade pip and setuptools first (CVE-2025-47273, CVE-2024-6345)
 RUN pip install --no-cache-dir --upgrade pip setuptools
 
 # Install Empirica with no cache
-RUN pip install --no-cache-dir --no-compile /tmp/empirica-1.3.2-py3-none-any.whl \
-    && rm /tmp/empirica-1.3.2-py3-none-any.whl \
+RUN pip install --no-cache-dir --no-compile /tmp/empirica-1.4.0-py3-none-any.whl \
+    && rm /tmp/empirica-1.4.0-py3-none-any.whl \
     && pip cache purge 2>/dev/null || true
 
 # Create directory for user data

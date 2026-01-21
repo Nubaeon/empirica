@@ -158,7 +158,10 @@ def handle_goals_claim_command(args):
                 
                 # Create mock args for preflight
                 class MockArgs:
-                    def __init__(self, session_id, prompt):
+                    """Mock arguments for calling preflight handler."""
+
+                    def __init__(self, session_id: str, prompt: str) -> None:
+                        """Initialize mock args with session ID and prompt."""
                         self.session_id = session_id
                         self.prompt = prompt
                         self.prompt_only = False

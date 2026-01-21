@@ -1,14 +1,17 @@
 # Multi-Project Storage Architecture
 
-**Version:** 1.3.2 | **Status:** Production
+**Version:** 1.4.0 | **Status:** Production
 
 ---
 
 ## Overview
 
-Empirica uses a **hub-and-spoke** architecture for multi-project setups:
-- **Hub:** Global `~/.empirica/` contains the central database and vector store
-- **Spokes:** Each git repo has its own `.empirica/` for project-specific artifacts
+Empirica uses a **project-local primary** architecture:
+- **Primary:** Each git repo has its own `.empirica/sessions/sessions.db` for all project data
+- **Global:** `~/.empirica/` stores only credentials, config, and cross-project Qdrant vectors
+- **Fallback:** If no local `.empirica/` exists, falls back to `~/.empirica/`
+
+**Key principle:** Data follows the project. When you `cd` into a repo, you get that project's sessions, goals, and findings.
 
 ```
                               ┌─────────────────────────────────────────┐
@@ -106,7 +109,8 @@ Empirica uses a **hub-and-spoke** architecture for multi-project setups:
 - Goal/task tracking
 
 ### Layer 2: WARM (SQLite)
-- `~/.empirica/sessions/sessions.db`
+- `<project>/.empirica/sessions/sessions.db` (PRIMARY - project-local)
+- Falls back to `~/.empirica/sessions/sessions.db` if no local dir
 - All structured data: sessions, projects, reflexes, goals
 - Fast queries for recent context
 
@@ -274,15 +278,18 @@ Qdrant runs as separate service for semantic memory.
 
 ## File Locations Summary
 
-| Artifact | Global Location | Project Location |
-|----------|-----------------|------------------|
-| Sessions DB | `~/.empirica/sessions/sessions.db` | - |
-| Qdrant vectors | `~/.empirica/qdrant_storage/` | - |
-| Global lessons | `~/.empirica/lessons/*.yaml` | - |
-| Project lessons | - | `<repo>/.empirica/lessons/*.yaml` |
-| Git checkpoints | - | `<repo>/.git/refs/notes/empirica/` |
-| Config | `~/.empirica/config.yaml` | `<repo>/.empirica/config.yaml` |
-| Personas | `~/.empirica/personas/` | `<repo>/.empirica/personas/` |
+| Artifact | Primary (Project-Local) | Fallback (Global) |
+|----------|------------------------|-------------------|
+| Sessions DB | `<repo>/.empirica/sessions/sessions.db` | `~/.empirica/sessions/sessions.db` |
+| Qdrant vectors | - | `~/.empirica/qdrant_storage/` (always global) |
+| Global lessons | - | `~/.empirica/lessons/*.yaml` |
+| Project lessons | `<repo>/.empirica/lessons/*.yaml` | - |
+| Git checkpoints | `<repo>/.git/refs/notes/empirica/` | - |
+| Config | `<repo>/.empirica/config.yaml` | `~/.empirica/config.yaml` |
+| Personas | `<repo>/.empirica/personas/` | `~/.empirica/personas/` |
+| Credentials | - | `~/.empirica/credentials.yaml` (always global) |
+
+**Resolution order:** Project-local `.empirica/` is checked first. Falls back to `~/.empirica/` only if local dir doesn't exist.
 
 ---
 

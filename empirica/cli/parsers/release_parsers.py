@@ -49,6 +49,33 @@ def add_release_parsers(subparsers):
         default='human',
         help='Output format'
     )
+    docs_parser.add_argument(
+        '--check-docstrings',
+        action='store_true',
+        help='Check Python code for missing docstrings (functions, classes, modules)'
+    )
+    docs_parser.add_argument(
+        '--turtle',
+        action='store_true',
+        help='Epistemic recursive mode: iterate between code and docs to surface gaps'
+    )
+    docs_parser.add_argument(
+        '--check-staleness',
+        action='store_true',
+        help='Detect stale docs by cross-referencing with recent findings, dead-ends, and mistakes'
+    )
+    docs_parser.add_argument(
+        '--staleness-threshold',
+        type=float,
+        default=0.7,
+        help='Minimum similarity threshold for staleness detection (default: 0.7)'
+    )
+    docs_parser.add_argument(
+        '--staleness-days',
+        type=int,
+        default=30,
+        help='Look back N days for memory items (default: 30)'
+    )
 
     # Docs explain - focused information retrieval
     explain_parser = subparsers.add_parser(

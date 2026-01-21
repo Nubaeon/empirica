@@ -45,6 +45,7 @@ class BasicImageAssessment:
     notes: str = ""
     
     def to_dict(self) -> Dict:
+        """Convert image assessment to dictionary representation."""
         return asdict(self)
 
 
@@ -52,6 +53,7 @@ class VisionAnalyzer:
     """Simple vision analyzer for core Empirica"""
     
     def __init__(self):
+        """Initialize vision analyzer, requiring PIL/Pillow installation."""
         if not HAS_PIL:
             raise ImportError(
                 "PIL/Pillow required for vision analysis. "

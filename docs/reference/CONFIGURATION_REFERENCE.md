@@ -614,6 +614,10 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
   - `observer`: Passive oversight - log warnings but don't block AI actions
   - `controller`: Active oversight - block actions when appropriate
   - `auto`: Same as controller (default behavior)
+- `EMPIRICA_SENTINEL_CHECK_EXPIRY`: Enable 30-minute CHECK expiry (`true`, `false`, default: `false`)
+  - When `true`: CHECK is invalidated after 30 minutes, requiring fresh CHECK before praxic tools
+  - When `false` (default): No time-based expiry - useful for paused sessions
+  - Note: Disabled by default because users may pause work and resume later
 
 ### Vector Search & Embeddings (Qdrant)
 
@@ -635,7 +639,7 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 
 - `EMPIRICA_INSTANCE_ID`: Explicit override for session instance identification. Used for multi-Claude environments.
 - `EMPIRICA_AUTOPILOT_MODE`: Enable binding Sentinel decisions (`true`, `false`, default: `false`). When `true`, CHECK decisions are enforced (not suggestive).
-- `EMPIRICA_STATUS_MODE`: Status display mode for statusline (`balanced`, `minimal`, `verbose`)
+- `EMPIRICA_STATUS_MODE`: Status display mode for statusline (`basic`, `default`, `learning`, `full`). Default: `default`. Shows confidence, open goals/unknowns, phase, vectors, and drift status.
 
 ### Features
 

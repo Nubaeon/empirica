@@ -115,7 +115,7 @@ class SessionDatabase:
             SessionRepository, CascadeRepository, GoalRepository,
             BranchRepository, BreadcrumbRepository, ProjectRepository,
             TokenRepository, CommandRepository, WorkspaceRepository,
-            VectorRepository
+            VectorRepository, MetricsRepository
         )
         self.sessions = SessionRepository(self.conn)
         self.cascades = CascadeRepository(self.conn)
@@ -127,6 +127,7 @@ class SessionDatabase:
         self.commands = CommandRepository(self.conn)
         self.workspace = WorkspaceRepository(self.conn)
         self.vectors = VectorRepository(self.conn)
+        self.metrics = MetricsRepository(self.conn)
 
         # Core repositories need special handling to avoid circular dependency
         # We'll initialize them lazily when first accessed
@@ -699,357 +700,12 @@ class SessionDatabase:
         return self.sessions.get_session_summary(session_id, detail_level)
 
     def calculate_flow_metrics(self, project_id: str, limit: int = 5) -> Dict:
-        """
-        Calculate flow state metrics for recent sessions in a project.
-
-        Flow state = optimal AI productivity characterized by:
-        - High engagement + capability (know/do)
-        - Clear goals + low uncertainty
-        - Meaningful progress (completion/impact)
-
-        Args:
-            project_id: Project UUID
-            limit: Number of recent sessions to analyze (default: 5)
-
-        Returns:
-            Dict with flow scores, trend, blockers, and triggers
-        """
-        from .flow_state_calculator import (
-            calculate_flow_score,
-            classify_flow_state,
-            calculate_flow_trend,
-            identify_flow_blockers,
-            check_flow_triggers
-        )
-
-        # Get recent sessions with POSTFLIGHT vectors
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT
-                s.session_id,
-                s.ai_id,
-                s.start_time,
-                r.engagement, r.know, r.do, r.context,
-                r.clarity, r.coherence, r.signal, r.density,
-                r.state, r.change, r.completion, r.impact, r.uncertainty
-            FROM sessions s
-            JOIN reflexes r ON s.session_id = r.session_id
-            WHERE s.project_id = ?
-            AND r.phase = 'POSTFLIGHT'
-            ORDER BY r.timestamp DESC
-            LIMIT ?
-        """, (project_id, limit))
-
-        rows = cursor.fetchall()
-
-        if not rows:
-            return {
-                'flow_scores': [],
-                'current_flow': None,
-                'trend': None,
-                'blockers': [],
-                'triggers_present': {}
-            }
-
-        # Calculate flow score for each session
-        flow_data = []
-        for row in rows:
-            session_id = row[0]
-            ai_id = row[1]
-            start_time = row[2]
-
-            # Build vectors dict from columns
-            vectors = {
-                'engagement': row[3],
-                'know': row[4],
-                'do': row[5],
-                'context': row[6],
-                'clarity': row[7],
-                'coherence': row[8],
-                'signal': row[9],
-                'density': row[10],
-                'state': row[11],
-                'change': row[12],
-                'completion': row[13],
-                'impact': row[14],
-                'uncertainty': row[15]
-            }
-
-            # Calculate flow score
-            flow_score = calculate_flow_score(vectors)
-            state_name, emoji = classify_flow_state(flow_score)
-            
-            # Calculate component contributions for display
-            components = {
-                'engagement': vectors['engagement'] * 0.25 * 100,
-                'capability': ((vectors['know'] + vectors['do']) / 2) * 0.20 * 100,
-                'clarity': vectors['clarity'] * 0.15 * 100,
-                'confidence': (1.0 - vectors['uncertainty']) * 0.15 * 100,
-                'completion': vectors['completion'] * 0.10 * 100,
-                'impact': vectors['impact'] * 0.10 * 100,
-                'coherence': vectors['coherence'] * 0.05 * 100
-            }
-            
-            # Generate recommendations based on low vectors
-            recommendations = identify_flow_blockers(vectors)
-
-            flow_data.append({
-                'session_id': session_id,
-                'ai_id': ai_id,
-                'start_time': start_time,
-                'flow_score': flow_score,
-                'flow_state': state_name,
-                'emoji': emoji,
-                'vectors': vectors,
-                'components': components,
-                'recommendations': recommendations
-            })
-
-        # Get latest (most recent) session data
-        latest = flow_data[0] if flow_data else None
-
-        # Calculate trend
-        flow_scores = [f['flow_score'] for f in reversed(flow_data)]  # Oldest to newest
-        trend_desc, trend_emoji = calculate_flow_trend(flow_scores) if len(flow_scores) >= 2 else ("Not enough data", "")
-
-        # Identify blockers from latest session
-        blockers = identify_flow_blockers(latest['vectors']) if latest else []
-
-        # Check flow triggers
-        triggers_present = check_flow_triggers(latest['vectors']) if latest else {}
-
-        return {
-            'flow_scores': flow_data,
-            'current_flow': latest,
-            'average_flow': round(sum(flow_scores) / len(flow_scores), 1) if flow_scores else 0.0,
-            'trend': {
-                'description': trend_desc,
-                'emoji': trend_emoji
-            },
-            'blockers': blockers,
-            'triggers_present': triggers_present
-        }
+        """Calculate flow state metrics (delegates to MetricsRepository)"""
+        return self.metrics.calculate_flow_metrics(project_id, limit)
 
     def calculate_health_score(self, project_id: str, limit: int = 5) -> Dict:
-        """
-        Calculate epistemic health score for recent sessions in a project.
-
-        Health score measures:
-        - Epistemic completeness (findings, unknowns resolution)
-        - Knowledge quality (clarity, coherence, signal)
-        - Progress tracking (completion, impact)
-        - Error reduction (mistakes, dead ends)
-
-        Args:
-            project_id: Project UUID
-            limit: Number of recent sessions to analyze (default: 5)
-
-        Returns:
-            Dict with health score, trend, and component analysis
-        """
-        from .flow_state_calculator import calculate_flow_score
-
-        # Get recent sessions with POSTFLIGHT vectors
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT
-                s.session_id,
-                s.ai_id,
-                s.start_time,
-                r.engagement, r.know, r.do, r.context,
-                r.clarity, r.coherence, r.signal, r.density,
-                r.state, r.change, r.completion, r.impact, r.uncertainty
-            FROM sessions s
-            JOIN reflexes r ON s.session_id = r.session_id
-            WHERE s.project_id = ?
-            AND r.phase = 'POSTFLIGHT'
-            ORDER BY r.timestamp DESC
-            LIMIT ?
-        """, (project_id, limit))
-
-        rows = cursor.fetchall()
-
-        if not rows:
-            return {
-                'health_score': 0.0,
-                'trend': 'Not enough data',
-                'components': {}
-            }
-
-        # Calculate health score for each session
-        health_data = []
-        for row in rows:
-            session_id = row[0]
-            ai_id = row[1]
-            start_time = row[2]
-
-            # Build vectors dict from columns
-            vectors = {
-                'engagement': row[3],
-                'know': row[4],
-                'do': row[5],
-                'context': row[6],
-                'clarity': row[7],
-                'coherence': row[8],
-                'signal': row[9],
-                'density': row[10],
-                'state': row[11],
-                'change': row[12],
-                'completion': row[13],
-                'impact': row[14],
-                'uncertainty': row[15]
-            }
-
-            # Calculate health score (0-100)
-            health_score = self._calculate_session_health_score(vectors)
-
-            health_data.append({
-                'session_id': session_id,
-                'ai_id': ai_id,
-                'start_time': start_time,
-                'health_score': health_score,
-                'vectors': vectors
-            })
-
-        # Get latest (most recent) session data
-        latest = health_data[0] if health_data else None
-
-        # Calculate trend
-        health_scores = [h['health_score'] for h in reversed(health_data)]  # Oldest to newest
-        trend_desc, trend_emoji = self._calculate_health_trend(health_scores) if len(health_scores) >= 2 else ("Not enough data", "")
-
-        # Calculate component analysis
-        components = self._analyze_health_components(health_data)
-
-        return {
-            'health_scores': health_data,
-            'current_health': latest,
-            'average_health': round(sum(health_scores) / len(health_scores), 1) if health_scores else 0.0,
-            'trend': {
-                'description': trend_desc,
-                'emoji': trend_emoji
-            },
-            'components': components
-        }
-
-    def _calculate_session_health_score(self, vectors: Dict[str, float]) -> float:
-        """
-        Calculate health score (0-100) from epistemic vectors.
-
-        Health score formula:
-        - Knowledge Quality (30%): clarity + coherence + signal
-        - Epistemic Progress (25%): completion + impact
-        - Capability (20%): know + do
-        - Confidence (15%): low uncertainty
-        - Engagement (10%): focus and immersion
-
-        Args:
-            vectors: Dict of epistemic vectors (0.0-1.0)
-
-        Returns:
-            Health score (0-100)
-        """
-        # Extract vectors with defaults
-        clarity = vectors.get('clarity', 0.5)
-        coherence = vectors.get('coherence', 0.5)
-        signal = vectors.get('signal', 0.5)
-        completion = vectors.get('completion', 0.5)
-        impact = vectors.get('impact', 0.5)
-        know = vectors.get('know', 0.5)
-        do = vectors.get('do', 0.5)
-        uncertainty = vectors.get('uncertainty', 0.5)
-        engagement = vectors.get('engagement', 0.5)
-
-        # Calculate components
-        knowledge_quality = (clarity + coherence + signal) / 3.0
-        epistemic_progress = (completion + impact) / 2.0
-        capability = (know + do) / 2.0
-        confidence = 1.0 - uncertainty
-
-        # Calculate health score
-        health_score = (
-            knowledge_quality * 0.30 +
-            epistemic_progress * 0.25 +
-            capability * 0.20 +
-            confidence * 0.15 +
-            engagement * 0.10
-        )
-
-        return round(health_score * 100, 1)
-
-    def _calculate_health_trend(self, health_scores: List[float]) -> Tuple[str, str]:
-        """
-        Calculate health trend from multiple scores.
-
-        Args:
-            health_scores: List of health scores (oldest to newest)
-
-        Returns:
-            Tuple of (trend_description, trend_emoji)
-        """
-        if len(health_scores) < 2:
-            return "Not enough data", ""
-
-        # Calculate change
-        oldest = health_scores[0]
-        newest = health_scores[-1]
-        change = newest - oldest
-        percent_change = (change / oldest) * 100 if oldest > 0 else 0
-
-        # Determine trend
-        if percent_change > 15:
-            return f"📈 Improving ({percent_change:.0f}%)", "📈"
-        elif percent_change > 5:
-            return f"📉 Stable improvement ({percent_change:.0f}%)", "📉"
-        elif percent_change > -5:
-            return f"🔄 Stable ({percent_change:.0f}%)", "🔄"
-        elif percent_change > -15:
-            return f"📉 Declining ({percent_change:.0f}%)", "📉"
-        else:
-            return f"📉 Significant decline ({percent_change:.0f}%)", "📉"
-
-    def _analyze_health_components(self, health_data: List[Dict]) -> Dict:
-        """
-        Analyze health score components across sessions.
-
-        Args:
-            health_data: List of session health data
-
-        Returns:
-            Dict with component analysis
-        """
-        if not health_data:
-            return {}
-
-        # Calculate averages
-        latest = health_data[0]
-        vectors = latest['vectors']
-
-        return {
-            'knowledge_quality': {
-                'clarity': vectors.get('clarity', 0.5),
-                'coherence': vectors.get('coherence', 0.5),
-                'signal': vectors.get('signal', 0.5),
-                'average': (vectors.get('clarity', 0.5) + vectors.get('coherence', 0.5) + vectors.get('signal', 0.5)) / 3.0
-            },
-            'epistemic_progress': {
-                'completion': vectors.get('completion', 0.5),
-                'impact': vectors.get('impact', 0.5),
-                'average': (vectors.get('completion', 0.5) + vectors.get('impact', 0.5)) / 2.0
-            },
-            'capability': {
-                'know': vectors.get('know', 0.5),
-                'do': vectors.get('do', 0.5),
-                'average': (vectors.get('know', 0.5) + vectors.get('do', 0.5)) / 2.0
-            },
-            'confidence': {
-                'uncertainty': vectors.get('uncertainty', 0.5),
-                'confidence_score': 1.0 - vectors.get('uncertainty', 0.5)
-            },
-            'engagement': {
-                'engagement': vectors.get('engagement', 0.5)
-            }
-        }
+        """Calculate epistemic health score (delegates to MetricsRepository)"""
+        return self.metrics.calculate_health_score(project_id, limit)
 
     def _load_feature_status(self, project_root: str) -> Optional[Dict]:
         """
@@ -1697,39 +1353,71 @@ class SessionDatabase:
             logger.debug(f"Error getting git status: {e}")
             return None
     
-    def generate_file_tree(self, project_root: str, max_depth: int = 3, use_cache: bool = True) -> Optional[str]:
-        """Generate file tree respecting .gitignore
-        
+    def generate_file_tree(
+        self,
+        project_root: str,
+        max_depth: Optional[int] = None,  # Auto-detect if None
+        use_cache: bool = True,
+        max_chars: int = 8000,  # Truncate if larger
+        adaptive: bool = True   # Auto-reduce depth for large projects
+    ) -> Optional[str]:
+        """Generate file tree respecting .gitignore with smart sizing
+
+        SEARCH-FIRST ARCHITECTURE: Limits tree size to prevent context bloat.
+        Uses adaptive depth for large projects and truncates with warning.
+
         Args:
             project_root: Path to project root
-            max_depth: Tree depth (default: 3)
+            max_depth: Tree depth (auto-detected if None: 2 for large, 3 for small)
             use_cache: Use cached tree if <60s old
-            
+            max_chars: Max characters before truncation (default: 8000)
+            adaptive: Auto-reduce depth for large projects
+
         Returns:
             str: Tree output (plain text, no ANSI codes) or None if tree not available
         """
         import subprocess
         import time
         from pathlib import Path
-        
+
         # Check if tree is installed
         try:
             subprocess.run(["tree", "--version"], capture_output=True, check=True, timeout=1)
         except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
             logger.debug("tree command not available, skipping file tree generation")
             return None
-        
-        cache_key = f"tree_{Path(project_root).name}_{max_depth}"
-        cache_dir = Path(project_root) / ".empirica" / "cache"
+
+        root_path = Path(project_root)
+
+        # Adaptive depth: count top-level directories to estimate project size
+        if max_depth is None:
+            if adaptive:
+                try:
+                    # Count directories at depth 1 (excluding hidden and common large dirs)
+                    skip_dirs = {'.git', '.empirica', 'node_modules', '__pycache__', '.venv', 'venv', 'dist', 'build'}
+                    top_dirs = [d for d in root_path.iterdir() if d.is_dir() and d.name not in skip_dirs and not d.name.startswith('.')]
+
+                    if len(top_dirs) > 15:
+                        max_depth = 2  # Large project: shallow tree
+                        logger.debug(f"Adaptive depth: 2 (large project with {len(top_dirs)} top-level dirs)")
+                    else:
+                        max_depth = 3  # Normal project
+                except Exception:
+                    max_depth = 3
+            else:
+                max_depth = 3
+
+        cache_key = f"tree_{root_path.name}_{max_depth}_{max_chars}"
+        cache_dir = root_path / ".empirica" / "cache"
         cache_file = cache_dir / f"{cache_key}.txt"
-        
+
         # Check cache
         if use_cache and cache_file.exists():
             age = time.time() - cache_file.stat().st_mtime
             if age < 60:  # 60 second cache
                 logger.debug(f"Using cached file tree (age: {age:.1f}s)")
                 return cache_file.read_text()
-        
+
         # Generate tree
         cmd = [
             "tree",
@@ -1739,12 +1427,29 @@ class SessionDatabase:
             "-n",  # No color (plain text)
             project_root
         ]
-        
+
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-            
+
             if result.returncode == 0:
                 tree_output = result.stdout
+
+                # Truncate if too large
+                if len(tree_output) > max_chars:
+                    lines = tree_output.split('\n')
+                    truncated_lines = []
+                    char_count = 0
+                    for line in lines:
+                        if char_count + len(line) + 1 > max_chars - 100:  # Leave room for warning
+                            break
+                        truncated_lines.append(line)
+                        char_count += len(line) + 1
+
+                    tree_output = '\n'.join(truncated_lines)
+                    tree_output += f"\n\n... (truncated, showing {len(truncated_lines)} of {len(lines)} lines)"
+                    tree_output += "\n[Use 'tree -L 4' in Bash for full structure]"
+                    logger.debug(f"Truncated file tree from {len(lines)} to {len(truncated_lines)} lines")
+
                 # Cache it
                 cache_dir.mkdir(parents=True, exist_ok=True)
                 cache_file.write_text(tree_output)
@@ -1771,15 +1476,34 @@ class SessionDatabase:
         return project
 
     def _load_breadcrumbs_for_mode(self, project_id: str, mode: str, subject: Optional[str] = None) -> Dict:
-        """Load all breadcrumbs (findings, unknowns, dead_ends, mistakes, reference_docs) based on mode"""
+        """Load all breadcrumbs (findings, unknowns, dead_ends, mistakes, reference_docs) based on mode
+
+        SEARCH-FIRST ARCHITECTURE: Limits items to prevent context bloat.
+        Warns when items are truncated - AI should use Qdrant search for full context.
+        """
+        truncation_warnings = []
+
+        # Define limits for session_start mode
+        FINDINGS_LIMIT = 10
+        UNKNOWNS_LIMIT = 10
+        DEAD_ENDS_LIMIT = 5
+        MISTAKES_LIMIT = 5
+
         if mode == "session_start":
-            # FAST: Recent items only
-            findings = self.breadcrumbs.get_project_findings(project_id, limit=10, subject=subject)
-            unknowns = self.breadcrumbs.get_project_unknowns(project_id, resolved=False, subject=subject)
-            dead_ends = self.breadcrumbs.get_project_dead_ends(project_id, limit=5, subject=subject)
-            recent_mistakes = self.breadcrumbs.get_project_mistakes(project_id, limit=5)
+            # FAST: Recent items only with limits
+            findings = self.breadcrumbs.get_project_findings(project_id, limit=FINDINGS_LIMIT, subject=subject)
+
+            # Get unknowns with limit, count total for warning
+            all_unknowns = self.breadcrumbs.get_project_unknowns(project_id, resolved=False, subject=subject)
+            total_unknowns = len(all_unknowns)
+            unknowns = all_unknowns[:UNKNOWNS_LIMIT]
+            if total_unknowns > UNKNOWNS_LIMIT:
+                truncation_warnings.append(f"unknowns: showing {UNKNOWNS_LIMIT} of {total_unknowns} unresolved (use 'empirica project-search' for full list)")
+
+            dead_ends = self.breadcrumbs.get_project_dead_ends(project_id, limit=DEAD_ENDS_LIMIT, subject=subject)
+            recent_mistakes = self.breadcrumbs.get_project_mistakes(project_id, limit=MISTAKES_LIMIT)
         else:  # mode == "live"
-            # COMPLETE: All items
+            # COMPLETE: All items (no limits)
             findings = self.breadcrumbs.get_project_findings(project_id, subject=subject)
             unknowns = self.breadcrumbs.get_project_unknowns(project_id, subject=subject)
             dead_ends = self.breadcrumbs.get_project_dead_ends(project_id, subject=subject)
@@ -1787,7 +1511,7 @@ class SessionDatabase:
 
         reference_docs = self.breadcrumbs.get_project_reference_docs(project_id)
 
-        return {
+        result = {
             'findings': findings,
             'unknowns': unknowns,
             'dead_ends': dead_ends,
@@ -1795,9 +1519,39 @@ class SessionDatabase:
             'reference_docs': reference_docs
         }
 
-    def _load_goals_for_project(self, project_id: str) -> Dict:
-        """Load goals for project (delegates to GoalRepository)"""
-        return self.goals.get_project_goals(project_id)
+        if truncation_warnings:
+            result['truncation_warnings'] = truncation_warnings
+
+        return result
+
+    def _load_goals_for_project(self, project_id: str, limit: int = 10) -> Dict:
+        """Load goals for project with limit to prevent context bloat
+
+        SEARCH-FIRST ARCHITECTURE: Limits goals shown, warns if truncated.
+        """
+        goals_data = self.goals.get_project_goals(project_id)
+
+        # Apply limits to goals and incomplete_work
+        truncation_warnings = []
+
+        # Truncate 'goals' (active goals with subtask counts)
+        if 'goals' in goals_data:
+            total_goals = len(goals_data['goals'])
+            if total_goals > limit:
+                goals_data['goals'] = goals_data['goals'][:limit]
+                truncation_warnings.append(f"goals: showing {limit} of {total_goals} (use 'empirica goals-list' for full list)")
+
+        # Truncate 'incomplete_work'
+        if 'incomplete_work' in goals_data:
+            total_incomplete = len(goals_data['incomplete_work'])
+            if total_incomplete > limit:
+                goals_data['incomplete_work'] = goals_data['incomplete_work'][:limit]
+                truncation_warnings.append(f"incomplete_work: showing {limit} of {total_incomplete}")
+
+        if truncation_warnings:
+            goals_data['truncation_warnings'] = truncation_warnings
+
+        return goals_data
 
     def _capture_live_state_if_requested(
         self,
@@ -1894,7 +1648,12 @@ class SessionDatabase:
 
         # 4. Load goals
         goals_data = self._load_goals_for_project(resolved_id)
+
+        # Merge truncation warnings from both sources
+        all_warnings = breadcrumbs.pop('truncation_warnings', []) + goals_data.pop('truncation_warnings', [])
         breadcrumbs.update(goals_data)
+        if all_warnings:
+            breadcrumbs['truncation_warnings'] = all_warnings
 
         # 5. Generate file tree
         file_tree = self.generate_file_tree(project_root)
@@ -1954,11 +1713,7 @@ class SessionDatabase:
             context_markdown = generate_context_markdown(breadcrumbs)
             breadcrumbs['context_markdown'] = context_markdown
 
-        # 9. Apply adaptive depth filtering if needed
-        if depth != "auto" or trigger == "post_compact":
-            breadcrumbs = self._apply_depth_filter(breadcrumbs, depth, trigger)
-
-        # 10. Calculate flow state metrics (AI productivity patterns)
+        # 9. Calculate flow state metrics (AI productivity patterns)
         try:
             flow_metrics = self.calculate_flow_metrics(resolved_id, limit=5)
             if flow_metrics and flow_metrics.get('current_flow'):
@@ -1967,7 +1722,7 @@ class SessionDatabase:
             logger.debug(f"Flow metrics calculation skipped: {e}")
             # Flow metrics are optional - don't fail bootstrap if calculation errors
 
-        # 11. Calculate health score (epistemic quality and completeness)
+        # 10. Calculate health score (epistemic quality and completeness)
         try:
             health_score = self.calculate_health_score(resolved_id, limit=5)
             if health_score:
@@ -1976,7 +1731,7 @@ class SessionDatabase:
             logger.debug(f"Health score calculation skipped: {e}")
             # Health score is optional - don't fail bootstrap if calculation errors
 
-        # 12. Load feature status from FEATURE_STATUS.md
+        # 11. Load feature status from FEATURE_STATUS.md
         try:
             feature_status = self._load_feature_status(project_root)
             if feature_status:
@@ -1986,6 +1741,10 @@ class SessionDatabase:
                     breadcrumbs['health_score']['feature_completion'] = feature_status
         except Exception as e:
             logger.debug(f"Feature status load skipped: {e}")
+
+        # 12. Apply adaptive depth filtering LAST (after all fields populated)
+        if depth != "auto" or trigger == "post_compact":
+            breadcrumbs = self._apply_depth_filter(breadcrumbs, depth, trigger)
 
         return breadcrumbs
 
@@ -2165,10 +1924,16 @@ class SessionDatabase:
         Apply adaptive depth filtering to breadcrumbs based on drift or explicit depth.
 
         Depth levels:
-        - minimal: Last 5 findings/unknowns, current goal only (~500 tokens)
-        - moderate: Last 10 findings/unknowns, all active goals (~1500 tokens)
-        - full: All findings/unknowns, all goals, all ref-docs (~3000-5000 tokens)
+        - minimal: Essentials only (~2k tokens) - findings/unknowns/goals limited, no file_tree
+        - moderate: Balanced context (~8k tokens) - limited lists, no verbose metadata
+        - full: Complete context (unlimited) - all fields included
         - auto: Determine depth based on drift (if post_compact trigger)
+
+        Key optimizations:
+        - Strip redundant 'finding_data' JSON from findings (duplicates text)
+        - Remove file_tree for minimal/moderate (expensive, rarely needed by MCP)
+        - Remove verbose metadata like database_summary, structure_health
+        - Limit active_goals (often stale accumulation)
         """
         if depth == "auto" and trigger == "post_compact":
             # Calculate drift from pre-snapshot to current
@@ -2205,18 +1970,63 @@ class SessionDatabase:
             except:
                 depth = "moderate"  # Fallback to moderate on error
 
+        # Shared slimming helpers for depth filtering
+        def _slim_finding(f: dict) -> dict:
+            return {'finding': f.get('finding'), 'impact': f.get('impact')}
+
+        def _slim_unknown(u: dict) -> dict:
+            return {'unknown': u.get('unknown'), 'is_resolved': u.get('is_resolved', False)}
+
+        def _slim_goal(g: dict) -> dict:
+            return {
+                'id': g.get('id', '')[:8],  # Short ID
+                'objective': g.get('objective'),
+                'status': g.get('status')
+            }
+
+        def _slim_dead_end(d: dict) -> dict:
+            return {'approach': d.get('approach'), 'why_failed': d.get('why_failed')}
+
         # Apply depth filter
         if depth == "minimal":
-            breadcrumbs['findings'] = breadcrumbs.get('findings', [])[:5]
-            breadcrumbs['unknowns'] = breadcrumbs.get('unknowns', [])[:5]
-            breadcrumbs['goals'] = [g for g in breadcrumbs.get('goals', []) if 'current' in str(g).lower()][:1]
-            breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:3]
+            # ~2k tokens target: essentials only
+            breadcrumbs['findings'] = [_slim_finding(f) for f in breadcrumbs.get('findings', [])[:5]]
+            breadcrumbs['unknowns'] = [_slim_unknown(u) for u in breadcrumbs.get('unknowns', [])[:5]]
+            breadcrumbs['dead_ends'] = [_slim_dead_end(d) for d in breadcrumbs.get('dead_ends', [])[:3]]
+            breadcrumbs['mistakes_to_avoid'] = breadcrumbs.get('mistakes_to_avoid', [])[:2]
+            breadcrumbs['goals'] = [_slim_goal(g) for g in breadcrumbs.get('goals', [])[:1]]
+            breadcrumbs['active_goals'] = [_slim_goal(g) for g in breadcrumbs.get('active_goals', [])[:2]]
+            breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:2]
+            # Remove expensive/verbose fields entirely
+            for key in ['file_tree', 'git_status', 'database_summary', 'structure_health',
+                       'flow_metrics', 'health_score', 'recent_artifacts', 'active_sessions',
+                       'integrity_analysis', 'feature_status', 'findings_with_goals',
+                       'epistemic_artifacts', 'ai_activity', 'semantic_docs', 'available_skills',
+                       'key_decisions', 'incomplete_work', 'auto_captured_issues', 'truncation_warnings']:
+                breadcrumbs.pop(key, None)
+
         elif depth == "moderate":
-            breadcrumbs['findings'] = breadcrumbs.get('findings', [])[:10]
-            breadcrumbs['unknowns'] = breadcrumbs.get('unknowns', [])[:10]
-            breadcrumbs['goals'] = breadcrumbs.get('goals', [])[:5]
+            # ~8k tokens target: balanced context for MCP
+            breadcrumbs['findings'] = [_slim_finding(f) for f in breadcrumbs.get('findings', [])[:10]]
+            breadcrumbs['unknowns'] = [_slim_unknown(u) for u in breadcrumbs.get('unknowns', [])[:10]]
+            breadcrumbs['dead_ends'] = [_slim_dead_end(d) for d in breadcrumbs.get('dead_ends', [])[:5]]
+            breadcrumbs['mistakes_to_avoid'] = breadcrumbs.get('mistakes_to_avoid', [])[:5]
+            breadcrumbs['goals'] = [_slim_goal(g) for g in breadcrumbs.get('goals', [])[:5]]
+            breadcrumbs['active_goals'] = [_slim_goal(g) for g in breadcrumbs.get('active_goals', [])[:5]]
             breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:5]
-        # depth == "full": no filtering
+            breadcrumbs['incomplete_work'] = breadcrumbs.get('incomplete_work', [])[:3]
+            breadcrumbs['auto_captured_issues'] = breadcrumbs.get('auto_captured_issues', [])[:3]
+            # Remove expensive/verbose fields
+            for key in ['file_tree', 'database_summary', 'structure_health',
+                       'integrity_analysis', 'epistemic_artifacts', 'semantic_docs',
+                       'available_skills', 'findings_with_goals', 'recent_artifacts',
+                       'active_sessions', 'ai_activity', 'key_decisions']:
+                breadcrumbs.pop(key, None)
+            # Remove flow_metrics/health_score entirely for moderate (still verbose)
+            breadcrumbs.pop('flow_metrics', None)
+            breadcrumbs.pop('health_score', None)
+
+        # depth == "full": no filtering (keep everything)
 
         return breadcrumbs
 

@@ -248,6 +248,7 @@ def add_checkpoint_parsers(subparsers):
     # Project bootstrap command
     project_bootstrap_parser = subparsers.add_parser(
         'project-bootstrap',
+        aliases=['pb', 'bootstrap'],
         help='Show epistemic breadcrumbs for project'
     )
     project_bootstrap_parser.add_argument('--project-id', required=False, help='Project UUID or name (auto-detected from git remote if omitted)')
@@ -301,7 +302,7 @@ def add_checkpoint_parsers(subparsers):
     )
     project_search_parser.add_argument('--project-id', required=True, help='Project UUID')
     project_search_parser.add_argument('--task', required=True, help='Task description to search for')
-    project_search_parser.add_argument('--type', choices=['all', 'docs', 'memory'], default='all', help='Result type (default: all)')
+    project_search_parser.add_argument('--type', choices=['focused', 'all', 'docs', 'memory', 'eidetic', 'episodic'], default='focused', help='Result type: focused (default: eidetic+episodic), all, docs, memory, eidetic, episodic')
     project_search_parser.add_argument('--limit', type=int, default=5, help='Number of results to return (default: 5)')
     project_search_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     project_search_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
@@ -336,6 +337,7 @@ def add_checkpoint_parsers(subparsers):
     # Finding log command
     finding_log_parser = subparsers.add_parser(
         'finding-log',
+        aliases=['fl'],
         help='Log a project finding (what was learned/discovered)'
     )
     finding_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
@@ -353,6 +355,7 @@ def add_checkpoint_parsers(subparsers):
     # Unknown log command
     unknown_log_parser = subparsers.add_parser(
         'unknown-log',
+        aliases=['ul'],
         help='Log a project unknown (what\'s still unclear)'
     )
     unknown_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
@@ -380,6 +383,7 @@ def add_checkpoint_parsers(subparsers):
     # Dead end log command
     deadend_log_parser = subparsers.add_parser(
         'deadend-log',
+        aliases=['de'],
         help='Log a project dead end (what didn\'t work)'
     )
     deadend_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
@@ -407,10 +411,14 @@ def add_checkpoint_parsers(subparsers):
     refdoc_add_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
 
     # NEW: Goal Management Commands (MCP v2 Integration)
-    
+    # Aliases: goals-X → goal-X (singular), short aliases (gc, gl, etc.)
+
     # Goals create command (AI-first with config file support)
-    goals_create_parser = subparsers.add_parser('goals-create',
-        help='Create new goal (AI-first: use config file, Legacy: use flags)')
+    goals_create_parser = subparsers.add_parser(
+        'goals-create',
+        aliases=['goal-create', 'gc'],
+        help='Create new goal (AI-first: use config file, Legacy: use flags)'
+    )
 
     # AI-FIRST: Positional config file argument (optional, takes precedence)
     goals_create_parser.add_argument('config', nargs='?',
@@ -434,7 +442,11 @@ def add_checkpoint_parsers(subparsers):
     goals_create_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
     # Goals add-subtask command
-    goals_add_subtask_parser = subparsers.add_parser('goals-add-subtask', help='Add subtask to existing goal')
+    goals_add_subtask_parser = subparsers.add_parser(
+        'goals-add-subtask',
+        aliases=['goal-add-subtask'],
+        help='Add subtask to existing goal'
+    )
     goals_add_subtask_parser.add_argument('--goal-id', required=True, help='Goal UUID')
     goals_add_subtask_parser.add_argument('--description', required=True, help='Subtask description')
     goals_add_subtask_parser.add_argument('--importance', choices=['critical', 'high', 'medium', 'low'], default='medium', help='Epistemic importance')
@@ -454,7 +466,11 @@ def add_checkpoint_parsers(subparsers):
     goals_add_dep_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
 
     # Goals complete-subtask command
-    goals_complete_subtask_parser = subparsers.add_parser('goals-complete-subtask', help='Mark subtask as complete')
+    goals_complete_subtask_parser = subparsers.add_parser(
+        'goals-complete-subtask',
+        aliases=['goal-complete-subtask'],
+        help='Mark subtask as complete'
+    )
     # Use subtask-id as primary parameter, with task-id as deprecated alias for backward compatibility
     goals_complete_subtask_parser.add_argument('--subtask-id', help='Subtask UUID (preferred)')
     goals_complete_subtask_parser.add_argument('--task-id', help='Subtask UUID (deprecated, use --subtask-id)')
@@ -462,7 +478,11 @@ def add_checkpoint_parsers(subparsers):
     goals_complete_subtask_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     
     # Goals progress command
-    goals_progress_parser = subparsers.add_parser('goals-progress', help='Get goal completion progress')
+    goals_progress_parser = subparsers.add_parser(
+        'goals-progress',
+        aliases=['goal-progress'],
+        help='Get goal completion progress'
+    )
     goals_progress_parser.add_argument('--goal-id', required=True, help='Goal UUID')
     goals_progress_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     goals_progress_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
@@ -473,7 +493,11 @@ def add_checkpoint_parsers(subparsers):
     goals_get_subtasks_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     
     # Goals list command
-    goals_list_parser = subparsers.add_parser('goals-list', help='List goals')
+    goals_list_parser = subparsers.add_parser(
+        'goals-list',
+        aliases=['goal-list', 'gl'],
+        help='List goals'
+    )
     goals_list_parser.add_argument('--ai-id', help='Filter by AI identifier')
     goals_list_parser.add_argument('--session-id', help='Filter by session ID')
     goals_list_parser.add_argument('--scope-breadth-min', type=float, help='Filter by minimum breadth (0.0-1.0)')
@@ -482,19 +506,10 @@ def add_checkpoint_parsers(subparsers):
     goals_list_parser.add_argument('--scope-duration-max', type=float, help='Filter by maximum duration (0.0-1.0)')
     goals_list_parser.add_argument('--scope-coordination-min', type=float, help='Filter by minimum coordination (0.0-1.0)')
     goals_list_parser.add_argument('--scope-coordination-max', type=float, help='Filter by maximum coordination (0.0-1.0)')
-    goals_list_parser.add_argument('--completed', action='store_true', help='Filter by completion status')
+    goals_list_parser.add_argument('--completed', action='store_true', help='Show completed goals (default: active)')
+    goals_list_parser.add_argument('--limit', type=int, default=20, help='Max results (default: 20)')
     goals_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     goals_list_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
-
-    # Goals list-all command (shows all goals with inline subtasks)
-    goals_list_all_parser = subparsers.add_parser('goals-list-all',
-        help='List ALL goals with inline subtasks (no session required)')
-    goals_list_all_parser.add_argument('--status', choices=['active', 'completed', 'all'], default='active',
-        help='Filter by status (default: active)')
-    goals_list_all_parser.add_argument('--limit', type=int, default=20,
-        help='Maximum goals to show (default: 20)')
-    goals_list_all_parser.add_argument('--output', choices=['human', 'json'], default='human',
-        help='Output format')
 
     # Goals semantic search command (Qdrant-powered)
     goals_search_parser = subparsers.add_parser('goals-search',
@@ -548,7 +563,11 @@ def add_checkpoint_parsers(subparsers):
     goals_claim_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
     # Goals-complete command (NEW: Phase 3a - Git Bridge)
-    goals_complete_parser = subparsers.add_parser('goals-complete', help='Complete goal, merge branch, close BEADS issue')
+    goals_complete_parser = subparsers.add_parser(
+        'goals-complete',
+        aliases=['goal-complete'],
+        help='Complete goal, merge branch, close BEADS issue'
+    )
     goals_complete_parser.add_argument('--goal-id', required=True, help='Goal UUID to complete')
     goals_complete_parser.add_argument('--run-postflight', action='store_true', help='Run POSTFLIGHT before completing')
     goals_complete_parser.add_argument('--merge-branch', action='store_true', help='Merge git branch to main')
@@ -599,7 +618,11 @@ def add_checkpoint_parsers(subparsers):
     identity_verify_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
     # Sessions resume command
-    sessions_resume_parser = subparsers.add_parser('sessions-resume', help='Resume previous sessions')
+    sessions_resume_parser = subparsers.add_parser(
+        'sessions-resume',
+        aliases=['session-resume', 'sr'],
+        help='Resume previous sessions'
+    )
     sessions_resume_parser.add_argument('--ai-id', help='Filter by AI ID')
     sessions_resume_parser.add_argument('--count', type=int, default=1, help='Number of sessions to retrieve')
     sessions_resume_parser.add_argument('--detail-level', choices=['summary', 'detailed', 'full'], default='summary', help='Detail level')
@@ -607,8 +630,11 @@ def add_checkpoint_parsers(subparsers):
     sessions_resume_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
     # Session create command (AI-first with config file support)
-    session_create_parser = subparsers.add_parser('session-create',
-        help='Create new session (AI-first: use config file, Legacy: use flags)')
+    session_create_parser = subparsers.add_parser(
+        'session-create',
+        aliases=['sc'],
+        help='Create new session (AI-first: use config file, Legacy: use flags)'
+    )
 
     # AI-FIRST: Positional config file argument
     session_create_parser.add_argument('config', nargs='?',

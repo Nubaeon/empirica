@@ -118,11 +118,23 @@ def _resolve_auto_provider(ollama_url: str) -> str:
 
 
 class EmbeddingsProvider:
+    """
+    Multi-provider embeddings generator for Qdrant vector storage.
+
+    Supports multiple embedding backends with automatic fallback:
+    - Ollama (local, free)
+    - Jina AI (API, good quality)
+    - Voyage AI (API, high quality)
+    - Local sentence-transformers (fallback)
+
+    Provider selection: Set EMPIRICA_EMBEDDINGS_PROVIDER env var or use "auto".
+    """
     # Type declarations for conditional attributes
     _jina_api_key: Optional[str] = None
     _voyage_api_key: Optional[str] = None
 
     def __init__(self) -> None:
+        """Initialize embeddings provider based on environment configuration."""
         self.ollama_url = os.getenv("EMPIRICA_OLLAMA_URL", "http://localhost:11434")
 
         # Get provider from env, default to "auto"
@@ -172,6 +184,7 @@ class EmbeddingsProvider:
         logger.debug(f"Embeddings provider: {self.provider}, model: {self.model}")
 
     def embed(self, text: str) -> List[float]:
+        """Generate embedding vector for the given text using configured provider."""
         text = text or ""
 
         if self.provider == "openai":
@@ -325,6 +338,7 @@ class EmbeddingsProvider:
 _provider_singleton: EmbeddingsProvider | None = None
 
 def get_embedding(text: str) -> List[float]:
+    """Get embedding vector for text using the singleton provider instance."""
     global _provider_singleton
     if _provider_singleton is None:
         _provider_singleton = EmbeddingsProvider()

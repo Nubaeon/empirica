@@ -32,7 +32,8 @@ class EpistemicEvent:
         session_id: str,
         data: Dict[str, Any],
         timestamp: Optional[float] = None
-    ):
+    ) -> None:
+        """Initialize epistemic event with type, agent, session, and data."""
         self.event_type = event_type
         self.agent_id = agent_id
         self.session_id = session_id
@@ -50,6 +51,7 @@ class EpistemicEvent:
         }
     
     def __repr__(self):
+        """Return string representation of epistemic event."""
         return f"EpistemicEvent({self.event_type}, agent={self.agent_id})"
 
 
@@ -93,7 +95,8 @@ class EpistemicBus:
         bus.publish(EpistemicEvent('preflight_complete', ...))
     """
     
-    def __init__(self, enable_logging: bool = True):
+    def __init__(self, enable_logging: bool = True) -> None:
+        """Initialize epistemic bus with optional logging."""
         self.observers: List[EpistemicObserver] = []
         self.enable_logging = enable_logging
         self._event_count = 0
@@ -198,6 +201,7 @@ class LoggingObserver(EpistemicObserver):
     """
     
     def __init__(self, log_level: int = logging.INFO):
+        """Initialize logging observer with configurable log level."""
         self.log_level = log_level
     
     def handle_event(self, event: EpistemicEvent) -> None:
@@ -216,6 +220,7 @@ class CallbackObserver(EpistemicObserver):
     """
     
     def __init__(self, callback: Callable[[EpistemicEvent], None]):
+        """Initialize callback observer with function to call for each event."""
         self.callback = callback
     
     def handle_event(self, event: EpistemicEvent) -> None:

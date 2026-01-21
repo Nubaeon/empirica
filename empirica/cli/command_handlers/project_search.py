@@ -10,6 +10,7 @@ from ..cli_utils import handle_cli_error
 
 
 def handle_project_search_command(args):
+    """Handle project-search command for semantic search over docs and memory."""
     try:
         from empirica.core.qdrant.vector_store import init_collections, search, search_global
         project_id = args.project_id
@@ -37,7 +38,20 @@ def handle_project_search_command(args):
             if 'memory' in results:
                 print("\n🧠 Memory:")
                 for i, m in enumerate(results['memory'], 1):
-                    print(f"  {i}. {m.get('type')}  (score: {m.get('score'):.3f})")
+                    text = (m.get('text') or '')[:60]
+                    print(f"  {i}. [{m.get('type')}] {text}... (score: {m.get('score'):.3f})")
+            if 'eidetic' in results and results['eidetic']:
+                print("\n💎 Eidetic (facts):")
+                for i, e in enumerate(results['eidetic'], 1):
+                    content = (e.get('content') or '')[:60]
+                    conf = e.get('confidence', 0)
+                    print(f"  {i}. [{e.get('type')}] {content}... (conf: {conf:.2f}, score: {e.get('score'):.3f})")
+            if 'episodic' in results and results['episodic']:
+                print("\n📖 Episodic (session arcs):")
+                for i, ep in enumerate(results['episodic'], 1):
+                    narr = (ep.get('narrative') or '')[:60]
+                    outcome = ep.get('outcome', 'unknown')
+                    print(f"  {i}. [{outcome}] {narr}... (score: {ep.get('score'):.3f})")
             if use_global and results.get('global'):
                 print("\n🌐 Global (cross-project):")
                 for i, g in enumerate(results['global'], 1):

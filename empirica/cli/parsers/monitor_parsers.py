@@ -70,3 +70,57 @@ def add_monitor_parsers(subparsers):
 
     # REMOVED: monitor-export, monitor-reset, monitor-cost
     # Use: monitor --export FILE, monitor --reset, monitor --cost
+
+    # Compact analysis command - measure epistemic loss during memory compaction
+    compact_parser = subparsers.add_parser('compact-analysis',
+        help='Analyze epistemic loss during memory compaction',
+        description="""
+Retroactively analyze pre-compact snapshots vs post-compact assessments
+to measure knowledge loss and recovery during Claude Code memory compaction.
+
+Data Quality Filtering (default):
+- Excludes test sessions (ai_id: test*, *-test, storage-*)
+- Requires sessions with actual work evidence (findings/unknowns)
+- Filters rapid-fire sessions (< 5 min duration)
+        """)
+    compact_parser.add_argument('--include-tests', action='store_true',
+        help='Include test sessions in analysis (normally filtered)')
+    compact_parser.add_argument('--min-findings', type=int, default=0,
+        help='Minimum findings count to include session (default: 0)')
+    compact_parser.add_argument('--limit', type=int, default=20,
+        help='Maximum compact events to analyze (default: 20)')
+    compact_parser.add_argument('--output', choices=['human', 'json'], default='human',
+        help='Output format (default: human)')
+
+    # Calibration report command - analyze calibration from vector_trajectories
+    calibration_parser = subparsers.add_parser('calibration-report',
+        help='Generate calibration report from vector trajectories',
+        description="""
+Analyze AI self-assessment calibration using vector_trajectories table.
+Measures gap from expected (1.0 for most vectors, 0.0 for uncertainty) at session END.
+
+Key outputs:
+- Per-vector bias corrections (ADD to self-assessment)
+- Sample sizes and confidence intervals
+- Trend analysis over time (weekly)
+- Recommendations for system prompt updates
+
+Data Quality Filtering (default):
+- Uses vector_trajectories as primary source (not polluted bayesian_beliefs)
+- Filters test sessions (ai_id: test*, *-test, storage-*)
+- Requires meaningful sessions (pattern != 'unknown')
+- Excludes 0.5 default values (signs of placeholder data)
+        """)
+    calibration_parser.add_argument('--ai-id', help='Filter by AI identifier (default: claude-code)')
+    calibration_parser.add_argument('--weeks', type=int, default=8,
+        help='Number of weeks to analyze (default: 8)')
+    calibration_parser.add_argument('--include-tests', action='store_true',
+        help='Include test sessions in analysis (normally filtered)')
+    calibration_parser.add_argument('--min-samples', type=int, default=10,
+        help='Minimum samples per vector for confident analysis (default: 10)')
+    calibration_parser.add_argument('--output', choices=['human', 'json', 'markdown'], default='human',
+        help='Output format (default: human)')
+    calibration_parser.add_argument('--update-prompt', action='store_true',
+        help='Generate copy-paste ready calibration table for system prompts')
+    calibration_parser.add_argument('--verbose', action='store_true',
+        help='Show detailed per-vector analysis')

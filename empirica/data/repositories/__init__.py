@@ -14,6 +14,7 @@ from .breadcrumbs import BreadcrumbRepository
 from .projects import ProjectRepository
 from .utilities import TokenRepository, CommandRepository, WorkspaceRepository
 from .vectors import VectorRepository
+from .metrics import MetricsRepository
 
 __all__ = [
     'BaseRepository',
@@ -27,4 +28,5 @@ __all__ = [
     'CommandRepository',
     'WorkspaceRepository',
     'VectorRepository',
+    'MetricsRepository',
 ]

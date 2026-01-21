@@ -90,22 +90,23 @@ class LessonStorageManager:
             return
         try:
             from qdrant_client.models import Distance, VectorParams
+            from empirica.core.qdrant.embeddings import get_vector_size
             # Check if collection exists
             collections = self._qdrant.get_collections().collections
             exists = any(c.name == self._qdrant_collection for c in collections)
             if not exists:
-                # Create with 384 dimensions (for simple embeddings)
-                # In production, use model-specific size
+                # Use vector size from embeddings provider (auto-detects model)
+                vector_size = get_vector_size()
                 self._qdrant.create_collection(
                     collection_name=self._qdrant_collection,
-                    vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+                    vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE)
                 )
-                logger.info(f"Created Qdrant collection: {self._qdrant_collection}")
+                logger.info(f"Created Qdrant collection: {self._qdrant_collection} (dim={vector_size})")
         except Exception as e:
             logger.warning(f"Could not ensure Qdrant collection: {e}")
 
     def _load_hot_cache(self) -> int:
-        """Load all lessons into hot cache from warm storage"""
+        """Load all lessons into hot cache from warm storage for fast access."""
         cursor = self._conn.cursor()
         cursor.execute("""
             SELECT l.id, l.name, l.domain,
@@ -339,17 +340,9 @@ class LessonStorageManager:
         self._conn.commit()
 
     def _generate_embedding(self, text: str) -> List[float]:
-        """Generate embedding vector for text (placeholder - uses hash expansion)"""
-        # Simple deterministic embedding for now
-        # In production, use OpenAI/local embeddings
-        h = hashlib.md5(text.encode()).digest()
-        vector = []
-        for i in range(0, 384, 16):
-            # Expand hash to 384 dimensions
-            idx = i % 16
-            val = (h[idx] - 128) / 128.0
-            vector.extend([val] * min(24, 384 - len(vector)))
-        return vector[:384]
+        """Generate embedding vector for text using the core embeddings provider"""
+        from empirica.core.qdrant.embeddings import get_embedding
+        return get_embedding(text)
 
     # ==================== READ ====================
 
@@ -895,6 +888,7 @@ class LessonStorageManager:
 
         # Build dependency chains from entry points
         def get_chain(lesson_id, visited=None):
+            """Recursively build dependency chain from a lesson."""
             if visited is None:
                 visited = set()
             if lesson_id in visited:
@@ -947,10 +941,12 @@ class LessonStorageManager:
         printed = set()
 
         def format_lesson(lesson):
+            """Format lesson with confidence icon and name."""
             conf_icon = "●" if lesson['confidence'] >= 0.85 else "◐" if lesson['confidence'] >= 0.70 else "○"
             return f"{conf_icon} {lesson['name']} [{lesson['confidence']:.2f}]"
 
         def print_tree(lesson_id, prefix="", is_last=True, rel_label=None):
+            """Recursively print lesson tree with ASCII formatting."""
             if lesson_id in printed:
                 return
             printed.add(lesson_id)
@@ -1016,7 +1012,7 @@ class LessonStorageManager:
     # ==================== STATS ====================
 
     def stats(self) -> Dict:
-        """Get storage statistics"""
+        """Get storage statistics across all layers (hot, warm, cold, search)."""
         cursor = self._conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM lessons")
         lesson_count = cursor.fetchone()[0]

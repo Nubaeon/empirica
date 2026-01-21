@@ -4,8 +4,8 @@ Canonical Epistemic Assessment Schema
 This is THE single source of truth for the 13-vector epistemic assessment format.
 
 Used by:
-- CLI parser (empirica preflight, check, postflight)
-- MCP tools (execute_preflight, submit_preflight_assessment)
+- CLI parser (empirica preflight-submit, check-submit, postflight-submit)
+- MCP tools (submit_preflight_assessment, submit_check_assessment, submit_postflight_assessment)
 - PersonaHarness (apply persona priors)
 - SentinelOrchestrator (merge multi-persona assessments)
 - Validation layer (ensure format correctness)
@@ -573,7 +573,8 @@ def validate_assessment(data: Dict[str, Any]) -> bool:
             raise ValueError(f"Missing execution key: {key}")
 
     # Validate all vectors have score + rationale
-    def check_vector(vector_data: Dict, vector_name: str):
+    def check_vector(vector_data: Dict, vector_name: str) -> None:
+        """Validate vector has required score and rationale fields."""
         if "score" not in vector_data:
             raise ValueError(f"Missing score in {vector_name}")
         if "rationale" not in vector_data:

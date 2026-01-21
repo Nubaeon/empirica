@@ -19,16 +19,53 @@ logger = logging.getLogger(__name__)
 
 class TaskRepository:
     """Database operations for Task persistence"""
-    
+
     def __init__(self, db_path: Optional[str] = None):
         """
         Initialize repository
-        
+
         Args:
             db_path: Optional custom database path
         """
         self.db = SessionDatabase(db_path=db_path)
         self._ensure_tables()
+
+    def _resolve_subtask_id(self, subtask_id: str) -> Optional[str]:
+        """
+        Resolve partial subtask ID to full UUID.
+
+        Args:
+            subtask_id: Partial (8+ chars) or full UUID
+
+        Returns:
+            Full UUID or None if not found
+        """
+        # If it looks like a full UUID (contains hyphens), return as-is
+        if "-" in subtask_id:
+            return subtask_id
+
+        # Partial UUID - query database with prefix match
+        try:
+            cursor = self.db.conn.execute(
+                "SELECT id FROM subtasks WHERE id LIKE ? ORDER BY created_timestamp DESC",
+                (f"{subtask_id}%",)
+            )
+            results = cursor.fetchall()
+
+            if not results:
+                logger.warning(f"No subtask found matching: {subtask_id}")
+                return None
+
+            if len(results) > 1:
+                logger.warning(f"Multiple subtasks match '{subtask_id}' - using most recent")
+
+            resolved = results[0][0]
+            logger.debug(f"Resolved partial subtask ID '{subtask_id}' to {resolved}")
+            return resolved
+
+        except Exception as e:
+            logger.error(f"Error resolving subtask ID {subtask_id}: {e}")
+            return None
     
     def _ensure_tables(self):
         """Create task-related tables if they don't exist"""
@@ -140,27 +177,32 @@ class TaskRepository:
     
     def get_subtask(self, subtask_id: str) -> Optional[SubTask]:
         """
-        Retrieve subtask by ID
-        
+        Retrieve subtask by ID (supports partial UUID)
+
         Args:
-            subtask_id: SubTask identifier
-            
+            subtask_id: SubTask identifier (partial or full UUID)
+
         Returns:
             SubTask object or None if not found
         """
         try:
+            # Resolve partial UUID to full UUID
+            resolved_id = self._resolve_subtask_id(subtask_id)
+            if not resolved_id:
+                return None
+
             cursor = self.db.conn.execute(
                 "SELECT subtask_data FROM subtasks WHERE id = ?",
-                (subtask_id,)
+                (resolved_id,)
             )
             row = cursor.fetchone()
-            
+
             if row:
                 subtask_dict = json.loads(row[0])
                 return SubTask.from_dict(subtask_dict)
-            
+
             return None
-            
+
         except Exception as e:
             logger.error(f"Error retrieving subtask {subtask_id}: {e}")
             return None
@@ -199,42 +241,49 @@ class TaskRepository:
         completion_evidence: Optional[str] = None
     ) -> bool:
         """
-        Update subtask status
-        
+        Update subtask status (supports partial UUID)
+
         Args:
-            subtask_id: SubTask identifier
+            subtask_id: SubTask identifier (partial or full UUID)
             status: New status
             completion_evidence: Optional evidence (commit hash, etc.)
-            
+
         Returns:
             True if successful
         """
         try:
             import time
+
+            # Resolve partial UUID to full UUID
+            resolved_id = self._resolve_subtask_id(subtask_id)
+            if not resolved_id:
+                logger.error(f"Cannot resolve subtask ID: {subtask_id}")
+                return False
+
             timestamp = time.time() if status == TaskStatus.COMPLETED else None
-            
+
             self.db.conn.execute("""
-                UPDATE subtasks 
+                UPDATE subtasks
                 SET status = ?, completed_timestamp = ?, completion_evidence = ?
                 WHERE id = ?
-            """, (status.value, timestamp, completion_evidence, subtask_id))
+            """, (status.value, timestamp, completion_evidence, resolved_id))
             
             # Also update the subtask_data JSON
-            subtask = self.get_subtask(subtask_id)
+            subtask = self.get_subtask(resolved_id)
             if subtask:
                 subtask.status = status
                 subtask.completed_timestamp = timestamp
                 if completion_evidence:
                     subtask.completion_evidence = completion_evidence
                 subtask_data = json.dumps(subtask.to_dict())
-                
+
                 self.db.conn.execute(
                     "UPDATE subtasks SET subtask_data = ? WHERE id = ?",
-                    (subtask_data, subtask_id)
+                    (subtask_data, resolved_id)
                 )
-            
+
             self.db.conn.commit()
-            logger.info(f"Updated subtask {subtask_id} status: {status.value}")
+            logger.info(f"Updated subtask {resolved_id} status: {status.value}")
             return True
             
         except Exception as e:

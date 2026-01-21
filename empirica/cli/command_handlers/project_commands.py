@@ -2333,7 +2333,10 @@ def handle_project_switch_command(args):
         
         # Create bootstrap args
         class BootstrapArgs:
-            def __init__(self):
+            """Mock arguments for calling project bootstrap handler."""
+
+            def __init__(self) -> None:
+                """Initialize bootstrap args with project context."""
                 self.project_id = project_id
                 self.output = output_format
                 self.session_id = None

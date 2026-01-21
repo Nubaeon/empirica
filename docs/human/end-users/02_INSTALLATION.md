@@ -38,7 +38,7 @@ empirica session-create --ai-id myai
 pip install empirica
 
 # Specific version
-pip install empirica==1.3.2
+pip install empirica==1.4.0
 
 # With MCP server for Claude Desktop/Cursor
 pip install empirica empirica-mcp
@@ -56,13 +56,13 @@ brew install empirica
 ### Option 3: Docker
 ```bash
 # Standard image
-docker pull nubaeon/empirica:1.3.2
+docker pull nubaeon/empirica:1.4.0
 
 # Security-hardened Alpine (recommended)
-docker pull nubaeon/empirica:1.3.2-alpine
+docker pull nubaeon/empirica:1.4.0-alpine
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.3.2 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.4.0 /bin/bash
 ```
 
 ### Option 4: From Source

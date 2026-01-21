@@ -5,7 +5,35 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - Preparing v1.0.0
+## [1.4.0] - 2026-01-21 - Epistemic-First Model
+
+### Added
+- **calibration-report CLI command** - Analyze AI self-assessment calibration using vector_trajectories
+  - Measures gap from expected at session END (1.0 for most vectors, 0.0 for uncertainty)
+  - Outputs per-vector bias corrections, sample sizes, trends
+  - Supports human/json/markdown output formats
+  - Usage: `empirica calibration-report [--weeks N] [--output FORMAT]`
+
+- **CHECK phase epistemic snapshots** - CHECK now captures to epistemic_snapshots table
+  - Previously only POSTFLIGHT was captured
+  - Enables richer calibration analysis with intermediate CHECK data points
+
+### Changed
+- **Sentinel CHECK expiry now opt-in** (EMPIRICA_SENTINEL_CHECK_EXPIRY)
+  - Previously: 30-minute expiry was always enforced
+  - Now: Disabled by default - users may pause sessions and resume later
+  - Enable with: `export EMPIRICA_SENTINEL_CHECK_EXPIRY=true`
+
+### Fixed
+- **Sentinel timestamp parsing** - Now handles both ISO format and Unix timestamps from SQLite
+  - Previously failed on Unix float timestamps, defaulting to 999 minutes (always expired)
+
+### Removed
+- **sentinel-gate-minimal.py** - Consolidated into main sentinel-gate.py
+
+---
+
+## [Unreleased]
 
 ### Added
 - **Vector-based cognitive phase inference** (commit 768bc75d)
@@ -226,6 +254,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-**Current Version:** 0.9.0 (Phase 3 Complete)  
-**Next Version:** 1.0.0 (Phase 4 - Production Release)  
-**Target Release Date:** November 8-15, 2025
+**Current Version:** 1.4.0 (Epistemic-First Model)
+**Previous Milestone:** 1.0.0 (Phase 4 - Production Release, November 2025)

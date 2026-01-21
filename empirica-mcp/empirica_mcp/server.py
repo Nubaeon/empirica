@@ -21,7 +21,7 @@ CASCADE Philosophy:
 - Scope is vectorial (self-assessed): {"breadth": 0-1, "duration": 0-1, "coordination": 0-1}
 - Trust AI reasoning: Let agents assess epistemic state → scope vectors
 
-Version: 1.3.2
+Version: 1.4.0
 """
 
 import asyncio
@@ -1458,6 +1458,29 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
                     components_loaded=5  # Standard number of components
                 )
                 db.close()
+
+            # Update active_session file for statusline (instance-specific)
+            # Uses instance_id (e.g., tmux:%0) to prevent cross-pane bleeding
+            from pathlib import Path
+            try:
+                from empirica.utils.session_resolver import get_instance_id
+                instance_id = get_instance_id()
+            except ImportError:
+                instance_id = None
+
+            instance_suffix = ""
+            if instance_id:
+                # Sanitize instance_id for filename (replace special chars)
+                safe_instance = instance_id.replace(":", "_").replace("%", "")
+                instance_suffix = f"_{safe_instance}"
+
+            local_empirica = Path.cwd() / '.empirica'
+            if local_empirica.exists():
+                active_session_file = local_empirica / f'active_session{instance_suffix}'
+            else:
+                active_session_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
+            active_session_file.parent.mkdir(parents=True, exist_ok=True)
+            active_session_file.write_text(session_id)
 
             result = {
                 "ok": True,

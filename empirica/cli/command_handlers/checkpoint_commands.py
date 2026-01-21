@@ -341,6 +341,7 @@ def handle_checkpoint_diff_command(args):
         meta = {'uncertainty': vectors.get('uncertainty', 0)}
         
         def show_tier(name, tier_vectors):
+            """Display vectors for a single tier with indicators."""
             print(f"\n{name}:")
             for key, value in tier_vectors.items():
                 thresholds = _get_checkpoint_profile_thresholds()

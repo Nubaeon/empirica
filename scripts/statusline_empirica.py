@@ -58,9 +58,69 @@ def get_ai_id() -> str:
     return os.getenv('EMPIRICA_AI_ID', 'claude-code').strip()
 
 
+def get_open_counts(db: SessionDatabase, session_id: str) -> dict:
+    """
+    Get counts of open goals and unknowns (project-wide).
+
+    Goals and unknowns are project-wide because work spans sessions.
+    Goal-linked unknowns indicate blockers that need resolution.
+
+    Returns:
+        {
+            'open_goals': int,           # Goals not yet completed (project-wide)
+            'open_unknowns': int,        # Unknowns not yet resolved (project-wide)
+            'goal_linked_unknowns': int, # Unresolved unknowns linked to goals (blockers)
+            'completion': float,         # Latest completion vector (0.0-1.0)
+        }
+    """
+    cursor = db.conn.cursor()
+
+    # Count open goals PROJECT-WIDE (goals span sessions)
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM goals
+        WHERE status != 'completed'
+    """)
+    open_goals = cursor.fetchone()[0] or 0
+
+    # Count unresolved unknowns PROJECT-WIDE (not session-specific)
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM session_unknowns
+        WHERE is_resolved = FALSE
+    """)
+    open_unknowns = cursor.fetchone()[0] or 0
+
+    # Count goal-linked unresolved unknowns (blockers)
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM session_unknowns
+        WHERE is_resolved = FALSE AND goal_id IS NOT NULL
+    """)
+    goal_linked_unknowns = cursor.fetchone()[0] or 0
+
+    # Get completion from latest vector state
+    cursor.execute("""
+        SELECT completion
+        FROM reflexes
+        WHERE session_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """, (session_id,))
+    reflex_row = cursor.fetchone()
+    completion = reflex_row[0] if reflex_row and reflex_row[0] is not None else 0.0
+
+    return {
+        'open_goals': open_goals,
+        'open_unknowns': open_unknowns,
+        'goal_linked_unknowns': goal_linked_unknowns,
+        'completion': completion,
+    }
+
+
 def get_active_goal(db: SessionDatabase, session_id: str) -> dict:
     """
-    Get the active goal for a session.
+    Get the active goal for a session (legacy, kept for 'full' mode).
 
     Returns:
         {
@@ -151,9 +211,50 @@ def format_progress_bar(completion: float, width: int = 8) -> str:
     return f"{color}{bar}{Colors.RESET} {pct}%"
 
 
+def format_open_counts(open_counts: dict) -> str:
+    """
+    Format open goals and unknowns as actionable counts.
+
+    Shows what needs to be closed - useful for peeking into AI reality.
+
+    Returns:
+        String like "🎯3 ❓6/4" (3 goals, 6 unknowns total, 4 goal-linked blockers)
+    """
+    if not open_counts:
+        return f"{Colors.GRAY}--{Colors.RESET}"
+
+    goals = open_counts.get('open_goals', 0)
+    unknowns = open_counts.get('open_unknowns', 0)
+    goal_linked = open_counts.get('goal_linked_unknowns', 0)
+
+    # Color code based on counts
+    if goals == 0:
+        goal_color = Colors.GREEN
+    elif goals <= 2:
+        goal_color = Colors.YELLOW
+    else:
+        goal_color = Colors.CYAN
+
+    # Color unknowns based on goal-linked (blockers) count
+    if goal_linked == 0:
+        unknown_color = Colors.GREEN
+    elif goal_linked <= 5:
+        unknown_color = Colors.YELLOW
+    else:
+        unknown_color = Colors.CYAN
+
+    # Format: ❓total/blockers (e.g., ❓119/70 means 119 unresolved, 70 blocking goals)
+    if goal_linked > 0 and goal_linked != unknowns:
+        unknown_str = f"❓{unknowns}/{goal_linked}"
+    else:
+        unknown_str = f"❓{unknowns}"
+
+    return f"{goal_color}🎯{goals}{Colors.RESET} {unknown_color}{unknown_str}{Colors.RESET}"
+
+
 def format_goal_progress(goal: dict, max_name_len: int = 12) -> str:
     """
-    Format goal progress for statusline.
+    Format goal progress for statusline (legacy, used in 'full' mode).
 
     Returns:
         String like "auth-fix ████░░░░ 45%" or "████░░░░ 45%" if no goal name
@@ -249,22 +350,57 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     except ImportError:
         current_instance_id = None
 
-    # Priority 1: Check active_session file
-    active_session_file = Path.home() / '.empirica' / 'active_session'
-    if active_session_file.exists():
-        try:
-            session_id = active_session_file.read_text().strip()
-            if session_id:
-                cursor.execute("""
-                    SELECT session_id, ai_id, start_time
-                    FROM sessions
-                    WHERE session_id = ? AND end_time IS NULL
-                """, (session_id,))
-                row = cursor.fetchone()
-                if row:
-                    return dict(row)
-        except Exception:
-            pass  # Fall through to other methods
+    # Priority 1: Check instance-specific active_session file
+    # Uses instance_id (e.g., tmux:%0) to prevent cross-pane bleeding
+    # Search UPWARD from CWD like git does for .git/
+
+    # Get instance_id for per-pane isolation
+    instance_suffix = ""
+    if current_instance_id:
+        # Sanitize instance_id for filename (replace special chars)
+        safe_instance = current_instance_id.replace(":", "_").replace("%", "")
+        instance_suffix = f"_{safe_instance}"
+
+    local_active_session = None
+    current = Path.cwd()
+    for parent in [current] + list(current.parents):
+        # Try instance-specific file first, then generic
+        for filename in [f'active_session{instance_suffix}', 'active_session']:
+            candidate = parent / '.empirica' / filename
+            if candidate.exists():
+                local_active_session = candidate
+                break
+        if local_active_session:
+            break
+        if parent == Path.home() or parent == parent.parent:
+            break  # Stop at home or filesystem root
+
+    global_active_session = Path.home() / '.empirica' / f'active_session{instance_suffix}'
+    global_active_session_fallback = Path.home() / '.empirica' / 'active_session'
+
+    # Build list of files to check (instance-specific first)
+    files_to_check = []
+    if local_active_session:
+        files_to_check.append(local_active_session)
+    files_to_check.append(global_active_session)
+    if global_active_session != global_active_session_fallback:
+        files_to_check.append(global_active_session_fallback)
+
+    for active_session_file in files_to_check:
+        if active_session_file.exists():
+            try:
+                session_id = active_session_file.read_text().strip()
+                if session_id:
+                    cursor.execute("""
+                        SELECT session_id, ai_id, start_time
+                        FROM sessions
+                        WHERE session_id = ? AND end_time IS NULL
+                    """, (session_id,))
+                    row = cursor.fetchone()
+                    if row:
+                        return dict(row)
+            except Exception:
+                pass  # Try next file
 
     # Priority 2: Exact ai_id match (with instance isolation)
     if current_instance_id:
@@ -498,7 +634,8 @@ def format_statusline(
     drift_detected: bool = False,
     drift_severity: str = None,
     gate_decision: str = None,
-    goal: dict = None
+    goal: dict = None,
+    open_counts: dict = None
 ) -> str:
     """Format the statusline based on mode."""
 
@@ -515,10 +652,10 @@ def format_statusline(
         return ' '.join(parts)
 
     elif mode == 'default':
-        # Goal progress + CASCADE gate + key vectors (%) + deltas + drift
-        # (Replaced NOETIC/PRAXIC - that's AI internal language, not useful for users)
-        goal_str = format_goal_progress(goal)
-        parts.append(goal_str)
+        # Open counts (goals/unknowns to close) + CASCADE gate + key vectors (%) + deltas + drift
+        # Shows actionable items: what needs to be resolved
+        counts_str = format_open_counts(open_counts)
+        parts.append(counts_str)
 
         # CASCADE gate (compliance checkpoint) with metacog decision
         if phase:
@@ -550,8 +687,8 @@ def format_statusline(
 
     elif mode == 'learning':
         # Focus on vectors with values and deltas (for developers)
-        goal_str = format_goal_progress(goal)
-        parts.append(goal_str)
+        counts_str = format_open_counts(open_counts)
+        parts.append(counts_str)
 
         if phase:
             parts.append(f"{phase}")
@@ -616,24 +753,44 @@ def main():
         ai_id = get_ai_id()
 
         # Auto-detect project from current directory (like git does with .git/)
-        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) .empirica/ in cwd, 3) default
+        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) .empirica/ in cwd or parents, 3) global
         project_path = os.getenv('EMPIRICA_PROJECT_PATH')
 
         if not project_path:
-            # Check if current directory has .empirica/
-            cwd_db = Path.cwd() / '.empirica' / 'sessions' / 'sessions.db'
-            if cwd_db.exists():
-                project_path = str(Path.cwd())
+            # Search UPWARD for .empirica/ like git does for .git/
+            current = Path.cwd()
+            for parent in [current] + list(current.parents):
+                candidate_db = parent / '.empirica' / 'sessions' / 'sessions.db'
+                if candidate_db.exists():
+                    project_path = str(parent)
+                    break
+                if parent == Path.home() or parent == parent.parent:
+                    break
 
         if project_path:
             db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
             db = SessionDatabase(db_path=str(db_path))
         else:
-            db = SessionDatabase()
+            # Fallback to global hub at ~/.empirica/ instead of creating in CWD
+            global_db = Path.home() / '.empirica' / 'sessions' / 'sessions.db'
+            if global_db.exists():
+                db = SessionDatabase(db_path=str(global_db))
+            else:
+                db = SessionDatabase()
         session = get_active_session(db, ai_id)
 
+        # Always get project-level counts (goals are project-wide)
+        cursor = db.conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM goals WHERE status != 'completed'")
+        open_goals = cursor.fetchone()[0] or 0
+
         if not session:
-            print(f"{Colors.GRAY}[empirica:{ai_id}:inactive]{Colors.RESET}")
+            # No active session, but still show project-level data
+            if open_goals > 0:
+                print(f"{Colors.GRAY}[empirica]{Colors.RESET} {Colors.CYAN}🎯{open_goals}{Colors.RESET} │ {Colors.GRAY}no session{Colors.RESET}")
+            else:
+                print(f"{Colors.GRAY}[empirica:{ai_id}:inactive]{Colors.RESET}")
+            db.close()
             return
 
         session_id = session['session_id']
@@ -647,8 +804,11 @@ def main():
         # Check drift from DB (compare recent reflexes)
         drift_detected, drift_severity = get_drift_from_db(db, session_id)
 
-        # Get active goal for this session
+        # Get active goal for this session (used in 'full' mode)
         goal = get_active_goal(db, session_id)
+
+        # Get open counts (goals/unknowns to close) - used in default/learning modes
+        open_counts = get_open_counts(db, session_id)
 
         # Get drift from cache (updated by hooks) - fallback
         drift_state = read_drift_cache(str(Path.cwd()))
@@ -668,7 +828,7 @@ def main():
         output = format_statusline(
             session, phase, vectors, drift_state, deltas, mode,
             drift_detected=drift_detected, drift_severity=drift_severity,
-            gate_decision=gate_decision, goal=goal
+            gate_decision=gate_decision, goal=goal, open_counts=open_counts
         )
         print(output)
 

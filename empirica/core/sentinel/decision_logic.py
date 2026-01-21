@@ -91,6 +91,7 @@ class PersonaMatch:
     priors: Dict[str, float] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert persona recommendation to dictionary representation."""
         return {
             "persona_id": self.persona_id,
             "name": self.name,

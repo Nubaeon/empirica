@@ -23,6 +23,7 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,7 @@ class FeatureCoverage:
 
     @property
     def coverage(self) -> float:
+        """Calculate documentation coverage ratio (0.0 to 1.0)."""
         return self.documented / self.total if self.total > 0 else 0.0
 
     @property
@@ -56,6 +58,7 @@ class FeatureCoverage:
             return "🌑"
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert coverage data to dictionary representation."""
         return {
             "name": self.name,
             "total": self.total,
@@ -63,6 +66,34 @@ class FeatureCoverage:
             "coverage": round(self.coverage * 100, 1),
             "moon": self.moon,
             "undocumented": self.undocumented[:10]  # Top 10
+        }
+
+
+@dataclass
+class StalenessItem:
+    """A single staleness detection result."""
+    doc_path: str
+    section: str
+    severity: str  # "high", "medium", "low"
+    audience: str  # "ai", "developer", "user"
+    memory_type: str  # "finding", "dead_end", "mistake", "unknown"
+    memory_text: str
+    memory_age_days: int
+    similarity: float
+    suggestion: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert staleness item to dictionary."""
+        return {
+            "doc_path": self.doc_path,
+            "section": self.section,
+            "severity": self.severity,
+            "audience": self.audience,
+            "memory_type": self.memory_type,
+            "memory_text": self.memory_text[:200],  # Truncate for display
+            "memory_age_days": self.memory_age_days,
+            "similarity": round(self.similarity, 3),
+            "suggestion": self.suggestion
         }
 
 
@@ -75,6 +106,7 @@ class EpistemicDocsAgent:
     """
 
     def __init__(self, project_root: Path | None = None, verbose: bool = False):
+        """Initialize docs agent with optional project root and verbosity setting."""
         self.root = project_root or self._detect_project_root()
         self.verbose = verbose
         self.categories: list[FeatureCoverage] = []
@@ -206,6 +238,89 @@ class EpistemicDocsAgent:
             re.search(r'\b' + term.lower() + r'\b', docs_content) is not None
         )
 
+    def check_docstrings(self) -> dict[str, Any]:
+        """
+        Check Python code for missing docstrings using AST.
+
+        Returns dict with:
+        - modules_missing: List of modules without module docstrings
+        - classes_missing: List of classes without docstrings
+        - functions_missing: List of public functions without docstrings
+        - coverage: Overall docstring coverage percentage
+        """
+        modules_missing: list[str] = []
+        classes_missing: list[str] = []
+        functions_missing: list[str] = []
+        total_items = 0
+        documented_items = 0
+
+        # Scan empirica package
+        package_dir = self.root / "empirica"
+        if not package_dir.exists():
+            return {
+                "modules_missing": modules_missing,
+                "classes_missing": classes_missing,
+                "functions_missing": functions_missing,
+                "total_items": total_items,
+                "documented_items": documented_items,
+                "coverage": 0.0
+            }
+
+        for py_file in package_dir.rglob("*.py"):
+            if "__pycache__" in str(py_file):
+                continue
+
+            try:
+                content = py_file.read_text()
+                tree = ast.parse(content)
+                rel_path = py_file.relative_to(self.root)
+
+                # Check module docstring
+                total_items += 1
+                if ast.get_docstring(tree):
+                    documented_items += 1
+                else:
+                    modules_missing.append(str(rel_path))
+
+                # Check classes and functions
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.ClassDef):
+                        total_items += 1
+                        if ast.get_docstring(node):
+                            documented_items += 1
+                        else:
+                            classes_missing.append(f"{rel_path}:{node.name}")
+
+                    elif isinstance(node, ast.FunctionDef):
+                        # Skip private/dunder methods
+                        if node.name.startswith("_") and not node.name.startswith("__"):
+                            continue
+                        # Skip dunder except __init__
+                        if node.name.startswith("__") and node.name != "__init__":
+                            continue
+
+                        total_items += 1
+                        if ast.get_docstring(node):
+                            documented_items += 1
+                        else:
+                            functions_missing.append(f"{rel_path}:{node.name}")
+
+            except (SyntaxError, UnicodeDecodeError):
+                # Skip files that can't be parsed
+                continue
+
+        # Calculate coverage
+        coverage = round(documented_items / total_items * 100, 1) if total_items > 0 else 0.0
+
+        return {
+            "modules_missing": modules_missing,
+            "classes_missing": classes_missing,
+            "functions_missing": functions_missing,
+            "total_items": total_items,
+            "documented_items": documented_items,
+            "coverage": coverage
+        }
+
     def assess_cli_coverage(self, docs_content: str) -> FeatureCoverage:
         """Assess CLI command documentation coverage."""
         commands = self._extract_cli_commands()
@@ -332,6 +447,95 @@ class EpistemicDocsAgent:
             "notebooklm_suggestions": self._generate_notebooklm_suggestions()
         }
 
+    def run_turtle_assessment(self, max_rounds: int = 3) -> dict[str, Any]:
+        """
+        Epistemic recursive assessment - turtles all the way down.
+
+        Iterates between code and docs to surface gaps:
+        1. Run standard assessment (code → docs comparison)
+        2. Check docstrings (code self-documentation)
+        3. Compare docstrings to external docs (consistency)
+        4. Generate epistemic vectors for convergence tracking
+
+        Args:
+            max_rounds: Maximum iteration rounds (default 3)
+
+        Returns:
+            Combined assessment with convergence tracking
+        """
+        rounds: list[dict[str, Any]] = []
+        prev_uncertainty = 1.0
+
+        for round_num in range(1, max_rounds + 1):
+            # Layer 1: Standard docs assessment
+            docs_result = self.run_assessment()
+
+            # Layer 2: Docstring assessment
+            docstring_result = self.check_docstrings()
+
+            # Layer 3: Cross-reference - find items documented externally but missing docstrings
+            docs_content = self._load_all_docs_content()
+            cross_gaps = []
+            for func in docstring_result["functions_missing"][:20]:  # Top 20
+                # Check if it's documented externally
+                func_name = func.split(":")[-1] if ":" in func else func
+                if self._check_if_documented(func_name, docs_content):
+                    cross_gaps.append(f"{func} (in docs, missing docstring)")
+
+            # Calculate combined epistemic state
+            docs_coverage = docs_result["overall"]["coverage"] / 100
+            docstring_coverage = docstring_result["coverage"] / 100
+            combined_coverage = (docs_coverage + docstring_coverage) / 2
+
+            # Epistemic vectors for this round
+            know = combined_coverage
+            uncertainty = 1 - combined_coverage
+            delta = prev_uncertainty - uncertainty
+
+            round_data = {
+                "round": round_num,
+                "docs_coverage": docs_result["overall"]["coverage"],
+                "docstring_coverage": docstring_result["coverage"],
+                "combined_coverage": round(combined_coverage * 100, 1),
+                "cross_gaps": cross_gaps[:5],
+                "vectors": {
+                    "know": round(know, 2),
+                    "uncertainty": round(uncertainty, 2),
+                    "delta": round(delta, 3)
+                },
+                "convergence": abs(delta) < 0.01  # Converged if delta < 1%
+            }
+            rounds.append(round_data)
+
+            # Check convergence
+            if round_data["convergence"]:
+                break
+
+            prev_uncertainty = uncertainty
+
+        # Final summary
+        final_round = rounds[-1]
+        return {
+            "turtle_mode": True,
+            "total_rounds": len(rounds),
+            "converged": final_round["convergence"],
+            "final_state": {
+                "docs_coverage": final_round["docs_coverage"],
+                "docstring_coverage": final_round["docstring_coverage"],
+                "combined": final_round["combined_coverage"],
+                "moon": self._score_to_moon(final_round["combined_coverage"] / 100)
+            },
+            "epistemic_vectors": final_round["vectors"],
+            "cross_gaps": final_round["cross_gaps"],
+            "rounds": rounds,
+            "recommendations": self._generate_recommendations(),
+            "docstring_gaps": {
+                "modules": docstring_result["modules_missing"][:10],
+                "classes": docstring_result["classes_missing"][:10],
+                "functions": docstring_result["functions_missing"][:10]
+            }
+        }
+
     def _score_to_moon(self, score: float) -> str:
         """Convert 0-1 score to moon phase."""
         if score >= 0.85:
@@ -356,6 +560,439 @@ class EpistemicDocsAgent:
                 )
 
         return recommendations[:5]  # Top 5 recommendations
+
+    def _classify_audience(self, doc_path: str) -> str:
+        """
+        Classify doc audience based on path.
+
+        AI-first model: Everything is AI-facing by default.
+        Only explicitly human-prefixed paths are for humans.
+        """
+        path_str = str(doc_path).lower()
+        if "human/end-users" in path_str or "human/end_users" in path_str:
+            return "user"
+        elif "human/developers" in path_str or "human/developer" in path_str:
+            return "developer"
+        else:
+            return "ai"  # Default - AI is primary consumer
+
+    def _get_sensitivity_threshold(self, audience: str, base_threshold: float) -> float:
+        """
+        Get staleness sensitivity threshold by audience.
+
+        AI docs need highest sensitivity (any drift matters).
+        """
+        if audience == "ai":
+            return base_threshold - 0.05  # More sensitive
+        elif audience == "developer":
+            return base_threshold
+        else:  # user
+            return base_threshold + 0.05  # Less sensitive
+
+    def check_staleness(
+        self,
+        threshold: float = 0.7,  # Kept for API compatibility, not used
+        lookback_days: int = 30
+    ) -> dict[str, Any]:
+        """
+        Detect stale docs using deterministic heuristics (no AI/semantic search).
+
+        Fast pre-filter that identifies:
+        1. Orphaned references - Docs mentioning CLI commands or classes that no longer exist
+        2. Undocumented code - New CLI commands or classes with no doc coverage
+        3. Activity gaps - Docs in directories with recent code changes but stale doc timestamps
+        4. Explicit mentions - Dead ends/findings that literally reference doc paths
+
+        For deep semantic analysis, use agent-spawn with an LLM.
+
+        Args:
+            threshold: Unused (kept for API compatibility)
+            lookback_days: How far back to check git activity (default 30)
+
+        Returns:
+            Dict with staleness report organized by issue type
+        """
+        docs_dir = self.root / "docs"
+        if not docs_dir.exists():
+            return {
+                "ok": False,
+                "error": f"No docs directory found at {docs_dir}",
+                "issues": []
+            }
+
+        # Gather code inventory
+        cli_commands = set(self._extract_cli_commands())
+        core_modules, _ = self._extract_core_modules()
+        core_classes = set(core_modules)
+
+        # Gather doc inventory
+        docs_content = self._load_all_docs_content()
+        doc_files = list(docs_dir.rglob("*.md"))
+        doc_files = [f for f in doc_files if "_archive" not in str(f)]
+
+        issues: list[dict[str, Any]] = []
+
+        # === Check 1: Undocumented CLI commands ===
+        for cmd in cli_commands:
+            if not self._check_if_documented(cmd, docs_content):
+                issues.append({
+                    "type": "undocumented_code",
+                    "severity": "high",
+                    "item": cmd,
+                    "category": "CLI command",
+                    "suggestion": f"Add documentation for 'empirica {cmd}' command"
+                })
+
+        # === Check 2: Undocumented core classes ===
+        for cls in core_classes:
+            if not self._check_if_documented(cls, docs_content):
+                issues.append({
+                    "type": "undocumented_code",
+                    "severity": "medium",
+                    "item": cls,
+                    "category": "Core class",
+                    "suggestion": f"Add documentation for {cls} class"
+                })
+
+        # === Check 3: Orphaned doc references ===
+        # Check if docs reference CLI commands that no longer exist
+        for doc_file in doc_files:
+            try:
+                content = doc_file.read_text()
+                rel_path = str(doc_file.relative_to(docs_dir))
+
+                # Look for empirica command patterns in docs
+                cmd_pattern = r'empirica\s+([a-z]+-[a-z-]+)'  # Require hyphen to be a command
+                doc_cmds = set(re.findall(cmd_pattern, content))
+
+                for doc_cmd in doc_cmds:
+                    # Skip common words and invalid patterns
+                    if doc_cmd in {'the', 'a', 'an', 'to', 'is', 'and', 'or', 'empirica'}:
+                        continue
+                    if not re.match(r'^[a-z]+-[a-z-]+$', doc_cmd):  # Must have at least one hyphen
+                        continue
+                    if doc_cmd not in cli_commands and len(doc_cmd) > 5:
+                        issues.append({
+                            "type": "orphaned_reference",
+                            "severity": "high",
+                            "doc_path": rel_path,
+                            "item": f"empirica {doc_cmd}",
+                            "category": "Removed CLI command",
+                            "suggestion": f"Remove or update reference to 'empirica {doc_cmd}' - command no longer exists"
+                        })
+            except Exception:
+                continue
+
+        # === Check 4: Git activity gap ===
+        activity_gaps = self._check_git_activity_gaps(docs_dir, lookback_days)
+        for gap in activity_gaps:
+            issues.append({
+                "type": "activity_gap",
+                "severity": "medium",
+                "doc_path": gap["doc_path"],
+                "item": f"{gap['code_commits']} code commits, doc unchanged",
+                "category": "Stale doc",
+                "suggestion": f"Doc may be stale - {gap['code_commits']} commits to related code in last {lookback_days} days"
+            })
+
+        # === Check 5: Explicit doc references in memory ===
+        explicit_refs = self._check_explicit_doc_references(docs_dir)
+        for ref in explicit_refs:
+            issues.append({
+                "type": "explicit_reference",
+                "severity": "high",
+                "doc_path": ref["doc_path"],
+                "item": ref["memory_text"][:100],
+                "category": ref["memory_type"],
+                "suggestion": ref["suggestion"]
+            })
+
+        # Categorize by severity
+        high = [i for i in issues if i["severity"] == "high"]
+        medium = [i for i in issues if i["severity"] == "medium"]
+        low = [i for i in issues if i["severity"] == "low"]
+
+        # Assessment
+        if len(high) >= 10:
+            assessment = "Critical documentation debt"
+        elif len(high) >= 5:
+            assessment = "Significant gaps detected"
+        elif len(high) > 0 or len(medium) >= 5:
+            assessment = "Some docs need attention"
+        else:
+            assessment = "Documentation appears current"
+
+        return {
+            "ok": True,
+            "summary": {
+                "total_issues": len(issues),
+                "high_severity": len(high),
+                "medium_severity": len(medium),
+                "low_severity": len(low),
+                "assessment": assessment,
+                "cli_commands_checked": len(cli_commands),
+                "core_classes_checked": len(core_classes),
+                "docs_checked": len(doc_files)
+            },
+            "by_type": {
+                "undocumented_code": [i for i in issues if i["type"] == "undocumented_code"],
+                "orphaned_reference": [i for i in issues if i["type"] == "orphaned_reference"],
+                "activity_gap": [i for i in issues if i["type"] == "activity_gap"],
+                "explicit_reference": [i for i in issues if i["type"] == "explicit_reference"]
+            },
+            "by_severity": {
+                "high": high[:15],
+                "medium": medium[:15],
+                "low": low[:10]
+            },
+            "note": "For deep semantic analysis, use: empirica agent-spawn --task 'Analyze <doc> for staleness'"
+        }
+
+    def _check_git_activity_gaps(self, docs_dir: Path, lookback_days: int) -> list[dict]:
+        """Check for docs that haven't been updated despite related code changes."""
+        gaps = []
+        try:
+            import subprocess
+
+            # Get list of files changed in last N days
+            result = subprocess.run(
+                ["git", "log", f"--since={lookback_days} days ago", "--name-only", "--pretty=format:"],
+                capture_output=True, text=True, cwd=self.root
+            )
+            if result.returncode != 0:
+                return gaps
+
+            changed_files = [f.strip() for f in result.stdout.split('\n') if f.strip()]
+
+            # Group changes by directory
+            from collections import Counter
+            dir_changes = Counter()
+            for f in changed_files:
+                if f.startswith("empirica/"):
+                    # Map code path to potential doc area
+                    parts = f.split("/")
+                    if len(parts) >= 2:
+                        area = parts[1]  # e.g., "core", "cli", "data"
+                        dir_changes[area] += 1
+
+            # Check if corresponding docs have been updated
+            for area, count in dir_changes.items():
+                if count < 5:  # Only flag if significant activity
+                    continue
+
+                # Look for docs about this area (exclude archives)
+                area_docs = [d for d in docs_dir.rglob(f"*{area}*.md") if "_archive" not in str(d)]
+                if not area_docs:
+                    continue
+
+                for doc in area_docs:
+                    # Check if doc was modified recently
+                    doc_result = subprocess.run(
+                        ["git", "log", f"--since={lookback_days} days ago", "--oneline", str(doc)],
+                        capture_output=True, text=True, cwd=self.root
+                    )
+                    doc_commits = len([l for l in doc_result.stdout.strip().split('\n') if l])
+
+                    if doc_commits == 0:  # Doc not updated but code was
+                        gaps.append({
+                            "doc_path": str(doc.relative_to(docs_dir)),
+                            "code_area": area,
+                            "code_commits": count,
+                            "doc_commits": doc_commits
+                        })
+
+        except Exception:
+            pass
+
+        return gaps[:10]  # Limit results
+
+    def _check_explicit_doc_references(self, docs_dir: Path) -> list[dict]:
+        """Check if any memory items explicitly reference doc paths."""
+        refs = []
+
+        try:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+
+            # Query recent findings and dead_ends that mention doc paths
+            cursor = db.conn.cursor()
+
+            # Look for mentions of .md files or "docs/" in memory
+            for table, mem_type in [("project_findings", "finding"), ("project_dead_ends", "dead_end")]:
+                try:
+                    cursor.execute(f"""
+                        SELECT text FROM {table}
+                        WHERE (text LIKE '%.md%' OR text LIKE '%docs/%' OR text LIKE '%documentation%')
+                        AND timestamp > ?
+                        ORDER BY timestamp DESC LIMIT 10
+                    """, (datetime.now(timezone.utc).timestamp() - 30*24*3600,))
+
+                    for row in cursor.fetchall():
+                        text = row[0] if row else ""
+                        # Extract mentioned doc paths
+                        md_matches = re.findall(r'[\w/-]+\.md', text)
+                        for md in md_matches:
+                            # Check if this doc exists
+                            potential_path = docs_dir / md
+                            if potential_path.exists() or (docs_dir / md.split('/')[-1]).exists():
+                                refs.append({
+                                    "doc_path": md,
+                                    "memory_type": mem_type,
+                                    "memory_text": text[:200],
+                                    "suggestion": f"Memory explicitly mentions {md} - review for updates"
+                                })
+                except Exception:
+                    continue
+
+            db.close()
+
+        except Exception:
+            pass
+
+        return refs[:5]  # Limit results
+
+    def _detect_project_id(self) -> str | None:
+        """Detect project ID from .empirica config."""
+        try:
+            import yaml
+
+            # Try reading from .empirica/project.yaml (primary method)
+            project_yaml = self.root / ".empirica" / "project.yaml"
+            if project_yaml.exists():
+                with open(project_yaml, 'r') as f:
+                    data = yaml.safe_load(f)
+                    if data and data.get("project_id"):
+                        return data["project_id"]
+
+            # Fallback: Try .empirica/project.json
+            project_json = self.root / ".empirica" / "project.json"
+            if project_json.exists():
+                data = json.loads(project_json.read_text())
+                return data.get("project_id")
+
+        except Exception:
+            pass
+        return None
+
+    def _extract_doc_sections(self, content: str) -> list[tuple[str, str]]:
+        """Extract sections from markdown content by headers."""
+        sections = []
+        lines = content.split('\n')
+        current_header = "Introduction"
+        current_content: list[str] = []
+
+        for line in lines:
+            if line.startswith('#'):
+                # Save previous section
+                if current_content:
+                    sections.append((current_header, '\n'.join(current_content)))
+                # Start new section
+                current_header = line.lstrip('#').strip()
+                current_content = []
+            else:
+                current_content.append(line)
+
+        # Don't forget last section
+        if current_content:
+            sections.append((current_header, '\n'.join(current_content)))
+
+        return sections
+
+    def _calculate_age_days(self, timestamp_val) -> int:
+        """Calculate age in days from timestamp (Unix float or ISO string)."""
+        if timestamp_val is None:
+            return 999  # Treat missing timestamp as very old
+
+        try:
+            # Handle Unix timestamp (float)
+            if isinstance(timestamp_val, (int, float)):
+                ts = datetime.fromtimestamp(timestamp_val, tz=timezone.utc)
+            elif isinstance(timestamp_val, str):
+                # Handle ISO string formats
+                if 'T' in timestamp_val:
+                    if timestamp_val.endswith('Z'):
+                        timestamp_val = timestamp_val[:-1] + '+00:00'
+                    ts = datetime.fromisoformat(timestamp_val)
+                else:
+                    ts = datetime.fromisoformat(timestamp_val)
+
+                # Make timezone-aware if naive
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+            else:
+                return 999
+
+            now = datetime.now(timezone.utc)
+            delta = now - ts
+            return max(0, delta.days)
+        except Exception:
+            return 999
+
+    def _determine_severity(
+        self,
+        score: float,
+        memory_type: str,
+        age_days: int,
+        audience: str
+    ) -> str:
+        """
+        Determine staleness severity based on multiple factors.
+
+        High severity:
+        - High similarity (>0.8) + recent (<7 days) + AI docs
+        - Dead end or mistake with any similarity + AI docs
+
+        Medium severity:
+        - Moderate similarity (0.7-0.8) + recent (<14 days)
+        - Finding with high similarity on any doc
+
+        Low severity:
+        - Lower similarity or older items
+        """
+        # Dangerous memory types get elevated severity
+        dangerous_types = {"dead_end", "mistake"}
+
+        if memory_type in dangerous_types:
+            if audience == "ai":
+                return "high"  # AI following bad advice is critical
+            elif score >= 0.75:
+                return "high"
+            else:
+                return "medium"
+
+        # High similarity + recent = high severity for AI docs
+        if score >= 0.8 and age_days <= 7:
+            if audience == "ai":
+                return "high"
+            else:
+                return "medium"
+
+        # Moderate signals
+        if score >= 0.75 and age_days <= 14:
+            return "medium"
+
+        if score >= 0.7:
+            return "low"
+
+        return "low"
+
+    def _generate_staleness_suggestion(
+        self,
+        memory_type: str,
+        memory_text: str,
+        section_title: str
+    ) -> str:
+        """Generate actionable suggestion for staleness fix."""
+        type_suggestions = {
+            "finding": f"Update '{section_title}' to reflect: {memory_text[:100]}...",
+            "dead_end": f"Add warning to '{section_title}': this approach may not work",
+            "mistake": f"Review '{section_title}': following this led to errors",
+            "unknown": f"Clarify '{section_title}': questions remain about this topic"
+        }
+        return type_suggestions.get(
+            memory_type,
+            f"Review '{section_title}' for potential updates"
+        )
 
     def _generate_notebooklm_suggestions(self) -> dict[str, Any]:
         """Generate NotebookLM content suggestions based on doc structure."""
@@ -465,8 +1102,45 @@ def handle_docs_assess(args) -> int:
         verbose = getattr(args, 'verbose', False)
         output_format = getattr(args, 'output', 'human')
         summary_only = getattr(args, 'summary_only', False)
+        check_docstrings = getattr(args, 'check_docstrings', False)
+        turtle_mode = getattr(args, 'turtle', False)
+        check_staleness = getattr(args, 'check_staleness', False)
+        staleness_threshold = getattr(args, 'staleness_threshold', 0.7)
+        staleness_days = getattr(args, 'staleness_days', 30)
 
         agent = EpistemicDocsAgent(project_root=project_root, verbose=verbose)
+
+        # Staleness detection mode
+        if check_staleness:
+            result = agent.check_staleness(
+                threshold=staleness_threshold,
+                lookback_days=staleness_days
+            )
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                _print_staleness_output(result, verbose)
+            return 0
+
+        # Turtle mode: recursive epistemic assessment
+        if turtle_mode:
+            result = agent.run_turtle_assessment()
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                _print_turtle_output(result, verbose)
+            return 0
+
+        # Check docstrings only mode
+        if check_docstrings:
+            result = agent.check_docstrings()
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                _print_docstring_output(result, verbose)
+            return 0
+
+        # Standard assessment
         result = agent.run_assessment()
 
         # Lightweight summary for bootstrap context (~50 tokens)
@@ -511,6 +1185,210 @@ def _generate_summary(result: dict, categories: list) -> dict:
         "top_gaps": top_gaps,
         "doc_count": doc_count
     }
+
+
+def _print_staleness_output(result: dict, verbose: bool):
+    """Print staleness detection output (deterministic heuristics mode)."""
+    print("\n" + "=" * 60)
+    print("🔍 DOC STALENESS DETECTION (Heuristic Mode)")
+    print("=" * 60)
+
+    if not result.get("ok"):
+        print(f"\n❌ Error: {result.get('error', 'Unknown error')}")
+        return
+
+    summary = result["summary"]
+
+    # Assessment header
+    assessment = summary.get("assessment", "Unknown")
+    if "Critical" in assessment:
+        icon = "🔴"
+    elif "Significant" in assessment:
+        icon = "🟡"
+    elif "Some" in assessment:
+        icon = "🟠"
+    else:
+        icon = "🟢"
+
+    print(f"\n{icon} {assessment}")
+    print(f"   CLI commands checked: {summary.get('cli_commands_checked', 0)}")
+    print(f"   Core classes checked: {summary.get('core_classes_checked', 0)}")
+    print(f"   Docs checked: {summary.get('docs_checked', 0)}")
+
+    # Severity breakdown
+    print("\n📊 Issues Found:")
+    print(f"   🔴 High:   {summary['high_severity']}")
+    print(f"   🟡 Medium: {summary['medium_severity']}")
+    print(f"   🟢 Low:    {summary['low_severity']}")
+
+    # By type breakdown
+    by_type = result.get("by_type", {})
+    undoc = by_type.get("undocumented_code", [])
+    orphan = by_type.get("orphaned_reference", [])
+    gaps = by_type.get("activity_gap", [])
+    explicit = by_type.get("explicit_reference", [])
+
+    print("\n📋 By Type:")
+    print(f"   📝 Undocumented code:    {len(undoc)}")
+    print(f"   🔗 Orphaned references:  {len(orphan)}")
+    print(f"   ⏰ Activity gaps:        {len(gaps)}")
+    print(f"   📌 Explicit mentions:    {len(explicit)}")
+
+    # High severity items
+    by_severity = result.get("by_severity", {})
+    high_items = by_severity.get("high", [])
+    if high_items:
+        print("\n" + "-" * 60)
+        print("🔴 HIGH SEVERITY")
+        print("-" * 60)
+        for item in high_items[:8]:
+            _print_staleness_item_v2(item)
+
+    # Medium severity items
+    medium_items = by_severity.get("medium", [])
+    if medium_items and (verbose or len(high_items) < 5):
+        print("\n" + "-" * 60)
+        print("🟡 MEDIUM SEVERITY")
+        print("-" * 60)
+        limit = 8 if verbose else 5
+        for item in medium_items[:limit]:
+            _print_staleness_item_v2(item)
+        if len(medium_items) > limit:
+            print(f"   ... and {len(medium_items) - limit} more")
+
+    # Note about deep analysis
+    if result.get("note"):
+        print(f"\n💡 {result['note']}")
+
+    print("\n" + "=" * 60)
+
+
+def _print_staleness_item_v2(item: dict):
+    """Print a single staleness item (v2 format for deterministic mode)."""
+    issue_type = item.get("type", "unknown")
+    severity = item.get("severity", "medium")
+    doc_path = item.get("doc_path", "")
+    item_name = item.get("item", "")
+    category = item.get("category", "")
+    suggestion = item.get("suggestion", "")
+
+    # Type icons
+    type_icons = {
+        "undocumented_code": "📝",
+        "orphaned_reference": "🔗",
+        "activity_gap": "⏰",
+        "explicit_reference": "📌"
+    }
+    type_icon = type_icons.get(issue_type, "❓")
+
+    if doc_path:
+        print(f"\n   {type_icon} {doc_path}")
+        print(f"      {category}: {item_name[:60]}")
+    else:
+        print(f"\n   {type_icon} {category}: {item_name[:60]}")
+
+    print(f"      → {suggestion[:70]}...")
+
+
+def _print_turtle_output(result: dict, verbose: bool):
+    """Print turtle mode (recursive epistemic) output."""
+    print("\n" + "=" * 60)
+    print("🐢 TURTLE MODE: RECURSIVE EPISTEMIC ASSESSMENT")
+    print("=" * 60)
+
+    final = result["final_state"]
+    vectors = result["epistemic_vectors"]
+
+    print(f"\n{final['moon']} Combined Coverage: {final['combined']}%")
+    print(f"   External docs: {final['docs_coverage']}%")
+    print(f"   Code docstrings: {final['docstring_coverage']}%")
+
+    print(f"\n📊 Epistemic Vectors:")
+    print(f"   know: {vectors['know']:.2f}")
+    print(f"   uncertainty: {vectors['uncertainty']:.2f}")
+    print(f"   delta: {vectors['delta']:+.3f}")
+
+    print(f"\n🔄 Convergence: {'✅ Converged' if result['converged'] else '⚠️ Not converged'}")
+    print(f"   Rounds: {result['total_rounds']}")
+
+    if result.get("cross_gaps"):
+        print(f"\n⚠️ Cross-Reference Gaps (in docs but missing docstring):")
+        for gap in result["cross_gaps"][:5]:
+            print(f"   • {gap}")
+
+    if verbose and result.get("docstring_gaps"):
+        gaps = result["docstring_gaps"]
+        if gaps.get("modules"):
+            print(f"\n📄 Modules missing docstrings:")
+            for m in gaps["modules"][:5]:
+                print(f"   • {m}")
+        if gaps.get("classes"):
+            print(f"\n🏛️ Classes missing docstrings:")
+            for c in gaps["classes"][:5]:
+                print(f"   • {c}")
+        if gaps.get("functions"):
+            print(f"\n⚙️ Functions missing docstrings:")
+            for f in gaps["functions"][:5]:
+                print(f"   • {f}")
+
+    if result.get("recommendations"):
+        print(f"\n💡 Recommendations:")
+        for rec in result["recommendations"][:3]:
+            print(f"   • {rec}")
+
+    print("\n" + "=" * 60)
+
+
+def _print_docstring_output(result: dict, verbose: bool):
+    """Print docstring check output."""
+    print("\n" + "=" * 60)
+    print("📝 DOCSTRING COVERAGE CHECK")
+    print("=" * 60)
+
+    coverage = result["coverage"]
+    total = result["total_items"]
+    documented = result["documented_items"]
+
+    # Moon phase
+    if coverage >= 85:
+        moon = "🌕"
+    elif coverage >= 70:
+        moon = "🌔"
+    elif coverage >= 50:
+        moon = "🌓"
+    elif coverage >= 30:
+        moon = "🌒"
+    else:
+        moon = "🌑"
+
+    print(f"\n{moon} Docstring Coverage: {coverage}%")
+    print(f"   Items: {documented}/{total} documented")
+
+    if result["modules_missing"]:
+        print(f"\n📄 Modules missing docstrings ({len(result['modules_missing'])}):")
+        limit = 10 if verbose else 5
+        for m in result["modules_missing"][:limit]:
+            print(f"   • {m}")
+        if len(result["modules_missing"]) > limit:
+            print(f"   ... and {len(result['modules_missing']) - limit} more")
+
+    if result["classes_missing"]:
+        print(f"\n🏛️ Classes missing docstrings ({len(result['classes_missing'])}):")
+        limit = 10 if verbose else 5
+        for c in result["classes_missing"][:limit]:
+            print(f"   • {c}")
+        if len(result["classes_missing"]) > limit:
+            print(f"   ... and {len(result['classes_missing']) - limit} more")
+
+    if result["functions_missing"]:
+        print(f"\n⚙️ Functions missing docstrings ({len(result['functions_missing'])}):")
+        limit = 10 if verbose else 5
+        for f in result["functions_missing"][:limit]:
+            print(f"   • {f}")
+        if len(result["functions_missing"]) > limit:
+            print(f"   ... and {len(result['functions_missing']) - limit} more")
+
+    print("\n" + "=" * 60)
 
 
 def _print_human_output(result: dict, categories: list[FeatureCoverage], verbose: bool):
@@ -620,11 +1498,39 @@ class DocsExplainAgent:
     }
 
     def __init__(self, project_root: Path | None = None, project_id: str | None = None):
+        """Initialize explain agent with optional project root and project ID."""
         self.root = project_root or EpistemicDocsAgent._detect_project_root()
         self.docs_dir = self.root / "docs"
         self._docs_cache: dict[str, str] = {}
         self.project_id = project_id or self._detect_project_id()
         self._qdrant_available: bool | None = None
+
+        # Fallback: if docs_dir doesn't exist, try to find Empirica's package docs
+        # This enables docs-explain to work from any directory, not just within the project
+        if not self.docs_dir.exists():
+            self.docs_dir = self._find_empirica_package_docs()
+
+    def _find_empirica_package_docs(self) -> Path:
+        """Find Empirica's installed package docs directory as fallback."""
+        try:
+            # Method 1: Use the package's __file__ location
+            import empirica
+            package_dir = Path(empirica.__file__).parent.parent
+            docs_candidate = package_dir / "docs"
+            if docs_candidate.exists():
+                return docs_candidate
+
+            # Method 2: Check common installation patterns
+            # For editable installs, the package is often in a 'empirica' subdir
+            if (package_dir / "empirica" / "__init__.py").exists():
+                docs_candidate = package_dir / "docs"
+                if docs_candidate.exists():
+                    return docs_candidate
+        except Exception:
+            pass
+
+        # Return original (non-existent) path if fallback fails
+        return self.root / "docs"
 
     def _detect_project_id(self) -> str | None:
         """Detect project ID from .empirica config or database."""

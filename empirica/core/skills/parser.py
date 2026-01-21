@@ -9,6 +9,7 @@ from typing import Dict, List
 
 
 def parse_markdown_to_skill(md_text: str, name: str, tags: List[str] | None = None) -> Dict:
+    """Parse markdown text into a skill dictionary."""
     # Heuristic: extract sections by headings
     sections = {}
     current = "body"
@@ -22,6 +23,7 @@ def parse_markdown_to_skill(md_text: str, name: str, tags: List[str] | None = No
             sections[current].append(line)
 
     def extract_list(sec_key: str) -> List[str]:
+        """Extract list items from a section."""
         lines = sections.get(sec_key, [])
         items: List[str] = []
         for ln in lines:
@@ -31,6 +33,7 @@ def parse_markdown_to_skill(md_text: str, name: str, tags: List[str] | None = No
         return items
 
     def extract_paragraph(sec_key: str) -> str:
+        """Extract paragraph text from a section."""
         return "\n".join([ln for ln in sections.get(sec_key, []) if ln.strip()])
 
     skill = {

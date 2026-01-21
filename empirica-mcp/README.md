@@ -205,8 +205,8 @@ pip install empirica
 ## Docker
 
 ```bash
-docker pull nubaeon/empirica:1.3.2
-docker run -p 3000:3000 nubaeon/empirica:1.3.2 empirica-mcp
+docker pull nubaeon/empirica:1.4.0
+docker run -p 3000:3000 nubaeon/empirica:1.4.0 empirica-mcp
 ```
 
 ---
@@ -214,7 +214,7 @@ docker run -p 3000:3000 nubaeon/empirica:1.3.2 empirica-mcp
 ## Requirements
 
 - Python 3.11+
-- empirica >= 1.3.2
+- empirica >= 1.4.0
 - mcp >= 1.0.0
 
 ---

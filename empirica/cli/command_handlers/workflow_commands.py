@@ -15,6 +15,7 @@ import logging
 from ..cli_utils import handle_cli_error, parse_json_safely
 from ..validation import PreflightInput, CheckInput, PostflightInput, safe_validate
 from empirica.core.canonical.empirica_git.sentinel_hooks import SentinelHooks, SentinelDecision, auto_enable_sentinel
+from empirica.utils.session_resolver import resolve_session_id
 
 # Auto-enable Sentinel with default evaluator on module load
 auto_enable_sentinel()
@@ -139,7 +140,6 @@ def handle_preflight_submit_command(args):
             vectors = validated.vectors
             reasoning = validated.reasoning or ''
             task_context = validated.task_context or ''
-            noetic_concepts = getattr(validated, 'noetic_concepts', None)
             output_format = 'json'  # AI-first always uses JSON output
         else:
             # LEGACY MODE: Use CLI flags
@@ -147,7 +147,6 @@ def handle_preflight_submit_command(args):
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
             reasoning = args.reasoning
             task_context = getattr(args, 'task_context', '') or ''  # For pattern retrieval
-            noetic_concepts = None  # Legacy mode doesn't support AI-provided concepts
             output_format = getattr(args, 'output', 'json')  # Default to JSON
 
             # Validate required fields for legacy mode
@@ -170,6 +169,17 @@ def handle_preflight_submit_command(args):
                 }))
                 sys.exit(1)
             vectors = validated.vectors  # Use validated vectors
+
+        # Resolve partial session IDs to full UUIDs
+        try:
+            session_id = resolve_session_id(session_id)
+        except ValueError as e:
+            print(json.dumps({
+                "ok": False,
+                "error": f"Invalid session_id: {e}",
+                "hint": "Use full UUID, partial UUID (8+ chars), or 'latest'"
+            }))
+            sys.exit(1)
 
         # Extract all numeric values from vectors (handle both simple and nested formats)
         extracted_vectors = _extract_all_vectors(vectors)
@@ -269,30 +279,6 @@ def handle_preflight_submit_command(args):
                 except Exception as e:
                     logger.debug(f"Pattern retrieval failed (optional): {e}")
 
-            # NOETIC EIDETIC: Extract task understanding concepts and embed as eidetic facts
-            noetic_result = None
-            try:
-                from empirica.core.noetic_eidetic import hook_cascade_noetic
-
-                db = SessionDatabase()
-                session = db.get_session(session_id)
-                if session and session.get('project_id'):
-                    noetic_result = hook_cascade_noetic(
-                        phase="PREFLIGHT",
-                        session_id=session_id,
-                        project_id=session['project_id'],
-                        reasoning=reasoning or "",
-                        task_context=task_context,
-                        vectors=vectors,
-                        domain=session.get('subject'),
-                        ai_concepts=noetic_concepts,  # AI-provided concepts (priority over regex)
-                    )
-                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded (source: {noetic_result.get('source', 'unknown')})")
-                db.close()
-            except Exception as e:
-                # Noetic extraction is optional
-                logger.debug(f"Noetic eidetic extraction skipped: {e}")
-
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -305,8 +291,7 @@ def handle_preflight_submit_command(args):
                 "storage_layers": {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
-                    "json_logs": True,
-                    "noetic_eidetic": noetic_result.get('concepts_embedded', 0) > 0 if noetic_result else False
+                    "json_logs": True
                 },
                 "calibration": {
                     "adjustments": calibration_adjustments if calibration_adjustments else None,
@@ -672,7 +657,6 @@ def handle_check_submit_command(args):
             decision = config_data.get('decision')
             reasoning = config_data.get('reasoning', '')
             approach = config_data.get('approach', reasoning)  # Fallback to reasoning
-            noetic_concepts = config_data.get('noetic_concepts')  # AI-provided concepts
             output_format = config_data.get('output', 'json')  # Default to JSON for AI-first
         else:
             session_id = args.session_id
@@ -680,9 +664,19 @@ def handle_check_submit_command(args):
             decision = args.decision
             reasoning = args.reasoning
             approach = getattr(args, 'approach', reasoning)  # Fallback to reasoning
-            noetic_concepts = None  # Legacy mode doesn't support AI-provided concepts
             output_format = getattr(args, 'output', 'human')
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
+
+        # Resolve partial session IDs to full UUIDs
+        try:
+            session_id = resolve_session_id(session_id)
+        except ValueError as e:
+            print(json.dumps({
+                "ok": False,
+                "error": f"Invalid session_id: {e}",
+                "hint": "Use full UUID, partial UUID (8+ chars), or 'latest'"
+            }))
+            sys.exit(1)
 
         # BOOTSTRAP GATE: Ensure project context is loaded before CHECK
         # Without bootstrap, CHECK vectors are hollow (same bug as PREFLIGHT-before-bootstrap)
@@ -727,6 +721,8 @@ def handle_check_submit_command(args):
                 print("   CHECK will proceed but vectors may be hollow.", file=_sys.stderr)
 
         # AUTO-INCREMENT ROUND: Get next round from CHECK history
+        # Also retrieve previous CHECK vectors for diminishing returns detection
+        previous_check_vectors = []
         try:
             from empirica.data.session_database import SessionDatabase
             db = SessionDatabase()
@@ -737,6 +733,28 @@ def handle_check_submit_command(args):
             """, (session_id,))
             check_count = cursor.fetchone()[0]
             round_num = check_count + 1  # Next round
+
+            # DIMINISHING RETURNS: Get last 3 CHECK vectors for delta analysis
+            # Note: reflexes table stores vectors as individual columns, not JSON
+            if check_count > 0:
+                cursor.execute("""
+                    SELECT engagement, know, do, context, clarity, coherence,
+                           signal, density, state, change, completion, impact, uncertainty
+                    FROM reflexes
+                    WHERE session_id = ? AND phase = 'CHECK'
+                    ORDER BY timestamp DESC
+                    LIMIT 3
+                """, (session_id,))
+                rows = cursor.fetchall()
+                vector_names = ['engagement', 'know', 'do', 'context', 'clarity', 'coherence',
+                               'signal', 'density', 'state', 'change', 'completion', 'impact', 'uncertainty']
+                for row in rows:
+                    prev_vectors = {}
+                    for i, name in enumerate(vector_names):
+                        if row[i] is not None:
+                            prev_vectors[name] = row[i]
+                    if prev_vectors:  # Only add if we got any vectors
+                        previous_check_vectors.append(prev_vectors)
             db.close()
         except Exception:
             round_num = getattr(args, 'round', 1)  # Fallback to arg or 1
@@ -777,9 +795,72 @@ def handle_check_submit_command(args):
         corrected_know = know - 0.05  # AI overestimates knowing
         corrected_uncertainty = uncertainty + 0.10  # AI underestimates doubt
 
+        # DIMINISHING RETURNS DETECTION: Analyze if investigation is still improving
+        # Key insight: Speed and correctness are ALIGNED when calibration is good.
+        # If investigation stops improving know/reducing uncertainty, proceeding IS correct.
+        diminishing_returns = {
+            "detected": False,
+            "rounds_analyzed": 0,
+            "know_deltas": [],
+            "uncertainty_deltas": [],
+            "reason": None,
+            "recommend_proceed": False
+        }
+
+        if len(previous_check_vectors) >= 2:
+            # Compute deltas between consecutive rounds (newest first)
+            # previous_check_vectors[0] = last round, [1] = round before that, etc.
+            for i in range(len(previous_check_vectors)):
+                if i == 0:
+                    # Current vs last round
+                    prev_know = previous_check_vectors[i].get('know', 0.5)
+                    prev_uncertainty = previous_check_vectors[i].get('uncertainty', 0.5)
+                    delta_know = know - prev_know
+                    delta_uncertainty = uncertainty - prev_uncertainty  # Negative is good
+                    diminishing_returns["know_deltas"].append(delta_know)
+                    diminishing_returns["uncertainty_deltas"].append(delta_uncertainty)
+                elif i < len(previous_check_vectors):
+                    # Between previous rounds
+                    curr = previous_check_vectors[i - 1]
+                    prev = previous_check_vectors[i]
+                    delta_know = curr.get('know', 0.5) - prev.get('know', 0.5)
+                    delta_uncertainty = curr.get('uncertainty', 0.5) - prev.get('uncertainty', 0.5)
+                    diminishing_returns["know_deltas"].append(delta_know)
+                    diminishing_returns["uncertainty_deltas"].append(delta_uncertainty)
+
+            diminishing_returns["rounds_analyzed"] = len(previous_check_vectors) + 1
+
+            # Detect diminishing returns: if last 2 rounds show minimal improvement
+            if len(diminishing_returns["know_deltas"]) >= 2:
+                recent_know_deltas = diminishing_returns["know_deltas"][:2]
+                recent_uncertainty_deltas = diminishing_returns["uncertainty_deltas"][:2]
+
+                # Minimal improvement threshold
+                DELTA_THRESHOLD = 0.05  # Less than 5% improvement per round
+
+                know_stagnant = all(abs(d) < DELTA_THRESHOLD for d in recent_know_deltas)
+                uncertainty_stagnant = all(d >= -DELTA_THRESHOLD for d in recent_uncertainty_deltas)  # Not decreasing
+
+                if know_stagnant and uncertainty_stagnant:
+                    diminishing_returns["detected"] = True
+                    diminishing_returns["reason"] = f"know stagnant ({recent_know_deltas}), uncertainty not decreasing ({recent_uncertainty_deltas})"
+
+                    # Recommend proceed if baseline is reasonable (know >= 0.60, uncertainty <= 0.45)
+                    # Relaxed thresholds because investigation has plateaued
+                    if know >= 0.60 and uncertainty <= 0.45:
+                        diminishing_returns["recommend_proceed"] = True
+                        diminishing_returns["reason"] += " - baseline adequate, investigation plateaued"
+                    else:
+                        diminishing_returns["reason"] += " - baseline insufficient for proceed override"
+
+        # Compute decision with diminishing returns factored in
         computed_decision = None
         if corrected_know >= 0.70 and corrected_uncertainty <= 0.35:
             computed_decision = "proceed"
+        elif diminishing_returns["recommend_proceed"]:
+            # Override: investigation plateaued with adequate baseline
+            computed_decision = "proceed"
+            logger.info(f"CHECK decision override: proceed due to diminishing returns ({diminishing_returns['reason']})")
         else:
             computed_decision = "investigate"
 
@@ -828,31 +909,11 @@ def handle_check_submit_command(args):
                 }
             )
             
-            # Wire Bayesian beliefs logging (TIER 3 Priority 2)
-            # Update AI's beliefs about epistemic vectors based on CHECK assessment
-            try:
-                from empirica.core.bayesian_beliefs import BayesianBeliefManager
-                from empirica.data.session_database import SessionDatabase
-                
-                db = SessionDatabase()
-                belief_manager = BayesianBeliefManager(db)
-                
-                # Update beliefs for each vector based on CHECK submission
-                for vector_name in ['engagement', 'know', 'do', 'context', 'clarity', 
-                                   'coherence', 'signal', 'density', 'state', 'change',
-                                   'completion', 'impact', 'uncertainty']:
-                    if vector_name in vectors:
-                        observation = vectors[vector_name]
-                        belief_manager.update_belief(
-                            session_id=session_id,
-                            vector_name=vector_name,
-                            observation=observation,
-                            phase="CHECK",
-                            round_num=round_num
-                        )
-            except Exception as e:
-                # Bayesian logging is non-critical - don't fail CHECK if it errors
-                logger.warning(f"Bayesian belief update failed: {e}")
+            # NOTE: Bayesian belief updates during CHECK were REMOVED (2026-01-21)
+            # Reason: CHECK-phase updates polluted calibration data by recording mid-session
+            # observations without proper PREFLIGHT→POSTFLIGHT baseline comparison.
+            # Calibration now uses vector_trajectories table which captures clean start/end vectors.
+            # POSTFLIGHT still does proper belief updates with PREFLIGHT comparison (see postflight_submit).
             
             # Wire CHECK phase hooks (TIER 3 Priority 3)
             # Capture fresh epistemic state before and after CHECK
@@ -953,29 +1014,50 @@ def handle_check_submit_command(args):
                     # Auto-checkpoint failure is not fatal, but log it
                     logger.warning(f"Auto-checkpoint after CHECK (uncertainty > 0.5) failed (non-fatal): {e}")
 
-            # NOETIC EIDETIC: Extract decision rationale concepts and embed as eidetic facts
-            noetic_result = None
+            # EPISTEMIC SNAPSHOTS: Capture CHECK phase vectors for calibration analysis
+            # Added 2026-01-21 to provide CHECK data for vector_trajectories analysis
+            # Previously only POSTFLIGHT was captured, missing CHECK as intermediate data point
+            snapshot_created = False
+            snapshot_id = None
             try:
-                from empirica.core.noetic_eidetic import hook_cascade_noetic
+                from empirica.data.snapshot_provider import EpistemicSnapshotProvider
+                from empirica.data.epistemic_snapshot import ContextSummary
+                from empirica.data.session_database import SessionDatabase
 
                 db = SessionDatabase()
-                session = db.get_session(session_id)
-                if session and session.get('project_id'):
-                    noetic_result = hook_cascade_noetic(
-                        phase="CHECK",
-                        session_id=session_id,
-                        project_id=session['project_id'],
-                        reasoning=reasoning or "",
-                        task_context=approach,  # CHECK uses 'approach' as context
-                        vectors=vectors,
-                        domain=session.get('subject'),
-                        ai_concepts=noetic_concepts,  # AI-provided concepts (priority over regex)
-                    )
-                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded (source: {noetic_result.get('source', 'unknown')})")
+                snapshot_provider = EpistemicSnapshotProvider()
+
+                # Build context summary from CHECK state
+                check_confidence = 1.0 - uncertainty
+                context_summary = ContextSummary(
+                    semantic={"phase": "CHECK", "decision": decision, "confidence": check_confidence},
+                    narrative=reasoning or f"CHECK round {round_num}: {decision}",
+                    evidence_refs=[checkpoint_id] if checkpoint_id else []
+                )
+
+                # Create snapshot - this auto-links to previous snapshot (PREFLIGHT)
+                snapshot = snapshot_provider.create_snapshot_from_session(
+                    session_id=session_id,
+                    context_summary=context_summary,
+                    cascade_phase="CHECK",
+                    domain_vectors={"round": round_num, "decision": decision} if round_num else None
+                )
+
+                # Set vectors
+                snapshot.vectors = vectors
+                # No delta for CHECK - deltas are POSTFLIGHT-PREFLIGHT only
+
+                # Save to epistemic_snapshots table
+                snapshot_provider.save_snapshot(snapshot)
+                snapshot_id = snapshot.snapshot_id
+                snapshot_created = True
+
+                logger.debug(f"Created CHECK epistemic snapshot {snapshot_id} for session {session_id}")
+
                 db.close()
             except Exception as e:
-                # Noetic extraction is optional
-                logger.debug(f"Noetic eidetic extraction skipped: {e}")
+                # Snapshot creation is non-fatal
+                logger.debug(f"CHECK epistemic snapshot creation skipped: {e}")
 
             result = {
                 "ok": True,
@@ -992,8 +1074,13 @@ def handle_check_submit_command(args):
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
-                    "noetic_eidetic": noetic_result.get('concepts_embedded', 0) > 0 if noetic_result else False
+                    "epistemic_snapshots": snapshot_created
                 },
+                "snapshot": {
+                    "created": snapshot_created,
+                    "snapshot_id": snapshot_id,
+                    "note": "CHECK vectors captured for calibration analysis"
+                } if snapshot_created else None,
                 "bootstrap": {
                     "had_context": bootstrap_status.get('has_bootstrap', False),
                     "auto_run": bootstrap_result is not None,
@@ -1006,6 +1093,7 @@ def handle_check_submit_command(args):
                     "corrected_vectors": {"know": corrected_know, "uncertainty": corrected_uncertainty},
                     "readiness_gate": "know>=0.70 AND uncertainty<=0.35 (after bias correction)",
                     "gate_passed": computed_decision == "proceed",
+                    "diminishing_returns": diminishing_returns,
                     "autopilot": {
                         "enabled": autopilot_mode,
                         "binding": decision_binding,
@@ -1307,7 +1395,6 @@ def handle_postflight_submit_command(args):
             session_id = config_data.get('session_id')
             vectors = config_data.get('vectors')
             reasoning = config_data.get('reasoning', '')
-            noetic_concepts = config_data.get('noetic_concepts')  # AI-provided concepts
             output_format = 'json'
 
             # Validate required fields
@@ -1323,7 +1410,6 @@ def handle_postflight_submit_command(args):
             session_id = args.session_id
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
             reasoning = args.reasoning
-            noetic_concepts = None  # Legacy mode doesn't support AI-provided concepts
             output_format = getattr(args, 'output', 'json')
 
             # Validate required fields for legacy mode
@@ -1338,6 +1424,17 @@ def handle_postflight_submit_command(args):
         # Validate vectors
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")
+
+        # Resolve partial session IDs to full UUIDs
+        try:
+            session_id = resolve_session_id(session_id)
+        except ValueError as e:
+            print(json.dumps({
+                "ok": False,
+                "error": f"Invalid session_id: {e}",
+                "hint": "Use full UUID, partial UUID (8+ chars), or 'latest'"
+            }))
+            sys.exit(1)
 
         # Extract all numeric values from vectors (handle both simple and nested formats)
         extracted_vectors = _extract_all_vectors(vectors)
@@ -1477,9 +1574,11 @@ def handle_postflight_submit_command(args):
             # Creating an additional checkpoint was creating duplicate entries with default values
             # The GitEnhancedReflexLogger.add_checkpoint() call above is sufficient
 
-            # BAYESIAN BELIEF UPDATE: Update AI calibration priors based on PREFLIGHT → POSTFLIGHT deltas
-            # This enables the AI to learn from its own performance over time
+            # BAYESIAN BELIEF UPDATE: Update AI priors based on PREFLIGHT → POSTFLIGHT deltas
+            # NOTE: Primary calibration source is vector_trajectories table (clean start/end vectors).
+            # This bayesian update is secondary - kept for backward compatibility and .breadcrumbs.yaml export.
             belief_updates = {}
+            calibration_exported = False
             try:
                 if preflight_vectors:
                     from empirica.core.bayesian_beliefs import BayesianBeliefManager
@@ -1487,7 +1586,7 @@ def handle_postflight_submit_command(args):
                     db = SessionDatabase()
                     belief_manager = BayesianBeliefManager(db)
 
-                    # Get cascade_id for this session
+                    # Get cascade_id and ai_id for this session
                     cursor = db.conn.cursor()
                     cursor.execute("""
                         SELECT cascade_id FROM cascades
@@ -1496,6 +1595,11 @@ def handle_postflight_submit_command(args):
                     """, (session_id,))
                     cascade_row = cursor.fetchone()
                     cascade_id = cascade_row[0] if cascade_row else str(uuid.uuid4())
+
+                    # Get ai_id for calibration export
+                    cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
+                    ai_row = cursor.fetchone()
+                    ai_id = ai_row[0] if ai_row else 'claude-code'
 
                     # Update beliefs with PREFLIGHT → POSTFLIGHT comparison
                     belief_updates = belief_manager.update_beliefs(
@@ -1507,6 +1611,16 @@ def handle_postflight_submit_command(args):
 
                     if belief_updates:
                         logger.debug(f"Updated Bayesian beliefs for {len(belief_updates)} vectors")
+
+                        # BREADCRUMBS CALIBRATION EXPORT: Write to .breadcrumbs.yaml for instant session-start
+                        # This creates a calibration cache layer - no DB queries needed at startup
+                        try:
+                            from empirica.core.bayesian_beliefs import export_calibration_to_breadcrumbs
+                            calibration_exported = export_calibration_to_breadcrumbs(ai_id, db)
+                            if calibration_exported:
+                                logger.debug(f"Exported calibration to .breadcrumbs.yaml for {ai_id}")
+                        except Exception as cal_e:
+                            logger.debug(f"Calibration export to breadcrumbs skipped: {cal_e}")
 
                     db.close()
             except Exception as e:
@@ -1678,31 +1792,6 @@ def handle_postflight_submit_command(args):
                 # Snapshot creation is non-fatal
                 logger.debug(f"Epistemic snapshot creation skipped: {e}")
 
-            # NOETIC EIDETIC: Extract conceptual reasoning and embed as eidetic facts
-            # This captures WHY/WHICH/FOR WHOM - the noetic concepts behind the learning
-            noetic_result = None
-            try:
-                from empirica.core.noetic_eidetic import hook_cascade_noetic
-
-                db = SessionDatabase()
-                session = db.get_session(session_id)
-                if session and session.get('project_id'):
-                    noetic_result = hook_cascade_noetic(
-                        phase="POSTFLIGHT",
-                        session_id=session_id,
-                        project_id=session['project_id'],
-                        reasoning=reasoning or "",
-                        task_context=session.get('subject'),
-                        vectors=vectors,
-                        domain=session.get('subject'),
-                        ai_concepts=noetic_concepts,  # AI-provided concepts (priority over regex)
-                    )
-                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded (source: {noetic_result.get('source', 'unknown')})")
-                db.close()
-            except Exception as e:
-                # Noetic extraction is optional
-                logger.debug(f"Noetic eidetic extraction skipped: {e}")
-
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -1723,13 +1812,16 @@ def handle_postflight_submit_command(args):
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
                     "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False,
+                    "breadcrumbs_calibration": calibration_exported,
                     "episodic_memory": episodic_stored,
                     "epistemic_snapshots": snapshot_created,
-                    "qdrant_memory": memory_synced > 0,
-                    "noetic_eidetic": noetic_result.get('concepts_embedded', 0) > 0 if noetic_result else False
+                    "qdrant_memory": memory_synced > 0
                 },
+                "breadcrumbs": {
+                    "calibration_exported": calibration_exported,
+                    "note": "Calibration written to .breadcrumbs.yaml for instant session-start availability"
+                } if calibration_exported else None,
                 "memory_synced": memory_synced,
-                "noetic_concepts": noetic_result.get('concepts_embedded', 0) if noetic_result else 0,
                 "snapshot": {
                     "created": snapshot_created,
                     "snapshot_id": snapshot_id,

@@ -45,7 +45,8 @@ def patch_asyncio_for_mcp():
         import httpx
         # Monkey-patch httpx AsyncClient.__del__ to ignore errors
         original_del = httpx.AsyncClient.__del__
-        def safe_del(self):
+        def safe_del(self) -> None:
+            """Safely cleanup AsyncClient, ignoring event loop closure errors."""
             try:
                 original_del(self)
             except Exception:

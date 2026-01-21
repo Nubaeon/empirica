@@ -7,7 +7,8 @@ from datetime import datetime
 class MigrationRunner:
     """Manages database migrations with execution tracking"""
 
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        """Initialize migration runner with database connection."""
         self.conn = conn
         self._ensure_migrations_table()
 

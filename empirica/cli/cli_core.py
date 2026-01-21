@@ -34,6 +34,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Custom formatter that groups subcommands by category"""
     
     def _format_action(self, action):
+        """Format action with grouped subcommands by category."""
         try:
             if isinstance(action, argparse._SubParsersAction):
                 categories = {
@@ -59,7 +60,8 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Agents': ['agent-spawn', 'agent-report', 'agent-aggregate', 'agent-export', 'agent-import', 'agent-discover'],
                     'Sentinel': ['sentinel-orchestrate', 'sentinel-load-profile', 'sentinel-status', 'sentinel-check'],
                     'Personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find'],
-                    'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats']
+                    'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats'],
+                    'MCP Server': ['mcp-start', 'mcp-stop', 'mcp-status', 'mcp-test', 'mcp-list-tools', 'mcp-call'],
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -104,6 +106,7 @@ from .parsers import (
     add_onboarding_parsers,
     add_trajectory_parsers,
     add_concept_graph_parsers,
+    add_mcp_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -133,6 +136,14 @@ from .command_handlers.persona_commands import (
 )
 from .command_handlers.release_commands import handle_release_ready_command
 from .command_handlers.docs_commands import handle_docs_assess, handle_docs_explain
+from .command_handlers.mcp_commands import (
+    handle_mcp_start_command,
+    handle_mcp_stop_command,
+    handle_mcp_status_command,
+    handle_mcp_test_command,
+    handle_mcp_list_tools_command,
+    handle_mcp_call_command,
+)
 from .command_handlers.trajectory_commands import (
     handle_trajectory_show as handle_trajectory_show_command,
     handle_trajectory_stats as handle_trajectory_stats_command,
@@ -205,6 +216,7 @@ def create_argument_parser():
     add_onboarding_parsers(subparsers)
     add_trajectory_parsers(subparsers)
     add_concept_graph_parsers(subparsers)
+    add_mcp_parsers(subparsers)
 
     return parser
 
@@ -232,20 +244,6 @@ def main(args=None):
             db.close()
         except Exception as e:
             print(f"[VERBOSE] Database: (unavailable: {e})", file=sys.stderr)
-    
-    # Log command usage for telemetry
-    try:
-        from empirica.data.session_database import SessionDatabase
-        db = SessionDatabase()
-        db.log_command_usage(
-            command_name=parsed_args.command,
-            execution_time_ms=0,  # Will update at end
-            success=None,  # Will update based on execution
-            error_message=None
-        )
-        db.close()
-    except Exception:
-        pass  # Don't fail if telemetry fails
     
     # Command handler mapping
     try:
@@ -297,6 +295,8 @@ def main(args=None):
             'assess-state': handle_assess_state_command,
             'mco-load': handle_mco_load_command,
             'trajectory-project': handle_trajectory_project_command,
+            'compact-analysis': handle_compact_analysis,
+            'calibration-report': handle_calibration_report_command,
 
             # Checkpoint commands
             'checkpoint-create': handle_checkpoint_create_command,
@@ -345,7 +345,6 @@ def main(args=None):
             # Goals commands
             'goals-create': handle_goals_create_command,
             'goals-list': handle_goals_list_command,
-            'goals-list-all': handle_goals_list_all_command,
             'goals-search': handle_goals_search_command,
             'goals-complete': handle_goals_complete_command,
             'goals-claim': handle_goals_claim_command,
@@ -441,6 +440,46 @@ def main(args=None):
             'concept-stats': handle_concept_stats,
             'concept-top': handle_concept_top,
             'concept-related': handle_concept_related,
+
+            # MCP server management commands
+            'mcp-start': handle_mcp_start_command,
+            'mcp-stop': handle_mcp_stop_command,
+            'mcp-status': handle_mcp_status_command,
+            'mcp-test': handle_mcp_test_command,
+            'mcp-list-tools': handle_mcp_list_tools_command,
+            'mcp-call': handle_mcp_call_command,
+
+            # === ALIASES ===
+            # Argparse registers aliases for --help, but handler lookup needs them too
+            # CASCADE aliases
+            'pre': handle_preflight_submit_command,
+            'preflight': handle_preflight_submit_command,
+            'post': handle_postflight_submit_command,
+            'postflight': handle_postflight_submit_command,
+            # Session aliases
+            'sc': handle_session_create_command,
+            'sl': handle_sessions_list_command,
+            'sr': handle_sessions_resume_command,
+            'session-list': handle_sessions_list_command,
+            'session-show': handle_sessions_show_command,
+            'session-export': handle_sessions_export_command,
+            'session-resume': handle_sessions_resume_command,
+            # Goal aliases
+            'gc': handle_goals_create_command,
+            'gl': handle_goals_list_command,
+            'goal-create': handle_goals_create_command,
+            'goal-list': handle_goals_list_command,
+            'goal-complete': handle_goals_complete_command,
+            'goal-progress': handle_goals_progress_command,
+            'goal-add-subtask': handle_goals_add_subtask_command,
+            'goal-complete-subtask': handle_goals_complete_subtask_command,
+            # Logging aliases
+            'fl': handle_finding_log_command,
+            'ul': handle_unknown_log_command,
+            'de': handle_deadend_log_command,
+            # Project aliases
+            'pb': handle_project_bootstrap_command,
+            'bootstrap': handle_project_bootstrap_command,
         }
         
         if parsed_args.command in command_handlers:
@@ -467,22 +506,10 @@ def main(args=None):
                 # Non-dict non-zero result is an exit code
                 exit_code = result
 
-            # Log successful execution
+            # Log execution time
             elapsed_ms = int((time.time() - start_time) * 1000)
             if verbose:
                 print(f"[VERBOSE] Execution time: {elapsed_ms}ms", file=sys.stderr)
-
-            try:
-                db = SessionDatabase()
-                db.log_command_usage(
-                    command_name=parsed_args.command,
-                    execution_time_ms=elapsed_ms,
-                    success=(exit_code == 0),
-                    error_message=None if exit_code == 0 else "Command returned error"
-                )
-                db.close()
-            except Exception:
-                pass
 
             sys.exit(exit_code)
         else:
@@ -490,20 +517,6 @@ def main(args=None):
             sys.exit(1)
             
     except Exception as e:
-        # Log failed execution
-        elapsed_ms = int((time.time() - start_time) * 1000)
-        try:
-            db = SessionDatabase()
-            db.log_command_usage(
-                command_name=parsed_args.command,
-                execution_time_ms=elapsed_ms,
-                success=False,
-                error_message=str(e)
-            )
-            db.close()
-        except Exception:
-            pass
-        
         handle_cli_error(e, parsed_args.command)
         sys.exit(1)
 

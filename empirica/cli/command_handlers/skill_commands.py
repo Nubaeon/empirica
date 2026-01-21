@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def _load_skill_sources(root: str) -> List[Dict]:
+    """Load available skill sources from SKILL_SOURCES.yaml."""
     import yaml  # type: ignore
     path = os.path.join(root, 'docs', 'skills', 'SKILL_SOURCES.yaml')
     if not os.path.exists(path):
@@ -22,6 +23,7 @@ def _load_skill_sources(root: str) -> List[Dict]:
 
 
 def handle_skill_suggest_command(args):
+    """Handle skill-suggest command to find relevant skills for a task."""
     try:
         import yaml  # type: ignore
         root = os.getcwd()
@@ -67,6 +69,7 @@ def handle_skill_suggest_command(args):
 
 
 def handle_skill_fetch_command(args):
+    """Handle skill-fetch command to download and save a skill definition."""
     try:
         import requests  # type: ignore
         import yaml  # type: ignore
@@ -79,6 +82,7 @@ def handle_skill_fetch_command(args):
         tags = [t.strip() for t in (getattr(args, 'tags', '') or '').split(',') if t.strip()]
 
         def _save_skill(skill_obj: dict) -> dict:
+            """Save skill object to project_skills directory as YAML."""
             slug = skill_obj['id']
             out_dir = os.path.join(os.getcwd(), 'project_skills')
             os.makedirs(out_dir, exist_ok=True)

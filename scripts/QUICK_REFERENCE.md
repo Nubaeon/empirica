@@ -23,10 +23,13 @@
 
 ## What gets protected:
 
-- ✅ `.empirica_reflex_logs/` (7.8MB session history)
+- ✅ `.empirica/` (project-local sessions, goals, findings - PRIMARY storage)
+- ✅ `~/.empirica/` (global hub: credentials, cross-project data - FALLBACK)
+- ✅ `.empirica_reflex_logs/` (legacy session history)
 - ✅ `.agent_memory.json` (agent state)
-- ✅ `~/.empirica/sessions.db` (132KB database with 131+ sessions)
-- ✅ `~/.empirica/credentials.yaml` (API keys)
+
+**Note:** Modern Empirica uses project-local `.empirica/sessions/sessions.db` as primary.
+Global `~/.empirica/` is used for credentials and as fallback when no local dir exists.
 
 ## If you accidentally lost data:
 
@@ -49,8 +52,10 @@
 
 3. **Verify restoration:**
    ```bash
-   sqlite3 ~/.empirica/sessions.db "SELECT COUNT(*) FROM sessions;"
-   # Should show: 131 or more
+   # Check project-local (primary)
+   sqlite3 .empirica/sessions/sessions.db "SELECT COUNT(*) FROM sessions;"
+   # Or global fallback
+   sqlite3 ~/.empirica/sessions/sessions.db "SELECT COUNT(*) FROM sessions;"
    ```
 
 ## See full guide:

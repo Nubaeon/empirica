@@ -1,7 +1,7 @@
 {
   "description": "Empirica epistemic hooks - Sentinel gating + continuity management",
   "hooks": {
-    "PreToolCall": [
+    "PreToolUse": [
       {
         "matcher": "Edit|Write",
         "hooks": [
@@ -29,6 +29,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash ${BREADCRUMBS_ROOT:-/home/yogapad/empirical-ai/breadcrumbs}/hooks/pre-compact.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
             "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.py",
             "timeout": 30
           }
@@ -43,6 +48,12 @@
             "type": "command",
             "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/post-compact.py",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash ${BREADCRUMBS_ROOT:-/home/yogapad/empirical-ai/breadcrumbs}/hooks/session-start.sh",
+            "timeout": 10,
+            "allowFailure": true
           }
         ]
       },

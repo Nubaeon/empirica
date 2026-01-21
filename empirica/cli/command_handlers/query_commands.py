@@ -44,6 +44,7 @@ def handle_query_command(args):
             'issues': _query_issues,
             'handoffs': _query_handoffs,
             'goals': _query_goals,
+            'blockers': _query_blockers,
         }
 
         handler = handlers.get(query_type)
@@ -327,6 +328,62 @@ def _query_goals(scope: str, session_id: str, project_id: str,
     return results
 
 
+def _query_blockers(scope: str, session_id: str, project_id: str,
+                    limit: int, status: str, ai_id: str, since: str) -> List[Dict]:
+    """Query goal-linked unknowns (blockers) sorted by impact"""
+    from empirica.data.session_database import SessionDatabase
+    db = SessionDatabase()
+
+    query = """
+        SELECT
+            su.id,
+            su.unknown as content,
+            su.impact,
+            su.goal_id,
+            g.objective as goal_objective,
+            g.status as goal_status,
+            su.session_id,
+            su.created_timestamp as created_at
+        FROM session_unknowns su
+        JOIN goals g ON su.goal_id = g.id
+        WHERE su.is_resolved = FALSE
+          AND su.goal_id IS NOT NULL
+    """
+    params = []
+
+    # Optional: filter to only blockers for active goals
+    if status == 'active':
+        query += " AND g.status != 'completed'"
+    elif status == 'completed':
+        query += " AND g.status = 'completed'"
+
+    if scope == 'session' and session_id:
+        query += " AND su.session_id = ?"
+        params.append(session_id)
+
+    query += " ORDER BY su.impact DESC, su.created_timestamp DESC LIMIT ?"
+    params.append(limit)
+
+    cursor = db.conn.cursor()
+    cursor.execute(query, params)
+
+    results = []
+    for row in cursor.fetchall():
+        results.append({
+            'id': row[0],
+            'content': row[1],
+            'impact': row[2] or 0.5,
+            'goal_id': row[3],
+            'goal_objective': row[4],
+            'goal_status': row[5],
+            'session_id': row[6],
+            'created_at': row[7]
+        })
+
+    db.close()
+    return results
+
+
 def _print_human(query_type: str, scope: str, results: List[Dict]):
     """Print human-readable output"""
     type_emoji = {
@@ -336,7 +393,8 @@ def _print_human(query_type: str, scope: str, results: List[Dict]):
         'mistakes': '⚠️',
         'issues': '🐛',
         'handoffs': '📋',
-        'goals': '🎯'
+        'goals': '🎯',
+        'blockers': '🚧'
     }
 
     emoji = type_emoji.get(query_type, '📄')
@@ -382,4 +440,10 @@ def _print_human(query_type: str, scope: str, results: List[Dict]):
             pct = r.get('progress_pct', 0)
             print(f"{i}. {obj}")
             print(f"   Progress: {progress} ({pct}%)")
+        elif query_type == 'blockers':
+            content = r.get('content', '')[:70]
+            impact = r.get('impact', 0)
+            goal = r.get('goal_objective', '')[:40]
+            print(f"{i}. [{impact:.1f}] {content}")
+            print(f"   🎯 Blocks: {goal}")
         print()

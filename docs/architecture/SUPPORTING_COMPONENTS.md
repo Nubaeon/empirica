@@ -92,47 +92,6 @@ is_valid = signer.verify(signed_checkpoint)
 
 ---
 
-## Context Load Balancer
-
-**Module:** `empirica.core.context_load_balancer`
-
-### ContextLoadBalancer
-
-Manages context window utilization to prevent overflow.
-
-```python
-balancer = ContextLoadBalancer(
-    max_context_tokens=100000,  # Model's context window
-    target_utilization=0.8,    # Keep 20% headroom
-    priority_weights={
-        "session_state": 1.0,  # Highest priority
-        "recent_findings": 0.8,
-        "lessons": 0.6,
-        "historical": 0.4
-    }
-)
-
-# Allocate context budget
-allocation = balancer.allocate(
-    session_state_tokens=5000,
-    findings_tokens=20000,
-    lessons_tokens=30000,
-    historical_tokens=50000
-)
-# Returns which content to include/exclude
-
-# Get current utilization
-util = balancer.get_utilization()
-print(f"Context used: {util['used_tokens']}/{util['max_tokens']}")
-```
-
-**Strategies:**
-- Priority-based allocation (keep critical context, trim historical)
-- Token counting for accurate budgeting
-- Graceful degradation under pressure
-
----
-
 ## Findings Deprecation Engine
 
 **Module:** `empirica.core.findings_deprecation`
@@ -263,7 +222,6 @@ if not result.valid:
 
 - `empirica/core/agents/epistemic_agent.py` - Agent spawning
 - `empirica/core/checkpoint_signer.py` - Cryptographic signing
-- `empirica/core/context_load_balancer.py` - Context management
 - `empirica/core/findings_deprecation.py` - Finding lifecycle
 - `empirica/core/git_ops/signed_operations.py` - Signed git ops
 - `empirica/core/validation/` - Validation components

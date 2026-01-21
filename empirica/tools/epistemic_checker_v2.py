@@ -28,13 +28,15 @@ except ImportError:
 class EpistemicClaim:
     """Represents an empirical claim found in text"""
 
-    def __init__(self, text: str, claim_type: str, line_number: int, context: str):
+    def __init__(self, text: str, claim_type: str, line_number: int, context: str) -> None:
+        """Initialize claim with text, type, line number, and context."""
         self.text = text
         self.claim_type = claim_type
         self.line_number = line_number
         self.context = context
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert claim to dictionary representation."""
         return {
             'text': self.text,
             'type': self.claim_type,
@@ -47,14 +49,16 @@ class ExperientialEvidence:
     """Evidence from actual investigation (not just training data)"""
 
     def __init__(self, finding_id: str, finding_text: str, session_id: str,
-                 impact: float, timestamp: str):
+                 impact: float, timestamp: str) -> None:
+        """Initialize evidence from an Empirica finding."""
         self.finding_id = finding_id
         self.finding_text = finding_text
         self.session_id = session_id
         self.impact = impact
         self.timestamp = timestamp
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert evidence to dictionary representation."""
         return {
             'finding_id': self.finding_id,
             'finding_text': self.finding_text,
@@ -76,7 +80,8 @@ class EpistemicAssessment:
 
     def __init__(self, claim: EpistemicClaim, know: float, uncertainty: float,
                  evidence: List[ExperientialEvidence], reasoning: str,
-                 evidence_type: str):
+                 evidence_type: str) -> None:
+        """Initialize assessment with claim, epistemic vectors, and evidence."""
         self.claim = claim
         self.know = know
         self.uncertainty = uncertainty
@@ -106,7 +111,8 @@ class EpistemicAssessment:
 
         return len(flags) > 0, flags
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert assessment to dictionary representation."""
         should_flag, flags = self.should_flag()
         return {
             'claim': self.claim.to_dict(),

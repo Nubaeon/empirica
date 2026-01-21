@@ -77,7 +77,10 @@ def handle_goals_complete_command(args):
                 
                 # Create mock args for postflight
                 class MockArgs:
-                    def __init__(self, session_id, task_summary):
+                    """Mock arguments for calling postflight handler."""
+
+                    def __init__(self, session_id: str, task_summary: str) -> None:
+                        """Initialize mock args with session ID and task summary."""
                         self.session_id = session_id
                         self.task_summary = task_summary
                         self.output = 'json'
@@ -194,7 +197,10 @@ def handle_goals_complete_command(args):
                 
                 # Create mock args for handoff
                 class MockArgs:
-                    def __init__(self, session_id, task_summary):
+                    """Mock arguments for calling handoff create handler."""
+
+                    def __init__(self, session_id: str, task_summary: str) -> None:
+                        """Initialize mock args with session ID and task summary."""
                         self.session_id = session_id
                         self.task_summary = task_summary
                         self.key_findings = None

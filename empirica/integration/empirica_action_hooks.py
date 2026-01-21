@@ -236,8 +236,10 @@ class EmpiricaActionHooks:
 def track_component_usage(component_name: str):
     """Decorator to track when Empirica components are used"""
     def decorator(func: Callable) -> Callable:
+        """Wrap function with component usage tracking."""
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            """Execute function with usage tracking."""
             # Track component usage
             hooks = EmpiricaActionHooks()
             
@@ -263,8 +265,10 @@ def track_component_usage(component_name: str):
 def track_cascade_phase(phase: str, goal: str = None):
     """Decorator to track metacognitive cascade phases"""
     def decorator(func: Callable) -> Callable:
+        """Wrap function with cascade phase tracking."""
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            """Execute function with phase tracking."""
             hooks = EmpiricaActionHooks()
             
             # Update cascade status

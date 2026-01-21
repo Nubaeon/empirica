@@ -1,28 +1,98 @@
 #!/usr/bin/env python3
 """
-Empirica Sentinel Gate Hook - Enforces CHECK before high-impact tools
+Empirica Sentinel Gate - Noetic Firewall with Epistemic ACLs
 
-This hook intercepts Edit, Write, and Bash (non-read-only) tool calls and
-checks if we have a recent passing CHECK gate. If not, it blocks the tool
-and prompts the AI to run CHECK first.
+Implements least-privilege principle for AI tool access:
+- NOETIC tools (read/investigate) → always allowed
+- PRAXIC tools (write/execute) → require valid CHECK
 
-Architecture:
-1. Hook receives tool call info via stdin (JSON)
-2. Check reflexes table for recent CHECK with decision="proceed"
-3. If valid CHECK exists (within last N minutes), allow
-4. If no CHECK or CHECK returned "investigate", block with guidance
+This is essentially iptables for cognition - default deny, explicit allow.
 
-This enforces noetic-before-praxic at the tool level.
+Core features (always on):
+- Smart project root discovery (env var, known paths, cwd search)
+- Noetic tool whitelist (Read, Grep, Glob, etc.)
+- Safe Bash command whitelist (ls, cat, git status, etc.)
+- PREFLIGHT + CHECK requirement for praxic actions
+- Decision parsing (blocks if CHECK returned "investigate")
+- Vector threshold validation (know >= 0.70, uncertainty <= 0.35 after bias)
+
+Optional features (off by default):
+- EMPIRICA_SENTINEL_REQUIRE_BOOTSTRAP=true - Require project-bootstrap before praxic
+- EMPIRICA_SENTINEL_COMPACT_INVALIDATION=true - Invalidate CHECK after compact
+- EMPIRICA_SENTINEL_CHECK_EXPIRY=true - Enable 30-minute CHECK expiry
+- EMPIRICA_SENTINEL_LOOPING=false - Disable sentinel entirely
 """
-
 import json
 import sys
 import os
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# Add empirica to path
-sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
+# Noetic tools - read/investigate/search - always allowed (whitelist)
+NOETIC_TOOLS = {
+    'Read', 'Glob', 'Grep', 'LSP',           # File inspection
+    'WebFetch', 'WebSearch',                  # Web research
+    'Task', 'TaskOutput',                     # Agent delegation
+    'TodoWrite',                              # Planning
+    'AskUserQuestion',                        # User interaction
+    'Skill',                                  # Skill invocation
+    'KillShell',                              # Process management (cleanup)
+}
+
+# Safe Bash command prefixes - read-only operations (ACL)
+SAFE_BASH_PREFIXES = (
+    # File inspection
+    'cat ', 'head ', 'tail ', 'less ', 'more ',
+    'ls', 'ls ', 'dir ', 'tree ', 'file ', 'stat ', 'wc ',
+    'find ', 'locate ', 'which ', 'type ', 'whereis ',
+    # Text search/processing (read-only)
+    'grep ', 'rg ', 'ag ', 'ack ', 'sed -n', 'awk ',
+    # Git read operations
+    'git status', 'git log', 'git diff', 'git show', 'git branch',
+    'git remote', 'git tag', 'git stash list', 'git blame',
+    'git ls-files', 'git ls-tree', 'git cat-file',
+    # Environment inspection
+    'pwd', 'echo ', 'printf ', 'env', 'printenv', 'set',
+    'whoami', 'id', 'hostname', 'uname', 'date', 'cal',
+    # Empirica CLI (has its own auth)
+    'empirica ',
+    # Package inspection (not install)
+    'pip show', 'pip list', 'pip freeze', 'pip index',
+    'npm list', 'npm ls', 'npm view', 'npm info',
+    'cargo tree', 'cargo metadata',
+    # Process inspection
+    'ps ', 'top -b -n 1', 'pgrep ', 'jobs',
+    # Disk inspection
+    'df ', 'du ', 'mount', 'lsblk',
+    # Network inspection (not modification)
+    'curl ', 'wget -O-', 'ping -c', 'dig ', 'nslookup ', 'host ',
+    # Documentation
+    'man ', 'info ', 'help ',
+    # Testing (read-only check)
+    'test ', '[ ',
+)
+
+# Thresholds for CHECK validation
+KNOW_THRESHOLD = 0.70
+UNCERTAINTY_THRESHOLD = 0.35
+KNOW_BIAS = 0.10
+UNCERTAINTY_BIAS = -0.04
+MAX_CHECK_AGE_MINUTES = 30
+
+
+def respond(decision, reason=""):
+    """Output in Claude Code's expected format."""
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": decision,
+            "permissionDecisionReason": reason
+        }
+    }
+    # Suppress output for "allow" to avoid "hook error" display bug in Claude Code TUI
+    if decision == "allow":
+        output["suppressOutput"] = True
+    print(json.dumps(output))
 
 
 def find_project_root() -> Path:
@@ -57,408 +127,193 @@ def find_project_root() -> Path:
     return Path.cwd()
 
 
-def get_active_session() -> str:
-    """Get the active Empirica session ID."""
+def get_last_compact_timestamp(project_root: Path) -> datetime:
+    """Get timestamp of most recent compact from pre_summary snapshot."""
     try:
-        from empirica.utils.session_resolver import get_latest_session_id
-        return get_latest_session_id(ai_id='claude-code', active_only=True)
+        ref_docs_dir = project_root / ".empirica" / "ref-docs"
+        if not ref_docs_dir.exists():
+            return None
+        snapshots = sorted(ref_docs_dir.glob("pre_summary_*.json"), reverse=True)
+        if not snapshots:
+            return None
+        # Parse: pre_summary_2026-01-21T12-30-45.json
+        filename = snapshots[0].name
+        ts = filename.replace("pre_summary_", "").replace(".json", "")
+        # Convert 2026-01-21T12-30-45 to ISO
+        date_part, time_part = ts.split("T")
+        time_part = time_part.replace("-", ":")
+        return datetime.fromisoformat(f"{date_part}T{time_part}")
     except Exception:
         return None
 
 
-def get_bootstrap_status(session_id: str) -> dict:
-    """
-    Check if project-bootstrap has been run for this session.
+def is_safe_bash_command(tool_input: dict) -> bool:
+    """Check if a Bash command is in the safe (noetic) whitelist."""
+    command = tool_input.get('command', '')
+    if not command:
+        return False
 
-    Returns:
-        {
-            "has_bootstrap": bool,
-            "project_id": str or None
-        }
-    """
-    try:
-        from empirica.data.session_database import SessionDatabase
-        db = SessionDatabase()
-        cursor = db.conn.cursor()
+    # Strip leading whitespace and check against safe prefixes
+    command_stripped = command.lstrip()
 
-        cursor.execute("""
-            SELECT project_id FROM sessions
-            WHERE session_id = ?
-        """, (session_id,))
-        row = cursor.fetchone()
-        db.close()
+    # Check if command starts with any safe prefix
+    for prefix in SAFE_BASH_PREFIXES:
+        if command_stripped.startswith(prefix):
+            return True
+        # Also check without trailing space for commands like 'ls', 'pwd'
+        if prefix.endswith(' ') and command_stripped == prefix.rstrip():
+            return True
 
-        if not row:
-            return {"has_bootstrap": False, "project_id": None}
-
-        project_id = row[0]
-        return {
-            "has_bootstrap": project_id is not None,
-            "project_id": project_id
-        }
-    except Exception as e:
-        return {"has_bootstrap": False, "project_id": None, "error": str(e)}
-
-
-def get_last_check_decision(session_id: str, max_age_minutes: int = 30) -> dict:
-    """
-    Get the most recent CHECK decision for this session.
-
-    Returns:
-        {
-            "has_check": bool,
-            "decision": "proceed" | "investigate" | None,
-            "age_minutes": float,
-            "is_valid": bool  # True if recent CHECK with proceed
-        }
-    """
-    try:
-        from empirica.data.session_database import SessionDatabase
-        db = SessionDatabase()
-        cursor = db.conn.cursor()
-
-        # Get most recent CHECK phase
-        cursor.execute("""
-            SELECT phase, reflex_data, timestamp
-            FROM reflexes
-            WHERE session_id = ? AND phase = 'CHECK'
-            ORDER BY timestamp DESC
-            LIMIT 1
-        """, (session_id,))
-
-        row = cursor.fetchone()
-        db.close()
-
-        if not row:
-            return {
-                "has_check": False,
-                "decision": None,
-                "age_minutes": None,
-                "is_valid": False
-            }
-
-        phase, reflex_data, timestamp = row
-
-        # Parse decision from reflex_data
-        decision = None
-        if reflex_data:
-            try:
-                data = json.loads(reflex_data)
-                decision = data.get('decision')
-            except json.JSONDecodeError:
-                pass
-
-        # Calculate age
-        try:
-            check_time = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            age = datetime.now(check_time.tzinfo) - check_time
-            age_minutes = age.total_seconds() / 60
-        except Exception:
-            age_minutes = 999  # Assume old if can't parse
-
-        is_valid = (
-            decision == 'proceed' and
-            age_minutes <= max_age_minutes
-        )
-
-        return {
-            "has_check": True,
-            "decision": decision,
-            "age_minutes": round(age_minutes, 1),
-            "is_valid": is_valid
-        }
-
-    except Exception as e:
-        return {
-            "has_check": False,
-            "decision": None,
-            "age_minutes": None,
-            "is_valid": False,
-            "error": str(e)
-        }
-
-
-def get_sentinel_mode() -> str:
-    """
-    Get sentinel operating mode from environment.
-
-    Modes:
-    - observer: Log warnings but don't block (passive oversight)
-    - controller: Actively block when appropriate (active oversight)
-    - auto: Same as controller (default)
-
-    Returns:
-        Mode string: 'observer', 'controller', or 'auto'
-    """
-    mode = os.getenv('EMPIRICA_SENTINEL_MODE', 'auto').lower()
-    if mode in ('observer', 'controller', 'auto'):
-        return mode
-    return 'auto'
-
-
-def maybe_allow_in_observer_mode(original_decision: dict, mode: str, tool_name: str) -> dict:
-    """
-    If in observer mode, convert block to allow with warning.
-
-    Observer mode provides passive oversight - logs concerns but doesn't
-    block AI actions. Useful for:
-    - Debugging/development
-    - Building trust gradually
-    - Analyzing AI behavior patterns
-
-    Args:
-        original_decision: The decision dict that would be returned
-        mode: Current sentinel mode
-        tool_name: Name of the tool being called
-
-    Returns:
-        Modified decision dict (allow in observer mode, original otherwise)
-    """
-    if mode == 'observer' and original_decision.get('decision') == 'block':
-        # Convert block to allow but preserve the warning
-        reason = original_decision.get('reason', 'Sentinel would block')
-        return {
-            "decision": "allow",
-            "reason": f"[OBSERVER MODE] Would block: {reason}",
-            "observer_mode": True,
-            "original_decision": "block",
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolCall",
-                "warning": f"⚠️ OBSERVER: Sentinel would block {tool_name} - {reason}",
-                "mode": "observer"
-            }
-        }
-    return original_decision
+    return False
 
 
 def main():
-    """Main hook logic."""
-    # Parse hook input
     try:
-        hook_input = json.loads(sys.stdin.read())
-    except json.JSONDecodeError:
+        hook_input = json.loads(sys.stdin.read() or '{}')
+    except Exception:
         hook_input = {}
 
     tool_name = hook_input.get('tool_name', 'unknown')
+    tool_input = hook_input.get('tool_input', {})
 
-    # Get sentinel mode
-    sentinel_mode = get_sentinel_mode()
+    # === NOETIC FIREWALL: Whitelist-based access control ===
 
-    # Find project root and change to it
+    # Rule 1: Noetic tools always allowed (read/investigate)
+    if tool_name in NOETIC_TOOLS:
+        respond("allow", f"Noetic tool: {tool_name}")
+        sys.exit(0)
+
+    # Rule 2: Safe Bash commands always allowed (read-only shell)
+    if tool_name == 'Bash' and is_safe_bash_command(tool_input):
+        respond("allow", "Safe Bash (read-only)")
+        sys.exit(0)
+
+    # Rule 3: Everything else is PRAXIC - requires CHECK authorization
+    # This includes: Edit, Write, NotebookEdit, unsafe Bash, unknown tools
+
+    # Check if sentinel looping is disabled (escape hatch)
+    if os.getenv('EMPIRICA_SENTINEL_LOOPING', 'true').lower() == 'false':
+        respond("allow", "Sentinel disabled")
+        sys.exit(0)
+
+    # === AUTHORIZATION CHECK ===
+
+    # Setup paths - smart discovery
     project_root = find_project_root()
     os.chdir(project_root)
+    sys.path.insert(0, str(project_root))
 
     # Get active session
-    session_id = get_active_session()
+    try:
+        from empirica.utils.session_resolver import get_latest_session_id
+        session_id = get_latest_session_id(ai_id='claude-code', active_only=True)
+    except Exception:
+        respond("allow", "No session resolver")
+        sys.exit(0)
 
     if not session_id:
-        # No active session - allow but warn
-        output = {
-            "decision": "allow",
-            "reason": "No active Empirica session - gate bypassed",
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolCall",
-                "warning": "No active session. Consider running: empirica session-create"
-            }
-        }
-        print(json.dumps(output))
+        respond("allow", "No active session")
         sys.exit(0)
 
-    # Check for bootstrap context
-    bootstrap_status = get_bootstrap_status(session_id)
+    from empirica.data.session_database import SessionDatabase
+    db = SessionDatabase()
+    cursor = db.conn.cursor()
 
-    if not bootstrap_status.get('has_bootstrap'):
-        # No bootstrap - block and provide guidance
-        reason = f"No project context loaded. Run project-bootstrap before {tool_name}."
-        guidance = f"""
-## Sentinel Gate: BOOTSTRAP Required
+    # Optional: Bootstrap requirement
+    if os.getenv('EMPIRICA_SENTINEL_REQUIRE_BOOTSTRAP', 'false').lower() == 'true':
+        cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+        row = cursor.fetchone()
+        if not row or not row[0]:
+            db.close()
+            respond("block", f"No bootstrap for {session_id[:8]}")
+            sys.exit(0)
 
-Session `{session_id}` has no project context loaded.
-Without bootstrap, your epistemic assessments are hollow.
+    # Check for PREFLIGHT (authentication)
+    cursor.execute("""
+        SELECT timestamp FROM reflexes
+        WHERE session_id = ? AND phase = 'PREFLIGHT'
+        ORDER BY timestamp DESC LIMIT 1
+    """, (session_id,))
+    preflight_row = cursor.fetchone()
 
-**Run bootstrap first:**
-
-```bash
-empirica project-bootstrap --session-id {session_id} --output json
-```
-
-Then run CHECK to proceed with this action.
-"""
-
-        output = {
-            "decision": "block",
-            "reason": reason,
-            "session_id": session_id,
-            "bootstrap_status": bootstrap_status,
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolCall",
-                "additionalContext": guidance
-            }
-        }
-
-        # Apply observer mode override if needed
-        output = maybe_allow_in_observer_mode(output, sentinel_mode, tool_name)
-
-        if output.get('decision') == 'block':
-            print(f"""
-🚫 Sentinel Gate: {tool_name} blocked
-
-{reason}
-
-Run project-bootstrap first. See guidance in context.
-""", file=sys.stderr)
-        else:
-            print(f"""
-⚠️ Sentinel Gate: {tool_name} would be blocked (OBSERVER MODE)
-
-{reason}
-
-[OBSERVER MODE: Action allowed but should run project-bootstrap first]
-""", file=sys.stderr)
-
-        print(json.dumps(output))
+    if not preflight_row:
+        db.close()
+        respond("block", f"No PREFLIGHT for session {session_id[:8]}. Run PREFLIGHT first.")
         sys.exit(0)
 
-    # Check for recent valid CHECK
-    check_status = get_last_check_decision(session_id)
+    preflight_timestamp = preflight_row[0]
 
-    if check_status.get('is_valid'):
-        # Valid CHECK exists - allow
-        output = {
-            "decision": "allow",
-            "reason": f"Valid CHECK (decision={check_status['decision']}, age={check_status['age_minutes']}min)",
-            "session_id": session_id,
-            "check_status": check_status
-        }
-        print(json.dumps(output))
+    # Check for CHECK (authorization)
+    cursor.execute("""
+        SELECT know, uncertainty, reflex_data, timestamp
+        FROM reflexes
+        WHERE session_id = ? AND phase = 'CHECK'
+        ORDER BY timestamp DESC LIMIT 1
+    """, (session_id,))
+    check_row = cursor.fetchone()
+    db.close()
+
+    if not check_row:
+        respond("block", f"No CHECK for session {session_id[:8]}. Run CHECK first.")
         sys.exit(0)
 
-    # No valid CHECK - check if sentinel looping is disabled
-    if os.getenv('EMPIRICA_SENTINEL_LOOPING', 'true').lower() == 'false':
-        output = {
-            "decision": "allow",
-            "reason": "Sentinel looping disabled (EMPIRICA_SENTINEL_LOOPING=false)",
-            "session_id": session_id
-        }
-        print(json.dumps(output))
+    know, uncertainty, reflex_data, check_timestamp = check_row
+
+    # Verify CHECK is after PREFLIGHT (proper sequence)
+    try:
+        if float(check_timestamp) < float(preflight_timestamp):
+            respond("block", f"CHECK predates PREFLIGHT. Run CHECK for current goal.")
+            sys.exit(0)
+    except (TypeError, ValueError):
+        pass  # Can't compare timestamps, skip this check
+
+    # Parse decision from reflex_data
+    decision = None
+    if reflex_data:
+        try:
+            data = json.loads(reflex_data)
+            decision = data.get('decision')
+        except Exception:
+            pass
+
+    # Check if decision was "investigate" (not authorized for praxic)
+    if decision == 'investigate':
+        respond("block", f"CHECK returned 'investigate'. Complete investigation first.")
         sys.exit(0)
 
-    # Block and provide guidance
-    if check_status.get('has_check'):
-        if check_status.get('decision') == 'investigate':
-            reason = f"Last CHECK returned 'investigate'. Complete investigation before {tool_name}."
-            guidance = """
-## Sentinel Gate: INVESTIGATE Required
+    # Optional: Check age expiry
+    check_time = None
+    if os.getenv('EMPIRICA_SENTINEL_CHECK_EXPIRY', 'false').lower() == 'true':
+        try:
+            if isinstance(check_timestamp, (int, float)) or (isinstance(check_timestamp, str) and check_timestamp.replace('.', '').isdigit()):
+                check_time = datetime.fromtimestamp(float(check_timestamp))
+            else:
+                check_time = datetime.fromisoformat(check_timestamp.replace('Z', '+00:00').replace('+00:00', ''))
+            age_minutes = (datetime.now() - check_time).total_seconds() / 60
 
-Your last CHECK returned `investigate` - you need more information before this action.
+            if age_minutes > MAX_CHECK_AGE_MINUTES:
+                respond("block", f"CHECK expired ({age_minutes:.0f}min > {MAX_CHECK_AGE_MINUTES}min)")
+                sys.exit(0)
+        except Exception:
+            pass
 
-**Steps:**
-1. Continue investigation (read files, search, ask questions)
-2. When ready, run CHECK again:
+    # Optional: Compact invalidation
+    if os.getenv('EMPIRICA_SENTINEL_COMPACT_INVALIDATION', 'false').lower() == 'true':
+        last_compact = get_last_compact_timestamp(project_root)
+        if last_compact and check_time and last_compact > check_time:
+            respond("block", "CHECK invalidated by compact. Run CHECK to recalibrate.")
+            sys.exit(0)
 
-```bash
-empirica check-submit - << 'EOF'
-{
-  "session_id": "<SESSION_ID>",
-  "action_description": "<what you intend to do>",
-  "vectors": {
-    "know": <updated_value>,
-    "uncertainty": <updated_value>,
-    "context": <updated_value>
-  },
-  "reasoning": "<why you're now ready>"
-}
-EOF
-```
+    # Apply bias corrections and check thresholds
+    corrected_know = (know or 0) + KNOW_BIAS
+    corrected_unc = (uncertainty or 1) + UNCERTAINTY_BIAS
 
-3. If CHECK returns `proceed`, you can continue with the action.
-"""
-        else:
-            reason = f"CHECK expired (age={check_status.get('age_minutes')}min > 30min). Run CHECK before {tool_name}."
-            guidance = """
-## Sentinel Gate: CHECK Expired
-
-Your last CHECK is too old. Run a fresh CHECK before this action.
-
-```bash
-empirica check-submit - << 'EOF'
-{
-  "session_id": "<SESSION_ID>",
-  "action_description": "<what you intend to do>",
-  "vectors": {
-    "know": <0.0-1.0>,
-    "uncertainty": <0.0-1.0>,
-    "context": <0.0-1.0>
-  },
-  "reasoning": "<current epistemic state>"
-}
-EOF
-```
-"""
+    if corrected_know >= KNOW_THRESHOLD and corrected_unc <= UNCERTAINTY_THRESHOLD:
+        respond("allow", f"CHECK passed (know={corrected_know:.2f}, unc={corrected_unc:.2f})")
+        sys.exit(0)
     else:
-        reason = f"No CHECK found for this session. Run CHECK before {tool_name}."
-        guidance = f"""
-## Sentinel Gate: CHECK Required
-
-No CHECK gate found for session `{session_id}`.
-Before high-impact actions (Edit, Write, Bash), you must assess readiness.
-
-**Run CHECK:**
-
-```bash
-empirica check-submit - << 'EOF'
-{{
-  "session_id": "{session_id}",
-  "action_description": "<what you intend to do>",
-  "vectors": {{
-    "know": <0.0-1.0: How much do you know about this task?>,
-    "uncertainty": <0.0-1.0: How uncertain are you?>,
-    "context": <0.0-1.0: How well do you understand the codebase?>
-  }},
-  "reasoning": "<explain your current epistemic state>"
-}}
-EOF
-```
-
-**If CHECK returns:**
-- `proceed` - You can continue with the action
-- `investigate` - Do more research first, then CHECK again
-"""
-
-    output = {
-        "decision": "block",
-        "reason": reason,
-        "session_id": session_id,
-        "check_status": check_status,
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolCall",
-            "additionalContext": guidance
-        }
-    }
-
-    # Apply observer mode override if needed
-    output = maybe_allow_in_observer_mode(output, sentinel_mode, tool_name)
-
-    # Print guidance to stderr for user visibility
-    if output.get('decision') == 'block':
-        print(f"""
-🚫 Sentinel Gate: {tool_name} blocked
-
-{reason}
-
-Run CHECK to proceed. See guidance in context.
-""", file=sys.stderr)
-    else:
-        print(f"""
-⚠️ Sentinel Gate: {tool_name} would be blocked (OBSERVER MODE)
-
-{reason}
-
-[OBSERVER MODE: Action allowed but should run CHECK first]
-""", file=sys.stderr)
-
-    print(json.dumps(output))
-    sys.exit(0)
+        respond("block", f"CHECK thresholds not met: know={corrected_know:.2f} (<0.70), unc={corrected_unc:.2f} (>0.35)")
+        sys.exit(0)
 
 
 if __name__ == '__main__':

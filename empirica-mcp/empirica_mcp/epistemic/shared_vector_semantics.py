@@ -6,7 +6,7 @@ used by BOTH CLI and MCP contexts. The vectors themselves are
 universal, only the presentation format differs.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
 
@@ -17,8 +17,11 @@ class VectorDefinition:
     description: str
     scale_min_meaning: str  # What 0.0 means
     scale_max_meaning: str  # What 1.0 means
-    gate_threshold: float = None  # Minimum threshold to proceed (if applicable)
+    gate_threshold: Optional[float] = None  # Minimum threshold to proceed (if applicable)
     tier: str = "execution"  # foundation, comprehension, execution, meta
+    # Phase-aware descriptions (for vectors that mean different things in noetic vs praxic)
+    noetic_description: Optional[str] = None  # What to assess in investigation/learning phase
+    praxic_description: Optional[str] = None  # What to assess in implementation/action phase
 
 
 # ============================================================================
@@ -113,10 +116,12 @@ EXECUTION_VECTORS = {
     ),
     "completion": VectorDefinition(
         name="completion",
-        description="Am I done? (Progress measure)",
+        description="Am I done? (Phase-aware progress measure)",
         scale_min_meaning="Not started (0%)",
         scale_max_meaning="Fully complete (100%)",
-        tier="execution"
+        tier="execution",
+        noetic_description="Have I learned enough to proceed with confidence?",
+        praxic_description="Have I implemented enough to ship for the stated objective?"
     ),
     "impact": VectorDefinition(
         name="impact",
@@ -176,9 +181,49 @@ ASK_BEFORE_INVESTIGATE = {
 }
 
 
-def get_vector_definition(vector_name: str) -> VectorDefinition:
+def get_vector_definition(vector_name: str) -> Optional[VectorDefinition]:
     """Get definition for a specific vector"""
     return ALL_VECTORS.get(vector_name)
+
+
+def get_phase_aware_description(vector_name: str, phase: str = "praxic") -> str:
+    """
+    Get the appropriate vector description based on current phase.
+
+    Args:
+        vector_name: Name of the vector (e.g., "completion")
+        phase: Current phase - "noetic" (investigation/learning) or "praxic" (implementation/action)
+
+    Returns:
+        Phase-appropriate description, or generic description if no phase-specific one exists
+    """
+    vector_def = ALL_VECTORS.get(vector_name)
+    if not vector_def:
+        return f"Unknown vector: {vector_name}"
+
+    if phase == "noetic" and vector_def.noetic_description:
+        return vector_def.noetic_description
+    elif phase == "praxic" and vector_def.praxic_description:
+        return vector_def.praxic_description
+
+    return vector_def.description
+
+
+def get_completion_prompt(phase: str = "praxic") -> str:
+    """
+    Get the completion assessment prompt for the current phase.
+
+    This is the key function for phase-aware completion:
+    - NOETIC phase: "Have I learned enough to proceed with confidence?"
+    - PRAXIC phase: "Have I implemented enough to ship for the stated objective?"
+
+    Args:
+        phase: "noetic" or "praxic"
+
+    Returns:
+        The appropriate completion assessment question
+    """
+    return get_phase_aware_description("completion", phase)
 
 
 def get_vectors_by_tier(tier: str) -> Dict[str, VectorDefinition]:
