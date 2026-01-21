@@ -409,6 +409,8 @@ def search(project_id: str, query_text: str, kind: str = "focused", limit: int =
                         "text": (r.payload or {}).get("text"),
                         "session_id": (r.payload or {}).get("session_id"),
                         "goal_id": (r.payload or {}).get("goal_id"),
+                        "timestamp": (r.payload or {}).get("timestamp"),
+                        "impact": (r.payload or {}).get("impact"),
                     }
                     for r in rm.points
                 ]

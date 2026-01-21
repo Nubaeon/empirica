@@ -23,6 +23,7 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +66,34 @@ class FeatureCoverage:
             "coverage": round(self.coverage * 100, 1),
             "moon": self.moon,
             "undocumented": self.undocumented[:10]  # Top 10
+        }
+
+
+@dataclass
+class StalenessItem:
+    """A single staleness detection result."""
+    doc_path: str
+    section: str
+    severity: str  # "high", "medium", "low"
+    audience: str  # "ai", "developer", "user"
+    memory_type: str  # "finding", "dead_end", "mistake", "unknown"
+    memory_text: str
+    memory_age_days: int
+    similarity: float
+    suggestion: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert staleness item to dictionary."""
+        return {
+            "doc_path": self.doc_path,
+            "section": self.section,
+            "severity": self.severity,
+            "audience": self.audience,
+            "memory_type": self.memory_type,
+            "memory_text": self.memory_text[:200],  # Truncate for display
+            "memory_age_days": self.memory_age_days,
+            "similarity": round(self.similarity, 3),
+            "suggestion": self.suggestion
         }
 
 
@@ -532,6 +561,354 @@ class EpistemicDocsAgent:
 
         return recommendations[:5]  # Top 5 recommendations
 
+    def _classify_audience(self, doc_path: str) -> str:
+        """
+        Classify doc audience based on path.
+
+        AI-first model: Everything is AI-facing by default.
+        Only explicitly human-prefixed paths are for humans.
+        """
+        path_str = str(doc_path).lower()
+        if "human/end-users" in path_str or "human/end_users" in path_str:
+            return "user"
+        elif "human/developers" in path_str or "human/developer" in path_str:
+            return "developer"
+        else:
+            return "ai"  # Default - AI is primary consumer
+
+    def _get_sensitivity_threshold(self, audience: str, base_threshold: float) -> float:
+        """
+        Get staleness sensitivity threshold by audience.
+
+        AI docs need highest sensitivity (any drift matters).
+        """
+        if audience == "ai":
+            return base_threshold - 0.05  # More sensitive
+        elif audience == "developer":
+            return base_threshold
+        else:  # user
+            return base_threshold + 0.05  # Less sensitive
+
+    def check_staleness(
+        self,
+        threshold: float = 0.7,
+        lookback_days: int = 30
+    ) -> dict[str, Any]:
+        """
+        Detect stale docs by cross-referencing with recent memory items.
+
+        Uses Qdrant semantic search to find docs that may be outdated based on:
+        - Recent findings that contradict or update documented behavior
+        - Dead ends that reference approaches docs still recommend
+        - Mistakes caused by following documented advice
+        - Resolved unknowns with answers differing from docs
+
+        Args:
+            threshold: Minimum similarity score to flag (default 0.7)
+            lookback_days: How far back to look for memory items (default 30)
+
+        Returns:
+            Dict with staleness report including items by severity and audience
+        """
+        staleness_items: list[StalenessItem] = []
+        docs_checked = 0
+        memory_items_found = 0
+
+        # Try to get project ID for Qdrant
+        project_id = self._detect_project_id()
+        if not project_id:
+            return {
+                "ok": False,
+                "error": "Could not detect project ID. Run from project root or specify --project-id",
+                "staleness_items": []
+            }
+
+        # Check if Qdrant is available
+        try:
+            from empirica.core.qdrant.vector_store import search, _check_qdrant_available
+            if not _check_qdrant_available():
+                return {
+                    "ok": False,
+                    "error": "Qdrant not available. Start with: docker run -p 6333:6333 qdrant/qdrant",
+                    "staleness_items": []
+                }
+        except ImportError:
+            return {
+                "ok": False,
+                "error": "Qdrant dependencies not installed",
+                "staleness_items": []
+            }
+
+        # Load docs
+        docs_dir = self.root / "docs"
+        if not docs_dir.exists():
+            return {
+                "ok": False,
+                "error": f"No docs directory found at {docs_dir}",
+                "staleness_items": []
+            }
+
+        # Process each doc file
+        for md_file in docs_dir.rglob("*.md"):
+            if "_archive" in str(md_file):
+                continue
+
+            rel_path = str(md_file.relative_to(docs_dir))
+            audience = self._classify_audience(rel_path)
+            effective_threshold = self._get_sensitivity_threshold(audience, threshold)
+
+            try:
+                content = md_file.read_text()
+                docs_checked += 1
+
+                # Extract sections (by headers)
+                sections = self._extract_doc_sections(content)
+
+                for section_title, section_content in sections:
+                    if len(section_content.strip()) < 50:
+                        continue  # Skip tiny sections
+
+                    # Search memory for similar items
+                    query = f"{section_title} {section_content[:500]}"
+                    try:
+                        results = search(
+                            project_id,
+                            query,
+                            kind="memory",
+                            limit=5
+                        )
+                        memory_matches = results.get("memory", [])
+                    except Exception:
+                        memory_matches = []
+
+                    # Analyze matches for staleness signals
+                    for match in memory_matches:
+                        score = match.get("score", 0.0)
+                        if score < effective_threshold:
+                            continue
+
+                        memory_items_found += 1
+                        memory_type = match.get("type", "finding")
+                        memory_text = match.get("text", "")
+                        timestamp_str = match.get("timestamp", "")
+
+                        # Calculate age
+                        age_days = self._calculate_age_days(timestamp_str)
+                        if age_days > lookback_days:
+                            continue
+
+                        # Determine severity based on score and type
+                        severity = self._determine_severity(
+                            score, memory_type, age_days, audience
+                        )
+
+                        # Generate suggestion
+                        suggestion = self._generate_staleness_suggestion(
+                            memory_type, memory_text, section_title
+                        )
+
+                        staleness_items.append(StalenessItem(
+                            doc_path=rel_path,
+                            section=section_title,
+                            severity=severity,
+                            audience=audience,
+                            memory_type=memory_type,
+                            memory_text=memory_text,
+                            memory_age_days=age_days,
+                            similarity=score,
+                            suggestion=suggestion
+                        ))
+
+            except Exception as e:
+                if self.verbose:
+                    print(f"Warning: Could not process {rel_path}: {e}")
+
+        # Group by severity
+        high_severity = [i for i in staleness_items if i.severity == "high"]
+        medium_severity = [i for i in staleness_items if i.severity == "medium"]
+        low_severity = [i for i in staleness_items if i.severity == "low"]
+
+        # Calculate staleness score
+        if docs_checked > 0:
+            staleness_ratio = len(high_severity) / docs_checked
+            if staleness_ratio >= 0.3:
+                staleness_assessment = "Critical documentation debt"
+            elif staleness_ratio >= 0.15:
+                staleness_assessment = "Significant staleness detected"
+            elif staleness_ratio >= 0.05:
+                staleness_assessment = "Some docs may need updates"
+            else:
+                staleness_assessment = "Documentation appears current"
+        else:
+            staleness_assessment = "No docs checked"
+
+        return {
+            "ok": True,
+            "summary": {
+                "docs_checked": docs_checked,
+                "memory_items_analyzed": memory_items_found,
+                "high_severity": len(high_severity),
+                "medium_severity": len(medium_severity),
+                "low_severity": len(low_severity),
+                "assessment": staleness_assessment
+            },
+            "by_severity": {
+                "high": [i.to_dict() for i in high_severity[:10]],
+                "medium": [i.to_dict() for i in medium_severity[:10]],
+                "low": [i.to_dict() for i in low_severity[:5]]
+            },
+            "by_audience": {
+                "ai": [i.to_dict() for i in staleness_items if i.audience == "ai"][:10],
+                "developer": [i.to_dict() for i in staleness_items if i.audience == "developer"][:10],
+                "user": [i.to_dict() for i in staleness_items if i.audience == "user"][:10]
+            },
+            "threshold_used": threshold,
+            "lookback_days": lookback_days
+        }
+
+    def _detect_project_id(self) -> str | None:
+        """Detect project ID from .empirica config."""
+        try:
+            import yaml
+
+            # Try reading from .empirica/project.yaml (primary method)
+            project_yaml = self.root / ".empirica" / "project.yaml"
+            if project_yaml.exists():
+                with open(project_yaml, 'r') as f:
+                    data = yaml.safe_load(f)
+                    if data and data.get("project_id"):
+                        return data["project_id"]
+
+            # Fallback: Try .empirica/project.json
+            project_json = self.root / ".empirica" / "project.json"
+            if project_json.exists():
+                data = json.loads(project_json.read_text())
+                return data.get("project_id")
+
+        except Exception:
+            pass
+        return None
+
+    def _extract_doc_sections(self, content: str) -> list[tuple[str, str]]:
+        """Extract sections from markdown content by headers."""
+        sections = []
+        lines = content.split('\n')
+        current_header = "Introduction"
+        current_content: list[str] = []
+
+        for line in lines:
+            if line.startswith('#'):
+                # Save previous section
+                if current_content:
+                    sections.append((current_header, '\n'.join(current_content)))
+                # Start new section
+                current_header = line.lstrip('#').strip()
+                current_content = []
+            else:
+                current_content.append(line)
+
+        # Don't forget last section
+        if current_content:
+            sections.append((current_header, '\n'.join(current_content)))
+
+        return sections
+
+    def _calculate_age_days(self, timestamp_val) -> int:
+        """Calculate age in days from timestamp (Unix float or ISO string)."""
+        if timestamp_val is None:
+            return 999  # Treat missing timestamp as very old
+
+        try:
+            # Handle Unix timestamp (float)
+            if isinstance(timestamp_val, (int, float)):
+                ts = datetime.fromtimestamp(timestamp_val, tz=timezone.utc)
+            elif isinstance(timestamp_val, str):
+                # Handle ISO string formats
+                if 'T' in timestamp_val:
+                    if timestamp_val.endswith('Z'):
+                        timestamp_val = timestamp_val[:-1] + '+00:00'
+                    ts = datetime.fromisoformat(timestamp_val)
+                else:
+                    ts = datetime.fromisoformat(timestamp_val)
+
+                # Make timezone-aware if naive
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+            else:
+                return 999
+
+            now = datetime.now(timezone.utc)
+            delta = now - ts
+            return max(0, delta.days)
+        except Exception:
+            return 999
+
+    def _determine_severity(
+        self,
+        score: float,
+        memory_type: str,
+        age_days: int,
+        audience: str
+    ) -> str:
+        """
+        Determine staleness severity based on multiple factors.
+
+        High severity:
+        - High similarity (>0.8) + recent (<7 days) + AI docs
+        - Dead end or mistake with any similarity + AI docs
+
+        Medium severity:
+        - Moderate similarity (0.7-0.8) + recent (<14 days)
+        - Finding with high similarity on any doc
+
+        Low severity:
+        - Lower similarity or older items
+        """
+        # Dangerous memory types get elevated severity
+        dangerous_types = {"dead_end", "mistake"}
+
+        if memory_type in dangerous_types:
+            if audience == "ai":
+                return "high"  # AI following bad advice is critical
+            elif score >= 0.75:
+                return "high"
+            else:
+                return "medium"
+
+        # High similarity + recent = high severity for AI docs
+        if score >= 0.8 and age_days <= 7:
+            if audience == "ai":
+                return "high"
+            else:
+                return "medium"
+
+        # Moderate signals
+        if score >= 0.75 and age_days <= 14:
+            return "medium"
+
+        if score >= 0.7:
+            return "low"
+
+        return "low"
+
+    def _generate_staleness_suggestion(
+        self,
+        memory_type: str,
+        memory_text: str,
+        section_title: str
+    ) -> str:
+        """Generate actionable suggestion for staleness fix."""
+        type_suggestions = {
+            "finding": f"Update '{section_title}' to reflect: {memory_text[:100]}...",
+            "dead_end": f"Add warning to '{section_title}': this approach may not work",
+            "mistake": f"Review '{section_title}': following this led to errors",
+            "unknown": f"Clarify '{section_title}': questions remain about this topic"
+        }
+        return type_suggestions.get(
+            memory_type,
+            f"Review '{section_title}' for potential updates"
+        )
+
     def _generate_notebooklm_suggestions(self) -> dict[str, Any]:
         """Generate NotebookLM content suggestions based on doc structure."""
         docs_dir = self.root / "docs"
@@ -642,8 +1019,23 @@ def handle_docs_assess(args) -> int:
         summary_only = getattr(args, 'summary_only', False)
         check_docstrings = getattr(args, 'check_docstrings', False)
         turtle_mode = getattr(args, 'turtle', False)
+        check_staleness = getattr(args, 'check_staleness', False)
+        staleness_threshold = getattr(args, 'staleness_threshold', 0.7)
+        staleness_days = getattr(args, 'staleness_days', 30)
 
         agent = EpistemicDocsAgent(project_root=project_root, verbose=verbose)
+
+        # Staleness detection mode
+        if check_staleness:
+            result = agent.check_staleness(
+                threshold=staleness_threshold,
+                lookback_days=staleness_days
+            )
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                _print_staleness_output(result, verbose)
+            return 0
 
         # Turtle mode: recursive epistemic assessment
         if turtle_mode:
@@ -708,6 +1100,117 @@ def _generate_summary(result: dict, categories: list) -> dict:
         "top_gaps": top_gaps,
         "doc_count": doc_count
     }
+
+
+def _print_staleness_output(result: dict, verbose: bool):
+    """Print staleness detection output."""
+    print("\n" + "=" * 60)
+    print("🔍 DOC STALENESS DETECTION")
+    print("=" * 60)
+
+    if not result.get("ok"):
+        print(f"\n❌ Error: {result.get('error', 'Unknown error')}")
+        return
+
+    summary = result["summary"]
+
+    # Assessment header
+    assessment = summary.get("assessment", "Unknown")
+    if "Critical" in assessment:
+        icon = "🔴"
+    elif "Significant" in assessment:
+        icon = "🟡"
+    elif "Some" in assessment:
+        icon = "🟠"
+    else:
+        icon = "🟢"
+
+    print(f"\n{icon} {assessment}")
+    print(f"   Docs checked: {summary['docs_checked']}")
+    print(f"   Memory items analyzed: {summary['memory_items_analyzed']}")
+    print(f"   Threshold: {result.get('threshold_used', 0.7)}")
+    print(f"   Lookback: {result.get('lookback_days', 30)} days")
+
+    # Severity breakdown
+    print("\n📊 Severity Breakdown:")
+    print(f"   🔴 High:   {summary['high_severity']}")
+    print(f"   🟡 Medium: {summary['medium_severity']}")
+    print(f"   🟢 Low:    {summary['low_severity']}")
+
+    # High severity items
+    by_severity = result.get("by_severity", {})
+    high_items = by_severity.get("high", [])
+    if high_items:
+        print("\n" + "-" * 60)
+        print("🔴 HIGH SEVERITY (requires attention)")
+        print("-" * 60)
+        for item in high_items[:5]:
+            _print_staleness_item(item)
+
+    # Medium severity items (if verbose or few high items)
+    medium_items = by_severity.get("medium", [])
+    if medium_items and (verbose or len(high_items) < 3):
+        print("\n" + "-" * 60)
+        print("🟡 MEDIUM SEVERITY")
+        print("-" * 60)
+        limit = 10 if verbose else 3
+        for item in medium_items[:limit]:
+            _print_staleness_item(item)
+        if len(medium_items) > limit:
+            print(f"   ... and {len(medium_items) - limit} more")
+
+    # Low severity (only if verbose)
+    low_items = by_severity.get("low", [])
+    if low_items and verbose:
+        print("\n" + "-" * 60)
+        print("🟢 LOW SEVERITY (monitor)")
+        print("-" * 60)
+        for item in low_items[:3]:
+            _print_staleness_item(item)
+        if len(low_items) > 3:
+            print(f"   ... and {len(low_items) - 3} more")
+
+    # Audience breakdown
+    by_audience = result.get("by_audience", {})
+    ai_count = len(by_audience.get("ai", []))
+    dev_count = len(by_audience.get("developer", []))
+    user_count = len(by_audience.get("user", []))
+
+    if ai_count or dev_count or user_count:
+        print("\n📋 By Audience:")
+        print(f"   🤖 AI docs:        {ai_count} items")
+        print(f"   👨‍💻 Developer docs: {dev_count} items")
+        print(f"   👤 User docs:      {user_count} items")
+
+    print("\n" + "=" * 60)
+
+
+def _print_staleness_item(item: dict):
+    """Print a single staleness item."""
+    doc_path = item.get("doc_path", "unknown")
+    section = item.get("section", "unknown")
+    memory_type = item.get("memory_type", "finding")
+    similarity = item.get("similarity", 0.0)
+    age_days = item.get("memory_age_days", 0)
+    suggestion = item.get("suggestion", "")
+    audience = item.get("audience", "ai")
+
+    # Type icons
+    type_icons = {
+        "finding": "💡",
+        "dead_end": "🚫",
+        "mistake": "⚠️",
+        "unknown": "❓"
+    }
+    type_icon = type_icons.get(memory_type, "📝")
+
+    audience_icons = {"ai": "🤖", "developer": "👨‍💻", "user": "👤"}
+    aud_icon = audience_icons.get(audience, "📄")
+
+    print(f"\n   {aud_icon} {doc_path}")
+    print(f"      Section: {section[:50]}...")
+    print(f"      {type_icon} {memory_type} (similarity: {similarity:.2f}, {age_days}d ago)")
+    print(f"      💡 {suggestion[:80]}...")
 
 
 def _print_turtle_output(result: dict, verbose: bool):
