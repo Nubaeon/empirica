@@ -1,0 +1,28 @@
+{
+  "goal_id": "b798e6a2-b34d-48c9-b118-5642fb6fc2df",
+  "session_id": "1f777871-93d2-42f7-9a3a-e11ca114441e",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T10:42:57.865922+00:00",
+  "goal_data": {
+    "objective": "Add docstrings to classes: SessionCreate, CommandExecute, EmbeddingsProvider, AssessmentStatus, CheckResult, MockAssessment, BootstrapArgs in CLI handlers",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T10:42:57.865937+00:00",
+      "action": "created"
+    }
+  ]
+}
