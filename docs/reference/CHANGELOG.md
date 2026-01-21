@@ -254,6 +254,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-**Current Version:** 0.9.0 (Phase 3 Complete)  
-**Next Version:** 1.0.0 (Phase 4 - Production Release)  
-**Target Release Date:** November 8-15, 2025
+**Current Version:** 1.4.0 (Epistemic-First Model)
+**Previous Milestone:** 1.0.0 (Phase 4 - Production Release, November 2025)

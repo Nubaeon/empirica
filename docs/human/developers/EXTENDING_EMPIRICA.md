@@ -347,9 +347,9 @@ class MyRepository(BaseRepository):
 
 ### Issue 4: Version Pinning
 
-**Problem:** Extensions use different minimum versions (`>=1.2.3`, `>=1.2.4`, `>=1.3.0`).
+**Problem:** Older extensions used inconsistent minimum versions (`>=1.2.3`, `>=1.2.4`, `>=1.3.0`).
 
-**Recommendation:** Use `>=1.4.0` for all new extensions (current stable).
+**Resolution:** All extensions should now use `>=1.4.0` (current stable). Update older dependencies.
 
 ---
 
