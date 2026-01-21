@@ -1,0 +1,30 @@
+{
+  "goal_id": "334b3542-5a5e-4913-be3e-da3ab4c4aa2a",
+  "session_id": "c956cded-5a15-48a3-bda9-4c7dbd3edee1",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-21T20:04:23.019192+00:00",
+  "goal_data": {
+    "objective": "Review and update Sentinel middleware - compare full sentinel-gate.py vs minimal version, update empirica-framework SKILL.md with latest features",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Sentinel middleware comparison documented",
+      "SKILL.md updated with 1.4.0 features",
+      "Decision on which sentinel to use as default"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-21T20:04:23.019201+00:00",
+      "action": "created"
+    }
+  ]
+}
