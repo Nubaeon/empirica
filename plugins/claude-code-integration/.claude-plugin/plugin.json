@@ -5,6 +5,5 @@
     "name": "Empirica Project",
     "url": "https://github.com/Nubaeon/empirica"
   },
-  "version": "1.4.0",
-  "hooks": "../hooks/hooks.json"
+  "version": "1.4.0"
 }

@@ -5,6 +5,59 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-21
+
+### Added
+- **CHECK Snapshot Capture & Calibration Report** - New `calibration-report` command analyzes epistemic assessment patterns:
+  ```bash
+  empirica calibration-report --session-id <ID>
+  ```
+  - Captures epistemic state at CHECK gates for calibration analysis
+  - Shows vector trajectories, bias corrections, and drift patterns
+  - Enables data-driven calibration improvements
+
+- **Query Blockers Command** - Surface goal-linked unknowns blocking progress:
+  ```bash
+  empirica query blockers --session-id <ID>
+  ```
+  - Shows unknowns linked to specific goals
+  - Helps identify what's preventing goal completion
+
+- **Statusline Project-Wide Unknowns** - Enhanced statusline shows:
+  - Project-wide unknowns with goal-linked blockers
+  - Instance-specific active_session files for tmux isolation
+  - Upward search for `.empirica/` like git does for `.git/`
+
+- **docs-assess Enhancements** - New flags for documentation assessment:
+  - `--check-docstrings` - Check Python docstring coverage
+  - `--turtle` - Spawn parallel assessment agents
+
+- **Search-First Bootstrap Architecture** - Improved project-bootstrap:
+  - Adaptive limits based on content availability
+  - Eidetic and episodic memory in unified search
+  - 'focused' mode (eidetic + episodic) is now the default
+
+### Changed
+- **Sentinel CHECK Age Expiry** - Now opt-in (not default). High-stakes environments can enable via flags
+- **goals-list Refactoring** - Works without `--session-id`:
+  - No filters: shows all active goals
+  - `--session-id`: filter by session
+  - `--ai-id`: filter by AI
+  - `--completed`: show completed goals
+  - Removed redundant `goals-list-all` command
+- **Architecture Cleanup**:
+  - Extracted earned autonomy system to separate project
+  - Extracted MetricsRepository from session_database.py
+  - Removed over-engineered noetic_eidetic module
+
+### Fixed
+- **Partial Session ID Resolution** - Workflow commands (preflight, check, postflight) now resolve partial UUIDs before database writes
+- **Sentinel Timestamp Parsing** - Fixed bug causing CHECK gate failures
+- **Statusline tmux Cross-Pane Bleeding** - Instance-specific active_session files prevent cross-pane contamination
+- **Storage Dimension Hardcoding** - Now uses core embeddings provider instead of hardcoded 384-dim
+- **assess-directory** - Excludes `__init__.py` files by default
+- **Test Compatibility** - Updated tests for flat vector format
+
 ## [1.3.0] - 2026-01-09
 
 ### Added
@@ -300,16 +353,6 @@ First stable release of Empirica - genuine AI epistemic self-assessment framewor
 - Checkpoint signature verification
 - Git notes integrity checks
 
-## [Unreleased]
-
-### Planned
-- Enhanced Qdrant integration for semantic search
-- Real-time epistemic drift detection
-- Advanced calibration metrics
-- Web dashboard for session visualization
-
----
-
 ## Version Guidelines
 
 - **MAJOR** (x.0.0): Breaking changes, incompatible API changes
@@ -321,69 +364,3 @@ First stable release of Empirica - genuine AI epistemic self-assessment framewor
 - [GitHub Repository](https://github.com/Nubaeon/empirica)
 - [Documentation](https://github.com/Nubaeon/empirica/tree/main/docs)
 - [Issue Tracker](https://github.com/Nubaeon/empirica/issues)
-
-## [Unreleased] - 2025-12-24
-
-### Added - Major Feature Release
-- **Epistemic Environmental Awareness System**: Complete spatial understanding for AIs
-  - Active work context (sessions, goals, AI activity, epistemic artifacts)
-  - File tree structure (3-level depth, .gitignore filtering, 60s caching)
-  - Database schema summary (key tables, row counts, orthogonal view)
-  - Project structure health (pattern detection, conformance scoring)
-  - Flow state metrics (6-component productivity measurement)
-  
-- **Flow State Metrics System**: Empirically validated productivity measurement
-  - 6 components: CASCADE (25%), Bootstrap (15%), Goals (15%), Learning (20%), CHECK (15%), Continuity (10%)
-  - Displays recent session flow scores in bootstrap (⭐ 🟢 🟡 🔴)
-  - Provides actionable recommendations for improvement
-  - Tracked empirically: File tree session scored 1.00 (perfect flow)
-
-- **Smart CHECK Prompts**: Context-aware recommendations for high-scope work
-  - Triggers when scope breadth ≥0.6 or duration ≥0.5
-  - Shows in goals-create JSON output as check_recommendation
-  - Includes suggested timing and ready-to-use command
-
-- **CLI Command Telemetry**: Usage-based legacy detection
-  - Tracks command usage, execution time, success/failure
-  - Analytics detect rarely-used (<5/90d), abandoned (>180d), broken (<50% success)
-  - All local tracking, no external telemetry
-  - Integrated into CLI entry point (automatic tracking)
-
-- **AI Naming Convention**: Standardized format for cross-session discovery
-  - Format: `<model>-<workstream>` (e.g., claude-bootstrap-enhancement)
-  - Documented in system prompts and bootstrap tips
-  - Enables session filtering and handoff clarity
-
-- **Static/Dynamic Context Separation**: Clear knowledge architecture
-  - STATIC (system prompts): How Empirica works, universal knowledge
-  - DYNAMIC (bootstrap): Project-specific reality, current state
-  - Documented in CANONICAL_SYSTEM_PROMPT.md sections VIII & IX
-
-### Fixed
-- goals-complete: Fixed AttributeError with sqlite3.Row objects (dict-style access)
-- Flow metrics: Added helpful message when no completed sessions exist
-- CLI audit: Removed 16 empty command stubs (assess, decision, profile, component commands)
-
-### Improved
-- Bootstrap output: Now shows 6 major sections (active work, flow metrics, DB schema, structure health, file tree, artifacts)
-- System prompts: Enhanced with static context (DB schema, flow factors, project patterns)
-- Test strategy: Documented unit vs integration testing philosophy (TESTING_STRATEGY.md)
-
-### Performance
-- File tree generation: 3ms average, instant cache hits
-- Bootstrap loading: ~200ms with all new features
-- Flow metrics calculation: <100ms for 5 sessions
-
-### Documentation
-- Added comprehensive static context to CANONICAL_SYSTEM_PROMPT.md
-- Created TESTING_STRATEGY.md with testing philosophy
-- Updated system prompts in docs/system-prompts/ directory
-- Enhanced rovodev config.yml with latest patterns
-
-### Technical Details
-- New tables: command_usage (CLI telemetry)
-- New modules: empirica/metrics/flow_state.py, empirica/utils/structure_health.py
-- Enhanced: SessionDatabase with telemetry and flow metrics methods
-- 10 sessions, ~2600+ lines changed, 12 commits
-- Average flow score: 0.89 (exceptional productivity day)
-
