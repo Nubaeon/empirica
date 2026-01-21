@@ -206,6 +206,89 @@ class EpistemicDocsAgent:
             re.search(r'\b' + term.lower() + r'\b', docs_content) is not None
         )
 
+    def check_docstrings(self) -> dict[str, Any]:
+        """
+        Check Python code for missing docstrings using AST.
+
+        Returns dict with:
+        - modules_missing: List of modules without module docstrings
+        - classes_missing: List of classes without docstrings
+        - functions_missing: List of public functions without docstrings
+        - coverage: Overall docstring coverage percentage
+        """
+        modules_missing: list[str] = []
+        classes_missing: list[str] = []
+        functions_missing: list[str] = []
+        total_items = 0
+        documented_items = 0
+
+        # Scan empirica package
+        package_dir = self.root / "empirica"
+        if not package_dir.exists():
+            return {
+                "modules_missing": modules_missing,
+                "classes_missing": classes_missing,
+                "functions_missing": functions_missing,
+                "total_items": total_items,
+                "documented_items": documented_items,
+                "coverage": 0.0
+            }
+
+        for py_file in package_dir.rglob("*.py"):
+            if "__pycache__" in str(py_file):
+                continue
+
+            try:
+                content = py_file.read_text()
+                tree = ast.parse(content)
+                rel_path = py_file.relative_to(self.root)
+
+                # Check module docstring
+                total_items += 1
+                if ast.get_docstring(tree):
+                    documented_items += 1
+                else:
+                    modules_missing.append(str(rel_path))
+
+                # Check classes and functions
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.ClassDef):
+                        total_items += 1
+                        if ast.get_docstring(node):
+                            documented_items += 1
+                        else:
+                            classes_missing.append(f"{rel_path}:{node.name}")
+
+                    elif isinstance(node, ast.FunctionDef):
+                        # Skip private/dunder methods
+                        if node.name.startswith("_") and not node.name.startswith("__"):
+                            continue
+                        # Skip dunder except __init__
+                        if node.name.startswith("__") and node.name != "__init__":
+                            continue
+
+                        total_items += 1
+                        if ast.get_docstring(node):
+                            documented_items += 1
+                        else:
+                            functions_missing.append(f"{rel_path}:{node.name}")
+
+            except (SyntaxError, UnicodeDecodeError):
+                # Skip files that can't be parsed
+                continue
+
+        # Calculate coverage
+        coverage = round(documented_items / total_items * 100, 1) if total_items > 0 else 0.0
+
+        return {
+            "modules_missing": modules_missing,
+            "classes_missing": classes_missing,
+            "functions_missing": functions_missing,
+            "total_items": total_items,
+            "documented_items": documented_items,
+            "coverage": coverage
+        }
+
     def assess_cli_coverage(self, docs_content: str) -> FeatureCoverage:
         """Assess CLI command documentation coverage."""
         commands = self._extract_cli_commands()
@@ -330,6 +413,95 @@ class EpistemicDocsAgent:
             "categories": [c.to_dict() for c in self.categories],
             "recommendations": self._generate_recommendations(),
             "notebooklm_suggestions": self._generate_notebooklm_suggestions()
+        }
+
+    def run_turtle_assessment(self, max_rounds: int = 3) -> dict[str, Any]:
+        """
+        Epistemic recursive assessment - turtles all the way down.
+
+        Iterates between code and docs to surface gaps:
+        1. Run standard assessment (code → docs comparison)
+        2. Check docstrings (code self-documentation)
+        3. Compare docstrings to external docs (consistency)
+        4. Generate epistemic vectors for convergence tracking
+
+        Args:
+            max_rounds: Maximum iteration rounds (default 3)
+
+        Returns:
+            Combined assessment with convergence tracking
+        """
+        rounds: list[dict[str, Any]] = []
+        prev_uncertainty = 1.0
+
+        for round_num in range(1, max_rounds + 1):
+            # Layer 1: Standard docs assessment
+            docs_result = self.run_assessment()
+
+            # Layer 2: Docstring assessment
+            docstring_result = self.check_docstrings()
+
+            # Layer 3: Cross-reference - find items documented externally but missing docstrings
+            docs_content = self._load_all_docs_content()
+            cross_gaps = []
+            for func in docstring_result["functions_missing"][:20]:  # Top 20
+                # Check if it's documented externally
+                func_name = func.split(":")[-1] if ":" in func else func
+                if self._check_if_documented(func_name, docs_content):
+                    cross_gaps.append(f"{func} (in docs, missing docstring)")
+
+            # Calculate combined epistemic state
+            docs_coverage = docs_result["overall"]["coverage"] / 100
+            docstring_coverage = docstring_result["coverage"] / 100
+            combined_coverage = (docs_coverage + docstring_coverage) / 2
+
+            # Epistemic vectors for this round
+            know = combined_coverage
+            uncertainty = 1 - combined_coverage
+            delta = prev_uncertainty - uncertainty
+
+            round_data = {
+                "round": round_num,
+                "docs_coverage": docs_result["overall"]["coverage"],
+                "docstring_coverage": docstring_result["coverage"],
+                "combined_coverage": round(combined_coverage * 100, 1),
+                "cross_gaps": cross_gaps[:5],
+                "vectors": {
+                    "know": round(know, 2),
+                    "uncertainty": round(uncertainty, 2),
+                    "delta": round(delta, 3)
+                },
+                "convergence": abs(delta) < 0.01  # Converged if delta < 1%
+            }
+            rounds.append(round_data)
+
+            # Check convergence
+            if round_data["convergence"]:
+                break
+
+            prev_uncertainty = uncertainty
+
+        # Final summary
+        final_round = rounds[-1]
+        return {
+            "turtle_mode": True,
+            "total_rounds": len(rounds),
+            "converged": final_round["convergence"],
+            "final_state": {
+                "docs_coverage": final_round["docs_coverage"],
+                "docstring_coverage": final_round["docstring_coverage"],
+                "combined": final_round["combined_coverage"],
+                "moon": self._score_to_moon(final_round["combined_coverage"] / 100)
+            },
+            "epistemic_vectors": final_round["vectors"],
+            "cross_gaps": final_round["cross_gaps"],
+            "rounds": rounds,
+            "recommendations": self._generate_recommendations(),
+            "docstring_gaps": {
+                "modules": docstring_result["modules_missing"][:10],
+                "classes": docstring_result["classes_missing"][:10],
+                "functions": docstring_result["functions_missing"][:10]
+            }
         }
 
     def _score_to_moon(self, score: float) -> str:
@@ -465,8 +637,30 @@ def handle_docs_assess(args) -> int:
         verbose = getattr(args, 'verbose', False)
         output_format = getattr(args, 'output', 'human')
         summary_only = getattr(args, 'summary_only', False)
+        check_docstrings = getattr(args, 'check_docstrings', False)
+        turtle_mode = getattr(args, 'turtle', False)
 
         agent = EpistemicDocsAgent(project_root=project_root, verbose=verbose)
+
+        # Turtle mode: recursive epistemic assessment
+        if turtle_mode:
+            result = agent.run_turtle_assessment()
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                _print_turtle_output(result, verbose)
+            return 0
+
+        # Check docstrings only mode
+        if check_docstrings:
+            result = agent.check_docstrings()
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                _print_docstring_output(result, verbose)
+            return 0
+
+        # Standard assessment
         result = agent.run_assessment()
 
         # Lightweight summary for bootstrap context (~50 tokens)
@@ -511,6 +705,107 @@ def _generate_summary(result: dict, categories: list) -> dict:
         "top_gaps": top_gaps,
         "doc_count": doc_count
     }
+
+
+def _print_turtle_output(result: dict, verbose: bool):
+    """Print turtle mode (recursive epistemic) output."""
+    print("\n" + "=" * 60)
+    print("🐢 TURTLE MODE: RECURSIVE EPISTEMIC ASSESSMENT")
+    print("=" * 60)
+
+    final = result["final_state"]
+    vectors = result["epistemic_vectors"]
+
+    print(f"\n{final['moon']} Combined Coverage: {final['combined']}%")
+    print(f"   External docs: {final['docs_coverage']}%")
+    print(f"   Code docstrings: {final['docstring_coverage']}%")
+
+    print(f"\n📊 Epistemic Vectors:")
+    print(f"   know: {vectors['know']:.2f}")
+    print(f"   uncertainty: {vectors['uncertainty']:.2f}")
+    print(f"   delta: {vectors['delta']:+.3f}")
+
+    print(f"\n🔄 Convergence: {'✅ Converged' if result['converged'] else '⚠️ Not converged'}")
+    print(f"   Rounds: {result['total_rounds']}")
+
+    if result.get("cross_gaps"):
+        print(f"\n⚠️ Cross-Reference Gaps (in docs but missing docstring):")
+        for gap in result["cross_gaps"][:5]:
+            print(f"   • {gap}")
+
+    if verbose and result.get("docstring_gaps"):
+        gaps = result["docstring_gaps"]
+        if gaps.get("modules"):
+            print(f"\n📄 Modules missing docstrings:")
+            for m in gaps["modules"][:5]:
+                print(f"   • {m}")
+        if gaps.get("classes"):
+            print(f"\n🏛️ Classes missing docstrings:")
+            for c in gaps["classes"][:5]:
+                print(f"   • {c}")
+        if gaps.get("functions"):
+            print(f"\n⚙️ Functions missing docstrings:")
+            for f in gaps["functions"][:5]:
+                print(f"   • {f}")
+
+    if result.get("recommendations"):
+        print(f"\n💡 Recommendations:")
+        for rec in result["recommendations"][:3]:
+            print(f"   • {rec}")
+
+    print("\n" + "=" * 60)
+
+
+def _print_docstring_output(result: dict, verbose: bool):
+    """Print docstring check output."""
+    print("\n" + "=" * 60)
+    print("📝 DOCSTRING COVERAGE CHECK")
+    print("=" * 60)
+
+    coverage = result["coverage"]
+    total = result["total_items"]
+    documented = result["documented_items"]
+
+    # Moon phase
+    if coverage >= 85:
+        moon = "🌕"
+    elif coverage >= 70:
+        moon = "🌔"
+    elif coverage >= 50:
+        moon = "🌓"
+    elif coverage >= 30:
+        moon = "🌒"
+    else:
+        moon = "🌑"
+
+    print(f"\n{moon} Docstring Coverage: {coverage}%")
+    print(f"   Items: {documented}/{total} documented")
+
+    if result["modules_missing"]:
+        print(f"\n📄 Modules missing docstrings ({len(result['modules_missing'])}):")
+        limit = 10 if verbose else 5
+        for m in result["modules_missing"][:limit]:
+            print(f"   • {m}")
+        if len(result["modules_missing"]) > limit:
+            print(f"   ... and {len(result['modules_missing']) - limit} more")
+
+    if result["classes_missing"]:
+        print(f"\n🏛️ Classes missing docstrings ({len(result['classes_missing'])}):")
+        limit = 10 if verbose else 5
+        for c in result["classes_missing"][:limit]:
+            print(f"   • {c}")
+        if len(result["classes_missing"]) > limit:
+            print(f"   ... and {len(result['classes_missing']) - limit} more")
+
+    if result["functions_missing"]:
+        print(f"\n⚙️ Functions missing docstrings ({len(result['functions_missing'])}):")
+        limit = 10 if verbose else 5
+        for f in result["functions_missing"][:limit]:
+            print(f"   • {f}")
+        if len(result["functions_missing"]) > limit:
+            print(f"   ... and {len(result['functions_missing']) - limit} more")
+
+    print("\n" + "=" * 60)
 
 
 def _print_human_output(result: dict, categories: list[FeatureCoverage], verbose: bool):

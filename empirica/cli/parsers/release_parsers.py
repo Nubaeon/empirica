@@ -49,6 +49,16 @@ def add_release_parsers(subparsers):
         default='human',
         help='Output format'
     )
+    docs_parser.add_argument(
+        '--check-docstrings',
+        action='store_true',
+        help='Check Python code for missing docstrings (functions, classes, modules)'
+    )
+    docs_parser.add_argument(
+        '--turtle',
+        action='store_true',
+        help='Epistemic recursive mode: iterate between code and docs to surface gaps'
+    )
 
     # Docs explain - focused information retrieval
     explain_parser = subparsers.add_parser(
