@@ -364,6 +364,7 @@ def calculate_aggregate_stats(events: List[Dict]) -> Dict:
             net_unc_gain.append(net['uncertainty'])
 
     def stats(values):
+        """Calculate mean, min, max, count for a list of numeric values."""
         if not values:
             return None
         return {
