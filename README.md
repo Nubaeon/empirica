@@ -2,7 +2,7 @@
 
 > **Teaching AI to know what it knows—and what it doesn't**
 
-[![Version](https://img.shields.io/badge/version-1.3.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.3.3)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.4.0)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -176,13 +176,13 @@ brew install empirica
 
 ```bash
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.3.2
+docker pull nubaeon/empirica:1.4.0
 
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.3.2-alpine
+docker pull nubaeon/empirica:1.4.0-alpine
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.3.2 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.4.0 /bin/bash
 ```
 
 ---
@@ -358,7 +358,7 @@ Projects using Empirica's epistemic foundations:
 
 ---
 
-## What's New in 1.3.2
+## What's New in 1.4.0
 
 - **Simplified CASCADE Workflow** — Direct `submit_preflight_assessment` / `submit_postflight_assessment` (removed execute_* theater)
 - **Python 3.10+ Support** — Lowered minimum from 3.11 to 3.10 for broader compatibility
@@ -400,6 +400,6 @@ See [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.3.2
+**Version:** 1.4.0
 
 *Built through 800+ sessions of genuine epistemic collaboration between humans and AI.*
