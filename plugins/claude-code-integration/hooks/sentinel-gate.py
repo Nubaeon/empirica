@@ -3,14 +3,19 @@
 Empirica Sentinel Gate Hook - Enforces CHECK before high-impact tools
 
 This hook intercepts Edit, Write, and Bash (non-read-only) tool calls and
-checks if we have a recent passing CHECK gate. If not, it blocks the tool
+checks if we have a passing CHECK gate. If not, it blocks the tool
 and prompts the AI to run CHECK first.
 
 Architecture:
 1. Hook receives tool call info via stdin (JSON)
-2. Check reflexes table for recent CHECK with decision="proceed"
-3. If valid CHECK exists (within last N minutes), allow
+2. Check reflexes table for CHECK with decision="proceed"
+3. If valid CHECK exists, allow
 4. If no CHECK or CHECK returned "investigate", block with guidance
+
+Environment variables:
+- EMPIRICA_SENTINEL_CHECK_EXPIRY=true - Enable 30-min CHECK expiry (disabled by default)
+  Note: Expiry is problematic for paused sessions; user may resume later.
+- EMPIRICA_SENTINEL_LOOPING=false - Disable sentinel looping entirely
 
 This enforces noetic-before-praxic at the tool level.
 """
@@ -245,17 +250,24 @@ def get_last_check_decision(session_id: str, max_age_minutes: int = 30) -> dict:
             except json.JSONDecodeError:
                 pass
 
-        # Calculate age
+        # Calculate age - handle both ISO format and Unix timestamps (SQLite float)
         check_time = None
+        age_minutes = None
         try:
-            check_time = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            # Make timezone-naive for comparison
-            if check_time.tzinfo is not None:
-                check_time = check_time.replace(tzinfo=None)
+            # Check if timestamp is a Unix timestamp (float/int)
+            if isinstance(timestamp, (int, float)) or (isinstance(timestamp, str) and timestamp.replace('.', '').replace('-', '').isdigit()):
+                check_time = datetime.fromtimestamp(float(timestamp))
+            else:
+                # ISO format
+                check_time = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                # Make timezone-naive for comparison
+                if check_time.tzinfo is not None:
+                    check_time = check_time.replace(tzinfo=None)
             age = datetime.now() - check_time
             age_minutes = age.total_seconds() / 60
         except Exception:
-            age_minutes = 999  # Assume old if can't parse
+            # Skip age check if timestamp parsing fails rather than blocking
+            age_minutes = None
 
         # Check if a compact happened AFTER this CHECK
         invalidated_by_compact = False
@@ -264,16 +276,23 @@ def get_last_check_decision(session_id: str, max_age_minutes: int = 30) -> dict:
             if last_compact > check_time:
                 invalidated_by_compact = True
 
+        # Check validity - skip age check if age_minutes is None (parsing failed)
+        # Age check is disabled by default via EMPIRICA_SENTINEL_CHECK_EXPIRY env var
+        check_expiry_enabled = os.getenv('EMPIRICA_SENTINEL_CHECK_EXPIRY', 'false').lower() == 'true'
+        age_ok = True
+        if check_expiry_enabled and age_minutes is not None:
+            age_ok = age_minutes <= max_age_minutes
+
         is_valid = (
             decision == 'proceed' and
-            age_minutes <= max_age_minutes and
-            not invalidated_by_compact  # NEW: Compact invalidates CHECK
+            age_ok and
+            not invalidated_by_compact  # Compact invalidates CHECK
         )
 
         return {
             "has_check": True,
             "decision": decision,
-            "age_minutes": round(age_minutes, 1),
+            "age_minutes": round(age_minutes, 1) if age_minutes is not None else None,
             "is_valid": is_valid,
             "invalidated_by_compact": invalidated_by_compact,
             "check_time": str(check_time) if check_time else None,
@@ -505,11 +524,15 @@ EOF
 3. If CHECK returns `proceed`, you can continue with the action.
 """
         else:
-            reason = f"CHECK expired (age={check_status.get('age_minutes')}min > 30min). Run CHECK before {tool_name}."
+            # Fallback: CHECK exists but is invalid for other reasons
+            # (e.g., age expired if EMPIRICA_SENTINEL_CHECK_EXPIRY=true, or unexpected decision)
+            age_info = f" (age={check_status.get('age_minutes')}min)" if check_status.get('age_minutes') else ""
+            decision_info = check_status.get('decision', 'unknown')
+            reason = f"CHECK not valid{age_info}, decision={decision_info}. Run CHECK before {tool_name}."
             guidance = """
-## Sentinel Gate: CHECK Expired
+## Sentinel Gate: CHECK Required
 
-Your last CHECK is too old. Run a fresh CHECK before this action.
+Your last CHECK is not valid. Run a fresh CHECK before this action.
 
 ```bash
 empirica check-submit - << 'EOF'
