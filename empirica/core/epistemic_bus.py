@@ -51,6 +51,7 @@ class EpistemicEvent:
         }
     
     def __repr__(self):
+        """Return string representation of epistemic event."""
         return f"EpistemicEvent({self.event_type}, agent={self.agent_id})"
 
 
@@ -200,6 +201,7 @@ class LoggingObserver(EpistemicObserver):
     """
     
     def __init__(self, log_level: int = logging.INFO):
+        """Initialize logging observer with configurable log level."""
         self.log_level = log_level
     
     def handle_event(self, event: EpistemicEvent) -> None:
@@ -218,6 +220,7 @@ class CallbackObserver(EpistemicObserver):
     """
     
     def __init__(self, callback: Callable[[EpistemicEvent], None]):
+        """Initialize callback observer with function to call for each event."""
         self.callback = callback
     
     def handle_event(self, event: EpistemicEvent) -> None:

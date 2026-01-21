@@ -417,6 +417,7 @@ class KnowledgeGraphNode:
     epistemic_delta: Optional[EpistemicDelta] = None
 
     def to_dict(self) -> Dict:
+        """Convert knowledge graph node to dictionary representation."""
         return {
             'id': self.id,
             'node_type': self.node_type,
@@ -434,6 +435,7 @@ class KnowledgeGraphEdge:
     weight: float = 1.0
 
     def to_dict(self) -> Dict:
+        """Convert knowledge graph edge to dictionary representation."""
         return {
             'source_id': self.source_id,
             'target_id': self.target_id,

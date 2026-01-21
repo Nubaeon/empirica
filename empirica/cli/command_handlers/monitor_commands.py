@@ -1572,6 +1572,7 @@ def handle_trajectory_project_command(args):
 
         # Calculate turtle stack layers
         def get_moon_phase(score: float) -> tuple:
+            """Return moon emoji and status label for a confidence score."""
             if score >= 0.85:
                 return "🌕", "CRYSTALLINE"
             elif score >= 0.70:

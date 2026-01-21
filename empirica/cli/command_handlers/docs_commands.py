@@ -39,6 +39,7 @@ class FeatureCoverage:
 
     @property
     def coverage(self) -> float:
+        """Calculate documentation coverage ratio (0.0 to 1.0)."""
         return self.documented / self.total if self.total > 0 else 0.0
 
     @property

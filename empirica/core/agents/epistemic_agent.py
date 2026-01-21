@@ -57,6 +57,7 @@ class EpistemicAgentConfig:
     findings_so_far: List[str] = field(default_factory=list)
 
     def __post_init__(self):
+        """Set default persona and generate investigation path if not provided."""
         if not self.persona_id and not self.persona:
             self.persona_id = "general"  # Default persona
 

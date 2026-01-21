@@ -106,7 +106,7 @@ class LessonStorageManager:
             logger.warning(f"Could not ensure Qdrant collection: {e}")
 
     def _load_hot_cache(self) -> int:
-        """Load all lessons into hot cache from warm storage"""
+        """Load all lessons into hot cache from warm storage for fast access."""
         cursor = self._conn.cursor()
         cursor.execute("""
             SELECT l.id, l.name, l.domain,
@@ -888,6 +888,7 @@ class LessonStorageManager:
 
         # Build dependency chains from entry points
         def get_chain(lesson_id, visited=None):
+            """Recursively build dependency chain from a lesson."""
             if visited is None:
                 visited = set()
             if lesson_id in visited:
@@ -940,10 +941,12 @@ class LessonStorageManager:
         printed = set()
 
         def format_lesson(lesson):
+            """Format lesson with confidence icon and name."""
             conf_icon = "●" if lesson['confidence'] >= 0.85 else "◐" if lesson['confidence'] >= 0.70 else "○"
             return f"{conf_icon} {lesson['name']} [{lesson['confidence']:.2f}]"
 
         def print_tree(lesson_id, prefix="", is_last=True, rel_label=None):
+            """Recursively print lesson tree with ASCII formatting."""
             if lesson_id in printed:
                 return
             printed.add(lesson_id)
@@ -1009,7 +1012,7 @@ class LessonStorageManager:
     # ==================== STATS ====================
 
     def stats(self) -> Dict:
-        """Get storage statistics"""
+        """Get storage statistics across all layers (hot, warm, cold, search)."""
         cursor = self._conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM lessons")
         lesson_count = cursor.fetchone()[0]

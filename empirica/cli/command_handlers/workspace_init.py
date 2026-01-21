@@ -61,6 +61,7 @@ class WorkspaceScanner:
     """Scans workspace and builds epistemic state"""
     
     def __init__(self, workspace_path: Path):
+        """Initialize workspace scanner with the target path."""
         self.workspace_path = workspace_path
         self.git_repos = []
         self.non_git_dirs = []

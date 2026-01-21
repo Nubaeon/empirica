@@ -37,6 +37,7 @@ class CredentialsLoader:
     _credentials_cache = None
 
     def __new__(cls):
+        """Create singleton instance of credentials loader."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance

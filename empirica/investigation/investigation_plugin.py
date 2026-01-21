@@ -122,6 +122,7 @@ class InvestigationPlugin:
             }
     
     def __repr__(self):
+        """Return string representation of the investigation plugin."""
         return f"InvestigationPlugin(name='{self.name}', improves={self.improves_vectors}, gain={self.confidence_gain})"
 
 
@@ -231,9 +232,11 @@ class PluginRegistry:
         ]
     
     def __len__(self):
+        """Return number of registered plugins."""
         return len(self.plugins)
-    
+
     def __repr__(self):
+        """Return string representation of the plugin registry."""
         return f"PluginRegistry(plugins={len(self.plugins)})"
 
 

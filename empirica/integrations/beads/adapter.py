@@ -17,6 +17,7 @@ class BeadsAdapter:
     """Subprocess-based BEADS integration"""
     
     def __init__(self):
+        """Initialize BEADS adapter with availability caching."""
         self._available = None  # Cache availability check
     
     def is_available(self) -> bool:

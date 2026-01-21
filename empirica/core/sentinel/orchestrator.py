@@ -330,6 +330,7 @@ class OrchestrationResult:
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert multi-persona result to dictionary representation."""
         return {
             "ok": self.ok,
             "task": self.task,
@@ -358,6 +359,7 @@ class LoopRecord:
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert loop record to dictionary representation."""
         return {
             "loop": self.loop_number,
             "preflight": self.preflight_vectors,

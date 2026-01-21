@@ -46,6 +46,7 @@ class CheckResult:
     moon: str = ""  # Moon phase indicator
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert check result to dictionary for JSON serialization."""
         return {
             "name": self.name,
             "status": self.status.value,
@@ -66,6 +67,7 @@ class EpistemicReleaseAgent:
     """
 
     def __init__(self, project_root: Optional[Path] = None, quick: bool = False):
+        """Initialize release agent with project root and quick mode setting."""
         self.root = project_root or Path.cwd()
         self.quick = quick
         self.results: List[CheckResult] = []

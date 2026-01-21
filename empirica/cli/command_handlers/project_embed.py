@@ -28,6 +28,7 @@ def _read_file(path: str) -> str:
 
 
 def handle_project_embed_command(args):
+    """Handle project-embed command to sync docs and memory to Qdrant."""
     try:
         from empirica.core.qdrant.vector_store import (
             init_collections, upsert_docs, upsert_memory,

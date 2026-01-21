@@ -114,6 +114,7 @@ class SentinelConfig:
     requires_sentinel_approval_before_act: bool = False
 
     def to_dict(self) -> Dict:
+        """Convert sentinel config to dictionary representation."""
         result = asdict(self)
         # Convert escalation triggers
         result['escalation_triggers'] = [t.to_dict() for t in self.escalation_triggers]

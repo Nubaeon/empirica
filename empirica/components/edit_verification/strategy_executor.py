@@ -23,6 +23,7 @@ class EditStrategyExecutor:
     """
     
     def __init__(self):
+        """Initialize strategy executor with edit tracking for calibration."""
         self.edit_attempts = []  # Track for calibration
     
     async def execute_strategy(
@@ -224,9 +225,9 @@ class EditStrategyExecutor:
             }
     
     def _make_flexible_pattern(self, old_str: str) -> str:
-        """
+        r"""
         Convert exact string to regex with flexible whitespace.
-        
+
         Example: "def  my_func():" -> r"def\s+my_func\(\):"
         """
         # Escape special regex characters
@@ -245,6 +246,7 @@ if __name__ == "__main__":
     import os
     
     async def test_strategies():
+        """Test all edit strategies with a sample file."""
         executor = EditStrategyExecutor()
         
         # Create test file

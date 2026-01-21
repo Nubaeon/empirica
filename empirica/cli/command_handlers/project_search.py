@@ -10,6 +10,7 @@ from ..cli_utils import handle_cli_error
 
 
 def handle_project_search_command(args):
+    """Handle project-search command for semantic search over docs and memory."""
     try:
         from empirica.core.qdrant.vector_store import init_collections, search, search_global
         project_id = args.project_id

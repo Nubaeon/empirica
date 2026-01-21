@@ -205,6 +205,7 @@ class EmergedPersonaStore:
     """
 
     def __init__(self, base_path: str = None):
+        """Initialize persona store with optional custom base path."""
         if base_path:
             self.base_path = Path(base_path)
         else:
