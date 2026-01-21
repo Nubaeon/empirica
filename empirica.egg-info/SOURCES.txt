@@ -51,10 +51,10 @@ empirica/cli/command_handlers/action_commands.py
 empirica/cli/command_handlers/agent_commands.py
 empirica/cli/command_handlers/architecture_commands.py
 empirica/cli/command_handlers/ask_handler.py
-empirica/cli/command_handlers/autonomy_commands.py
 empirica/cli/command_handlers/chat_handler.py
 empirica/cli/command_handlers/checkpoint_commands.py
 empirica/cli/command_handlers/checkpoint_signing_commands.py
+empirica/cli/command_handlers/compact_analysis.py
 empirica/cli/command_handlers/concept_graph_commands.py
 empirica/cli/command_handlers/config_commands.py
 empirica/cli/command_handlers/dashboard.py
@@ -101,7 +101,6 @@ empirica/cli/parsers/__init__.py
 empirica/cli/parsers/action_parsers.py
 empirica/cli/parsers/agent_parsers.py
 empirica/cli/parsers/architecture_parsers.py
-empirica/cli/parsers/autonomy_parsers.py
 empirica/cli/parsers/cascade_parsers.py
 empirica/cli/parsers/checkpoint_parsers.py
 empirica/cli/parsers/concept_graph_parsers.py
@@ -164,14 +163,12 @@ empirica/config/mco/protocols.yaml
 empirica/core/__init__.py
 empirica/core/bayesian_beliefs.py
 empirica/core/checkpoint_signer.py
-empirica/core/context_load_balancer.py
 empirica/core/emerged_personas.py
 empirica/core/epistemic_bus.py
 empirica/core/epistemic_trajectory.py
 empirica/core/findings_deprecation.py
 empirica/core/issue_capture.py
 empirica/core/memory_gap_detector.py
-empirica/core/noetic_eidetic.py
 empirica/core/signaling.py
 empirica/core/thresholds.py
 empirica/core/agents/__init__.py
@@ -181,9 +178,6 @@ empirica/core/architecture_assessment/assessor.py
 empirica/core/architecture_assessment/coupling_analyzer.py
 empirica/core/architecture_assessment/schema.py
 empirica/core/architecture_assessment/stability_estimator.py
-empirica/core/autonomy/__init__.py
-empirica/core/autonomy/graduated_sentinel.py
-empirica/core/autonomy/trust_calculator.py
 empirica/core/canonical/__init__.py
 empirica/core/canonical/checkpoint_storage.py
 empirica/core/canonical/git_enhanced_reflex_logger.py
@@ -276,6 +270,7 @@ empirica/data/repositories/branches.py
 empirica/data/repositories/breadcrumbs.py
 empirica/data/repositories/cascades.py
 empirica/data/repositories/goals.py
+empirica/data/repositories/metrics.py
 empirica/data/repositories/projects.py
 empirica/data/repositories/sessions.py
 empirica/data/repositories/utilities.py
