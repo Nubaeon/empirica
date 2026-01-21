@@ -1,0 +1,28 @@
+{
+  "goal_id": "b1ec8107-bf17-46fb-8d98-30ff4f215e08",
+  "session_id": "a71fb003-d808-477a-9942-abc6d5525af0",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T20:30:54.572829+00:00",
+  "goal_data": {
+    "objective": "Update documentation for v1.4.0: Add Sentinel hook configuration docs (sentinel-gate.py, EMPIRICA_SENTINEL_CHECK_EXPIRY env var), update architecture docs with new calibration-report command, ensure all version references are updated to v1.4.0",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T20:30:54.572848+00:00",
+      "action": "created"
+    }
+  ]
+}
