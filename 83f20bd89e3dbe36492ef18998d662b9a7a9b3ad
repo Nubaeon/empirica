@@ -1,0 +1,28 @@
+{
+  "goal_id": "ecd8a481-1436-42b8-822c-6e91721eb98e",
+  "session_id": "17d32f33",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T21:20:39.503868+00:00",
+  "goal_data": {
+    "objective": "Publish v1.4.0 to PyPI, update Homebrew tap, push DockerHub image",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T21:20:39.503883+00:00",
+      "action": "created"
+    }
+  ]
+}
