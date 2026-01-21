@@ -116,6 +116,7 @@ from .monitor_commands import (
     handle_check_drift_command, handle_mco_load_command,
     handle_assess_state_command, handle_trajectory_project_command
 )
+from .compact_analysis import handle_compact_analysis
 from .investigation_commands import (
     handle_investigate_command,
     handle_analyze_command,
@@ -279,6 +280,7 @@ __all__ = [
     'handle_mco_load_command',
     'handle_assess_state_command',
     'handle_trajectory_project_command',
+    'handle_compact_analysis',
 
     # Investigation commands
     'handle_investigate_command',

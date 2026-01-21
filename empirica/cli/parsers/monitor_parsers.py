@@ -70,3 +70,24 @@ def add_monitor_parsers(subparsers):
 
     # REMOVED: monitor-export, monitor-reset, monitor-cost
     # Use: monitor --export FILE, monitor --reset, monitor --cost
+
+    # Compact analysis command - measure epistemic loss during memory compaction
+    compact_parser = subparsers.add_parser('compact-analysis',
+        help='Analyze epistemic loss during memory compaction',
+        description="""
+Retroactively analyze pre-compact snapshots vs post-compact assessments
+to measure knowledge loss and recovery during Claude Code memory compaction.
+
+Data Quality Filtering (default):
+- Excludes test sessions (ai_id: test*, *-test, storage-*)
+- Requires sessions with actual work evidence (findings/unknowns)
+- Filters rapid-fire sessions (< 5 min duration)
+        """)
+    compact_parser.add_argument('--include-tests', action='store_true',
+        help='Include test sessions in analysis (normally filtered)')
+    compact_parser.add_argument('--min-findings', type=int, default=0,
+        help='Minimum findings count to include session (default: 0)')
+    compact_parser.add_argument('--limit', type=int, default=20,
+        help='Maximum compact events to analyze (default: 20)')
+    compact_parser.add_argument('--output', choices=['human', 'json'], default='human',
+        help='Output format (default: human)')

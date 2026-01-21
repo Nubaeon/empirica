@@ -307,6 +307,7 @@ def main(args=None):
             'assess-state': handle_assess_state_command,
             'mco-load': handle_mco_load_command,
             'trajectory-project': handle_trajectory_project_command,
+            'compact-analysis': handle_compact_analysis,
 
             # Checkpoint commands
             'checkpoint-create': handle_checkpoint_create_command,
