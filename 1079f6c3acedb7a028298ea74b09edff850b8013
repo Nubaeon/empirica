@@ -1,0 +1,29 @@
+{
+  "goal_id": "05d36509-638a-4a83-bbe2-01fa98cb219e",
+  "session_id": "0545c8c3-975b-496e-8400-62e5b15c716b",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-21T17:44:12.173879+00:00",
+  "goal_data": {
+    "objective": "Fix MCP server project_bootstrap to use same depth-aware filtering as CLI (currently dumps 87k+ chars)",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "MCP project_bootstrap respects depth parameter",
+      "Output size reasonable (<10k chars for moderate depth)"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-21T17:44:12.173890+00:00",
+      "action": "created"
+    }
+  ]
+}
