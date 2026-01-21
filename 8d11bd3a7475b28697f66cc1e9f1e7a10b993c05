@@ -1,0 +1,28 @@
+{
+  "goal_id": "e5cba6d8-b70e-4d0e-9192-c8312d25861d",
+  "session_id": "17d32f33",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T22:07:57.380950+00:00",
+  "goal_data": {
+    "objective": "Epistemic security audit of noetic firewall and Sentinel gate",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T22:07:57.380966+00:00",
+      "action": "created"
+    }
+  ]
+}
