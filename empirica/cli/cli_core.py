@@ -62,7 +62,6 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find'],
                     'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats'],
                     'MCP Server': ['mcp-start', 'mcp-stop', 'mcp-status', 'mcp-test', 'mcp-list-tools', 'mcp-call'],
-                    'Autonomy': ['suggestion-log', 'suggestion-list', 'suggestion-review', 'trust-status', 'autonomy-status', 'evaluate-action', 'trust-evolution']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -97,7 +96,6 @@ from .parsers import (
     add_epistemics_parsers,
     add_edit_verification_parsers,
     add_issue_capture_parsers,
-    add_autonomy_parsers,
     add_architecture_parsers,
     add_query_parsers,
     add_agent_parsers,
@@ -157,15 +155,6 @@ from .command_handlers.concept_graph_commands import (
     handle_concept_top,
     handle_concept_related,
 )
-from .command_handlers.autonomy_commands import (
-    handle_suggestion_log_command,
-    handle_suggestion_list_command,
-    handle_suggestion_review_command,
-    handle_trust_status_command,
-    handle_autonomy_status_command,
-    handle_evaluate_action_command,
-    handle_trust_evolution_command,
-)
 
 
 def _get_version():
@@ -217,7 +206,6 @@ def create_argument_parser():
     add_epistemics_parsers(subparsers)
     add_edit_verification_parsers(subparsers)
     add_issue_capture_parsers(subparsers)
-    add_autonomy_parsers(subparsers)
     add_architecture_parsers(subparsers)
     add_query_parsers(subparsers)
     add_agent_parsers(subparsers)
@@ -461,15 +449,6 @@ def main(args=None):
             'mcp-list-tools': handle_mcp_list_tools_command,
             'mcp-call': handle_mcp_call_command,
 
-            # Autonomy / Earned Authority commands
-            'suggestion-log': handle_suggestion_log_command,
-            'suggestion-list': handle_suggestion_list_command,
-            'suggestion-review': handle_suggestion_review_command,
-            'trust-status': handle_trust_status_command,
-            'autonomy-status': handle_autonomy_status_command,
-            'evaluate-action': handle_evaluate_action_command,
-            'trust-evolution': handle_trust_evolution_command,
-
             # === ALIASES ===
             # Argparse registers aliases for --help, but handler lookup needs them too
             # CASCADE aliases
@@ -498,8 +477,6 @@ def main(args=None):
             'fl': handle_finding_log_command,
             'ul': handle_unknown_log_command,
             'de': handle_deadend_log_command,
-            # Suggestion alias
-            'sug': handle_suggestion_log_command,
             # Project aliases
             'pb': handle_project_bootstrap_command,
             'bootstrap': handle_project_bootstrap_command,

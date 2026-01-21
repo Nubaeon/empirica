@@ -65,7 +65,6 @@ from .onboarding_parsers import add_onboarding_parsers
 from .trajectory_parsers import add_trajectory_parsers
 from .concept_graph_parsers import add_concept_graph_parsers
 from .mcp_parsers import add_mcp_parsers
-from .autonomy_parsers import add_autonomy_parsers
 
 __all__ = [
     'format_help_text',
@@ -95,5 +94,4 @@ __all__ = [
     'add_trajectory_parsers',
     'add_concept_graph_parsers',
     'add_mcp_parsers',
-    'add_autonomy_parsers',
 ]

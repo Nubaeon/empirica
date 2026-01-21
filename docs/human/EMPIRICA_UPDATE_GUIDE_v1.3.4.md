@@ -10,9 +10,9 @@
 Key changes since your last sync:
 1. **Memory retrieval** now defaults to "focused" (eidetic + episodic)
 2. **Bootstrap** has size-aware depth filtering (89% token reduction)
-3. **New autonomy system** for earned trust/graduated Sentinel modes
-4. **CLI aliases** added (backward compatible)
-5. **MCP tools** deprecated: `execute_preflight`, `execute_postflight` removed
+3. **CLI aliases** added (backward compatible)
+4. **MCP tools** deprecated: `execute_preflight`, `execute_postflight` removed
+5. **Autonomy system** extracted to separate project (empirica-autonomy)
 
 ---
 
@@ -69,35 +69,16 @@ No action needed. Automatic.
 
 ---
 
-## 3. Autonomy System (NEW)
+## 3. Autonomy System (EXTRACTED)
 
-### New Commands
-```bash
-# Suggestions for human review
-empirica suggestion-log --session-id <ID> --suggestion "..." --domain architecture --confidence 0.8
-empirica suggestion-list --status pending
-empirica suggestion-review --suggestion-id <ID> --outcome accepted
+The earned autonomy system (trust calculation, graduated Sentinel modes, suggestion workflow) has been **extracted to a separate project**: `empirica-autonomy`.
 
-# Trust levels
-empirica trust-status                          # All domains
-empirica trust-status --domain architecture    # Specific domain
+This was done to:
+1. Keep the core Empirica framework focused on epistemic assessment + Sentinel gating
+2. Allow independent validation of the autonomy model
+3. Reduce complexity in the main codebase
 
-# Graduated Sentinel modes
-empirica autonomy-status --domain <dom>        # Show current mode
-empirica evaluate-action --action "..." --confidence 0.9  # Test if allowed
-empirica trust-evolution --domain <dom>        # Escalation recommendations
-```
-
-### Trust Levels → Sentinel Modes
-| Trust Score | Level | Mode | Behavior |
-|-------------|-------|------|----------|
-| 0.0 - 0.4 | LOW | CONTROLLER | Human approval for ALL |
-| 0.4 - 0.6 | MEDIUM | OBSERVER | Log warnings, human for significant |
-| 0.6 - 0.8 | HIGH | ADVISORY | Autonomous tactical, human for critical |
-| 0.8 - 1.0 | VERY_HIGH | AUTONOMOUS | Full autonomy, async review |
-
-### Migration
-Optional. Enable by using suggestion-log to build trust history.
+The core Sentinel still provides binary gating (CHECK pass/fail). Graduated autonomy based on earned trust is available in the separate `empirica-autonomy` project when needed.
 
 ---
 
@@ -297,10 +278,6 @@ empirica project-search --task "test query" --output json | jq '.search_type'
 # Test bootstrap depth
 empirica project-bootstrap --output json | jq '.depth'
 # Should show: "auto" with filtered output
-
-# Test autonomy commands
-empirica trust-status --output json
-# Should return domain trust levels
 
 # Test alias
 empirica pre --help
