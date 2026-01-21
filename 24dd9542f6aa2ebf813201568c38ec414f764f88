@@ -1,0 +1,28 @@
+{
+  "goal_id": "b54a0c9e-5d38-4b01-8616-518b133599f0",
+  "session_id": "bdac61bf-29fd-4165-b15c-ee4d25a20043",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T21:03:03.004990+00:00",
+  "goal_data": {
+    "objective": "Investigate and fix SessionStart:compact hook error",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T21:03:03.005007+00:00",
+      "action": "created"
+    }
+  ]
+}
