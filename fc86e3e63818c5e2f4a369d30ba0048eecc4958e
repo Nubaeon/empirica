@@ -1,0 +1,28 @@
+{
+  "goal_id": "0d318934-ac62-47a1-a1a8-785f7f9abe7f",
+  "session_id": "a71fb003-d808-477a-9942-abc6d5525af0",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T20:31:11.650613+00:00",
+  "goal_data": {
+    "objective": "Audit and update MCP server and skill documentation: Ensure empirica-framework skill reflects current CLI commands (including calibration-report), update MCP server README if needed, check for any stale command references",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T20:31:11.650629+00:00",
+      "action": "created"
+    }
+  ]
+}
