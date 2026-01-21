@@ -1,0 +1,28 @@
+{
+  "goal_id": "091598b4-7f1b-473b-b944-17498145e128",
+  "session_id": "4516a96d-d57c-4e45-b486-4e2756625235",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T12:39:59.260326+00:00",
+  "goal_data": {
+    "objective": "Verify and test Empirica hooks integration: sentinel gate blocking, PreCompact snapshots, post-compact context injection",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T12:39:59.260345+00:00",
+      "action": "created"
+    }
+  ]
+}
