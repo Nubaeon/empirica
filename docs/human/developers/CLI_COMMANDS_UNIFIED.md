@@ -1,7 +1,7 @@
 # Empirica CLI Commands - Unified Reference
 
 **Total Commands:** 126
-**Framework Version:** 1.3.3
+**Framework Version:** 1.4.0
 **Generated:** 2026-01-21
 **Status:** Production Ready
 
@@ -106,10 +106,11 @@
 - **investigate-checkpoint-branch** - Checkpoint investigation branch
 - **investigate-merge-branches** - Merge investigation branches
 
-### 12. Monitoring (3 commands)
+### 12. Monitoring (4 commands)
 - **monitor** - Start monitoring session
 - **check-drift** - Check for behavioral drift
 - **efficiency-report** - Generate efficiency metrics
+- **calibration-report** - Analyze AI self-assessment calibration
 
 ### 13. Skills (3 commands)
 - **skill-suggest** - Suggest skills based on current work
@@ -651,6 +652,33 @@ empirica unknown-resolve \
 **Purpose:** Generate efficiency metrics
 **Usage:** `empirica efficiency-report --session-id <session_id>`
 
+#### `calibration-report`
+**Purpose:** Analyze AI self-assessment calibration using vector_trajectories data
+**Usage:** `empirica calibration-report [--weeks N] [--output human|json|markdown]`
+
+Measures gap from expected at session END (1.0 for most vectors, 0.0 for uncertainty).
+Outputs per-vector bias corrections to ADD to self-assessments.
+
+**Options:**
+- `--weeks N` - Number of weeks to analyze (default: 8)
+- `--ai-id ID` - Filter by AI identifier (default: claude-code)
+- `--output FORMAT` - Output format: human (default), json, markdown
+- `--update-prompt` - Generate copy-paste ready table for system prompts
+- `--include-tests` - Include test sessions (normally filtered)
+- `--min-samples N` - Minimum samples for confident analysis (default: 10)
+
+**Example:**
+```bash
+# Human-readable calibration report
+empirica calibration-report
+
+# Markdown table for updating system prompts
+empirica calibration-report --output markdown
+
+# JSON for programmatic use
+empirica calibration-report --output json --weeks 4
+```
+
 ---
 
 ### Skills Commands
@@ -1071,4 +1099,4 @@ empirica --verbose check --session-id xyz # CHECK with debugging
 
 **Generated from:** empirica --help output (2026-01-21)
 **Total Commands:** 126
-**Framework Version:** 1.3.3
+**Framework Version:** 1.4.0
