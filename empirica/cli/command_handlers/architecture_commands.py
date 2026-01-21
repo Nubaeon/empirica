@@ -55,6 +55,12 @@ def handle_assess_directory_command(args):
 
     # Find all Python files
     py_files = list(target_dir.rglob("*.py"))
+
+    # Filter out __init__.py files by default (they're thin wrappers that
+    # score poorly on coupling metrics but are structurally correct)
+    if not getattr(args, 'include_init', False):
+        py_files = [f for f in py_files if f.name != '__init__.py']
+
     if not py_files:
         print(f"No Python files found in {target_dir}")
         return 1

@@ -84,3 +84,8 @@ def add_architecture_parsers(subparsers):
         default=10,
         help='Show top N worst components (default: 10)'
     )
+    dir_parser.add_argument(
+        '--include-init',
+        action='store_true',
+        help='Include __init__.py files (excluded by default as they are thin wrappers)'
+    )
