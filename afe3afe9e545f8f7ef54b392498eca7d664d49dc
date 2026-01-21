@@ -1,0 +1,28 @@
+{
+  "goal_id": "f6c83a6e-8cbb-417b-8a03-31fa2afeb2fa",
+  "session_id": "1f777871-93d2-42f7-9a3a-e11ca114441e",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T10:42:50.510369+00:00",
+  "goal_data": {
+    "objective": "Add module docstrings to vision/__init__.py, metrics/__init__.py, integration/__init__.py",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T10:42:50.510386+00:00",
+      "action": "created"
+    }
+  ]
+}
