@@ -1,0 +1,30 @@
+{
+  "goal_id": "908a3148-4ce1-4d2b-82b7-4bcde654f01f",
+  "session_id": "0545c8c3-975b-496e-8400-62e5b15c716b",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-21T18:32:04.823310+00:00",
+  "goal_data": {
+    "objective": "Update all system prompts to v1.4.0: sync docs/human/developers/system-prompts/CLAUDE.md and model_deltas/*.md with canonical ~/.claude/CLAUDE.md",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All system prompts show v1.4.0",
+      "Calibration data matches canonical",
+      "model_deltas structure preserved for non-Claude models"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-21T18:32:04.823321+00:00",
+      "action": "created"
+    }
+  ]
+}
