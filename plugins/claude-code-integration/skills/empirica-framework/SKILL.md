@@ -1,12 +1,14 @@
 ---
 name: empirica-framework
 description: "This skill should be used when the user asks to 'assess my knowledge state', 'run preflight', 'do a postflight', 'use CASCADE workflow', 'track what I know', 'measure learning', 'check epistemic drift', 'spawn investigation agents', 'create handoff', or mentions epistemic vectors, calibration, noetic/praxic phases, functional self-awareness, or structured investigation before coding tasks."
-version: 1.3.2
+version: 1.4.0
 ---
 
 # Empirica: Epistemic Framework for Claude Code
 
 Measure what you know. Track what you learn. Prevent overconfidence.
+
+**v1.4.0 Epistemic-First Model:** Assessment reveals complexity - you cannot know what requires investigation without investigation. Always start with a micro-PREFLIGHT.
 
 ## Two Axes: Workflow vs Thinking
 
@@ -30,12 +32,19 @@ hypothesize, search, read      deploy, test, implement
 
 You CHOOSE when to use noetic vs praxic thinking. CHECK gates the transition.
 
-## Bias Corrections
+## Bias Corrections (v1.4.0 Calibration - 2100+ observations)
 
 Apply these corrections to your self-assessments:
-- **Uncertainty:** +0.10 (you underestimate doubt)
-- **Knowledge:** -0.05 (you overestimate knowing)
-- **Readiness gate:** know ≥0.70 AND uncertainty ≤0.35
+- **Completion:** +0.48 (massively underestimate progress)
+- **Change:** +0.40 (underestimate impact of changes)
+- **Uncertainty:** -0.05 (slightly overestimate doubt)
+- **Know/Context/Do/Clarity:** ~+0.01 to +0.08 (well calibrated)
+
+**Readiness gate:** know ≥0.70 AND uncertainty ≤0.35 (after bias correction)
+
+**Completion is PHASE-AWARE:**
+- **NOETIC phase:** "Have I learned enough to proceed?" → 1.0 = ready for praxic
+- **PRAXIC phase:** "Have I implemented enough to ship?" → 1.0 = shippable
 
 ## Quick Start: CASCADE Workflow
 
@@ -187,6 +196,30 @@ empirica handoff-create --session-id <ID> \
 empirica handoff-query --session-id <ID> --output json
 ```
 
+## Memory Commands (Qdrant)
+
+Empirica v1.4.0 includes semantic memory via Qdrant:
+
+```bash
+# Focused search (eidetic facts + episodic session arcs)
+empirica project-search --project-id <ID> --task "authentication patterns"
+
+# Full search (all 4 collections: docs, memory, eidetic, episodic)
+empirica project-search --project-id <ID> --task "query" --type all
+
+# Include cross-project learnings
+empirica project-search --project-id <ID> --task "query" --global
+
+# Sync project memory to Qdrant
+empirica project-embed --project-id <ID> --output json
+```
+
+**Automatic ingestion:**
+- `finding-log` → creates eidetic facts + triggers immune decay on lessons
+- `postflight-submit` → creates episodic session narratives + auto-embeds
+
+**Requires:** `export EMPIRICA_QDRANT_URL="http://localhost:6333"`
+
 ## Semantic Search Triggers
 
 Use project search during noetic phases:
@@ -195,10 +228,6 @@ Use project search during noetic phases:
 2. **Before logging unknown** - Check if similar unknown was resolved
 3. **Pre-CHECK** - Find similar decision patterns
 4. **Pre-self-improvement** - Check for conflicting guidance
-
-```bash
-empirica project-search --project-id <ID> --task "authentication patterns"
-```
 
 ## When to Use CHECK
 
@@ -248,6 +277,30 @@ PREFLIGHT → Goal + Subtasks → [CHECK at each gate] → POSTFLIGHT
 ```
 PREFLIGHT → agent-spawn (×3) → agent-aggregate → CHECK → POSTFLIGHT
 ```
+
+## Sentinel Safety Gates
+
+Sentinel controls when praxic actions (Edit, Write, Bash) are allowed:
+
+**Readiness gate:** `know >= 0.70 AND uncertainty <= 0.35` (after bias correction)
+
+**Sentinel modes:**
+```bash
+# Observer mode: Log warnings but don't block
+export EMPIRICA_SENTINEL_MODE=observer
+
+# Controller mode: Actively block when not ready (default)
+export EMPIRICA_SENTINEL_MODE=controller
+
+# Disable looping (skip investigate cycles)
+export EMPIRICA_SENTINEL_LOOPING=false
+```
+
+**Full Sentinel features (sentinel-gate.py):**
+- Bootstrap requirement (must load project context)
+- CHECK age expiry (30 minutes)
+- Compact invalidation (CHECK invalid after context compaction)
+- Decision parsing (proceed vs investigate)
 
 ## Integration with Hooks
 

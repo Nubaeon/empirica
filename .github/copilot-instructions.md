@@ -1,7 +1,7 @@
 # Empirica System Prompt - Lean v7.1
 
 **Single Source of Truth for Empirica Cognitive OS**
-**Syncs with:** Empirica v1.3.2
+**Syncs with:** Empirica v1.4.0
 **Status:** AUTHORITATIVE
 
 ---
