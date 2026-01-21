@@ -1,0 +1,32 @@
+{
+  "goal_id": "98ae5278-c7d6-4a27-aefe-ce9848ad3faf",
+  "session_id": "58fe9bb5-7989-4302-89a3-5e63c1c573fe",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-21T13:19:31.734792+00:00",
+  "goal_data": {
+    "objective": "Validate Empirica plugin integration: (1) Sentinel gate blocking without CHECK, (2) Sentinel allowing after CHECK, (3) PreCompact snapshot creation, (4) Post-compact context injection, (5) Full epistemic loop completion",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Sentinel blocks Edit without CHECK",
+      "Sentinel allows Edit after valid CHECK",
+      "PreCompact creates snapshot file",
+      "SessionStart:compact injects context",
+      "Full PREFLIGHT->CHECK->POSTFLIGHT loop completes"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-21T13:19:31.734809+00:00",
+      "action": "created"
+    }
+  ]
+}
