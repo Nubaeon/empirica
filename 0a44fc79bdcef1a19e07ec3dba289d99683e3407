@@ -1,0 +1,30 @@
+{
+  "goal_id": "235c48cc-adca-4a10-80b5-c650294a6041",
+  "session_id": "f339972f-3368-45da-9b7a-93e3a5116ee2",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-21T16:41:41.382844+00:00",
+  "goal_data": {
+    "objective": "Investigate why POSTFLIGHT shows 0/null/false for bayesian_beliefs, breadcrumbs_calibration, and noetic_eidetic modules",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Identify root cause for each false/null module",
+      "Determine if these are bugs or expected behavior",
+      "Fix any bugs found or document expected behavior"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-21T16:41:41.382855+00:00",
+      "action": "created"
+    }
+  ]
+}
