@@ -1,0 +1,31 @@
+{
+  "goal_id": "e7c7766a-9bae-4f3a-a998-a1e4712720fe",
+  "session_id": "64d76e4b-dc3b-4828-8cd0-92432b531802",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-21T14:03:47.344910+00:00",
+  "goal_data": {
+    "objective": "Refactor project-bootstrap from context-dump to search-first architecture: (1) Limit goals/unknowns shown, (2) Use Qdrant search for findings/deadends/mistakes, (3) Warn about excessive items instead of loading all",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Bootstrap returns reasonable size (<10k chars)",
+      "Warns when goals/unknowns exceed threshold",
+      "Uses search for historical artifacts",
+      "Still provides essential context for PREFLIGHT"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-21T14:03:47.344922+00:00",
+      "action": "created"
+    }
+  ]
+}
