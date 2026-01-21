@@ -1,7 +1,8 @@
-# Empirica System Prompt - ROVO v1.3.3
+# Empirica System Prompt - ROVO v1.4.0
 
-**Model:** ROVO | **Generated:** 2026-01-20
-**Syncs with:** Empirica v1.3.3
+**Model:** ROVO | **Generated:** 2026-01-21
+**Syncs with:** Empirica v1.4.0
+**Change:** Epistemic-First Model - assessment reveals complexity, not assumptions
 **Status:** AUTHORITATIVE
 
 ---

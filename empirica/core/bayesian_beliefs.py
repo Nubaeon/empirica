@@ -4,8 +4,14 @@ Bayesian Belief Manager
 Updates AI priors based on historical performance.
 Implements calibration loop: POSTFLIGHT deltas → update beliefs → inform next PREFLIGHT.
 
-The core insight: AI doesn't "want" to lie - hallucination is an epistemic assessment problem.
-By tracking actual performance against self-assessed vectors, we calibrate future assessments.
+NOTE (2026-01-21): Primary calibration source is now `vector_trajectories` table which has
+clean start/end vectors for 253+ sessions. This module is kept for:
+1. POSTFLIGHT belief updates (proper PREFLIGHT→POSTFLIGHT comparison)
+2. .breadcrumbs.yaml calibration export
+3. Backward compatibility
+
+DO NOT use update_belief() (singular) during CHECK - it pollutes calibration data.
+Only update_beliefs() (plural) at POSTFLIGHT does proper baseline comparison.
 
 Bayesian Update:
     posterior_mean = (prior_var * observation + obs_var * prior_mean) / (prior_var + obs_var)

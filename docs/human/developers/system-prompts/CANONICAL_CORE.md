@@ -1,7 +1,8 @@
-# Empirica System Prompt - Canonical Core v1.3.3
+# Empirica System Prompt - Canonical Core v1.4.0
 
 **AI-Agnostic Core - All agents extend this**
-**Syncs with:** Empirica v1.3.3
+**Syncs with:** Empirica v1.4.0
+**Change:** Epistemic-First Model - assessment reveals complexity, not assumptions
 **Status:** AUTHORITATIVE
 
 ---

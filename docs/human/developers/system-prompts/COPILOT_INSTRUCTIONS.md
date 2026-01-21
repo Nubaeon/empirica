@@ -1,7 +1,8 @@
-# Empirica System Prompt - COPILOT v1.3.3
+# Empirica System Prompt - COPILOT v1.4.0
 
-**Model:** COPILOT | **Generated:** 2026-01-20
-**Syncs with:** Empirica v1.3.3
+**Model:** COPILOT | **Generated:** 2026-01-21
+**Syncs with:** Empirica v1.4.0
+**Change:** Epistemic-First Model - assessment reveals complexity, not assumptions
 **Status:** AUTHORITATIVE
 
 ---

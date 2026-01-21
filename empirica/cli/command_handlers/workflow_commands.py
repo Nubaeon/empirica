@@ -886,31 +886,11 @@ def handle_check_submit_command(args):
                 }
             )
             
-            # Wire Bayesian beliefs logging (TIER 3 Priority 2)
-            # Update AI's beliefs about epistemic vectors based on CHECK assessment
-            try:
-                from empirica.core.bayesian_beliefs import BayesianBeliefManager
-                from empirica.data.session_database import SessionDatabase
-                
-                db = SessionDatabase()
-                belief_manager = BayesianBeliefManager(db)
-                
-                # Update beliefs for each vector based on CHECK submission
-                for vector_name in ['engagement', 'know', 'do', 'context', 'clarity', 
-                                   'coherence', 'signal', 'density', 'state', 'change',
-                                   'completion', 'impact', 'uncertainty']:
-                    if vector_name in vectors:
-                        observation = vectors[vector_name]
-                        belief_manager.update_belief(
-                            session_id=session_id,
-                            vector_name=vector_name,
-                            observation=observation,
-                            phase="CHECK",
-                            round_num=round_num
-                        )
-            except Exception as e:
-                # Bayesian logging is non-critical - don't fail CHECK if it errors
-                logger.warning(f"Bayesian belief update failed: {e}")
+            # NOTE: Bayesian belief updates during CHECK were REMOVED (2026-01-21)
+            # Reason: CHECK-phase updates polluted calibration data by recording mid-session
+            # observations without proper PREFLIGHT→POSTFLIGHT baseline comparison.
+            # Calibration now uses vector_trajectories table which captures clean start/end vectors.
+            # POSTFLIGHT still does proper belief updates with PREFLIGHT comparison (see postflight_submit).
             
             # Wire CHECK phase hooks (TIER 3 Priority 3)
             # Capture fresh epistemic state before and after CHECK
@@ -1509,8 +1489,9 @@ def handle_postflight_submit_command(args):
             # Creating an additional checkpoint was creating duplicate entries with default values
             # The GitEnhancedReflexLogger.add_checkpoint() call above is sufficient
 
-            # BAYESIAN BELIEF UPDATE: Update AI calibration priors based on PREFLIGHT → POSTFLIGHT deltas
-            # This enables the AI to learn from its own performance over time
+            # BAYESIAN BELIEF UPDATE: Update AI priors based on PREFLIGHT → POSTFLIGHT deltas
+            # NOTE: Primary calibration source is vector_trajectories table (clean start/end vectors).
+            # This bayesian update is secondary - kept for backward compatibility and .breadcrumbs.yaml export.
             belief_updates = {}
             calibration_exported = False
             try:
