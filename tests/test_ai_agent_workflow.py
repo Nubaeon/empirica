@@ -49,28 +49,22 @@ class TestAIAgentWorkflow:
         finally:
             os.unlink(session_config_path)
 
-        # 2. PREFLIGHT ASSESSMENT
+        # 2. PREFLIGHT ASSESSMENT (flat vector format)
         preflight_config = {
             "session_id": session_id,
             "vectors": {
                 "engagement": 0.85,
-                "foundation": {
-                    "know": 0.60,
-                    "do": 0.85,
-                    "context": 0.50
-                },
-                "comprehension": {
-                    "clarity": 0.80,
-                    "coherence": 0.85,
-                    "signal": 0.75,
-                    "density": 0.65
-                },
-                "execution": {
-                    "state": 0.40,
-                    "change": 0.85,
-                    "completion": 0.70,
-                    "impact": 0.90
-                },
+                "know": 0.60,
+                "do": 0.85,
+                "context": 0.50,
+                "clarity": 0.80,
+                "coherence": 0.85,
+                "signal": 0.75,
+                "density": 0.65,
+                "state": 0.40,
+                "change": 0.85,
+                "completion": 0.70,
+                "impact": 0.90,
                 "uncertainty": 0.70
             },
             "reasoning": "Baseline epistemic assessment for test"
@@ -131,28 +125,22 @@ class TestAIAgentWorkflow:
         finally:
             os.unlink(check_config_path)
 
-        # 4. POSTFLIGHT ASSESSMENT
+        # 4. POSTFLIGHT ASSESSMENT (flat vector format)
         postflight_config = {
             "session_id": session_id,
             "vectors": {
                 "engagement": 0.85,
-                "foundation": {
-                    "know": 0.85,
-                    "do": 0.90,
-                    "context": 0.75
-                },
-                "comprehension": {
-                    "clarity": 0.90,
-                    "coherence": 0.90,
-                    "signal": 0.85,
-                    "density": 0.55
-                },
-                "execution": {
-                    "state": 0.80,
-                    "change": 0.90,
-                    "completion": 0.90,
-                    "impact": 0.95
-                },
+                "know": 0.85,
+                "do": 0.90,
+                "context": 0.75,
+                "clarity": 0.90,
+                "coherence": 0.90,
+                "signal": 0.85,
+                "density": 0.55,
+                "state": 0.80,
+                "change": 0.90,
+                "completion": 0.90,
+                "impact": 0.95,
                 "uncertainty": 0.30
             },
             "reasoning": "Completed test workflow. KNOW +0.25, STATE +0.40, UNCERTAINTY -0.40"
@@ -198,10 +186,11 @@ class TestAIAgentWorkflow:
         finally:
             os.unlink(session_config_path)
 
-        # Create goal
+        # Create goal with unique objective to avoid duplicate detection
+        unique_id = str(uuid.uuid4())[:8]
         goal_config = {
             "session_id": session_id,
-            "objective": "Test AI-first goal creation",
+            "objective": f"Test AI-first goal creation [{unique_id}]",
             "scope": {
                 "breadth": 0.3,
                 "duration": 0.2,
@@ -220,7 +209,7 @@ class TestAIAgentWorkflow:
 
         try:
             result = subprocess.run(
-                ['empirica', 'goals-create', goal_config_path],
+                ['empirica', 'goals-create', goal_config_path, '--force'],
                 capture_output=True,
                 text=True,
                 check=True
@@ -229,7 +218,7 @@ class TestAIAgentWorkflow:
             goal_response = json.loads(result.stdout)
             assert goal_response['ok'] is True
             assert 'goal_id' in goal_response
-            assert goal_response['objective'] == "Test AI-first goal creation"
+            assert goal_response['objective'].startswith("Test AI-first goal creation")
 
         finally:
             os.unlink(goal_config_path)
