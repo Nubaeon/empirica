@@ -614,6 +614,10 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
   - `observer`: Passive oversight - log warnings but don't block AI actions
   - `controller`: Active oversight - block actions when appropriate
   - `auto`: Same as controller (default behavior)
+- `EMPIRICA_SENTINEL_CHECK_EXPIRY`: Enable 30-minute CHECK expiry (`true`, `false`, default: `false`)
+  - When `true`: CHECK is invalidated after 30 minutes, requiring fresh CHECK before praxic tools
+  - When `false` (default): No time-based expiry - useful for paused sessions
+  - Note: Disabled by default because users may pause work and resume later
 
 ### Vector Search & Embeddings (Qdrant)
 

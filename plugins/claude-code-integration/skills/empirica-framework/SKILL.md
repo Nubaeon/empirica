@@ -280,33 +280,37 @@ PREFLIGHT → agent-spawn (×3) → agent-aggregate → CHECK → POSTFLIGHT
 
 ## Sentinel Safety Gates
 
-Sentinel controls when praxic actions (Edit, Write, Bash) are allowed:
+Sentinel controls when praxic actions (Edit, Write, NotebookEdit) are allowed:
 
 **Readiness gate:** `know >= 0.70 AND uncertainty <= 0.35` (after bias correction)
 
-**Sentinel modes:**
-```bash
-# Observer mode: Log warnings but don't block
-export EMPIRICA_SENTINEL_MODE=observer
+**Core features (always on):**
+- PREFLIGHT requirement (must assess before acting)
+- Decision parsing (blocks if CHECK returned "investigate")
+- Vector threshold validation (blocks if not ready)
 
-# Controller mode: Actively block when not ready (default)
-export EMPIRICA_SENTINEL_MODE=controller
+**Optional features (off by default):**
+```bash
+# Enable 30-minute CHECK expiry (problematic for paused sessions)
+export EMPIRICA_SENTINEL_CHECK_EXPIRY=true
+
+# Require project-bootstrap before praxic actions
+export EMPIRICA_SENTINEL_REQUIRE_BOOTSTRAP=true
+
+# Invalidate CHECK after context compaction
+export EMPIRICA_SENTINEL_COMPACT_INVALIDATION=true
 
 # Disable looping (skip investigate cycles)
 export EMPIRICA_SENTINEL_LOOPING=false
 ```
 
-**Full Sentinel features (sentinel-gate.py):**
-- Bootstrap requirement (must load project context)
-- CHECK age expiry (30 minutes)
-- Compact invalidation (CHECK invalid after context compaction)
-- Decision parsing (proceed vs investigate)
+**Note:** CHECK expiry is disabled by default because wall-clock time doesn't reflect actual work - users may pause and resume sessions.
 
 ## Integration with Hooks
 
 This plugin includes automatic hooks that enforce the CASCADE workflow:
 
-- **PreToolCall** (`sentinel-gate.py`): Gates Edit/Write/Bash until valid CHECK exists (<30min old)
+- **PreToolUse** (`sentinel-gate.py`): Gates Edit/Write/NotebookEdit until valid CHECK exists
 - **SessionStart:new** (`session-init.py`): Auto-creates session + bootstrap, prompts for PREFLIGHT
 - **SessionStart:compact** (`post-compact.py`): Auto-recovers session + bootstrap, prompts for CHECK
 - **SessionEnd** (`session-end-postflight.py`): Auto-captures POSTFLIGHT with final vectors
@@ -328,6 +332,7 @@ empirica finding-log --finding "..."     # Log discovery
 empirica unknown-log --unknown "..."     # Log question
 empirica goals-list                      # Show active goals
 empirica check-drift --session-id <ID>   # Detect drift
+empirica calibration-report              # Analyze calibration
 empirica agent-spawn --task "..."        # Spawn subagent
 empirica handoff-create ...              # Create handoff
 ```
