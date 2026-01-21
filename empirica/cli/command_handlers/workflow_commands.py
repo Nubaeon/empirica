@@ -139,7 +139,6 @@ def handle_preflight_submit_command(args):
             vectors = validated.vectors
             reasoning = validated.reasoning or ''
             task_context = validated.task_context or ''
-            noetic_concepts = getattr(validated, 'noetic_concepts', None)
             output_format = 'json'  # AI-first always uses JSON output
         else:
             # LEGACY MODE: Use CLI flags
@@ -147,7 +146,6 @@ def handle_preflight_submit_command(args):
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
             reasoning = args.reasoning
             task_context = getattr(args, 'task_context', '') or ''  # For pattern retrieval
-            noetic_concepts = None  # Legacy mode doesn't support AI-provided concepts
             output_format = getattr(args, 'output', 'json')  # Default to JSON
 
             # Validate required fields for legacy mode
@@ -269,30 +267,6 @@ def handle_preflight_submit_command(args):
                 except Exception as e:
                     logger.debug(f"Pattern retrieval failed (optional): {e}")
 
-            # NOETIC EIDETIC: Extract task understanding concepts and embed as eidetic facts
-            noetic_result = None
-            try:
-                from empirica.core.noetic_eidetic import hook_cascade_noetic
-
-                db = SessionDatabase()
-                session = db.get_session(session_id)
-                if session and session.get('project_id'):
-                    noetic_result = hook_cascade_noetic(
-                        phase="PREFLIGHT",
-                        session_id=session_id,
-                        project_id=session['project_id'],
-                        reasoning=reasoning or "",
-                        task_context=task_context,
-                        vectors=vectors,
-                        domain=session.get('subject'),
-                        ai_concepts=noetic_concepts,  # AI-provided concepts (priority over regex)
-                    )
-                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded (source: {noetic_result.get('source', 'unknown')})")
-                db.close()
-            except Exception as e:
-                # Noetic extraction is optional
-                logger.debug(f"Noetic eidetic extraction skipped: {e}")
-
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -305,8 +279,7 @@ def handle_preflight_submit_command(args):
                 "storage_layers": {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
-                    "json_logs": True,
-                    "noetic_eidetic": noetic_result.get('concepts_embedded', 0) > 0 if noetic_result else False
+                    "json_logs": True
                 },
                 "calibration": {
                     "adjustments": calibration_adjustments if calibration_adjustments else None,
@@ -672,7 +645,6 @@ def handle_check_submit_command(args):
             decision = config_data.get('decision')
             reasoning = config_data.get('reasoning', '')
             approach = config_data.get('approach', reasoning)  # Fallback to reasoning
-            noetic_concepts = config_data.get('noetic_concepts')  # AI-provided concepts
             output_format = config_data.get('output', 'json')  # Default to JSON for AI-first
         else:
             session_id = args.session_id
@@ -680,7 +652,6 @@ def handle_check_submit_command(args):
             decision = args.decision
             reasoning = args.reasoning
             approach = getattr(args, 'approach', reasoning)  # Fallback to reasoning
-            noetic_concepts = None  # Legacy mode doesn't support AI-provided concepts
             output_format = getattr(args, 'output', 'human')
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
 
@@ -1040,30 +1011,6 @@ def handle_check_submit_command(args):
                     # Auto-checkpoint failure is not fatal, but log it
                     logger.warning(f"Auto-checkpoint after CHECK (uncertainty > 0.5) failed (non-fatal): {e}")
 
-            # NOETIC EIDETIC: Extract decision rationale concepts and embed as eidetic facts
-            noetic_result = None
-            try:
-                from empirica.core.noetic_eidetic import hook_cascade_noetic
-
-                db = SessionDatabase()
-                session = db.get_session(session_id)
-                if session and session.get('project_id'):
-                    noetic_result = hook_cascade_noetic(
-                        phase="CHECK",
-                        session_id=session_id,
-                        project_id=session['project_id'],
-                        reasoning=reasoning or "",
-                        task_context=approach,  # CHECK uses 'approach' as context
-                        vectors=vectors,
-                        domain=session.get('subject'),
-                        ai_concepts=noetic_concepts,  # AI-provided concepts (priority over regex)
-                    )
-                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded (source: {noetic_result.get('source', 'unknown')})")
-                db.close()
-            except Exception as e:
-                # Noetic extraction is optional
-                logger.debug(f"Noetic eidetic extraction skipped: {e}")
-
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -1078,8 +1025,7 @@ def handle_check_submit_command(args):
                 "storage_layers": {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
-                    "json_logs": True,
-                    "noetic_eidetic": noetic_result.get('concepts_embedded', 0) > 0 if noetic_result else False
+                    "json_logs": True
                 },
                 "bootstrap": {
                     "had_context": bootstrap_status.get('has_bootstrap', False),
@@ -1395,7 +1341,6 @@ def handle_postflight_submit_command(args):
             session_id = config_data.get('session_id')
             vectors = config_data.get('vectors')
             reasoning = config_data.get('reasoning', '')
-            noetic_concepts = config_data.get('noetic_concepts')  # AI-provided concepts
             output_format = 'json'
 
             # Validate required fields
@@ -1411,7 +1356,6 @@ def handle_postflight_submit_command(args):
             session_id = args.session_id
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
             reasoning = args.reasoning
-            noetic_concepts = None  # Legacy mode doesn't support AI-provided concepts
             output_format = getattr(args, 'output', 'json')
 
             # Validate required fields for legacy mode
@@ -1782,31 +1726,6 @@ def handle_postflight_submit_command(args):
                 # Snapshot creation is non-fatal
                 logger.debug(f"Epistemic snapshot creation skipped: {e}")
 
-            # NOETIC EIDETIC: Extract conceptual reasoning and embed as eidetic facts
-            # This captures WHY/WHICH/FOR WHOM - the noetic concepts behind the learning
-            noetic_result = None
-            try:
-                from empirica.core.noetic_eidetic import hook_cascade_noetic
-
-                db = SessionDatabase()
-                session = db.get_session(session_id)
-                if session and session.get('project_id'):
-                    noetic_result = hook_cascade_noetic(
-                        phase="POSTFLIGHT",
-                        session_id=session_id,
-                        project_id=session['project_id'],
-                        reasoning=reasoning or "",
-                        task_context=session.get('subject'),
-                        vectors=vectors,
-                        domain=session.get('subject'),
-                        ai_concepts=noetic_concepts,  # AI-provided concepts (priority over regex)
-                    )
-                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded (source: {noetic_result.get('source', 'unknown')})")
-                db.close()
-            except Exception as e:
-                # Noetic extraction is optional
-                logger.debug(f"Noetic eidetic extraction skipped: {e}")
-
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -1830,15 +1749,13 @@ def handle_postflight_submit_command(args):
                     "breadcrumbs_calibration": calibration_exported,
                     "episodic_memory": episodic_stored,
                     "epistemic_snapshots": snapshot_created,
-                    "qdrant_memory": memory_synced > 0,
-                    "noetic_eidetic": noetic_result.get('concepts_embedded', 0) > 0 if noetic_result else False
+                    "qdrant_memory": memory_synced > 0
                 },
                 "breadcrumbs": {
                     "calibration_exported": calibration_exported,
                     "note": "Calibration written to .breadcrumbs.yaml for instant session-start availability"
                 } if calibration_exported else None,
                 "memory_synced": memory_synced,
-                "noetic_concepts": noetic_result.get('concepts_embedded', 0) if noetic_result else 0,
                 "snapshot": {
                     "created": snapshot_created,
                     "snapshot_id": snapshot_id,
