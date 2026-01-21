@@ -24,7 +24,8 @@ from typing import Dict, List, Any, Optional
 class SkillExtractor:
     """Extract decision frameworks from a skill's references/ directory."""
 
-    def __init__(self, skill_dir: Path):
+    def __init__(self, skill_dir: Path) -> None:
+        """Initialize extractor with skill directory path."""
         self.skill_dir = Path(skill_dir).expanduser()
         self.references_dir = self.skill_dir / "references"
         self.skill_md = self.skill_dir / "SKILL.md"

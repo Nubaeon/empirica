@@ -135,7 +135,8 @@ class PluginRegistry:
     that declare entry points in [project.entry-points."empirica.plugins"].
     """
 
-    def __init__(self, auto_discover: bool = False):
+    def __init__(self, auto_discover: bool = False) -> None:
+        """Initialize plugin manager with optional auto-discovery."""
         self.plugins: Dict[str, InvestigationPlugin] = {}
         self._discovered = False
         if auto_discover:

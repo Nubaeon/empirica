@@ -990,7 +990,10 @@ def handle_check_drift_command(args):
 
         # Create mock assessment from checkpoint vectors
         class MockAssessment:
-            def __init__(self, vectors):
+            """Mock assessment object for drift detection from checkpoint vectors."""
+
+            def __init__(self, vectors: dict) -> None:
+                """Initialize mock assessment from vector dictionary."""
                 for name, score in (vectors or {}).items():
                     setattr(self, name, type('VectorState', (), {'score': score})())
 

@@ -45,7 +45,8 @@ class LessonHotCache:
     Thread-safe with read-write lock pattern.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize hot cache with empty data structures."""
         # Lesson data indexed by ID
         self._lessons: Dict[str, HotLessonEntry] = {}
 
@@ -241,7 +242,8 @@ class LessonHotCache:
         visited = set()
         temp_visited = set()
 
-        def visit(lesson_id: str):
+        def visit(lesson_id: str) -> None:
+            """Visit lesson in DFS order for topological sort."""
             if lesson_id in visited:
                 return
             if lesson_id in temp_visited:

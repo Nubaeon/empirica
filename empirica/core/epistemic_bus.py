@@ -32,7 +32,8 @@ class EpistemicEvent:
         session_id: str,
         data: Dict[str, Any],
         timestamp: Optional[float] = None
-    ):
+    ) -> None:
+        """Initialize epistemic event with type, agent, session, and data."""
         self.event_type = event_type
         self.agent_id = agent_id
         self.session_id = session_id
@@ -93,7 +94,8 @@ class EpistemicBus:
         bus.publish(EpistemicEvent('preflight_complete', ...))
     """
     
-    def __init__(self, enable_logging: bool = True):
+    def __init__(self, enable_logging: bool = True) -> None:
+        """Initialize epistemic bus with optional logging."""
         self.observers: List[EpistemicObserver] = []
         self.enable_logging = enable_logging
         self._event_count = 0

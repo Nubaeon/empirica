@@ -573,7 +573,8 @@ def validate_assessment(data: Dict[str, Any]) -> bool:
             raise ValueError(f"Missing execution key: {key}")
 
     # Validate all vectors have score + rationale
-    def check_vector(vector_data: Dict, vector_name: str):
+    def check_vector(vector_data: Dict, vector_name: str) -> None:
+        """Validate vector has required score and rationale fields."""
         if "score" not in vector_data:
             raise ValueError(f"Missing score in {vector_name}")
         if "rationale" not in vector_data:

@@ -41,7 +41,8 @@ class CredentialsLoader:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize credentials loader and cache."""
         if self._credentials_cache is None:
             self._load_credentials()
 
@@ -113,7 +114,8 @@ class CredentialsLoader:
 
     def _interpolate_env_vars(self, config: Dict) -> Dict:
         """Replace ${VAR_NAME} with environment variable values"""
-        def replace_vars(obj):
+        def replace_vars(obj: Any) -> Any:
+            """Recursively replace env vars in nested structure."""
             if isinstance(obj, dict):
                 return {k: replace_vars(v) for k, v in obj.items()}
             elif isinstance(obj, list):
@@ -122,7 +124,8 @@ class CredentialsLoader:
                 # Replace ${VAR_NAME} with env var value
                 pattern = r'\$\{([A-Z_0-9]+)\}'
 
-                def replacer(match):
+                def replacer(match: re.Match) -> str:
+                    """Replace single env var match with its value."""
                     var_name = match.group(1)
                     value = os.getenv(var_name)
                     if value is None:

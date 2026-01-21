@@ -16,14 +16,15 @@ logger = logging.getLogger(__name__)
 class ProjectConfig:
     """Project configuration with subject mappings"""
     
-    def __init__(self, config_data: Dict[str, Any]):
+    def __init__(self, config_data: Dict[str, Any]) -> None:
+        """Initialize project config from configuration dictionary."""
         self.project_id = config_data.get('project_id')
         self.name = config_data.get('name', 'Unknown Project')
         self.description = config_data.get('description', '')
         self.subjects = config_data.get('subjects', {})
         self.default_subject = config_data.get('default_subject')
         self.auto_detect = config_data.get('auto_detect', {'enabled': True, 'method': 'path_match'})
-        
+
         # BEADS integration settings
         self.beads = config_data.get('beads', {})
         self.default_use_beads = self.beads.get('default_enabled', False)

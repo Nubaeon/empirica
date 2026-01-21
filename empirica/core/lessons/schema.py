@@ -66,6 +66,7 @@ class EpistemicDelta:
     uncertainty: float = 0.0  # Uncertainty reduction (negative = good)
 
     def to_dict(self) -> Dict[str, float]:
+        """Convert delta to dictionary representation."""
         return {
             'know': self.know,
             'do': self.do,
@@ -78,6 +79,7 @@ class EpistemicDelta:
 
     @classmethod
     def from_dict(cls, d: Dict[str, float]) -> 'EpistemicDelta':
+        """Create delta from dictionary representation."""
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
@@ -98,6 +100,7 @@ class LessonStep:
     timeout_ms: Optional[int] = None     # Max time for this step
 
     def to_dict(self) -> Dict:
+        """Convert step to dictionary representation."""
         return {
             'order': self.order,
             'phase': self.phase.value,
@@ -112,6 +115,7 @@ class LessonStep:
 
     @classmethod
     def from_dict(cls, d: Dict) -> 'LessonStep':
+        """Create step from dictionary representation."""
         return cls(
             order=d['order'],
             phase=LessonPhase(d['phase']),
@@ -134,6 +138,7 @@ class Prerequisite:
     required_level: float = 0.5          # Minimum level needed (0-1)
 
     def to_dict(self) -> Dict:
+        """Convert prerequisite to dictionary representation."""
         return {
             'type': self.type.value,
             'id': self.id,
@@ -143,6 +148,7 @@ class Prerequisite:
 
     @classmethod
     def from_dict(cls, d: Dict) -> 'Prerequisite':
+        """Create prerequisite from dictionary representation."""
         return cls(
             type=PrerequisiteType(d['type']),
             id=d['id'],
@@ -167,6 +173,7 @@ class Correction:
     timestamp: float = field(default_factory=time.time)
 
     def to_dict(self) -> Dict:
+        """Convert correction to dictionary representation."""
         return {
             'step_order': self.step_order,
             'original_action': self.original_action,
@@ -179,6 +186,7 @@ class Correction:
 
     @classmethod
     def from_dict(cls, d: Dict) -> 'Correction':
+        """Create correction from dictionary representation."""
         return cls(**d)
 
 
@@ -191,6 +199,7 @@ class LessonRelation:
     weight: float = 1.0                  # Relationship strength
 
     def to_dict(self) -> Dict:
+        """Convert relation to dictionary representation."""
         return {
             'relation_type': self.relation_type.value,
             'target_type': self.target_type,
@@ -200,6 +209,7 @@ class LessonRelation:
 
     @classmethod
     def from_dict(cls, d: Dict) -> 'LessonRelation':
+        """Create relation from dictionary representation."""
         return cls(
             relation_type=RelationType(d['relation_type']),
             target_type=d['target_type'],
@@ -219,6 +229,7 @@ class LessonValidation:
     last_validated: Optional[float] = None
 
     def to_dict(self) -> Dict:
+        """Convert validation to dictionary representation."""
         return {
             'replay_count': self.replay_count,
             'success_rate': self.success_rate,
@@ -230,6 +241,7 @@ class LessonValidation:
 
     @classmethod
     def from_dict(cls, d: Dict) -> 'LessonValidation':
+        """Create validation from dictionary representation."""
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
@@ -242,6 +254,7 @@ class LessonEpistemic:
     expected_delta: EpistemicDelta       # What vectors it improves
 
     def to_dict(self) -> Dict:
+        """Convert epistemic metadata to dictionary representation."""
         return {
             'source_confidence': self.source_confidence,
             'teaching_quality': self.teaching_quality,
@@ -251,6 +264,7 @@ class LessonEpistemic:
 
     @classmethod
     def from_dict(cls, d: Dict) -> 'LessonEpistemic':
+        """Create epistemic metadata from dictionary representation."""
         return cls(
             source_confidence=d['source_confidence'],
             teaching_quality=d['teaching_quality'],

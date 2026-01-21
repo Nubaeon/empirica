@@ -23,7 +23,8 @@ class OllamaReasoningModel(ReasoningService):
         model_name: str = "qwen2.5:32b",
         endpoint: str = "http://empirica-server:11434",
         timeout: int = 60
-    ):
+    ) -> None:
+        """Initialize adapter with model name, endpoint, and timeout."""
         self.model_name = model_name
         self.endpoint = endpoint
         self.timeout = timeout

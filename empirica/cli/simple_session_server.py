@@ -28,8 +28,9 @@ app = FastAPI(title="Empirica Session Server", version="1.0.0")
 class SessionManager:
     """Manages stateful AI collaboration sessions"""
     
-    def __init__(self):
-        self.sessions = {}
+    def __init__(self) -> None:
+        """Initialize session manager with empty session store."""
+        self.sessions: Dict[str, Any] = {}
         self.workspace_root = Path(__file__).parent.parent.parent
     
     def create(self, ai_id: str, task: str, workspace: Optional[str] = None) -> str:

@@ -60,6 +60,7 @@ class VectorState:
             raise ValueError(f"Vector score must be 0.0-1.0, got {self.score}")
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert vector state to dictionary representation."""
         return asdict(self)
 
 

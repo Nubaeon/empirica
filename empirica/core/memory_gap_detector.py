@@ -238,7 +238,8 @@ class MemoryGapDetector:
         know_impact = len(unreferenced) * finding_weight
 
         # Extract finding text (handle both dict and string)
-        def get_finding_text(f):
+        def get_finding_text(f: Any) -> str:
+            """Extract finding text from dict or string."""
             if isinstance(f, dict):
                 return f.get('finding', str(f))[:100]
             return str(f)[:100]
@@ -288,7 +289,8 @@ class MemoryGapDetector:
         clarity_impact = len(resolved_unincorporated) * 0.03
 
         # Extract unknown text (handle both dict and string)
-        def get_unknown_text(u):
+        def get_unknown_text(u: Any) -> str:
+            """Extract unknown text from dict or string."""
             if isinstance(u, dict):
                 return u.get('unknown', str(u))[:100]
             return str(u)[:100]

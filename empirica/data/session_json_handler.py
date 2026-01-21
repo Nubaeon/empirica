@@ -24,15 +24,16 @@ logger = logging.getLogger(__name__)
 class SessionJSONHandler:
     """Manages JSON exports and caching from SQLite database"""
     
-    def __init__(self, export_dir: Optional[str] = None):
+    def __init__(self, export_dir: Optional[str] = None) -> None:
+        """Initialize JSON handler with export directory."""
         if export_dir is None:
             # Default to .empirica/exports/
             base_dir = Path(__file__).parent.parent / '.empirica' / 'exports'
             export_dir = base_dir
-        
+
         self.export_dir = Path(export_dir)
         self.export_dir.mkdir(parents=True, exist_ok=True)
-        
+
         logger.info(f"JSON Handler initialized: {self.export_dir}")
     
     def export_session(self, db: SessionDatabase, session_id: str) -> Path:

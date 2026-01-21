@@ -23,7 +23,8 @@ from empirica.config.path_resolver import debug_paths
 class ProjectHeader(Static):
     """Display current project context"""
 
-    def on_mount(self):
+    def on_mount(self) -> None:
+        """Initialize widget on mount and start periodic context refresh."""
         self.update_context()
         self.set_interval(5.0, self.update_context)
 
@@ -49,7 +50,8 @@ class ProjectHeader(Static):
 class ActivityPanel(Static):
     """Display current session activity"""
 
-    def on_mount(self):
+    def on_mount(self) -> None:
+        """Initialize widget on mount and start periodic activity refresh."""
         self.update_activity()
         self.set_interval(1.0, self.update_activity)
 
@@ -128,7 +130,8 @@ class ActivityPanel(Static):
 class VectorsPanel(Static):
     """Display epistemic vectors"""
 
-    def on_mount(self):
+    def on_mount(self) -> None:
+        """Initialize widget on mount and start periodic vector refresh."""
         self.update_vectors()
         self.set_interval(1.0, self.update_vectors)
 
@@ -217,7 +220,8 @@ class VectorsPanel(Static):
 class CommandsLog(Static):
     """Display recent activity log"""
 
-    def on_mount(self):
+    def on_mount(self) -> None:
+        """Initialize widget on mount and start periodic log refresh."""
         self.update_log()
         self.set_interval(2.0, self.update_log)
 

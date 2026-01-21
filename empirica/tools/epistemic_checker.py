@@ -21,13 +21,15 @@ from pathlib import Path
 class EpistemicClaim:
     """Represents an empirical claim found in text"""
 
-    def __init__(self, text: str, claim_type: str, line_number: int, context: str):
+    def __init__(self, text: str, claim_type: str, line_number: int, context: str) -> None:
+        """Initialize claim with text, type, line number, and context."""
         self.text = text
         self.claim_type = claim_type
         self.line_number = line_number
         self.context = context
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert claim to dictionary representation."""
         return {
             'text': self.text,
             'type': self.claim_type,
@@ -40,7 +42,8 @@ class EpistemicAssessment:
     """Assessment of epistemic state for a claim"""
 
     def __init__(self, claim: EpistemicClaim, know: float, uncertainty: float,
-                 evidence: List[str], reasoning: str):
+                 evidence: List[str], reasoning: str) -> None:
+        """Initialize assessment with claim, epistemic vectors, and evidence."""
         self.claim = claim
         self.know = know
         self.uncertainty = uncertainty
@@ -62,7 +65,8 @@ class EpistemicAssessment:
 
         return len(flags) > 0, flags
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert assessment to dictionary representation."""
         should_flag, flags = self.should_flag()
         return {
             'claim': self.claim.to_dict(),

@@ -1771,15 +1771,34 @@ class SessionDatabase:
         return project
 
     def _load_breadcrumbs_for_mode(self, project_id: str, mode: str, subject: Optional[str] = None) -> Dict:
-        """Load all breadcrumbs (findings, unknowns, dead_ends, mistakes, reference_docs) based on mode"""
+        """Load all breadcrumbs (findings, unknowns, dead_ends, mistakes, reference_docs) based on mode
+
+        SEARCH-FIRST ARCHITECTURE: Limits items to prevent context bloat.
+        Warns when items are truncated - AI should use Qdrant search for full context.
+        """
+        truncation_warnings = []
+
+        # Define limits for session_start mode
+        FINDINGS_LIMIT = 10
+        UNKNOWNS_LIMIT = 10
+        DEAD_ENDS_LIMIT = 5
+        MISTAKES_LIMIT = 5
+
         if mode == "session_start":
-            # FAST: Recent items only
-            findings = self.breadcrumbs.get_project_findings(project_id, limit=10, subject=subject)
-            unknowns = self.breadcrumbs.get_project_unknowns(project_id, resolved=False, subject=subject)
-            dead_ends = self.breadcrumbs.get_project_dead_ends(project_id, limit=5, subject=subject)
-            recent_mistakes = self.breadcrumbs.get_project_mistakes(project_id, limit=5)
+            # FAST: Recent items only with limits
+            findings = self.breadcrumbs.get_project_findings(project_id, limit=FINDINGS_LIMIT, subject=subject)
+
+            # Get unknowns with limit, count total for warning
+            all_unknowns = self.breadcrumbs.get_project_unknowns(project_id, resolved=False, subject=subject)
+            total_unknowns = len(all_unknowns)
+            unknowns = all_unknowns[:UNKNOWNS_LIMIT]
+            if total_unknowns > UNKNOWNS_LIMIT:
+                truncation_warnings.append(f"unknowns: showing {UNKNOWNS_LIMIT} of {total_unknowns} unresolved (use 'empirica project-search' for full list)")
+
+            dead_ends = self.breadcrumbs.get_project_dead_ends(project_id, limit=DEAD_ENDS_LIMIT, subject=subject)
+            recent_mistakes = self.breadcrumbs.get_project_mistakes(project_id, limit=MISTAKES_LIMIT)
         else:  # mode == "live"
-            # COMPLETE: All items
+            # COMPLETE: All items (no limits)
             findings = self.breadcrumbs.get_project_findings(project_id, subject=subject)
             unknowns = self.breadcrumbs.get_project_unknowns(project_id, subject=subject)
             dead_ends = self.breadcrumbs.get_project_dead_ends(project_id, subject=subject)
@@ -1787,7 +1806,7 @@ class SessionDatabase:
 
         reference_docs = self.breadcrumbs.get_project_reference_docs(project_id)
 
-        return {
+        result = {
             'findings': findings,
             'unknowns': unknowns,
             'dead_ends': dead_ends,
@@ -1795,9 +1814,37 @@ class SessionDatabase:
             'reference_docs': reference_docs
         }
 
-    def _load_goals_for_project(self, project_id: str) -> Dict:
-        """Load goals for project (delegates to GoalRepository)"""
-        return self.goals.get_project_goals(project_id)
+        if truncation_warnings:
+            result['truncation_warnings'] = truncation_warnings
+
+        return result
+
+    def _load_goals_for_project(self, project_id: str, limit: int = 10) -> Dict:
+        """Load goals for project with limit to prevent context bloat
+
+        SEARCH-FIRST ARCHITECTURE: Limits goals shown, warns if truncated.
+        """
+        goals_data = self.goals.get_project_goals(project_id)
+
+        # Apply limits to active_goals and incomplete_work
+        truncation_warnings = []
+
+        if 'active_goals' in goals_data:
+            total_active = len(goals_data['active_goals'])
+            if total_active > limit:
+                goals_data['active_goals'] = goals_data['active_goals'][:limit]
+                truncation_warnings.append(f"active_goals: showing {limit} of {total_active} (use 'empirica goals-list' for full list)")
+
+        if 'incomplete_work' in goals_data:
+            total_incomplete = len(goals_data['incomplete_work'])
+            if total_incomplete > limit:
+                goals_data['incomplete_work'] = goals_data['incomplete_work'][:limit]
+                truncation_warnings.append(f"incomplete_work: showing {limit} of {total_incomplete}")
+
+        if truncation_warnings:
+            goals_data['truncation_warnings'] = truncation_warnings
+
+        return goals_data
 
     def _capture_live_state_if_requested(
         self,
@@ -1894,7 +1941,12 @@ class SessionDatabase:
 
         # 4. Load goals
         goals_data = self._load_goals_for_project(resolved_id)
+
+        # Merge truncation warnings from both sources
+        all_warnings = breadcrumbs.pop('truncation_warnings', []) + goals_data.pop('truncation_warnings', [])
         breadcrumbs.update(goals_data)
+        if all_warnings:
+            breadcrumbs['truncation_warnings'] = all_warnings
 
         # 5. Generate file tree
         file_tree = self.generate_file_tree(project_root)

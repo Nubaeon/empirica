@@ -56,10 +56,12 @@ class EmergedPersona:
     success_count: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert persona to dictionary representation."""
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'EmergedPersona':
+        """Create persona from dictionary representation."""
         return cls(**data)
 
     def to_yaml(self) -> str:

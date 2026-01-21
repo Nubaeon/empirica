@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 class DocCodeIntegrityAnalyzer:
     """Analyze integrity between documentation and codebase"""
     
-    def __init__(self, project_root: Optional[str] = None):
+    def __init__(self, project_root: Optional[str] = None) -> None:
+        """Initialize analyzer with project root directory."""
         self.project_root = Path(project_root) if project_root else Path.cwd()
         self.docs_dir = self.project_root / "docs"
         

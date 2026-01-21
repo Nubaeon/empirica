@@ -21,6 +21,7 @@ def create_app() -> Flask:
     # Enable CORS manually (flask-cors not installed)
     @app.after_request
     def add_cors_headers(response):
+        """Add CORS headers to all responses."""
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = '*'
@@ -29,6 +30,7 @@ def create_app() -> Flask:
     # Health check endpoint
     @app.route("/health", methods=["GET"])
     def health_check():
+        """Return API health status."""
         return jsonify({"status": "ok", "service": "empirica-api"})
 
     # Register blueprints
@@ -43,6 +45,7 @@ def create_app() -> Flask:
     # Global error handler
     @app.errorhandler(Exception)
     def handle_error(error):
+        """Handle uncaught exceptions with JSON error response."""
         logger.error(f"API error: {error}")
         return jsonify({
             "ok": False,

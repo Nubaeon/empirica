@@ -49,6 +49,7 @@ class SlideEpistemicAssessment:
     key_concepts: List[str]  # Extracted key concepts
     
     def to_dict(self) -> Dict:
+        """Convert assessment to dictionary representation."""
         d = asdict(self)
         # Convert numpy bools to Python bools for JSON serialization
         for k, v in d.items():
@@ -60,13 +61,14 @@ class SlideEpistemicAssessment:
 class SlideProcessor:
     """Process slides and assess epistemic value"""
     
-    def __init__(self, output_dir: Optional[Path] = None):
+    def __init__(self, output_dir: Optional[Path] = None) -> None:
+        """Initialize slide processor with output directory."""
         if not HAS_VISION:
             raise ImportError(
                 "Vision dependencies not installed. "
                 "Run: pip install pytesseract pillow opencv-contrib-python"
             )
-        
+
         self.output_dir = output_dir or Path(".empirica/slides")
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
