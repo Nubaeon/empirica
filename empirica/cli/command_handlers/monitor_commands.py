@@ -1806,3 +1806,406 @@ def handle_trajectory_project_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Trajectory Project", getattr(args, 'verbose', False))
+
+
+def handle_calibration_report_command(args):
+    """Handle calibration-report command.
+
+    Analyzes AI self-assessment calibration using vector_trajectories table.
+    Measures gap from expected (1.0 for most vectors, 0.0 for uncertainty) at session END.
+
+    Output: Per-vector corrections, sample sizes, trends, and system prompt recommendations.
+    """
+    try:
+        import json
+        import sqlite3
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+
+        # Get arguments
+        ai_id = getattr(args, 'ai_id', None) or 'claude-code'
+        weeks = getattr(args, 'weeks', 8)
+        include_tests = getattr(args, 'include_tests', False)
+        min_samples = getattr(args, 'min_samples', 10)
+        output_format = getattr(args, 'output', 'human')
+        update_prompt = getattr(args, 'update_prompt', False)
+        verbose = getattr(args, 'verbose', False)
+
+        # Find the sessions database
+        import os
+        db_paths = [
+            os.path.join(os.getcwd(), '.empirica', 'sessions', 'sessions.db'),
+            os.path.expanduser('~/.empirica/sessions/sessions.db')
+        ]
+
+        db_path = None
+        for path in db_paths:
+            if os.path.exists(path):
+                db_path = path
+                break
+
+        if not db_path:
+            result = {"ok": False, "error": "No sessions database found"}
+            print(json.dumps(result, indent=2))
+            return
+
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Calculate date range
+        cutoff_date = datetime.now() - timedelta(weeks=weeks)
+        cutoff_str = cutoff_date.strftime('%Y-%m-%d')
+
+        # Query vector_trajectories for end vectors
+        # Filter out test sessions unless include_tests is True
+        test_filter = "" if include_tests else """
+            AND (ai_id IS NULL OR (
+                ai_id NOT LIKE 'test%'
+                AND ai_id NOT LIKE '%%-test'
+                AND ai_id NOT LIKE 'storage-%%'
+            ))
+        """
+
+        query = f"""
+            SELECT
+                trajectory_id,
+                session_id,
+                ai_id,
+                end_vectors,
+                pattern,
+                created_at
+            FROM vector_trajectories
+            WHERE end_vectors IS NOT NULL
+                AND pattern != 'unknown'
+                AND created_at >= ?
+                {test_filter}
+            ORDER BY created_at DESC
+        """
+
+        cursor.execute(query, (cutoff_str,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        if not rows:
+            result = {
+                "ok": False,
+                "error": f"No trajectories found in last {weeks} weeks",
+                "hint": "Run more CASCADE workflows to build calibration data"
+            }
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                print(f"❌ No calibration data found in last {weeks} weeks")
+            return
+
+        # Define vectors and their expected values
+        # Most vectors should end at 1.0 (full capability)
+        # uncertainty should end at 0.0 (no remaining doubt)
+        vector_expected = {
+            'engagement': 1.0,
+            'know': 1.0,
+            'do': 1.0,
+            'context': 1.0,
+            'clarity': 1.0,
+            'coherence': 1.0,
+            'signal': 1.0,
+            'density': 1.0,
+            'state': 1.0,
+            'change': 1.0,
+            'completion': 1.0,
+            'impact': 1.0,
+            'uncertainty': 0.0  # Special: should be 0, not 1
+        }
+
+        # Collect all end vectors
+        vector_data = defaultdict(list)
+        weekly_data = defaultdict(lambda: defaultdict(list))
+
+        valid_trajectories = 0
+        filtered_trajectories = 0
+
+        for row in rows:
+            trajectory_id, session_id, row_ai_id, end_vectors_json, pattern, created_at = row
+
+            try:
+                end_vectors = json.loads(end_vectors_json)
+            except json.JSONDecodeError:
+                continue
+
+            # Filter out 0.5 default values (placeholder data)
+            # A session with all 0.5 values is likely a test/placeholder
+            values = list(end_vectors.values())
+            if values and all(v == 0.5 for v in values):
+                filtered_trajectories += 1
+                continue
+
+            valid_trajectories += 1
+
+            # Parse week from created_at
+            try:
+                dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                week_key = dt.strftime('%Y-W%W')
+            except:
+                week_key = 'unknown'
+
+            # Collect per-vector data
+            for vector_name, value in end_vectors.items():
+                if vector_name in vector_expected and isinstance(value, (int, float)):
+                    vector_data[vector_name].append(value)
+                    weekly_data[week_key][vector_name].append(value)
+
+        if valid_trajectories == 0:
+            result = {
+                "ok": False,
+                "error": "No valid trajectories after filtering",
+                "filtered": filtered_trajectories,
+                "hint": "All trajectories had 0.5 placeholder values"
+            }
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                print(f"❌ No valid calibration data (filtered {filtered_trajectories} placeholder sessions)")
+            return
+
+        # Calculate calibration metrics
+        calibration = {}
+        for vector_name, expected in vector_expected.items():
+            values = vector_data.get(vector_name, [])
+            if not values:
+                continue
+
+            count = len(values)
+            mean = sum(values) / count
+
+            # Gap from expected (correction to ADD to self-assessment)
+            # If expected is 1.0 and mean is 0.8, correction is +0.2
+            # If expected is 0.0 (uncertainty) and mean is 0.2, correction is -0.2
+            if expected == 1.0:
+                correction = expected - mean
+            else:  # uncertainty (expected = 0.0)
+                correction = -mean  # Negative means reduce uncertainty
+
+            # Calculate variance and std error
+            variance = sum((v - mean) ** 2 for v in values) / count if count > 1 else 0
+            std_dev = variance ** 0.5
+            std_error = std_dev / (count ** 0.5) if count > 0 else 0
+
+            # Determine trend from weekly data
+            weeks_list = sorted(weekly_data.keys())
+            if len(weeks_list) >= 2:
+                early_weeks = weeks_list[:len(weeks_list)//2]
+                late_weeks = weeks_list[len(weeks_list)//2:]
+
+                early_values = []
+                late_values = []
+                for w in early_weeks:
+                    early_values.extend(weekly_data[w].get(vector_name, []))
+                for w in late_weeks:
+                    late_values.extend(weekly_data[w].get(vector_name, []))
+
+                early_mean = sum(early_values) / len(early_values) if early_values else 0
+                late_mean = sum(late_values) / len(late_values) if late_values else 0
+
+                delta = late_mean - early_mean
+                if delta > 0.05:
+                    trend = "↑ improving"
+                elif delta < -0.05:
+                    trend = "↓ declining"
+                else:
+                    trend = "→ stable"
+            else:
+                trend = "→ stable"
+
+            # Confidence based on sample size
+            if count >= min_samples:
+                confidence = "high"
+            elif count >= min_samples // 2:
+                confidence = "medium"
+            else:
+                confidence = "low"
+
+            calibration[vector_name] = {
+                "correction": round(correction, 2),
+                "end_mean": round(mean, 2),
+                "expected": expected,
+                "count": count,
+                "std_error": round(std_error, 3),
+                "trend": trend,
+                "confidence": confidence
+            }
+
+        # Sort by absolute correction (biggest issues first)
+        sorted_vectors = sorted(
+            calibration.items(),
+            key=lambda x: abs(x[1]['correction']),
+            reverse=True
+        )
+
+        # Build result
+        result = {
+            "ok": True,
+            "data_source": "vector_trajectories",
+            "total_trajectories": valid_trajectories,
+            "filtered_trajectories": filtered_trajectories,
+            "weeks_analyzed": weeks,
+            "date_range": f"{cutoff_str} to {datetime.now().strftime('%Y-%m-%d')}",
+            "ai_id_filter": ai_id if ai_id else "all",
+            "calibration": {v: d for v, d in sorted_vectors}
+        }
+
+        # Identify key issues
+        key_issues = []
+        for vector_name, data in sorted_vectors:
+            if abs(data['correction']) >= 0.15:
+                if vector_name == 'uncertainty':
+                    meaning = "Residual doubt (should be ~0)"
+                elif data['correction'] > 0:
+                    meaning = f"Underestimate {vector_name}"
+                else:
+                    meaning = f"Overestimate {vector_name}"
+                key_issues.append({
+                    "vector": vector_name,
+                    "correction": data['correction'],
+                    "meaning": meaning
+                })
+
+        result["key_issues"] = key_issues
+
+        # Readiness gate info
+        know_data = calibration.get('know', {})
+        uncertainty_data = calibration.get('uncertainty', {})
+        result["readiness_gate"] = {
+            "threshold": "know >= 0.70 AND uncertainty <= 0.35",
+            "know_correction": know_data.get('correction', 0),
+            "uncertainty_correction": uncertainty_data.get('correction', 0),
+            "note": "Apply corrections: ADD to self-assessment"
+        }
+
+        # Output
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        elif output_format == 'markdown' or update_prompt:
+            # Generate markdown table for system prompt
+            print(f"## Calibration ({valid_trajectories} trajectories over {weeks} weeks)")
+            print()
+            print("*Method: Gap from expected at session END (1.0 for most, 0.0 for uncertainty).*")
+            print()
+            print("| Vector | Correction | End Mean | Trend | Meaning |")
+            print("|--------|------------|----------|-------|---------|")
+
+            for vector_name, data in sorted_vectors:
+                correction = data['correction']
+                # Format correction with sign
+                if correction >= 0:
+                    corr_str = f"+{correction:.2f}"
+                else:
+                    corr_str = f"{correction:.2f}"
+
+                # Bold significant corrections
+                if abs(correction) >= 0.15:
+                    corr_str = f"**{corr_str}**"
+
+                # Meaning
+                if vector_name == 'uncertainty':
+                    meaning = "Residual doubt (should be ~0)"
+                elif abs(correction) < 0.08:
+                    meaning = "Well calibrated"
+                elif correction > 0:
+                    meaning = f"Underestimate {vector_name}"
+                else:
+                    meaning = f"Overestimate {vector_name}"
+
+                print(f"| {vector_name} | {corr_str} | {data['end_mean']:.2f} | {data['trend']} | {meaning} |")
+
+            print()
+            print("**Apply corrections:** ADD the correction to your self-assessment.")
+            print(f"**Readiness gate:** know >= 0.70 AND uncertainty <= 0.35")
+        else:
+            # Human-readable output
+            print("=" * 70)
+            print("📊 CALIBRATION REPORT")
+            print("=" * 70)
+            print(f"Data source: vector_trajectories ({valid_trajectories} trajectories)")
+            print(f"Period: {result['date_range']} ({weeks} weeks)")
+            if filtered_trajectories:
+                print(f"Filtered: {filtered_trajectories} placeholder sessions excluded")
+            print()
+
+            if key_issues:
+                print("🎯 KEY ISSUES (|correction| >= 0.15):")
+                for issue in key_issues:
+                    sign = "+" if issue['correction'] >= 0 else ""
+                    print(f"   {issue['vector']}: {sign}{issue['correction']:.2f} - {issue['meaning']}")
+                print()
+
+            print("📈 PER-VECTOR CALIBRATION:")
+            print("-" * 70)
+            print(f"{'Vector':<15} {'Correction':>10} {'End Mean':>10} {'Samples':>8} {'Trend':>15}")
+            print("-" * 70)
+
+            for vector_name, data in sorted_vectors:
+                correction = data['correction']
+                sign = "+" if correction >= 0 else ""
+
+                # Highlight significant corrections
+                if abs(correction) >= 0.15:
+                    prefix = "⚠️ "
+                else:
+                    prefix = "   "
+
+                print(f"{prefix}{vector_name:<12} {sign}{correction:>8.2f} {data['end_mean']:>10.2f} {data['count']:>8} {data['trend']:>15}")
+
+            print("-" * 70)
+            print()
+            print("📋 READINESS GATE:")
+            print(f"   know >= 0.70 AND uncertainty <= 0.35 (after bias correction)")
+            print(f"   Apply: ADD corrections to your self-assessment")
+            print()
+
+            if verbose:
+                print("📊 WEEKLY TREND DATA:")
+                weeks_list = sorted(weekly_data.keys())
+                for week in weeks_list[-4:]:  # Last 4 weeks
+                    week_vectors = weekly_data[week]
+                    if week_vectors:
+                        know_vals = week_vectors.get('know', [])
+                        unc_vals = week_vectors.get('uncertainty', [])
+                        know_mean = sum(know_vals) / len(know_vals) if know_vals else 0
+                        unc_mean = sum(unc_vals) / len(unc_vals) if unc_vals else 0
+                        print(f"   {week}: know={know_mean:.2f}, uncertainty={unc_mean:.2f} (n={len(know_vals)})")
+
+            if update_prompt:
+                print()
+                print("=" * 70)
+                print("📝 COPY-PASTE FOR SYSTEM PROMPT:")
+                print("=" * 70)
+                print()
+                print("| Vector | Correction | End Mean | Trend | Meaning |")
+                print("|--------|------------|----------|-------|---------|")
+
+                for vector_name, data in sorted_vectors:
+                    correction = data['correction']
+                    if correction >= 0:
+                        corr_str = f"+{correction:.2f}"
+                    else:
+                        corr_str = f"{correction:.2f}"
+
+                    if abs(correction) >= 0.15:
+                        corr_str = f"**{corr_str}**"
+
+                    if vector_name == 'uncertainty':
+                        meaning = "Residual doubt (should be ~0)"
+                    elif abs(correction) < 0.08:
+                        meaning = "Well calibrated"
+                    elif correction > 0:
+                        meaning = f"Underestimate {vector_name}"
+                    else:
+                        meaning = f"Overestimate {vector_name}"
+
+                    print(f"| {vector_name} | {corr_str} | {data['end_mean']:.2f} | {data['trend']} | {meaning} |")
+
+            print()
+            print("=" * 70)
+
+    except Exception as e:
+        handle_cli_error(e, "Calibration Report", getattr(args, 'verbose', False))

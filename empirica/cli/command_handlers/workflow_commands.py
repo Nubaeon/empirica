@@ -991,6 +991,51 @@ def handle_check_submit_command(args):
                     # Auto-checkpoint failure is not fatal, but log it
                     logger.warning(f"Auto-checkpoint after CHECK (uncertainty > 0.5) failed (non-fatal): {e}")
 
+            # EPISTEMIC SNAPSHOTS: Capture CHECK phase vectors for calibration analysis
+            # Added 2026-01-21 to provide CHECK data for vector_trajectories analysis
+            # Previously only POSTFLIGHT was captured, missing CHECK as intermediate data point
+            snapshot_created = False
+            snapshot_id = None
+            try:
+                from empirica.data.snapshot_provider import EpistemicSnapshotProvider
+                from empirica.data.epistemic_snapshot import ContextSummary
+                from empirica.data.session_database import SessionDatabase
+
+                db = SessionDatabase()
+                snapshot_provider = EpistemicSnapshotProvider()
+
+                # Build context summary from CHECK state
+                check_confidence = 1.0 - uncertainty
+                context_summary = ContextSummary(
+                    semantic={"phase": "CHECK", "decision": decision, "confidence": check_confidence},
+                    narrative=reasoning or f"CHECK round {round_num}: {decision}",
+                    evidence_refs=[checkpoint_id] if checkpoint_id else []
+                )
+
+                # Create snapshot - this auto-links to previous snapshot (PREFLIGHT)
+                snapshot = snapshot_provider.create_snapshot_from_session(
+                    session_id=session_id,
+                    context_summary=context_summary,
+                    cascade_phase="CHECK",
+                    domain_vectors={"round": round_num, "decision": decision} if round_num else None
+                )
+
+                # Set vectors
+                snapshot.vectors = vectors
+                # No delta for CHECK - deltas are POSTFLIGHT-PREFLIGHT only
+
+                # Save to epistemic_snapshots table
+                snapshot_provider.save_snapshot(snapshot)
+                snapshot_id = snapshot.snapshot_id
+                snapshot_created = True
+
+                logger.debug(f"Created CHECK epistemic snapshot {snapshot_id} for session {session_id}")
+
+                db.close()
+            except Exception as e:
+                # Snapshot creation is non-fatal
+                logger.debug(f"CHECK epistemic snapshot creation skipped: {e}")
+
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -1005,8 +1050,14 @@ def handle_check_submit_command(args):
                 "storage_layers": {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
-                    "json_logs": True
+                    "json_logs": True,
+                    "epistemic_snapshots": snapshot_created
                 },
+                "snapshot": {
+                    "created": snapshot_created,
+                    "snapshot_id": snapshot_id,
+                    "note": "CHECK vectors captured for calibration analysis"
+                } if snapshot_created else None,
                 "bootstrap": {
                     "had_context": bootstrap_status.get('has_bootstrap', False),
                     "auto_run": bootstrap_result is not None,

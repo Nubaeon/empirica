@@ -296,6 +296,7 @@ def main(args=None):
             'mco-load': handle_mco_load_command,
             'trajectory-project': handle_trajectory_project_command,
             'compact-analysis': handle_compact_analysis,
+            'calibration-report': handle_calibration_report_command,
 
             # Checkpoint commands
             'checkpoint-create': handle_checkpoint_create_command,
