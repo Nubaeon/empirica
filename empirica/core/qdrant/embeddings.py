@@ -118,6 +118,17 @@ def _resolve_auto_provider(ollama_url: str) -> str:
 
 
 class EmbeddingsProvider:
+    """
+    Multi-provider embeddings generator for Qdrant vector storage.
+
+    Supports multiple embedding backends with automatic fallback:
+    - Ollama (local, free)
+    - Jina AI (API, good quality)
+    - Voyage AI (API, high quality)
+    - Local sentence-transformers (fallback)
+
+    Provider selection: Set EMPIRICA_EMBEDDINGS_PROVIDER env var or use "auto".
+    """
     # Type declarations for conditional attributes
     _jina_api_key: Optional[str] = None
     _voyage_api_key: Optional[str] = None

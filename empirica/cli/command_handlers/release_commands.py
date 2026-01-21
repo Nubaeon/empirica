@@ -29,6 +29,7 @@ from ..cli_utils import handle_cli_error
 
 
 class AssessmentStatus(Enum):
+    """Status indicators for release readiness assessments."""
     PASS = "pass"
     WARN = "warn"
     FAIL = "fail"
@@ -37,6 +38,7 @@ class AssessmentStatus(Enum):
 
 @dataclass
 class CheckResult:
+    """Result of a single release readiness check."""
     name: str
     status: AssessmentStatus
     message: str

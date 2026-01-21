@@ -507,12 +507,14 @@ manager = SessionManager()
 
 # Pydantic models
 class SessionCreate(BaseModel):
+    """Request model for creating a new collaboration session."""
     ai_id: str
     task: str
     workspace: Optional[str] = None
 
 
 class CommandExecute(BaseModel):
+    """Request model for executing a command within a session."""
     command: str
     args: Dict[str, Any] = {}
 
