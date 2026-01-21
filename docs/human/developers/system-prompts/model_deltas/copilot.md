@@ -1,4 +1,13 @@
-### The Turtle Principle
+# GitHub Copilot Model Delta - v1.4.0
+
+**Applies to:** GitHub Copilot
+**Last Updated:** 2026-01-21
+
+This delta contains Copilot-specific guidance to be used with the base Empirica system prompt.
+
+---
+
+## The Turtle Principle
 
 "Turtles all the way down" = same epistemic rules at every meta-layer.
 The Sentinel monitors using the same 13 vectors it monitors you with.
@@ -8,7 +17,7 @@ The Sentinel monitors using the same 13 vectors it monitors you with.
 
 ---
 
-### GitHub Integration Patterns
+## GitHub Integration Patterns
 
 **PR Workflow with Epistemic Tracking:**
 ```bash
@@ -42,3 +51,11 @@ empirica checkpoint-create --session-id <ID> --message "Feature complete"
 1. PREFLIGHT before review - assess familiarity with codebase area
 2. Log unknowns for areas needing author clarification
 3. POSTFLIGHT after review - capture learned patterns
+
+---
+
+## Copilot-Specific Notes
+
+**AI_ID Convention:** Use `copilot-<workstream>` (e.g., `copilot-code`, `copilot-review`)
+
+Copilot integrates with GitHub ecosystem. Use issue/PR references in findings for traceability.
