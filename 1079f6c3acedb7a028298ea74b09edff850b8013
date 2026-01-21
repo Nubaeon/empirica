@@ -1,0 +1,29 @@
+{
+  "goal_id": "30a91381-ea82-4c05-b7f6-122c98fad06b",
+  "session_id": "0545c8c3-975b-496e-8400-62e5b15c716b",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-21T17:44:11.947316+00:00",
+  "goal_data": {
+    "objective": "Document 18 undocumented CLI commands identified by docs-assess --check-staleness",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All 18 commands documented in appropriate docs",
+      "docs-assess --check-staleness shows 0 undocumented commands"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-21T17:44:11.947333+00:00",
+      "action": "created"
+    }
+  ]
+}
