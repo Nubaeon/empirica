@@ -2,7 +2,7 @@
 
 > **Teaching AI to know what it knows—and what it doesn't**
 
-[![Version](https://img.shields.io/badge/version-1.3.2-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.3.2)
+[![Version](https://img.shields.io/badge/version-1.3.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.3.3)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)

@@ -100,6 +100,101 @@ def get_bootstrap_status(session_id: str) -> dict:
         return {"has_bootstrap": False, "project_id": None, "error": str(e)}
 
 
+def get_session_phase_state(session_id: str) -> dict:
+    """
+    Get the CASCADE phase state of a session.
+
+    Returns:
+        {
+            "has_preflight": bool,
+            "has_check": bool,
+            "has_postflight": bool,
+            "last_phase": str or None,
+            "is_active_cycle": bool  # Has PREFLIGHT but no POSTFLIGHT
+        }
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        cursor.execute("""
+            SELECT phase FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC
+        """, (session_id,))
+        rows = cursor.fetchall()
+        db.close()
+
+        if not rows:
+            return {
+                "has_preflight": False,
+                "has_check": False,
+                "has_postflight": False,
+                "last_phase": None,
+                "is_active_cycle": False
+            }
+
+        phases = [r[0] for r in rows]
+        last_phase = phases[0] if phases else None
+
+        has_preflight = "PREFLIGHT" in phases
+        has_check = "CHECK" in phases
+        has_postflight = "POSTFLIGHT" in phases
+
+        # Active cycle = has PREFLIGHT but last phase is not POSTFLIGHT
+        is_active_cycle = has_preflight and last_phase != "POSTFLIGHT"
+
+        return {
+            "has_preflight": has_preflight,
+            "has_check": has_check,
+            "has_postflight": has_postflight,
+            "last_phase": last_phase,
+            "is_active_cycle": is_active_cycle
+        }
+    except Exception as e:
+        return {
+            "has_preflight": False,
+            "has_check": False,
+            "has_postflight": False,
+            "last_phase": None,
+            "is_active_cycle": False,
+            "error": str(e)
+        }
+
+
+def get_last_compact_timestamp() -> datetime:
+    """
+    Get the timestamp of the most recent compact (from pre_summary snapshot).
+
+    Returns None if no compact found.
+    """
+    try:
+        ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+        if not ref_docs_dir.exists():
+            return None
+
+        snapshots = sorted(ref_docs_dir.glob("pre_summary_*.json"), reverse=True)
+        if not snapshots:
+            return None
+
+        # Parse timestamp from filename: pre_summary_2026-01-21T12-30-45.json
+        filename = snapshots[0].name
+        timestamp_str = filename.replace("pre_summary_", "").replace(".json", "")
+        # Convert 2026-01-21T12-30-45 to ISO format
+        timestamp_str = timestamp_str.replace("T", " ").replace("-", ":", 2)
+        # Now it's like "2026:01:21 12:30:45", need to fix the date part
+        parts = timestamp_str.split(" ")
+        if len(parts) == 2:
+            date_part = parts[0].replace(":", "-")  # Back to 2026-01-21
+            time_part = parts[1].replace("-", ":")  # 12:30:45
+            timestamp_str = f"{date_part}T{time_part}"
+
+        return datetime.fromisoformat(timestamp_str)
+    except Exception:
+        return None
+
+
 def get_last_check_decision(session_id: str, max_age_minutes: int = 30) -> dict:
     """
     Get the most recent CHECK decision for this session.
@@ -109,7 +204,8 @@ def get_last_check_decision(session_id: str, max_age_minutes: int = 30) -> dict:
             "has_check": bool,
             "decision": "proceed" | "investigate" | None,
             "age_minutes": float,
-            "is_valid": bool  # True if recent CHECK with proceed
+            "is_valid": bool,  # True if recent CHECK with proceed AND no compact since
+            "invalidated_by_compact": bool  # True if compact happened after CHECK
         }
     """
     try:
@@ -134,7 +230,8 @@ def get_last_check_decision(session_id: str, max_age_minutes: int = 30) -> dict:
                 "has_check": False,
                 "decision": None,
                 "age_minutes": None,
-                "is_valid": False
+                "is_valid": False,
+                "invalidated_by_compact": False
             }
 
         phase, reflex_data, timestamp = row
@@ -149,23 +246,38 @@ def get_last_check_decision(session_id: str, max_age_minutes: int = 30) -> dict:
                 pass
 
         # Calculate age
+        check_time = None
         try:
             check_time = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            age = datetime.now(check_time.tzinfo) - check_time
+            # Make timezone-naive for comparison
+            if check_time.tzinfo is not None:
+                check_time = check_time.replace(tzinfo=None)
+            age = datetime.now() - check_time
             age_minutes = age.total_seconds() / 60
         except Exception:
             age_minutes = 999  # Assume old if can't parse
 
+        # Check if a compact happened AFTER this CHECK
+        invalidated_by_compact = False
+        last_compact = get_last_compact_timestamp()
+        if last_compact and check_time:
+            if last_compact > check_time:
+                invalidated_by_compact = True
+
         is_valid = (
             decision == 'proceed' and
-            age_minutes <= max_age_minutes
+            age_minutes <= max_age_minutes and
+            not invalidated_by_compact  # NEW: Compact invalidates CHECK
         )
 
         return {
             "has_check": True,
             "decision": decision,
             "age_minutes": round(age_minutes, 1),
-            "is_valid": is_valid
+            "is_valid": is_valid,
+            "invalidated_by_compact": invalidated_by_compact,
+            "check_time": str(check_time) if check_time else None,
+            "last_compact_time": str(last_compact) if last_compact else None
         }
 
     except Exception as e:
@@ -174,61 +286,9 @@ def get_last_check_decision(session_id: str, max_age_minutes: int = 30) -> dict:
             "decision": None,
             "age_minutes": None,
             "is_valid": False,
+            "invalidated_by_compact": False,
             "error": str(e)
         }
-
-
-def get_sentinel_mode() -> str:
-    """
-    Get sentinel operating mode from environment.
-
-    Modes:
-    - observer: Log warnings but don't block (passive oversight)
-    - controller: Actively block when appropriate (active oversight)
-    - auto: Same as controller (default)
-
-    Returns:
-        Mode string: 'observer', 'controller', or 'auto'
-    """
-    mode = os.getenv('EMPIRICA_SENTINEL_MODE', 'auto').lower()
-    if mode in ('observer', 'controller', 'auto'):
-        return mode
-    return 'auto'
-
-
-def maybe_allow_in_observer_mode(original_decision: dict, mode: str, tool_name: str) -> dict:
-    """
-    If in observer mode, convert block to allow with warning.
-
-    Observer mode provides passive oversight - logs concerns but doesn't
-    block AI actions. Useful for:
-    - Debugging/development
-    - Building trust gradually
-    - Analyzing AI behavior patterns
-
-    Args:
-        original_decision: The decision dict that would be returned
-        mode: Current sentinel mode
-        tool_name: Name of the tool being called
-
-    Returns:
-        Modified decision dict (allow in observer mode, original otherwise)
-    """
-    if mode == 'observer' and original_decision.get('decision') == 'block':
-        # Convert block to allow but preserve the warning
-        reason = original_decision.get('reason', 'Sentinel would block')
-        return {
-            "decision": "allow",
-            "reason": f"[OBSERVER MODE] Would block: {reason}",
-            "observer_mode": True,
-            "original_decision": "block",
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolCall",
-                "warning": f"⚠️ OBSERVER: Sentinel would block {tool_name} - {reason}",
-                "mode": "observer"
-            }
-        }
-    return original_decision
 
 
 def main():
@@ -240,9 +300,6 @@ def main():
         hook_input = {}
 
     tool_name = hook_input.get('tool_name', 'unknown')
-
-    # Get sentinel mode
-    sentinel_mode = get_sentinel_mode()
 
     # Find project root and change to it
     project_root = find_project_root()
@@ -296,24 +353,65 @@ Then run CHECK to proceed with this action.
             }
         }
 
-        # Apply observer mode override if needed
-        output = maybe_allow_in_observer_mode(output, sentinel_mode, tool_name)
-
-        if output.get('decision') == 'block':
-            print(f"""
+        print(f"""
 🚫 Sentinel Gate: {tool_name} blocked
 
 {reason}
 
 Run project-bootstrap first. See guidance in context.
 """, file=sys.stderr)
-        else:
-            print(f"""
-⚠️ Sentinel Gate: {tool_name} would be blocked (OBSERVER MODE)
+
+        print(json.dumps(output))
+        sys.exit(0)
+
+    # Check phase state to determine PREFLIGHT vs CHECK requirement
+    phase_state = get_session_phase_state(session_id)
+
+    # If no PREFLIGHT at all, require PREFLIGHT first
+    if not phase_state.get('has_preflight'):
+        reason = f"No PREFLIGHT found. Run PREFLIGHT to establish baseline before {tool_name}."
+        guidance = f"""
+## Sentinel Gate: PREFLIGHT Required
+
+Session `{session_id}` has no PREFLIGHT - you need to establish an epistemic baseline.
+
+**Run PREFLIGHT:**
+
+```bash
+empirica preflight-submit - << 'EOF'
+{{
+  "session_id": "{session_id}",
+  "task_context": "<what you're working on>",
+  "vectors": {{
+    "know": <0.0-1.0: What do you know about this task?>,
+    "uncertainty": <0.0-1.0: How uncertain are you?>,
+    "context": <0.0-1.0: How well do you understand the codebase?>,
+    "engagement": <0.0-1.0: How engaged are you?>
+  }},
+  "reasoning": "<explain your starting epistemic state>"
+}}
+EOF
+```
+
+After PREFLIGHT, run CHECK to proceed with this action.
+"""
+        output = {
+            "decision": "block",
+            "reason": reason,
+            "session_id": session_id,
+            "phase_state": phase_state,
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolCall",
+                "additionalContext": guidance
+            }
+        }
+
+        print(f"""
+🚫 Sentinel Gate: {tool_name} blocked
 
 {reason}
 
-[OBSERVER MODE: Action allowed but should run project-bootstrap first]
+Run PREFLIGHT first. See guidance in context.
 """, file=sys.stderr)
 
         print(json.dumps(output))
@@ -328,7 +426,8 @@ Run project-bootstrap first. See guidance in context.
             "decision": "allow",
             "reason": f"Valid CHECK (decision={check_status['decision']}, age={check_status['age_minutes']}min)",
             "session_id": session_id,
-            "check_status": check_status
+            "check_status": check_status,
+            "phase_state": phase_state
         }
         print(json.dumps(output))
         sys.exit(0)
@@ -345,7 +444,39 @@ Run project-bootstrap first. See guidance in context.
 
     # Block and provide guidance
     if check_status.get('has_check'):
-        if check_status.get('decision') == 'investigate':
+        if check_status.get('invalidated_by_compact'):
+            # CRITICAL: Compact happened after CHECK - need fresh calibration
+            reason = f"CHECK invalidated by compact. Run CHECK to calibrate post-compact state before {tool_name}."
+            guidance = f"""
+## Sentinel Gate: POST-COMPACT CHECK Required
+
+Your context was compacted since your last CHECK. Your previous epistemic assessment
+is now **invalid** because you lost detailed context.
+
+**This CHECK is critical for calibration data** - it captures how your knowledge
+changed across the compact boundary.
+
+**Run CHECK with HONEST post-compact assessment:**
+
+```bash
+empirica check-submit - << 'EOF'
+{{
+  "session_id": "{session_id}",
+  "action_description": "<what you intend to do>",
+  "vectors": {{
+    "know": <0.0-1.0: What do you ACTUALLY know now after compact?>,
+    "uncertainty": <0.0-1.0: How uncertain are you with only summary context?>,
+    "context": <0.0-1.0: How well do you understand current state?>
+  }},
+  "reasoning": "Post-compact assessment: <explain what you remember vs what you lost>"
+}}
+EOF
+```
+
+**Key principle:** Post-compact know should typically be LOWER than pre-compact.
+Be honest - this data is used for calibration.
+"""
+        elif check_status.get('decision') == 'investigate':
             reason = f"Last CHECK returned 'investigate'. Complete investigation before {tool_name}."
             guidance = """
 ## Sentinel Gate: INVESTIGATE Required
@@ -436,25 +567,13 @@ EOF
         }
     }
 
-    # Apply observer mode override if needed
-    output = maybe_allow_in_observer_mode(output, sentinel_mode, tool_name)
-
     # Print guidance to stderr for user visibility
-    if output.get('decision') == 'block':
-        print(f"""
+    print(f"""
 🚫 Sentinel Gate: {tool_name} blocked
 
 {reason}
 
 Run CHECK to proceed. See guidance in context.
-""", file=sys.stderr)
-    else:
-        print(f"""
-⚠️ Sentinel Gate: {tool_name} would be blocked (OBSERVER MODE)
-
-{reason}
-
-[OBSERVER MODE: Action allowed but should run CHECK first]
 """, file=sys.stderr)
 
     print(json.dumps(output))
