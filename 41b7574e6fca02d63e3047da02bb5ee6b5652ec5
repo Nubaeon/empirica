@@ -1,0 +1,31 @@
+{
+  "goal_id": "5d98ff86-89ae-438f-b973-d3588cb9069e",
+  "session_id": "f9d9e666-0596-4334-8a9f-2d64cce418a1",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-21T17:27:45.000333+00:00",
+  "goal_data": {
+    "objective": "Investigate existing earned autonomy tools (TrustCalculator, GraduatedSentinel) and determine how to integrate session requirements for praxic work",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Understand current TrustLevel and TrustCalculator implementation",
+      "Document how GraduatedSentinel gates actions",
+      "Identify integration points for session-required praxic work",
+      "Propose design for soft vs hard session requirements"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-21T17:27:45.000343+00:00",
+      "action": "created"
+    }
+  ]
+}
