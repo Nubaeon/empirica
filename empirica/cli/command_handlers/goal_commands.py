@@ -913,117 +913,124 @@ def handle_goals_progress_command(args):
 
 
 def handle_goals_list_command(args):
-    """Handle goals-list command"""
+    """Handle goals-list command - list goals with optional filters
+
+    Scoping (most specific wins):
+    - No filters: show all active goals
+    - --session-id: filter by session
+    - --ai-id: filter by AI
+    - --completed: show completed goals instead of active
+    """
     try:
-        from empirica.core.goals.repository import GoalRepository
-        from empirica.core.tasks.repository import TaskRepository
-        
+        from empirica.data.session_database import SessionDatabase
+
         # Parse arguments
         session_id = getattr(args, 'session_id', None)
         ai_id = getattr(args, 'ai_id', None)
-        completed = getattr(args, 'completed', None)
-        
-        # Parse scope filtering parameters
-        scope_filters = {
-            'breadth_min': getattr(args, 'scope_breadth_min', None),
-            'breadth_max': getattr(args, 'scope_breadth_max', None),
-            'duration_min': getattr(args, 'scope_duration_min', None),
-            'duration_max': getattr(args, 'scope_duration_max', None),
-            'coordination_min': getattr(args, 'scope_coordination_min', None),
-            'coordination_max': getattr(args, 'scope_coordination_max', None),
-        }
-        
-        # Use the real repository to get goals
-        goal_repo = GoalRepository()
-        task_repo = TaskRepository()
-        
+        show_completed = getattr(args, 'completed', False)
+        output_format = getattr(args, 'output', 'human')
+        limit = getattr(args, 'limit', 20) if hasattr(args, 'limit') else 20
+
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Build query based on filters
+        base_query = """
+            SELECT g.id, g.objective, g.status, g.is_completed,
+                   g.created_timestamp, g.session_id, s.ai_id,
+                   (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
+                   (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed') as completed_subtasks
+            FROM goals g
+            LEFT JOIN sessions s ON g.session_id = s.session_id
+            WHERE 1=1
+        """
+        params = []
+
+        # Apply filters
         if session_id:
-            goals = goal_repo.get_session_goals(session_id)
-        elif ai_id:
-            # Get goals for all sessions of a specific AI
-            from empirica.data.session_database import SessionDatabase
-            db = SessionDatabase()
-            cursor = db.conn.cursor()
+            base_query += " AND g.session_id = ?"
+            params.append(session_id)
 
-            # Get all session IDs for the specified AI
-            cursor.execute("""
-                SELECT session_id FROM sessions WHERE ai_id = ?
-                ORDER BY start_time DESC
-            """, (ai_id,))
-            session_ids = [row[0] for row in cursor.fetchall()]
+        if ai_id:
+            base_query += " AND s.ai_id = ?"
+            params.append(ai_id)
 
-            # Get goals from all those sessions
-            goals = []
-            for sid in session_ids:
-                session_goals = goal_repo.get_session_goals(sid)
-                goals.extend(session_goals)
-
-            db.close()
+        # Filter by completion status
+        if show_completed:
+            base_query += " AND (g.is_completed = 1 OR g.status = 'completed')"
         else:
-            # Show helpful reminder with preview of recent goals
-            from empirica.data.session_database import SessionDatabase
-            preview_db = SessionDatabase()
-            cursor = preview_db.conn.cursor()
+            base_query += " AND (g.is_completed = 0 AND g.status != 'completed')"
 
-            # Get 5 most recent goals across all sessions
-            cursor.execute("""
-                SELECT g.id, g.objective, g.created_timestamp, g.session_id,
-                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
-                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed') as completed_subtasks
-                FROM goals g
-                ORDER BY g.created_timestamp DESC
-                LIMIT 5
-            """)
+        base_query += " ORDER BY g.created_timestamp DESC LIMIT ?"
+        params.append(limit)
 
-            preview_goals = []
-            for row in cursor.fetchall():
-                total = row[4] or 0
-                completed = row[5] or 0
-                completion_pct = (completed / total * 100) if total > 0 else 0.0
+        cursor.execute(base_query, params)
+        rows = cursor.fetchall()
 
-                preview_goals.append({
-                    "goal_id": row[0],
-                    "objective": row[1][:80] + "..." if len(row[1]) > 80 else row[1],
-                    "created_at": row[2],
-                    "session_id": row[3],
-                    "completion_percentage": completion_pct,
-                    "subtasks": f"{completed}/{total}"
-                })
+        # Build results
+        # Row: 0=id, 1=objective, 2=status, 3=is_completed, 4=created, 5=session_id, 6=ai_id, 7=total, 8=completed
+        goals = []
+        for row in rows:
+            total = row[7] or 0
+            completed = row[8] or 0
+            progress_pct = (completed / total * 100) if total > 0 else 0.0
 
-            preview_db.close()
-            
-            result = {
-                "ok": False,
-                "session_id": None,
-                "message": "Session ID required for full goals list",
-                "hint": "Create a session: empirica session-create --ai-id <YOUR_AI_ID>",
-                "hint2": "Then query goals: empirica goals-list --session-id <SESSION_ID>",
-                "recent_goals_preview": preview_goals,
-                "preview_count": len(preview_goals),
-                "preview_note": "Showing last 5 goals across all sessions as preview",
-                "timestamp": time.time()
-            }
-            
-            if hasattr(args, 'output') and args.output == 'json':
-                print(json.dumps(result, indent=2))
-            else:
-                print("⚠️  Session ID required for full goals list")
-                print()
-                print("📋 Quick Start:")
-                print("   1. Create session: empirica session-create --ai-id <YOUR_AI_ID>")
-                print("   2. List goals: empirica goals-list --session-id <SESSION_ID>")
-                print()
-                if preview_goals:
-                    print(f"🔍 Recent Goals Preview (last {len(preview_goals)}):")
-                    for i, goal in enumerate(preview_goals, 1):
-                        status_emoji = "✅" if goal['completion_percentage'] == 100.0 else "⏳"
-                        print(f"   {status_emoji} {i}. {goal['objective']}")
-                        print(f"      ID: {goal['goal_id'][:8]}... | Session: {goal['session_id'][:8]}... | Progress: {goal['subtasks']}")
-                else:
-                    print("   (No goals found in database)")
-            
-            goal_repo.close()
+            goals.append({
+                "goal_id": row[0],
+                "objective": row[1],
+                "status": row[2],
+                "is_completed": bool(row[3]),
+                "created_at": row[4],
+                "session_id": row[5],
+                "ai_id": row[6],
+                "progress": f"{completed}/{total}",
+                "progress_pct": progress_pct
+            })
+
+        db.close()
+
+        # Build filter description for output
+        filters_applied = []
+        if session_id:
+            filters_applied.append(f"session={session_id[:8]}...")
+        if ai_id:
+            filters_applied.append(f"ai={ai_id}")
+        filter_desc = ", ".join(filters_applied) if filters_applied else "all"
+        status_desc = "completed" if show_completed else "active"
+
+        result = {
+            "ok": True,
+            "goals_count": len(goals),
+            "goals": goals,
+            "filters": {
+                "session_id": session_id,
+                "ai_id": ai_id,
+                "status": status_desc
+            },
+            "timestamp": time.time()
+        }
+
+        if output_format == 'json':
+            # Return result - CLI core will print as JSON
             return result
+        else:
+            # Human format - print here and return None so CLI core doesn't double-print
+            print(f"{'=' * 70}")
+            print(f"🎯 GOALS ({status_desc.upper()}) - {len(goals)} found [{filter_desc}]")
+            print(f"{'=' * 70}")
+            print()
+
+            if not goals:
+                print("   (No goals found)")
+            else:
+                for i, g in enumerate(goals, 1):
+                    status_emoji = "✅" if g['is_completed'] else ("🔄" if g['progress'] != "0/0" else "⏳")
+                    print(f"{status_emoji} {i}. {g['objective'][:65]}")
+                    ai_info = f" | AI: {g['ai_id']}" if g['ai_id'] else ""
+                    print(f"   ID: {g['goal_id'][:8]}... | Progress: {g['progress']} ({g['progress_pct']:.0f}%){ai_info}")
+                    print()
+
+            return None  # Prevents CLI core from printing dict items
         
         # Convert goals to dictionary format with proper scope filtering
         goals_dict = []
@@ -1324,176 +1331,6 @@ def handle_sessions_resume_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Resume sessions", getattr(args, 'verbose', False))
-
-
-def handle_goals_list_all_command(args):
-    """Handle goals-list-all command - show ALL goals with inline subtasks"""
-    try:
-        from empirica.data.session_database import SessionDatabase
-
-        status_filter = getattr(args, 'status', 'active')
-        limit = getattr(args, 'limit', 20)
-        output = getattr(args, 'output', 'human')
-
-        db = SessionDatabase()
-        cursor = db.conn.cursor()
-
-        # Build query based on status filter
-        # Schema: id, session_id, objective, scope, estimated_complexity, created_timestamp,
-        #         completed_timestamp, is_completed, goal_data, status, beads_issue_id, project_id
-        if status_filter == 'completed':
-            # Goals where all subtasks are completed (or no subtasks)
-            query = """
-                SELECT g.id, g.objective, g.status,
-                       g.created_timestamp, g.session_id, s.ai_id,
-                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
-                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed') as completed_subtasks
-                FROM goals g
-                LEFT JOIN sessions s ON g.session_id = s.session_id
-                WHERE g.status = 'completed'
-                   OR (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) =
-                      (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed')
-                   AND (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) > 0
-                ORDER BY g.created_timestamp DESC
-                LIMIT ?
-            """
-        elif status_filter == 'active':
-            # Goals that are not completed
-            query = """
-                SELECT g.id, g.objective, g.status,
-                       g.created_timestamp, g.session_id, s.ai_id,
-                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
-                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed') as completed_subtasks
-                FROM goals g
-                LEFT JOIN sessions s ON g.session_id = s.session_id
-                WHERE g.status != 'completed'
-                   AND NOT (
-                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) =
-                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed')
-                       AND (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) > 0
-                   )
-                ORDER BY g.created_timestamp DESC
-                LIMIT ?
-            """
-        else:  # 'all'
-            query = """
-                SELECT g.id, g.objective, g.status,
-                       g.created_timestamp, g.session_id, s.ai_id,
-                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
-                       (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed') as completed_subtasks
-                FROM goals g
-                LEFT JOIN sessions s ON g.session_id = s.session_id
-                ORDER BY g.created_timestamp DESC
-                LIMIT ?
-            """
-
-        cursor.execute(query, (limit,))
-        goals_rows = cursor.fetchall()
-
-        # Build result with inline subtasks
-        # Row indices: 0=id, 1=objective, 2=status, 3=created_timestamp, 4=session_id, 5=ai_id, 6=total, 7=completed
-        goals = []
-        for row in goals_rows:
-            goal_id = row[0]
-            total = row[6] or 0
-            completed = row[7] or 0
-            progress_pct = (completed / total * 100) if total > 0 else 0.0
-
-            # Get subtasks for this goal
-            cursor.execute("""
-                SELECT id, description, status, epistemic_importance, created_timestamp
-                FROM subtasks
-                WHERE goal_id = ?
-                ORDER BY
-                    CASE epistemic_importance
-                        WHEN 'critical' THEN 1
-                        WHEN 'high' THEN 2
-                        WHEN 'medium' THEN 3
-                        WHEN 'low' THEN 4
-                        ELSE 5
-                    END,
-                    created_timestamp
-            """, (goal_id,))
-            subtasks_rows = cursor.fetchall()
-
-            subtasks = []
-            for st in subtasks_rows:
-                subtasks.append({
-                    'id': st[0],
-                    'description': st[1],
-                    'status': st[2],
-                    'importance': st[3]  # Keep output key as 'importance' for simplicity
-                })
-
-            goals.append({
-                'id': goal_id,
-                'objective': row[1],
-                'status': row[2],
-                'created_at': row[3],
-                'session_id': row[4],
-                'ai_id': row[5],
-                'progress': {
-                    'total': total,
-                    'completed': completed,
-                    'percentage': round(progress_pct, 1)
-                },
-                'subtasks': subtasks
-            })
-
-        db.close()
-
-        result = {
-            'ok': True,
-            'filter': status_filter,
-            'count': len(goals),
-            'goals': goals
-        }
-
-        if output == 'json':
-            print(json.dumps(result, indent=2))
-        else:
-            # Human-readable format
-            status_label = {'active': 'ACTIVE', 'completed': 'COMPLETED', 'all': 'ALL'}
-            print(f"\n{'='*70}")
-            print(f"🎯 GOALS ({status_label.get(status_filter, status_filter)}) - {len(goals)} found")
-            print(f"{'='*70}\n")
-
-            if not goals:
-                print("  No goals found.")
-                return None
-
-            for i, goal in enumerate(goals, 1):
-                progress = goal['progress']
-                pct = progress['percentage']
-
-                # Status indicator
-                if pct == 100:
-                    status_icon = "✅"
-                elif pct > 0:
-                    status_icon = "🔄"
-                else:
-                    status_icon = "⏳"
-
-                print(f"{status_icon} {i}. {goal['objective']}")
-                print(f"   ID: {goal['id'][:8]}... | Progress: {progress['completed']}/{progress['total']} ({pct}%)")
-                if goal['ai_id']:
-                    print(f"   AI: {goal['ai_id']} | Session: {goal['session_id'][:8]}...")
-
-                # Inline subtasks (full description for AI context)
-                if goal['subtasks']:
-                    for st in goal['subtasks']:
-                        st_icon = "✓" if st['status'] == 'completed' else "○"
-                        imp_badge = f"[{st['importance'][:3]}]" if st['importance'] else ""
-                        # Show full description - truncation loses AI context
-                        print(f"      {st_icon} {imp_badge} {st['description']}")
-                print()
-
-        return None
-
-    except Exception as e:
-        result = {'ok': False, 'error': str(e)}
-        print(json.dumps(result))
-        return 1
 
 
 def handle_goals_search_command(args):
