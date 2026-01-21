@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """
-Empirica Sentinel Gate - Enforces CASCADE workflow before praxic tools.
+Empirica Sentinel Gate - Noetic Firewall with Epistemic ACLs
 
-Gates Edit, Write, NotebookEdit until valid PREFLIGHT + CHECK exist.
+Implements least-privilege principle for AI tool access:
+- NOETIC tools (read/investigate) → always allowed
+- PRAXIC tools (write/execute) → require valid CHECK
+
+This is essentially iptables for cognition - default deny, explicit allow.
 
 Core features (always on):
 - Smart project root discovery (env var, known paths, cwd search)
-- PREFLIGHT requirement detection
+- Noetic tool whitelist (Read, Grep, Glob, etc.)
+- Safe Bash command whitelist (ls, cat, git status, etc.)
+- PREFLIGHT + CHECK requirement for praxic actions
 - Decision parsing (blocks if CHECK returned "investigate")
 - Vector threshold validation (know >= 0.70, uncertainty <= 0.35 after bias)
 
@@ -22,7 +28,51 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-PRAXIC_TOOLS = {'Edit', 'Write', 'NotebookEdit'}
+# Noetic tools - read/investigate/search - always allowed (whitelist)
+NOETIC_TOOLS = {
+    'Read', 'Glob', 'Grep', 'LSP',           # File inspection
+    'WebFetch', 'WebSearch',                  # Web research
+    'Task', 'TaskOutput',                     # Agent delegation
+    'TodoWrite',                              # Planning
+    'AskUserQuestion',                        # User interaction
+    'Skill',                                  # Skill invocation
+    'KillShell',                              # Process management (cleanup)
+}
+
+# Safe Bash command prefixes - read-only operations (ACL)
+SAFE_BASH_PREFIXES = (
+    # File inspection
+    'cat ', 'head ', 'tail ', 'less ', 'more ',
+    'ls', 'ls ', 'dir ', 'tree ', 'file ', 'stat ', 'wc ',
+    'find ', 'locate ', 'which ', 'type ', 'whereis ',
+    # Text search/processing (read-only)
+    'grep ', 'rg ', 'ag ', 'ack ', 'sed -n', 'awk ',
+    # Git read operations
+    'git status', 'git log', 'git diff', 'git show', 'git branch',
+    'git remote', 'git tag', 'git stash list', 'git blame',
+    'git ls-files', 'git ls-tree', 'git cat-file',
+    # Environment inspection
+    'pwd', 'echo ', 'printf ', 'env', 'printenv', 'set',
+    'whoami', 'id', 'hostname', 'uname', 'date', 'cal',
+    # Empirica CLI (has its own auth)
+    'empirica ',
+    # Package inspection (not install)
+    'pip show', 'pip list', 'pip freeze', 'pip index',
+    'npm list', 'npm ls', 'npm view', 'npm info',
+    'cargo tree', 'cargo metadata',
+    # Process inspection
+    'ps ', 'top -b -n 1', 'pgrep ', 'jobs',
+    # Disk inspection
+    'df ', 'du ', 'mount', 'lsblk',
+    # Network inspection (not modification)
+    'curl ', 'wget -O-', 'ping -c', 'dig ', 'nslookup ', 'host ',
+    # Documentation
+    'man ', 'info ', 'help ',
+    # Testing (read-only check)
+    'test ', '[ ',
+)
+
+# Thresholds for CHECK validation
 KNOW_THRESHOLD = 0.70
 UNCERTAINTY_THRESHOLD = 0.35
 KNOW_BIAS = 0.10
@@ -97,6 +147,26 @@ def get_last_compact_timestamp(project_root: Path) -> datetime:
         return None
 
 
+def is_safe_bash_command(tool_input: dict) -> bool:
+    """Check if a Bash command is in the safe (noetic) whitelist."""
+    command = tool_input.get('command', '')
+    if not command:
+        return False
+
+    # Strip leading whitespace and check against safe prefixes
+    command_stripped = command.lstrip()
+
+    # Check if command starts with any safe prefix
+    for prefix in SAFE_BASH_PREFIXES:
+        if command_stripped.startswith(prefix):
+            return True
+        # Also check without trailing space for commands like 'ls', 'pwd'
+        if prefix.endswith(' ') and command_stripped == prefix.rstrip():
+            return True
+
+    return False
+
+
 def main():
     try:
         hook_input = json.loads(sys.stdin.read() or '{}')
@@ -104,16 +174,29 @@ def main():
         hook_input = {}
 
     tool_name = hook_input.get('tool_name', 'unknown')
+    tool_input = hook_input.get('tool_input', {})
 
-    # Allow noetic tools unconditionally
-    if tool_name not in PRAXIC_TOOLS:
-        respond("allow", f"Noetic: {tool_name}")
+    # === NOETIC FIREWALL: Whitelist-based access control ===
+
+    # Rule 1: Noetic tools always allowed (read/investigate)
+    if tool_name in NOETIC_TOOLS:
+        respond("allow", f"Noetic tool: {tool_name}")
         sys.exit(0)
 
-    # Check if sentinel looping is disabled
+    # Rule 2: Safe Bash commands always allowed (read-only shell)
+    if tool_name == 'Bash' and is_safe_bash_command(tool_input):
+        respond("allow", "Safe Bash (read-only)")
+        sys.exit(0)
+
+    # Rule 3: Everything else is PRAXIC - requires CHECK authorization
+    # This includes: Edit, Write, NotebookEdit, unsafe Bash, unknown tools
+
+    # Check if sentinel looping is disabled (escape hatch)
     if os.getenv('EMPIRICA_SENTINEL_LOOPING', 'true').lower() == 'false':
-        respond("allow", "Sentinel looping disabled")
+        respond("allow", "Sentinel disabled")
         sys.exit(0)
+
+    # === AUTHORIZATION CHECK ===
 
     # Setup paths - smart discovery
     project_root = find_project_root()
@@ -142,23 +225,25 @@ def main():
         row = cursor.fetchone()
         if not row or not row[0]:
             db.close()
-            print(f"No project-bootstrap for session {session_id[:8]}. Run: empirica project-bootstrap --session-id {session_id}", file=sys.stderr)
-            sys.exit(2)
+            respond("block", f"No bootstrap for {session_id[:8]}")
+            sys.exit(0)
 
-    # Check for PREFLIGHT
+    # Check for PREFLIGHT (authentication)
     cursor.execute("""
-        SELECT 1 FROM reflexes
+        SELECT timestamp FROM reflexes
         WHERE session_id = ? AND phase = 'PREFLIGHT'
-        LIMIT 1
+        ORDER BY timestamp DESC LIMIT 1
     """, (session_id,))
-    has_preflight = cursor.fetchone() is not None
+    preflight_row = cursor.fetchone()
 
-    if not has_preflight:
+    if not preflight_row:
         db.close()
-        print(f"No PREFLIGHT for session {session_id[:8]}. Run PREFLIGHT first, then CHECK.", file=sys.stderr)
-        sys.exit(2)
+        respond("block", f"No PREFLIGHT for session {session_id[:8]}. Run PREFLIGHT first.")
+        sys.exit(0)
 
-    # Check for CHECK with decision and timestamp
+    preflight_timestamp = preflight_row[0]
+
+    # Check for CHECK (authorization)
     cursor.execute("""
         SELECT know, uncertainty, reflex_data, timestamp
         FROM reflexes
@@ -169,10 +254,18 @@ def main():
     db.close()
 
     if not check_row:
-        print(f"No CHECK for session {session_id[:8]}. Run CHECK first.", file=sys.stderr)
-        sys.exit(2)
+        respond("block", f"No CHECK for session {session_id[:8]}. Run CHECK first.")
+        sys.exit(0)
 
-    know, uncertainty, reflex_data, timestamp = check_row
+    know, uncertainty, reflex_data, check_timestamp = check_row
+
+    # Verify CHECK is after PREFLIGHT (proper sequence)
+    try:
+        if float(check_timestamp) < float(preflight_timestamp):
+            respond("block", f"CHECK predates PREFLIGHT. Run CHECK for current goal.")
+            sys.exit(0)
+    except (TypeError, ValueError):
+        pass  # Can't compare timestamps, skip this check
 
     # Parse decision from reflex_data
     decision = None
@@ -183,36 +276,33 @@ def main():
         except Exception:
             pass
 
-    # Check if decision was "investigate"
+    # Check if decision was "investigate" (not authorized for praxic)
     if decision == 'investigate':
-        print(f"Last CHECK returned 'investigate'. Complete investigation before {tool_name}.", file=sys.stderr)
-        sys.exit(2)
+        respond("block", f"CHECK returned 'investigate'. Complete investigation first.")
+        sys.exit(0)
 
-    # Optional: Check age expiry (disabled by default - problematic for paused sessions)
-    # Users may pause work and resume later; wall-clock time doesn't reflect actual activity
+    # Optional: Check age expiry
     check_time = None
     if os.getenv('EMPIRICA_SENTINEL_CHECK_EXPIRY', 'false').lower() == 'true':
         try:
-            # Handle both ISO format and Unix timestamp (SQLite float)
-            if isinstance(timestamp, (int, float)) or (isinstance(timestamp, str) and timestamp.replace('.', '').isdigit()):
-                check_time = datetime.fromtimestamp(float(timestamp))
+            if isinstance(check_timestamp, (int, float)) or (isinstance(check_timestamp, str) and check_timestamp.replace('.', '').isdigit()):
+                check_time = datetime.fromtimestamp(float(check_timestamp))
             else:
-                check_time = datetime.fromisoformat(timestamp.replace('Z', '+00:00').replace('+00:00', ''))
+                check_time = datetime.fromisoformat(check_timestamp.replace('Z', '+00:00').replace('+00:00', ''))
             age_minutes = (datetime.now() - check_time).total_seconds() / 60
 
             if age_minutes > MAX_CHECK_AGE_MINUTES:
-                print(f"CHECK expired (age={age_minutes:.0f}min > {MAX_CHECK_AGE_MINUTES}min). Run CHECK first.", file=sys.stderr)
-                sys.exit(2)
-        except Exception as e:
-            # Timestamp parsing failed - skip age check rather than blocking
+                respond("block", f"CHECK expired ({age_minutes:.0f}min > {MAX_CHECK_AGE_MINUTES}min)")
+                sys.exit(0)
+        except Exception:
             pass
 
     # Optional: Compact invalidation
     if os.getenv('EMPIRICA_SENTINEL_COMPACT_INVALIDATION', 'false').lower() == 'true':
         last_compact = get_last_compact_timestamp(project_root)
         if last_compact and check_time and last_compact > check_time:
-            print(f"CHECK invalidated by compact. Run CHECK to recalibrate post-compact state.", file=sys.stderr)
-            sys.exit(2)
+            respond("block", "CHECK invalidated by compact. Run CHECK to recalibrate.")
+            sys.exit(0)
 
     # Apply bias corrections and check thresholds
     corrected_know = (know or 0) + KNOW_BIAS
@@ -222,8 +312,8 @@ def main():
         respond("allow", f"CHECK passed (know={corrected_know:.2f}, unc={corrected_unc:.2f})")
         sys.exit(0)
     else:
-        print(f"CHECK failed: know={corrected_know:.2f} (need >=0.70), unc={corrected_unc:.2f} (need <=0.35)", file=sys.stderr)
-        sys.exit(2)
+        respond("block", f"CHECK thresholds not met: know={corrected_know:.2f} (<0.70), unc={corrected_unc:.2f} (>0.35)")
+        sys.exit(0)
 
 
 if __name__ == '__main__':
