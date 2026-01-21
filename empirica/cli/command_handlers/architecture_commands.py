@@ -146,6 +146,7 @@ def _print_assessment_text(assessment):
     ]
 
     def print_vector(name, value, inverted=False):
+        """Print a single vector as a progress bar with optional warning indicator."""
         bar_width = 20
         filled = int(value * bar_width)
         bar = '█' * filled + '░' * (bar_width - filled)

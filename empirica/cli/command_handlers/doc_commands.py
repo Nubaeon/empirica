@@ -7,6 +7,7 @@ from ..cli_utils import handle_cli_error
 
 
 def handle_doc_check_command(args):
+    """Handle doc-check command to compute documentation completeness."""
     try:
         from empirica.core.docs.doc_planner import compute_doc_plan
         project_id = args.project_id
@@ -28,7 +29,7 @@ def handle_doc_check_command(args):
 
 
 def handle_doc_plan_suggest_command(args):
-    # Alias to doc_check with JSON enforced
+    """Handle doc-plan-suggest command, alias to doc-check with JSON output."""
     try:
         from empirica.core.docs.doc_planner import compute_doc_plan
         plan = compute_doc_plan(args.project_id, session_id=getattr(args, 'session_id', None), goal_id=getattr(args, 'goal_id', None))

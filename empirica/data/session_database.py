@@ -1826,15 +1826,17 @@ class SessionDatabase:
         """
         goals_data = self.goals.get_project_goals(project_id)
 
-        # Apply limits to active_goals and incomplete_work
+        # Apply limits to goals and incomplete_work
         truncation_warnings = []
 
-        if 'active_goals' in goals_data:
-            total_active = len(goals_data['active_goals'])
-            if total_active > limit:
-                goals_data['active_goals'] = goals_data['active_goals'][:limit]
-                truncation_warnings.append(f"active_goals: showing {limit} of {total_active} (use 'empirica goals-list' for full list)")
+        # Truncate 'goals' (active goals with subtask counts)
+        if 'goals' in goals_data:
+            total_goals = len(goals_data['goals'])
+            if total_goals > limit:
+                goals_data['goals'] = goals_data['goals'][:limit]
+                truncation_warnings.append(f"goals: showing {limit} of {total_goals} (use 'empirica goals-list' for full list)")
 
+        # Truncate 'incomplete_work'
         if 'incomplete_work' in goals_data:
             total_incomplete = len(goals_data['incomplete_work'])
             if total_incomplete > limit:

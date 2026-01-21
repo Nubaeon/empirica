@@ -118,6 +118,7 @@ def handle_checkpoint_verify_command(args):
         class VerificationSigner(CheckpointSigner):
             """Minimal signer for verification only - doesn't need identity"""
             def __init__(self, git_repo_path=None):
+                """Initialize verification-only signer without identity loading."""
                 self.git_repo_path = git_repo_path or Path.cwd()
                 self.ai_id = "verifier"
                 # Skip identity loading for verification
@@ -179,6 +180,7 @@ def handle_checkpoint_signatures_command(args):
         class ListSigner(CheckpointSigner):
             """Minimal signer for listing only - doesn't need identity"""
             def __init__(self, git_repo_path=None):
+                """Initialize listing-only signer without identity loading."""
                 self.git_repo_path = git_repo_path or Path.cwd()
                 self.ai_id = "lister"
         

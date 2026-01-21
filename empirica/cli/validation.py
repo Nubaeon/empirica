@@ -58,6 +58,7 @@ class NoeticConcept(BaseModel):
     @field_validator('fact_type')
     @classmethod
     def validate_fact_type(cls, v: str) -> str:
+        """Validate that fact_type is one of the allowed noetic concept types."""
         valid_types = {
             'task_understanding', 'decision_rationale', 'learning_insight',
             'epistemic_principle', 'rejected_alternative', 'conditional_knowledge',
@@ -148,6 +149,7 @@ class CheckInput(BaseModel):
     @field_validator('session_id')
     @classmethod
     def validate_session_id(cls, v: str) -> str:
+        """Validate session_id is non-empty."""
         if not v or not v.strip():
             raise ValueError('session_id cannot be empty')
         return v.strip()
@@ -155,6 +157,7 @@ class CheckInput(BaseModel):
     @field_validator('vectors')
     @classmethod
     def validate_vectors(cls, v: Optional[Dict[str, float]]) -> Optional[Dict[str, float]]:
+        """Validate optional vector values are in valid 0.0-1.0 range."""
         if v is None:
             return v
         for key, value in v.items():
@@ -180,6 +183,7 @@ class PostflightInput(BaseModel):
     @field_validator('session_id')
     @classmethod
     def validate_session_id(cls, v: str) -> str:
+        """Validate session_id is non-empty."""
         if not v or not v.strip():
             raise ValueError('session_id cannot be empty')
         return v.strip()
@@ -187,6 +191,7 @@ class PostflightInput(BaseModel):
     @field_validator('vectors')
     @classmethod
     def validate_vectors(cls, v: Dict[str, float]) -> Dict[str, float]:
+        """Validate required vector values are in valid 0.0-1.0 range."""
         if not v:
             raise ValueError('vectors cannot be empty')
         for key, value in v.items():

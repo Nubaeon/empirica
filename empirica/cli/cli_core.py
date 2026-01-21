@@ -34,6 +34,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Custom formatter that groups subcommands by category"""
     
     def _format_action(self, action):
+        """Format action with grouped subcommands by category."""
         try:
             if isinstance(action, argparse._SubParsersAction):
                 categories = {
