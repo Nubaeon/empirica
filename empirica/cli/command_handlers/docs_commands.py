@@ -591,180 +591,265 @@ class EpistemicDocsAgent:
 
     def check_staleness(
         self,
-        threshold: float = 0.7,
+        threshold: float = 0.7,  # Kept for API compatibility, not used
         lookback_days: int = 30
     ) -> dict[str, Any]:
         """
-        Detect stale docs by cross-referencing with recent memory items.
+        Detect stale docs using deterministic heuristics (no AI/semantic search).
 
-        Uses Qdrant semantic search to find docs that may be outdated based on:
-        - Recent findings that contradict or update documented behavior
-        - Dead ends that reference approaches docs still recommend
-        - Mistakes caused by following documented advice
-        - Resolved unknowns with answers differing from docs
+        Fast pre-filter that identifies:
+        1. Orphaned references - Docs mentioning CLI commands or classes that no longer exist
+        2. Undocumented code - New CLI commands or classes with no doc coverage
+        3. Activity gaps - Docs in directories with recent code changes but stale doc timestamps
+        4. Explicit mentions - Dead ends/findings that literally reference doc paths
+
+        For deep semantic analysis, use agent-spawn with an LLM.
 
         Args:
-            threshold: Minimum similarity score to flag (default 0.7)
-            lookback_days: How far back to look for memory items (default 30)
+            threshold: Unused (kept for API compatibility)
+            lookback_days: How far back to check git activity (default 30)
 
         Returns:
-            Dict with staleness report including items by severity and audience
+            Dict with staleness report organized by issue type
         """
-        staleness_items: list[StalenessItem] = []
-        docs_checked = 0
-        memory_items_found = 0
-
-        # Try to get project ID for Qdrant
-        project_id = self._detect_project_id()
-        if not project_id:
-            return {
-                "ok": False,
-                "error": "Could not detect project ID. Run from project root or specify --project-id",
-                "staleness_items": []
-            }
-
-        # Check if Qdrant is available
-        try:
-            from empirica.core.qdrant.vector_store import search, _check_qdrant_available
-            if not _check_qdrant_available():
-                return {
-                    "ok": False,
-                    "error": "Qdrant not available. Start with: docker run -p 6333:6333 qdrant/qdrant",
-                    "staleness_items": []
-                }
-        except ImportError:
-            return {
-                "ok": False,
-                "error": "Qdrant dependencies not installed",
-                "staleness_items": []
-            }
-
-        # Load docs
         docs_dir = self.root / "docs"
         if not docs_dir.exists():
             return {
                 "ok": False,
                 "error": f"No docs directory found at {docs_dir}",
-                "staleness_items": []
+                "issues": []
             }
 
-        # Process each doc file
-        for md_file in docs_dir.rglob("*.md"):
-            if "_archive" in str(md_file):
+        # Gather code inventory
+        cli_commands = set(self._extract_cli_commands())
+        core_modules, _ = self._extract_core_modules()
+        core_classes = set(core_modules)
+
+        # Gather doc inventory
+        docs_content = self._load_all_docs_content()
+        doc_files = list(docs_dir.rglob("*.md"))
+        doc_files = [f for f in doc_files if "_archive" not in str(f)]
+
+        issues: list[dict[str, Any]] = []
+
+        # === Check 1: Undocumented CLI commands ===
+        for cmd in cli_commands:
+            if not self._check_if_documented(cmd, docs_content):
+                issues.append({
+                    "type": "undocumented_code",
+                    "severity": "high",
+                    "item": cmd,
+                    "category": "CLI command",
+                    "suggestion": f"Add documentation for 'empirica {cmd}' command"
+                })
+
+        # === Check 2: Undocumented core classes ===
+        for cls in core_classes:
+            if not self._check_if_documented(cls, docs_content):
+                issues.append({
+                    "type": "undocumented_code",
+                    "severity": "medium",
+                    "item": cls,
+                    "category": "Core class",
+                    "suggestion": f"Add documentation for {cls} class"
+                })
+
+        # === Check 3: Orphaned doc references ===
+        # Check if docs reference CLI commands that no longer exist
+        for doc_file in doc_files:
+            try:
+                content = doc_file.read_text()
+                rel_path = str(doc_file.relative_to(docs_dir))
+
+                # Look for empirica command patterns in docs
+                cmd_pattern = r'empirica\s+([a-z]+-[a-z-]+)'  # Require hyphen to be a command
+                doc_cmds = set(re.findall(cmd_pattern, content))
+
+                for doc_cmd in doc_cmds:
+                    # Skip common words and invalid patterns
+                    if doc_cmd in {'the', 'a', 'an', 'to', 'is', 'and', 'or', 'empirica'}:
+                        continue
+                    if not re.match(r'^[a-z]+-[a-z-]+$', doc_cmd):  # Must have at least one hyphen
+                        continue
+                    if doc_cmd not in cli_commands and len(doc_cmd) > 5:
+                        issues.append({
+                            "type": "orphaned_reference",
+                            "severity": "high",
+                            "doc_path": rel_path,
+                            "item": f"empirica {doc_cmd}",
+                            "category": "Removed CLI command",
+                            "suggestion": f"Remove or update reference to 'empirica {doc_cmd}' - command no longer exists"
+                        })
+            except Exception:
                 continue
 
-            rel_path = str(md_file.relative_to(docs_dir))
-            audience = self._classify_audience(rel_path)
-            effective_threshold = self._get_sensitivity_threshold(audience, threshold)
+        # === Check 4: Git activity gap ===
+        activity_gaps = self._check_git_activity_gaps(docs_dir, lookback_days)
+        for gap in activity_gaps:
+            issues.append({
+                "type": "activity_gap",
+                "severity": "medium",
+                "doc_path": gap["doc_path"],
+                "item": f"{gap['code_commits']} code commits, doc unchanged",
+                "category": "Stale doc",
+                "suggestion": f"Doc may be stale - {gap['code_commits']} commits to related code in last {lookback_days} days"
+            })
 
-            try:
-                content = md_file.read_text()
-                docs_checked += 1
+        # === Check 5: Explicit doc references in memory ===
+        explicit_refs = self._check_explicit_doc_references(docs_dir)
+        for ref in explicit_refs:
+            issues.append({
+                "type": "explicit_reference",
+                "severity": "high",
+                "doc_path": ref["doc_path"],
+                "item": ref["memory_text"][:100],
+                "category": ref["memory_type"],
+                "suggestion": ref["suggestion"]
+            })
 
-                # Extract sections (by headers)
-                sections = self._extract_doc_sections(content)
+        # Categorize by severity
+        high = [i for i in issues if i["severity"] == "high"]
+        medium = [i for i in issues if i["severity"] == "medium"]
+        low = [i for i in issues if i["severity"] == "low"]
 
-                for section_title, section_content in sections:
-                    if len(section_content.strip()) < 50:
-                        continue  # Skip tiny sections
-
-                    # Search memory for similar items
-                    query = f"{section_title} {section_content[:500]}"
-                    try:
-                        results = search(
-                            project_id,
-                            query,
-                            kind="memory",
-                            limit=5
-                        )
-                        memory_matches = results.get("memory", [])
-                    except Exception:
-                        memory_matches = []
-
-                    # Analyze matches for staleness signals
-                    for match in memory_matches:
-                        score = match.get("score", 0.0)
-                        if score < effective_threshold:
-                            continue
-
-                        memory_items_found += 1
-                        memory_type = match.get("type", "finding")
-                        memory_text = match.get("text", "")
-                        timestamp_str = match.get("timestamp", "")
-
-                        # Calculate age
-                        age_days = self._calculate_age_days(timestamp_str)
-                        if age_days > lookback_days:
-                            continue
-
-                        # Determine severity based on score and type
-                        severity = self._determine_severity(
-                            score, memory_type, age_days, audience
-                        )
-
-                        # Generate suggestion
-                        suggestion = self._generate_staleness_suggestion(
-                            memory_type, memory_text, section_title
-                        )
-
-                        staleness_items.append(StalenessItem(
-                            doc_path=rel_path,
-                            section=section_title,
-                            severity=severity,
-                            audience=audience,
-                            memory_type=memory_type,
-                            memory_text=memory_text,
-                            memory_age_days=age_days,
-                            similarity=score,
-                            suggestion=suggestion
-                        ))
-
-            except Exception as e:
-                if self.verbose:
-                    print(f"Warning: Could not process {rel_path}: {e}")
-
-        # Group by severity
-        high_severity = [i for i in staleness_items if i.severity == "high"]
-        medium_severity = [i for i in staleness_items if i.severity == "medium"]
-        low_severity = [i for i in staleness_items if i.severity == "low"]
-
-        # Calculate staleness score
-        if docs_checked > 0:
-            staleness_ratio = len(high_severity) / docs_checked
-            if staleness_ratio >= 0.3:
-                staleness_assessment = "Critical documentation debt"
-            elif staleness_ratio >= 0.15:
-                staleness_assessment = "Significant staleness detected"
-            elif staleness_ratio >= 0.05:
-                staleness_assessment = "Some docs may need updates"
-            else:
-                staleness_assessment = "Documentation appears current"
+        # Assessment
+        if len(high) >= 10:
+            assessment = "Critical documentation debt"
+        elif len(high) >= 5:
+            assessment = "Significant gaps detected"
+        elif len(high) > 0 or len(medium) >= 5:
+            assessment = "Some docs need attention"
         else:
-            staleness_assessment = "No docs checked"
+            assessment = "Documentation appears current"
 
         return {
             "ok": True,
             "summary": {
-                "docs_checked": docs_checked,
-                "memory_items_analyzed": memory_items_found,
-                "high_severity": len(high_severity),
-                "medium_severity": len(medium_severity),
-                "low_severity": len(low_severity),
-                "assessment": staleness_assessment
+                "total_issues": len(issues),
+                "high_severity": len(high),
+                "medium_severity": len(medium),
+                "low_severity": len(low),
+                "assessment": assessment,
+                "cli_commands_checked": len(cli_commands),
+                "core_classes_checked": len(core_classes),
+                "docs_checked": len(doc_files)
+            },
+            "by_type": {
+                "undocumented_code": [i for i in issues if i["type"] == "undocumented_code"],
+                "orphaned_reference": [i for i in issues if i["type"] == "orphaned_reference"],
+                "activity_gap": [i for i in issues if i["type"] == "activity_gap"],
+                "explicit_reference": [i for i in issues if i["type"] == "explicit_reference"]
             },
             "by_severity": {
-                "high": [i.to_dict() for i in high_severity[:10]],
-                "medium": [i.to_dict() for i in medium_severity[:10]],
-                "low": [i.to_dict() for i in low_severity[:5]]
+                "high": high[:15],
+                "medium": medium[:15],
+                "low": low[:10]
             },
-            "by_audience": {
-                "ai": [i.to_dict() for i in staleness_items if i.audience == "ai"][:10],
-                "developer": [i.to_dict() for i in staleness_items if i.audience == "developer"][:10],
-                "user": [i.to_dict() for i in staleness_items if i.audience == "user"][:10]
-            },
-            "threshold_used": threshold,
-            "lookback_days": lookback_days
+            "note": "For deep semantic analysis, use: empirica agent-spawn --task 'Analyze <doc> for staleness'"
         }
+
+    def _check_git_activity_gaps(self, docs_dir: Path, lookback_days: int) -> list[dict]:
+        """Check for docs that haven't been updated despite related code changes."""
+        gaps = []
+        try:
+            import subprocess
+
+            # Get list of files changed in last N days
+            result = subprocess.run(
+                ["git", "log", f"--since={lookback_days} days ago", "--name-only", "--pretty=format:"],
+                capture_output=True, text=True, cwd=self.root
+            )
+            if result.returncode != 0:
+                return gaps
+
+            changed_files = [f.strip() for f in result.stdout.split('\n') if f.strip()]
+
+            # Group changes by directory
+            from collections import Counter
+            dir_changes = Counter()
+            for f in changed_files:
+                if f.startswith("empirica/"):
+                    # Map code path to potential doc area
+                    parts = f.split("/")
+                    if len(parts) >= 2:
+                        area = parts[1]  # e.g., "core", "cli", "data"
+                        dir_changes[area] += 1
+
+            # Check if corresponding docs have been updated
+            for area, count in dir_changes.items():
+                if count < 5:  # Only flag if significant activity
+                    continue
+
+                # Look for docs about this area (exclude archives)
+                area_docs = [d for d in docs_dir.rglob(f"*{area}*.md") if "_archive" not in str(d)]
+                if not area_docs:
+                    continue
+
+                for doc in area_docs:
+                    # Check if doc was modified recently
+                    doc_result = subprocess.run(
+                        ["git", "log", f"--since={lookback_days} days ago", "--oneline", str(doc)],
+                        capture_output=True, text=True, cwd=self.root
+                    )
+                    doc_commits = len([l for l in doc_result.stdout.strip().split('\n') if l])
+
+                    if doc_commits == 0:  # Doc not updated but code was
+                        gaps.append({
+                            "doc_path": str(doc.relative_to(docs_dir)),
+                            "code_area": area,
+                            "code_commits": count,
+                            "doc_commits": doc_commits
+                        })
+
+        except Exception:
+            pass
+
+        return gaps[:10]  # Limit results
+
+    def _check_explicit_doc_references(self, docs_dir: Path) -> list[dict]:
+        """Check if any memory items explicitly reference doc paths."""
+        refs = []
+
+        try:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+
+            # Query recent findings and dead_ends that mention doc paths
+            cursor = db.conn.cursor()
+
+            # Look for mentions of .md files or "docs/" in memory
+            for table, mem_type in [("project_findings", "finding"), ("project_dead_ends", "dead_end")]:
+                try:
+                    cursor.execute(f"""
+                        SELECT text FROM {table}
+                        WHERE (text LIKE '%.md%' OR text LIKE '%docs/%' OR text LIKE '%documentation%')
+                        AND timestamp > ?
+                        ORDER BY timestamp DESC LIMIT 10
+                    """, (datetime.now(timezone.utc).timestamp() - 30*24*3600,))
+
+                    for row in cursor.fetchall():
+                        text = row[0] if row else ""
+                        # Extract mentioned doc paths
+                        md_matches = re.findall(r'[\w/-]+\.md', text)
+                        for md in md_matches:
+                            # Check if this doc exists
+                            potential_path = docs_dir / md
+                            if potential_path.exists() or (docs_dir / md.split('/')[-1]).exists():
+                                refs.append({
+                                    "doc_path": md,
+                                    "memory_type": mem_type,
+                                    "memory_text": text[:200],
+                                    "suggestion": f"Memory explicitly mentions {md} - review for updates"
+                                })
+                except Exception:
+                    continue
+
+            db.close()
+
+        except Exception:
+            pass
+
+        return refs[:5]  # Limit results
 
     def _detect_project_id(self) -> str | None:
         """Detect project ID from .empirica config."""
@@ -1103,9 +1188,9 @@ def _generate_summary(result: dict, categories: list) -> dict:
 
 
 def _print_staleness_output(result: dict, verbose: bool):
-    """Print staleness detection output."""
+    """Print staleness detection output (deterministic heuristics mode)."""
     print("\n" + "=" * 60)
-    print("🔍 DOC STALENESS DETECTION")
+    print("🔍 DOC STALENESS DETECTION (Heuristic Mode)")
     print("=" * 60)
 
     if not result.get("ok"):
@@ -1126,91 +1211,83 @@ def _print_staleness_output(result: dict, verbose: bool):
         icon = "🟢"
 
     print(f"\n{icon} {assessment}")
-    print(f"   Docs checked: {summary['docs_checked']}")
-    print(f"   Memory items analyzed: {summary['memory_items_analyzed']}")
-    print(f"   Threshold: {result.get('threshold_used', 0.7)}")
-    print(f"   Lookback: {result.get('lookback_days', 30)} days")
+    print(f"   CLI commands checked: {summary.get('cli_commands_checked', 0)}")
+    print(f"   Core classes checked: {summary.get('core_classes_checked', 0)}")
+    print(f"   Docs checked: {summary.get('docs_checked', 0)}")
 
     # Severity breakdown
-    print("\n📊 Severity Breakdown:")
+    print("\n📊 Issues Found:")
     print(f"   🔴 High:   {summary['high_severity']}")
     print(f"   🟡 Medium: {summary['medium_severity']}")
     print(f"   🟢 Low:    {summary['low_severity']}")
+
+    # By type breakdown
+    by_type = result.get("by_type", {})
+    undoc = by_type.get("undocumented_code", [])
+    orphan = by_type.get("orphaned_reference", [])
+    gaps = by_type.get("activity_gap", [])
+    explicit = by_type.get("explicit_reference", [])
+
+    print("\n📋 By Type:")
+    print(f"   📝 Undocumented code:    {len(undoc)}")
+    print(f"   🔗 Orphaned references:  {len(orphan)}")
+    print(f"   ⏰ Activity gaps:        {len(gaps)}")
+    print(f"   📌 Explicit mentions:    {len(explicit)}")
 
     # High severity items
     by_severity = result.get("by_severity", {})
     high_items = by_severity.get("high", [])
     if high_items:
         print("\n" + "-" * 60)
-        print("🔴 HIGH SEVERITY (requires attention)")
+        print("🔴 HIGH SEVERITY")
         print("-" * 60)
-        for item in high_items[:5]:
-            _print_staleness_item(item)
+        for item in high_items[:8]:
+            _print_staleness_item_v2(item)
 
-    # Medium severity items (if verbose or few high items)
+    # Medium severity items
     medium_items = by_severity.get("medium", [])
-    if medium_items and (verbose or len(high_items) < 3):
+    if medium_items and (verbose or len(high_items) < 5):
         print("\n" + "-" * 60)
         print("🟡 MEDIUM SEVERITY")
         print("-" * 60)
-        limit = 10 if verbose else 3
+        limit = 8 if verbose else 5
         for item in medium_items[:limit]:
-            _print_staleness_item(item)
+            _print_staleness_item_v2(item)
         if len(medium_items) > limit:
             print(f"   ... and {len(medium_items) - limit} more")
 
-    # Low severity (only if verbose)
-    low_items = by_severity.get("low", [])
-    if low_items and verbose:
-        print("\n" + "-" * 60)
-        print("🟢 LOW SEVERITY (monitor)")
-        print("-" * 60)
-        for item in low_items[:3]:
-            _print_staleness_item(item)
-        if len(low_items) > 3:
-            print(f"   ... and {len(low_items) - 3} more")
-
-    # Audience breakdown
-    by_audience = result.get("by_audience", {})
-    ai_count = len(by_audience.get("ai", []))
-    dev_count = len(by_audience.get("developer", []))
-    user_count = len(by_audience.get("user", []))
-
-    if ai_count or dev_count or user_count:
-        print("\n📋 By Audience:")
-        print(f"   🤖 AI docs:        {ai_count} items")
-        print(f"   👨‍💻 Developer docs: {dev_count} items")
-        print(f"   👤 User docs:      {user_count} items")
+    # Note about deep analysis
+    if result.get("note"):
+        print(f"\n💡 {result['note']}")
 
     print("\n" + "=" * 60)
 
 
-def _print_staleness_item(item: dict):
-    """Print a single staleness item."""
-    doc_path = item.get("doc_path", "unknown")
-    section = item.get("section", "unknown")
-    memory_type = item.get("memory_type", "finding")
-    similarity = item.get("similarity", 0.0)
-    age_days = item.get("memory_age_days", 0)
+def _print_staleness_item_v2(item: dict):
+    """Print a single staleness item (v2 format for deterministic mode)."""
+    issue_type = item.get("type", "unknown")
+    severity = item.get("severity", "medium")
+    doc_path = item.get("doc_path", "")
+    item_name = item.get("item", "")
+    category = item.get("category", "")
     suggestion = item.get("suggestion", "")
-    audience = item.get("audience", "ai")
 
     # Type icons
     type_icons = {
-        "finding": "💡",
-        "dead_end": "🚫",
-        "mistake": "⚠️",
-        "unknown": "❓"
+        "undocumented_code": "📝",
+        "orphaned_reference": "🔗",
+        "activity_gap": "⏰",
+        "explicit_reference": "📌"
     }
-    type_icon = type_icons.get(memory_type, "📝")
+    type_icon = type_icons.get(issue_type, "❓")
 
-    audience_icons = {"ai": "🤖", "developer": "👨‍💻", "user": "👤"}
-    aud_icon = audience_icons.get(audience, "📄")
+    if doc_path:
+        print(f"\n   {type_icon} {doc_path}")
+        print(f"      {category}: {item_name[:60]}")
+    else:
+        print(f"\n   {type_icon} {category}: {item_name[:60]}")
 
-    print(f"\n   {aud_icon} {doc_path}")
-    print(f"      Section: {section[:50]}...")
-    print(f"      {type_icon} {memory_type} (similarity: {similarity:.2f}, {age_days}d ago)")
-    print(f"      💡 {suggestion[:80]}...")
+    print(f"      → {suggestion[:70]}...")
 
 
 def _print_turtle_output(result: dict, verbose: bool):
