@@ -1697,39 +1697,71 @@ class SessionDatabase:
             logger.debug(f"Error getting git status: {e}")
             return None
     
-    def generate_file_tree(self, project_root: str, max_depth: int = 3, use_cache: bool = True) -> Optional[str]:
-        """Generate file tree respecting .gitignore
-        
+    def generate_file_tree(
+        self,
+        project_root: str,
+        max_depth: Optional[int] = None,  # Auto-detect if None
+        use_cache: bool = True,
+        max_chars: int = 8000,  # Truncate if larger
+        adaptive: bool = True   # Auto-reduce depth for large projects
+    ) -> Optional[str]:
+        """Generate file tree respecting .gitignore with smart sizing
+
+        SEARCH-FIRST ARCHITECTURE: Limits tree size to prevent context bloat.
+        Uses adaptive depth for large projects and truncates with warning.
+
         Args:
             project_root: Path to project root
-            max_depth: Tree depth (default: 3)
+            max_depth: Tree depth (auto-detected if None: 2 for large, 3 for small)
             use_cache: Use cached tree if <60s old
-            
+            max_chars: Max characters before truncation (default: 8000)
+            adaptive: Auto-reduce depth for large projects
+
         Returns:
             str: Tree output (plain text, no ANSI codes) or None if tree not available
         """
         import subprocess
         import time
         from pathlib import Path
-        
+
         # Check if tree is installed
         try:
             subprocess.run(["tree", "--version"], capture_output=True, check=True, timeout=1)
         except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
             logger.debug("tree command not available, skipping file tree generation")
             return None
-        
-        cache_key = f"tree_{Path(project_root).name}_{max_depth}"
-        cache_dir = Path(project_root) / ".empirica" / "cache"
+
+        root_path = Path(project_root)
+
+        # Adaptive depth: count top-level directories to estimate project size
+        if max_depth is None:
+            if adaptive:
+                try:
+                    # Count directories at depth 1 (excluding hidden and common large dirs)
+                    skip_dirs = {'.git', '.empirica', 'node_modules', '__pycache__', '.venv', 'venv', 'dist', 'build'}
+                    top_dirs = [d for d in root_path.iterdir() if d.is_dir() and d.name not in skip_dirs and not d.name.startswith('.')]
+
+                    if len(top_dirs) > 15:
+                        max_depth = 2  # Large project: shallow tree
+                        logger.debug(f"Adaptive depth: 2 (large project with {len(top_dirs)} top-level dirs)")
+                    else:
+                        max_depth = 3  # Normal project
+                except Exception:
+                    max_depth = 3
+            else:
+                max_depth = 3
+
+        cache_key = f"tree_{root_path.name}_{max_depth}_{max_chars}"
+        cache_dir = root_path / ".empirica" / "cache"
         cache_file = cache_dir / f"{cache_key}.txt"
-        
+
         # Check cache
         if use_cache and cache_file.exists():
             age = time.time() - cache_file.stat().st_mtime
             if age < 60:  # 60 second cache
                 logger.debug(f"Using cached file tree (age: {age:.1f}s)")
                 return cache_file.read_text()
-        
+
         # Generate tree
         cmd = [
             "tree",
@@ -1739,12 +1771,29 @@ class SessionDatabase:
             "-n",  # No color (plain text)
             project_root
         ]
-        
+
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-            
+
             if result.returncode == 0:
                 tree_output = result.stdout
+
+                # Truncate if too large
+                if len(tree_output) > max_chars:
+                    lines = tree_output.split('\n')
+                    truncated_lines = []
+                    char_count = 0
+                    for line in lines:
+                        if char_count + len(line) + 1 > max_chars - 100:  # Leave room for warning
+                            break
+                        truncated_lines.append(line)
+                        char_count += len(line) + 1
+
+                    tree_output = '\n'.join(truncated_lines)
+                    tree_output += f"\n\n... (truncated, showing {len(truncated_lines)} of {len(lines)} lines)"
+                    tree_output += "\n[Use 'tree -L 4' in Bash for full structure]"
+                    logger.debug(f"Truncated file tree from {len(lines)} to {len(truncated_lines)} lines")
+
                 # Cache it
                 cache_dir.mkdir(parents=True, exist_ok=True)
                 cache_file.write_text(tree_output)
