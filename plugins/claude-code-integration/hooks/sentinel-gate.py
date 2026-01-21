@@ -153,6 +153,12 @@ def is_safe_bash_command(tool_input: dict) -> bool:
     if not command:
         return False
 
+    # Check for dangerous shell operators (command injection prevention)
+    # This blocks: ls; rm -rf, cat file | malicious, echo > file, etc.
+    for operator in DANGEROUS_SHELL_OPERATORS:
+        if operator in command:
+            return False
+
     # Strip leading whitespace and check against safe prefixes
     command_stripped = command.lstrip()
 
