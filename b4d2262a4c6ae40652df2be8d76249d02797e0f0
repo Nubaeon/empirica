@@ -1,0 +1,28 @@
+{
+  "goal_id": "7a3968f5-da31-4b9d-a718-951c609d737d",
+  "session_id": "1cb51f5b-7c4c-4e0f-ab61-7cbd228e0b62",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-21T10:36:50.464882+00:00",
+  "goal_data": {
+    "objective": "Enhance docs-assess with docstring checking and --turtle mode for epistemic recursive iteration between code and docs",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-21T10:36:50.464899+00:00",
+      "action": "created"
+    }
+  ]
+}
