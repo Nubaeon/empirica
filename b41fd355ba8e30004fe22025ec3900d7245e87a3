@@ -1,0 +1,30 @@
+{
+  "goal_id": "7037dd1d-7faf-4c59-a041-415969934330",
+  "session_id": "807fdb4c-455e-478f-ab11-0eeb5091b3ec",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-21T13:24:14.454529+00:00",
+  "goal_data": {
+    "objective": "Debug MCP server instability and project-bootstrap context bloat: (1) Check for multiple MCP instances, (2) Investigate why bootstrap returns 95k+ characters, (3) Clean up stale goals/unknowns if needed",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "MCP server running stably (single instance)",
+      "Bootstrap context reduced to reasonable size",
+      "Stale goals/unknowns cleaned up"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-21T13:24:14.454545+00:00",
+      "action": "created"
+    }
+  ]
+}
