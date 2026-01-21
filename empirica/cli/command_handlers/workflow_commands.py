@@ -15,6 +15,7 @@ import logging
 from ..cli_utils import handle_cli_error, parse_json_safely
 from ..validation import PreflightInput, CheckInput, PostflightInput, safe_validate
 from empirica.core.canonical.empirica_git.sentinel_hooks import SentinelHooks, SentinelDecision, auto_enable_sentinel
+from empirica.utils.session_resolver import resolve_session_id
 
 # Auto-enable Sentinel with default evaluator on module load
 auto_enable_sentinel()
@@ -168,6 +169,17 @@ def handle_preflight_submit_command(args):
                 }))
                 sys.exit(1)
             vectors = validated.vectors  # Use validated vectors
+
+        # Resolve partial session IDs to full UUIDs
+        try:
+            session_id = resolve_session_id(session_id)
+        except ValueError as e:
+            print(json.dumps({
+                "ok": False,
+                "error": f"Invalid session_id: {e}",
+                "hint": "Use full UUID, partial UUID (8+ chars), or 'latest'"
+            }))
+            sys.exit(1)
 
         # Extract all numeric values from vectors (handle both simple and nested formats)
         extracted_vectors = _extract_all_vectors(vectors)
@@ -654,6 +666,17 @@ def handle_check_submit_command(args):
             approach = getattr(args, 'approach', reasoning)  # Fallback to reasoning
             output_format = getattr(args, 'output', 'human')
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
+
+        # Resolve partial session IDs to full UUIDs
+        try:
+            session_id = resolve_session_id(session_id)
+        except ValueError as e:
+            print(json.dumps({
+                "ok": False,
+                "error": f"Invalid session_id: {e}",
+                "hint": "Use full UUID, partial UUID (8+ chars), or 'latest'"
+            }))
+            sys.exit(1)
 
         # BOOTSTRAP GATE: Ensure project context is loaded before CHECK
         # Without bootstrap, CHECK vectors are hollow (same bug as PREFLIGHT-before-bootstrap)
@@ -1401,6 +1424,17 @@ def handle_postflight_submit_command(args):
         # Validate vectors
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")
+
+        # Resolve partial session IDs to full UUIDs
+        try:
+            session_id = resolve_session_id(session_id)
+        except ValueError as e:
+            print(json.dumps({
+                "ok": False,
+                "error": f"Invalid session_id: {e}",
+                "hint": "Use full UUID, partial UUID (8+ chars), or 'latest'"
+            }))
+            sys.exit(1)
 
         # Extract all numeric values from vectors (handle both simple and nested formats)
         extracted_vectors = _extract_all_vectors(vectors)
