@@ -1,0 +1,28 @@
+{
+  "goal_id": "c2e97f89-c5fe-4505-82e8-ce44ed501fbf",
+  "session_id": "ea49c8d3-19c1-4d1a-83d3-80ef9bcedaf2",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-22T14:17:06.410585+00:00",
+  "goal_data": {
+    "objective": "Update CLAUDE_CODE_SETUP.md with current hook installation and plugin integration instructions",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-22T14:17:06.410600+00:00",
+      "action": "created"
+    }
+  ]
+}
