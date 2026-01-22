@@ -1,0 +1,28 @@
+{
+  "goal_id": "c25b3e17-ab0c-4339-a423-2a6534cae95c",
+  "session_id": "705cdec9-606a-49b6-9675-f4038871a9ff",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-22T22:37:44.162156+00:00",
+  "goal_data": {
+    "objective": "Implement git notes stores for all epistemic breadcrumbs: GitFindingStore, GitUnknownStore, GitDeadEndStore, GitMistakeStore. Update CLI commands to write to git notes. Update SYNC_ARCHITECTURE.md with final design.",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-22T22:37:44.162172+00:00",
+      "action": "created"
+    }
+  ]
+}
