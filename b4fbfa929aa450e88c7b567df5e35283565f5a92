@@ -1,0 +1,28 @@
+{
+  "goal_id": "7bbb9f1f-138b-47e6-827b-63c7277f6d0c",
+  "session_id": "ea49c8d3-19c1-4d1a-83d3-80ef9bcedaf2",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-22T14:17:08.033767+00:00",
+  "goal_data": {
+    "objective": "Update empirica-integration plugin to include: statusline config, memory compact hook, Sentinel gate, CLAUDE.md, and MCP server setup",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-22T14:17:08.033790+00:00",
+      "action": "created"
+    }
+  ]
+}
