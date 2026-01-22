@@ -17,36 +17,34 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-# Add empirica to path
-sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
+def find_git_root() -> Path | None:
+    """Find git repository root from current directory."""
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            return Path(result.stdout.strip())
+    except:
+        pass
+    return None
 
 
 def find_project_root() -> Path:
-    """Find Empirica project root with valid database."""
-    def has_valid_db(path: Path) -> bool:
-        db_path = path / '.empirica' / 'sessions' / 'sessions.db'
-        return db_path.exists() and db_path.stat().st_size > 0
-
+    """Find project root - prefers git repo, falls back to cwd."""
+    # First check for explicit workspace root
     if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
         workspace_path = Path(workspace_root).expanduser().resolve()
-        if has_valid_db(workspace_path):
+        if workspace_path.exists():
             return workspace_path
 
-    known_paths = [
-        Path.home() / 'empirical-ai' / 'empirica',
-        Path.home() / 'empirica',
-    ]
-    for path in known_paths:
-        if has_valid_db(path):
-            return path
+    # Try to find git repo root (most common case)
+    git_root = find_git_root()
+    if git_root:
+        return git_root
 
-    current = Path.cwd()
-    for parent in [current] + list(current.parents):
-        if has_valid_db(parent):
-            return parent
-        if parent == parent.parent:
-            break
-
+    # Fall back to current working directory
     return Path.cwd()
 
 

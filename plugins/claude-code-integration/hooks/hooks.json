@@ -1,9 +1,9 @@
 {
-  "description": "Empirica epistemic hooks - Sentinel gating + continuity management",
+  "description": "Empirica epistemic hooks - Noetic firewall + CASCADE workflow automation",
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
@@ -13,7 +13,7 @@
         ]
       },
       {
-        "matcher": "Bash\\((?!cat|ls|grep|find|echo|pwd|cd|git status|git log|git diff|empirica).*\\)",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
@@ -27,11 +27,6 @@
       {
         "matcher": "auto|manual",
         "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${BREADCRUMBS_ROOT:-/home/yogapad/empirical-ai/breadcrumbs}/hooks/pre-compact.sh",
-            "timeout": 15
-          },
           {
             "type": "command",
             "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.py",
@@ -48,12 +43,6 @@
             "type": "command",
             "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/post-compact.py",
             "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "bash ${BREADCRUMBS_ROOT:-/home/yogapad/empirical-ai/breadcrumbs}/hooks/session-start.sh",
-            "timeout": 10,
-            "allowFailure": true
           }
         ]
       },

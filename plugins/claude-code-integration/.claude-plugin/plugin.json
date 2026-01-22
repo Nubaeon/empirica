@@ -1,9 +1,9 @@
 {
   "name": "empirica-integration",
-  "description": "Epistemic continuity across memory compacting - automatic check-drift integration",
+  "description": "Noetic firewall + CASCADE workflow automation - epistemic self-assessment for Claude Code",
   "author": {
     "name": "Empirica Project",
     "url": "https://github.com/Nubaeon/empirica"
   },
-  "version": "1.4.0"
+  "version": "1.5.0"
 }

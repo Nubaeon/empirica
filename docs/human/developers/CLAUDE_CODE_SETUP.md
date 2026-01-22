@@ -11,10 +11,17 @@ This guide sets up Empirica for Claude Code users on Linux, macOS, or Windows.
 | Component | Purpose | Location |
 |-----------|---------|----------|
 | `empirica` | CLI + Python library | pip package |
-| Claude Code plugin | Epistemic hooks, CASCADE workflow | `~/.claude/plugins/local/` |
-| empirica-framework skill | Command reference for AI | `~/.claude/skills/` |
+| `empirica-mcp` | MCP server for Claude Code | pip package |
+| Claude Code plugin | Noetic firewall + CASCADE workflow | `~/.claude/plugins/local/` |
 | System prompt | Teaches Claude how to use Empirica | `~/.claude/CLAUDE.md` |
-| Environment vars | Qdrant, Ollama, autopilot config | Shell profile |
+| Statusline | Real-time epistemic status display | Plugin scripts/ |
+| MCP config | MCP server configuration | `~/.claude/mcp.json` |
+
+The plugin (v1.5.0) now bundles everything in one package:
+- **Sentinel gate** - Noetic firewall that gates praxic tools until CHECK passes
+- **Session hooks** - Auto-creates sessions, bootstraps projects, captures POSTFLIGHT
+- **Statusline script** - Shows epistemic state in terminal
+- **Templates** - CLAUDE.md, mcp.json, settings snippets
 
 ---
 
@@ -61,7 +68,7 @@ pip install empirica-mcp
 Verify:
 ```bash
 empirica --version
-# Should show: 1.4.0
+# Should show: 1.5.0 (or later)
 ```
 
 ---
@@ -165,26 +172,21 @@ EOF
 
 The statusline shows real-time epistemic status in your Claude Code terminal.
 
-Add to `~/.claude/settings.json`:
+Add to `~/.claude/settings.json` (after installing the plugin in Step 4):
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "python3 $(pip show empirica | grep Location | cut -d' ' -f2)/empirica/../scripts/statusline_empirica.py",
+    "command": "python3 ~/.claude/plugins/local/empirica-integration/scripts/statusline_empirica.py",
     "refresh_ms": 5000
   }
 }
 ```
 
-Or if you installed from source:
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "python3 /path/to/empirica/scripts/statusline_empirica.py",
-    "refresh_ms": 5000
-  }
-}
+Or use the template from the plugin:
+```bash
+cat ~/.claude/plugins/local/empirica-integration/templates/settings-statusline.json
+# Merge this into your settings.json
 ```
 
 **Display modes** (set via `EMPIRICA_STATUS_MODE` env var):
@@ -205,26 +207,40 @@ Or if you installed from source:
 
 ## Step 4: Install Empirica Plugin (Recommended)
 
-The plugin enforces the CASCADE workflow and preserves epistemic state automatically.
+The plugin (v1.5.0) enforces the CASCADE workflow and preserves epistemic state automatically.
 
-**What it does:**
-- **PreToolCall hooks** (`sentinel-gate.py`): Gates Edit/Write/Bash until valid CHECK exists
-- **SessionStart hooks** (`session-init.py`, `post-compact.py`): Auto-creates session + bootstrap
-- **SessionEnd hooks** (`session-end-postflight.py`): Auto-captures POSTFLIGHT
+**What it includes:**
+- **Noetic firewall** (`sentinel-gate.py`): Gates praxic tools (Edit/Write/Bash) until CHECK passes
+- **Session hooks** (`session-init.py`, `post-compact.py`): Auto-creates session, bootstraps projects, detects git repos
+- **POSTFLIGHT capture** (`session-end-postflight.py`): Auto-captures learning at session end
+- **Templates**: CLAUDE.md, mcp.json, statusline config - ready to copy
+- **Statusline script**: Real-time epistemic state display
 
 ### Option A: Full Plugin (Recommended)
 
 1. **Copy plugin to Claude plugins directory:**
 ```bash
-# From Empirica source
+# Create plugin directory
+mkdir -p ~/.claude/plugins/local
+
+# From Empirica source (if cloned)
 cp -r /path/to/empirica/plugins/claude-code-integration ~/.claude/plugins/local/empirica-integration
 
-# Or if installed via pip, find the path:
-pip show empirica | grep Location
-# Then copy from that location
+# Or if installed via pip:
+EMPIRICA_PATH=$(pip show empirica | grep Location | cut -d' ' -f2)
+cp -r "$EMPIRICA_PATH/empirica/../plugins/claude-code-integration" ~/.claude/plugins/local/empirica-integration
 ```
 
-2. **Register local marketplace** (create `~/.claude/plugins/known_marketplaces.json`):
+2. **Copy templates to Claude config:**
+```bash
+# System prompt
+cp ~/.claude/plugins/local/empirica-integration/templates/CLAUDE.md ~/.claude/CLAUDE.md
+
+# MCP server config (merge with existing if you have one)
+cp ~/.claude/plugins/local/empirica-integration/templates/mcp.json ~/.claude/mcp.json
+```
+
+3. **Register local marketplace** (create `~/.claude/plugins/known_marketplaces.json`):
 ```json
 {
   "local": {
@@ -237,7 +253,7 @@ pip show empirica | grep Location
 }
 ```
 
-3. **Add to installed plugins** (`~/.claude/plugins/installed_plugins.json`):
+4. **Add to installed plugins** (`~/.claude/plugins/installed_plugins.json`):
 ```json
 {
   "version": 2,
@@ -246,7 +262,7 @@ pip show empirica | grep Location
       {
         "scope": "user",
         "installPath": "~/.claude/plugins/local/empirica-integration",
-        "version": "1.0.0",
+        "version": "1.5.0",
         "isLocal": true
       }
     ]
@@ -254,7 +270,7 @@ pip show empirica | grep Location
 }
 ```
 
-4. **Enable in settings** (`~/.claude/settings.json`):
+5. **Enable in settings** (`~/.claude/settings.json`):
 ```json
 {
   "enabledPlugins": {
@@ -263,7 +279,7 @@ pip show empirica | grep Location
 }
 ```
 
-5. **Restart Claude Code**
+6. **Restart Claude Code**
 
 ### Option B: Simple Shell Hooks (Lightweight Alternative)
 
