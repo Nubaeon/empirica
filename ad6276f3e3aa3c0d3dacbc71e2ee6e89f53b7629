@@ -1,0 +1,28 @@
+🍞 BREADCRUMBS - 2026-01-22T22:11:46+01:00
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BRANCH: develop
+
+LAST_TASK:
+yeah thats the question, this is unusually complex which I suppose is expected given the speed of growth of everything and the different elements that require synching. Whatever is used I want to think from a security first perspective because this data is sensitive and will likely be targetted on route, however its synched. Lets go through all the options focusing on git which already does version control, whatever it is it must grow with the system (empirica has external dependendy projects wi
+
+MODIFIED_FILES:
+   M .breadcrumbs.yaml
+
+RECENT_COMMITS:
+  391b85e3 fix(docs): Correct version reference in CLAUDE_CODE_SETUP.md
+  bd3bf7fa feat(plugin): Restructure empirica-integration plugin v1.5.0
+  b4fbfa92 fix: Add shell operator injection check to noetic firewall
+  b4ba154f [auto] Pre-compact snapshot - 2026-01-21 23:13:01
+  8d11bd3a chore: automated release 1.4.0
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EPISTEMIC STATE (self-assess on resume)
+
+Please assess your current epistemic state:
+- CONFIDENCE: Rate 1-5 (1=guessing, 3=reasonable, 5=certain) where you are on understanding this codebase/task
+- UNCERTAINTIES: What are you unsure about? What needs verification?
+- KEY_DECISIONS: What important decisions were made that you should remember?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Continue from where you left off.
