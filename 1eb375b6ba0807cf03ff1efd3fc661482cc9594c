@@ -1,0 +1,33 @@
+🍞 BREADCRUMBS - 2026-01-22T23:41:01+01:00
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BRANCH: develop
+
+LAST_TASK:
+yeah lets build it, if every finding and unknown, deadend is stored we can upodate the doc we created or create a new one and remove the other. Lets create goals for this so we can do as many epistemic loops as needed
+
+MODIFIED_FILES:
+   M .breadcrumbs.yaml
+  ?? docs/architecture/SYNC_ARCHITECTURE.md
+  ?? empirica/core/canonical/empirica_git/dead_end_store.py
+  ?? empirica/core/canonical/empirica_git/finding_store.py
+  ?? empirica/core/canonical/empirica_git/mistake_store.py
+  ?? empirica/core/canonical/empirica_git/unknown_store.py
+
+RECENT_COMMITS:
+  ad6276f3 [auto] Pre-compact snapshot - 2026-01-22 22:11:45
+  391b85e3 fix(docs): Correct version reference in CLAUDE_CODE_SETUP.md
+  bd3bf7fa feat(plugin): Restructure empirica-integration plugin v1.5.0
+  b4fbfa92 fix: Add shell operator injection check to noetic firewall
+  b4ba154f [auto] Pre-compact snapshot - 2026-01-21 23:13:01
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EPISTEMIC STATE (self-assess on resume)
+
+Please assess your current epistemic state:
+- CONFIDENCE: Rate 1-5 (1=guessing, 3=reasonable, 5=certain) where you are on understanding this codebase/task
+- UNCERTAINTIES: What are you unsure about? What needs verification?
+- KEY_DECISIONS: What important decisions were made that you should remember?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Continue from where you left off.
