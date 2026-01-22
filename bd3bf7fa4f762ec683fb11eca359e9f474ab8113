@@ -1,0 +1,28 @@
+{
+  "goal_id": "9bd26841-36e7-495c-a875-ef8eff7acfb4",
+  "session_id": "e3c4decf-ac60-450e-94ff-25fa7dc60255",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-22T14:30:15.855210+00:00",
+  "goal_data": {
+    "objective": "Simplify documentation for regular users with links to deeper docs",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-22T14:30:15.855230+00:00",
+      "action": "created"
+    }
+  ]
+}
