@@ -1,0 +1,28 @@
+{
+  "goal_id": "d1eededa-1f9a-4f9d-9dc4-bf8e651f109e",
+  "session_id": "705cdec9-606a-49b6-9675-f4038871a9ff",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-22T21:07:55.372794+00:00",
+  "goal_data": {
+    "objective": "Design secure, user-friendly sync architecture for Empirica data across devices - must scale with system growth, leverage git notes, and abstract complexity from end users",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-22T21:07:55.372810+00:00",
+      "action": "created"
+    }
+  ]
+}
