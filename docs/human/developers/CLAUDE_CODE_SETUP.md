@@ -68,7 +68,7 @@ pip install empirica-mcp
 Verify:
 ```bash
 empirica --version
-# Should show: 1.5.0 (or later)
+# Should show: 1.4.0 (or later)
 ```
 
 ---
