@@ -1,14 +1,14 @@
 ---
 name: empirica-framework
 description: "This skill should be used when the user asks to 'assess my knowledge state', 'run preflight', 'do a postflight', 'use CASCADE workflow', 'track what I know', 'measure learning', 'check epistemic drift', 'spawn investigation agents', 'create handoff', or mentions epistemic vectors, calibration, noetic/praxic phases, functional self-awareness, or structured investigation before coding tasks."
-version: 1.4.0
+version: 1.5.0
 ---
 
 # Empirica: Epistemic Framework for Claude Code
 
 Measure what you know. Track what you learn. Prevent overconfidence.
 
-**v1.4.0 Epistemic-First Model:** Assessment reveals complexity - you cannot know what requires investigation without investigation. Always start with a micro-PREFLIGHT.
+**v1.5.0 Epistemic-First Model:** Assessment reveals complexity - you cannot know what requires investigation without investigation. Always start with a micro-PREFLIGHT.
 
 ## Two Axes: Workflow vs Thinking
 
@@ -32,13 +32,17 @@ hypothesize, search, read      deploy, test, implement
 
 You CHOOSE when to use noetic vs praxic thinking. CHECK gates the transition.
 
-## Bias Corrections (v1.4.0 Calibration - 2100+ observations)
+## Bias Corrections (v1.5.0 Calibration - 2483 observations)
 
 Apply these corrections to your self-assessments:
-- **Completion:** +0.48 (massively underestimate progress)
-- **Change:** +0.40 (underestimate impact of changes)
-- **Uncertainty:** -0.05 (slightly overestimate doubt)
-- **Know/Context/Do/Clarity:** ~+0.01 to +0.08 (well calibrated)
+- **Completion:** +0.80 (massively underestimate progress)
+- **Know:** +0.32 (significant underestimation)
+- **Clarity:** +0.25 (underestimate understanding)
+- **Change/Density:** +0.22 (underestimate impact and info richness)
+- **Signal:** +0.21 (underestimate relevance)
+- **Uncertainty:** -0.21 (overestimate doubt)
+- **Do/Context/Coherence/State:** +0.13 to +0.15 (moderate humility tax)
+- **Impact/Engagement:** ~+0.08/-0.03 (well calibrated)
 
 **Readiness gate:** know ≥0.70 AND uncertainty ≤0.35 (after bias correction)
 
@@ -196,9 +200,9 @@ empirica handoff-create --session-id <ID> \
 empirica handoff-query --session-id <ID> --output json
 ```
 
-## Memory Commands (Qdrant)
+## Memory Commands (Qdrant - Optional)
 
-Empirica v1.4.0 includes semantic memory via Qdrant:
+Empirica supports semantic memory via Qdrant for enhanced project search:
 
 ```bash
 # Focused search (eidetic facts + episodic session arcs)
@@ -214,11 +218,13 @@ empirica project-search --project-id <ID> --task "query" --global
 empirica project-embed --project-id <ID> --output json
 ```
 
-**Automatic ingestion:**
+**Automatic ingestion (when Qdrant available):**
 - `finding-log` → creates eidetic facts + triggers immune decay on lessons
 - `postflight-submit` → creates episodic session narratives + auto-embeds
 
-**Requires:** `export EMPIRICA_QDRANT_URL="http://localhost:6333"`
+**Optional setup:** `export EMPIRICA_QDRANT_URL="http://localhost:6333"`
+
+Empirica works fully without Qdrant - core CASCADE workflow, goals, findings, and calibration all use SQLite. Qdrant adds semantic search across sessions and projects.
 
 ## Semantic Search Triggers
 
@@ -288,9 +294,21 @@ Sentinel controls when praxic actions (Edit, Write, NotebookEdit) are allowed:
 - PREFLIGHT requirement (must assess before acting)
 - Decision parsing (blocks if CHECK returned "investigate")
 - Vector threshold validation (blocks if not ready)
+- **Anti-gaming:** Minimum noetic duration (30s) with evidence check
+
+**Anti-gaming mitigation (v1.5.0):**
+The Sentinel blocks rushed assessments that lack investigation evidence:
+- If CHECK submitted <30 seconds after PREFLIGHT
+- AND no findings or unknowns logged in that window
+- → Blocked with "Rushed assessment. Investigate and log learnings first."
+
+This prevents PREFLIGHT→CHECK speedruns without actual noetic work.
 
 **Optional features (off by default):**
 ```bash
+# Adjust minimum noetic duration (default: 30 seconds)
+export EMPIRICA_MIN_NOETIC_DURATION=60
+
 # Enable 30-minute CHECK expiry (problematic for paused sessions)
 export EMPIRICA_SENTINEL_CHECK_EXPIRY=true
 
@@ -315,7 +333,15 @@ This plugin includes automatic hooks that enforce the CASCADE workflow:
 - **SessionStart:compact** (`post-compact.py`): Auto-recovers session + bootstrap, prompts for CHECK
 - **SessionEnd** (`session-end-postflight.py`): Auto-captures POSTFLIGHT with final vectors
 
-**MCP integration:** Set `EMPIRICA_EPISTEMIC_MODE=true` to enable VectorRouter (routes based on vectors).
+**MCP integration:** The `empirica-mcp` server provides all Empirica tools to Claude Code.
+
+**Important: MCP Server Restart**
+After updating empirica-mcp code (e.g., via `pipx upgrade empirica-mcp`), you must restart the server:
+```bash
+pkill -f empirica-mcp  # Kill running server
+# Then use /mcp in Claude Code to reconnect
+```
+The `/mcp` command only reconnects the socket - it doesn't restart the process. Changes won't take effect until the server process is restarted.
 
 These run automatically - the workflow is enforced, not just suggested.
 
@@ -340,19 +366,20 @@ empirica handoff-create ...              # Create handoff
 ## Best Practices
 
 **DO:**
-- Apply bias corrections (+0.10 uncertainty)
+- Apply bias corrections (see v1.5.0 calibration table above)
 - Be honest about uncertainty (it's data, not failure)
-- Log findings as you discover them
+- Log findings as you discover them (also provides anti-gaming evidence)
 - Use CHECK before major actions
 - Compare POSTFLIGHT to PREFLIGHT
 - Spawn subagents for parallel investigation
 
 **DON'T:**
-- Inflate scores to "look good"
-- Skip PREFLIGHT (you lose calibration baseline)
+- Inflate scores to "look good" (Sentinel detects rushed assessments)
+- Skip PREFLIGHT (you lose calibration baseline AND get blocked)
 - Ignore high uncertainty signals
 - Forget to log what you learned
 - Proceed without CHECK when uncertainty > 0.5
+- Rush PREFLIGHT→CHECK without actual investigation
 
 ## More Information
 
