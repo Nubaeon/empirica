@@ -4,7 +4,7 @@ Empirica Sentinel Gate - Noetic Firewall with Epistemic ACLs
 
 Implements least-privilege principle for AI tool access:
 - NOETIC tools (read/investigate) → always allowed
-- PRAXIC tools (write/execute) → require valid CHECK
+- PRAXIC tools (write/execute) → require PREFLIGHT, auto-proceed if confident
 
 This is essentially iptables for cognition - default deny, explicit allow.
 
@@ -12,9 +12,10 @@ Core features (always on):
 - Smart project root discovery (env var, known paths, cwd search)
 - Noetic tool whitelist (Read, Grep, Glob, etc.)
 - Safe Bash command whitelist (ls, cat, git status, etc.)
-- PREFLIGHT + CHECK requirement for praxic actions
+- PREFLIGHT required for praxic actions (epistemic assessment)
+- AUTO-PROCEED: If PREFLIGHT passes gate (know >= 0.70, unc <= 0.35), skip CHECK
+- LOW-CONFIDENCE: If PREFLIGHT fails gate, explicit CHECK required
 - Decision parsing (blocks if CHECK returned "investigate")
-- Vector threshold validation (know >= 0.70, uncertainty <= 0.35 after bias)
 
 Optional features (off by default):
 - EMPIRICA_SENTINEL_REQUIRE_BOOTSTRAP=true - Require project-bootstrap before praxic
@@ -249,9 +250,9 @@ def main():
             respond("deny", f"No bootstrap for {session_id[:8]}. Run: empirica project-bootstrap")
             sys.exit(0)
 
-    # Check for PREFLIGHT (authentication)
+    # Check for PREFLIGHT (authentication) - with vectors for auto-proceed
     cursor.execute("""
-        SELECT timestamp FROM reflexes
+        SELECT know, uncertainty, timestamp FROM reflexes
         WHERE session_id = ? AND phase = 'PREFLIGHT'
         ORDER BY timestamp DESC LIMIT 1
     """, (session_id,))
@@ -262,9 +263,19 @@ def main():
         respond("deny", f"No PREFLIGHT. Assess your knowledge state first.")
         sys.exit(0)
 
-    preflight_timestamp = preflight_row[0]
+    preflight_know, preflight_uncertainty, preflight_timestamp = preflight_row
 
-    # Check for CHECK (authorization)
+    # Apply bias corrections to PREFLIGHT vectors
+    corrected_preflight_know = (preflight_know or 0) + KNOW_BIAS
+    corrected_preflight_unc = (preflight_uncertainty or 1) + UNCERTAINTY_BIAS
+
+    # AUTO-PROCEED: If PREFLIGHT passes readiness gate, skip CHECK requirement
+    if corrected_preflight_know >= KNOW_THRESHOLD and corrected_preflight_unc <= UNCERTAINTY_THRESHOLD:
+        db.close()
+        respond("allow", f"PREFLIGHT passed gate (know={corrected_preflight_know:.2f}, unc={corrected_preflight_unc:.2f}) - auto-proceed")
+        sys.exit(0)
+
+    # PREFLIGHT confidence too low - require explicit CHECK
     cursor.execute("""
         SELECT know, uncertainty, reflex_data, timestamp
         FROM reflexes
@@ -275,7 +286,7 @@ def main():
     db.close()
 
     if not check_row:
-        respond("deny", f"No CHECK. Verify readiness before praxic action.")
+        respond("deny", f"Low confidence (know={corrected_preflight_know:.2f}, unc={corrected_preflight_unc:.2f}). Submit CHECK to verify readiness.")
         sys.exit(0)
 
     know, uncertainty, reflex_data, check_timestamp = check_row
