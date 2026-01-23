@@ -57,6 +57,10 @@ from mcp import types
 
 # Empirica CLI configuration - use PATH for portability
 EMPIRICA_CLI = shutil.which("empirica")
+
+# Output size limits to prevent oversized responses
+MAX_OUTPUT_SIZE = 30000  # 30K characters max
+TRUNCATION_WARNING = "\n\n⚠️ OUTPUT TRUNCATED: Response exceeded {max_size} characters ({actual_size} total). Use 'empirica project-bootstrap --depth moderate' or query specific data."
 if not EMPIRICA_CLI:
     # Fallback: try common installation locations
     possible_paths = [
@@ -1406,6 +1410,13 @@ async def route_to_cli(tool_name: str, arguments: dict) -> List[types.TextConten
     if result.returncode == 0:
         # Parse text output to JSON for commands that don't support --output json yet
         output = parse_cli_output(tool_name, result.stdout, result.stderr, arguments)
+
+        # Truncate oversized outputs to prevent context overflow
+        if len(output) > MAX_OUTPUT_SIZE:
+            truncated = output[:MAX_OUTPUT_SIZE]
+            warning = TRUNCATION_WARNING.format(max_size=MAX_OUTPUT_SIZE, actual_size=len(output))
+            output = truncated + warning
+
         return [types.TextContent(type="text", text=output)]
     else:
         return [types.TextContent(
