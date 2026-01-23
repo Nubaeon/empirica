@@ -1,0 +1,30 @@
+{
+  "goal_id": "398f8eb4-137d-44be-91bf-f43a1db890ee",
+  "session_id": "da07688f-fc21-4713-9774-aed33ee55b61",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-23T13:33:05.915800+00:00",
+  "goal_data": {
+    "objective": "Investigate and fix Sentinel hook error: hooks show 'error' and fail to gate praxic tools properly when outside a session",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Sentinel properly blocks praxic tools without valid CHECK",
+      "No 'hook error' display when hook executes correctly",
+      "Works both in and out of session context"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-23T13:33:05.915812+00:00",
+      "action": "created"
+    }
+  ]
+}
