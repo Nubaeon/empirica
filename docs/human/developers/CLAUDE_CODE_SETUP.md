@@ -196,18 +196,18 @@ cat ~/.claude/plugins/local/empirica-integration/templates/settings-statusline.j
 - `full`: Everything with raw values
 
 **Status indicators:**
-- `⚡84%` = confidence score
-- `no goal` / `goal name` = active goal status
+- `⚡84%` = confidence score (⚡ high, 💡 good, 💫 uncertain, 🌑 low)
+- `🎯3 ❓12/5` = open goals (3) and unknowns (12 total, 5 blocking goals)
 - `PREFLIGHT/CHECK/POSTFLIGHT` = CASCADE workflow phase
 - `K:90% U:15% C:90%` = know/uncertainty/context vectors
-- `Δ K:+0.25 U:-0.25` = learning delta (vector changes)
-- `✓ stable` / `⚠ drifting` = drift status
+- `Δ K:+0.25 U:-0.15 ✓:+0.80` = learning deltas (K=know, U=uncertainty, ✓=completion)
+- `✓ stable` / `⚠ drifting` / `✗ severe` = drift status
 
 ---
 
 ## Step 4: Install Empirica Plugin (Recommended)
 
-The plugin (v1.5.0) enforces the CASCADE workflow and preserves epistemic state automatically.
+The plugin (v1.4.1) enforces the CASCADE workflow and preserves epistemic state automatically.
 
 **What it includes:**
 - **Noetic firewall** (`sentinel-gate.py`): Gates praxic tools (Edit/Write/Bash) until CHECK passes
