@@ -1,0 +1,16 @@
+{
+  "finding_id": "89fb4e5f-dc90-4b63-a6fa-c6ac280b0b7e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "da07688f-fc21-4713-9774-aed33ee55b61",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T13:39:46.504568+00:00",
+  "finding": "ROOT CAUSE: Same sentinel-gate.py hook defined in BOTH settings.json (absolute paths) AND plugin hooks.json (${CLAUDE_PLUGIN_ROOT}). Claude Code runs BOTH, causing duplicate execution and two 'hook error' messages. Previous dead end confirmed: 'Auto-discovery doesn't work reliably for local plugins' - settings.json should be authoritative. Fix: Remove PreToolUse from plugin hooks.json.",
+  "impact": 0.95,
+  "goal_id": "398f8eb4-137d-44be-91bf-f43a1db890ee",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "ROOT CAUSE: Same sentinel-gate.py hook defined in BOTH settings.json (absolute paths) AND plugin hooks.json (${CLAUDE_PLUGIN_ROOT}). Claude Code runs BOTH, causing duplicate execution and two 'hook error' messages. Previous dead end confirmed: 'Auto-discovery doesn't work reliably for local plugins' - settings.json should be authoritative. Fix: Remove PreToolUse from plugin hooks.json.",
+    "impact": 0.95
+  }
+}
