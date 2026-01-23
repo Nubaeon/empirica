@@ -1,0 +1,28 @@
+{
+  "goal_id": "0651f759-7f5c-48f2-8a0a-e1b6786c86c4",
+  "session_id": "e8b61aba-ddc0-4e79-8b64-7e40a5504478",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-23T12:52:02.239110+00:00",
+  "goal_data": {
+    "objective": "Phase 2: Claude Code Integration - UserPromptSubmit hook, disclosure injection, env configuration",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-23T12:52:02.239128+00:00",
+      "action": "created"
+    }
+  ]
+}
