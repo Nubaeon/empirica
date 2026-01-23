@@ -1,0 +1,16 @@
+{
+  "finding_id": "94430ff3-fdf8-4ccb-82f5-edcb6c984b66",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "1110ed11-8735-4901-adea-60d8c9e8ad4f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T16:16:01.151590+00:00",
+  "finding": "session_snapshot MCP failure root cause: The MCP server process wasn't restarted after pipx reinstall. The /mcp command only reconnects the socket but doesn't restart the server process. The old code is still running in memory. Need to kill and restart the empirica-mcp process, not just reconnect.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "session_snapshot MCP failure root cause: The MCP server process wasn't restarted after pipx reinstall. The /mcp command only reconnects the socket but doesn't restart the server process. The old code is still running in memory. Need to kill and restart the empirica-mcp process, not just reconnect.",
+    "impact": 0.8
+  }
+}
