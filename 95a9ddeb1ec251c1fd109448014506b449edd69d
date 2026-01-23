@@ -1,0 +1,28 @@
+{
+  "goal_id": "77eb6bf6-524b-4a26-b2b1-ba8512773876",
+  "session_id": "e8b61aba-ddc0-4e79-8b64-7e40a5504478",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-23T12:52:47.766065+00:00",
+  "goal_data": {
+    "objective": "Phase 4: Calibration & Learning - prediction tracking, accuracy measurement, feedback loop with Empirica",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-23T12:52:47.766085+00:00",
+      "action": "created"
+    }
+  ]
+}
