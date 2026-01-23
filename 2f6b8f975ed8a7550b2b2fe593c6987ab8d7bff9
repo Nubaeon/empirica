@@ -1,0 +1,13 @@
+{
+  "unknown_id": "0dd78543-9e34-49e6-9310-ff3ccfe1202a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "1110ed11-8735-4901-adea-60d8c9e8ad4f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T16:03:35.244619+00:00",
+  "unknown": "Post-compact hooks create TWO sessions instead of one: SessionStart:compact hook ran twice, creating sessions 1110ed11... and f812144a.... Sentinel then checks the first one (no PREFLIGHT) and blocks. Need to dedupe session creation in post-compact.py or add guard to prevent duplicate SessionStart triggers.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
