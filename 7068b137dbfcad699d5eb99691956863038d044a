@@ -1,0 +1,11 @@
+{
+  "dead_end_id": "0774211b-63b0-4943-b8e3-8c275cfa2bda",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bb4bc2b8-f626-4ee3-b150-524208b55687",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T17:02:50.312622+00:00",
+  "approach": "Looking for duplicate hooks in settings.json when hooks run twice",
+  "why_failed": "The duplicate was in orphaned plugin CACHE at ~/.claude/plugins/cache/local/, not in settings.json. Claude Code loads hooks from both active plugins AND orphaned cache directories. Always check cache directory for duplicates.",
+  "goal_id": null,
+  "subtask_id": null
+}
