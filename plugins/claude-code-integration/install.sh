@@ -5,7 +5,7 @@
 set -e
 
 PLUGIN_NAME="empirica-integration"
-PLUGIN_VERSION="1.5.0"
+PLUGIN_VERSION="1.4.1"
 PLUGIN_DIR="$HOME/.claude/plugins/local/$PLUGIN_NAME"
 MARKETPLACE_DIR="$HOME/.claude/plugins/local/.claude-plugin"
 SETTINGS_FILE="$HOME/.claude/settings.json"

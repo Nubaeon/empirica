@@ -5,6 +5,24 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-01-23
+
+### Added
+- **Sentinel Safe Pipe Chains** - Noetic firewall now allows piped commands to safe read-only targets (head, tail, wc, grep, sort, etc.) while blocking dangerous pipes
+- **Anti-Gaming Mitigations** - Sentinel detects rushed PREFLIGHT→CHECK transitions (<30s) without investigation evidence
+- **Complete Plugin Installer** - One-line curl install for Claude Code integration with all components (hooks, statusline, CLAUDE.md, MCP server)
+
+### Changed
+- **Calibration Update** - 2496 observations, updated bias corrections (completion: +0.75, know: +0.17, uncertainty: -0.11)
+- **Qdrant Optional** - Memory/semantic search features gracefully handle missing Qdrant; core CASCADE uses SQLite only
+- **MCP Tool Mappings** - Added missing tools (session_snapshot, goals_ready, goals_claim, investigate, vision_analyze, edit_with_confidence)
+- **MCP Output Limiting** - Responses capped at 30K characters to prevent context overflow
+
+### Fixed
+- **Dual Session Creation** - Fixed orphaned plugin cache causing SessionStart hooks to run twice
+- **Sentinel Messages** - Improved denial messages with specific vector values and guidance
+- **Auto-Proceed CHECK** - High-confidence PREFLIGHT (know≥0.70, unc≤0.35) now auto-proceeds without explicit CHECK
+
 ## [1.4.0] - 2026-01-21
 
 ### Added

@@ -74,17 +74,25 @@ SAFE_BASH_PREFIXES = (
 )
 
 # Dangerous shell operators (command injection prevention)
-# Blocks: ls; rm -rf, cat file | malicious, echo > file, etc.
+# Blocks: ls; rm -rf, echo > file, etc.
+# NOTE: Pipes handled separately - allowed only to safe targets
 DANGEROUS_SHELL_OPERATORS = (
     ';',      # Command chaining
     '&&',     # Conditional AND
     '||',     # Conditional OR
-    '|',      # Pipe (could send to malicious command)
     '`',      # Backtick command substitution
     '$(',     # Modern command substitution
     '>',      # Output redirection
     '>>',     # Append redirection
     '<',      # Input redirection
+)
+
+# Safe pipe targets - read-only commands that can receive piped input
+# Allows: grep ... | head, cat ... | wc -l, etc.
+SAFE_PIPE_TARGETS = (
+    'head', 'tail', 'wc', 'sort', 'uniq', 'grep', 'rg', 'awk', 'sed -n',
+    'cut', 'tr', 'less', 'more', 'cat', 'xargs echo', 'tee /dev/stderr',
+    'python3 -c', 'python -c',  # For simple JSON parsing
 )
 
 # Thresholds for CHECK validation
@@ -169,10 +177,14 @@ def is_safe_bash_command(tool_input: dict) -> bool:
         return False
 
     # Check for dangerous shell operators (command injection prevention)
-    # This blocks: ls; rm -rf, cat file | malicious, echo > file, etc.
+    # This blocks: ls; rm -rf, echo > file, etc.
     for operator in DANGEROUS_SHELL_OPERATORS:
         if operator in command:
             return False
+
+    # Handle pipes specially - allow if all segments are safe
+    if '|' in command:
+        return is_safe_pipe_chain(command)
 
     # Strip leading whitespace and check against safe prefixes
     command_stripped = command.lstrip()
@@ -186,6 +198,42 @@ def is_safe_bash_command(tool_input: dict) -> bool:
             return True
 
     return False
+
+
+def is_safe_pipe_chain(command: str) -> bool:
+    """
+    Check if a piped command chain is safe (all segments are read-only).
+
+    Allows: grep pattern file | head -20 | wc -l
+    Blocks: grep pattern | xargs rm, cat file | bash
+    """
+    segments = [s.strip() for s in command.split('|')]
+
+    if not segments:
+        return False
+
+    # First segment must be a safe command
+    first_cmd = segments[0]
+    first_is_safe = False
+    for prefix in SAFE_BASH_PREFIXES:
+        if first_cmd.startswith(prefix) or (prefix.endswith(' ') and first_cmd == prefix.rstrip()):
+            first_is_safe = True
+            break
+
+    if not first_is_safe:
+        return False
+
+    # All subsequent segments must start with safe pipe targets
+    for segment in segments[1:]:
+        segment_safe = False
+        for target in SAFE_PIPE_TARGETS:
+            if segment.startswith(target):
+                segment_safe = True
+                break
+        if not segment_safe:
+            return False
+
+    return True
 
 
 def main():

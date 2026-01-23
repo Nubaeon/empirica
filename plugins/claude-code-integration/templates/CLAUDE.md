@@ -1,4 +1,4 @@
-# Empirica System Prompt v1.5.0
+# Empirica System Prompt v1.4.1
 
 **Framework:** Empirica Epistemic Self-Assessment
 **AI_ID:** `claude-code` (use this with `--ai-id claude-code`)
