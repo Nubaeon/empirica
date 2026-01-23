@@ -5,16 +5,124 @@ Commands:
 - sync push: Push all epistemic notes to remote
 - sync pull: Pull all epistemic notes from remote
 - sync status: Show sync status (local vs remote)
+- sync config: Configure sync settings
 - rebuild: Reconstruct SQLite from git notes
 """
 
 import json
 import logging
+import os
 import subprocess
+from pathlib import Path
 from typing import Optional, Dict, Any, List
+import yaml
 from ..cli_utils import handle_cli_error
 
 logger = logging.getLogger(__name__)
+
+
+# Default sync configuration
+DEFAULT_SYNC_CONFIG = {
+    'enabled': True,
+    'remote': 'origin',
+    'visibility': 'private',  # 'private' or 'public' - determines warnings
+    'provider': 'auto',  # 'github', 'gitlab', 'forgejo', 'bitbucket', 'auto'
+    'auto_push_on': [],  # ['postflight', 'session_end'] - future auto-push triggers
+}
+
+
+def _get_config_path() -> Path:
+    """Get path to .empirica/config.yaml"""
+    workspace_root = _get_workspace_root()
+    return Path(workspace_root) / '.empirica' / 'config.yaml'
+
+
+def _load_sync_config() -> Dict[str, Any]:
+    """Load sync configuration from .empirica/config.yaml"""
+    config_path = _get_config_path()
+
+    if not config_path.exists():
+        return DEFAULT_SYNC_CONFIG.copy()
+
+    try:
+        with open(config_path) as f:
+            config = yaml.safe_load(f) or {}
+
+        sync_config = config.get('sync', {})
+
+        # Merge with defaults
+        result = DEFAULT_SYNC_CONFIG.copy()
+        result.update(sync_config)
+        return result
+    except Exception as e:
+        logger.warning(f"Failed to load sync config: {e}")
+        return DEFAULT_SYNC_CONFIG.copy()
+
+
+def _save_sync_config(sync_config: Dict[str, Any]) -> bool:
+    """Save sync configuration to .empirica/config.yaml"""
+    config_path = _get_config_path()
+
+    try:
+        # Load existing config
+        if config_path.exists():
+            with open(config_path) as f:
+                config = yaml.safe_load(f) or {}
+        else:
+            config = {'version': '2.0'}
+
+        # Update sync section
+        config['sync'] = sync_config
+
+        # Ensure directory exists
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write back
+        with open(config_path, 'w') as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save sync config: {e}")
+        return False
+
+
+def _detect_provider(remote_url: str) -> str:
+    """Detect git provider from remote URL"""
+    remote_lower = remote_url.lower()
+    if 'github.com' in remote_lower:
+        return 'github'
+    elif 'gitlab.com' in remote_lower or 'gitlab' in remote_lower:
+        return 'gitlab'
+    elif 'forgejo' in remote_lower or 'codeberg.org' in remote_lower:
+        return 'forgejo'
+    elif 'bitbucket.org' in remote_lower:
+        return 'bitbucket'
+    elif 'gitea' in remote_lower:
+        return 'gitea'
+    else:
+        return 'unknown'
+
+
+def _get_remote_url(remote: str = 'origin') -> Optional[str]:
+    """Get the URL for a remote"""
+    try:
+        result = subprocess.run(
+            ['git', 'remote', 'get-url', remote],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except:
+        pass
+    return None
+
+
+def _is_public_repo() -> Optional[bool]:
+    """Try to detect if repo is public (best effort, may return None)"""
+    # This is a heuristic - we can't truly know without API calls
+    # For now, return None (unknown) and rely on user config
+    return None
 
 
 # All empirica git notes refs
@@ -78,13 +186,141 @@ def _count_local_notes() -> Dict[str, int]:
     return counts
 
 
+def handle_sync_config_command(args):
+    """Handle sync config command - show/set sync configuration"""
+    try:
+        output_format = getattr(args, 'output', 'json')
+        key = getattr(args, 'key', None)
+        value = getattr(args, 'value', None)
+
+        # Load current config
+        sync_config = _load_sync_config()
+
+        # If setting a value
+        if key and value is not None:
+            valid_keys = ['enabled', 'remote', 'visibility', 'provider']
+            if key not in valid_keys:
+                result = {
+                    "ok": False,
+                    "error": f"Unknown config key: {key}",
+                    "valid_keys": valid_keys
+                }
+                print(json.dumps(result, indent=2))
+                return 1
+
+            # Parse boolean values
+            if key == 'enabled':
+                value = value.lower() in ('true', '1', 'yes', 'on')
+
+            # Validate visibility
+            if key == 'visibility' and value not in ('public', 'private'):
+                result = {
+                    "ok": False,
+                    "error": f"visibility must be 'public' or 'private', got '{value}'"
+                }
+                print(json.dumps(result, indent=2))
+                return 1
+
+            # Validate provider
+            if key == 'provider' and value not in ('github', 'gitlab', 'forgejo', 'gitea', 'bitbucket', 'auto', 'other'):
+                result = {
+                    "ok": False,
+                    "error": f"provider must be one of: github, gitlab, forgejo, gitea, bitbucket, auto, other"
+                }
+                print(json.dumps(result, indent=2))
+                return 1
+
+            # Update and save
+            sync_config[key] = value
+            if _save_sync_config(sync_config):
+                result = {
+                    "ok": True,
+                    "message": f"Set sync.{key} = {value}",
+                    "config": sync_config
+                }
+            else:
+                result = {
+                    "ok": False,
+                    "error": "Failed to save config"
+                }
+
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                print(f"✅ Set sync.{key} = {value}")
+
+            return 0 if result['ok'] else 1
+
+        # Show config (with optional key filter)
+        if key:
+            if key in sync_config:
+                result = {
+                    "ok": True,
+                    "key": key,
+                    "value": sync_config[key]
+                }
+            else:
+                result = {
+                    "ok": False,
+                    "error": f"Unknown config key: {key}"
+                }
+        else:
+            # Get remote info for context
+            remote_url = _get_remote_url(sync_config.get('remote', 'origin'))
+            detected_provider = _detect_provider(remote_url) if remote_url else 'unknown'
+
+            result = {
+                "ok": True,
+                "config": sync_config,
+                "remote_url": remote_url,
+                "detected_provider": detected_provider,
+                "config_path": str(_get_config_path())
+            }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print("📋 Sync Configuration")
+            print(f"   enabled: {sync_config.get('enabled', True)}")
+            print(f"   remote: {sync_config.get('remote', 'origin')}")
+            print(f"   visibility: {sync_config.get('visibility', 'private')}")
+            print(f"   provider: {sync_config.get('provider', 'auto')}")
+            if remote_url:
+                print(f"\n   Remote URL: {remote_url}")
+                print(f"   Detected provider: {detected_provider}")
+            print(f"\n   Config file: {_get_config_path()}")
+            print("\n   Set with: empirica sync-config <key> <value>")
+            print("   Keys: enabled, remote, visibility, provider")
+
+        return 0 if result['ok'] else 1
+
+    except Exception as e:
+        handle_cli_error(e, "Sync config", getattr(args, 'verbose', False))
+        return 1
+
+
 def handle_sync_push_command(args):
     """Handle sync push command - push all epistemic notes to remote"""
     try:
-        remote = getattr(args, 'remote', 'origin') or 'origin'
+        # Load config
+        sync_config = _load_sync_config()
+
+        # Use CLI arg if provided, otherwise use config
+        remote = getattr(args, 'remote', None) or sync_config.get('remote', 'origin')
         output_format = getattr(args, 'output', 'json')
         dry_run = getattr(args, 'dry_run', False)
         verbose = getattr(args, 'verbose', False)
+        force = getattr(args, 'force', False)
+
+        # Check if sync is enabled
+        if not sync_config.get('enabled', True) and not force:
+            result = {
+                "ok": False,
+                "error": "Sync is disabled in config",
+                "hint": "Run 'empirica sync-config enabled true' to enable or use --force"
+            }
+            print(json.dumps(result, indent=2))
+            return 1
 
         # Check remote exists
         if not _check_remote(remote):
@@ -95,6 +331,16 @@ def handle_sync_push_command(args):
             }
             print(json.dumps(result, indent=2))
             return 1
+
+        # Visibility warning for public repos
+        visibility = sync_config.get('visibility', 'private')
+        remote_url = _get_remote_url(remote)
+        if visibility == 'public' and not force:
+            # Show warning but continue
+            if output_format != 'json':
+                print("⚠️  Warning: visibility=public - epistemic notes will be visible in the repo")
+                print("   Use 'empirica sync-config visibility private' if this repo should be private")
+                print()
 
         # Count local notes
         local_counts = _count_local_notes()
@@ -189,10 +435,25 @@ def handle_sync_push_command(args):
 def handle_sync_pull_command(args):
     """Handle sync pull command - pull all epistemic notes from remote"""
     try:
-        remote = getattr(args, 'remote', 'origin') or 'origin'
+        # Load config
+        sync_config = _load_sync_config()
+
+        # Use CLI arg if provided, otherwise use config
+        remote = getattr(args, 'remote', None) or sync_config.get('remote', 'origin')
         output_format = getattr(args, 'output', 'json')
         rebuild = getattr(args, 'rebuild', False)
         verbose = getattr(args, 'verbose', False)
+        force = getattr(args, 'force', False)
+
+        # Check if sync is enabled
+        if not sync_config.get('enabled', True) and not force:
+            result = {
+                "ok": False,
+                "error": "Sync is disabled in config",
+                "hint": "Run 'empirica sync-config enabled true' to enable or use --force"
+            }
+            print(json.dumps(result, indent=2))
+            return 1
 
         # Check remote exists
         if not _check_remote(remote):

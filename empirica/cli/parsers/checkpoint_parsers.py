@@ -651,13 +651,24 @@ def add_checkpoint_parsers(subparsers):
     # ===== SYNC COMMANDS =====
     # Git notes synchronization for multi-device/multi-AI coordination
 
+    # sync config command
+    sync_config_parser = subparsers.add_parser(
+        'sync-config',
+        help='Configure sync settings (remote, visibility, provider)'
+    )
+    sync_config_parser.add_argument('key', nargs='?', help='Config key to get/set (enabled, remote, visibility, provider)')
+    sync_config_parser.add_argument('value', nargs='?', help='Value to set')
+    sync_config_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
+    sync_config_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+
     # sync push command
     sync_push_parser = subparsers.add_parser(
         'sync-push',
         help='Push all epistemic notes to remote'
     )
-    sync_push_parser.add_argument('--remote', default='origin', help='Git remote name (default: origin)')
+    sync_push_parser.add_argument('--remote', help='Git remote name (uses config default if not specified)')
     sync_push_parser.add_argument('--dry-run', action='store_true', help='Show what would be pushed without pushing')
+    sync_push_parser.add_argument('--force', action='store_true', help='Push even if sync is disabled in config')
     sync_push_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
     sync_push_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
@@ -666,8 +677,9 @@ def add_checkpoint_parsers(subparsers):
         'sync-pull',
         help='Pull all epistemic notes from remote'
     )
-    sync_pull_parser.add_argument('--remote', default='origin', help='Git remote name (default: origin)')
+    sync_pull_parser.add_argument('--remote', help='Git remote name (uses config default if not specified)')
     sync_pull_parser.add_argument('--rebuild', action='store_true', help='Also rebuild SQLite from notes after pull')
+    sync_pull_parser.add_argument('--force', action='store_true', help='Pull even if sync is disabled in config')
     sync_pull_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
     sync_pull_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
@@ -676,7 +688,7 @@ def add_checkpoint_parsers(subparsers):
         'sync-status',
         help='Show sync status (local note counts, remote availability)'
     )
-    sync_status_parser.add_argument('--remote', default='origin', help='Git remote name (default: origin)')
+    sync_status_parser.add_argument('--remote', help='Git remote name (uses config default if not specified)')
     sync_status_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
     sync_status_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 

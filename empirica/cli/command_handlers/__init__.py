@@ -101,6 +101,7 @@ from .project_embed import (
     handle_project_embed_command,
 )
 from .sync_commands import (
+    handle_sync_config_command,
     handle_sync_push_command,
     handle_sync_pull_command,
     handle_sync_status_command,
@@ -272,6 +273,7 @@ __all__ = [
     'handle_project_embed_command',
 
     # Sync commands (git notes synchronization)
+    'handle_sync_config_command',
     'handle_sync_push_command',
     'handle_sync_pull_command',
     'handle_sync_status_command',

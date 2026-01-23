@@ -45,6 +45,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Project Management': ['project-init', 'project-create', 'project-list', 'project-switch', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
                     'Workspace': ['workspace-init', 'workspace-map', 'workspace-overview'],
                     'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
+                    'Sync': ['sync-config', 'sync-push', 'sync-pull', 'sync-status', 'rebuild'],
                     'Identity': ['identity-create', 'identity-export', 'identity-list', 'identity-verify'],
                     'Handoffs': ['handoff-create', 'handoff-query'],
                     'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
@@ -343,6 +344,7 @@ def main(args=None):
             'refdoc-add': handle_refdoc_add_command,
 
             # Sync commands (git notes synchronization)
+            'sync-config': handle_sync_config_command,
             'sync-push': handle_sync_push_command,
             'sync-pull': handle_sync_pull_command,
             'sync-status': handle_sync_status_command,
