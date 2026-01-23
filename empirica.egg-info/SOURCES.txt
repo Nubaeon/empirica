@@ -19,6 +19,7 @@ docs/architecture/SELF_MONITORING.md
 docs/architecture/SENTINEL_ARCHITECTURE.md
 docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md
 docs/architecture/SUPPORTING_COMPONENTS.md
+docs/architecture/SYNC_ARCHITECTURE.md
 docs/architecture/VERSION_UPDATE_DESIGN.md
 docs/architecture/epistemic_vs_git_diff.svg
 docs/architecture/separation-of-concerns.md
@@ -92,6 +93,7 @@ empirica/cli/command_handlers/sentinel_commands.py
 empirica/cli/command_handlers/session_commands.py
 empirica/cli/command_handlers/session_create.py
 empirica/cli/command_handlers/skill_commands.py
+empirica/cli/command_handlers/sync_commands.py
 empirica/cli/command_handlers/trajectory_commands.py
 empirica/cli/command_handlers/utility_commands.py
 empirica/cli/command_handlers/vision_commands.py
@@ -186,9 +188,13 @@ empirica/core/canonical/git_state_capture.py
 empirica/core/canonical/reflex_frame.py
 empirica/core/canonical/empirica_git/__init__.py
 empirica/core/canonical/empirica_git/checkpoint_manager.py
+empirica/core/canonical/empirica_git/dead_end_store.py
+empirica/core/canonical/empirica_git/finding_store.py
 empirica/core/canonical/empirica_git/goal_store.py
+empirica/core/canonical/empirica_git/mistake_store.py
 empirica/core/canonical/empirica_git/sentinel_hooks.py
 empirica/core/canonical/empirica_git/session_sync.py
+empirica/core/canonical/empirica_git/unknown_store.py
 empirica/core/completion/__init__.py
 empirica/core/completion/git_query.py
 empirica/core/completion/tracker.py
