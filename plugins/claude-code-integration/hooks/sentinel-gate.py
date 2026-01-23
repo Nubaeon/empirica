@@ -225,15 +225,24 @@ def main():
     sys.path.insert(0, str(project_root))
 
     # Get active session
+    session_id = None
     try:
         from empirica.utils.session_resolver import get_latest_session_id
         session_id = get_latest_session_id(ai_id='claude-code', active_only=True)
-    except Exception:
-        respond("allow", "No session resolver")
+    except ValueError as e:
+        # No session found - this is expected when no active session exists
+        if "No session found" in str(e):
+            respond("allow", "WARNING: No active Empirica session. Run 'empirica session-create --ai-id claude-code' for epistemic tracking.")
+            sys.exit(0)
+        # Other ValueError - treat as resolver issue
+        respond("allow", f"Session resolver error: {e}")
+        sys.exit(0)
+    except Exception as e:
+        respond("allow", f"No session resolver: {e}")
         sys.exit(0)
 
     if not session_id:
-        # Warn but allow - user chose fail-open behavior outside sessions
+        # Shouldn't reach here, but handle gracefully
         respond("allow", "WARNING: No active Empirica session. Run 'empirica session-create --ai-id claude-code' for epistemic tracking.")
         sys.exit(0)
 
