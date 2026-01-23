@@ -1,0 +1,13 @@
+{
+  "unknown_id": "13d8c300-f8fd-41f2-9924-3a21a96eb7f1",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bb4bc2b8-f626-4ee3-b150-524208b55687",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T16:43:12.356562+00:00",
+  "unknown": "Dual session creation bug persists: Why is post-compact.py running twice during compact even after removing duplicate hooks from settings.json? The plugin's hooks.json only has one SessionStart:compact entry. Need to investigate: (1) plugin auto-discovery, (2) multiple plugin installations, (3) hook execution timing.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
