@@ -16,7 +16,7 @@ import subprocess
 import json
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -123,13 +123,13 @@ class GitGoalStore:
                 'goal_id': goal_id,
                 'session_id': session_id,
                 'ai_id': ai_id,
-                'created_at': datetime.now(UTC).isoformat(),
+                'created_at': datetime.now(timezone.utc).isoformat(),
                 'goal_data': goal_data,
                 'epistemic_state': epistemic_state or {},
                 'lineage': lineage or [
                     {
                         'ai_id': ai_id,
-                        'timestamp': datetime.now(UTC).isoformat(),
+                        'timestamp': datetime.now(timezone.utc).isoformat(),
                         'action': 'created'
                     }
                 ]
@@ -168,10 +168,10 @@ class GitGoalStore:
     def load_goal(self, goal_id: str) -> Optional[Dict[str, Any]]:
         """
         Load goal from git notes
-        
+
         Args:
             goal_id: Goal UUID
-            
+
         Returns:
             Dict: Goal payload or None
         """
@@ -185,29 +185,36 @@ class GitGoalStore:
             # Try to find goal in git notes
             note_ref = f'empirica/goals/{goal_id}'
 
-            # Get current commit
+            # List which commit has the note (notes can be on any commit, not just HEAD)
             result = subprocess.run(
-                ['git', 'rev-parse', 'HEAD'],
+                ['git', 'notes', f'--ref={note_ref}', 'list'],
                 cwd=self.workspace_root,
                 capture_output=True,
-                text=True,
-                check=True
+                text=True
             )
-            commit_hash = result.stdout.strip()
-            
-            # Load note
+
+            if result.returncode != 0 or not result.stdout.strip():
+                return None
+
+            # Format is: <blob> <commit>
+            parts = result.stdout.strip().split()
+            if len(parts) < 2:
+                return None
+            commit_hash = parts[1]
+
+            # Load note from the commit it's actually attached to
             result = subprocess.run(
                 ['git', 'notes', f'--ref={note_ref}', 'show', commit_hash],
                 cwd=self.workspace_root,
                 capture_output=True,
                 text=True
             )
-            
+
             if result.returncode != 0:
                 return None
-            
+
             return json.loads(result.stdout)
-            
+
         except Exception as e:
             logger.warning(f"Failed to load goal from git: {e}")
             return None
@@ -304,7 +311,7 @@ class GitGoalStore:
         # Add lineage entry
         goal_data['lineage'].append({
             'ai_id': ai_id,
-            'timestamp': datetime.now(UTC).isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'action': action
         })
         

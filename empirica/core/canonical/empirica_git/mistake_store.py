@@ -171,15 +171,24 @@ class GitMistakeStore:
         try:
             note_ref = f'empirica/mistakes/{mistake_id}'
 
+            # List which commit has the note (notes can be on any commit, not just HEAD)
             result = subprocess.run(
-                ['git', 'rev-parse', 'HEAD'],
+                ['git', 'notes', f'--ref={note_ref}', 'list'],
                 cwd=self.workspace_root,
                 capture_output=True,
-                text=True,
-                check=True
+                text=True
             )
-            commit_hash = result.stdout.strip()
 
+            if result.returncode != 0 or not result.stdout.strip():
+                return None
+
+            # Format is: <blob> <commit>
+            parts = result.stdout.strip().split()
+            if len(parts) < 2:
+                return None
+            commit_hash = parts[1]
+
+            # Load note from the commit it's actually attached to
             result = subprocess.run(
                 ['git', 'notes', f'--ref={note_ref}', 'show', commit_hash],
                 cwd=self.workspace_root,
