@@ -1,0 +1,16 @@
+{
+  "finding_id": "d95ddb81-9a72-4174-94dd-3b2cd9f4c2bb",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "1110ed11-8735-4901-adea-60d8c9e8ad4f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T16:05:27.096796+00:00",
+  "finding": "Epistemically-weighted post-compact summaries COMPLETE: epistemic_summarizer.py implemented with calculate_weight(), rank_items(), format_epistemic_focus(), log_compact_effectiveness(). Integrated in post-compact.py at lines 518 and 743. Formula: weight = impact \u00d7 type_confidence \u00d7 recency_decay.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Epistemically-weighted post-compact summaries COMPLETE: epistemic_summarizer.py implemented with calculate_weight(), rank_items(), format_epistemic_focus(), log_compact_effectiveness(). Integrated in post-compact.py at lines 518 and 743. Formula: weight = impact \u00d7 type_confidence \u00d7 recency_decay.",
+    "impact": 0.8
+  }
+}
