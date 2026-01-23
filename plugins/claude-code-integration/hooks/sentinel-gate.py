@@ -232,7 +232,8 @@ def main():
         sys.exit(0)
 
     if not session_id:
-        respond("allow", "No active session")
+        # Warn but allow - user chose fail-open behavior outside sessions
+        respond("allow", "WARNING: No active Empirica session. Run 'empirica session-create --ai-id claude-code' for epistemic tracking.")
         sys.exit(0)
 
     from empirica.data.session_database import SessionDatabase
