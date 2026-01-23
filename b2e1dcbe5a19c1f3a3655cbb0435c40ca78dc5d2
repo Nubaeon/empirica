@@ -1,0 +1,16 @@
+{
+  "finding_id": "28ca4641-d8a6-4c3d-943d-96ad9866d7b7",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "917e8348-43e1-43d1-99fa-17f71b15d8ae",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T18:10:50.110302+00:00",
+  "finding": "Git notes load bug FIXED: All git store load_*() methods incorrectly looked for notes on HEAD, but notes are attached to the commit that was HEAD at creation time. Fixed by using 'git notes list' to find which commit has the note, then reading from that commit. Affects: finding_store.py, unknown_store.py, dead_end_store.py, mistake_store.py, goal_store.py. This enables rebuild command to work correctly (459 records now rebuilt vs 0 before).",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Git notes load bug FIXED: All git store load_*() methods incorrectly looked for notes on HEAD, but notes are attached to the commit that was HEAD at creation time. Fixed by using 'git notes list' to find which commit has the note, then reading from that commit. Affects: finding_store.py, unknown_store.py, dead_end_store.py, mistake_store.py, goal_store.py. This enables rebuild command to work correctly (459 records now rebuilt vs 0 before).",
+    "impact": 0.9
+  }
+}
