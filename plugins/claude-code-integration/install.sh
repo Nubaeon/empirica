@@ -5,8 +5,12 @@
 set -e
 
 PLUGIN_NAME="empirica-integration"
+PLUGIN_VERSION="1.5.0"
 PLUGIN_DIR="$HOME/.claude/plugins/local/$PLUGIN_NAME"
 MARKETPLACE_DIR="$HOME/.claude/plugins/local/.claude-plugin"
+SETTINGS_FILE="$HOME/.claude/settings.json"
+INSTALLED_PLUGINS_FILE="$HOME/.claude/plugins/installed_plugins.json"
+KNOWN_MARKETPLACES_FILE="$HOME/.claude/plugins/known_marketplaces.json"
 REPO_URL="https://github.com/Nubaeon/empirica.git"
 PLUGIN_PATH="plugins/claude-code-integration"
 
@@ -27,35 +31,31 @@ if ! command -v python3 &>/dev/null; then
     exit 1
 fi
 
-# Check if empirica CLI is installed
-if ! command -v empirica &>/dev/null; then
-    echo "⚠️  Warning: empirica CLI not found"
-    echo "   Install with: pip install empirica"
-    echo "   Or from source: pip install -e /path/to/empirica"
-    echo ""
-    echo "   The plugin requires the empirica CLI for full functionality."
-    echo ""
-fi
-
-# Check jq is available (optional but recommended)
+# Check jq is available (required for JSON manipulation)
 if ! command -v jq &>/dev/null; then
-    echo "⚠️  Warning: jq not installed (optional)"
-    echo "   Some features work better with jq. Install with:"
-    echo "   apt install jq (Debian/Ubuntu) or brew install jq (macOS)"
-    echo ""
+    echo "❌ Error: jq is required for installation"
+    echo "   Install with: apt install jq (Debian/Ubuntu) or brew install jq (macOS)"
+    exit 1
 fi
 
-# ==================== INSTALL ====================
+# Check pipx for MCP server installation
+PIPX_AVAILABLE=false
+if command -v pipx &>/dev/null; then
+    PIPX_AVAILABLE=true
+fi
+
+# ==================== INSTALL PLUGIN FILES ====================
 
 # Create directories
 mkdir -p "$HOME/.claude/plugins/local"
 mkdir -p "$MARKETPLACE_DIR"
+mkdir -p "$HOME/.claude"
 
 # Clone or update
 if [ -d "$PLUGIN_DIR" ]; then
     echo "📦 Updating existing installation..."
     cd "$PLUGIN_DIR"
-    git pull --ff-only origin main 2>/dev/null || git fetch origin && git reset --hard origin/main
+    git pull --ff-only origin main 2>/dev/null || (git fetch origin && git reset --hard origin/main) || true
 else
     echo "📦 Installing plugin..."
     # Create temp dir for sparse checkout
@@ -75,9 +75,82 @@ else
     rm -rf "$TEMP_DIR"
 fi
 
+# Make hooks executable
+chmod +x "$PLUGIN_DIR/hooks/"*.py 2>/dev/null || true
+chmod +x "$PLUGIN_DIR/hooks/"*.sh 2>/dev/null || true
+chmod +x "$PLUGIN_DIR/scripts/"*.py 2>/dev/null || true
+
+# ==================== INSTALL CLAUDE.md ====================
+
+echo "📝 Installing CLAUDE.md system prompt..."
+if [ -f "$PLUGIN_DIR/templates/CLAUDE.md" ]; then
+    if [ -f "$HOME/.claude/CLAUDE.md" ]; then
+        echo "   CLAUDE.md already exists - backing up to CLAUDE.md.bak"
+        cp "$HOME/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md.bak"
+    fi
+    cp "$PLUGIN_DIR/templates/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+    echo "   ✓ CLAUDE.md installed to ~/.claude/CLAUDE.md"
+else
+    echo "   ⚠️  CLAUDE.md template not found"
+fi
+
+# ==================== CONFIGURE SETTINGS.JSON ====================
+
+echo "⚙️  Configuring settings.json..."
+
+# Create settings.json if it doesn't exist
+if [ ! -f "$SETTINGS_FILE" ]; then
+    echo '{}' > "$SETTINGS_FILE"
+fi
+
+# Add enabledPlugins if not present
+if ! jq -e '.enabledPlugins' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    jq '.enabledPlugins = {}' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+fi
+
+# Enable the plugin
+jq --arg name "$PLUGIN_NAME@local" '.enabledPlugins[$name] = true' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+echo "   ✓ Plugin enabled in settings.json"
+
+# Add StatusLine if not present
+if ! jq -e '.statusLine' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    jq --arg cmd "python3 $PLUGIN_DIR/scripts/statusline_empirica.py" \
+       '.statusLine = {"type": "command", "command": $cmd}' \
+       "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+    echo "   ✓ StatusLine configured"
+else
+    echo "   StatusLine already configured"
+fi
+
+# Add PreToolUse hooks if not present (needed because hooks.json can't have them for local plugins)
+if ! jq -e '.hooks.PreToolUse' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    jq '.hooks = (.hooks // {})' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+fi
+
+# Check if sentinel hooks already present
+if ! jq -e '.hooks.PreToolUse[] | select(.hooks[].command | contains("sentinel-gate"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    jq --arg sentinel_cmd "python3 $PLUGIN_DIR/hooks/sentinel-gate.py" \
+       '.hooks.PreToolUse = (.hooks.PreToolUse // []) + [
+         {
+           "matcher": "Edit|Write",
+           "hooks": [{"type": "command", "command": $sentinel_cmd, "timeout": 10}]
+         },
+         {
+           "matcher": "Bash",
+           "hooks": [{"type": "command", "command": $sentinel_cmd, "timeout": 10}]
+         }
+       ]' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+    echo "   ✓ PreToolUse (Sentinel) hooks configured"
+else
+    echo "   PreToolUse hooks already configured"
+fi
+
+# ==================== MARKETPLACE REGISTRATION ====================
+
+echo "📋 Registering in marketplace..."
+
 # Create marketplace.json if not exists
 if [ ! -f "$MARKETPLACE_DIR/marketplace.json" ]; then
-    echo "📝 Creating local marketplace config..."
     cat > "$MARKETPLACE_DIR/marketplace.json" << 'EOF'
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
@@ -91,47 +164,103 @@ fi
 
 # Add plugin to marketplace if not already present
 if ! grep -q "\"name\": \"$PLUGIN_NAME\"" "$MARKETPLACE_DIR/marketplace.json" 2>/dev/null; then
-    echo "📝 Registering plugin in marketplace..."
-    if command -v jq &>/dev/null; then
-        jq --arg name "$PLUGIN_NAME" '.plugins += [{
-            "name": $name,
-            "description": "Noetic firewall + CASCADE workflow automation for Claude Code",
-            "version": "1.5.0",
-            "author": { "name": "Empirica Project", "url": "https://github.com/Nubaeon/empirica" },
-            "source": "./" + $name,
-            "category": "productivity"
-        }]' "$MARKETPLACE_DIR/marketplace.json" > "$MARKETPLACE_DIR/marketplace.json.tmp"
-        mv "$MARKETPLACE_DIR/marketplace.json.tmp" "$MARKETPLACE_DIR/marketplace.json"
-    else
-        echo "⚠️  jq not available - manually add $PLUGIN_NAME to marketplace.json"
-    fi
+    jq --arg name "$PLUGIN_NAME" --arg version "$PLUGIN_VERSION" '.plugins += [{
+        "name": $name,
+        "description": "Noetic firewall + CASCADE workflow automation for Claude Code",
+        "version": $version,
+        "author": { "name": "Empirica Project", "url": "https://github.com/Nubaeon/empirica" },
+        "source": "./" + $name,
+        "category": "productivity"
+    }]' "$MARKETPLACE_DIR/marketplace.json" > "$MARKETPLACE_DIR/marketplace.json.tmp"
+    mv "$MARKETPLACE_DIR/marketplace.json.tmp" "$MARKETPLACE_DIR/marketplace.json"
+    echo "   ✓ Added to marketplace.json"
 fi
 
-# Make hooks executable
-chmod +x "$PLUGIN_DIR/hooks/"*.py 2>/dev/null || true
-chmod +x "$PLUGIN_DIR/hooks/"*.sh 2>/dev/null || true
-chmod +x "$PLUGIN_DIR/scripts/"*.py 2>/dev/null || true
+# ==================== INSTALLED PLUGINS REGISTRATION ====================
+
+echo "📦 Registering installed plugin..."
+
+# Create installed_plugins.json if not exists
+if [ ! -f "$INSTALLED_PLUGINS_FILE" ]; then
+    echo '{"version": 2, "plugins": {}}' > "$INSTALLED_PLUGINS_FILE"
+fi
+
+# Add plugin entry
+INSTALL_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+jq --arg name "$PLUGIN_NAME@local" --arg path "$PLUGIN_DIR" --arg version "$PLUGIN_VERSION" --arg date "$INSTALL_DATE" \
+   '.plugins[$name] = [{
+     "scope": "user",
+     "installPath": $path,
+     "version": $version,
+     "installedAt": $date,
+     "lastUpdated": $date,
+     "isLocal": true
+   }]' "$INSTALLED_PLUGINS_FILE" > "$INSTALLED_PLUGINS_FILE.tmp" && mv "$INSTALLED_PLUGINS_FILE.tmp" "$INSTALLED_PLUGINS_FILE"
+echo "   ✓ Added to installed_plugins.json"
+
+# ==================== KNOWN MARKETPLACES ====================
+
+echo "🗂️  Registering local marketplace..."
+
+# Create known_marketplaces.json if not exists
+if [ ! -f "$KNOWN_MARKETPLACES_FILE" ]; then
+    echo '{}' > "$KNOWN_MARKETPLACES_FILE"
+fi
+
+# Add local marketplace if not present
+if ! jq -e '.local' "$KNOWN_MARKETPLACES_FILE" >/dev/null 2>&1; then
+    jq --arg path "$HOME/.claude/plugins/local" --arg date "$INSTALL_DATE" \
+       '.local = {
+         "source": {"source": "directory", "path": $path},
+         "installLocation": $path,
+         "lastUpdated": $date
+       }' "$KNOWN_MARKETPLACES_FILE" > "$KNOWN_MARKETPLACES_FILE.tmp" && mv "$KNOWN_MARKETPLACES_FILE.tmp" "$KNOWN_MARKETPLACES_FILE"
+    echo "   ✓ Local marketplace registered"
+fi
+
+# ==================== INSTALL EMPIRICA-MCP ====================
+
+echo "🔌 Installing empirica-mcp server..."
+
+if [ "$PIPX_AVAILABLE" = true ]; then
+    # Check if already installed
+    if pipx list 2>/dev/null | grep -q "empirica-mcp"; then
+        echo "   empirica-mcp already installed, upgrading..."
+        pipx upgrade empirica-mcp 2>/dev/null || pipx install --force empirica-mcp 2>/dev/null || echo "   ⚠️  Could not upgrade empirica-mcp"
+    else
+        pipx install empirica-mcp 2>/dev/null || echo "   ⚠️  Could not install empirica-mcp via pipx"
+    fi
+    echo "   ✓ empirica-mcp installed"
+else
+    echo "   ⚠️  pipx not available - install manually:"
+    echo "      pipx install empirica-mcp"
+    echo "      Or: pip install empirica-mcp"
+fi
 
 # ==================== CREATE INITIAL SESSION ====================
 
 if command -v empirica &>/dev/null; then
     echo ""
     echo "🔧 Creating initial Empirica session..."
-    empirica session-create --ai-id claude-code --output json 2>/dev/null && echo "   Session created!" || echo "   (Session creation skipped)"
+    empirica session-create --ai-id claude-code --output json 2>/dev/null && echo "   ✓ Session created!" || echo "   (Session creation skipped - may already exist)"
 fi
 
 # ==================== VERIFY ====================
 
 echo ""
-echo "✅ $PLUGIN_NAME installed successfully!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ $PLUGIN_NAME v$PLUGIN_VERSION installed successfully!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "📍 Location: $PLUGIN_DIR"
+echo "📍 Plugin:     $PLUGIN_DIR"
+echo "📝 CLAUDE.md:  ~/.claude/CLAUDE.md"
+echo "⚙️  Settings:   ~/.claude/settings.json"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "WHAT'S INCLUDED:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "🛡️  Sentinel Gate (PreToolUse hooks)"
+echo "🛡️  Sentinel Gate (Noetic Firewall)"
 echo "    - Noetic tools (Read, Grep, etc.) always allowed"
 echo "    - Praxic tools (Edit, Write, Bash) require CHECK"
 echo ""
@@ -139,15 +268,26 @@ echo "📋 CASCADE Workflow (Pre/Post Compact)"
 echo "    - Auto-saves epistemic state before compact"
 echo "    - Auto-loads context after compact"
 echo ""
+echo "📊 StatusLine"
+echo "    - Shows session ID, phase, know/uncertainty vectors"
+echo ""
+echo "🔌 MCP Server"
+echo "    - Full Empirica API available to Claude"
+echo ""
 echo "🎯 Skills"
 echo "    - /empirica-framework - Full command reference"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "USAGE:"
+echo "NEXT STEPS:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "The plugin runs automatically. Hooks are registered in:"
-echo "  $PLUGIN_DIR/hooks/hooks.json"
+echo "1. Restart Claude Code to load the plugin"
+echo ""
+echo "2. Verify with: /plugin"
+echo "   Should show: $PLUGIN_NAME@local"
+echo ""
+echo "3. Connect MCP server: /mcp"
+echo "   Should show: empirica connected"
 echo ""
 echo "To disable sentinel gating temporarily:"
 echo "  export EMPIRICA_SENTINEL_LOOPING=false"
