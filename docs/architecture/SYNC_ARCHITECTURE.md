@@ -1,9 +1,9 @@
 # Empirica Sync Architecture
 
-**Version:** 1.0.0-draft
-**Status:** Design Document
-**Session:** 705cdec9-606a-49b6-9675-f4038871a9ff
-**Date:** 2026-01-22
+**Version:** 1.0.0
+**Status:** Implementation Complete (Phase 1-2)
+**Session:** 917e8348-43e1-43d1-99fa-17f71b15d8ae
+**Date:** 2026-01-23
 
 ---
 
@@ -372,6 +372,11 @@ workspace:
 3. [x] `empirica sync-status` - Show local note counts, remote availability
 4. [x] `empirica rebuild --from-notes` - Reconstruct SQLite from git notes
 
+**Bug fix (2026-01-23):** All `load_*()` methods in git stores were incorrectly
+looking for notes on HEAD. Git notes are attached to the commit that was HEAD
+at creation time, not current HEAD. Fixed by using `git notes list` to find
+which commit has the note, then reading from that commit.
+
 **Files created:**
 - `empirica/cli/command_handlers/sync_commands.py`
 
@@ -457,4 +462,5 @@ empirica rebuild --from-notes --qdrant
 
 ---
 
-**Document Status:** Phase 1 and 2 COMPLETE. Ready for testing and Phase 3 design.
+**Document Status:** Phase 1 and 2 COMPLETE and TESTED. `rebuild --from-notes` works
+(459 records rebuilt from git notes). Ready for Phase 3 design (workspace orchestration).
