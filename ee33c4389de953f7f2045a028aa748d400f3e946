@@ -1,0 +1,16 @@
+{
+  "finding_id": "fb20c129-979d-4f22-b887-c63500d8fca7",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0f523c9c-66aa-4eb3-a404-78b751f53401",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T15:11:30.142292+00:00",
+  "finding": "CONCEPT: Noetic Red Teaming - emerging discipline for adversarial testing of AI epistemic self-assessment systems. Novel attack surface: confidence manipulation, context poisoning, calibration attacks, epistemic spoofing. As epistemic gates become security-critical infrastructure, this becomes a real security specialty.",
+  "impact": 0.75,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CONCEPT: Noetic Red Teaming - emerging discipline for adversarial testing of AI epistemic self-assessment systems. Novel attack surface: confidence manipulation, context poisoning, calibration attacks, epistemic spoofing. As epistemic gates become security-critical infrastructure, this becomes a real security specialty.",
+    "impact": 0.75
+  }
+}
