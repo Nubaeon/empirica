@@ -1,0 +1,28 @@
+{
+  "goal_id": "6bed85d1-9952-473e-82c5-b2812552a479",
+  "session_id": "e8b61aba-ddc0-4e79-8b64-7e40a5504478",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-23T12:51:33.501847+00:00",
+  "goal_data": {
+    "objective": "Phase 1: Build Epistemic Candor Core Engine - prompt classifier, micro-PREFLIGHT assessor, candor disclosure generator",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-23T12:51:33.501865+00:00",
+      "action": "created"
+    }
+  ]
+}
