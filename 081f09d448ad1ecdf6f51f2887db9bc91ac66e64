@@ -1,0 +1,28 @@
+🍞 BREADCRUMBS - 2026-01-23T15:39:00+01:00
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BRANCH: develop
+
+LAST_TASK:
+yup crazy crazy, lets see if you can help me with 2 things, I auto add tmux spawning into konsole bashrc but when I want 2 konsole windows it chooses to replicate the tmux instance instead creating a new one and we have the statusline running inside bashrc -- we wanted to test this in our nushell + epistemic integration but its just getting in the way now
+
+MODIFIED_FILES:
+   M .breadcrumbs.yaml
+
+RECENT_COMMITS:
+  081f09d4 feat: Add warning message when Sentinel allows praxic tools outside session
+  29d21340 [auto] Pre-compact snapshot - 2026-01-23 14:52:15
+  bfb6e112 refactor: Improve Sentinel denial messages
+  a6e1d347 fix: Remove duplicate PreToolUse hooks from plugin hooks.json
+  71cdba32 feat: Add one-command install script for empirica-integration plugin
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EPISTEMIC STATE (self-assess on resume)
+
+Please assess your current epistemic state:
+- CONFIDENCE: Rate 1-5 (1=guessing, 3=reasonable, 5=certain) where you are on understanding this codebase/task
+- UNCERTAINTIES: What are you unsure about? What needs verification?
+- KEY_DECISIONS: What important decisions were made that you should remember?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Continue from where you left off.
