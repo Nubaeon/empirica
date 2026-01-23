@@ -1,0 +1,16 @@
+{
+  "finding_id": "fcc16217-eb41-4b9e-8440-8948530d0392",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "eb5949d4-c655-452a-8275-91cd589df4c8",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T13:58:37.225016+00:00",
+  "finding": "Sentinel warning for outside-session implemented: now shows 'WARNING: No active Empirica session. Run empirica session-create...' instead of silent allow. Updated all 3 locations (local, repo, cache).",
+  "impact": 0.7,
+  "goal_id": "1fa115fc-e4b9-4871-aeb2-38aec3d85567",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sentinel warning for outside-session implemented: now shows 'WARNING: No active Empirica session. Run empirica session-create...' instead of silent allow. Updated all 3 locations (local, repo, cache).",
+    "impact": 0.7
+  }
+}
