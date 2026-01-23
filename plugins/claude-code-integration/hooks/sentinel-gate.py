@@ -245,7 +245,7 @@ def main():
         row = cursor.fetchone()
         if not row or not row[0]:
             db.close()
-            respond("block", f"No bootstrap for {session_id[:8]}")
+            respond("deny", f"No bootstrap for {session_id[:8]}. Run: empirica project-bootstrap")
             sys.exit(0)
 
     # Check for PREFLIGHT (authentication)
@@ -258,7 +258,7 @@ def main():
 
     if not preflight_row:
         db.close()
-        respond("block", f"No PREFLIGHT for session {session_id[:8]}. Run PREFLIGHT first.")
+        respond("deny", f"No PREFLIGHT. Assess your knowledge state first.")
         sys.exit(0)
 
     preflight_timestamp = preflight_row[0]
@@ -274,7 +274,7 @@ def main():
     db.close()
 
     if not check_row:
-        respond("block", f"No CHECK for session {session_id[:8]}. Run CHECK first.")
+        respond("deny", f"No CHECK. Verify readiness before praxic action.")
         sys.exit(0)
 
     know, uncertainty, reflex_data, check_timestamp = check_row
@@ -282,7 +282,7 @@ def main():
     # Verify CHECK is after PREFLIGHT (proper sequence)
     try:
         if float(check_timestamp) < float(preflight_timestamp):
-            respond("block", f"CHECK predates PREFLIGHT. Run CHECK for current goal.")
+            respond("deny", f"CHECK predates PREFLIGHT. Reassess with fresh CHECK.")
             sys.exit(0)
     except (TypeError, ValueError):
         pass  # Can't compare timestamps, skip this check
@@ -298,7 +298,7 @@ def main():
 
     # Check if decision was "investigate" (not authorized for praxic)
     if decision == 'investigate':
-        respond("block", f"CHECK returned 'investigate'. Complete investigation first.")
+        respond("deny", f"CHECK returned 'investigate'. Continue noetic phase first.")
         sys.exit(0)
 
     # Optional: Check age expiry
@@ -312,7 +312,7 @@ def main():
             age_minutes = (datetime.now() - check_time).total_seconds() / 60
 
             if age_minutes > MAX_CHECK_AGE_MINUTES:
-                respond("block", f"CHECK expired ({age_minutes:.0f}min > {MAX_CHECK_AGE_MINUTES}min)")
+                respond("deny", f"CHECK expired ({age_minutes:.0f}min). Refresh epistemic state.")
                 sys.exit(0)
         except Exception:
             pass
@@ -321,7 +321,7 @@ def main():
     if os.getenv('EMPIRICA_SENTINEL_COMPACT_INVALIDATION', 'false').lower() == 'true':
         last_compact = get_last_compact_timestamp(project_root)
         if last_compact and check_time and last_compact > check_time:
-            respond("block", "CHECK invalidated by compact. Run CHECK to recalibrate.")
+            respond("deny", "Context compacted. Recalibrate with fresh CHECK.")
             sys.exit(0)
 
     # Apply bias corrections and check thresholds
@@ -332,7 +332,7 @@ def main():
         respond("allow", f"CHECK passed (know={corrected_know:.2f}, unc={corrected_unc:.2f})")
         sys.exit(0)
     else:
-        respond("block", f"CHECK thresholds not met: know={corrected_know:.2f} (<0.70), unc={corrected_unc:.2f} (>0.35)")
+        respond("deny", f"Insufficient confidence: know={corrected_know:.2f}, uncertainty={corrected_unc:.2f}. Investigate more.")
         sys.exit(0)
 
 
