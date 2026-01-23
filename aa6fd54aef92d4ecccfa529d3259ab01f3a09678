@@ -1,0 +1,16 @@
+{
+  "finding_id": "0dba72d9-037c-48a0-bb92-33b344ac9605",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "41aaeb7a-2d68-4bdd-878d-966c7279752c",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T15:31:31.099964+00:00",
+  "finding": "Duplicate hook mystery RESOLVED: settings.json has TWO PreToolUse matchers (Edit|Write and Bash) pointing to same sentinel-gate.py - this is CORRECT design. Each matcher fires only for its tool pattern. Issue #10871 (plugin auto-discovery duplicates) doesn't affect us since we removed PreToolUse from plugin hooks.json.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Duplicate hook mystery RESOLVED: settings.json has TWO PreToolUse matchers (Edit|Write and Bash) pointing to same sentinel-gate.py - this is CORRECT design. Each matcher fires only for its tool pattern. Issue #10871 (plugin auto-discovery duplicates) doesn't affect us since we removed PreToolUse from plugin hooks.json.",
+    "impact": 0.85
+  }
+}
