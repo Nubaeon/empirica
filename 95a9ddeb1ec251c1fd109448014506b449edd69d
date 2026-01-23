@@ -1,0 +1,28 @@
+{
+  "goal_id": "8c115692-0d07-4597-8c74-3bde29b76f4a",
+  "session_id": "e8b61aba-ddc0-4e79-8b64-7e40a5504478",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-23T12:52:19.614322+00:00",
+  "goal_data": {
+    "objective": "Phase 3: Legal Domain Implementation - domain vectors, confabulation profiles, verification sources (Freshfields pilot)",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-23T12:52:19.614338+00:00",
+      "action": "created"
+    }
+  ]
+}
