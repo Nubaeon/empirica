@@ -1,0 +1,16 @@
+{
+  "finding_id": "b53ec93c-6dfe-49a3-a056-a3e3eac95bdd",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T18:29:39.412367+00:00",
+  "finding": "Sentinel mid-session monitoring gap identified: After PREFLIGHT passes (know >= 0.70, uncertainty <= 0.35), Sentinel allows ALL praxic tools with no further checks until POSTFLIGHT. This means a session could drift significantly - work on wrong things, accumulate errors, or exceed scope - without any epistemic checkpoint. The gap exists because CASCADE assumes linear PREFLIGHT\u2192CHECK\u2192POSTFLIGHT flow, but real work is messier.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sentinel mid-session monitoring gap identified: After PREFLIGHT passes (know >= 0.70, uncertainty <= 0.35), Sentinel allows ALL praxic tools with no further checks until POSTFLIGHT. This means a session could drift significantly - work on wrong things, accumulate errors, or exceed scope - without any epistemic checkpoint. The gap exists because CASCADE assumes linear PREFLIGHT\u2192CHECK\u2192POSTFLIGHT flow, but real work is messier.",
+    "impact": 0.85
+  }
+}
