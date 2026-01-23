@@ -14,7 +14,6 @@ def handle_mistake_log_command(args):
     """Handle mistake-log command"""
     try:
         from empirica.data.session_database import SessionDatabase
-        from empirica.cli.command_handlers.project_commands import infer_scope
 
         # Parse arguments
         project_id = getattr(args, 'project_id', None)
@@ -36,102 +35,73 @@ def handle_mistake_log_command(args):
             if row and row['project_id']:
                 project_id = row['project_id']
 
-        # DUAL-SCOPE LOGIC: Infer scope and log to appropriate table(s)
-        explicit_scope = getattr(args, 'scope', None)
-        scope = infer_scope(session_id, project_id, explicit_scope)
-        
-        mistake_ids = []
-        
-        if scope in ['session', 'both']:
-            # Log to session_mistakes
-            mistake_id_session = db.log_session_mistake(
-                session_id=session_id,
-                mistake=mistake,
-                why_wrong=why_wrong,
-                cost_estimate=cost_estimate,
-                root_cause_vector=root_cause_vector,
-                prevention=prevention,
-                goal_id=goal_id
-            )
-            mistake_ids.append(('session', mistake_id_session))
-        
-        if scope in ['project', 'both']:
-            # Log to mistakes_made (legacy table)
-            mistake_id_project = db.log_mistake(
-                session_id=session_id,
-                mistake=mistake,
-                why_wrong=why_wrong,
-                cost_estimate=cost_estimate,
-                root_cause_vector=root_cause_vector,
-                prevention=prevention,
-                goal_id=goal_id,
-                project_id=project_id
-            )
-            mistake_ids.append(('project', mistake_id_project))
+        # PROJECT-SCOPED: All mistakes are project-scoped (session_id preserved for provenance)
+        mistake_id = db.log_mistake(
+            session_id=session_id,
+            mistake=mistake,
+            why_wrong=why_wrong,
+            cost_estimate=cost_estimate,
+            root_cause_vector=root_cause_vector,
+            prevention=prevention,
+            goal_id=goal_id,
+            project_id=project_id
+        )
+
+        # Get ai_id from session for git notes
+        ai_id = 'claude-code'  # Default
+        try:
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
+            row = cursor.fetchone()
+            if row and row['ai_id']:
+                ai_id = row['ai_id']
+        except:
+            pass
 
         db.close()
 
-        # GIT NOTES DUAL-WRITE: Store mistake in git notes for sync
+        # GIT NOTES: Store mistake in git notes for sync (canonical source)
         git_stored = False
-        if mistake_ids:
-            try:
-                from empirica.core.canonical.empirica_git.mistake_store import GitMistakeStore
-                git_store = GitMistakeStore()
+        try:
+            from empirica.core.canonical.empirica_git.mistake_store import GitMistakeStore
+            git_store = GitMistakeStore()
 
-                # Use the project mistake_id as the canonical ID
-                primary_id = next((mid for scope_name, mid in mistake_ids if scope_name == 'project'), None)
-                if not primary_id:
-                    primary_id = mistake_ids[0][1] if mistake_ids else None
-
-                if primary_id:
-                    # Get ai_id from session if available
-                    ai_id = 'claude-code'  # Default
-                    try:
-                        db_temp = SessionDatabase()
-                        cursor = db_temp.conn.cursor()
-                        cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
-                        row = cursor.fetchone()
-                        if row and row['ai_id']:
-                            ai_id = row['ai_id']
-                        db_temp.close()
-                    except:
-                        pass
-
-                    git_stored = git_store.store_mistake(
-                        mistake_id=primary_id,
-                        project_id=project_id,
-                        session_id=session_id,
-                        ai_id=ai_id,
-                        mistake=mistake,
-                        why_wrong=why_wrong,
-                        prevention=prevention,
-                        cost_estimate=cost_estimate,
-                        root_cause_vector=root_cause_vector,
-                        goal_id=goal_id
-                    )
-                    if git_stored:
-                        logger.info(f"✓ Mistake {primary_id[:8]} stored in git notes")
-            except Exception as git_err:
-                # Non-fatal - log but continue
-                logger.warning(f"Git notes storage failed: {git_err}")
+            git_stored = git_store.store_mistake(
+                mistake_id=mistake_id,
+                project_id=project_id,
+                session_id=session_id,
+                ai_id=ai_id,
+                mistake=mistake,
+                why_wrong=why_wrong,
+                prevention=prevention,
+                cost_estimate=cost_estimate,
+                root_cause_vector=root_cause_vector,
+                goal_id=goal_id
+            )
+            if git_stored:
+                logger.info(f"✓ Mistake {mistake_id[:8]} stored in git notes")
+        except Exception as git_err:
+            # Non-fatal - log but continue
+            logger.warning(f"Git notes storage failed: {git_err}")
 
         # Format output
         result = {
             "ok": True,
-            "scope": scope,
-            "mistakes": [{"scope": s, "mistake_id": mid} for s, mid in mistake_ids],
+            "mistake_id": mistake_id,
             "session_id": session_id,
-            "git_stored": git_stored,  # Git notes for sync
-            "message": f"Mistake logged to {scope} scope{'s' if scope == 'both' else ''}"
+            "project_id": project_id,
+            "git_stored": git_stored,
+            "message": "Mistake logged to project scope"
         }
 
         if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
-            print(f"✅ Mistake logged to {scope} scope{'s' if scope == 'both' else ''}")
-            for s, mid in mistake_ids:
-                print(f"   {s.capitalize()} mistake ID: {mid[:8]}...")
+            print(f"✅ Mistake logged successfully")
+            print(f"   Mistake ID: {mistake_id[:8]}...")
             print(f"   Session: {session_id[:8]}...")
+            if project_id:
+                print(f"   Project: {project_id[:8]}...")
             if git_stored:
                 print(f"   📝 Stored in git notes for sync")
             if root_cause_vector:

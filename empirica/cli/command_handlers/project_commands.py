@@ -4,46 +4,11 @@ Project Commands - Multi-repo/multi-session project tracking
 
 import json
 import logging
-from typing import Optional, Literal
+from typing import Optional
 from ..cli_utils import handle_cli_error
 from empirica.core.memory_gap_detector import MemoryGapDetector
 
 logger = logging.getLogger(__name__)
-
-
-def infer_scope(session_id: Optional[str], project_id: Optional[str], explicit_scope: Optional[str]) -> Literal['session', 'project', 'both']:
-    """
-    Smart scope inference for dual-scoped logging.
-    
-    Rules:
-    1. If explicit_scope provided → use it
-    2. If only session_id → 'session'
-    3. If only project_id → 'project'
-    4. If both → 'both' (dual-log)
-    5. If neither → 'project' (backward compatible default)
-    
-    Args:
-        session_id: Optional session UUID
-        project_id: Optional project UUID
-        explicit_scope: Optional explicit scope choice
-        
-    Returns:
-        'session', 'project', or 'both'
-    """
-    if explicit_scope:
-        return explicit_scope
-    
-    has_session = session_id is not None
-    has_project = project_id is not None
-    
-    if has_session and has_project:
-        return 'both'  # Dual-log when both provided
-    elif has_session:
-        return 'session'
-    elif has_project:
-        return 'project'
-    else:
-        return 'project'  # Backward compatible default
 
 
 def handle_project_create_command(args):
@@ -1752,98 +1717,66 @@ def handle_deadend_log_command(args):
             if active_goal:
                 goal_id = active_goal['id']
 
-        # DUAL-SCOPE LOGIC: Infer scope and log to appropriate table(s)
-        explicit_scope = config_data.get('scope') if config_data else getattr(args, 'scope', None)
-        scope = infer_scope(session_id, project_id, explicit_scope)
-        
-        dead_end_ids = []
-        
-        if scope in ['session', 'both']:
-            # Log to session_dead_ends
-            dead_end_id_session = db.log_session_dead_end(
-                session_id=session_id,
-                approach=approach,
-                why_failed=why_failed,
-                goal_id=goal_id,
-                subtask_id=subtask_id,
-                subject=subject,
-                impact=impact
-            )
-            dead_end_ids.append(('session', dead_end_id_session))
-        
-        if scope in ['project', 'both']:
-            # Log to project_dead_ends (legacy table)
-            dead_end_id_project = db.log_dead_end(
-                project_id=project_id,
-                session_id=session_id,
-                approach=approach,
-                why_failed=why_failed,
-                goal_id=goal_id,
-                subtask_id=subtask_id,
-                subject=subject,
-                impact=impact
-            )
-            dead_end_ids.append(('project', dead_end_id_project))
+        # PROJECT-SCOPED: All dead ends are project-scoped (session_id preserved for provenance)
+        dead_end_id = db.log_dead_end(
+            project_id=project_id,
+            session_id=session_id,
+            approach=approach,
+            why_failed=why_failed,
+            goal_id=goal_id,
+            subtask_id=subtask_id,
+            subject=subject,
+            impact=impact
+        )
+
+        # Get ai_id from session for git notes
+        ai_id = 'claude-code'  # Default
+        try:
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
+            row = cursor.fetchone()
+            if row and row['ai_id']:
+                ai_id = row['ai_id']
+        except:
+            pass
 
         db.close()
 
-        # GIT NOTES DUAL-WRITE: Store dead end in git notes for sync
+        # GIT NOTES: Store dead end in git notes for sync (canonical source)
         git_stored = False
-        if dead_end_ids:
-            try:
-                from empirica.core.canonical.empirica_git.dead_end_store import GitDeadEndStore
-                git_store = GitDeadEndStore()
+        try:
+            from empirica.core.canonical.empirica_git.dead_end_store import GitDeadEndStore
+            git_store = GitDeadEndStore()
 
-                # Use the project dead_end_id as the canonical ID
-                primary_id = next((did for scope_name, did in dead_end_ids if scope_name == 'project'), None)
-                if not primary_id:
-                    primary_id = dead_end_ids[0][1] if dead_end_ids else None
-
-                if primary_id:
-                    # Get ai_id from session if available
-                    ai_id = 'claude-code'  # Default
-                    try:
-                        db_temp = SessionDatabase()
-                        cursor = db_temp.conn.cursor()
-                        cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
-                        row = cursor.fetchone()
-                        if row and row['ai_id']:
-                            ai_id = row['ai_id']
-                        db_temp.close()
-                    except:
-                        pass
-
-                    git_stored = git_store.store_dead_end(
-                        dead_end_id=primary_id,
-                        project_id=project_id,
-                        session_id=session_id,
-                        ai_id=ai_id,
-                        approach=approach,
-                        why_failed=why_failed,
-                        goal_id=goal_id,
-                        subtask_id=subtask_id
-                    )
-                    if git_stored:
-                        logger.info(f"✓ Dead end {primary_id[:8]} stored in git notes")
-            except Exception as git_err:
-                # Non-fatal - log but continue
-                logger.warning(f"Git notes storage failed: {git_err}")
+            git_stored = git_store.store_dead_end(
+                dead_end_id=dead_end_id,
+                project_id=project_id,
+                session_id=session_id,
+                ai_id=ai_id,
+                approach=approach,
+                why_failed=why_failed,
+                goal_id=goal_id,
+                subtask_id=subtask_id
+            )
+            if git_stored:
+                logger.info(f"✓ Dead end {dead_end_id[:8]} stored in git notes")
+        except Exception as git_err:
+            # Non-fatal - log but continue
+            logger.warning(f"Git notes storage failed: {git_err}")
 
         result = {
             "ok": True,
-            "scope": scope,
-            "dead_ends": [{"scope": s, "dead_end_id": did} for s, did in dead_end_ids],
+            "dead_end_id": dead_end_id,
             "project_id": project_id if project_id else None,
-            "git_stored": git_stored,  # Git notes for sync
-            "message": f"Dead end logged to {scope} scope{'s' if scope == 'both' else ''}"
+            "git_stored": git_stored,
+            "message": "Dead end logged to project scope"
         }
 
         if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
             print(f"✅ Dead end logged successfully")
-            for scope_name, did in dead_end_ids:
-                print(f"   {scope_name.capitalize()} Dead End ID: {did[:8] if did else 'N/A'}...")
+            print(f"   Dead End ID: {dead_end_id[:8]}...")
             if project_id:
                 print(f"   Project: {project_id[:8]}...")
             if git_stored:
