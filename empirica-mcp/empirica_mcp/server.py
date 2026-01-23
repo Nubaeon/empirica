@@ -1586,6 +1586,18 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "epistemics_list": ["epistemics-list"],
         "epistemics_show": ["epistemics-show"],
 
+        # Goals workflow
+        "goals_ready": ["goals-ready"],
+        "goals_claim": ["goals-claim"],
+        "investigate": ["investigate"],
+
+        # Vision tools
+        "vision_analyze": ["vision"],
+        "vision_log": ["vision"],  # Same command, different args
+
+        # Metacognitive editing
+        "edit_with_confidence": ["edit-with-confidence"],
+
         # Human Copilot Tools
         "monitor": ["monitor"],
         "check_drift": ["check-drift"],
