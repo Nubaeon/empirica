@@ -1,0 +1,29 @@
+🍞 BREADCRUMBS - 2026-01-23T14:52:15+01:00
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BRANCH: develop
+
+LAST_TASK:
+Sentinel is not warning outside of session, and likely not blocking within session right now, that needs handling first, within an epistemic loop to track it -- as for retrieval the important thing is that Claude intelligently does this, its not heuristic or keyword based its llm (Claude) assessment
+
+MODIFIED_FILES:
+   M .breadcrumbs.yaml
+   M empirica.egg-info/SOURCES.txt
+
+RECENT_COMMITS:
+  bfb6e112 refactor: Improve Sentinel denial messages
+  a6e1d347 fix: Remove duplicate PreToolUse hooks from plugin hooks.json
+  71cdba32 feat: Add one-command install script for empirica-integration plugin
+  a9f9414f [auto] Pre-compact snapshot - 2026-01-23 14:00:32
+  68e109ee fix: Add missing DANGEROUS_SHELL_OPERATORS constant
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EPISTEMIC STATE (self-assess on resume)
+
+Please assess your current epistemic state:
+- CONFIDENCE: Rate 1-5 (1=guessing, 3=reasonable, 5=certain) where you are on understanding this codebase/task
+- UNCERTAINTIES: What are you unsure about? What needs verification?
+- KEY_DECISIONS: What important decisions were made that you should remember?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Continue from where you left off.
