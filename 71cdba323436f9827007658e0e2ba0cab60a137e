@@ -1,0 +1,16 @@
+{
+  "finding_id": "959976b2-6b31-46c7-9b05-312bbab280a4",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "da07688f-fc21-4713-9774-aed33ee55b61",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T13:36:03.930040+00:00",
+  "finding": "Claude Code hook docs reveal: permissionDecision should be 'allow', 'deny', or 'ask'. The value 'block' is listed as deprecated alias for 'deny'. Also: exit code 2 = blocking error (shows stderr), JSON only processed on exit code 0, suppressOutput hides from transcript.",
+  "impact": 0.85,
+  "goal_id": "398f8eb4-137d-44be-91bf-f43a1db890ee",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Claude Code hook docs reveal: permissionDecision should be 'allow', 'deny', or 'ask'. The value 'block' is listed as deprecated alias for 'deny'. Also: exit code 2 = blocking error (shows stderr), JSON only processed on exit code 0, suppressOutput hides from transcript.",
+    "impact": 0.85
+  }
+}
