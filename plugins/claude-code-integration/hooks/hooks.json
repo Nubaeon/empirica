@@ -1,28 +1,6 @@
 {
-  "description": "Empirica epistemic hooks - Noetic firewall + CASCADE workflow automation",
+  "description": "Empirica epistemic hooks - CASCADE workflow automation (PreToolUse defined in ~/.claude/settings.json for local plugins)",
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write|NotebookEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/sentinel-gate.py",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/sentinel-gate.py",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
     "PreCompact": [
       {
         "matcher": "auto|manual",
