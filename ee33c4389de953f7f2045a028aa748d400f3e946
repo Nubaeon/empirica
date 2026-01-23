@@ -1,0 +1,16 @@
+{
+  "finding_id": "a1f216ef-ab39-4b65-9ef7-74621ae8bf6b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0f523c9c-66aa-4eb3-a404-78b751f53401",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T15:09:44.585057+00:00",
+  "finding": "SECURITY CONSIDERATION: Auto-proceed on high-confidence PREFLIGHT creates potential prompt injection vector. If AI is manipulated into reporting false high confidence, praxic gate is bypassed. Current model assumes trusted prompt source. For high-value enterprise deployments, additional mitigations needed: confidence ceilings, tiered praxic (destructive ops always require CHECK), velocity anomaly detection, or signed vectors.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "SECURITY CONSIDERATION: Auto-proceed on high-confidence PREFLIGHT creates potential prompt injection vector. If AI is manipulated into reporting false high confidence, praxic gate is bypassed. Current model assumes trusted prompt source. For high-value enterprise deployments, additional mitigations needed: confidence ceilings, tiered praxic (destructive ops always require CHECK), velocity anomaly detection, or signed vectors.",
+    "impact": 0.85
+  }
+}
