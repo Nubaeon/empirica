@@ -1,0 +1,16 @@
+{
+  "finding_id": "71ef8bec-f7d5-40e0-99e7-353235ca2b2b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bb4bc2b8-f626-4ee3-b150-524208b55687",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T17:02:30.391721+00:00",
+  "finding": "Dual session creation root cause CONFIRMED: Orphaned plugin cache at ~/.claude/plugins/cache/local/empirica-integration/1.5.0/ has identical hooks.json as the actual plugin. Claude Code loads hooks from BOTH directories despite the .orphaned_at marker. Fix: Remove orphaned cache directory.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Dual session creation root cause CONFIRMED: Orphaned plugin cache at ~/.claude/plugins/cache/local/empirica-integration/1.5.0/ has identical hooks.json as the actual plugin. Claude Code loads hooks from BOTH directories despite the .orphaned_at marker. Fix: Remove orphaned cache directory.",
+    "impact": 0.8
+  }
+}
