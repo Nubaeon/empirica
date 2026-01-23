@@ -1,0 +1,16 @@
+{
+  "finding_id": "1fdee17c-2f9d-4108-ae94-2fb69f050d3b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "917e8348-43e1-43d1-99fa-17f71b15d8ae",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T18:20:24.330681+00:00",
+  "finding": "Git notes sync requires same remote as code by default. For public repos with private epistemic data, options: (1) separate private remote for notes only, (2) private fork/mirror, (3) encrypted notes, (4) alternative sync (file sync, separate private repo). The sync-config 'remote' setting enables using a different remote for notes vs code.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Git notes sync requires same remote as code by default. For public repos with private epistemic data, options: (1) separate private remote for notes only, (2) private fork/mirror, (3) encrypted notes, (4) alternative sync (file sync, separate private repo). The sync-config 'remote' setting enables using a different remote for notes vs code.",
+    "impact": 0.8
+  }
+}
