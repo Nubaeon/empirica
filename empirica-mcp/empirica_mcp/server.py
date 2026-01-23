@@ -1548,6 +1548,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         # Sessions
         "get_epistemic_state": ["sessions-show"],
         "get_session_summary": ["sessions-show", "--verbose"],
+        "session_snapshot": ["session-snapshot"],
         "get_calibration_report": ["calibration"],
         "resume_previous_session": ["sessions-resume"],
         "memory_compact": ["memory-compact"],
@@ -1603,6 +1604,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "preflight": "prompt",           # preflight <prompt> [--session-id ...]
         "postflight": "session_id",      # postflight <session_id> [--summary ...]
         "sessions-show": "session_id",   # sessions-show <session_id>
+        "session-snapshot": "session_id", # session-snapshot <session_id>
         "calibration": "session_id",     # calibration <session_id>
     }
 
