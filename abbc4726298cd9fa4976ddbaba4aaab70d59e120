@@ -1,0 +1,16 @@
+{
+  "finding_id": "8d57be1e-5ecf-414e-be9d-bace16c03de5",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "80799eea-9596-41cc-8e6a-651236854f7f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T14:59:46.732638+00:00",
+  "finding": "Sentinel gate architecture updated: PREFLIGHT with high confidence (know >= 0.70, unc <= 0.35 after bias) now auto-proceeds to praxic tools without requiring explicit CHECK. CHECK is only required when PREFLIGHT shows low confidence.",
+  "impact": 0.85,
+  "goal_id": "9c27e41d-fec8-43e8-9556-04e837511e11",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sentinel gate architecture updated: PREFLIGHT with high confidence (know >= 0.70, unc <= 0.35 after bias) now auto-proceeds to praxic tools without requiring explicit CHECK. CHECK is only required when PREFLIGHT shows low confidence.",
+    "impact": 0.85
+  }
+}
