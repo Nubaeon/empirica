@@ -1,0 +1,32 @@
+{
+  "goal_id": "3c18098d-b868-42d3-b16b-9d912c778372",
+  "session_id": "bb4bc2b8-f626-4ee3-b150-524208b55687",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-23T17:13:23.942422+00:00",
+  "goal_data": {
+    "objective": "Version bump to 1.4.1 - align all version references across core, MCP, plugin, docs, and release artifacts (PyPI, Homebrew, Docker)",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "All version strings updated to 1.4.1",
+      "CHANGELOG updated with 1.4.1 section",
+      "README badge updated",
+      "Plugin/skill versions aligned",
+      "Release artifacts (Homebrew formula, Docker) identified and updated"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-23T17:13:23.942439+00:00",
+      "action": "created"
+    }
+  ]
+}
