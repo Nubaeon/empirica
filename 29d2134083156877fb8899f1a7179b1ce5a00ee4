@@ -1,0 +1,40 @@
+🧠 EMPIRICA PRE-COMPACT STATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Timestamp: 2026-01-23T14-52-17
+Session: eb5949d4-c655-452a-8275-91cd589df4c8
+Snapshot: pre_summary_2026-01-23T14-52-17.json
+
+PRE-COMPACT VECTORS (compare with your post-compact self-assessment):
+  know=0.4, uncertainty=0.65
+  completion=0.05, context=0.5
+
+BREADCRUMBS AVAILABLE:
+  Findings: 10
+  Unknowns: 10
+  Goals: 10
+  Dead-ends: 3
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RETRIEVAL (if context feels incomplete):
+
+  # Full epistemic load
+  empirica project-bootstrap --session-id eb5949d4...
+
+  # Semantic search (requires Qdrant)
+  empirica project-search --task "<what you need>"
+
+  # This snapshot
+  cat .empirica/ref-docs/pre_summary_2026-01-23T14-52-17.json
+
+  # Recent git notes
+  git notes --ref=breadcrumbs show HEAD
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SELF-ASSESSMENT (for calibration):
+
+After reviewing the injected context, assess your epistemic state:
+- How does your current know/uncertainty compare to pre-compact?
+- What's missing that you expected to remember?
+- What retrieval would help fill gaps?
+
+This enables drift detection between pre and post compact states.
