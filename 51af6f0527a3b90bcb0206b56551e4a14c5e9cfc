@@ -1,0 +1,16 @@
+{
+  "finding_id": "8ee62d15-ccd2-45d8-9977-3bd70eb9171a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T19:32:42.976505+00:00",
+  "finding": "Open epistemic infrastructure as democratized AI improvement: Externalizing epistemic state (Empirica) before internalizing it (fine-tuning) creates an auditable, shareable, forkable layer. MIT open source means anyone can participate in the self-improvement loop. This is bazaar vs cathedral for AI cognition - closed labs have compute, but open source has epistemic diversity. A thousand users in different domains generate calibration data no single lab could produce. The next iteration of open source isn't just code, it's the learning process itself.",
+  "impact": 0.92,
+  "goal_id": "21290d6c-4917-4b58-939c-288bc217ae80",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Open epistemic infrastructure as democratized AI improvement: Externalizing epistemic state (Empirica) before internalizing it (fine-tuning) creates an auditable, shareable, forkable layer. MIT open source means anyone can participate in the self-improvement loop. This is bazaar vs cathedral for AI cognition - closed labs have compute, but open source has epistemic diversity. A thousand users in different domains generate calibration data no single lab could produce. The next iteration of open source isn't just code, it's the learning process itself.",
+    "impact": 0.92
+  }
+}
