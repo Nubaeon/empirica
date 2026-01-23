@@ -1,0 +1,13 @@
+{
+  "unknown_id": "8c9375f8-20e7-40e1-a68d-3a5f61f6a8a2",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "917e8348-43e1-43d1-99fa-17f71b15d8ae",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T18:25:14.192495+00:00",
+  "unknown": "Sentinel mid-session monitoring: What's the right balance? Too strict = annoying interruptions. Too loose = drift goes undetected. Options: tool count limit, time expiry, error-triggered, goal-completion gate. Which combination provides safety without friction?",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
