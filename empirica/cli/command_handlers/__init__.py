@@ -100,6 +100,12 @@ from .project_search import (
 from .project_embed import (
     handle_project_embed_command,
 )
+from .sync_commands import (
+    handle_sync_push_command,
+    handle_sync_pull_command,
+    handle_sync_status_command,
+    handle_rebuild_command,
+)
 from .doc_commands import (
     handle_doc_check_command,
     handle_doc_plan_suggest_command,
@@ -264,6 +270,13 @@ __all__ = [
     'handle_refdoc_add_command',
     'handle_project_search_command',
     'handle_project_embed_command',
+
+    # Sync commands (git notes synchronization)
+    'handle_sync_push_command',
+    'handle_sync_pull_command',
+    'handle_sync_status_command',
+    'handle_rebuild_command',
+
     'handle_doc_check_command',
     'handle_doc_plan_suggest_command',
     'handle_skill_suggest_command',

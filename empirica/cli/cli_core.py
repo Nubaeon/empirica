@@ -341,7 +341,13 @@ def main(args=None):
             'unknown-resolve': handle_unknown_resolve_command,
             'deadend-log': handle_deadend_log_command,
             'refdoc-add': handle_refdoc_add_command,
-            
+
+            # Sync commands (git notes synchronization)
+            'sync-push': handle_sync_push_command,
+            'sync-pull': handle_sync_pull_command,
+            'sync-status': handle_sync_status_command,
+            'rebuild': handle_rebuild_command,
+
             # Goals commands
             'goals-create': handle_goals_create_command,
             'goals-list': handle_goals_list_command,

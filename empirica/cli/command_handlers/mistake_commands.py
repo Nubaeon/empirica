@@ -68,8 +68,52 @@ def handle_mistake_log_command(args):
                 project_id=project_id
             )
             mistake_ids.append(('project', mistake_id_project))
-        
+
         db.close()
+
+        # GIT NOTES DUAL-WRITE: Store mistake in git notes for sync
+        git_stored = False
+        if mistake_ids:
+            try:
+                from empirica.core.canonical.empirica_git.mistake_store import GitMistakeStore
+                git_store = GitMistakeStore()
+
+                # Use the project mistake_id as the canonical ID
+                primary_id = next((mid for scope_name, mid in mistake_ids if scope_name == 'project'), None)
+                if not primary_id:
+                    primary_id = mistake_ids[0][1] if mistake_ids else None
+
+                if primary_id:
+                    # Get ai_id from session if available
+                    ai_id = 'claude-code'  # Default
+                    try:
+                        db_temp = SessionDatabase()
+                        cursor = db_temp.conn.cursor()
+                        cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
+                        row = cursor.fetchone()
+                        if row and row['ai_id']:
+                            ai_id = row['ai_id']
+                        db_temp.close()
+                    except:
+                        pass
+
+                    git_stored = git_store.store_mistake(
+                        mistake_id=primary_id,
+                        project_id=project_id,
+                        session_id=session_id,
+                        ai_id=ai_id,
+                        mistake=mistake,
+                        why_wrong=why_wrong,
+                        prevention=prevention,
+                        cost_estimate=cost_estimate,
+                        root_cause_vector=root_cause_vector,
+                        goal_id=goal_id
+                    )
+                    if git_stored:
+                        logger.info(f"✓ Mistake {primary_id[:8]} stored in git notes")
+            except Exception as git_err:
+                # Non-fatal - log but continue
+                logger.warning(f"Git notes storage failed: {git_err}")
 
         # Format output
         result = {
@@ -77,9 +121,10 @@ def handle_mistake_log_command(args):
             "scope": scope,
             "mistakes": [{"scope": s, "mistake_id": mid} for s, mid in mistake_ids],
             "session_id": session_id,
+            "git_stored": git_stored,  # Git notes for sync
             "message": f"Mistake logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
-        
+
         if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
@@ -87,6 +132,8 @@ def handle_mistake_log_command(args):
             for s, mid in mistake_ids:
                 print(f"   {s.capitalize()} mistake ID: {mid[:8]}...")
             print(f"   Session: {session_id[:8]}...")
+            if git_stored:
+                print(f"   📝 Stored in git notes for sync")
             if root_cause_vector:
                 print(f"   Root cause: {root_cause_vector} vector")
             if cost_estimate:

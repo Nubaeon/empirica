@@ -648,4 +648,45 @@ def add_checkpoint_parsers(subparsers):
     session_create_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
     session_create_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
+    # ===== SYNC COMMANDS =====
+    # Git notes synchronization for multi-device/multi-AI coordination
+
+    # sync push command
+    sync_push_parser = subparsers.add_parser(
+        'sync-push',
+        help='Push all epistemic notes to remote'
+    )
+    sync_push_parser.add_argument('--remote', default='origin', help='Git remote name (default: origin)')
+    sync_push_parser.add_argument('--dry-run', action='store_true', help='Show what would be pushed without pushing')
+    sync_push_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
+    sync_push_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+
+    # sync pull command
+    sync_pull_parser = subparsers.add_parser(
+        'sync-pull',
+        help='Pull all epistemic notes from remote'
+    )
+    sync_pull_parser.add_argument('--remote', default='origin', help='Git remote name (default: origin)')
+    sync_pull_parser.add_argument('--rebuild', action='store_true', help='Also rebuild SQLite from notes after pull')
+    sync_pull_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
+    sync_pull_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+
+    # sync status command
+    sync_status_parser = subparsers.add_parser(
+        'sync-status',
+        help='Show sync status (local note counts, remote availability)'
+    )
+    sync_status_parser.add_argument('--remote', default='origin', help='Git remote name (default: origin)')
+    sync_status_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
+    sync_status_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+
+    # rebuild command
+    rebuild_parser = subparsers.add_parser(
+        'rebuild',
+        help='Reconstruct SQLite from git notes'
+    )
+    rebuild_parser.add_argument('--from-notes', action='store_true', default=True, help='Rebuild from git notes (default)')
+    rebuild_parser.add_argument('--qdrant', action='store_true', help='Also rebuild Qdrant embeddings')
+    rebuild_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
+    rebuild_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 

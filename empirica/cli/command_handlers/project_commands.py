@@ -1239,69 +1239,78 @@ def handle_finding_log_command(args):
                 goal_id = active_goal['id']
                 # Note: subtask_id remains None unless explicitly provided
 
-        # DUAL-SCOPE LOGIC: Infer scope and log to appropriate table(s)
-        explicit_scope = config_data.get('scope') if config_data else getattr(args, 'scope', None)
-        scope = infer_scope(session_id, project_id, explicit_scope)
-        
-        finding_ids = []
-        
-        if scope in ['session', 'both']:
-            # Log to session_findings
-            finding_id_session = db.log_session_finding(
-                session_id=session_id,
-                finding=finding,
-                goal_id=goal_id,
-                subtask_id=subtask_id,
-                subject=subject,
-                impact=impact
-            )
-            finding_ids.append(('session', finding_id_session))
-        
-        if scope in ['project', 'both']:
-            # Log to project_findings (legacy table)
-            finding_id_project = db.log_finding(
+        # PROJECT-SCOPED: All findings are project-scoped (session_id preserved for provenance)
+        finding_id = db.log_finding(
+            project_id=project_id,
+            session_id=session_id,
+            finding=finding,
+            goal_id=goal_id,
+            subtask_id=subtask_id,
+            subject=subject,
+            impact=impact
+        )
+
+        # Get ai_id from session for git notes
+        ai_id = 'claude-code'  # Default
+        try:
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
+            row = cursor.fetchone()
+            if row and row['ai_id']:
+                ai_id = row['ai_id']
+        except:
+            pass
+
+        db.close()
+
+        # GIT NOTES: Store finding in git notes for sync (canonical source)
+        git_stored = False
+        try:
+            from empirica.core.canonical.empirica_git.finding_store import GitFindingStore
+            git_store = GitFindingStore()
+
+            git_stored = git_store.store_finding(
+                finding_id=finding_id,
                 project_id=project_id,
                 session_id=session_id,
+                ai_id=ai_id,
                 finding=finding,
+                impact=impact,
                 goal_id=goal_id,
                 subtask_id=subtask_id,
-                subject=subject,
-                impact=impact
+                subject=subject
             )
-            finding_ids.append(('project', finding_id_project))
-        
-        db.close()
+            if git_stored:
+                logger.info(f"✓ Finding {finding_id[:8]} stored in git notes")
+        except Exception as git_err:
+            # Non-fatal - log but continue
+            logger.warning(f"Git notes storage failed: {git_err}")
 
         # AUTO-EMBED: Add finding to Qdrant for semantic search
         embedded = False
-        if project_id and finding_ids:
+        if project_id and finding_id:
             try:
                 from empirica.core.qdrant.vector_store import embed_single_memory_item
                 from datetime import datetime
-                # Use project finding_id if available, else session
-                primary_id = next((fid for scope, fid in finding_ids if scope == 'project'), None)
-                if not primary_id:
-                    primary_id = finding_ids[0][1] if finding_ids else None
-                if primary_id:
-                    embedded = embed_single_memory_item(
-                        project_id=project_id,
-                        item_id=primary_id,
-                        text=finding,
-                        item_type='finding',
-                        session_id=session_id,
-                        goal_id=goal_id,
-                        subtask_id=subtask_id,
-                        subject=subject,
-                        impact=impact,
-                        timestamp=datetime.now().isoformat()
-                    )
+                embedded = embed_single_memory_item(
+                    project_id=project_id,
+                    item_id=finding_id,
+                    text=finding,
+                    item_type='finding',
+                    session_id=session_id,
+                    goal_id=goal_id,
+                    subtask_id=subtask_id,
+                    subject=subject,
+                    impact=impact,
+                    timestamp=datetime.now().isoformat()
+                )
             except Exception as embed_err:
                 # Non-fatal - log but continue
                 logger.warning(f"Auto-embed failed: {embed_err}")
 
         # EIDETIC MEMORY: Extract fact and add to eidetic layer for confidence tracking
         eidetic_result = None
-        if project_id and finding_ids:
+        if project_id and finding_id:
             try:
                 from empirica.core.qdrant.vector_store import (
                     embed_eidetic,
@@ -1319,25 +1328,21 @@ def handle_finding_log_command(args):
                     logger.debug(f"Confirmed existing eidetic fact: {content_hash[:8]}")
                 else:
                     # Create new eidetic entry
-                    primary_id = next((fid for scope, fid in finding_ids if scope == 'project'), None)
-                    if not primary_id:
-                        primary_id = finding_ids[0][1] if finding_ids else None
-
                     eidetic_created = embed_eidetic(
                         project_id=project_id,
-                        fact_id=primary_id,
+                        fact_id=finding_id,
                         content=finding,
                         fact_type="fact",
                         domain=subject,  # Use subject as domain hint
-                        confidence=0.5 + (impact * 0.2),  # Higher impact → higher initial confidence
+                        confidence=0.5 + ((impact or 0.5) * 0.2),  # Higher impact → higher initial confidence
                         confirmation_count=1,
                         source_sessions=[session_id] if session_id else [],
-                        source_findings=[primary_id] if primary_id else [],
+                        source_findings=[finding_id],
                         tags=[subject] if subject else [],
                     )
                     if eidetic_created:
                         eidetic_result = "created"
-                        logger.debug(f"Created new eidetic fact: {primary_id}")
+                        logger.debug(f"Created new eidetic fact: {finding_id}")
             except Exception as eidetic_err:
                 # Non-fatal - log but continue
                 logger.warning(f"Eidetic ingestion failed: {eidetic_err}")
@@ -1364,13 +1369,14 @@ def handle_finding_log_command(args):
 
         result = {
             "ok": True,
-            "scope": scope,
-            "findings": [{"scope": s, "finding_id": fid} for s, fid in finding_ids],
+            "finding_id": finding_id,
             "project_id": project_id if project_id else None,
+            "session_id": session_id,
+            "git_stored": git_stored,  # Git notes for sync
             "embedded": embedded,
             "eidetic": eidetic_result,  # "created" | "confirmed" | None
             "immune_decay": decayed_lessons if decayed_lessons else None,  # Lessons affected by this finding
-            "message": f"Finding logged to {scope} scope{'s' if scope == 'both' else ''}"
+            "message": "Finding logged to project scope"
         }
 
         # Format output (AI-first = JSON by default)
@@ -1379,11 +1385,11 @@ def handle_finding_log_command(args):
         else:
             # Human-readable output (legacy)
             print(f"✅ Finding logged successfully")
-            if finding_ids:
-                for scope, fid in finding_ids:
-                    print(f"   Finding ID ({scope}): {fid}")
+            print(f"   Finding ID: {finding_id}")
             if project_id:
                 print(f"   Project: {project_id[:8]}...")
+            if git_stored:
+                print(f"   📝 Stored in git notes for sync")
             if embedded:
                 print(f"   🔍 Auto-embedded for semantic search")
             if decayed_lessons:
@@ -1503,84 +1509,93 @@ def handle_unknown_log_command(args):
             if active_goal:
                 goal_id = active_goal['id']
 
-        # DUAL-SCOPE LOGIC: Infer scope and log to appropriate table(s)
-        explicit_scope = config_data.get('scope') if config_data else getattr(args, 'scope', None)
-        scope = infer_scope(session_id, project_id, explicit_scope)
-        
-        unknown_ids = []
-        
-        if scope in ['session', 'both']:
-            # Log to session_unknowns
-            unknown_id_session = db.log_session_unknown(
-                session_id=session_id,
-                unknown=unknown,
-                goal_id=goal_id,
-                subtask_id=subtask_id,
-                subject=subject,
-                impact=impact
-            )
-            unknown_ids.append(('session', unknown_id_session))
-        
-        if scope in ['project', 'both']:
-            # Log to project_unknowns (legacy table)
-            unknown_id_project = db.log_unknown(
+        # PROJECT-SCOPED: All unknowns are project-scoped (session_id preserved for provenance)
+        unknown_id = db.log_unknown(
+            project_id=project_id,
+            session_id=session_id,
+            unknown=unknown,
+            goal_id=goal_id,
+            subtask_id=subtask_id,
+            subject=subject,
+            impact=impact
+        )
+
+        # Get ai_id from session for git notes
+        ai_id = 'claude-code'  # Default
+        try:
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
+            row = cursor.fetchone()
+            if row and row['ai_id']:
+                ai_id = row['ai_id']
+        except:
+            pass
+
+        db.close()
+
+        # GIT NOTES: Store unknown in git notes for sync (canonical source)
+        git_stored = False
+        try:
+            from empirica.core.canonical.empirica_git.unknown_store import GitUnknownStore
+            git_store = GitUnknownStore()
+
+            git_stored = git_store.store_unknown(
+                unknown_id=unknown_id,
                 project_id=project_id,
                 session_id=session_id,
+                ai_id=ai_id,
                 unknown=unknown,
                 goal_id=goal_id,
-                subtask_id=subtask_id,
-                subject=subject,
-                impact=impact
+                subtask_id=subtask_id
             )
-            unknown_ids.append(('project', unknown_id_project))
-        
-        db.close()
+            if git_stored:
+                logger.info(f"✓ Unknown {unknown_id[:8]} stored in git notes")
+        except Exception as git_err:
+            # Non-fatal - log but continue
+            logger.warning(f"Git notes storage failed: {git_err}")
 
         # AUTO-EMBED: Add unknown to Qdrant for semantic search
         embedded = False
-        if project_id and unknown_ids:
+        if project_id and unknown_id:
             try:
                 from empirica.core.qdrant.vector_store import embed_single_memory_item
                 from datetime import datetime
-                # Use project unknown_id if available, else session
-                primary_id = next((uid for scope, uid in unknown_ids if scope == 'project'), None)
-                if not primary_id:
-                    primary_id = unknown_ids[0][1] if unknown_ids else None
-                if primary_id:
-                    embedded = embed_single_memory_item(
-                        project_id=project_id,
-                        item_id=primary_id,
-                        text=unknown,
-                        item_type='unknown',
-                        session_id=session_id,
-                        goal_id=goal_id,
-                        subtask_id=subtask_id,
-                        subject=subject,
-                        impact=impact,
-                        is_resolved=False,
-                        timestamp=datetime.now().isoformat()
-                    )
+                embedded = embed_single_memory_item(
+                    project_id=project_id,
+                    item_id=unknown_id,
+                    text=unknown,
+                    item_type='unknown',
+                    session_id=session_id,
+                    goal_id=goal_id,
+                    subtask_id=subtask_id,
+                    subject=subject,
+                    impact=impact,
+                    is_resolved=False,
+                    timestamp=datetime.now().isoformat()
+                )
             except Exception as embed_err:
                 # Non-fatal - log but continue
                 logger.warning(f"Auto-embed failed: {embed_err}")
 
         result = {
             "ok": True,
-            "scope": scope,
-            "unknowns": [{"scope": s, "unknown_id": uid} for s, uid in unknown_ids],
+            "unknown_id": unknown_id,
             "project_id": project_id if project_id else None,
+            "session_id": session_id,
+            "git_stored": git_stored,  # Git notes for sync
             "embedded": embedded,
-            "message": f"Unknown logged to {scope} scope{'s' if scope == 'both' else ''}"
+            "message": "Unknown logged to project scope"
         }
 
         if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
             print(f"✅ Unknown logged successfully")
-            for scope_name, uid in unknown_ids:
-                print(f"   {scope_name.title()} Unknown ID: {uid[:8] if uid else 'N/A'}...")
+            print(f"   Unknown ID: {unknown_id}")
             if project_id:
                 print(f"   Project: {project_id[:8]}...")
+            if git_stored:
+                print(f"   📝 Stored in git notes for sync")
             if embedded:
                 print(f"   🔍 Auto-embedded for semantic search")
 
@@ -1769,14 +1784,57 @@ def handle_deadend_log_command(args):
                 impact=impact
             )
             dead_end_ids.append(('project', dead_end_id_project))
-        
+
         db.close()
+
+        # GIT NOTES DUAL-WRITE: Store dead end in git notes for sync
+        git_stored = False
+        if dead_end_ids:
+            try:
+                from empirica.core.canonical.empirica_git.dead_end_store import GitDeadEndStore
+                git_store = GitDeadEndStore()
+
+                # Use the project dead_end_id as the canonical ID
+                primary_id = next((did for scope_name, did in dead_end_ids if scope_name == 'project'), None)
+                if not primary_id:
+                    primary_id = dead_end_ids[0][1] if dead_end_ids else None
+
+                if primary_id:
+                    # Get ai_id from session if available
+                    ai_id = 'claude-code'  # Default
+                    try:
+                        db_temp = SessionDatabase()
+                        cursor = db_temp.conn.cursor()
+                        cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
+                        row = cursor.fetchone()
+                        if row and row['ai_id']:
+                            ai_id = row['ai_id']
+                        db_temp.close()
+                    except:
+                        pass
+
+                    git_stored = git_store.store_dead_end(
+                        dead_end_id=primary_id,
+                        project_id=project_id,
+                        session_id=session_id,
+                        ai_id=ai_id,
+                        approach=approach,
+                        why_failed=why_failed,
+                        goal_id=goal_id,
+                        subtask_id=subtask_id
+                    )
+                    if git_stored:
+                        logger.info(f"✓ Dead end {primary_id[:8]} stored in git notes")
+            except Exception as git_err:
+                # Non-fatal - log but continue
+                logger.warning(f"Git notes storage failed: {git_err}")
 
         result = {
             "ok": True,
             "scope": scope,
             "dead_ends": [{"scope": s, "dead_end_id": did} for s, did in dead_end_ids],
             "project_id": project_id if project_id else None,
+            "git_stored": git_stored,  # Git notes for sync
             "message": f"Dead end logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 
@@ -1788,6 +1846,8 @@ def handle_deadend_log_command(args):
                 print(f"   {scope_name.capitalize()} Dead End ID: {did[:8] if did else 'N/A'}...")
             if project_id:
                 print(f"   Project: {project_id[:8]}...")
+            if git_stored:
+                print(f"   📝 Stored in git notes for sync")
 
         return 0  # Success
 

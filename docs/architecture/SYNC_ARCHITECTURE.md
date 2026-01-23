@@ -344,67 +344,117 @@ workspace:
 
 ---
 
-## Implementation Roadmap
+## Implementation Status
 
-### Phase 1: Git Notes for Findings/Unknowns (Required)
+### Phase 1: Git Notes for Findings/Unknowns - COMPLETE
 
-1. Create `GitFindingStore` (mirror of GitGoalStore pattern)
-2. Create `GitUnknownStore`
-3. Create `GitDeadEndStore`
-4. Modify `finding-log`, `unknown-log`, `deadend-log` to write to git notes
-5. Update SessionSync to include new refs
+1. [x] Create `GitFindingStore` (mirror of GitGoalStore pattern)
+2. [x] Create `GitUnknownStore`
+3. [x] Create `GitDeadEndStore`
+4. [x] Create `GitMistakeStore`
+5. [x] Modify `finding-log`, `unknown-log`, `deadend-log`, `mistake-log` to dual-write to git notes
+6. [x] SessionSync already includes notes refs infrastructure
 
-**Files to modify:**
-- `empirica/core/canonical/empirica_git/finding_store.py` (new)
-- `empirica/core/canonical/empirica_git/unknown_store.py` (new)
-- `empirica/cli/command_handlers/action_commands.py`
-- `empirica/core/canonical/empirica_git/session_sync.py`
+**Files created:**
+- `empirica/core/canonical/empirica_git/finding_store.py`
+- `empirica/core/canonical/empirica_git/unknown_store.py`
+- `empirica/core/canonical/empirica_git/dead_end_store.py`
+- `empirica/core/canonical/empirica_git/mistake_store.py`
 
-### Phase 2: CLI Sync Commands
+**Files modified:**
+- `empirica/cli/command_handlers/project_commands.py` (finding-log, unknown-log, deadend-log)
+- `empirica/cli/command_handlers/mistake_commands.py` (mistake-log)
 
-1. `empirica sync push` - Push all notes refs
-2. `empirica sync pull` - Fetch all notes refs
-3. `empirica sync status` - Show diff between local/remote
-4. `empirica rebuild` - Reconstruct SQLite from notes
+### Phase 2: CLI Sync Commands - COMPLETE
 
-**Files to create:**
+1. [x] `empirica sync-push` - Push all notes refs to remote
+2. [x] `empirica sync-pull` - Fetch all notes refs from remote
+3. [x] `empirica sync-status` - Show local note counts, remote availability
+4. [x] `empirica rebuild --from-notes` - Reconstruct SQLite from git notes
+
+**Files created:**
 - `empirica/cli/command_handlers/sync_commands.py`
 
-### Phase 3: Workspace Orchestration
+**Files modified:**
+- `empirica/cli/parsers/checkpoint_parsers.py` (added sync parsers)
+- `empirica/cli/command_handlers/__init__.py` (exports)
+- `empirica/cli/cli_core.py` (command routing)
 
-1. `empirica workspace sync` - Iterate projects
-2. `empirica workspace status` - Show all projects
-3. Dependency ordering (cognitive_vault first)
+### Phase 3: Workspace Orchestration - TODO
 
-**Files to modify:**
-- `empirica/cli/command_handlers/workspace_commands.py`
-- Extend `.empirica-workspace` parser
+1. [ ] `empirica workspace sync` - Iterate projects with dependency ordering
+2. [ ] Extend `workspace-overview` to show sync status
+3. [ ] Dependency ordering (cognitive_vault syncs first)
 
-### Phase 4: Conflict Resolution (Future)
+### Phase 4: Conflict Resolution - FUTURE
 
-1. Detect conflicting notes on pull
-2. Strategy options: last-write-wins, manual merge, append-only
-3. User prompt for resolution
+Git notes has built-in merge strategies that can be leveraged:
+- `union` (default for multi-AI): Concatenate both versions
+- `ours`: Keep local version
+- `theirs`: Keep remote version
+- `cat_sort_uniq`: Combine and deduplicate
+
+---
+
+## Usage
+
+### Push epistemic state to remote
+```bash
+# Push all empirica notes to origin
+empirica sync-push
+
+# Push to a specific remote
+empirica sync-push --remote upstream
+
+# Dry run - show what would be pushed
+empirica sync-push --dry-run
+```
+
+### Pull epistemic state from remote
+```bash
+# Pull all empirica notes from origin
+empirica sync-pull
+
+# Pull and rebuild SQLite cache
+empirica sync-pull --rebuild
+
+# Pull from specific remote
+empirica sync-pull --remote upstream
+```
+
+### Check sync status
+```bash
+empirica sync-status
+```
+
+### Rebuild SQLite from git notes
+```bash
+# Rebuild findings, unknowns, dead_ends, mistakes from git notes
+empirica rebuild --from-notes
+
+# Also rebuild Qdrant embeddings
+empirica rebuild --from-notes --qdrant
+```
 
 ---
 
 ## Unknowns / Future Work
 
-1. **Conflict resolution strategy** - When same finding edited on two devices?
-2. **Note signing** - Cryptographic verification of note authorship?
-3. **Qdrant sync** - Should embeddings sync, or always rebuild?
-4. **Multi-AI coordination** - When multiple AIs share same repo?
-5. **Doppler integration specifics** - SDK, env var injection pattern?
+1. **Workspace sync orchestration** - How to handle cross-project dependencies?
+2. **Note signing** - Cryptographic verification of note authorship (Phase 2 identity)?
+3. **Qdrant sync** - Should embeddings sync via git-lfs, or always rebuild?
+4. **Multi-AI conflict resolution UI** - When `union` merge creates duplicates?
+5. **Doppler integration** - SDK patterns for secrets that shouldn't be in git notes?
 
 ---
 
 ## References
 
-- `empirica/core/canonical/empirica_git/goal_store.py` - Existing pattern
+- `empirica/core/canonical/empirica_git/goal_store.py` - Reference pattern for git stores
 - `empirica/core/canonical/empirica_git/session_sync.py` - Push/pull infrastructure
 - `.empirica-workspace` - Workspace configuration
 - Session 705cdec9 findings: ae078e3a, 26d3682a
 
 ---
 
-**Document Status:** Ready for review. Pending unknowns logged for future investigation.
+**Document Status:** Phase 1 and 2 COMPLETE. Ready for testing and Phase 3 design.
