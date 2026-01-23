@@ -125,6 +125,27 @@ def _is_public_repo() -> Optional[bool]:
     return None
 
 
+def _list_remotes() -> Dict[str, str]:
+    """List all git remotes and their URLs"""
+    try:
+        result = subprocess.run(
+            ['git', 'remote', '-v'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode != 0:
+            return {}
+
+        remotes = {}
+        for line in result.stdout.strip().split('\n'):
+            if line and '(push)' in line:
+                parts = line.split()
+                if len(parts) >= 2:
+                    remotes[parts[0]] = parts[1]
+        return remotes
+    except:
+        return {}
+
+
 # All empirica git notes refs
 EMPIRICA_NOTES_REFS = [
     'empirica/goals',
@@ -266,14 +287,17 @@ def handle_sync_config_command(args):
                 }
         else:
             # Get remote info for context
-            remote_url = _get_remote_url(sync_config.get('remote', 'origin'))
+            current_remote = sync_config.get('remote', 'origin')
+            remote_url = _get_remote_url(current_remote)
             detected_provider = _detect_provider(remote_url) if remote_url else 'unknown'
+            all_remotes = _list_remotes()
 
             result = {
                 "ok": True,
                 "config": sync_config,
                 "remote_url": remote_url,
                 "detected_provider": detected_provider,
+                "available_remotes": all_remotes,
                 "config_path": str(_get_config_path())
             }
 
@@ -288,7 +312,26 @@ def handle_sync_config_command(args):
             if remote_url:
                 print(f"\n   Remote URL: {remote_url}")
                 print(f"   Detected provider: {detected_provider}")
+
+            # Show available remotes
+            if all_remotes and len(all_remotes) > 1:
+                print(f"\n   Available remotes:")
+                for name, url in all_remotes.items():
+                    marker = "→" if name == current_remote else " "
+                    print(f"   {marker} {name}: {url}")
+
             print(f"\n   Config file: {_get_config_path()}")
+
+            # Show private sync hint if visibility is private but using public provider
+            visibility = sync_config.get('visibility', 'private')
+            if visibility == 'private' and detected_provider in ('github', 'gitlab', 'bitbucket'):
+                print("\n   💡 Private Sync Tip:")
+                print("      Your visibility is 'private' but using a public provider.")
+                print("      To keep epistemic notes private:")
+                print("      1. Create a private repo for notes")
+                print("      2. git remote add notes-private <private-repo-url>")
+                print("      3. empirica sync-config remote notes-private")
+
             print("\n   Set with: empirica sync-config <key> <value>")
             print("   Keys: enabled, remote, visibility, provider")
 

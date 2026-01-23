@@ -441,6 +441,102 @@ empirica rebuild --from-notes
 empirica rebuild --from-notes --qdrant
 ```
 
+### Configure sync settings
+```bash
+# Show current configuration
+empirica sync-config
+
+# Set default remote (for push/pull)
+empirica sync-config remote origin
+
+# Set visibility (affects warnings)
+empirica sync-config visibility private
+
+# Set provider (for provider-specific hints)
+empirica sync-config provider github
+```
+
+---
+
+## Private Sync for Public Repos
+
+**Problem:** If your code repo is public (e.g., GitHub), pushing git notes makes epistemic data public too. This may expose work-in-progress findings, unknowns, or sensitive breadcrumbs.
+
+**Solution:** Use a separate private remote for notes.
+
+### Setup Private Notes Remote
+
+```bash
+# 1. Create a private repo (can be empty, just for notes)
+#    GitHub: github.com/youruser/project-notes-private (set to PRIVATE)
+#    Forgejo: your-forgejo.com/youruser/project-notes
+#    GitLab: gitlab.com/youruser/project-notes-private
+
+# 2. Add it as a remote in your public repo
+git remote add notes-private git@github.com:youruser/project-notes-private.git
+
+# 3. Configure Empirica to use it
+empirica sync-config remote notes-private
+
+# 4. Verify
+empirica sync-config --output human
+# Should show: remote: notes-private
+
+# 5. Sync uses the private remote
+empirica sync-push    # → pushes to notes-private
+empirica sync-pull    # → pulls from notes-private
+```
+
+### How It Works
+
+Git notes are refs (`refs/notes/empirica/*`) that sync to whichever remote you push to.
+By configuring a different remote for Empirica sync, notes go to the private repo while
+code continues to push to the public repo:
+
+```
+Your Machine                    Remotes
+─────────────                   ───────
+refs/heads/main    ──push──►    origin (public)
+refs/notes/empirica/* ─push─►   notes-private (private)
+```
+
+### Multi-Machine Workflow
+
+On Machine A (where you created notes):
+```bash
+empirica sync-push  # Notes go to private remote
+```
+
+On Machine B (where you want to continue):
+```bash
+# Clone the public repo
+git clone https://github.com/youruser/project.git
+
+# Add the private notes remote
+git remote add notes-private git@github.com:youruser/project-notes-private.git
+
+# Configure Empirica
+empirica sync-config remote notes-private
+
+# Pull notes from private remote
+empirica sync-pull --rebuild
+
+# Now you have all epistemic state
+empirica sync-status
+```
+
+### Self-Hosted Options
+
+For complete control, use self-hosted Forgejo/Gitea:
+
+```bash
+git remote add forgejo git@your-forgejo.com:user/project.git
+empirica sync-config remote forgejo
+empirica sync-config provider forgejo
+```
+
+This keeps all epistemic data on your own infrastructure.
+
 ---
 
 ## Unknowns / Future Work
