@@ -1,0 +1,16 @@
+{
+  "finding_id": "88ab90d6-87a7-41bb-903f-ec5d2acb715c",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "1110ed11-8735-4901-adea-60d8c9e8ad4f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T16:08:35.618195+00:00",
+  "finding": "session_snapshot MCP tool fixed: Was missing from tool_map (caused underscore instead of hyphen) and positional_args (session_id is positional, not flag). Now maps to 'session-snapshot' correctly. MCP server restart required to pick up changes.",
+  "impact": 0.6,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "session_snapshot MCP tool fixed: Was missing from tool_map (caused underscore instead of hyphen) and positional_args (session_id is positional, not flag). Now maps to 'session-snapshot' correctly. MCP server restart required to pick up changes.",
+    "impact": 0.6
+  }
+}
