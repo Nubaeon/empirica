@@ -1,0 +1,16 @@
+{
+  "finding_id": "c39d9e34-57b9-4a7c-b630-685de1166800",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0c2e415f-414a-42d9-ba7b-d63fbba71c32",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T17:27:07.665663+00:00",
+  "finding": "Installed plugin at ~/.claude/plugins/local/ must be manually synced after repo updates. Safe pipe chain changes in sentinel-gate.py weren't automatically deployed - had to copy from repo to installed location.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Installed plugin at ~/.claude/plugins/local/ must be manually synced after repo updates. Safe pipe chain changes in sentinel-gate.py weren't automatically deployed - had to copy from repo to installed location.",
+    "impact": 0.7
+  }
+}
