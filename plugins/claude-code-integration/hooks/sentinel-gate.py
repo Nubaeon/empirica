@@ -72,6 +72,20 @@ SAFE_BASH_PREFIXES = (
     'test ', '[ ',
 )
 
+# Dangerous shell operators (command injection prevention)
+# Blocks: ls; rm -rf, cat file | malicious, echo > file, etc.
+DANGEROUS_SHELL_OPERATORS = (
+    ';',      # Command chaining
+    '&&',     # Conditional AND
+    '||',     # Conditional OR
+    '|',      # Pipe (could send to malicious command)
+    '`',      # Backtick command substitution
+    '$(',     # Modern command substitution
+    '>',      # Output redirection
+    '>>',     # Append redirection
+    '<',      # Input redirection
+)
+
 # Thresholds for CHECK validation
 KNOW_THRESHOLD = 0.70
 UNCERTAINTY_THRESHOLD = 0.35
