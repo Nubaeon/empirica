@@ -1,0 +1,16 @@
+{
+  "finding_id": "9a16e3e6-d956-49bd-9b09-55097991ed90",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "eb5949d4-c655-452a-8275-91cd589df4c8",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T13:58:39.315304+00:00",
+  "finding": "Claude Code hooks reference created at .empirica/lessons/claude-code-hooks-reference.yaml - documents hook events, output schema, exit codes, configuration locations, and known issues from debugging.",
+  "impact": 0.8,
+  "goal_id": "1fa115fc-e4b9-4871-aeb2-38aec3d85567",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Claude Code hooks reference created at .empirica/lessons/claude-code-hooks-reference.yaml - documents hook events, output schema, exit codes, configuration locations, and known issues from debugging.",
+    "impact": 0.8
+  }
+}
