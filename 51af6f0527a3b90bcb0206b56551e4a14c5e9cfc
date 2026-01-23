@@ -1,0 +1,16 @@
+{
+  "finding_id": "20d792ad-3c6f-449a-bb3c-507641696226",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T18:29:41.529722+00:00",
+  "finding": "Planned Sentinel improvement #2 - Goal-completion gate: Before goals-create can succeed, require POSTFLIGHT on the previous goal. This enforces proper epistemic loop closure: you can't start a new goal without reflecting on what you learned from the last one. Implementation location: sentinel-gate.py should check for open goals without POSTFLIGHT before allowing goals-create. Exception: First goal of session (no prior goal to close).",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Planned Sentinel improvement #2 - Goal-completion gate: Before goals-create can succeed, require POSTFLIGHT on the previous goal. This enforces proper epistemic loop closure: you can't start a new goal without reflecting on what you learned from the last one. Implementation location: sentinel-gate.py should check for open goals without POSTFLIGHT before allowing goals-create. Exception: First goal of session (no prior goal to close).",
+    "impact": 0.8
+  }
+}
