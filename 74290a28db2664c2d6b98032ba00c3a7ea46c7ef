@@ -1,0 +1,28 @@
+🍞 BREADCRUMBS - 2026-01-23T16:58:42+01:00
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BRANCH: develop
+
+LAST_TASK:
+First issue (likely MCP server or us just being too agressive, the full should be prevented if over X chars)
+
+MODIFIED_FILES:
+   M .breadcrumbs.yaml
+
+RECENT_COMMITS:
+  f83ce95e feat: Add anti-gaming mitigations to Sentinel
+  c7a4e274 fix: Sentinel now shows helpful warning when no session exists
+  aa6fd54a fix: Correct cascade column name ended_at → completed_at
+  ee33c438 feat: Auto-proceed CHECK on high-confidence PREFLIGHT + session auto-close
+  abbc4726 [auto] Pre-compact snapshot - 2026-01-23 15:39:00
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EPISTEMIC STATE (self-assess on resume)
+
+Please assess your current epistemic state:
+- CONFIDENCE: Rate 1-5 (1=guessing, 3=reasonable, 5=certain) where you are on understanding this codebase/task
+- UNCERTAINTIES: What are you unsure about? What needs verification?
+- KEY_DECISIONS: What important decisions were made that you should remember?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Continue from where you left off.
