@@ -1,0 +1,13 @@
+{
+  "unknown_id": "d440925f-f811-4897-ab52-d688c4964ef2",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "da07688f-fc21-4713-9774-aed33ee55b61",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T13:35:25.258390+00:00",
+  "unknown": "What exactly does the user see when 'hook error' occurs? Does the command still execute (fail-open)? Or is it blocked but with wrong message? Need user to describe exact behavior.",
+  "goal_id": "398f8eb4-137d-44be-91bf-f43a1db890ee",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
