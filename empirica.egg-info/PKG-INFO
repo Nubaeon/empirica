@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: empirica
-Version: 1.4.0
+Version: 1.4.1
 Summary: Genuine AI epistemic self-assessment framework - Universal interface for single AI tracking
 Author: David S. L. Van Assche
 License-Expression: MIT
@@ -68,7 +68,7 @@ Dynamic: license-file
 
 > **Teaching AI to know what it knows—and what it doesn't**
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.4.0)
+[![Version](https://img.shields.io/badge/version-1.4.1-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.4.1)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -397,16 +397,16 @@ Each session starts higher because learnings persist. No more re-investigating t
 With Claude Code hooks enabled, you see epistemic state in your terminal:
 
 ```
-[empirica] 💫49% │ no goal │ PREFLIGHT │ K:50% U:50% C:50% │ Δ K:+0.25 U:-0.25 C:+0.20 │ △ drift
+[empirica] ⚡94% │ 🎯3 ❓12/5 │ POSTFLIGHT │ K:95% U:5% C:92% │ Δ K:+0.07 U:-0.05 ✓:+0.90 │ ✓ stable
 ```
 
 **What this tells you:**
-- **💫49%** — Overall epistemic confidence
-- **no goal** — Current goal status (or goal name when active)
-- **PREFLIGHT** — CASCADE phase (PREFLIGHT → CHECK → POSTFLIGHT)
-- **K:50% U:50% C:50%** — Knowledge, Uncertainty, Context scores
-- **Δ K:+0.25** — Learning delta since session start
-- **△ drift** — Drift indicator (✓ stable when calibrated)
+- **⚡94%** — Overall epistemic confidence (⚡ high, 💡 good, 💫 uncertain, 🌑 low)
+- **🎯3 ❓12/5** — Open goals (3) and unknowns (12 total, 5 blocking goals)
+- **POSTFLIGHT** — CASCADE phase (PREFLIGHT → CHECK → POSTFLIGHT)
+- **K:95% U:5% C:92%** — Knowledge, Uncertainty, Context scores
+- **Δ K:+0.07 ✓:+0.90** — Learning deltas (K=know, U=uncertainty, ✓=completion)
+- **✓ stable** — Drift indicator (✓ stable, ⚠ drifting, ✗ severe)
 
 ---
 
