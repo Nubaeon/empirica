@@ -1,0 +1,30 @@
+{
+  "goal_id": "e86fea59-aad2-4f84-819f-d2da926fc74e",
+  "session_id": "d9824571-6f68-4bc8-8809-0391c5a6da1a",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-23T13:20:17.154569+00:00",
+  "goal_data": {
+    "objective": "Fix Sentinel gating, add plugin auto-install, and integrate breadcrumbs for continuity injection",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Sentinel properly blocks (not errors) without CHECK",
+      "Plugin has one-command install script",
+      "Breadcrumbs project integrated for pre/post flight continuity"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-23T13:20:17.154587+00:00",
+      "action": "created"
+    }
+  ]
+}
