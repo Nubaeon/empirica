@@ -1,0 +1,30 @@
+{
+  "goal_id": "b5c52ed6-d5b8-4df0-8a59-7b0e9081cf43",
+  "session_id": "41aaeb7a-2d68-4bdd-878d-966c7279752c",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-23T15:33:32.500294+00:00",
+  "goal_data": {
+    "objective": "Stress test Noetic Firewall (Sentinel) - comprehensive edge case testing",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All test scenarios pass or reveal fixable issues",
+      "Document any discovered edge cases",
+      "Confirm Sentinel behavior matches spec"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-23T15:33:32.500310+00:00",
+      "action": "created"
+    }
+  ]
+}
