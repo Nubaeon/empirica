@@ -1,0 +1,16 @@
+{
+  "finding_id": "6f46d77b-73e1-485c-8df7-895c7fd6727b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "1110ed11-8735-4901-adea-60d8c9e8ad4f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T16:17:42.308512+00:00",
+  "finding": "MCP server restart required after pipx install: The /mcp command only reconnects to running server, doesn't restart it. Must `pkill -f empirica-mcp` then /mcp to load new code. This is why changes weren't taking effect.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "MCP server restart required after pipx install: The /mcp command only reconnects to running server, doesn't restart it. Must `pkill -f empirica-mcp` then /mcp to load new code. This is why changes weren't taking effect.",
+    "impact": 0.85
+  }
+}
