@@ -1,0 +1,16 @@
+{
+  "finding_id": "452c3981-743c-4eea-92e8-9bba86e6d109",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "da07688f-fc21-4713-9774-aed33ee55b61",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T13:38:36.462678+00:00",
+  "finding": "User confirms: Sentinel should WARN but ALLOW when no session. Current fail-open is intentional for usability. The issue is the 'hook error' display, not the gating logic itself.",
+  "impact": 0.7,
+  "goal_id": "398f8eb4-137d-44be-91bf-f43a1db890ee",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "User confirms: Sentinel should WARN but ALLOW when no session. Current fail-open is intentional for usability. The issue is the 'hook error' display, not the gating logic itself.",
+    "impact": 0.7
+  }
+}
