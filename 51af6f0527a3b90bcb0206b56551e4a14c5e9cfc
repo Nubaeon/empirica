@@ -1,0 +1,16 @@
+{
+  "finding_id": "2964c1d9-2e33-42e6-a5b5-8bbd71d85da8",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-23T19:27:34.849329+00:00",
+  "finding": "Recursive self-improvement via epistemic training data: Empirica's accumulated calibration data (2535+ observations, bias corrections, dead-ends, mistakes, trajectories) constitutes a training dataset for metacognition. Fine-tuning open weights models on this data would train accurate self-assessment and epistemic loop closure INTO the weights. The training signal is \"be more accurate about your knowledge state\" - a safer optimization target than raw capability. This closes the self-improvement loop through training cycles rather than real-time weight modification, while remaining fully auditable (all training examples in git notes).",
+  "impact": 0.95,
+  "goal_id": "21290d6c-4917-4b58-939c-288bc217ae80",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Recursive self-improvement via epistemic training data: Empirica's accumulated calibration data (2535+ observations, bias corrections, dead-ends, mistakes, trajectories) constitutes a training dataset for metacognition. Fine-tuning open weights models on this data would train accurate self-assessment and epistemic loop closure INTO the weights. The training signal is \"be more accurate about your knowledge state\" - a safer optimization target than raw capability. This closes the self-improvement loop through training cycles rather than real-time weight modification, while remaining fully auditable (all training examples in git notes).",
+    "impact": 0.95
+  }
+}
