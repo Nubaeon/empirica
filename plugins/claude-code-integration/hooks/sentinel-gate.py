@@ -295,16 +295,45 @@ def main():
     db.close()
 
     if not check_row:
-        respond("deny", f"Low confidence (know={corrected_preflight_know:.2f}, unc={corrected_preflight_unc:.2f}). Submit CHECK to verify readiness.")
+        respond("deny", f"Insufficient understanding (know={corrected_preflight_know:.2f}, unc={corrected_preflight_unc:.2f}). Investigate before acting.")
         sys.exit(0)
 
     know, uncertainty, reflex_data, check_timestamp = check_row
 
     # Verify CHECK is after PREFLIGHT (proper sequence)
     try:
-        if float(check_timestamp) < float(preflight_timestamp):
-            respond("deny", f"CHECK predates PREFLIGHT. Reassess with fresh CHECK.")
+        preflight_ts = float(preflight_timestamp)
+        check_ts = float(check_timestamp)
+
+        if check_ts < preflight_ts:
+            respond("deny", f"Assessment sequence invalid. Start fresh noetic phase.")
             sys.exit(0)
+
+        # Anti-gaming: Minimum noetic duration with evidence check
+        # If CHECK is very fast (<30s) AND no evidence of investigation, reject
+        noetic_duration = check_ts - preflight_ts
+        MIN_NOETIC_DURATION = float(os.getenv('EMPIRICA_MIN_NOETIC_DURATION', '30'))
+
+        if noetic_duration < MIN_NOETIC_DURATION:
+            # Check for evidence of investigation (findings or unknowns logged)
+            db_check = SessionDatabase()
+            cursor_check = db_check.conn.cursor()
+            cursor_check.execute("""
+                SELECT COUNT(*) FROM findings
+                WHERE session_id = ? AND timestamp > ? AND timestamp < ?
+            """, (session_id, preflight_ts, check_ts))
+            findings_count = cursor_check.fetchone()[0]
+
+            cursor_check.execute("""
+                SELECT COUNT(*) FROM unknowns
+                WHERE session_id = ? AND timestamp > ? AND timestamp < ?
+            """, (session_id, preflight_ts, check_ts))
+            unknowns_count = cursor_check.fetchone()[0]
+            db_check.close()
+
+            if findings_count == 0 and unknowns_count == 0:
+                respond("deny", f"Rushed assessment ({noetic_duration:.0f}s). Investigate and log learnings first.")
+                sys.exit(0)
     except (TypeError, ValueError):
         pass  # Can't compare timestamps, skip this check
 
