@@ -1,0 +1,30 @@
+{
+  "goal_id": "30f711d8-02ce-44e8-b2f0-7ef155c88167",
+  "session_id": "093ab2d1-9102-425a-9c50-7578812cbb42",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-23T14:07:35.558411+00:00",
+  "goal_data": {
+    "objective": "Investigate duplicate PreToolUse hook execution: determine if known issue, bug, or expected behavior",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Find Claude Code documentation on hook auto-discovery",
+      "Search GitHub issues for duplicate hook reports",
+      "Determine root cause of ${CLAUDE_PLUGIN_ROOT} hook firing without hooks.json entry"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-23T14:07:35.558421+00:00",
+      "action": "created"
+    }
+  ]
+}
