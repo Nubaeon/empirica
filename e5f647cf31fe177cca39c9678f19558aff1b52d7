@@ -1,0 +1,16 @@
+{
+  "finding_id": "077d300e-74a6-48a7-8bfa-5a83cd2d0358",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-24T15:42:17.628369+00:00",
+  "finding": "NotebookLM customize prompt best practice: Include CRITICAL instruction 'Never display font names, color codes, hex values, or design labels as visible slide text' to prevent the AI from showing styling metadata as actual content. Also specify 'Each slide: 1 headline, 5-8 bullet points max, no dense paragraphs' for clean output. Learned from production use.",
+  "impact": 0.6,
+  "goal_id": "4a7341bb-7dc9-4a73-9482-3380f4f1ef20",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "NotebookLM customize prompt best practice: Include CRITICAL instruction 'Never display font names, color codes, hex values, or design labels as visible slide text' to prevent the AI from showing styling metadata as actual content. Also specify 'Each slide: 1 headline, 5-8 bullet points max, no dense paragraphs' for clean output. Learned from production use.",
+    "impact": 0.6
+  }
+}
