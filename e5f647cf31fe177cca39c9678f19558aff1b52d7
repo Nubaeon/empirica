@@ -1,0 +1,16 @@
+{
+  "finding_id": "9052eb39-d526-4c0f-adf2-5af2c2f145be",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-24T15:42:28.600996+00:00",
+  "finding": "NotebookLM slide workflow pattern: (1) Create MD file with well-structured content (headers become slide candidates, bullet points become talking points), (2) Upload as source, (3) Click 'Slide Deck' in Studio panel, (4) Choose 'Presenter Slides' for clean visuals or 'Detailed Deck' for standalone reading, (5) Use customize prompt for meta-instructions (audience, names, dates, tone), (6) Export as PDF, optionally recreate in Google Slides for full editing. Uses Nano Banana Pro model. Source: https://medium.com/ai-quick-tips/how-to-create-slide-decks-in-notebooklm-in-less-than-5-minutes-the-fast-non-stressful-way-3d54fee7e497",
+  "impact": 0.7,
+  "goal_id": "4a7341bb-7dc9-4a73-9482-3380f4f1ef20",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "NotebookLM slide workflow pattern: (1) Create MD file with well-structured content (headers become slide candidates, bullet points become talking points), (2) Upload as source, (3) Click 'Slide Deck' in Studio panel, (4) Choose 'Presenter Slides' for clean visuals or 'Detailed Deck' for standalone reading, (5) Use customize prompt for meta-instructions (audience, names, dates, tone), (6) Export as PDF, optionally recreate in Google Slides for full editing. Uses Nano Banana Pro model. Source: https://medium.com/ai-quick-tips/how-to-create-slide-decks-in-notebooklm-in-less-than-5-minutes-the-fast-non-stressful-way-3d54fee7e497",
+    "impact": 0.7
+  }
+}
