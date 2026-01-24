@@ -1,0 +1,33 @@
+{
+  "goal_id": "4a7341bb-7dc9-4a73-9482-3380f4f1ef20",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-24T12:06:19.719601+00:00",
+  "goal_data": {
+    "objective": "Review Philipp's Dr. Reimer presentation for data accuracy: verify statistics against actual Empirica data, identify interpretation issues, surface gaps, and assess epistemic-candor integration potential",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "All statistical claims verified against actual data",
+      "Bias correction values cross-checked with .breadcrumbs.yaml",
+      "Source code paths verified",
+      "Interpretation issues documented",
+      "epistemic-candor relevance assessed",
+      "Corrections documented for Philipp"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-24T12:06:19.719614+00:00",
+      "action": "created"
+    }
+  ]
+}
