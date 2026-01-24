@@ -1,0 +1,16 @@
+{
+  "finding_id": "63585c1b-23cf-4acb-8c18-55f0d16edde3",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-24T12:44:00.996681+00:00",
+  "finding": "Created NotebookLM-optimized presentation source for Dr. Reimer: includes 298,987 clean observations (vs 82,380 in paper), proper Bayesian calibration explanation, legal confabulation risk categories, and epistemic-candor MCP integration",
+  "impact": 0.7,
+  "goal_id": "4a7341bb-7dc9-4a73-9482-3380f4f1ef20",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Created NotebookLM-optimized presentation source for Dr. Reimer: includes 298,987 clean observations (vs 82,380 in paper), proper Bayesian calibration explanation, legal confabulation risk categories, and epistemic-candor MCP integration",
+    "impact": 0.7
+  }
+}
