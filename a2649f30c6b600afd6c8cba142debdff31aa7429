@@ -1,0 +1,16 @@
+{
+  "finding_id": "3b4c5576-3b58-49a6-b2f7-192086aff9a0",
+  "project_id": "f8749f408f952271242a536d8c9a2591",
+  "session_id": "074d60af-503b-48a0-b1ab-3a322b98fa77",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T14:00:08.462604+00:00",
+  "finding": "MCP server connected - empirica tools available via ToolSearch",
+  "impact": 0.6,
+  "goal_id": "60063434-4b08-46ad-95dc-15d595201d03",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "MCP server connected - empirica tools available via ToolSearch",
+    "impact": 0.6
+  }
+}
