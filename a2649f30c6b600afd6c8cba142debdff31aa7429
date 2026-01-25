@@ -1,0 +1,16 @@
+{
+  "finding_id": "2564cefa-c78f-452a-83d8-12f24f61921b",
+  "project_id": "f8749f408f952271242a536d8c9a2591",
+  "session_id": "074d60af-503b-48a0-b1ab-3a322b98fa77",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T13:59:46.209449+00:00",
+  "finding": "Read tool works in noetic phase - sentinel allows investigation tools",
+  "impact": 0.5,
+  "goal_id": "60063434-4b08-46ad-95dc-15d595201d03",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Read tool works in noetic phase - sentinel allows investigation tools",
+    "impact": 0.5
+  }
+}
