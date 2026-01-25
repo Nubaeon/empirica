@@ -1,0 +1,28 @@
+{
+  "goal_id": "bc38d844-4e15-4ec1-b5fe-ccf1a3c06bf1",
+  "session_id": "42e4dd29-e882-484d-9e40-c2cb7dedb0de",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-25T16:19:46.191346+00:00",
+  "goal_data": {
+    "objective": "Investigate and resolve MCP server multi-project storage bug: MCP creates sessions in global ~/.empirica/ instead of local project .empirica/ when running from non-project CWD. Determine correct architecture, fix path resolution, and ensure statusline/CLI/MCP all use consistent storage.",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-25T16:19:46.191361+00:00",
+      "action": "created"
+    }
+  ]
+}
