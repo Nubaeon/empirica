@@ -1,0 +1,16 @@
+{
+  "finding_id": "546f445c-615a-4878-afef-66ba30651418",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "94121b87-03df-4b1b-8081-41ddfab43244",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T14:21:35.121881+00:00",
+  "finding": "CRM schema shows excellent pattern for cross-project linking: clients table has client_findings and client_unknowns tables that reference existing Empirica breadcrumbs. Key insight: don't duplicate data, REFERENCE it across project boundaries. Same pattern could work for project-to-project links.",
+  "impact": 0.75,
+  "goal_id": "397d5ca6-003d-4e0a-ad65-b679e9297967",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CRM schema shows excellent pattern for cross-project linking: clients table has client_findings and client_unknowns tables that reference existing Empirica breadcrumbs. Key insight: don't duplicate data, REFERENCE it across project boundaries. Same pattern could work for project-to-project links.",
+    "impact": 0.75
+  }
+}
