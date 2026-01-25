@@ -1,0 +1,28 @@
+{
+  "goal_id": "397d5ca6-003d-4e0a-ad65-b679e9297967",
+  "session_id": "94121b87-03df-4b1b-8081-41ddfab43244",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-25T14:18:36.089095+00:00",
+  "goal_data": {
+    "objective": "Research and design multi-project management for Empirica - categorization, linking, non-dev user support",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-25T14:18:36.089114+00:00",
+      "action": "created"
+    }
+  ]
+}
