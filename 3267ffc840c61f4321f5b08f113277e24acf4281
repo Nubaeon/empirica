@@ -1,0 +1,16 @@
+{
+  "finding_id": "4b7c7435-d9d3-4f53-b97d-b666edf89123",
+  "project_id": "9a755202-1e7f-4acf-a1a9-9f338bcff9d1",
+  "session_id": "b45e6fea-bb4b-4ab7-80b7-bafad545d7ef",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T19:11:39.412729+00:00",
+  "finding": "Sessions table uses end_time IS NULL for active sessions (no status column). Goals table uses created_timestamp not created_at. Timestamps may be stored as strings, need float() conversion.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sessions table uses end_time IS NULL for active sessions (no status column). Goals table uses created_timestamp not created_at. Timestamps may be stored as strings, need float() conversion.",
+    "impact": 0.7
+  }
+}
