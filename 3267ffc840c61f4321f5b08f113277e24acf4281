@@ -1,0 +1,16 @@
+{
+  "finding_id": "c89c3b43-90ee-49d3-b4a0-1aaff384b75a",
+  "project_id": "9a755202-1e7f-4acf-a1a9-9f338bcff9d1",
+  "session_id": "b45e6fea-bb4b-4ab7-80b7-bafad545d7ef",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T18:40:54.760541+00:00",
+  "finding": "CRM schema corrected: client_projects provides many-to-many client-project relationships, engagements now have direct project_id. Relationship types: customer, sponsor, partner, stakeholder.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CRM schema corrected: client_projects provides many-to-many client-project relationships, engagements now have direct project_id. Relationship types: customer, sponsor, partner, stakeholder.",
+    "impact": 0.85
+  }
+}
