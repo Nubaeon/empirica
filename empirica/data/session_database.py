@@ -1187,7 +1187,10 @@ class SessionDatabase:
         self,
         name: str,
         description: Optional[str] = None,
-        repos: Optional[List[str]] = None
+        repos: Optional[List[str]] = None,
+        project_type: Optional[str] = None,
+        project_tags: Optional[List[str]] = None,
+        parent_project_id: Optional[str] = None
     ) -> str:
         """Create a new project (delegates to ProjectRepository)
 
@@ -1195,11 +1198,19 @@ class SessionDatabase:
             name: Project name (e.g., "Empirica Core")
             description: Project description
             repos: List of repository names (e.g., ["empirica", "empirica-dev"])
+            project_type: Category (product, application, feature, research, documentation, infrastructure, operations)
+            project_tags: List of tags for flexible categorization
+            parent_project_id: Optional parent project for hierarchy
 
         Returns:
             project_id: UUID string
         """
-        return self.projects.create_project(name, description, repos)
+        return self.projects.create_project(
+            name, description, repos,
+            project_type=project_type,
+            project_tags=project_tags,
+            parent_project_id=parent_project_id
+        )
     
     def get_project(self, project_id: str) -> Optional[Dict]:
         """Get project data (delegates to ProjectRepository)"""

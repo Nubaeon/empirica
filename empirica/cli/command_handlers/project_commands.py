@@ -15,23 +15,43 @@ def handle_project_create_command(args):
     """Handle project-create command"""
     try:
         from empirica.data.session_database import SessionDatabase
+        from empirica.data.repositories.projects import ProjectRepository
 
         # Parse arguments
         name = args.name
         description = getattr(args, 'description', None)
         repos_str = getattr(args, 'repos', None)
-        
+        project_type = getattr(args, 'type', None)
+        tags_str = getattr(args, 'tags', None)
+        parent = getattr(args, 'parent', None)
+
         # Parse repos JSON if provided
         repos = None
         if repos_str:
             repos = json.loads(repos_str)
+
+        # Parse tags (comma-separated or JSON array)
+        tags = None
+        if tags_str:
+            if tags_str.startswith('['):
+                tags = json.loads(tags_str)
+            else:
+                tags = [t.strip() for t in tags_str.split(',')]
+
+        # Validate project_type
+        if project_type and project_type not in ProjectRepository.PROJECT_TYPES:
+            print(f"⚠️  Unknown type '{project_type}'. Valid types: {', '.join(ProjectRepository.PROJECT_TYPES)}")
+            project_type = 'product'
 
         # Create project
         db = SessionDatabase()
         project_id = db.create_project(
             name=name,
             description=description,
-            repos=repos
+            repos=repos,
+            project_type=project_type,
+            project_tags=tags,
+            parent_project_id=parent
         )
         db.close()
 
@@ -41,7 +61,10 @@ def handle_project_create_command(args):
                 "ok": True,
                 "project_id": project_id,
                 "name": name,
+                "project_type": project_type or 'product',
+                "tags": tags or [],
                 "repos": repos or [],
+                "parent_project_id": parent,
                 "message": "Project created successfully"
             }
             print(json.dumps(result, indent=2))
@@ -49,10 +72,15 @@ def handle_project_create_command(args):
             print(f"✅ Project created successfully")
             print(f"   Project ID: {project_id}")
             print(f"   Name: {name}")
+            print(f"   Type: {project_type or 'product'}")
+            if tags:
+                print(f"   Tags: {', '.join(tags)}")
             if description:
                 print(f"   Description: {description}")
             if repos:
                 print(f"   Repos: {', '.join(repos)}")
+            if parent:
+                print(f"   Parent: {parent}")
 
         # Return None to avoid exit code issues and duplicate output
         return None

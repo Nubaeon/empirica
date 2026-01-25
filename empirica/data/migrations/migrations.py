@@ -532,6 +532,100 @@ def migration_016_auto_captured_issues(cursor: sqlite3.Cursor):
     logger.info("✓ Created auto_captured_issues table and index")
 
 
+# Migration 17: Add project_type and project_tags for multi-project workspace management
+def migration_017_project_type_and_tags(cursor: sqlite3.Cursor):
+    """
+    Add project classification fields for workspace management.
+
+    project_type: Categorizes project (product, application, research, documentation, infrastructure, operations)
+    project_tags: JSON array of free-form tags for flexible categorization
+    parent_project_id: Optional hierarchy (e.g., empirica-autonomy → empirica)
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    add_column_if_missing(cursor, "projects", "project_type", "TEXT", "'product'")
+    add_column_if_missing(cursor, "projects", "project_tags", "TEXT")  # JSON array
+    add_column_if_missing(cursor, "projects", "parent_project_id", "TEXT")
+
+    # Add index for type-based queries
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(project_type)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_projects_parent ON projects(parent_project_id)")
+
+    logger.info("✓ Added project_type, project_tags, and parent_project_id to projects table")
+
+
+# Migration 18: Add project_relationships table for cross-project links
+def migration_018_project_relationships(cursor: sqlite3.Cursor):
+    """
+    Create project_relationships table for explicit cross-project links.
+
+    This complements knowledge_graph by providing a simpler, project-focused view.
+    Types: depends_on, blocks, shares_domain, cross_learns, parent_of
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS project_relationships (
+            id TEXT PRIMARY KEY,
+            source_project_id TEXT NOT NULL,
+            target_project_id TEXT NOT NULL,
+            relationship_type TEXT NOT NULL,
+            weight REAL DEFAULT 1.0,
+            notes TEXT,
+            created_at REAL NOT NULL,
+            created_by_ai_id TEXT,
+
+            FOREIGN KEY (source_project_id) REFERENCES projects(id),
+            FOREIGN KEY (target_project_id) REFERENCES projects(id),
+            UNIQUE(source_project_id, target_project_id, relationship_type)
+        )
+    """)
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_proj_rel_source ON project_relationships(source_project_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_proj_rel_target ON project_relationships(target_project_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_proj_rel_type ON project_relationships(relationship_type)")
+
+    logger.info("✓ Created project_relationships table")
+
+
+# Migration 19: Add cross_project_finding_links for shared learnings
+def migration_019_cross_project_finding_links(cursor: sqlite3.Cursor):
+    """
+    Create table to link findings across projects.
+
+    Allows a finding from project A to be marked as relevant to project B.
+    Pattern borrowed from CRM's client_findings table.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cross_project_finding_links (
+            id TEXT PRIMARY KEY,
+            finding_id TEXT NOT NULL,
+            source_project_id TEXT NOT NULL,
+            target_project_id TEXT NOT NULL,
+            relevance REAL DEFAULT 1.0,
+            notes TEXT,
+            created_at REAL NOT NULL,
+            created_by_ai_id TEXT,
+
+            FOREIGN KEY (finding_id) REFERENCES project_findings(id),
+            FOREIGN KEY (source_project_id) REFERENCES projects(id),
+            FOREIGN KEY (target_project_id) REFERENCES projects(id),
+            UNIQUE(finding_id, target_project_id)
+        )
+    """)
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_xproj_finding_src ON cross_project_finding_links(source_project_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_xproj_finding_tgt ON cross_project_finding_links(target_project_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_xproj_finding_id ON cross_project_finding_links(finding_id)")
+
+    logger.info("✓ Created cross_project_finding_links table")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -549,4 +643,7 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("014_lessons_and_knowledge_graph", "Add lessons and knowledge graph tables for epistemic procedural knowledge", migration_014_lessons_and_knowledge_graph),
     ("015_sessions_instance_id", "Add instance_id to sessions for multi-instance isolation", migration_015_sessions_instance_id),
     ("016_auto_captured_issues", "Add auto_captured_issues table for issue tracking", migration_016_auto_captured_issues),
+    ("017_project_type_and_tags", "Add project_type, project_tags, parent_project_id for workspace management", migration_017_project_type_and_tags),
+    ("018_project_relationships", "Add project_relationships table for cross-project links", migration_018_project_relationships),
+    ("019_cross_project_finding_links", "Add cross_project_finding_links for shared learnings", migration_019_cross_project_finding_links),
 ]

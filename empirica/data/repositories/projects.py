@@ -21,11 +21,17 @@ logger = logging.getLogger(__name__)
 class ProjectRepository(BaseRepository):
     """Repository for project-level management and context"""
 
+    # Valid project types for workspace management
+    PROJECT_TYPES = ['product', 'application', 'feature', 'research', 'documentation', 'infrastructure', 'operations']
+
     def create_project(
         self,
         name: str,
         description: Optional[str] = None,
-        repos: Optional[List[str]] = None
+        repos: Optional[List[str]] = None,
+        project_type: Optional[str] = None,
+        project_tags: Optional[List[str]] = None,
+        parent_project_id: Optional[str] = None
     ) -> str:
         """
         Create a new project for multi-repo/multi-session tracking.
@@ -34,30 +40,44 @@ class ProjectRepository(BaseRepository):
             name: Project name (e.g., "Empirica Core")
             description: Project description
             repos: List of repository names (e.g., ["empirica", "empirica-dev"])
+            project_type: Category (product, application, feature, research, documentation, infrastructure, operations)
+            project_tags: List of tags for flexible categorization
+            parent_project_id: Optional parent project for hierarchy
 
         Returns:
             project_id: UUID string
         """
         project_id = str(uuid.uuid4())
 
+        # Validate project_type
+        if project_type and project_type not in self.PROJECT_TYPES:
+            logger.warning(f"Unknown project_type '{project_type}', defaulting to 'product'")
+            project_type = 'product'
+        project_type = project_type or 'product'
+
         project_data = {
             "name": name,
             "description": description,
-            "repos": repos or []
+            "repos": repos or [],
+            "project_type": project_type,
+            "project_tags": project_tags or [],
+            "parent_project_id": parent_project_id
         }
 
         self._execute("""
             INSERT INTO projects (
                 id, name, description, repos, created_timestamp,
-                last_activity_timestamp, project_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                last_activity_timestamp, project_data,
+                project_type, project_tags, parent_project_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             project_id, name, description, json.dumps(repos or []),
-            time.time(), time.time(), json.dumps(project_data)
+            time.time(), time.time(), json.dumps(project_data),
+            project_type, json.dumps(project_tags or []), parent_project_id
         ))
 
         self.commit()
-        logger.info(f"📁 Project created: {name} ({project_id[:8]}...)")
+        logger.info(f"📁 Project created: {name} [{project_type}] ({project_id[:8]}...)")
 
         return project_id
 
