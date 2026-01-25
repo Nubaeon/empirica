@@ -1,0 +1,16 @@
+{
+  "finding_id": "6cb264b9-5cb6-49d9-9938-07dd265c4d76",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a9de988c-0ffc-45c0-a13b-200211c6d797",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T17:22:53.061706+00:00",
+  "finding": "Statusline bug root cause: When a project lacks its own .empirica/ directory, statusline falls back to global ~/.empirica/sessions/sessions.db which contains data from other projects (e.g., Empirica). The get_open_counts() function also lacks project_id filtering, so it counts ALL goals/unknowns in the DB regardless of which project owns them.",
+  "impact": 0.8,
+  "goal_id": "c56da3f3-75b3-4a18-b853-8b26588dc73f",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Statusline bug root cause: When a project lacks its own .empirica/ directory, statusline falls back to global ~/.empirica/sessions/sessions.db which contains data from other projects (e.g., Empirica). The get_open_counts() function also lacks project_id filtering, so it counts ALL goals/unknowns in the DB regardless of which project owns them.",
+    "impact": 0.8
+  }
+}
