@@ -1,0 +1,16 @@
+{
+  "finding_id": "e6b39aa5-9f1d-45c6-b173-2361eaf1fda3",
+  "project_id": "9a755202-1e7f-4acf-a1a9-9f338bcff9d1",
+  "session_id": "b45e6fea-bb4b-4ab7-80b7-bafad545d7ef",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T17:35:51.535327+00:00",
+  "finding": "ProjectTree widget uses textual Tree widget with data parameter to store project dict for selection handling",
+  "impact": 0.6,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "ProjectTree widget uses textual Tree widget with data parameter to store project dict for selection handling",
+    "impact": 0.6
+  }
+}
