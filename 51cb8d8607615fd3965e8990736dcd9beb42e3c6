@@ -1,0 +1,16 @@
+{
+  "finding_id": "f8b56617-367a-47e6-a9bf-5a2ac667f521",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "ed050822-b5ed-4492-ac1b-5e4634ed77bf",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T12:00:34.347775+00:00",
+  "finding": "DISTRIBUTION FIX: Plugin hooks.json emptied, install.sh now adds ALL hooks (PreToolUse, PreCompact, SessionStart, SessionEnd) to settings.json with absolute paths. Fixes ${CLAUDE_PLUGIN_ROOT} cache resolution issue for local plugin installations.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "DISTRIBUTION FIX: Plugin hooks.json emptied, install.sh now adds ALL hooks (PreToolUse, PreCompact, SessionStart, SessionEnd) to settings.json with absolute paths. Fixes ${CLAUDE_PLUGIN_ROOT} cache resolution issue for local plugin installations.",
+    "impact": 0.85
+  }
+}
