@@ -82,10 +82,12 @@ DANGEROUS_SHELL_OPERATORS = (
     '||',     # Conditional OR
     '`',      # Backtick command substitution
     '$(',     # Modern command substitution
-    '>',      # Output redirection
-    '>>',     # Append redirection
-    '<',      # Input redirection
+    # NOTE: Redirection (>, >>, <) checked separately to allow safe patterns
 )
+
+# Safe redirection patterns (stderr suppression, etc.)
+import re
+SAFE_REDIRECT_PATTERN = re.compile(r'2>/dev/null|2>&1|>/dev/null|2>\s*/dev/null')
 
 # Safe pipe targets - read-only commands that can receive piped input
 # Allows: grep ... | head, cat ... | wc -l, etc.
@@ -185,6 +187,16 @@ def is_safe_bash_command(tool_input: dict) -> bool:
     for operator in DANGEROUS_SHELL_OPERATORS:
         if operator in command:
             return False
+
+    # Check for file redirection (dangerous) vs stderr suppression (safe)
+    # Strip safe patterns first, then check for remaining redirects
+    cmd_without_safe_redirects = SAFE_REDIRECT_PATTERN.sub('', command)
+    if '>' in cmd_without_safe_redirects or '>>' in cmd_without_safe_redirects:
+        return False  # Actual file redirection - not safe
+    if '<' in cmd_without_safe_redirects:
+        # Allow heredocs for safe commands (empirica already handled above)
+        if '<<' not in command:
+            return False  # Input redirection from file - not safe
 
     # Handle pipes specially - allow if all segments are safe
     if '|' in command:
