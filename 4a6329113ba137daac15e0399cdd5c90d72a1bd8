@@ -1,0 +1,16 @@
+{
+  "finding_id": "e6cee8f8-85b5-463a-90e2-c054f9f962d6",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "94121b87-03df-4b1b-8081-41ddfab43244",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T14:21:52.227654+00:00",
+  "finding": "Natural project taxonomy from naming convention: product (core SDK), application (chat, web, outreach), feature (autonomy, autopilot), research (paper, prediction), documentation (vision), infrastructure (secrets, internal), operations (comms, crm). Projects already self-categorize by suffix - need to formalize this into project type enum.",
+  "impact": 0.7,
+  "goal_id": "397d5ca6-003d-4e0a-ad65-b679e9297967",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Natural project taxonomy from naming convention: product (core SDK), application (chat, web, outreach), feature (autonomy, autopilot), research (paper, prediction), documentation (vision), infrastructure (secrets, internal), operations (comms, crm). Projects already self-categorize by suffix - need to formalize this into project type enum.",
+    "impact": 0.7
+  }
+}
