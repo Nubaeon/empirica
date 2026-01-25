@@ -288,6 +288,46 @@ else
     echo "      Or: pip install empirica-mcp"
 fi
 
+# ==================== CONFIGURE MCP.JSON ====================
+
+echo "⚙️  Configuring MCP server..."
+
+MCP_FILE="$HOME/.claude/mcp.json"
+
+# Find empirica-mcp path (pipx or pip)
+MCP_CMD=""
+if command -v empirica-mcp &>/dev/null; then
+    MCP_CMD=$(which empirica-mcp)
+elif [ -f "$HOME/.local/bin/empirica-mcp" ]; then
+    MCP_CMD="$HOME/.local/bin/empirica-mcp"
+fi
+
+if [ -n "$MCP_CMD" ]; then
+    # Create mcp.json if it doesn't exist
+    if [ ! -f "$MCP_FILE" ]; then
+        echo '{"mcpServers":{}}' > "$MCP_FILE"
+    fi
+
+    # Add empirica MCP server if not present
+    if ! jq -e '.mcpServers.empirica' "$MCP_FILE" >/dev/null 2>&1; then
+        jq --arg cmd "$MCP_CMD" \
+           '.mcpServers.empirica = {
+             "command": $cmd,
+             "args": [],
+             "type": "stdio",
+             "env": {"EMPIRICA_EPISTEMIC_MODE": "true"},
+             "tools": ["*"],
+             "description": "Empirica epistemic framework - CASCADE workflow, goals, findings"
+           }' "$MCP_FILE" > "$MCP_FILE.tmp" && mv "$MCP_FILE.tmp" "$MCP_FILE"
+        echo "   ✓ MCP server configured in ~/.claude/mcp.json"
+    else
+        echo "   MCP server already configured"
+    fi
+else
+    echo "   ⚠️  empirica-mcp not found in PATH - configure mcp.json manually"
+    echo "      See: ~/.claude/plugins/local/empirica-integration/templates/mcp.json"
+fi
+
 # ==================== CREATE INITIAL SESSION ====================
 
 if command -v empirica &>/dev/null; then

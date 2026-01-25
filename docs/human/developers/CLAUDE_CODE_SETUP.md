@@ -271,18 +271,21 @@ chmod +x ~/.claude/hooks/post-compact.sh
 
 ## Step 5: Configure MCP Server (Optional)
 
-For Claude Code MCP integration, edit `~/.claude/mcp.json`:
+The MCP server gives Claude direct access to Empirica tools.
+
+**If you used the Quick Install:** `~/.claude/mcp.json` is auto-configured with the correct path.
+
+**Manual configuration:** Edit `~/.claude/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "empirica": {
-      "command": "empirica-mcp",
+      "command": "/home/YOUR_USER/.local/bin/empirica-mcp",
       "args": [],
       "type": "stdio",
       "env": {
-        "EMPIRICA_EPISTEMIC_MODE": "true",
-        "EMPIRICA_PERSONALITY": "balanced_architect"
+        "EMPIRICA_EPISTEMIC_MODE": "true"
       },
       "tools": ["*"],
       "description": "Empirica epistemic framework"
@@ -291,7 +294,13 @@ For Claude Code MCP integration, edit `~/.claude/mcp.json`:
 }
 ```
 
-**If installed from source** (not pip), use full path:
+**IMPORTANT:** Use the **full absolute path** to `empirica-mcp`. Find it with:
+```bash
+which empirica-mcp
+# Usually: ~/.local/bin/empirica-mcp (pipx) or ~/.local/bin/empirica-mcp (pip --user)
+```
+
+**If installed from source**, use the venv path:
 ```json
 {
   "mcpServers": {
@@ -301,8 +310,7 @@ For Claude Code MCP integration, edit `~/.claude/mcp.json`:
       "type": "stdio",
       "env": {
         "PYTHONPATH": "/path/to/empirica",
-        "EMPIRICA_EPISTEMIC_MODE": "true",
-        "EMPIRICA_PERSONALITY": "balanced_architect"
+        "EMPIRICA_EPISTEMIC_MODE": "true"
       },
       "tools": ["*"]
     }
@@ -310,9 +318,10 @@ For Claude Code MCP integration, edit `~/.claude/mcp.json`:
 }
 ```
 
-**Test MCP server:**
-```bash
-empirica-mcp --help
+**Verify MCP is working** (in Claude Code):
+```
+/mcp
+# Should show: empirica (connected)
 ```
 
 ---
