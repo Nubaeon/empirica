@@ -1,0 +1,14 @@
+{
+  "mistake_id": "89e8aad8-527f-4c98-8961-f50d1c3198b1",
+  "project_id": "9a755202-1e7f-4acf-a1a9-9f338bcff9d1",
+  "session_id": "b45e6fea-bb4b-4ab7-80b7-bafad545d7ef",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T18:38:10.650094+00:00",
+  "mistake": "CRM schema has inverted relationship: engagements link to goals instead of projects",
+  "why_wrong": "Goals are already project-scoped. The chain client->engagement->goal->project is backwards. A client should link to projects directly (many-to-many), with engagements scoped to client-project pairs. Current design forces traversing through goals to find which projects a client is associated with.",
+  "prevention": "When designing relational schemas, trace the natural hierarchy first: clients own projects, projects own goals. Link at the ownership level, not the leaf level.",
+  "cost_estimate": null,
+  "root_cause_vector": "context",
+  "goal_id": null,
+  "subtask_id": null
+}
