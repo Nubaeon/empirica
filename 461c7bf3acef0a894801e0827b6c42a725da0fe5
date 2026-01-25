@@ -1,0 +1,13 @@
+{
+  "unknown_id": "08f0cf8c-ed8c-43a4-8ac4-b7bb3224e5e6",
+  "project_id": "9a755202-1e7f-4acf-a1a9-9f338bcff9d1",
+  "session_id": "b45e6fea-bb4b-4ab7-80b7-bafad545d7ef",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T18:38:24.493514+00:00",
+  "unknown": "Should existing engagements table be migrated to add project_id, or should we create a new engagement model? Need to check if there's any data in engagements table.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
