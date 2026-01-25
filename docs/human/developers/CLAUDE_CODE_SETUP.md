@@ -237,7 +237,57 @@ cp ~/.claude/plugins/local/empirica-integration/templates/mcp.json ~/.claude/mcp
 }
 ```
 
-6. **Restart Claude Code**
+6. **Add hooks to settings.json** (CRITICAL for Sentinel firewall):
+
+The Sentinel gate (noetic firewall) requires PreToolUse hooks. Add to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/sentinel-gate.py", "timeout": 10}]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/sentinel-gate.py", "timeout": 10}]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "auto|manual",
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/pre-compact.py", "timeout": 30}]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/post-compact.py", "timeout": 30}]
+      },
+      {
+        "matcher": "new|fresh",
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/session-init.py", "timeout": 30}]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/session-end-postflight.py", "timeout": 20},
+          {"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/curate-snapshots.py --output json", "timeout": 15, "allowFailure": true}
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Note:** Use absolute paths (replace `~` with your actual home directory like `/home/username`).
+
+See `templates/settings-hooks.json` for reference.
+
+7. **Restart Claude Code**
 
 ### Option B: Simple Shell Hooks (Lightweight Alternative)
 
