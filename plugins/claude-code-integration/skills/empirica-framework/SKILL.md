@@ -1,14 +1,14 @@
 ---
 name: empirica-framework
 description: "This skill should be used when the user asks to 'assess my knowledge state', 'run preflight', 'do a postflight', 'use CASCADE workflow', 'track what I know', 'measure learning', 'check epistemic drift', 'spawn investigation agents', 'create handoff', or mentions epistemic vectors, calibration, noetic/praxic phases, functional self-awareness, or structured investigation before coding tasks."
-version: 1.4.1
+version: 1.4.2
 ---
 
 # Empirica: Epistemic Framework for Claude Code
 
 Measure what you know. Track what you learn. Prevent overconfidence.
 
-**v1.4.1 Epistemic-First Model:** Assessment reveals complexity - you cannot know what requires investigation without investigation. Always start with a micro-PREFLIGHT.
+**v1.4.2 Epistemic-First Model:** Assessment reveals complexity - you cannot know what requires investigation without investigation. Always start with a micro-PREFLIGHT.
 
 ## Two Axes: Workflow vs Thinking
 
@@ -32,7 +32,7 @@ hypothesize, search, read      deploy, test, implement
 
 You CHOOSE when to use noetic vs praxic thinking. CHECK gates the transition.
 
-## Bias Corrections (v1.4.1 Calibration - 2483 observations)
+## Bias Corrections (v1.4.2 Calibration - 2483 observations)
 
 Apply these corrections to your self-assessments:
 - **Completion:** +0.80 (massively underestimate progress)
@@ -296,7 +296,7 @@ Sentinel controls when praxic actions (Edit, Write, NotebookEdit) are allowed:
 - Vector threshold validation (blocks if not ready)
 - **Anti-gaming:** Minimum noetic duration (30s) with evidence check
 
-**Anti-gaming mitigation (v1.4.1):**
+**Anti-gaming mitigation (v1.4.2):**
 The Sentinel blocks rushed assessments that lack investigation evidence:
 - If CHECK submitted <30 seconds after PREFLIGHT
 - AND no findings or unknowns logged in that window
@@ -366,7 +366,7 @@ empirica handoff-create ...              # Create handoff
 ## Best Practices
 
 **DO:**
-- Apply bias corrections (see v1.4.1 calibration table above)
+- Apply bias corrections (see v1.4.2 calibration table above)
 - Be honest about uncertainty (it's data, not failure)
 - Log findings as you discover them (also provides anti-gaming evidence)
 - Use CHECK before major actions

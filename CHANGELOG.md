@@ -5,6 +5,23 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-01-25
+
+### Added
+- **MCP Multi-Project Support** - MCP server now supports explicit workspace configuration:
+  - `--workspace` argument sets project root for multi-project environments
+  - Auto-detects from git root if `.empirica/` exists
+  - Fallback to common development paths (`~/empirical-ai/empirica`, `~/empirica`)
+  - Fixes sessions being created in global `~/.empirica/` instead of project `.empirica/`
+
+### Fixed
+- **Sentinel Gate: Empirica CLI** - Allow `empirica` CLI commands with heredocs (stdin JSON input)
+- **Sentinel Gate: Stderr Redirects** - Allow safe stderr redirects (`2>/dev/null`, `2>&1`) while still blocking file writes
+
+### Changed
+- **Docs Clarification** - Claude Code users don't need MCP server; hooks provide full functionality
+- **MCP Workspace Configuration** - Added section to CLAUDE_CODE_SETUP.md for multi-project setup
+
 ## [1.4.1] - 2026-01-23
 
 ### Added
