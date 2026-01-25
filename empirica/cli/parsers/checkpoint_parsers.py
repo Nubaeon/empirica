@@ -213,6 +213,9 @@ def add_checkpoint_parsers(subparsers):
     project_create_parser.add_argument('--name', required=True, help='Project name')
     project_create_parser.add_argument('--description', help='Project description')
     project_create_parser.add_argument('--repos', help='JSON array of repository names (e.g., \'["empirica", "empirica-dev"]\')')
+    project_create_parser.add_argument('--type', choices=['product', 'application', 'feature', 'research', 'documentation', 'infrastructure', 'operations'], default='product', help='Project type for workspace categorization')
+    project_create_parser.add_argument('--tags', help='Tags for categorization (comma-separated or JSON array)')
+    project_create_parser.add_argument('--parent', help='Parent project ID for hierarchical organization')
     project_create_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     project_create_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
@@ -294,6 +297,18 @@ def add_checkpoint_parsers(subparsers):
     workspace_init_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     workspace_init_parser.add_argument('--non-interactive', action='store_true', help='Skip user questions, use defaults')
     workspace_init_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+
+    # Workspace list command - show projects with types and tags
+    workspace_list_parser = subparsers.add_parser(
+        'workspace-list',
+        help='List projects with types, tags, and hierarchical relationships'
+    )
+    workspace_list_parser.add_argument('--type', choices=['product', 'application', 'feature', 'research', 'documentation', 'infrastructure', 'operations'], help='Filter by project type')
+    workspace_list_parser.add_argument('--tags', help='Filter by tags (comma-separated, matches any)')
+    workspace_list_parser.add_argument('--parent', help='Show only children of this project ID')
+    workspace_list_parser.add_argument('--tree', action='store_true', help='Show hierarchical tree view')
+    workspace_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    workspace_list_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
     # Project semantic search command (Qdrant-backed)
     project_search_parser = subparsers.add_parser(

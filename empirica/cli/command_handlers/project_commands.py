@@ -2213,6 +2213,180 @@ def handle_workspace_map_command(args):
     except Exception as e:
         handle_cli_error(e, "Workspace map", getattr(args, 'verbose', False))
         return 1
+
+
+def handle_workspace_list_command(args):
+    """Handle workspace-list command - list projects with types, tags, and hierarchy"""
+    try:
+        from empirica.data.session_database import SessionDatabase
+        from empirica.data.repositories.projects import ProjectRepository
+
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Build query with optional filters
+        query = """
+            SELECT id, name, description, status, project_type, project_tags,
+                   parent_project_id, total_sessions, last_activity_timestamp
+            FROM projects
+        """
+        params = []
+        conditions = []
+
+        # Filter by type
+        filter_type = getattr(args, 'type', None)
+        if filter_type:
+            conditions.append("project_type = ?")
+            params.append(filter_type)
+
+        # Filter by parent
+        filter_parent = getattr(args, 'parent', None)
+        if filter_parent:
+            conditions.append("parent_project_id = ?")
+            params.append(filter_parent)
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        query += " ORDER BY project_type, name"
+
+        cursor.execute(query, params)
+        projects = [dict(row) for row in cursor.fetchall()]
+
+        # Filter by tags if specified (in-memory filtering since tags are JSON)
+        filter_tags = getattr(args, 'tags', None)
+        if filter_tags:
+            tag_list = [t.strip().lower() for t in filter_tags.split(',')]
+            filtered = []
+            for p in projects:
+                project_tags = json.loads(p.get('project_tags') or '[]')
+                project_tags_lower = [t.lower() for t in project_tags]
+                if any(tag in project_tags_lower for tag in tag_list):
+                    filtered.append(p)
+            projects = filtered
+
+        db.close()
+
+        # Parse JSON fields
+        for p in projects:
+            p['project_tags'] = json.loads(p.get('project_tags') or '[]')
+
+        output_format = getattr(args, 'output', 'human')
+        show_tree = getattr(args, 'tree', False)
+
+        # JSON output
+        if output_format == 'json':
+            result = {
+                "ok": True,
+                "filters": {
+                    "type": filter_type,
+                    "tags": filter_tags,
+                    "parent": filter_parent
+                },
+                "total_projects": len(projects),
+                "projects": projects
+            }
+            print(json.dumps(result, indent=2))
+            return None
+
+        # Human-readable output
+        print("╔════════════════════════════════════════════════════════════════╗")
+        print("║  Empirica Workspace - Projects by Type                         ║")
+        print("╚════════════════════════════════════════════════════════════════╝\n")
+
+        if not projects:
+            print("   No projects found matching filters.")
+            return None
+
+        if show_tree:
+            # Tree view - group by parent relationships
+            _display_project_tree(projects)
+        else:
+            # Default - group by type
+            types_order = ProjectRepository.PROJECT_TYPES
+            for ptype in types_order:
+                type_projects = [p for p in projects if p.get('project_type') == ptype]
+                if type_projects:
+                    icon = _get_type_icon(ptype)
+                    print(f"{icon} {ptype.upper()}")
+                    print("─" * 60)
+                    for p in type_projects:
+                        tags_str = ', '.join(p['project_tags']) if p['project_tags'] else ''
+                        parent_str = f" (child of {p['parent_project_id'][:8]}...)" if p['parent_project_id'] else ''
+                        print(f"   {p['name']}{parent_str}")
+                        print(f"      ID: {p['id'][:8]}...  Sessions: {p['total_sessions']}")
+                        if tags_str:
+                            print(f"      Tags: {tags_str}")
+                        if p['description']:
+                            print(f"      {p['description'][:60]}...")
+                        print()
+                    print()
+
+        # Summary
+        type_counts = {}
+        for p in projects:
+            ptype = p.get('project_type', 'product')
+            type_counts[ptype] = type_counts.get(ptype, 0) + 1
+
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("📊 Summary")
+        for ptype, count in sorted(type_counts.items()):
+            print(f"   {_get_type_icon(ptype)} {ptype}: {count}")
+        print()
+
+        return None
+
+    except Exception as e:
+        handle_cli_error(e, "Workspace list", getattr(args, 'verbose', False))
+        return None
+
+
+def _get_type_icon(project_type):
+    """Get emoji icon for project type"""
+    icons = {
+        'product': '📦',
+        'application': '🖥️',
+        'feature': '⚡',
+        'research': '🔬',
+        'documentation': '📚',
+        'infrastructure': '🏗️',
+        'operations': '⚙️'
+    }
+    return icons.get(project_type, '📁')
+
+
+def _display_project_tree(projects):
+    """Display projects as a tree based on parent relationships"""
+    # Build parent -> children map
+    children_map = {}
+    roots = []
+
+    for p in projects:
+        parent_id = p.get('parent_project_id')
+        if parent_id:
+            if parent_id not in children_map:
+                children_map[parent_id] = []
+            children_map[parent_id].append(p)
+        else:
+            roots.append(p)
+
+    def print_tree(project, indent=0):
+        prefix = "   " * indent
+        icon = _get_type_icon(project.get('project_type', 'product'))
+        tags_str = f" [{', '.join(project['project_tags'])}]" if project['project_tags'] else ''
+        print(f"{prefix}{icon} {project['name']}{tags_str}")
+        print(f"{prefix}   ID: {project['id'][:8]}... | Type: {project.get('project_type', 'product')}")
+
+        # Print children
+        children = children_map.get(project['id'], [])
+        for child in children:
+            print_tree(child, indent + 1)
+
+    for root in roots:
+        print_tree(root)
+        print()
+
+
 """
 Project Switch Command Handler
 Implements empirica project-switch for clear AI agent UX when changing projects
