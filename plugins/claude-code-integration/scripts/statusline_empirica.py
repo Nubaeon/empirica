@@ -58,45 +58,73 @@ def get_ai_id() -> str:
     return os.getenv('EMPIRICA_AI_ID', 'claude-code').strip()
 
 
-def get_open_counts(db: SessionDatabase, session_id: str) -> dict:
+def get_open_counts(db: SessionDatabase, session_id: str, project_id: str = None) -> dict:
     """
-    Get counts of open goals and unknowns (project-wide).
+    Get counts of open goals and unknowns for a specific project.
 
-    Goals and unknowns are project-wide because work spans sessions.
+    Goals and unknowns are project-scoped to prevent cross-project data leakage.
     Goal-linked unknowns indicate blockers that need resolution.
+
+    Args:
+        db: Database connection
+        session_id: Current session ID
+        project_id: Project ID to filter by (required for accurate counts)
 
     Returns:
         {
-            'open_goals': int,           # Goals not yet completed (project-wide)
-            'open_unknowns': int,        # Unknowns not yet resolved (project-wide)
+            'open_goals': int,           # Goals not yet completed (project-scoped)
+            'open_unknowns': int,        # Unknowns not yet resolved (project-scoped)
             'goal_linked_unknowns': int, # Unresolved unknowns linked to goals (blockers)
             'completion': float,         # Latest completion vector (0.0-1.0)
         }
     """
     cursor = db.conn.cursor()
 
-    # Count open goals PROJECT-WIDE (goals span sessions)
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM goals
-        WHERE status != 'completed'
-    """)
+    # Count open goals for THIS PROJECT only
+    if project_id:
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM goals
+            WHERE status != 'completed' AND project_id = ?
+        """, (project_id,))
+    else:
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM goals
+            WHERE status != 'completed'
+        """)
     open_goals = cursor.fetchone()[0] or 0
 
-    # Count unresolved unknowns PROJECT-WIDE (not session-specific)
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM session_unknowns
-        WHERE is_resolved = FALSE
-    """)
+    # Count unresolved unknowns for THIS PROJECT only
+    if project_id:
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM session_unknowns su
+            JOIN sessions s ON su.session_id = s.session_id
+            WHERE su.is_resolved = FALSE AND s.project_id = ?
+        """, (project_id,))
+    else:
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM session_unknowns
+            WHERE is_resolved = FALSE
+        """)
     open_unknowns = cursor.fetchone()[0] or 0
 
-    # Count goal-linked unresolved unknowns (blockers)
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM session_unknowns
-        WHERE is_resolved = FALSE AND goal_id IS NOT NULL
-    """)
+    # Count goal-linked unresolved unknowns (blockers) for THIS PROJECT
+    if project_id:
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM session_unknowns su
+            JOIN sessions s ON su.session_id = s.session_id
+            WHERE su.is_resolved = FALSE AND su.goal_id IS NOT NULL AND s.project_id = ?
+        """, (project_id,))
+    else:
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM session_unknowns
+            WHERE is_resolved = FALSE AND goal_id IS NOT NULL
+        """)
     goal_linked_unknowns = cursor.fetchone()[0] or 0
 
     # Get completion from latest vector state
@@ -753,8 +781,10 @@ def main():
         ai_id = get_ai_id()
 
         # Auto-detect project from current directory (like git does with .git/)
-        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) .empirica/ in cwd or parents, 3) global
+        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) .empirica/ in cwd or parents
+        # NOTE: We do NOT fall back to global ~/.empirica/ to prevent cross-project data leakage
         project_path = os.getenv('EMPIRICA_PROJECT_PATH')
+        is_local_project = False
 
         if not project_path:
             # Search UPWARD for .empirica/ like git does for .git/
@@ -763,6 +793,7 @@ def main():
                 candidate_db = parent / '.empirica' / 'sessions' / 'sessions.db'
                 if candidate_db.exists():
                     project_path = str(parent)
+                    is_local_project = True
                     break
                 if parent == Path.home() or parent == parent.parent:
                     break
@@ -770,26 +801,27 @@ def main():
         if project_path:
             db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
             db = SessionDatabase(db_path=str(db_path))
+            is_local_project = True
         else:
-            # Fallback to global hub at ~/.empirica/ instead of creating in CWD
-            global_db = Path.home() / '.empirica' / 'sessions' / 'sessions.db'
-            if global_db.exists():
-                db = SessionDatabase(db_path=str(global_db))
-            else:
-                db = SessionDatabase()
+            # No local .empirica/ found - show "no project" instead of using global data
+            # This prevents showing Empirica project data in unrelated projects
+            print(f"{Colors.GRAY}[empirica]{Colors.RESET} │ {Colors.GRAY}no project{Colors.RESET}")
+            return
+
         session = get_active_session(db, ai_id)
 
-        # Always get project-level counts (goals are project-wide)
-        cursor = db.conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM goals WHERE status != 'completed'")
-        open_goals = cursor.fetchone()[0] or 0
+        # Get project_id from session for filtering
+        project_id = None
+        if session:
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session['session_id'],))
+            row = cursor.fetchone()
+            if row:
+                project_id = row[0]
 
         if not session:
-            # No active session, but still show project-level data
-            if open_goals > 0:
-                print(f"{Colors.GRAY}[empirica]{Colors.RESET} {Colors.CYAN}🎯{open_goals}{Colors.RESET} │ {Colors.GRAY}no session{Colors.RESET}")
-            else:
-                print(f"{Colors.GRAY}[empirica:{ai_id}:inactive]{Colors.RESET}")
+            # No active session - show minimal status
+            print(f"{Colors.GRAY}[empirica:{ai_id}:inactive]{Colors.RESET}")
             db.close()
             return
 
@@ -808,7 +840,8 @@ def main():
         goal = get_active_goal(db, session_id)
 
         # Get open counts (goals/unknowns to close) - used in default/learning modes
-        open_counts = get_open_counts(db, session_id)
+        # Pass project_id to filter by THIS project only
+        open_counts = get_open_counts(db, session_id, project_id=project_id)
 
         # Get drift from cache (updated by hooks) - fallback
         drift_state = read_drift_cache(str(Path.cwd()))
