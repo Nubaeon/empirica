@@ -17,7 +17,7 @@ This guide sets up Empirica for Claude Code users on Linux, macOS, or Windows.
 | Statusline | Real-time epistemic status display | Plugin scripts/ |
 | MCP config | MCP server configuration | `~/.claude/mcp.json` |
 
-The plugin (v1.5.0) now bundles everything in one package:
+The plugin (v1.4.1) now bundles everything in one package:
 - **Sentinel gate** - Noetic firewall that gates praxic tools until CHECK passes
 - **Session hooks** - Auto-creates sessions, bootstraps projects, captures POSTFLIGHT
 - **Statusline script** - Shows epistemic state in terminal
@@ -75,96 +75,54 @@ empirica --version
 
 ## Step 2: Add System Prompt
 
-Create or edit `~/.claude/CLAUDE.md`:
+The full system prompt teaches Claude how to use Empirica with calibration data, memory commands, and workflow guidance.
 
+**Option A: Copy from plugin (recommended after Step 4):**
 ```bash
-mkdir -p ~/.claude
-cat >> ~/.claude/CLAUDE.md << 'EOF'
+cp ~/.claude/plugins/local/empirica-integration/templates/CLAUDE.md ~/.claude/CLAUDE.md
+```
 
-# Empirica - Epistemic Self-Assessment Framework
-
-You have access to Empirica for tracking what you know and learn.
-
-## Session Workflow
-
+**Option B: Copy from source:**
 ```bash
-# 1. Start session (do this first)
+# If you have the Empirica repo cloned
+cp /path/to/empirica/docs/human/developers/system-prompts/CLAUDE.md ~/.claude/CLAUDE.md
+```
+
+**Option C: Manual copy:**
+
+The authoritative system prompt is maintained at:
+- **Repo:** `docs/human/developers/system-prompts/CLAUDE.md`
+- **Plugin:** `templates/CLAUDE.md` (synced copy)
+
+Copy the full contents of that file to `~/.claude/CLAUDE.md`.
+
+**What the system prompt includes:**
+- Calibration data (253 trajectories, bias corrections per vector)
+- CASCADE workflow (PREFLIGHT → CHECK → POSTFLIGHT)
+- Core commands with correct flags
+- Memory commands (Qdrant integration)
+- Cognitive immune system (lessons decay)
+- Proactive behaviors (pattern recognition, goal hygiene)
+- Epistemic-first task structure
+
+**Quick reference (subset):**
+```bash
+# Session lifecycle
 empirica session-create --ai-id claude-code --output json
-
-# 2. Load project context
 empirica project-bootstrap --session-id <ID> --output json
 
-# 3. Create goal (tracks what you're working on)
-empirica goals-create --session-id <ID> --objective "Implement feature X"
+# CASCADE phases
+empirica preflight-submit -     # Baseline (JSON stdin)
+empirica check-submit -         # Gate (JSON stdin)
+empirica postflight-submit -    # Learning delta (JSON stdin)
 
-# 4. PREFLIGHT: Assess what you know BEFORE starting work
-empirica preflight-submit -
-
-# 5. Do your work...
-
-# 6. Complete goal when done
-empirica goals-complete --goal-id <GOAL_ID> --reason "Implemented and tested"
-
-# 7. POSTFLIGHT: Measure what you learned AFTER completing work
-empirica postflight-submit -
+# Breadcrumbs
+empirica finding-log --finding "..." --impact 0.7
+empirica unknown-log --unknown "..."
+empirica deadend-log --approach "..." --why-failed "..."
 ```
 
-**Per-goal loops:** Each goal gets its own PREFLIGHT → work → POSTFLIGHT cycle.
-Don't batch multiple goals - complete one loop before starting the next.
-
-## Core Vectors (0.0-1.0)
-
-| Vector | Meaning | Ready Threshold |
-|--------|---------|-----------------|
-| **know** | Domain knowledge | >= 0.70 |
-| **uncertainty** | Doubt level | <= 0.35 |
-| **context** | Information access | >= 0.60 |
-| **do** | Execution capability | >= 0.60 |
-
-**Bias correction (from 995 observations):** Subtract 0.14 from uncertainty, add 0.10 to know (Claude overestimates doubt, underestimates knowledge).
-
-## Log As You Work
-
-```bash
-# Discoveries
-empirica finding-log --finding "Discovered X works by Y" --impact 0.7
-
-# Questions/unknowns
-empirica unknown-log --unknown "Need to investigate Z"
-
-# Failed approaches (prevent repeating)
-empirica deadend-log --approach "Tried X" --why-failed "Failed because Y"
-```
-
-**Impact scale:** 0.1-0.3 trivial | 0.4-0.6 important | 0.7-0.9 critical
-
-## When Uncertain
-
-If uncertainty > 0.5 or you're unsure how to proceed:
-```bash
-empirica check-submit -
-```
-This returns `proceed` or `investigate` guidance.
-
-## Key Commands
-
-```bash
-empirica --help              # All commands
-empirica goals-list          # Active goals
-empirica project-search --task "query"  # Search past learnings
-empirica session-snapshot <ID>          # Save current state
-```
-
-## The Turtle Principle
-
-"Turtles all the way down" = same epistemic rules at every meta-layer.
-The Sentinel monitors using the same 13 vectors it monitors you with.
-
-**Moon phases in output:** 🌕 grounded → 🌓 forming → 🌑 void
-**Sentinel may:** 🔄 REVISE | ⛔ HALT | 🔒 LOCK (stop if ungrounded)
-
-EOF
-```
+**Readiness gate:** know >= 0.70 AND uncertainty <= 0.35 (after bias correction)
 
 ---
 
@@ -262,7 +220,7 @@ cp ~/.claude/plugins/local/empirica-integration/templates/mcp.json ~/.claude/mcp
       {
         "scope": "user",
         "installPath": "~/.claude/plugins/local/empirica-integration",
-        "version": "1.5.0",
+        "version": "1.4.1",
         "isLocal": true
       }
     ]
