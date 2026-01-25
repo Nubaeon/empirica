@@ -17,7 +17,7 @@ This guide sets up Empirica for Claude Code users on Linux, macOS, or Windows.
 | Statusline | Real-time epistemic status display | Plugin scripts/ |
 | MCP config | MCP server configuration | `~/.claude/mcp.json` |
 
-The plugin (v1.4.1) now bundles everything in one package:
+The plugin (v1.4.2) now bundles everything in one package:
 - **Sentinel gate** - Noetic firewall that gates praxic tools until CHECK passes
 - **Session hooks** - Auto-creates sessions, bootstraps projects, captures POSTFLIGHT
 - **Statusline script** - Shows epistemic state in terminal
@@ -165,7 +165,7 @@ cat ~/.claude/plugins/local/empirica-integration/templates/settings-statusline.j
 
 ## Step 4: Install Empirica Plugin (Recommended)
 
-The plugin (v1.4.1) enforces the CASCADE workflow and preserves epistemic state automatically.
+The plugin (v1.4.2) enforces the CASCADE workflow and preserves epistemic state automatically.
 
 **What it includes:**
 - **Noetic firewall** (`sentinel-gate.py`): Gates praxic tools (Edit/Write/Bash) until CHECK passes
@@ -220,7 +220,7 @@ cp ~/.claude/plugins/local/empirica-integration/templates/mcp.json ~/.claude/mcp
       {
         "scope": "user",
         "installPath": "~/.claude/plugins/local/empirica-integration",
-        "version": "1.4.1",
+        "version": "1.4.2",
         "isLocal": true
       }
     ]
@@ -323,6 +323,8 @@ chmod +x ~/.claude/hooks/post-compact.sh
 
 The MCP server gives Claude direct access to Empirica tools.
 
+**Note:** Claude Code users typically don't need the MCP server—the CLI + hooks provide full functionality. The MCP server is primarily for Claude Desktop and Claude.ai integration where hooks aren't available.
+
 **If you used the Quick Install:** `~/.claude/mcp.json` is auto-configured with the correct path.
 
 **Manual configuration:** Edit `~/.claude/mcp.json`:
@@ -332,7 +334,7 @@ The MCP server gives Claude direct access to Empirica tools.
   "mcpServers": {
     "empirica": {
       "command": "/home/YOUR_USER/.local/bin/empirica-mcp",
-      "args": [],
+      "args": ["--workspace", "/path/to/your/project"],
       "type": "stdio",
       "env": {
         "EMPIRICA_EPISTEMIC_MODE": "true"
@@ -340,6 +342,31 @@ The MCP server gives Claude direct access to Empirica tools.
       "tools": ["*"],
       "description": "Empirica epistemic framework"
     }
+  }
+}
+```
+
+### Multi-Project Workspace Configuration (v1.4.2+)
+
+The MCP server needs to know which project's `.empirica/` directory to use. Without this, sessions may be created in the wrong location.
+
+**Option A: Explicit workspace (recommended for multi-project setups):**
+```json
+{
+  "args": ["--workspace", "/home/user/my-project"]
+}
+```
+
+**Option B: Auto-detection (works if MCP starts from project directory):**
+The server will auto-detect from:
+1. Git root (if `.empirica/` exists there)
+2. Common paths: `~/empirical-ai/empirica`, `~/empirica`
+
+**Option C: Environment variable:**
+```json
+{
+  "env": {
+    "EMPIRICA_WORKSPACE_ROOT": "/home/user/my-project"
   }
 }
 ```
