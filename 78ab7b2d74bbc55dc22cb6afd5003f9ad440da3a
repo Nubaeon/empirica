@@ -1,0 +1,16 @@
+{
+  "finding_id": "d85dc814-bc80-48b7-af63-4bf9eadfadf7",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T14:48:11.737580+00:00",
+  "finding": "Empirica's primary value isn't the technical 'how' (vectors, calibration, CASCADE) - it's being the BRIDGE that shows people a different way of working with AI. All the technical capability in the world is wasted if users approach with tool/oracle framing. Empirica's deepest function: teaching the collaborative partner frame through practice. The 13 vectors, the CHECK gates, the PREFLIGHT rituals - these aren't just measurement tools, they're behavioral scaffolding that trains humans AND AI to work together with mutual epistemic awareness. Maybe the only framing that matters for trustworthy AI.",
+  "impact": 0.95,
+  "goal_id": "4a7341bb-7dc9-4a73-9482-3380f4f1ef20",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Empirica's primary value isn't the technical 'how' (vectors, calibration, CASCADE) - it's being the BRIDGE that shows people a different way of working with AI. All the technical capability in the world is wasted if users approach with tool/oracle framing. Empirica's deepest function: teaching the collaborative partner frame through practice. The 13 vectors, the CHECK gates, the PREFLIGHT rituals - these aren't just measurement tools, they're behavioral scaffolding that trains humans AND AI to work together with mutual epistemic awareness. Maybe the only framing that matters for trustworthy AI.",
+    "impact": 0.95
+  }
+}
