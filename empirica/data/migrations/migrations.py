@@ -626,6 +626,71 @@ def migration_019_cross_project_finding_links(cursor: sqlite3.Cursor):
     logger.info("✓ Created cross_project_finding_links table")
 
 
+# Migration 20: Add client_projects junction table for client-project relationships
+def migration_020_client_projects(cursor: sqlite3.Cursor):
+    """
+    Create client_projects junction table for many-to-many client-project relationships.
+
+    This fixes the schema design where engagements linked to goals instead of projects.
+    Clients should link directly to projects, with engagements scoped to the relationship.
+
+    Relationship types:
+    - customer: Client is paying for work on this project
+    - sponsor: Client is funding/sponsoring this project
+    - partner: Collaborative relationship
+    - stakeholder: Has interest but not direct ownership
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS client_projects (
+            id TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            relationship_type TEXT DEFAULT 'customer',
+            status TEXT DEFAULT 'active',
+            started_at REAL NOT NULL,
+            ended_at REAL,
+            notes TEXT,
+            created_at REAL NOT NULL,
+            created_by_ai_id TEXT,
+
+            FOREIGN KEY (client_id) REFERENCES clients(client_id),
+            FOREIGN KEY (project_id) REFERENCES projects(id),
+            UNIQUE(client_id, project_id, relationship_type)
+        )
+    """)
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_client_projects_client ON client_projects(client_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_client_projects_project ON client_projects(project_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_client_projects_status ON client_projects(status)")
+
+    logger.info("✓ Created client_projects junction table")
+
+
+# Migration 21: Add project_id to engagements table
+def migration_021_engagements_project_id(cursor: sqlite3.Cursor):
+    """
+    Add project_id to engagements table for direct project scoping.
+
+    This changes the relationship model:
+    - Before: client → engagement → goal → project (inverted)
+    - After: client → project (via client_projects), engagement has project_id
+
+    The goal_id remains for optional fine-grained linking to specific goals.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    add_column_if_missing(cursor, "engagements", "project_id", "TEXT")
+
+    # Add index for project-based queries
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_engagements_project ON engagements(project_id)")
+
+    logger.info("✓ Added project_id to engagements table")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -646,4 +711,6 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("017_project_type_and_tags", "Add project_type, project_tags, parent_project_id for workspace management", migration_017_project_type_and_tags),
     ("018_project_relationships", "Add project_relationships table for cross-project links", migration_018_project_relationships),
     ("019_cross_project_finding_links", "Add cross_project_finding_links for shared learnings", migration_019_cross_project_finding_links),
+    ("020_client_projects", "Add client_projects junction table for client-project relationships", migration_020_client_projects),
+    ("021_engagements_project_id", "Add project_id to engagements for direct project scoping", migration_021_engagements_project_id),
 ]

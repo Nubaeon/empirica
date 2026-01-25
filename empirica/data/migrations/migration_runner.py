@@ -76,11 +76,11 @@ class MigrationRunner:
 def column_exists(cursor: sqlite3.Cursor, table: str, column: str) -> bool:
     """Check if a column exists in a table"""
     VALID_TABLES = {
-        'sessions', 'reflexes', 'cascades', 'findings', 'unknowns', 
+        'sessions', 'reflexes', 'cascades', 'findings', 'unknowns',
         'dead_ends', 'reference_docs', 'mistakes', 'goals', 'subtasks',
         'checkpoints', 'handoffs', 'schema_migrations', 'epistemic_snapshots',
         'bayesian_beliefs', 'projects', 'project_findings', 'project_unknowns',
-        'mistakes_made'
+        'mistakes_made', 'clients', 'engagements', 'client_interactions'
     }
     
     if table not in VALID_TABLES:
@@ -100,7 +100,7 @@ def add_column_if_missing(cursor: sqlite3.Cursor, table: str, column: str, colum
         'dead_ends', 'reference_docs', 'mistakes', 'goals', 'subtasks',
         'checkpoints', 'handoffs', 'schema_migrations', 'epistemic_snapshots',
         'bayesian_beliefs', 'projects', 'project_findings', 'project_unknowns',
-        'mistakes_made'
+        'mistakes_made', 'clients', 'engagements', 'client_interactions'
     }
     VALID_COLUMN_TYPES = {
         'TEXT', 'INTEGER', 'REAL', 'BLOB', 'NULL',
