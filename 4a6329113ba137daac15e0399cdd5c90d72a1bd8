@@ -1,0 +1,16 @@
+{
+  "finding_id": "a22c3f9c-8173-4305-8994-67daa9d734aa",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "94121b87-03df-4b1b-8081-41ddfab43244",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T14:20:51.506630+00:00",
+  "finding": "Multi-project organization research: 7 key patterns identified - (1) Entity+Relationship types from CRMs, (2) Semantic metadata layer from wikis, (3) Hybrid navigation 7\u00b12 hierarchy + facets + search, (4) Two-level templates (project + task), (5) Graph visualization from Obsidian/Roam, (6) Portfolio visibility from PPM, (7) Confidence-first metadata. Non-dev friction: CLI intimidation, conceptual confusion (commits/branches), binary file limitations.",
+  "impact": 0.8,
+  "goal_id": "397d5ca6-003d-4e0a-ad65-b679e9297967",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Multi-project organization research: 7 key patterns identified - (1) Entity+Relationship types from CRMs, (2) Semantic metadata layer from wikis, (3) Hybrid navigation 7\u00b12 hierarchy + facets + search, (4) Two-level templates (project + task), (5) Graph visualization from Obsidian/Roam, (6) Portfolio visibility from PPM, (7) Confidence-first metadata. Non-dev friction: CLI intimidation, conceptual confusion (commits/branches), binary file limitations.",
+    "impact": 0.8
+  }
+}
