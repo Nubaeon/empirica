@@ -1,0 +1,16 @@
+{
+  "finding_id": "1419c784-0308-48d5-a8d9-657b643070b8",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T14:51:01.688134+00:00",
+  "finding": "Empirica-legal concept: Turn AI uncertainty into expertise routing. When AI hits low confidence, instead of dead-end or confabulation, surface which humans in org have calibrated expertise in that domain + their trained AI partner. Query flows to highest-confidence human+AI pair. Requires: (1) expertise mapping with calibrated scores, (2) per-partner AI calibration profiles, (3) epistemic routing matching query uncertainty to human expertise, (4) collaborative handoff to human+AI unit. Transforms law firm into calibrated knowledge network. The 'I don't know' becomes a connection point, not a failure.",
+  "impact": 0.85,
+  "goal_id": "4a7341bb-7dc9-4a73-9482-3380f4f1ef20",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Empirica-legal concept: Turn AI uncertainty into expertise routing. When AI hits low confidence, instead of dead-end or confabulation, surface which humans in org have calibrated expertise in that domain + their trained AI partner. Query flows to highest-confidence human+AI pair. Requires: (1) expertise mapping with calibrated scores, (2) per-partner AI calibration profiles, (3) epistemic routing matching query uncertainty to human expertise, (4) collaborative handoff to human+AI unit. Transforms law firm into calibrated knowledge network. The 'I don't know' becomes a connection point, not a failure.",
+    "impact": 0.85
+  }
+}
