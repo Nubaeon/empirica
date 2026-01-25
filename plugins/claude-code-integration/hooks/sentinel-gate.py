@@ -176,6 +176,10 @@ def is_safe_bash_command(tool_input: dict) -> bool:
     if not command:
         return False
 
+    # EMPIRICA CLI: Always safe - needs stdin for JSON
+    if command.lstrip().startswith('empirica '):
+        return True
+
     # Check for dangerous shell operators (command injection prevention)
     # This blocks: ls; rm -rf, echo > file, etc.
     for operator in DANGEROUS_SHELL_OPERATORS:

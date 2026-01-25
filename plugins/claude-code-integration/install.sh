@@ -145,6 +145,57 @@ else
     echo "   PreToolUse hooks already configured"
 fi
 
+# Add PreCompact hook (empirica pre-compact snapshot)
+if ! jq -e '.hooks.PreCompact[] | select(.hooks[].command | contains("pre-compact.py"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    jq --arg precompact_cmd "python3 $PLUGIN_DIR/hooks/pre-compact.py" \
+       '.hooks.PreCompact = (.hooks.PreCompact // []) + [
+         {
+           "matcher": "auto|manual",
+           "hooks": [{"type": "command", "command": $precompact_cmd, "timeout": 30}]
+         }
+       ]' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+    echo "   ✓ PreCompact hook configured"
+else
+    echo "   PreCompact hook already configured"
+fi
+
+# Add SessionStart hooks (post-compact bootstrap + session-init)
+if ! jq -e '.hooks.SessionStart[] | select(.hooks[].command | contains("post-compact.py"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    jq --arg postcompact_cmd "python3 $PLUGIN_DIR/hooks/post-compact.py" \
+       --arg sessioninit_cmd "python3 $PLUGIN_DIR/hooks/session-init.py" \
+       '.hooks.SessionStart = (.hooks.SessionStart // []) + [
+         {
+           "matcher": "compact",
+           "hooks": [{"type": "command", "command": $postcompact_cmd, "timeout": 30}]
+         },
+         {
+           "matcher": "new|fresh",
+           "hooks": [{"type": "command", "command": $sessioninit_cmd, "timeout": 30}]
+         }
+       ]' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+    echo "   ✓ SessionStart hooks configured"
+else
+    echo "   SessionStart hooks already configured"
+fi
+
+# Add SessionEnd hooks (postflight + snapshot curation)
+if ! jq -e '.hooks.SessionEnd[] | select(.hooks[].command | contains("session-end-postflight.py"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    jq --arg postflight_cmd "python3 $PLUGIN_DIR/hooks/session-end-postflight.py" \
+       --arg curate_cmd "python3 $PLUGIN_DIR/hooks/curate-snapshots.py --output json" \
+       '.hooks.SessionEnd = (.hooks.SessionEnd // []) + [
+         {
+           "matcher": ".*",
+           "hooks": [
+             {"type": "command", "command": $postflight_cmd, "timeout": 20},
+             {"type": "command", "command": $curate_cmd, "timeout": 15, "allowFailure": true}
+           ]
+         }
+       ]' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+    echo "   ✓ SessionEnd hooks configured"
+else
+    echo "   SessionEnd hooks already configured"
+fi
+
 # ==================== MARKETPLACE REGISTRATION ====================
 
 echo "📋 Registering in marketplace..."
