@@ -1,0 +1,28 @@
+{
+  "goal_id": "1f7f7bcc-6317-4596-9561-20fea32dd371",
+  "session_id": "dbd6c5c3-b471-4453-a797-3e3022e7ba93",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-25T13:39:39.846063+00:00",
+  "goal_data": {
+    "objective": "Test Empirica: verify sentinel gate and MCP server",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-25T13:39:39.846425+00:00",
+      "action": "created"
+    }
+  ]
+}
