@@ -1,0 +1,16 @@
+{
+  "finding_id": "97598a19-588d-4b30-9f94-affbb1d79868",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "42e4dd29-e882-484d-9e40-c2cb7dedb0de",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T16:24:02.830097+00:00",
+  "finding": "MCP server multi-project fix: Added --workspace argument and auto-detection. When MCP server starts without CWD context (Claude Desktop, Claude.ai), it now: 1) Uses explicit --workspace arg if provided, 2) Auto-detects from git root if .empirica/ exists, 3) Falls back to common development paths. Configure in mcp.json: {\"args\": [\"--workspace\", \"/path/to/project\"]}",
+  "impact": 0.75,
+  "goal_id": "bc38d844-4e15-4ec1-b5fe-ccf1a3c06bf1",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "MCP server multi-project fix: Added --workspace argument and auto-detection. When MCP server starts without CWD context (Claude Desktop, Claude.ai), it now: 1) Uses explicit --workspace arg if provided, 2) Auto-detects from git root if .empirica/ exists, 3) Falls back to common development paths. Configure in mcp.json: {\"args\": [\"--workspace\", \"/path/to/project\"]}",
+    "impact": 0.75
+  }
+}
