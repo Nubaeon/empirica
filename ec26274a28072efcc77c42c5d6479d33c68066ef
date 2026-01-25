@@ -1,0 +1,28 @@
+{
+  "goal_id": "78134d05-efd4-434e-b0a9-0b8ff1806701",
+  "session_id": "13943668-2b89-4300-b7c8-701cfee4862a",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-25T21:04:12.622684+00:00",
+  "goal_data": {
+    "objective": "Analyze 284 job names and propose parent project groupings",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-25T21:04:12.623024+00:00",
+      "action": "created"
+    }
+  ]
+}
