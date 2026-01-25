@@ -1,0 +1,28 @@
+{
+  "goal_id": "0ec0d582-5e59-4633-bc44-9e448506dd80",
+  "session_id": "13943668-2b89-4300-b7c8-701cfee4862a",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-25T20:56:58.047931+00:00",
+  "goal_data": {
+    "objective": "Create parent project structure for clients while waiting for David's CRM fix",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-25T20:56:58.048292+00:00",
+      "action": "created"
+    }
+  ]
+}
