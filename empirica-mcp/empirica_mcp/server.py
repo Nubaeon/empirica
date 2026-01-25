@@ -2011,7 +2011,62 @@ async def main():
         )
 
 def run():
-    """Synchronous entry point for command-line usage"""
+    """Synchronous entry point for command-line usage
+
+    Supports --workspace /path/to/project to set EMPIRICA_WORKSPACE_ROOT
+    for multi-project environments (Claude Desktop, Claude.ai).
+
+    Example MCP config:
+        {
+            "command": "empirica-mcp",
+            "args": ["--workspace", "/home/user/my-project"],
+            "env": {}
+        }
+    """
+    import argparse
+    parser = argparse.ArgumentParser(description="Empirica MCP Server")
+    parser.add_argument(
+        "--workspace", "-w",
+        help="Project workspace root (sets EMPIRICA_WORKSPACE_ROOT)"
+    )
+    args = parser.parse_args()
+
+    if args.workspace:
+        workspace_path = Path(args.workspace).expanduser().resolve()
+        if workspace_path.exists():
+            os.environ["EMPIRICA_WORKSPACE_ROOT"] = str(workspace_path)
+            logger.info(f"📍 Workspace set to: {workspace_path}")
+        else:
+            logger.warning(f"⚠️  Workspace path not found: {workspace_path}")
+    elif not os.getenv("EMPIRICA_WORKSPACE_ROOT"):
+        # Auto-detect: Try to find git root from CWD, or use known dev paths
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                capture_output=True, text=True, timeout=2, check=False
+            )
+            if result.returncode == 0:
+                git_root = Path(result.stdout.strip())
+                if (git_root / ".empirica").exists():
+                    os.environ["EMPIRICA_WORKSPACE_ROOT"] = str(git_root)
+                    logger.info(f"📍 Auto-detected workspace from git: {git_root}")
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
+        # If still not set, check common development paths
+        if not os.getenv("EMPIRICA_WORKSPACE_ROOT"):
+            common_paths = [
+                Path.home() / "empirical-ai" / "empirica",
+                Path.home() / "empirica",
+                Path.cwd(),
+            ]
+            for path in common_paths:
+                if (path / ".empirica" / "sessions" / "sessions.db").exists():
+                    os.environ["EMPIRICA_WORKSPACE_ROOT"] = str(path)
+                    logger.info(f"📍 Auto-detected workspace from common path: {path}")
+                    break
+
     asyncio.run(main())
 
 if __name__ == "__main__":
