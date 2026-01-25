@@ -1,0 +1,16 @@
+{
+  "finding_id": "6eae27ae-cd20-4f12-a9c3-0fcf3796572e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa9b58c5-88c8-4173-bb12-2b045b40868f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-25T14:45:25.494673+00:00",
+  "finding": "Three frames for AI determine outcomes: (1) Tool frame \u2192 brittle, narrow usage, (2) Oracle frame \u2192 confident confabulation without limits, (3) Collaborative Partner frame \u2192 mutual epistemic awareness unlocks emergent capability. The skeptics (LeCun) see a tool, the zoomers see an oracle, neither sees a partner. The real unlock isn't raw capability but MUTUAL EPISTEMIC CALIBRATION - human and AI each knowing their limits, compensating for blind spots. Empirica measures not 'is AI smart' but 'does AI know what it knows' - foundation for genuine collaboration where human and AI mirror each other's epistemic states.",
+  "impact": 0.9,
+  "goal_id": "4a7341bb-7dc9-4a73-9482-3380f4f1ef20",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Three frames for AI determine outcomes: (1) Tool frame \u2192 brittle, narrow usage, (2) Oracle frame \u2192 confident confabulation without limits, (3) Collaborative Partner frame \u2192 mutual epistemic awareness unlocks emergent capability. The skeptics (LeCun) see a tool, the zoomers see an oracle, neither sees a partner. The real unlock isn't raw capability but MUTUAL EPISTEMIC CALIBRATION - human and AI each knowing their limits, compensating for blind spots. Empirica measures not 'is AI smart' but 'does AI know what it knows' - foundation for genuine collaboration where human and AI mirror each other's epistemic states.",
+    "impact": 0.9
+  }
+}
