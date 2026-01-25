@@ -1,0 +1,28 @@
+{
+  "goal_id": "5bfc0ecd-5ac4-4ca3-b699-da4fcfaf3c47",
+  "session_id": "b45e6fea-bb4b-4ab7-80b7-bafad545d7ef",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-25T17:38:41.880370+00:00",
+  "goal_data": {
+    "objective": "Phase 6: Portfolio analytics - session metrics and project statistics",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-25T17:38:41.880389+00:00",
+      "action": "created"
+    }
+  ]
+}
