@@ -1,0 +1,30 @@
+{
+  "goal_id": "649ab1a1-1f89-4868-90d8-ce8b0a680ff4",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-26T13:42:20.142825+00:00",
+  "goal_data": {
+    "objective": "Update empirica-crm to use global CRM database",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Update memory_backend.py to use get_crm_db_path()",
+      "Update schema.py ensure_schema() for global CRM DB",
+      "Update client/engagement stores to use global path"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-26T13:42:20.142834+00:00",
+      "action": "created"
+    }
+  ]
+}
