@@ -1,0 +1,31 @@
+{
+  "goal_id": "886f307b-7940-4c4b-9487-59297ade47e4",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-26T12:49:52.309984+00:00",
+  "goal_data": {
+    "objective": "Add Google Workspace MCP integration to empirica-crm plugin",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Add google-workspace-mcp to plugin .mcp.json",
+      "Create client-from-email command that extracts client info from Gmail threads",
+      "Create interaction-log-from-calendar that logs meetings as client_interactions",
+      "Document OAuth setup in plugin README"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-26T12:49:52.309995+00:00",
+      "action": "created"
+    }
+  ]
+}
