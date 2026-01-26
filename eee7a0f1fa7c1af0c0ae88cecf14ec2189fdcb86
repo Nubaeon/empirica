@@ -1,0 +1,13 @@
+{
+  "unknown_id": "476ecad5-6fb6-4343-93d3-b90c9040bdfa",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T13:26:21.603717+00:00",
+  "unknown": "Should CLI 'link' and 'unlink' commands migrate from client_projects to creating/deleting engagements? Current: link creates simple client_projects entry. Alternative: link creates engagement with project_id. Need to decide on single source of truth for client-project relationships.",
+  "goal_id": "bf195856-8013-403d-b7c2-4696faf2b0ec",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
