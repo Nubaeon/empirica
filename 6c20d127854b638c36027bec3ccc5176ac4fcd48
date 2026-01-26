@@ -1,0 +1,16 @@
+{
+  "finding_id": "d6079424-0294-409b-a881-58dea67123cf",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T12:47:52.142418+00:00",
+  "finding": "Pattern for empirica-crm: Document-trained agents (Item-style) - maps to goal/subtask structure. Could add 'process templates' that spawn pre-defined subtask sequences for common CRM workflows.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Pattern for empirica-crm: Document-trained agents (Item-style) - maps to goal/subtask structure. Could add 'process templates' that spawn pre-defined subtask sequences for common CRM workflows.",
+    "impact": 0.7
+  }
+}
