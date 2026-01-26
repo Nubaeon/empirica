@@ -1,0 +1,16 @@
+{
+  "finding_id": "89567eb8-8497-43c6-af5f-a69aba42ed25",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T18:31:29.773175+00:00",
+  "finding": "DUPLICATE HOOK REGISTRATION: Claude Code caches plugin hooks.json and doesn't re-read on session start. When hooks.json was emptied (hooks: {}), the old ${CLAUDE_PLUGIN_ROOT} registration persisted. This causes sentinel-gate.py to run twice - once from cached plugin hooks (${CLAUDE_PLUGIN_ROOT}) and once from settings.json (absolute path). Fix: Clear plugin cache at ~/.claude/plugins/cache/local/empirica-integration/ or restart Claude Code to force re-read.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "DUPLICATE HOOK REGISTRATION: Claude Code caches plugin hooks.json and doesn't re-read on session start. When hooks.json was emptied (hooks: {}), the old ${CLAUDE_PLUGIN_ROOT} registration persisted. This causes sentinel-gate.py to run twice - once from cached plugin hooks (${CLAUDE_PLUGIN_ROOT}) and once from settings.json (absolute path). Fix: Clear plugin cache at ~/.claude/plugins/cache/local/empirica-integration/ or restart Claude Code to force re-read.",
+    "impact": 0.8
+  }
+}
