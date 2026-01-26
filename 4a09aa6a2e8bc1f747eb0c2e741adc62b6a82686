@@ -1,0 +1,16 @@
+{
+  "finding_id": "a9c5cc01-4260-4cd4-b982-fc55c605a84a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T18:32:28.766702+00:00",
+  "finding": "NOETIC vs PRAXIC CONTEXT SEPARATION: Three-phase pattern retrieval design: (1) PREFLIGHT uses retrieve_task_patterns() for PROACTIVE context loading - returns lessons, dead_ends, relevant_findings to arm AI before investigation. Uses task_context OR reasoning as search query. (2) CHECK uses check_against_patterns() for REACTIVE validation - validates current approach against known failures, returns dead_end_matches and mistake_risk warnings at the noetic\u2192praxic gate. (3) POSTFLIGHT uses embed_episodic() for STORAGE - embeds session narrative using reasoning for future retrieval. This implements progressive disclosure: broad context \u2192 specific validation \u2192 learning capture.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "NOETIC vs PRAXIC CONTEXT SEPARATION: Three-phase pattern retrieval design: (1) PREFLIGHT uses retrieve_task_patterns() for PROACTIVE context loading - returns lessons, dead_ends, relevant_findings to arm AI before investigation. Uses task_context OR reasoning as search query. (2) CHECK uses check_against_patterns() for REACTIVE validation - validates current approach against known failures, returns dead_end_matches and mistake_risk warnings at the noetic\u2192praxic gate. (3) POSTFLIGHT uses embed_episodic() for STORAGE - embeds session narrative using reasoning for future retrieval. This implements progressive disclosure: broad context \u2192 specific validation \u2192 learning capture.",
+    "impact": 0.85
+  }
+}
