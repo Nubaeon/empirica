@@ -1,0 +1,16 @@
+{
+  "finding_id": "3f979fbc-a6f0-4d10-9c7e-868edb56c662",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T12:49:36.124212+00:00",
+  "finding": "taylorwilsdon/google_workspace_mcp: FastMCP-based, supports Gmail/Drive/Calendar/Docs/Sheets/Slides/Forms/Chat/Tasks/Apps Script. OAuth 2.0/2.1, multi-user mode. NOTE: No native Contacts support - would need custom Apps Script for CRM contact management.",
+  "impact": 0.75,
+  "goal_id": "55ecc6c6-8646-419f-a4b1-5de5209d821e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "taylorwilsdon/google_workspace_mcp: FastMCP-based, supports Gmail/Drive/Calendar/Docs/Sheets/Slides/Forms/Chat/Tasks/Apps Script. OAuth 2.0/2.1, multi-user mode. NOTE: No native Contacts support - would need custom Apps Script for CRM contact management.",
+    "impact": 0.75
+  }
+}
