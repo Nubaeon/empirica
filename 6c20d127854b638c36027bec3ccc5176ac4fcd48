@@ -1,0 +1,16 @@
+{
+  "finding_id": "dccadbf4-11bd-4000-b3ba-f4d62868ad2c",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T12:49:35.016684+00:00",
+  "finding": "Google managed MCP servers (Dec 2025): BigQuery, Compute Engine, GKE, Maps at launch. Enterprise features: IAM integration, audit logging, Model Armor for prompt injection defense. Apigee can translate any API into MCP server with existing security controls. Free for enterprise customers.",
+  "impact": 0.8,
+  "goal_id": "55ecc6c6-8646-419f-a4b1-5de5209d821e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Google managed MCP servers (Dec 2025): BigQuery, Compute Engine, GKE, Maps at launch. Enterprise features: IAM integration, audit logging, Model Armor for prompt injection defense. Apigee can translate any API into MCP server with existing security controls. Free for enterprise customers.",
+    "impact": 0.8
+  }
+}
