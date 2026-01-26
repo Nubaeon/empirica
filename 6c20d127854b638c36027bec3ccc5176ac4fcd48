@@ -1,0 +1,30 @@
+{
+  "goal_id": "df71851d-eea5-402e-9778-52c17a6b80b3",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-26T12:49:52.441121+00:00",
+  "goal_data": {
+    "objective": "Add Google Contacts MCP or Apps Script integration for contact sync",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Research Google People API MCP options",
+      "Either find existing MCP or design Apps Script bridge",
+      "Create client-sync-contacts command"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-26T12:49:52.441131+00:00",
+      "action": "created"
+    }
+  ]
+}
