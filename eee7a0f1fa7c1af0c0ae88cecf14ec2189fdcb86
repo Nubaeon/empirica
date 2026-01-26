@@ -1,0 +1,16 @@
+{
+  "finding_id": "84b30292-f921-4573-b567-05ff6da9142d",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T13:44:00.363974+00:00",
+  "finding": "Global CRM database created at ~/.empirica/crm/crm.db with tables: clients, engagements, client_interactions, client_memory. Added path resolver functions: get_global_empirica_home(), get_crm_db_path(), get_client_lessons_dir(), ensure_crm_structure(). Migrated 1 client (Acme Corp) from project-local to global CRM.",
+  "impact": 0.85,
+  "goal_id": "0e3198bc-dc61-49b3-97ce-daea5b8bdae8",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Global CRM database created at ~/.empirica/crm/crm.db with tables: clients, engagements, client_interactions, client_memory. Added path resolver functions: get_global_empirica_home(), get_crm_db_path(), get_client_lessons_dir(), ensure_crm_structure(). Migrated 1 client (Acme Corp) from project-local to global CRM.",
+    "impact": 0.85
+  }
+}
