@@ -265,13 +265,14 @@ def handle_preflight_submit_command(args):
 
             db.close()
 
-            # PATTERN RETRIEVAL: Load relevant patterns based on task_context
+            # PATTERN RETRIEVAL: Load relevant patterns based on task_context or reasoning
             # This arms the AI with lessons, dead_ends, and findings BEFORE starting work
             patterns = None
-            if task_context and project_id:
+            search_context = task_context or reasoning  # Fall back to reasoning if no task_context
+            if search_context and project_id:
                 try:
                     from empirica.core.qdrant.pattern_retrieval import retrieve_task_patterns
-                    patterns = retrieve_task_patterns(project_id, task_context)
+                    patterns = retrieve_task_patterns(project_id, search_context)
                     if patterns and any(patterns.values()):
                         logger.debug(f"Retrieved patterns: {len(patterns.get('lessons', []))} lessons, "
                                    f"{len(patterns.get('dead_ends', []))} dead_ends, "
