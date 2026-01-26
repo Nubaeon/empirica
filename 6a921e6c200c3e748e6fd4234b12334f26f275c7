@@ -1,0 +1,30 @@
+{
+  "goal_id": "4b156a3f-9f4c-4029-aac5-90d272133659",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-26T17:52:01.517144+00:00",
+  "goal_data": {
+    "objective": "Investigate and fix PreToolUse:Bash hook errors (regression)",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Identify root cause of hook errors",
+      "Fix the regression",
+      "Verify hooks work correctly"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-26T17:52:01.517153+00:00",
+      "action": "created"
+    }
+  ]
+}
