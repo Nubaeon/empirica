@@ -1,0 +1,16 @@
+{
+  "finding_id": "e536a24f-14fd-4368-bb08-2f5f76fed759",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T17:20:34.882406+00:00",
+  "finding": "Documentation updated across all 3 repos for global CRM architecture: (1) MULTI_PROJECT_STORAGE.md - added CRM to global hub diagram and file locations, (2) CRM_MODULE_DESIGN.md - updated status to IMPLEMENTED, added project_id to engagements, added client_memory table, resolved design decisions, (3) empirica-workspace README - added storage model table clarifying global vs project-local.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Documentation updated across all 3 repos for global CRM architecture: (1) MULTI_PROJECT_STORAGE.md - added CRM to global hub diagram and file locations, (2) CRM_MODULE_DESIGN.md - updated status to IMPLEMENTED, added project_id to engagements, added client_memory table, resolved design decisions, (3) empirica-workspace README - added storage model table clarifying global vs project-local.",
+    "impact": 0.7
+  }
+}
