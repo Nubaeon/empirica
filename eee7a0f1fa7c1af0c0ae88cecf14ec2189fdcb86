@@ -1,0 +1,30 @@
+{
+  "goal_id": "7f123ed3-c043-4d62-9e8e-f48878f2e209",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-26T13:42:20.286092+00:00",
+  "goal_data": {
+    "objective": "Update empirica-workspace dashboard to read from global CRM DB",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Update discovery.py to find global CRM DB",
+      "Update widgets to query global CRM for clients/engagements",
+      "Verify dashboard shows clients across all projects"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-26T13:42:20.286102+00:00",
+      "action": "created"
+    }
+  ]
+}
