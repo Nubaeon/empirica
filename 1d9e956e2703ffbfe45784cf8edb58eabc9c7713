@@ -1,0 +1,16 @@
+{
+  "finding_id": "86128669-c3f2-47a4-b42c-53b014b4aff4",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T14:16:42.583367+00:00",
+  "finding": "Integration architecture: MCP servers = data access layer (Gmail, Calendar, Drive), empirica-crm = epistemic layer (client_memory, findings, unknowns, calibration). Separation of concerns allows MCP to handle auth/API complexity while empirica tracks knowledge state about clients.",
+  "impact": 0.85,
+  "goal_id": "df71851d-eea5-402e-9778-52c17a6b80b3",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Integration architecture: MCP servers = data access layer (Gmail, Calendar, Drive), empirica-crm = epistemic layer (client_memory, findings, unknowns, calibration). Separation of concerns allows MCP to handle auth/API complexity while empirica tracks knowledge state about clients.",
+    "impact": 0.85
+  }
+}
