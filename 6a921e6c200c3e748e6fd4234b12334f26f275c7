@@ -1,0 +1,16 @@
+{
+  "finding_id": "8bf8e6af-8030-49cd-b7ac-19336082aa8c",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T17:25:13.105977+00:00",
+  "finding": "GDPR Compliance Audit: Empirica is ~15-20% compliant. EXISTS: local-first storage, session export, git audit trail. MISSING: Right to erasure (Art.17), full portability (Art.20), rectification (Art.16), consent management, data retention enforcement, anonymization. CRITICAL: Need data_subject_rights.py with delete_user_data(), cascade delete, CLI command. Git immutability conflicts with erasure right - need architectural decision.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "GDPR Compliance Audit: Empirica is ~15-20% compliant. EXISTS: local-first storage, session export, git audit trail. MISSING: Right to erasure (Art.17), full portability (Art.20), rectification (Art.16), consent management, data retention enforcement, anonymization. CRITICAL: Need data_subject_rights.py with delete_user_data(), cascade delete, CLI command. Git immutability conflicts with erasure right - need architectural decision.",
+    "impact": 0.9
+  }
+}
