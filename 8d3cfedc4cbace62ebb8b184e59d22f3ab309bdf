@@ -1,0 +1,16 @@
+{
+  "finding_id": "ef8e8c6e-16ec-43a7-b368-05d6840b5c42",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T11:23:48.533992+00:00",
+  "finding": "Empirica-crm unique differentiators vs AI-native CRMs: (1) Calibration - measures AI confidence vs reality, (2) CASCADE workflow - noetic\u2192praxic gating before action, (3) Cross-project semantic memory - learnings persist across contexts, (4) Goal-driven not automation-driven. Could COMPLEMENT not compete with AI-native CRMs.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Empirica-crm unique differentiators vs AI-native CRMs: (1) Calibration - measures AI confidence vs reality, (2) CASCADE workflow - noetic\u2192praxic gating before action, (3) Cross-project semantic memory - learnings persist across contexts, (4) Goal-driven not automation-driven. Could COMPLEMENT not compete with AI-native CRMs.",
+    "impact": 0.85
+  }
+}
