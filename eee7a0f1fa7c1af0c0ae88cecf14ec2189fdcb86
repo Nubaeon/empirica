@@ -1,0 +1,31 @@
+{
+  "goal_id": "bf195856-8013-403d-b7c2-4696faf2b0ec",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-26T13:21:56.681243+00:00",
+  "goal_data": {
+    "objective": "Fix dashboard widgets to use engagements as client-project connection layer",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Update ClientList to show engagements count",
+      "Update ClientDetail to display engagements with projects",
+      "Update ProjectDetail to show client engagements",
+      "Dashboard correctly shows many-to-many client-project relationships via engagements"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-26T13:21:56.681252+00:00",
+      "action": "created"
+    }
+  ]
+}
