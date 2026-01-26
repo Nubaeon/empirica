@@ -1,0 +1,16 @@
+{
+  "finding_id": "aa33adf4-b3de-4762-809b-70670d798b58",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T12:49:37.227334+00:00",
+  "finding": "Integration pattern for empirica-crm + Google MCP: MCP servers provide data ingestion (emails, calendar, docs), empirica-crm provides epistemic layer (track what we know about clients from those interactions). Separation of concerns: MCP = data access, Empirica = knowledge state.",
+  "impact": 0.85,
+  "goal_id": "55ecc6c6-8646-419f-a4b1-5de5209d821e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Integration pattern for empirica-crm + Google MCP: MCP servers provide data ingestion (emails, calendar, docs), empirica-crm provides epistemic layer (track what we know about clients from those interactions). Separation of concerns: MCP = data access, Empirica = knowledge state.",
+    "impact": 0.85
+  }
+}
