@@ -80,12 +80,13 @@ def column_exists(cursor: sqlite3.Cursor, table: str, column: str) -> bool:
         'dead_ends', 'reference_docs', 'mistakes', 'goals', 'subtasks',
         'checkpoints', 'handoffs', 'schema_migrations', 'epistemic_snapshots',
         'bayesian_beliefs', 'projects', 'project_findings', 'project_unknowns',
-        'mistakes_made', 'clients', 'engagements', 'client_interactions'
+        'mistakes_made', 'clients', 'engagements', 'client_interactions',
+        'client_projects'
     }
-    
+
     if table not in VALID_TABLES:
         raise ValueError(f"Invalid table name: {table}")
-    
+
     cursor.execute(
         "SELECT COUNT(*) FROM pragma_table_info(?) WHERE name=?",
         (table, column)
@@ -100,7 +101,8 @@ def add_column_if_missing(cursor: sqlite3.Cursor, table: str, column: str, colum
         'dead_ends', 'reference_docs', 'mistakes', 'goals', 'subtasks',
         'checkpoints', 'handoffs', 'schema_migrations', 'epistemic_snapshots',
         'bayesian_beliefs', 'projects', 'project_findings', 'project_unknowns',
-        'mistakes_made', 'clients', 'engagements', 'client_interactions'
+        'mistakes_made', 'clients', 'engagements', 'client_interactions',
+        'client_projects'
     }
     VALID_COLUMN_TYPES = {
         'TEXT', 'INTEGER', 'REAL', 'BLOB', 'NULL',
