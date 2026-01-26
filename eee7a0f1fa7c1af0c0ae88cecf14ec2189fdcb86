@@ -1,0 +1,30 @@
+{
+  "goal_id": "71cd65b3-68c3-4ec2-8f91-475e26c13cce",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-26T13:21:56.560637+00:00",
+  "goal_data": {
+    "objective": "Clean up test data - remove 35 test/junk projects cluttering the database",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Delete TestCase* projects",
+      "Delete duplicate OAuth Integration Test projects",
+      "Verify dashboard shows clean project list"
+    ],
+    "estimated_complexity": 0.3,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-26T13:21:56.560648+00:00",
+      "action": "created"
+    }
+  ]
+}
