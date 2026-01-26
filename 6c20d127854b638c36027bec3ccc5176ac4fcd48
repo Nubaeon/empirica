@@ -1,0 +1,30 @@
+{
+  "goal_id": "5d260c43-b4e2-49ab-9b11-720bbd44fe04",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-26T12:47:53.947798+00:00",
+  "goal_data": {
+    "objective": "Add custom fields support to empirica-crm for adaptive data model",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Design custom_fields schema for clients/engagements",
+      "Implement field type validation",
+      "Add CLI commands for field management"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-26T12:47:53.947808+00:00",
+      "action": "created"
+    }
+  ]
+}
