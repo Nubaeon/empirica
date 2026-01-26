@@ -1,0 +1,16 @@
+{
+  "finding_id": "5a89afd9-f82f-4752-8013-165c94f7d2f9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T14:27:59.027121+00:00",
+  "finding": "Pre-compact hook committed files to git but working tree wasn't updated. Had to manually checkout crm_schema.py and path_resolver.py from commit 1d9e956e. Files were in git history but missing from disk.",
+  "impact": 0.5,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Pre-compact hook committed files to git but working tree wasn't updated. Had to manually checkout crm_schema.py and path_resolver.py from commit 1d9e956e. Files were in git history but missing from disk.",
+    "impact": 0.5
+  }
+}
