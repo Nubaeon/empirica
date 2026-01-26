@@ -1,0 +1,16 @@
+{
+  "finding_id": "34fec2b4-f1ee-4a79-9431-7a4370edee87",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T14:16:44.666154+00:00",
+  "finding": "Google People API (Contacts) not in main Workspace MCP servers - gap for CRM. Options: (1) Apps Script bridge via google_workspace_mcp, (2) Build dedicated contacts MCP, (3) Use aaronsb/google-workspace-mcp which claims Contact Access support.",
+  "impact": 0.7,
+  "goal_id": "df71851d-eea5-402e-9778-52c17a6b80b3",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Google People API (Contacts) not in main Workspace MCP servers - gap for CRM. Options: (1) Apps Script bridge via google_workspace_mcp, (2) Build dedicated contacts MCP, (3) Use aaronsb/google-workspace-mcp which claims Contact Access support.",
+    "impact": 0.7
+  }
+}
