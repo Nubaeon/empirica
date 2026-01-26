@@ -1,0 +1,16 @@
+{
+  "finding_id": "eeec7842-1417-4a0b-99e2-d581e41e94e7",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T17:58:55.012638+00:00",
+  "finding": "PREFLIGHT pattern retrieval was only using task_context, not reasoning. Fixed by adding fallback: search_context = task_context or reasoning. Now Qdrant injects relevant findings, dead_ends, and lessons even when only reasoning is provided.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "PREFLIGHT pattern retrieval was only using task_context, not reasoning. Fixed by adding fallback: search_context = task_context or reasoning. Now Qdrant injects relevant findings, dead_ends, and lessons even when only reasoning is provided.",
+    "impact": 0.85
+  }
+}
