@@ -1,0 +1,28 @@
+{
+  "goal_id": "90e0714e-a831-4814-8690-d1c39d3c0a0e",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T17:18:36.652406+00:00",
+  "goal_data": {
+    "objective": "Update documentation for global CRM architecture",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "claude-code",
+      "timestamp": "2026-01-26T17:18:36.652428+00:00",
+      "action": "created"
+    }
+  ]
+}
