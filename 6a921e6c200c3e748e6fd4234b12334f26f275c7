@@ -1,0 +1,16 @@
+{
+  "finding_id": "b2346fb2-4885-4151-aa50-6bb50424c15a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T17:37:10.367100+00:00",
+  "finding": "Austrian Gov IT: ELAK (electronic file system) is core platform, BRZ (Federal Computing Centre) is tech partner, BMF coordinates e-government. Strong digital sovereignty push - BMWET adopted Nextcloud Oct 2025 for sensitive data on Austrian servers. Digital Austria portal: oesterreich.gv.at. empirica-gov would integrate as AI layer underneath existing ELAK/BRZ infrastructure.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Austrian Gov IT: ELAK (electronic file system) is core platform, BRZ (Federal Computing Centre) is tech partner, BMF coordinates e-government. Strong digital sovereignty push - BMWET adopted Nextcloud Oct 2025 for sensitive data on Austrian servers. Digital Austria portal: oesterreich.gv.at. empirica-gov would integrate as AI layer underneath existing ELAK/BRZ infrastructure.",
+    "impact": 0.8
+  }
+}
