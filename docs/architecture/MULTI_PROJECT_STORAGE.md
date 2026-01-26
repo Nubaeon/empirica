@@ -8,10 +8,11 @@
 
 Empirica uses a **project-local primary** architecture:
 - **Primary:** Each git repo has its own `.empirica/sessions/sessions.db` for all project data
-- **Global:** `~/.empirica/` stores only credentials, config, and cross-project Qdrant vectors
+- **Global:** `~/.empirica/` stores credentials, config, cross-project Qdrant vectors, and **CRM data**
+- **CRM:** `~/.empirica/crm/crm.db` stores clients and engagements (inherently cross-project)
 - **Fallback:** If no local `.empirica/` exists, falls back to `~/.empirica/`
 
-**Key principle:** Data follows the project. When you `cd` into a repo, you get that project's sessions, goals, and findings.
+**Key principle:** Data follows the project. When you `cd` into a repo, you get that project's sessions, goals, and findings. CRM data (clients, engagements) is always global since relationships span multiple projects.
 
 ```
                               ┌─────────────────────────────────────────┐
@@ -47,6 +48,16 @@ Empirica uses a **project-local primary** architecture:
                               │  │   ════════                      │   │
                               │  │   • *.yaml (cold storage)       │   │
                               │  │   • Cross-project learnings     │   │
+                              │  │   • clients/ (client lessons)   │   │
+                              │  └─────────────────────────────────┘   │
+                              │                                         │
+                              │  ┌─────────────────────────────────┐   │
+                              │  │   crm/crm.db                    │   │
+                              │  │   ═══════════                   │   │
+                              │  │   • clients (relationships)     │   │
+                              │  │   • engagements (client↔project)│   │
+                              │  │   • client_interactions         │   │
+                              │  │   • client_memory (semantic)    │   │
                               │  └─────────────────────────────────┘   │
                               │                                         │
                               └──────────────────┬──────────────────────┘
@@ -159,6 +170,19 @@ results = search(
     include_global=True  # Search other projects too
 )
 ```
+
+### Client → Project (via Engagements)
+```sql
+-- Find all projects linked to a client via engagements
+-- (Queries ~/.empirica/crm/crm.db)
+SELECT e.project_id, e.title, e.status, e.engagement_type
+FROM engagements e
+WHERE e.client_id = 'client-uuid'
+  AND e.status = 'active';
+```
+
+Engagements serve as the many-to-many connection layer between clients and projects.
+A client can have multiple engagements with multiple projects over time.
 
 ---
 
@@ -281,8 +305,10 @@ Qdrant runs as separate service for semantic memory.
 | Artifact | Primary (Project-Local) | Fallback (Global) |
 |----------|------------------------|-------------------|
 | Sessions DB | `<repo>/.empirica/sessions/sessions.db` | `~/.empirica/sessions/sessions.db` |
+| CRM DB | - | `~/.empirica/crm/crm.db` (always global) |
 | Qdrant vectors | - | `~/.empirica/qdrant_storage/` (always global) |
 | Global lessons | - | `~/.empirica/lessons/*.yaml` |
+| Client lessons | - | `~/.empirica/lessons/clients/{client_id}/*.yaml` |
 | Project lessons | `<repo>/.empirica/lessons/*.yaml` | - |
 | Git checkpoints | `<repo>/.git/refs/notes/empirica/` | - |
 | Config | `<repo>/.empirica/config.yaml` | `~/.empirica/config.yaml` |
@@ -290,6 +316,8 @@ Qdrant runs as separate service for semantic memory.
 | Credentials | - | `~/.empirica/credentials.yaml` (always global) |
 
 **Resolution order:** Project-local `.empirica/` is checked first. Falls back to `~/.empirica/` only if local dir doesn't exist.
+
+**Always Global:** CRM data (clients, engagements), Qdrant vectors, and credentials are always stored globally because they span multiple projects.
 
 ---
 
