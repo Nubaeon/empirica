@@ -1,0 +1,16 @@
+{
+  "finding_id": "3ef2254e-7002-43c4-bcf4-e70677bec357",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T12:47:53.190355+00:00",
+  "finding": "Pattern for empirica-crm: Human-in-the-loop controls (Creatio-style) - maps directly to Sentinel gate. Could extend with 'autonomy levels' per client/engagement type.",
+  "impact": 0.65,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Pattern for empirica-crm: Human-in-the-loop controls (Creatio-style) - maps directly to Sentinel gate. Could extend with 'autonomy levels' per client/engagement type.",
+    "impact": 0.65
+  }
+}
