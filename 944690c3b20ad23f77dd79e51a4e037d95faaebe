@@ -1,0 +1,31 @@
+{
+  "goal_id": "caaacc2d-9e9d-42a1-a5d7-573118368226",
+  "session_id": "673b8746-2e20-4e09-b155-c94871ac354a",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-26T11:16:07.070985+00:00",
+  "goal_data": {
+    "objective": "Research AI-first CRM systems and their architecture patterns",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Identify 3-5 AI-first CRM systems (if any exist)",
+      "Document their data models and integration patterns",
+      "Compare with empirica-crm approach",
+      "Note what we can learn/adapt"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-26T11:16:07.070996+00:00",
+      "action": "created"
+    }
+  ]
+}
