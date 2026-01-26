@@ -1,0 +1,16 @@
+{
+  "finding_id": "926ad854-19eb-44cd-b46e-c8d7977fcc9f",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c6613e54-c340-4120-a537-4dd86d500446",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T13:40:23.083309+00:00",
+  "finding": "Empirica Storage Architecture: 4 layers (HOT\u2192WARM\u2192SEARCH\u2192COLD). Project-local SQLite is primary, global ~/.empirica/ is fallback. Qdrant is ALWAYS global for cross-project search. Lessons live in YAML cold storage. CRM data (clients, engagements) is cross-project by nature and should follow global/Qdrant pattern, not project-local pattern.",
+  "impact": 0.9,
+  "goal_id": "cf5777ed-1732-4767-923d-d0d6af965b13",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Empirica Storage Architecture: 4 layers (HOT\u2192WARM\u2192SEARCH\u2192COLD). Project-local SQLite is primary, global ~/.empirica/ is fallback. Qdrant is ALWAYS global for cross-project search. Lessons live in YAML cold storage. CRM data (clients, engagements) is cross-project by nature and should follow global/Qdrant pattern, not project-local pattern.",
+    "impact": 0.9
+  }
+}
