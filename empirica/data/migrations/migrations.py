@@ -679,9 +679,18 @@ def migration_021_engagements_project_id(cursor: sqlite3.Cursor):
     - After: client → project (via client_projects), engagement has project_id
 
     The goal_id remains for optional fine-grained linking to specific goals.
+
+    NOTE: The engagements table is part of empirica-crm, not core empirica.
+    This migration gracefully skips if the table doesn't exist.
     """
     import logging
     logger = logging.getLogger(__name__)
+
+    # Check if engagements table exists (it's part of empirica-crm)
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='engagements'")
+    if not cursor.fetchone():
+        logger.info("⏭ Skipping migration 021: engagements table not present (empirica-crm not installed)")
+        return
 
     add_column_if_missing(cursor, "engagements", "project_id", "TEXT")
 
