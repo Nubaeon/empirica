@@ -1,0 +1,16 @@
+{
+  "finding_id": "d2b62e45-0900-4451-aa1b-d23db3e88c3a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T11:22:50.856976+00:00",
+  "finding": "AI-native vs AI-enabled: Native = AI as central nervous system surrounding database. Enabled = AI bolted on as sidebar/chatbot. Key question shift: 'Can it do X?' \u2192 'How much of X can it do automatically?' Autonomous background operation is the differentiator.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "AI-native vs AI-enabled: Native = AI as central nervous system surrounding database. Enabled = AI bolted on as sidebar/chatbot. Key question shift: 'Can it do X?' \u2192 'How much of X can it do automatically?' Autonomous background operation is the differentiator.",
+    "impact": 0.85
+  }
+}
