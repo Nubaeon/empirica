@@ -253,6 +253,78 @@ def get_messages_dir() -> Path:
     return get_empirica_root() / 'messages'
 
 
+def get_global_empirica_home() -> Path:
+    """
+    Get the global Empirica home directory (~/.empirica).
+
+    This is ALWAYS the user's home directory, regardless of project context.
+    Used for cross-project data like CRM, global lessons, and credentials.
+
+    Returns:
+        Path to ~/.empirica/
+    """
+    return Path.home() / '.empirica'
+
+
+def get_crm_db_path() -> Path:
+    """
+    Get path to global CRM database.
+
+    CRM data (clients, engagements) is cross-project by nature,
+    so it always lives in the global home: ~/.empirica/crm/crm.db
+
+    Priority:
+    1. EMPIRICA_CRM_DB environment variable
+    2. ~/.empirica/crm/crm.db (default)
+
+    Returns:
+        Path to crm.db
+    """
+    # Check environment variable
+    if env_db := os.getenv('EMPIRICA_CRM_DB'):
+        try:
+            db_path = _validate_user_path(env_db, 'EMPIRICA_CRM_DB')
+            logger.debug(f"📍 Using EMPIRICA_CRM_DB: {db_path}")
+            return db_path
+        except ValueError as e:
+            logger.warning(f"⚠️  Invalid EMPIRICA_CRM_DB: {e}")
+
+    # Default: global home
+    return get_global_empirica_home() / 'crm' / 'crm.db'
+
+
+def get_client_lessons_dir(client_id: Optional[str] = None) -> Path:
+    """
+    Get directory for client-scoped lessons (procedural knowledge).
+
+    Args:
+        client_id: Optional client UUID. If provided, returns client-specific dir.
+
+    Returns:
+        Path to ~/.empirica/lessons/clients/ or ~/.empirica/lessons/clients/{client_id}/
+    """
+    base = get_global_empirica_home() / 'lessons' / 'clients'
+    if client_id:
+        return base / client_id
+    return base
+
+
+def ensure_crm_structure() -> None:
+    """
+    Ensure CRM directory structure exists in global home.
+    Creates ~/.empirica/crm/ and ~/.empirica/lessons/clients/
+    """
+    global_home = get_global_empirica_home()
+
+    # CRM database directory
+    (global_home / 'crm').mkdir(parents=True, exist_ok=True)
+
+    # Client lessons directory
+    (global_home / 'lessons' / 'clients').mkdir(parents=True, exist_ok=True)
+
+    logger.debug(f"✅ Ensured CRM structure at {global_home}")
+
+
 def ensure_empirica_structure() -> None:
     """
     Ensure .empirica directory structure exists.
@@ -330,9 +402,13 @@ def debug_paths() -> dict:
         'identity_dir': str(get_identity_dir()),
         'metrics_dir': str(get_metrics_dir()),
         'messages_dir': str(get_messages_dir()),
+        'global_home': str(get_global_empirica_home()),
+        'crm_db': str(get_crm_db_path()),
+        'client_lessons_dir': str(get_client_lessons_dir()),
         'env_vars': {
             'EMPIRICA_DATA_DIR': os.getenv('EMPIRICA_DATA_DIR'),
-            'EMPIRICA_SESSION_DB': os.getenv('EMPIRICA_SESSION_DB')
+            'EMPIRICA_SESSION_DB': os.getenv('EMPIRICA_SESSION_DB'),
+            'EMPIRICA_CRM_DB': os.getenv('EMPIRICA_CRM_DB')
         },
         'config_loaded': load_empirica_config() is not None
     }
