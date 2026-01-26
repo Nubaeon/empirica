@@ -1,0 +1,14 @@
+{
+  "mistake_id": "30289d3a-7e56-4e3a-a01f-503323516de6",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "befb6730-fa6f-4539-abac-3735777b3cb1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-26T17:10:10.505846+00:00",
+  "mistake": "Statusline showed data from wrong tmux pane due to stale test sessions with instance_id=NULL being matched by prefix fallback",
+  "why_wrong": "Priority 3 prefix match (ai_id LIKE 'claude-code%') combined with instance_id IS NULL fallback allowed test sessions like claude-code-test to match when no exact session found",
+  "prevention": "1) Always close test sessions after testing, 2) Consider tightening instance_id IS NULL fallback to only match when explicitly requested, 3) Add cleanup script for orphaned test sessions",
+  "cost_estimate": "30 minutes debugging",
+  "root_cause_vector": "CONTEXT",
+  "goal_id": null,
+  "subtask_id": null
+}
