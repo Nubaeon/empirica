@@ -12,12 +12,20 @@ import sys
 from ..cli_utils import handle_cli_error
 
 
-def auto_close_previous_sessions(db, ai_id, current_project_id, output_format='json'):
+def auto_close_previous_sessions(db, ai_id, current_project_id, current_instance_id=None, output_format='json'):
     """
     Auto-close previous sessions with POSTFLIGHT for clean lifecycle.
 
-    - Same project: auto-close with POSTFLIGHT (using last vectors)
+    - Same project AND same instance: auto-close with POSTFLIGHT
+    - Same project, different instance: leave open (multi-pane support)
     - Other projects: warn only (don't auto-close)
+
+    Args:
+        db: SessionDatabase instance
+        ai_id: AI identifier
+        current_project_id: Project ID for the new session
+        current_instance_id: Instance ID (e.g., tmux:%8) for multi-pane isolation
+        output_format: Output format ('json' or 'human')
 
     Returns: dict with closed_sessions and warnings
     """
@@ -31,7 +39,7 @@ def auto_close_previous_sessions(db, ai_id, current_project_id, output_format='j
 
     # Find all active sessions for this AI (no end_time timestamp)
     cursor.execute("""
-        SELECT session_id, project_id, created_at
+        SELECT session_id, project_id, created_at, instance_id
         FROM sessions
         WHERE ai_id = ? AND end_time IS NULL
         ORDER BY created_at DESC
@@ -41,9 +49,15 @@ def auto_close_previous_sessions(db, ai_id, current_project_id, output_format='j
     for session in active_sessions:
         session_id = session['session_id']
         session_project_id = session['project_id']
+        session_instance_id = session['instance_id']
 
-        # Skip if same project will be handled (current one being created)
+        # Same project: check instance_id for multi-pane support
         if session_project_id == current_project_id:
+            # Only auto-close if same instance OR no instance tracking
+            # This allows multiple tmux panes to have concurrent sessions
+            if current_instance_id and session_instance_id and session_instance_id != current_instance_id:
+                # Different instance in same project - leave open (multi-pane)
+                continue
             # Same project: auto-close with POSTFLIGHT
 
             # Get last CHECK or PREFLIGHT vectors for POSTFLIGHT
@@ -302,8 +316,12 @@ def handle_session_create_command(args):
                     pass
 
         # AUTO-CLOSE PREVIOUS SESSIONS before creating new one
+        # Get current instance_id for multi-pane isolation
+        from empirica.utils.session_resolver import get_instance_id
+        current_instance_id = get_instance_id()
+
         db = SessionDatabase()
-        close_result = auto_close_previous_sessions(db, ai_id, early_project_id, output_format)
+        close_result = auto_close_previous_sessions(db, ai_id, early_project_id, current_instance_id, output_format)
 
         if close_result["closed_sessions"]:
             if output_format != 'json':
