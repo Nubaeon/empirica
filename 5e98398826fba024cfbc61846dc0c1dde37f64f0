@@ -1,0 +1,16 @@
+{
+  "finding_id": "4460a2b3-91d7-4aa6-a3da-f556f9df1274",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T11:13:42.715407+00:00",
+  "finding": "Post-compact context pollution fixes: (1) Finding deduplication at insert time in breadcrumbs.py using 85% word-overlap similarity (2) Stale plan auto-archive in session-init.py when goal is 100% complete. Commit: 5e983988",
+  "impact": 0.8,
+  "goal_id": "9fed0c81-64ae-487d-ac3d-df62ae2e6186",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Post-compact context pollution fixes: (1) Finding deduplication at insert time in breadcrumbs.py using 85% word-overlap similarity (2) Stale plan auto-archive in session-init.py when goal is 100% complete. Commit: 5e983988",
+    "impact": 0.8
+  }
+}
