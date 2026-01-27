@@ -1,0 +1,16 @@
+{
+  "finding_id": "b350e7b9-b9fa-4949-8350-229291d98ddf",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T11:02:17.029296+00:00",
+  "finding": "Epistemic summarizer compact #2 observation: Post-compact know recovery ~83% (0.9\u21920.75), uncertainty drift ~50% (0.1\u21920.2). Ranked findings successfully surfaced key completed work. Pattern retrieval found the epistemic summarizer finding itself (0.77 score). System appears stable - previous session completed successfully with POSTFLIGHT.",
+  "impact": 0.6,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Epistemic summarizer compact #2 observation: Post-compact know recovery ~83% (0.9\u21920.75), uncertainty drift ~50% (0.1\u21920.2). Ranked findings successfully surfaced key completed work. Pattern retrieval found the epistemic summarizer finding itself (0.77 score). System appears stable - previous session completed successfully with POSTFLIGHT.",
+    "impact": 0.6
+  }
+}
