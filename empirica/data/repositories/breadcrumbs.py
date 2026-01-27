@@ -44,6 +44,36 @@ class BreadcrumbRepository(BaseRepository):
                 unique.append(item)
         return unique
 
+    def _text_similarity(self, text1: str, text2: str) -> float:
+        """Simple word-overlap similarity (Jaccard-like)."""
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+        if not words1 or not words2:
+            return 0.0
+        intersection = len(words1 & words2)
+        union = len(words1 | words2)
+        return intersection / union if union > 0 else 0.0
+
+    def _find_similar_finding(
+        self,
+        project_id: str,
+        finding: str,
+        threshold: float = 0.85
+    ) -> Optional[str]:
+        """Check if a similar finding already exists (deduplication)."""
+        cursor = self._execute("""
+            SELECT id, finding FROM project_findings
+            WHERE project_id = ?
+            ORDER BY created_timestamp DESC
+            LIMIT 50
+        """, (project_id,))
+
+        for row in cursor.fetchall():
+            existing_id, existing_text = row
+            if self._text_similarity(finding, existing_text) >= threshold:
+                return existing_id
+        return None
+
     def log_finding(
         self,
         project_id: str,
@@ -58,7 +88,16 @@ class BreadcrumbRepository(BaseRepository):
 
         Args:
             impact: Impact score 0.0-1.0 (importance). If None, defaults to 0.5.
+
+        Returns:
+            finding_id - new ID if created, existing ID if duplicate found
         """
+        # Check for similar existing finding (deduplication)
+        existing_id = self._find_similar_finding(project_id, finding)
+        if existing_id:
+            logger.info(f"📝 Finding deduplicated (similar exists): {finding[:50]}...")
+            return existing_id
+
         finding_id = str(uuid.uuid4())
 
         if impact is None:

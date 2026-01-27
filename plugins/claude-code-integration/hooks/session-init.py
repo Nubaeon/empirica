@@ -14,8 +14,68 @@ import json
 import sys
 import subprocess
 import os
+import re
+import shutil
 from pathlib import Path
 from datetime import datetime
+
+def archive_stale_plans() -> list:
+    """
+    Archive plan files whose goals are complete.
+
+    Scans ~/.claude/plans/ for .md files, extracts goal_id from content,
+    checks if goal is complete, and moves to archive if so.
+
+    Returns list of archived plan names.
+    """
+    plans_dir = Path.home() / ".claude" / "plans"
+    archive_dir = plans_dir / "archive"
+
+    if not plans_dir.exists():
+        return []
+
+    archived = []
+    goal_id_pattern = re.compile(r'\*\*Goal ID:\*\*\s*`([a-f0-9-]+)`')
+
+    for plan_file in plans_dir.glob("*.md"):
+        if plan_file.name.startswith("."):
+            continue
+
+        try:
+            content = plan_file.read_text()
+
+            # Extract goal_id if present
+            match = goal_id_pattern.search(content)
+            if not match:
+                continue
+
+            goal_id = match.group(1)
+
+            # Check if goal exists and is complete
+            result = subprocess.run(
+                ['empirica', 'goals-progress', '--goal-id', goal_id, '--output', 'json'],
+                capture_output=True, text=True, timeout=5
+            )
+
+            if result.returncode == 0:
+                try:
+                    goal_data = json.loads(result.stdout)
+                    status = goal_data.get('status', '')
+                    completion_pct = goal_data.get('completion_percentage', 0)
+
+                    # Archive if completed or all subtasks done
+                    if status == 'completed' or completion_pct >= 100:
+                        archive_dir.mkdir(parents=True, exist_ok=True)
+                        dest = archive_dir / plan_file.name
+                        shutil.move(str(plan_file), str(dest))
+                        archived.append(plan_file.name)
+                except json.JSONDecodeError:
+                    pass
+        except Exception:
+            continue
+
+    return archived
+
 
 def find_git_root() -> Path | None:
     """Find git repository root from current directory."""
@@ -151,6 +211,9 @@ def main():
 
     ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
 
+    # Archive stale plans (whose goals are complete)
+    archived_plans = archive_stale_plans()
+
     # Create session and bootstrap
     result = create_session_and_bootstrap(ai_id)
 
@@ -233,11 +296,12 @@ EOF
     }
 
     # User-visible message
+    archive_msg = f"\n🗄️  Archived {len(archived_plans)} stale plan(s)" if archived_plans else ""
     print(f"""
 🚀 Empirica: New Session Initialized
 
 ✅ Session created: {session_id}
-✅ Project context loaded
+✅ Project context loaded{archive_msg}
 
 📋 Run PREFLIGHT to establish baseline, then CHECK before actions.
 """, file=sys.stderr)
