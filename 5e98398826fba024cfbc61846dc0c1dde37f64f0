@@ -1,0 +1,16 @@
+{
+  "finding_id": "6393d529-31a2-4305-9f56-02d8a3ff4806",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T13:51:03.826873+00:00",
+  "finding": "Epistemic vector decomposition should be descriptive not prescriptive. AI internal process is probabilistic (attention, embeddings, latent space) - already mathematical, just emergent. Rubrics should describe signal TYPES (retrieval confidence, pattern recognition, prediction capacity) not rigid formulas. Calibration validates outcomes empirically, allowing internal process to evolve with model capabilities. Rigid rubrics \u2192 calcified heuristics.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Epistemic vector decomposition should be descriptive not prescriptive. AI internal process is probabilistic (attention, embeddings, latent space) - already mathematical, just emergent. Rubrics should describe signal TYPES (retrieval confidence, pattern recognition, prediction capacity) not rigid formulas. Calibration validates outcomes empirically, allowing internal process to evolve with model capabilities. Rigid rubrics \u2192 calcified heuristics.",
+    "impact": 0.85
+  }
+}
