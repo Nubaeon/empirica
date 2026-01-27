@@ -28,6 +28,7 @@ import sys
 import os
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 # Noetic tools - read/investigate/search - always allowed (whitelist)
 NOETIC_TOOLS = {
@@ -98,10 +99,10 @@ SAFE_PIPE_TARGETS = (
 )
 
 # Thresholds for CHECK validation
+# NOTE: Using RAW thresholds - bias corrections are FEEDBACK for AI to internalize,
+# not silent adjustments. What AI sees in statusline = what sentinel evaluates.
 KNOW_THRESHOLD = 0.70
 UNCERTAINTY_THRESHOLD = 0.35
-KNOW_BIAS = 0.10
-UNCERTAINTY_BIAS = -0.04
 MAX_CHECK_AGE_MINUTES = 30
 
 
@@ -120,36 +121,45 @@ def respond(decision, reason=""):
     print(json.dumps(output))
 
 
-def find_project_root() -> Path:
-    """Find Empirica project root with valid database."""
-    def has_valid_db(path: Path) -> bool:
-        db_path = path / '.empirica' / 'sessions' / 'sessions.db'
-        return db_path.exists() and db_path.stat().st_size > 0
+def find_empirica_package() -> Optional[Path]:
+    """Find where empirica package can be imported from.
 
-    # Check environment variable
-    if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
-        workspace_path = Path(workspace_root).expanduser().resolve()
-        if has_valid_db(workspace_path):
-            return workspace_path
+    This is ONLY for setting up sys.path to enable imports.
+    Actual path resolution (DB location, etc.) is delegated to
+    empirica.config.path_resolver after import.
 
-    # Known development paths
+    Returns:
+        Path to add to sys.path, or None if empirica is already importable.
+    """
+    # Check if already importable (pip installed)
+    try:
+        import empirica.config.path_resolver
+        return None  # Already available, no path needed
+    except ImportError:
+        pass
+
+    # Search for empirica package in known development locations
+    def has_empirica_package(path: Path) -> bool:
+        return (path / 'empirica' / '__init__.py').exists()
+
+    # Check cwd and parents first (respect project context)
+    current = Path.cwd()
+    for parent in [current] + list(current.parents):
+        if has_empirica_package(parent):
+            return parent
+        if parent == parent.parent:
+            break
+
+    # Fallback to known dev paths
     known_paths = [
         Path.home() / 'empirical-ai' / 'empirica',
         Path.home() / 'empirica',
     ]
     for path in known_paths:
-        if has_valid_db(path):
+        if has_empirica_package(path):
             return path
 
-    # Search upward from cwd
-    current = Path.cwd()
-    for parent in [current] + list(current.parents):
-        if has_valid_db(parent):
-            return parent
-        if parent == parent.parent:
-            break
-
-    return Path.cwd()
+    return None
 
 
 def get_last_compact_timestamp(project_root: Path) -> datetime:
@@ -283,10 +293,22 @@ def main():
 
     # === AUTHORIZATION CHECK ===
 
-    # Setup paths - smart discovery
-    project_root = find_project_root()
-    os.chdir(project_root)
-    sys.path.insert(0, str(project_root))
+    # Setup imports - find empirica package if not already installed
+    package_path = find_empirica_package()
+    if package_path:
+        sys.path.insert(0, str(package_path))
+
+    # Import path_resolver for canonical path resolution
+    try:
+        from empirica.config.path_resolver import get_empirica_root
+    except ImportError as e:
+        respond("allow", f"Cannot import path_resolver: {e}")
+        sys.exit(0)
+
+    # Change to the resolved empirica root (for relative paths in DB)
+    empirica_root = get_empirica_root()
+    if empirica_root.exists():
+        os.chdir(empirica_root.parent)  # .empirica's parent is project root
 
     # Get active session
     session_id = None
@@ -310,6 +332,7 @@ def main():
         respond("allow", "WARNING: No active Empirica session. Run 'empirica session-create --ai-id claude-code' for epistemic tracking.")
         sys.exit(0)
 
+    # SessionDatabase uses path_resolver internally for DB location
     from empirica.data.session_database import SessionDatabase
     db = SessionDatabase()
     cursor = db.conn.cursor()
@@ -338,14 +361,14 @@ def main():
 
     preflight_know, preflight_uncertainty, preflight_timestamp = preflight_row
 
-    # Apply bias corrections to PREFLIGHT vectors
-    corrected_preflight_know = (preflight_know or 0) + KNOW_BIAS
-    corrected_preflight_unc = (preflight_uncertainty or 1) + UNCERTAINTY_BIAS
+    # Use RAW vectors - bias corrections are feedback for AI to internalize, not silent adjustments
+    raw_know = preflight_know or 0
+    raw_unc = preflight_uncertainty or 1
 
     # AUTO-PROCEED: If PREFLIGHT passes readiness gate, skip CHECK requirement
-    if corrected_preflight_know >= KNOW_THRESHOLD and corrected_preflight_unc <= UNCERTAINTY_THRESHOLD:
+    if raw_know >= KNOW_THRESHOLD and raw_unc <= UNCERTAINTY_THRESHOLD:
         db.close()
-        respond("allow", f"PREFLIGHT passed gate (know={corrected_preflight_know:.2f}, unc={corrected_preflight_unc:.2f}) - auto-proceed")
+        respond("allow", f"PREFLIGHT passed gate (know={raw_know:.2f}, unc={raw_unc:.2f}) - auto-proceed")
         sys.exit(0)
 
     # PREFLIGHT confidence too low - require explicit CHECK
@@ -359,7 +382,7 @@ def main():
     db.close()
 
     if not check_row:
-        respond("deny", f"Insufficient understanding (know={corrected_preflight_know:.2f}, unc={corrected_preflight_unc:.2f}). Investigate before acting.")
+        respond("deny", f"Insufficient understanding (know={raw_know:.2f}, unc={raw_unc:.2f}). Investigate before acting.")
         sys.exit(0)
 
     know, uncertainty, reflex_data, check_timestamp = check_row
@@ -433,20 +456,20 @@ def main():
 
     # Optional: Compact invalidation
     if os.getenv('EMPIRICA_SENTINEL_COMPACT_INVALIDATION', 'false').lower() == 'true':
-        last_compact = get_last_compact_timestamp(project_root)
+        last_compact = get_last_compact_timestamp(empirica_root.parent)
         if last_compact and check_time and last_compact > check_time:
             respond("deny", "Context compacted. Recalibrate with fresh CHECK.")
             sys.exit(0)
 
-    # Apply bias corrections and check thresholds
-    corrected_know = (know or 0) + KNOW_BIAS
-    corrected_unc = (uncertainty or 1) + UNCERTAINTY_BIAS
+    # Use RAW vectors - what AI sees = what sentinel evaluates
+    raw_check_know = know or 0
+    raw_check_unc = uncertainty or 1
 
-    if corrected_know >= KNOW_THRESHOLD and corrected_unc <= UNCERTAINTY_THRESHOLD:
-        respond("allow", f"CHECK passed (know={corrected_know:.2f}, unc={corrected_unc:.2f})")
+    if raw_check_know >= KNOW_THRESHOLD and raw_check_unc <= UNCERTAINTY_THRESHOLD:
+        respond("allow", f"CHECK passed (know={raw_check_know:.2f}, unc={raw_check_unc:.2f})")
         sys.exit(0)
     else:
-        respond("deny", f"Insufficient confidence: know={corrected_know:.2f}, uncertainty={corrected_unc:.2f}. Investigate more.")
+        respond("deny", f"Insufficient confidence: know={raw_check_know:.2f}, uncertainty={raw_check_unc:.2f}. Investigate more.")
         sys.exit(0)
 
 
