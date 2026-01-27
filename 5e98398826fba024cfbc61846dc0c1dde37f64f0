@@ -1,0 +1,16 @@
+{
+  "finding_id": "33a3e841-4eeb-47aa-8d9f-d90770639f95",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T14:21:12.815861+00:00",
+  "finding": "13 vectors as epistemic lingua franca: Vectors grounded in human-converged epistemic primitives (epistemology, information theory, systems theory, psychology, logic). Different AIs with different training can map to same reference frame. Enables cross-agent calibration and makes framework testable against philosophical/psychological literature. Not arbitrary internal states but shared epistemic concepts.",
+  "impact": 0.95,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "13 vectors as epistemic lingua franca: Vectors grounded in human-converged epistemic primitives (epistemology, information theory, systems theory, psychology, logic). Different AIs with different training can map to same reference frame. Enables cross-agent calibration and makes framework testable against philosophical/psychological literature. Not arbitrary internal states but shared epistemic concepts.",
+    "impact": 0.95
+  }
+}
