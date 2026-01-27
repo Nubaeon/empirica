@@ -1,0 +1,16 @@
+{
+  "finding_id": "b4ac6378-ee36-4458-ab0e-3ad5d5a2fdcf",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "881ab723-3524-4c24-a372-4407be31f3f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T18:55:06.425558+00:00",
+  "finding": "CRITICAL: Database path mismatch on Philipp's system caused sentinel deadlock. CLI used ~/.empirica/sessions/sessions.db while sentinel hook used ~/empirica/.empirica/sessions/sessions.db (source repo). PREFLIGHT submissions were invisible to hook. Fix: export EMPIRICA_WORKSPACE_ROOT=\"$HOME\" in .zshrc aligns both to use ~/.empirica/. This is a common issue when empirica source repo exists alongside global .empirica config.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CRITICAL: Database path mismatch on Philipp's system caused sentinel deadlock. CLI used ~/.empirica/sessions/sessions.db while sentinel hook used ~/empirica/.empirica/sessions/sessions.db (source repo). PREFLIGHT submissions were invisible to hook. Fix: export EMPIRICA_WORKSPACE_ROOT=\"$HOME\" in .zshrc aligns both to use ~/.empirica/. This is a common issue when empirica source repo exists alongside global .empirica config.",
+    "impact": 0.9
+  }
+}
