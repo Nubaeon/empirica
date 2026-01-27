@@ -1,0 +1,31 @@
+{
+  "goal_id": "6c6ae102-d079-4381-94f1-154249cc088b",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-27T14:28:18.687355+00:00",
+  "goal_data": {
+    "objective": "White paper: Vector-Outcome Correlations for Empirica Users",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Simple correlation stats from existing data",
+      "Accessible explanation for practitioners",
+      "Shows which vectors predict what outcomes",
+      "Not academic - practical"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-27T14:28:18.687365+00:00",
+      "action": "created"
+    }
+  ]
+}
