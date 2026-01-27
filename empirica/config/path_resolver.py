@@ -266,6 +266,43 @@ def get_global_empirica_home() -> Path:
     return Path.home() / '.empirica'
 
 
+# Cache for global config to avoid repeated file reads
+_global_config_cache = None
+
+
+def load_global_config() -> Optional[dict]:
+    """
+    Load global Empirica config from ~/.empirica/config.yaml.
+
+    Returns:
+        Config dict if file exists and is valid YAML, None otherwise.
+        Cached after first load.
+
+    Example config structure:
+        version: '2.0'
+        defaults:
+          auto_init_projects: true
+        settings:
+          auto_checkpoint: true
+    """
+    global _global_config_cache
+    if _global_config_cache is not None:
+        return _global_config_cache
+
+    config_path = get_global_empirica_home() / 'config.yaml'
+    if not config_path.exists():
+        return None
+
+    try:
+        import yaml
+        with open(config_path, 'r') as f:
+            _global_config_cache = yaml.safe_load(f)
+            return _global_config_cache
+    except Exception as e:
+        logger.warning(f"Failed to load global config: {e}")
+        return None
+
+
 def get_crm_db_path() -> Path:
     """
     Get path to global CRM database.

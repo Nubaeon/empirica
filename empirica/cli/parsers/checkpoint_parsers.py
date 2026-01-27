@@ -663,6 +663,16 @@ def add_checkpoint_parsers(subparsers):
     session_create_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
     session_create_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
+    # Auto-init: Initialize .empirica/ if not present (issue #25)
+    session_create_parser.add_argument('--auto-init', action='store_true',
+        help='Auto-initialize .empirica/ if not present in git repo (prevents orphaned sessions)')
+    session_create_parser.add_argument('--no-auto-init', action='store_true',
+        help='Disable auto-init even if enabled in global config')
+    session_create_parser.add_argument('--project-name',
+        help='Project name for auto-init (defaults to directory name)')
+    session_create_parser.add_argument('--project-description',
+        help='Project description for auto-init')
+
     # ===== SYNC COMMANDS =====
     # Git notes synchronization for multi-device/multi-AI coordination
 
