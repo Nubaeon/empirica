@@ -1,0 +1,16 @@
+{
+  "finding_id": "f269c50a-e1c3-4238-a49e-417bb26185c9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "881ab723-3524-4c24-a372-4407be31f3f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T18:30:37.206696+00:00",
+  "finding": "Philipp's ~/.empirica/active_session had stale reference to non-existent session 84f0f6eb. The session was likely created but failed to persist to SQLite. Terminal-specific files (active_session_term_*) were all valid. Fixed by removing stale file - statusline will use terminal-specific files correctly. The symlink Philipp mentioned was Claude Code's ~/.claude/debug/latest which points to debug logs (normal behavior).",
+  "impact": 0.5,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Philipp's ~/.empirica/active_session had stale reference to non-existent session 84f0f6eb. The session was likely created but failed to persist to SQLite. Terminal-specific files (active_session_term_*) were all valid. Fixed by removing stale file - statusline will use terminal-specific files correctly. The symlink Philipp mentioned was Claude Code's ~/.claude/debug/latest which points to debug logs (normal behavior).",
+    "impact": 0.5
+  }
+}
