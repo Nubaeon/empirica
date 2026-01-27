@@ -1,0 +1,16 @@
+{
+  "finding_id": "126b728c-08ac-4408-9d44-e8d0476f371a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8e047a2d-cde4-4ac7-8dbf-ffa81aabefaa",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T10:30:14.261635+00:00",
+  "finding": "CLAUDE.md v1.4.1: Removed static calibration table. Calibration now dynamically injected from .breadcrumbs.yaml at session start. AI should internalize bias corrections shown, not rely on hidden adjustments. Sentinel uses raw vectors - what statusline shows = what gate evaluates.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CLAUDE.md v1.4.1: Removed static calibration table. Calibration now dynamically injected from .breadcrumbs.yaml at session start. AI should internalize bias corrections shown, not rely on hidden adjustments. Sentinel uses raw vectors - what statusline shows = what gate evaluates.",
+    "impact": 0.7
+  }
+}
