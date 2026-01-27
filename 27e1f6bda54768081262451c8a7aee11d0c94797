@@ -1,0 +1,16 @@
+{
+  "finding_id": "01b81b99-e5d6-4fdb-9853-f9bacd5a4010",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "e3cdb010-2ee1-4a1e-ad39-0787da4abf93",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T21:00:57.389329+00:00",
+  "finding": "Documentation updated with sessions vs goals clarification across 3 files: CLAUDE.md (full section), technical-foundations-philipp.md (section 4b), empirica-concepts-for-presentations.md (brief note). Key insight: sessions=temporal (context windows), goals=structural (persistent). Orthogonal axes, not hierarchy.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Documentation updated with sessions vs goals clarification across 3 files: CLAUDE.md (full section), technical-foundations-philipp.md (section 4b), empirica-concepts-for-presentations.md (brief note). Key insight: sessions=temporal (context windows), goals=structural (persistent). Orthogonal axes, not hierarchy.",
+    "impact": 0.8
+  }
+}
