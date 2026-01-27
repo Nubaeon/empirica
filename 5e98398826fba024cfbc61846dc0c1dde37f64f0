@@ -1,0 +1,16 @@
+{
+  "finding_id": "07fb3cf4-10a0-43cc-8145-9bd41808e76e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T11:21:58.519025+00:00",
+  "finding": "Design Decision: Noesis/Storage overlap solved via insert-time deduplication, NOT pointer indirection. Qdrant (SEARCH layer) and SQLite (WARM layer) both store full finding text, but deduplication at insert prevents duplicates from propagating. Pointer architecture (Qdrant stores IDs only, SQLite holds content) considered but rejected as complexity creep - current approach is simpler with single source of truth at insert time.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Design Decision: Noesis/Storage overlap solved via insert-time deduplication, NOT pointer indirection. Qdrant (SEARCH layer) and SQLite (WARM layer) both store full finding text, but deduplication at insert prevents duplicates from propagating. Pointer architecture (Qdrant stores IDs only, SQLite holds content) considered but rejected as complexity creep - current approach is simpler with single source of truth at insert time.",
+    "impact": 0.7
+  }
+}
