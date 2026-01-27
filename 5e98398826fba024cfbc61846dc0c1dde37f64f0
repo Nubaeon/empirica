@@ -1,0 +1,28 @@
+{
+  "goal_id": "7fdb5722-6921-492a-a514-4cc61aee67b4",
+  "session_id": "881ab723-3524-4c24-a372-4407be31f3f6",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-27T19:08:31.153351+00:00",
+  "goal_data": {
+    "objective": "Refactor sentinel-gate.py to use canonical path_resolver instead of custom find_project_root()",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-27T19:08:31.153370+00:00",
+      "action": "created"
+    }
+  ]
+}
