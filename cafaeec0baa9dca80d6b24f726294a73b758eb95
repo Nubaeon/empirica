@@ -1,0 +1,29 @@
+{
+  "goal_id": "9fed0c81-64ae-487d-ac3d-df62ae2e6186",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-27T11:11:36.922857+00:00",
+  "goal_data": {
+    "objective": "Fix post-compact context pollution: stale plans and duplicate findings",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "No duplicate findings in retrieval results",
+      "Stale plans auto-archived when goal is complete"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-27T11:11:36.922869+00:00",
+      "action": "created"
+    }
+  ]
+}
