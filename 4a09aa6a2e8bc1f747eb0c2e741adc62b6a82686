@@ -1,0 +1,16 @@
+{
+  "finding_id": "000938d9-7d87-4e82-b885-db2354c80bce",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "807ace22-5d04-4c83-b9d4-dbd43c52876d",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T08:38:26.311588+00:00",
+  "finding": "Philipp's learning doc corrections: (1) 13 vectors are engagement/know/do/context/clarity/coherence/signal/density/state/change/completion/impact/uncertainty - NOT custom list. (2) CASCADE = PREFLIGHT\u2192CHECK\u2192POSTFLIGHT assessment workflow - NOT acronym. (3) NOETIC-PRAXIC = thinking phases (investigation vs action). (4) Memory = HOT/WARM/SEARCH/COLD. (5) Sentinel = 3-layer defense (NoeticFilter+AxiologicGate+ComplianceGate). (6) Epistemic artifacts not formal - use breadcrumbs.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Philipp's learning doc corrections: (1) 13 vectors are engagement/know/do/context/clarity/coherence/signal/density/state/change/completion/impact/uncertainty - NOT custom list. (2) CASCADE = PREFLIGHT\u2192CHECK\u2192POSTFLIGHT assessment workflow - NOT acronym. (3) NOETIC-PRAXIC = thinking phases (investigation vs action). (4) Memory = HOT/WARM/SEARCH/COLD. (5) Sentinel = 3-layer defense (NoeticFilter+AxiologicGate+ComplianceGate). (6) Epistemic artifacts not formal - use breadcrumbs.",
+    "impact": 0.9
+  }
+}
