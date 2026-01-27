@@ -1,0 +1,13 @@
+{
+  "unknown_id": "5111f3b8-5991-44e4-b897-752890dbdd9d",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T14:23:00.349374+00:00",
+  "unknown": "Research agenda: Validate 13 vectors against their claimed epistemic constructs. Do they actually correlate with what they claim to measure? We have 2700+ observations - could run correlation analysis between PREFLIGHT vectors and POSTFLIGHT outcomes. Would give Empirica scientific legitimacy as validated measurement instrument.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
