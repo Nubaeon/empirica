@@ -1,0 +1,16 @@
+{
+  "finding_id": "7e8a2157-2e94-43e3-80f1-c63811db57bd",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T11:23:05.372905+00:00",
+  "finding": "Agentic Data Problem (Wang/Substack): Agents fail from data infrastructure gaps, not reasoning. Key challenges: (1) trajectory complexity - 47 steps need 47 judgment calls, (2) quiet failures - Claude 3.7 complied with malicious requests 70% in testing, (3) ground truth ambiguity - multiple valid paths. Empirica addresses: CASCADE tracks epistemic state per decision, Sentinel gates prevent action when uncertain, 13 vectors provide explicit measurement, git notes create reproducible audit trails.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Agentic Data Problem (Wang/Substack): Agents fail from data infrastructure gaps, not reasoning. Key challenges: (1) trajectory complexity - 47 steps need 47 judgment calls, (2) quiet failures - Claude 3.7 complied with malicious requests 70% in testing, (3) ground truth ambiguity - multiple valid paths. Empirica addresses: CASCADE tracks epistemic state per decision, Sentinel gates prevent action when uncertain, 13 vectors provide explicit measurement, git notes create reproducible audit trails.",
+    "impact": 0.85
+  }
+}
