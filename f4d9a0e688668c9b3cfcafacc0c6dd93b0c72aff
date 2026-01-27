@@ -1,0 +1,16 @@
+{
+  "finding_id": "e011ba49-e651-4189-a24b-1c2dc2a235d9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T19:41:39.116382+00:00",
+  "finding": "Git analogy for Empirica adoption: Git didn't go viral - became essential infrastructure over 5-10 years through solving real problems for people who understood them. Empirica follows same pattern: invisible when working, appreciated by practitioners, gradual adoption. Flashy wrappers get attention; infrastructure becomes essential. Clawdbot = nice GUI for SVN; Empirica = git (new model enabling new possibilities).",
+  "impact": 0.85,
+  "goal_id": "6c6ae102-d079-4381-94f1-154249cc088b",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Git analogy for Empirica adoption: Git didn't go viral - became essential infrastructure over 5-10 years through solving real problems for people who understood them. Empirica follows same pattern: invisible when working, appreciated by practitioners, gradual adoption. Flashy wrappers get attention; infrastructure becomes essential. Clawdbot = nice GUI for SVN; Empirica = git (new model enabling new possibilities).",
+    "impact": 0.85
+  }
+}
