@@ -199,25 +199,9 @@ def handle_session_create_command(args):
             print()
 
         # AUTO-INIT: Initialize .empirica/ if not present (issue #25)
+        # Simple: if --auto-init flag passed and .empirica/ missing, run project-init
         auto_init_performed = False
-        auto_init = getattr(args, 'auto_init', False)
-        no_auto_init = getattr(args, 'no_auto_init', False)
-
-        # Check global config for auto_init_projects default
-        if not auto_init and not no_auto_init:
-            try:
-                from empirica.config.path_resolver import load_global_config
-                global_config = load_global_config()
-                if global_config:
-                    auto_init = global_config.get('defaults', {}).get('auto_init_projects', False)
-            except Exception:
-                pass
-
-        # Override with --no-auto-init flag
-        if no_auto_init:
-            auto_init = False
-
-        if auto_init:
+        if getattr(args, 'auto_init', False):
             from empirica.config.path_resolver import get_git_root
             git_root = get_git_root()
 
@@ -236,7 +220,6 @@ def handle_session_create_command(args):
             # Check if .empirica/ already exists
             empirica_config = git_root / '.empirica' / 'config.yaml'
             if not empirica_config.exists():
-                # Need to initialize
                 if output_format != 'json':
                     print("🔧 Auto-initializing Empirica in this repository...")
 
@@ -244,12 +227,12 @@ def handle_session_create_command(args):
                     from empirica.cli.command_handlers.project_init import handle_project_init_command
                     from types import SimpleNamespace
 
-                    # Build mock args for project-init (non-interactive mode)
+                    # Use defaults: directory name, no description
                     init_args = SimpleNamespace(
                         non_interactive=True,
                         output='json' if output_format == 'json' else 'default',
-                        project_name=getattr(args, 'project_name', None) or git_root.name,
-                        project_description=getattr(args, 'project_description', None),
+                        project_name=git_root.name,
+                        project_description=None,
                         enable_beads=False,
                         create_semantic_index=False,
                         force=False
@@ -262,10 +245,10 @@ def handle_session_create_command(args):
                         sys.exit(1)
 
                     auto_init_performed = True
-                    project_id = result.get('project_id')  # Get project_id from init result
+                    project_id = result.get('project_id')
 
                     if output_format != 'json':
-                        print(f"✅ Project auto-initialized: {init_args.project_name}")
+                        print(f"✅ Project auto-initialized: {git_root.name}")
                         print()
 
                 except Exception as e:
