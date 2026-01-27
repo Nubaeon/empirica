@@ -1,0 +1,16 @@
+{
+  "finding_id": "09d1834f-bb26-4ce7-9df6-85bdda3fa7b2",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T19:44:24.966859+00:00",
+  "finding": "Uncalibrated AI real costs: cybersecurity incidents, legal liability (OGH 2025), productivity drain verifying outputs, enterprise adoption blocked (audit requirements), regulated industries locked out, knowledge degradation from trusted wrong answers, insurance/liability uncertainty. Empirica isn't nice-to-have - it's the unlock for everything blocked on \"can't trust AI enough.\"",
+  "impact": 0.9,
+  "goal_id": "6c6ae102-d079-4381-94f1-154249cc088b",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Uncalibrated AI real costs: cybersecurity incidents, legal liability (OGH 2025), productivity drain verifying outputs, enterprise adoption blocked (audit requirements), regulated industries locked out, knowledge degradation from trusted wrong answers, insurance/liability uncertainty. Empirica isn't nice-to-have - it's the unlock for everything blocked on \"can't trust AI enough.\"",
+    "impact": 0.9
+  }
+}
