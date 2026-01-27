@@ -1,0 +1,16 @@
+{
+  "finding_id": "4c322819-ab07-44d6-b65b-b92e9cefe5ad",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "881ab723-3524-4c24-a372-4407be31f3f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T09:38:07.618756+00:00",
+  "finding": "empirica-outreach fully synced to Philipp via rsync (188MB). Includes: presentations (Austrian ministry, Freshfields, Dr. Reimer), .empirica session data, .qdrant_data vector DB, empirica_outreach bot code, assets, and all platform folders (reddit, telegram, discord, etc.). Synced via rsync not git to preserve local materials separate from public repo.",
+  "impact": 0.6,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "empirica-outreach fully synced to Philipp via rsync (188MB). Includes: presentations (Austrian ministry, Freshfields, Dr. Reimer), .empirica session data, .qdrant_data vector DB, empirica_outreach bot code, assets, and all platform folders (reddit, telegram, discord, etc.). Synced via rsync not git to preserve local materials separate from public repo.",
+    "impact": 0.6
+  }
+}
