@@ -1,0 +1,16 @@
+{
+  "finding_id": "1047f257-3924-4ac3-b7c8-b8f72a41bd32",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7707bcf3-2df4-4fc7-8099-45a1dae9ec7a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T14:00:33.481309+00:00",
+  "finding": "Canonical explanation for \"how does AI calculate epistemic vectors\": Emergent mathematical processes (attention, embeddings, probability) map to semantic questions that LLMs grok via natural language. External systems verify approximation accuracy. AI calibrates through Bayesian belief updates, threshold gate checking, and guidance from humans/AIs to improve assessment over time. Not rigid heuristics - adaptive probabilistic grounding.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Canonical explanation for \"how does AI calculate epistemic vectors\": Emergent mathematical processes (attention, embeddings, probability) map to semantic questions that LLMs grok via natural language. External systems verify approximation accuracy. AI calibrates through Bayesian belief updates, threshold gate checking, and guidance from humans/AIs to improve assessment over time. Not rigid heuristics - adaptive probabilistic grounding.",
+    "impact": 0.9
+  }
+}
