@@ -1,0 +1,16 @@
+{
+  "finding_id": "0d64e4e8-883b-499f-bf1f-2c52f613fd61",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "e3cdb010-2ee1-4a1e-ad39-0787da4abf93",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T21:36:26.438133+00:00",
+  "finding": "Implemented project-aware PREFLIGHT tracking: reflexes table now has project_id column, sentinel-gate checks for project context switches and requires new PREFLIGHT when project changes within same session. Added migration 022. Sessions=temporal, goals=structural, PREFLIGHT=project-scoped.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Implemented project-aware PREFLIGHT tracking: reflexes table now has project_id column, sentinel-gate checks for project context switches and requires new PREFLIGHT when project changes within same session. Added migration 022. Sessions=temporal, goals=structural, PREFLIGHT=project-scoped.",
+    "impact": 0.9
+  }
+}
