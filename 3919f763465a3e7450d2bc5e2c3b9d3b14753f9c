@@ -1,0 +1,16 @@
+{
+  "finding_id": "cdbf3a45-c8a4-4601-8517-0f365e8888f9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8e047a2d-cde4-4ac7-8dbf-ffa81aabefaa",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-27T10:11:40.062145+00:00",
+  "finding": "Database cleanup completed: removed 488 test sessions, 2300+ orphaned/test reflexes, 32 default reflexes remain (legitimate markers). Database size reduced from 201MB to 183MB. Backup at sessions.db.backup-20260127-110956.",
+  "impact": 0.6,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Database cleanup completed: removed 488 test sessions, 2300+ orphaned/test reflexes, 32 default reflexes remain (legitimate markers). Database size reduced from 201MB to 183MB. Backup at sessions.db.backup-20260127-110956.",
+    "impact": 0.6
+  }
+}
