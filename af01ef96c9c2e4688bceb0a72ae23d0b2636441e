@@ -1,0 +1,16 @@
+{
+  "finding_id": "114fc4f4-2f3e-465b-adb9-464710d92dc6",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bb977dc1-6663-4b61-aabf-9edf633de74c",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-28T17:24:38.890438+00:00",
+  "finding": "Product architecture decision: Noetic firewall stays bundled in empirica (MIT). No lite/split product. Rationale: (1) Firewall's value IS calibration, inseparable from empirica, (2) Multi-AI workflows need sentinel watching multiple terminals/subagents/branches simultaneously - race condition scaling is the real technical challenge, (3) Enterprise product is support, training, and deploying bayesian guardian + noetic filter for absolute control. Open-core model: MIT framework for adoption, enterprise value in expertise and advanced orchestration.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Product architecture decision: Noetic firewall stays bundled in empirica (MIT). No lite/split product. Rationale: (1) Firewall's value IS calibration, inseparable from empirica, (2) Multi-AI workflows need sentinel watching multiple terminals/subagents/branches simultaneously - race condition scaling is the real technical challenge, (3) Enterprise product is support, training, and deploying bayesian guardian + noetic filter for absolute control. Open-core model: MIT framework for adoption, enterprise value in expertise and advanced orchestration.",
+    "impact": 0.9
+  }
+}
