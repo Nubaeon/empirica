@@ -381,7 +381,19 @@ def handle_session_create_command(args):
         else:
             active_session_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
         active_session_file.parent.mkdir(parents=True, exist_ok=True)
-        active_session_file.write_text(session_id)
+        # Atomic write: temp file + rename prevents partial reads from concurrent access
+        import tempfile
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=str(active_session_file.parent))
+        try:
+            with os.fdopen(tmp_fd, 'w') as tmp_f:
+                tmp_f.write(session_id)
+            os.rename(tmp_path, str(active_session_file))
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
         # NOTE: PREFLIGHT must be user-submitted with genuine vectors
         # Do NOT auto-generate - breaks continuity and learning metrics

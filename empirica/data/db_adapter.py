@@ -122,7 +122,12 @@ class SQLiteAdapter(DatabaseAdapter):
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Enable timeout for database lock waits (30 seconds)
-        self._conn = sqlite3.connect(str(self.db_path), timeout=30.0)
+        # isolation_level="IMMEDIATE" ensures DML statements acquire RESERVED lock
+        # upfront, preventing SQLITE_BUSY when two writers try to escalate from
+        # SHARED to RESERVED simultaneously. Reads are unaffected (no lock for SELECTs).
+        self._conn = sqlite3.connect(
+            str(self.db_path), timeout=30.0, isolation_level="IMMEDIATE"
+        )
         self._conn.row_factory = sqlite3.Row  # Return rows as dicts
 
         # Enable WAL mode for better concurrency
@@ -134,12 +139,22 @@ class SQLiteAdapter(DatabaseAdapter):
 
         self._cursor = None
 
-        logger.info(f"📊 SQLite adapter initialized: {self.db_path} (WAL mode enabled)")
+        logger.info(f"📊 SQLite adapter initialized: {self.db_path} (WAL+IMMEDIATE mode)")
 
     @property
     def conn(self):
         """Return raw SQLite connection"""
         return self._conn
+
+    def begin_immediate(self):
+        """Begin an IMMEDIATE transaction for write operations.
+
+        IMMEDIATE transactions acquire a RESERVED lock upfront,
+        preventing other writers from starting. This avoids SQLITE_BUSY
+        errors that occur with DEFERRED transactions when they try to
+        escalate from SHARED to RESERVED lock mid-transaction.
+        """
+        self._conn.execute("BEGIN IMMEDIATE")
 
     def execute(self, query: str, params: Optional[Tuple] = None) -> "SQLiteAdapter":
         """Execute a query with optional parameters"""
@@ -149,6 +164,20 @@ class SQLiteAdapter(DatabaseAdapter):
         else:
             self._cursor.execute(query)
         return self
+
+    def execute_with_retry(self, query: str, params: Optional[Tuple] = None) -> "SQLiteAdapter":
+        """Execute a query with exponential backoff retry for transient errors.
+
+        Uses RetryPolicy for OperationalError (database locked) and similar
+        transient SQLite errors. Falls back to regular execute on import failure.
+        """
+        try:
+            from empirica.data.connection_pool import RetryPolicy
+        except ImportError:
+            return self.execute(query, params)
+
+        retry = RetryPolicy(max_retries=3, base_delay=0.1, max_delay=5.0)
+        return retry.execute_with_retry(self.execute, query, params)
 
     def fetchone(self) -> Optional[Dict[str, Any]]:
         """Fetch one row as dictionary"""
