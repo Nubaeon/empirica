@@ -1,0 +1,16 @@
+{
+  "finding_id": "8b93cfed-3d52-44e6-a75a-ef953c3f45b5",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "95c9c7bf-e6d5-4870-b8de-a41c3790f659",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-28T13:58:46.376451+00:00",
+  "finding": "db_adapter.py auto-creates .empirica/sessions/ directory (line 122) but doesn't create config.yaml or project.yaml. Results in orphaned sessions without project context. Fix: session-create should fail early if .empirica/config.yaml doesn't exist, with clear error to run project-init first.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "db_adapter.py auto-creates .empirica/sessions/ directory (line 122) but doesn't create config.yaml or project.yaml. Results in orphaned sessions without project context. Fix: session-create should fail early if .empirica/config.yaml doesn't exist, with clear error to run project-init first.",
+    "impact": 0.7
+  }
+}
