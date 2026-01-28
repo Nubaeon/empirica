@@ -131,14 +131,45 @@ def handle_project_init_command(args):
         with open(project_config_path, 'w') as f:
             yaml.dump(project_config, f, default_flow_style=False, sort_keys=False)
         
-        # Create project in database
+        # Create or reuse project in database (idempotent)
         db = SessionDatabase()
-        project_id = db.create_project(
-            name=project_name,
-            description=project_description,
-            repos=[git_url] if git_url else None
-        )
-        
+        project_id = None
+        reused_existing = False
+
+        # First, check if project.yaml already has a project_id (from previous init)
+        if project_config_path.exists():
+            try:
+                with open(project_config_path, 'r') as f:
+                    existing_config = yaml.safe_load(f) or {}
+                existing_id = existing_config.get('project_id')
+                if existing_id:
+                    # Verify it exists in DB
+                    existing_project = db.get_project(existing_id)
+                    if existing_project:
+                        project_id = existing_id
+                        reused_existing = True
+                        if output_format != 'json':
+                            print(f"   ♻️  Reusing existing project_id: {project_id[:8]}...")
+            except Exception:
+                pass  # Fall through to create new
+
+        # If no existing project_id, check by name (prevents duplicates)
+        if not project_id:
+            existing_by_name = db.projects.get_project_by_name(project_name)
+            if existing_by_name:
+                project_id = existing_by_name['id']
+                reused_existing = True
+                if output_format != 'json':
+                    print(f"   ♻️  Found existing project by name: {project_id[:8]}...")
+
+        # Only create new if no existing project found
+        if not project_id:
+            project_id = db.create_project(
+                name=project_name,
+                description=project_description,
+                repos=[git_url] if git_url else None
+            )
+
         # Update project.yaml with project_id
         project_config['project_id'] = project_id
         with open(project_config_path, 'w') as f:
@@ -185,13 +216,14 @@ def handle_project_init_command(args):
                 "project_id": project_id,
                 "project_name": project_name,
                 "git_root": str(git_root),
+                "reused_existing": reused_existing,
                 "files_created": {
                     "config": str(config_path),
                     "project_config": str(project_config_path),
                     "semantic_index": str(semantic_index_path) if semantic_index_path else None
                 },
                 "beads_enabled": enable_beads,
-                "message": "Empirica initialized successfully"
+                "message": "Empirica initialized successfully" + (" (reused existing project)" if reused_existing else "")
             }
             print(json.dumps(result, indent=2))
         else:
