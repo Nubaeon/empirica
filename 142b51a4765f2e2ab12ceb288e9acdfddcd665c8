@@ -1,0 +1,13 @@
+{
+  "unknown_id": "6a3f9b73-9990-4655-8166-8e80ef6041ab",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "95c9c7bf-e6d5-4870-b8de-a41c3790f659",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-28T15:19:15.700198+00:00",
+  "unknown": "project-embed rehydration incomplete: Populates memory collection but not eidetic from SQLite findings. For repo sharing / container deployment, should rebuild full Qdrant state including eidetic facts with confidence. Current workaround: use --type all for search.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
