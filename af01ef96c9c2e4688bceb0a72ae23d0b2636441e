@@ -1,0 +1,30 @@
+{
+  "goal_id": "837b2d4d-3b78-41f5-980d-3329974c3f50",
+  "session_id": "95c9c7bf-e6d5-4870-b8de-a41c3790f659",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-28T15:31:57.761954+00:00",
+  "goal_data": {
+    "objective": "Fix Sentinel race condition: AI can execute praxic actions faster than hook can gate. Observed when first Bash after POSTFLIGHT slipped through before DB commit completed.",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Sentinel reliably blocks all praxic actions after POSTFLIGHT",
+      "No race condition window where actions slip through",
+      "Consider: synchronous DB commits, hook caching, or action queuing"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-28T15:31:57.761972+00:00",
+      "action": "created"
+    }
+  ]
+}
