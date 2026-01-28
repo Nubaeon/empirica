@@ -1,0 +1,16 @@
+{
+  "finding_id": "27e75e02-196c-46f0-aa56-36a82f066994",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bb977dc1-6663-4b61-aabf-9edf633de74c",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-28T17:29:16.915467+00:00",
+  "finding": "Race condition audit complete. 8 issues found across 3 tiers. CRITICAL: (A) Non-atomic active_session file writes (write_text not atomic), (B) Sentinel creates 2+ DB connections per hook invocation, (C) No BEGIN IMMEDIATE for reflexes writes. GOOD: WAL mode + 30s timeout properly configured. KEY: RetryPolicy and ConnectionPool exist but are unused. Priority fixes: atomic file writes (tempfile+rename), single connection per sentinel invocation, explicit transaction scoping, activate retry policy.",
+  "impact": 0.9,
+  "goal_id": "300b091e-2a9f-4965-8310-02096610e741",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Race condition audit complete. 8 issues found across 3 tiers. CRITICAL: (A) Non-atomic active_session file writes (write_text not atomic), (B) Sentinel creates 2+ DB connections per hook invocation, (C) No BEGIN IMMEDIATE for reflexes writes. GOOD: WAL mode + 30s timeout properly configured. KEY: RetryPolicy and ConnectionPool exist but are unused. Priority fixes: atomic file writes (tempfile+rename), single connection per sentinel invocation, explicit transaction scoping, activate retry policy.",
+    "impact": 0.9
+  }
+}
