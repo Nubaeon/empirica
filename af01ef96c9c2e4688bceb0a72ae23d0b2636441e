@@ -1,0 +1,16 @@
+{
+  "finding_id": "7dd58ebe-5444-438c-a987-12514641121a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bb977dc1-6663-4b61-aabf-9edf633de74c",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-28T17:07:44.725882+00:00",
+  "finding": "Two new directions identified: (1) tmux breakage on restart needs investigation - sessions/active_session files get stale when tmux restarts, (2) Noetic firewall should be a standalone installable plugin, not bundled in empirica core. Already exists as Claude Code plugin at ~/.claude/plugins/local/empirica-integration. Question: could work without empirica (basic mode) or depend on it (full epistemic mode). License decision needed - BSL proposed.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Two new directions identified: (1) tmux breakage on restart needs investigation - sessions/active_session files get stale when tmux restarts, (2) Noetic firewall should be a standalone installable plugin, not bundled in empirica core. Already exists as Claude Code plugin at ~/.claude/plugins/local/empirica-integration. Question: could work without empirica (basic mode) or depend on it (full epistemic mode). License decision needed - BSL proposed.",
+    "impact": 0.7
+  }
+}
