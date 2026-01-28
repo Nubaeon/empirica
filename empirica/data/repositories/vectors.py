@@ -1,8 +1,37 @@
 """Vector repository for epistemic vector storage and retrieval"""
 import json
 import time
+import subprocess
 from typing import Dict, List, Optional
 from .base import BaseRepository
+
+
+def _get_project_id_from_cwd() -> Optional[str]:
+    """Auto-detect project_id from current working directory's git repo."""
+    try:
+        # Get git remote origin URL as project identifier
+        result = subprocess.run(
+            ['git', 'config', '--get', 'remote.origin.url'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            # Hash the URL to get a stable project ID
+            import hashlib
+            url = result.stdout.strip()
+            return hashlib.sha256(url.encode()).hexdigest()[:16]
+
+        # Fallback: use git root directory name
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            import hashlib
+            path = result.stdout.strip()
+            return hashlib.sha256(path.encode()).hexdigest()[:16]
+    except Exception:
+        pass
+    return None
 
 
 class VectorRepository(BaseRepository):
@@ -16,7 +45,8 @@ class VectorRepository(BaseRepository):
         cascade_id: Optional[str] = None,
         round_num: int = 1,
         metadata: Optional[Dict] = None,
-        reasoning: Optional[str] = None
+        reasoning: Optional[str] = None,
+        project_id: Optional[str] = None
     ) -> int:
         """
         Store epistemic vectors in the reflexes table
@@ -33,6 +63,10 @@ class VectorRepository(BaseRepository):
         Returns:
             Row ID of the inserted record
         """
+        # Auto-detect project_id if not provided
+        if project_id is None:
+            project_id = _get_project_id_from_cwd()
+
         # Extract the 13 vectors, providing default values if not present
         vector_names = [
             'engagement', 'know', 'do', 'context',
@@ -51,7 +85,8 @@ class VectorRepository(BaseRepository):
             'phase': phase,
             'round': round_num,
             'vectors': vectors,
-            'timestamp': time.time()
+            'timestamp': time.time(),
+            'project_id': project_id
         }
 
         # Merge in any additional metadata if provided
@@ -64,13 +99,14 @@ class VectorRepository(BaseRepository):
                 engagement, know, do, context,
                 clarity, coherence, signal, density,
                 state, change, completion, impact, uncertainty,
-                reflex_data, reasoning
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                reflex_data, reasoning, project_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             session_id, cascade_id, phase, round_num, time.time(),
             *vector_values,  # Unpack the 13 vector values
             json.dumps(reflex_data),
-            reasoning
+            reasoning,
+            project_id
         ))
 
         self.commit()

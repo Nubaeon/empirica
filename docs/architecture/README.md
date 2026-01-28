@@ -155,21 +155,45 @@ The core process for ensuring epistemic rigor.
 *   **ACT (Execute Task):** The AI performs the work, documenting decisions and reasoning.
 *   **POSTFLIGHT (Final Assessment):** The AI re-assesses its 13 vectors *after* work to measure the "epistemic delta" (learning).
 
-### 3. Distributed Coordination via Git
+### 3. Sessions vs Goals (Orthogonal Organization)
+Sessions and goals serve different organizational purposes and are **orthogonal**, not hierarchical:
+
+| Concept | Axis | Bounded By | Persists |
+|---------|------|------------|----------|
+| **Sessions** | TEMPORAL | Context windows | No - temporal intervals |
+| **Goals** | STRUCTURAL | Completion criteria | Yes - indefinitely |
+
+**Sessions = When things happened**
+- Created on `SessionStart` hook (fresh conversation or post-compact)
+- One Claude Code conversation = N Empirica sessions (one per context window)
+- Purpose: Audit trail, calibration checkpoints, epistemic snapshots
+
+**Goals = What the work is**
+- Persist across sessions indefinitely
+- Own subtasks and epistemic artifacts (findings, unknowns, dead-ends)
+- Purpose: Structural organization, progress tracking
+
+**Dual Linkage:** Epistemic artifacts have BOTH `session_id` AND `goal_id`:
+- `session_id` → "When was this discovered?" (temporal provenance)
+- `goal_id` → "What work does this belong to?" (semantic organization)
+
+This is correct design. Don't collapse them into a hierarchy.
+
+### 4. Distributed Coordination via Git
 Empirica uses Git as a "cognitive substrate" for multi-agent coordination.
 *   **Branches:** Represent different reasoning paths or explorations.
 *   **Commits:** Act as epistemic snapshots of what the AI knew at a decision point.
 *   **Merges:** Represent the integration of knowledge from different reasoning paths.
 *   **Git Notes:** Store compressed, portable state for handoffs between sessions or agents, enabling massive token reduction (e.g., 97%).
 
-### 4. Privacy-Preserving Knowledge Transfer
+### 5. Privacy-Preserving Knowledge Transfer
 Instead of transferring full, sensitive conversation histories, Empirica uses **Epistemic Snapshots**.
 *   **Size:** ~500 tokens (95%+ compression).
 *   **Content:** Contains the 13 epistemic vectors, an abstracted context summary, semantic tags, and a reasoning brief.
 *   **Excludes:** Raw conversation text, sensitive data (keys, PII), full code snippets.
 This allows knowledge about confidence, uncertainty, and what was learned to be transferred without violating privacy.
 
-### 5. Sentinel Orchestrator & The Cognitive Vault (Future Vision)
+### 6. Sentinel Orchestrator & The Cognitive Vault (Future Vision)
 The long-term vision includes a **Cognitive Vault**—a secure, Git-native storage system—governed by a **Sentinel** (a small, open-weights language model).
 *   **Sentinel's Role:** The Sentinel will be trained on the "delta packages" (learning trajectories) produced by other AIs. It will monitor all AI activity, validate epistemic commits, manage handoffs, and enforce governance policies.
 *   **Self-Improving System:** This creates a feedback loop where the system gets smarter over time by learning from its own operational data.

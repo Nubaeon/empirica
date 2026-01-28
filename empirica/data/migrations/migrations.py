@@ -700,6 +700,25 @@ def migration_021_engagements_project_id(cursor: sqlite3.Cursor):
     logger.info("✓ Added project_id to engagements table")
 
 
+# Migration 22: Add project_id to reflexes for project-aware PREFLIGHT tracking
+def migration_022_reflexes_project_id(cursor: sqlite3.Cursor):
+    """
+    Add project_id to reflexes table for project-aware epistemic assessments.
+
+    This enables the sentinel gate to detect when the AI switches between projects
+    within the same session and require a new PREFLIGHT assessment for the new
+    project context.
+
+    Sessions are TEMPORAL (bounded by context windows/compactions).
+    Goals are STRUCTURAL (persist across sessions).
+    PREFLIGHT assessments are now PROJECT-SCOPED (valid for specific project context).
+    """
+    add_column_if_missing(cursor, "reflexes", "project_id", "TEXT")
+
+    # Add index for project-based queries
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_reflexes_project ON reflexes(project_id)")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -722,4 +741,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("019_cross_project_finding_links", "Add cross_project_finding_links for shared learnings", migration_019_cross_project_finding_links),
     ("020_client_projects", "Add client_projects junction table for client-project relationships", migration_020_client_projects),
     ("021_engagements_project_id", "Add project_id to engagements for direct project scoping", migration_021_engagements_project_id),
+    ("022_reflexes_project_id", "Add project_id to reflexes for project-aware PREFLIGHT tracking", migration_022_reflexes_project_id),
 ]
