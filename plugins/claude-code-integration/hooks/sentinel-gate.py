@@ -390,10 +390,22 @@ def main():
     preflight_know, preflight_uncertainty, preflight_timestamp, preflight_project_id = preflight_row
 
     # PROJECT CONTEXT CHECK: Require new PREFLIGHT if project changed
+    # This implicitly closes the previous project's epistemic loop
     current_project_id = _get_current_project_id()
     if current_project_id and preflight_project_id and current_project_id != preflight_project_id:
+        # Check if previous project loop was properly closed with POSTFLIGHT
+        cursor.execute("""
+            SELECT timestamp FROM reflexes
+            WHERE session_id = ? AND phase = 'POSTFLIGHT' AND project_id = ?
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id, preflight_project_id))
+        prev_postflight = cursor.fetchone()
+
         db.close()
-        respond("deny", f"Project context changed. Run PREFLIGHT to reassess for new project.")
+        if prev_postflight:
+            respond("deny", f"Project context changed. Run PREFLIGHT for new project.")
+        else:
+            respond("deny", f"Project context changed (previous loop unclosed - consider POSTFLIGHT). Run PREFLIGHT for new project.")
         sys.exit(0)
 
     # POSTFLIGHT LOOP CHECK: If POSTFLIGHT exists after PREFLIGHT, loop is closed
