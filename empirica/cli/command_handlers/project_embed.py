@@ -32,8 +32,10 @@ def handle_project_embed_command(args):
     try:
         from empirica.core.qdrant.vector_store import (
             init_collections, upsert_docs, upsert_memory,
-            sync_high_impact_to_global, init_global_collection
+            sync_high_impact_to_global, init_global_collection,
+            embed_eidetic, _check_qdrant_available
         )
+        import hashlib
         from empirica.data.session_database import SessionDatabase
 
         project_id = args.project_id
@@ -195,6 +197,39 @@ def handle_project_embed_command(args):
 
         upsert_memory(project_id, mem_items)
 
+        # EIDETIC REHYDRATION: Populate eidetic collection from findings
+        # This enables full Qdrant state restoration on repo clone/container deploy
+        eidetic_count = 0
+        if _check_qdrant_available() and findings:
+            for f in findings:
+                finding_text = f.get('finding', '')
+                if not finding_text:
+                    continue
+
+                # Content hash for deduplication (same as finding-log)
+                content_hash = hashlib.md5(finding_text.encode()).hexdigest()
+
+                # Base confidence from impact, or default 0.6 for rehydrated facts
+                impact = f.get('impact')
+                base_confidence = float(impact) if impact else 0.6
+
+                try:
+                    success = embed_eidetic(
+                        project_id=project_id,
+                        fact_id=f.get('id', content_hash),
+                        content=finding_text,
+                        fact_type="fact",
+                        domain=f.get('subject'),
+                        source_sessions=[f.get('session_id')] if f.get('session_id') else None,
+                        source_findings=[f.get('id')] if f.get('id') else None,
+                        confidence=base_confidence,
+                        tags=[f.get('subject')] if f.get('subject') else None,
+                    )
+                    if success:
+                        eidetic_count += 1
+                except Exception as e:
+                    logger.debug(f"Eidetic embed failed for finding {f.get('id', 'unknown')}: {e}")
+
         # Sync high-impact items to global collection if --global flag
         global_synced = 0
         if sync_global:
@@ -205,6 +240,7 @@ def handle_project_embed_command(args):
             'ok': True,
             'docs': len(docs_to_upsert),
             'memory': len(mem_items),
+            'eidetic': eidetic_count,
             'breakdown': {
                 'findings': len(findings),
                 'unknowns': len(unknowns),
