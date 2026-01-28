@@ -162,6 +162,33 @@ def find_empirica_package() -> Optional[Path]:
     return None
 
 
+def _get_current_project_id() -> Optional[str]:
+    """Get project_id from current working directory's git repo."""
+    import subprocess
+    import hashlib
+    try:
+        # Get git remote origin URL as project identifier
+        result = subprocess.run(
+            ['git', 'config', '--get', 'remote.origin.url'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            url = result.stdout.strip()
+            return hashlib.sha256(url.encode()).hexdigest()[:16]
+
+        # Fallback: use git root directory name
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            path = result.stdout.strip()
+            return hashlib.sha256(path.encode()).hexdigest()[:16]
+    except Exception:
+        pass
+    return None
+
+
 def get_last_compact_timestamp(project_root: Path) -> datetime:
     """Get timestamp of most recent compact from pre_summary snapshot."""
     try:
@@ -347,8 +374,9 @@ def main():
             sys.exit(0)
 
     # Check for PREFLIGHT (authentication) - with vectors for auto-proceed
+    # Include project_id to check for project context switches
     cursor.execute("""
-        SELECT know, uncertainty, timestamp FROM reflexes
+        SELECT know, uncertainty, timestamp, project_id FROM reflexes
         WHERE session_id = ? AND phase = 'PREFLIGHT'
         ORDER BY timestamp DESC LIMIT 1
     """, (session_id,))
@@ -359,7 +387,36 @@ def main():
         respond("deny", f"No PREFLIGHT. Assess your knowledge state first.")
         sys.exit(0)
 
-    preflight_know, preflight_uncertainty, preflight_timestamp = preflight_row
+    preflight_know, preflight_uncertainty, preflight_timestamp, preflight_project_id = preflight_row
+
+    # PROJECT CONTEXT CHECK: Require new PREFLIGHT if project changed
+    current_project_id = _get_current_project_id()
+    if current_project_id and preflight_project_id and current_project_id != preflight_project_id:
+        db.close()
+        respond("deny", f"Project context changed. Run PREFLIGHT to reassess for new project.")
+        sys.exit(0)
+
+    # POSTFLIGHT LOOP CHECK: If POSTFLIGHT exists after PREFLIGHT, loop is closed
+    # This enforces the epistemic cycle: PREFLIGHT → work → POSTFLIGHT → (new PREFLIGHT required)
+    cursor.execute("""
+        SELECT timestamp FROM reflexes
+        WHERE session_id = ? AND phase = 'POSTFLIGHT'
+        ORDER BY timestamp DESC LIMIT 1
+    """, (session_id,))
+    postflight_row = cursor.fetchone()
+
+    if postflight_row:
+        postflight_timestamp = postflight_row[0]
+        try:
+            preflight_ts = float(preflight_timestamp)
+            postflight_ts = float(postflight_timestamp)
+
+            if postflight_ts > preflight_ts:
+                db.close()
+                respond("deny", f"Epistemic loop closed (POSTFLIGHT completed). Run new PREFLIGHT to start next goal.")
+                sys.exit(0)
+        except (ValueError, TypeError):
+            pass  # If timestamps can't be compared, continue with other checks
 
     # Use RAW vectors - bias corrections are feedback for AI to internalize, not silent adjustments
     raw_know = preflight_know or 0
