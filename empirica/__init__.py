@@ -15,7 +15,7 @@ Key Features:
 Version: 1.4.1
 """
 
-__version__ = "1.4.3"
+__version__ = "1.4.4"
 __author__ = "Empirica Project"
 
 # Core imports (ReflexLogger removed - use GitEnhancedReflexLogger instead)
