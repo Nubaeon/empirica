@@ -258,6 +258,7 @@ empirica/dashboard/cascade_monitor.py
 empirica/dashboard/snapshot_monitor.py
 empirica/data/__init__.py
 empirica/data/connection_pool.py
+empirica/data/crm_schema.py
 empirica/data/db_adapter.py
 empirica/data/epistemic_snapshot.py
 empirica/data/flow_state_calculator.py
