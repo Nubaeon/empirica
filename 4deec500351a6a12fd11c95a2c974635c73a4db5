@@ -1,0 +1,16 @@
+{
+  "finding_id": "2635d061-e8ee-41e4-8b9c-9141ca4aa78d",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "152c089e-c074-464d-a568-eaaa304b6c1e",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-28T17:59:23.882951+00:00",
+  "finding": "Race condition fixes implemented: (1) Atomic active_session writes via tempfile+os.rename in session_create.py, (2) Single DB connection per sentinel invocation (eliminated dual SessionDatabase), (3) isolation_level=IMMEDIATE at SQLite connect level for upfront RESERVED lock on DML, (4) execute_with_retry() added to SQLiteAdapter, (5) instance_id caching unnecessary (env var reads, not subprocess), (6) Statusline caching unnecessary (read-only WAL queries). 327 tests pass.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Race condition fixes implemented: (1) Atomic active_session writes via tempfile+os.rename in session_create.py, (2) Single DB connection per sentinel invocation (eliminated dual SessionDatabase), (3) isolation_level=IMMEDIATE at SQLite connect level for upfront RESERVED lock on DML, (4) execute_with_retry() added to SQLiteAdapter, (5) instance_id caching unnecessary (env var reads, not subprocess), (6) Statusline caching unnecessary (read-only WAL queries). 327 tests pass.",
+    "impact": 0.85
+  }
+}
