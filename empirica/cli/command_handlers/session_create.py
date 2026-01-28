@@ -277,6 +277,27 @@ def handle_session_create_command(args):
                         print("   Run 'empirica project-init' manually")
                     sys.exit(1)
 
+        # REQUIRE INITIALIZATION: Fail early if project not initialized (prevents orphaned sessions)
+        # Only check if in a git repo - non-git directories fall back to global ~/.empirica/
+        from empirica.config.path_resolver import get_git_root
+        git_root = get_git_root()
+        if git_root:
+            empirica_config = git_root / '.empirica' / 'config.yaml'
+            if not empirica_config.exists():
+                if output_format == 'json':
+                    print(json.dumps({
+                        "ok": False,
+                        "error": "Project not initialized",
+                        "hint": "Run 'empirica project-init' or use 'empirica session-create --auto-init'",
+                        "git_root": str(git_root)
+                    }))
+                else:
+                    print(f"❌ Project not initialized in {git_root.name}")
+                    print(f"\nOptions:")
+                    print(f"  1. Initialize: empirica project-init")
+                    print(f"  2. Auto-init:  empirica session-create --ai-id {ai_id} --auto-init")
+                sys.exit(1)
+
         # EARLY PROJECT DETECTION: Needed for auto-close of previous sessions
         early_project_id = project_id  # From config if provided
         if not early_project_id:
