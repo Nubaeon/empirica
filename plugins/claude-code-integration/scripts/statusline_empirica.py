@@ -419,11 +419,13 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
             try:
                 session_id = active_session_file.read_text().strip()
                 if session_id:
+                    # Filter by ai_id to prevent sub-agent sessions from hijacking statusline
+                    # (e.g., test-goal-agent overwrites active_session file in same pane)
                     cursor.execute("""
                         SELECT session_id, ai_id, start_time
                         FROM sessions
-                        WHERE session_id = ? AND end_time IS NULL
-                    """, (session_id,))
+                        WHERE session_id = ? AND end_time IS NULL AND ai_id = ?
+                    """, (session_id, ai_id))
                     row = cursor.fetchone()
                     if row:
                         return dict(row)
