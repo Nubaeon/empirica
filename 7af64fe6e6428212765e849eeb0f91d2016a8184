@@ -1,0 +1,16 @@
+{
+  "finding_id": "0e9b3e11-f8fd-4e29-ba06-1cfdc41bc830",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "47784a70-c610-4a31-865b-917932572e59",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T15:13:40.856729+00:00",
+  "finding": "SECURITY: Replaced blanket 'empirica ' Sentinel whitelist with tiered permissions. Tier 1 (read-only: goals-list, epistemics-show, etc) always allowed. Tier 2 (state-changing: preflight-submit, finding-log, etc) allowed through normal gate. Toggle operations use Sentinel self-exemption - only allowed when loop is genuinely closed AND command matches specific pause file write/remove pattern. Prevents prompt injection from disabling enforcement via hypothetical 'empirica toggle --off'.",
+  "impact": 0.9,
+  "goal_id": "f5599d39-e775-402e-9135-641eb3bcb30f",
+  "subtask_id": null,
+  "subject": "sentinel-security",
+  "finding_data": {
+    "finding": "SECURITY: Replaced blanket 'empirica ' Sentinel whitelist with tiered permissions. Tier 1 (read-only: goals-list, epistemics-show, etc) always allowed. Tier 2 (state-changing: preflight-submit, finding-log, etc) allowed through normal gate. Toggle operations use Sentinel self-exemption - only allowed when loop is genuinely closed AND command matches specific pause file write/remove pattern. Prevents prompt injection from disabling enforcement via hypothetical 'empirica toggle --off'.",
+    "impact": 0.9
+  }
+}
