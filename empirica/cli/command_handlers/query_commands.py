@@ -85,25 +85,18 @@ def handle_query_command(args):
 
 def _query_findings(scope: str, session_id: str, project_id: str,
                     limit: int, status: str, ai_id: str, since: str) -> List[Dict]:
-    """Query findings from session_findings or project_findings"""
+    """Query findings from project_findings (canonical table)."""
     from empirica.data.session_database import SessionDatabase
     db = SessionDatabase()
 
     if scope == 'session':
-        query = "SELECT id, session_id, finding as content, impact, created_timestamp as created_at FROM session_findings WHERE session_id = ? ORDER BY created_timestamp DESC LIMIT ?"
+        query = "SELECT id, session_id, finding as content, impact, created_timestamp as created_at FROM project_findings WHERE session_id = ? ORDER BY created_timestamp DESC LIMIT ?"
         params = [session_id, limit]
     elif scope == 'project':
         query = "SELECT id, project_id, finding as content, impact, created_timestamp as created_at FROM project_findings WHERE project_id = ? ORDER BY created_timestamp DESC LIMIT ?"
         params = [project_id, limit]
     else:  # global
-        query = """
-            SELECT id, session_id, NULL as project_id, finding as content, impact, created_timestamp as created_at, 'session' as source
-            FROM session_findings
-            UNION ALL
-            SELECT id, NULL as session_id, project_id, finding as content, impact, created_timestamp as created_at, 'project' as source
-            FROM project_findings
-            ORDER BY created_at DESC LIMIT ?
-        """
+        query = "SELECT id, session_id, project_id, finding as content, impact, created_timestamp as created_at FROM project_findings ORDER BY created_timestamp DESC LIMIT ?"
         params = [limit]
 
     cursor = db.conn.cursor()
@@ -116,7 +109,7 @@ def _query_findings(scope: str, session_id: str, project_id: str,
 
 def _query_unknowns(scope: str, session_id: str, project_id: str,
                     limit: int, status: str, ai_id: str, since: str) -> List[Dict]:
-    """Query unknowns from session_unknowns or project_unknowns"""
+    """Query unknowns from project_unknowns (canonical table)."""
     from empirica.data.session_database import SessionDatabase
     db = SessionDatabase()
 
@@ -128,20 +121,13 @@ def _query_unknowns(scope: str, session_id: str, project_id: str,
         status_filter = " AND is_resolved = 0"
 
     if scope == 'session':
-        query = f"SELECT id, session_id, unknown as content, CASE WHEN is_resolved THEN 'resolved' ELSE 'open' END as status, resolved_by, created_timestamp as created_at FROM session_unknowns WHERE session_id = ?{status_filter} ORDER BY created_timestamp DESC LIMIT ?"
+        query = f"SELECT id, session_id, unknown as content, CASE WHEN is_resolved THEN 'resolved' ELSE 'open' END as status, resolved_by, created_timestamp as created_at FROM project_unknowns WHERE session_id = ?{status_filter} ORDER BY created_timestamp DESC LIMIT ?"
         params = [session_id, limit]
     elif scope == 'project':
         query = f"SELECT id, project_id, unknown as content, CASE WHEN is_resolved THEN 'resolved' ELSE 'open' END as status, resolved_by, created_timestamp as created_at FROM project_unknowns WHERE project_id = ?{status_filter} ORDER BY created_timestamp DESC LIMIT ?"
         params = [project_id, limit]
-    else:
-        query = f"""
-            SELECT id, session_id, NULL as project_id, unknown as content, CASE WHEN is_resolved THEN 'resolved' ELSE 'open' END as status, resolved_by, created_timestamp as created_at, 'session' as source
-            FROM session_unknowns WHERE 1=1{status_filter}
-            UNION ALL
-            SELECT id, NULL as session_id, project_id, unknown as content, CASE WHEN is_resolved THEN 'resolved' ELSE 'open' END as status, resolved_by, created_timestamp as created_at, 'project' as source
-            FROM project_unknowns WHERE 1=1{status_filter}
-            ORDER BY created_at DESC LIMIT ?
-        """
+    else:  # global
+        query = f"SELECT id, session_id, project_id, unknown as content, CASE WHEN is_resolved THEN 'resolved' ELSE 'open' END as status, resolved_by, created_timestamp as created_at FROM project_unknowns WHERE 1=1{status_filter} ORDER BY created_timestamp DESC LIMIT ?"
         params = [limit]
 
     cursor = db.conn.cursor()
@@ -154,25 +140,18 @@ def _query_unknowns(scope: str, session_id: str, project_id: str,
 
 def _query_deadends(scope: str, session_id: str, project_id: str,
                     limit: int, status: str, ai_id: str, since: str) -> List[Dict]:
-    """Query dead ends from session_dead_ends or project_dead_ends"""
+    """Query dead ends from project_dead_ends (canonical table)."""
     from empirica.data.session_database import SessionDatabase
     db = SessionDatabase()
 
     if scope == 'session':
-        query = "SELECT id, session_id, approach, why_failed, created_timestamp as created_at FROM session_dead_ends WHERE session_id = ? ORDER BY created_timestamp DESC LIMIT ?"
+        query = "SELECT id, session_id, approach, why_failed, created_timestamp as created_at FROM project_dead_ends WHERE session_id = ? ORDER BY created_timestamp DESC LIMIT ?"
         params = [session_id, limit]
     elif scope == 'project':
         query = "SELECT id, project_id, approach, why_failed, created_timestamp as created_at FROM project_dead_ends WHERE project_id = ? ORDER BY created_timestamp DESC LIMIT ?"
         params = [project_id, limit]
-    else:
-        query = """
-            SELECT id, session_id, NULL as project_id, approach, why_failed, created_timestamp as created_at, 'session' as source
-            FROM session_dead_ends
-            UNION ALL
-            SELECT id, NULL as session_id, project_id, approach, why_failed, created_timestamp as created_at, 'project' as source
-            FROM project_dead_ends
-            ORDER BY created_at DESC LIMIT ?
-        """
+    else:  # global
+        query = "SELECT id, session_id, project_id, approach, why_failed, created_timestamp as created_at FROM project_dead_ends ORDER BY created_timestamp DESC LIMIT ?"
         params = [limit]
 
     cursor = db.conn.cursor()
@@ -344,7 +323,7 @@ def _query_blockers(scope: str, session_id: str, project_id: str,
             g.status as goal_status,
             su.session_id,
             su.created_timestamp as created_at
-        FROM session_unknowns su
+        FROM project_unknowns su
         JOIN goals g ON su.goal_id = g.id
         WHERE su.is_resolved = FALSE
           AND su.goal_id IS NOT NULL

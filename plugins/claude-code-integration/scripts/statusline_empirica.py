@@ -80,34 +80,35 @@ def get_open_counts(db: SessionDatabase, session_id: str, project_id: str = None
     """
     cursor = db.conn.cursor()
 
-    # Count open goals for THIS PROJECT only
+    # Count open goals for THIS PROJECT (project-scoped, not session-scoped)
+    # Use is_completed (source of truth) not status column (can be inconsistent)
     if project_id:
         cursor.execute("""
             SELECT COUNT(*)
             FROM goals
-            WHERE status != 'completed' AND project_id = ?
+            WHERE is_completed = 0 AND project_id = ?
         """, (project_id,))
     else:
         cursor.execute("""
             SELECT COUNT(*)
             FROM goals
-            WHERE status != 'completed'
+            WHERE is_completed = 0
         """)
     open_goals = cursor.fetchone()[0] or 0
 
-    # Count unresolved unknowns for THIS PROJECT only
+    # Count unresolved unknowns for THIS PROJECT
+    # Use project_unknowns directly (has project_id column) - no session JOIN needed
     if project_id:
         cursor.execute("""
             SELECT COUNT(*)
-            FROM session_unknowns su
-            JOIN sessions s ON su.session_id = s.session_id
-            WHERE su.is_resolved = FALSE AND s.project_id = ?
+            FROM project_unknowns
+            WHERE is_resolved = 0 AND project_id = ?
         """, (project_id,))
     else:
         cursor.execute("""
             SELECT COUNT(*)
-            FROM session_unknowns
-            WHERE is_resolved = FALSE
+            FROM project_unknowns
+            WHERE is_resolved = 0
         """)
     open_unknowns = cursor.fetchone()[0] or 0
 
@@ -115,15 +116,14 @@ def get_open_counts(db: SessionDatabase, session_id: str, project_id: str = None
     if project_id:
         cursor.execute("""
             SELECT COUNT(*)
-            FROM session_unknowns su
-            JOIN sessions s ON su.session_id = s.session_id
-            WHERE su.is_resolved = FALSE AND su.goal_id IS NOT NULL AND s.project_id = ?
+            FROM project_unknowns
+            WHERE is_resolved = 0 AND goal_id IS NOT NULL AND project_id = ?
         """, (project_id,))
     else:
         cursor.execute("""
             SELECT COUNT(*)
-            FROM session_unknowns
-            WHERE is_resolved = FALSE AND goal_id IS NOT NULL
+            FROM project_unknowns
+            WHERE is_resolved = 0 AND goal_id IS NOT NULL
         """)
     goal_linked_unknowns = cursor.fetchone()[0] or 0
 
@@ -419,13 +419,11 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
             try:
                 session_id = active_session_file.read_text().strip()
                 if session_id:
-                    # Filter by ai_id to prevent sub-agent sessions from hijacking statusline
-                    # (e.g., test-goal-agent overwrites active_session file in same pane)
                     cursor.execute("""
                         SELECT session_id, ai_id, start_time
                         FROM sessions
-                        WHERE session_id = ? AND end_time IS NULL AND ai_id = ?
-                    """, (session_id, ai_id))
+                        WHERE session_id = ? AND end_time IS NULL
+                    """, (session_id,))
                     row = cursor.fetchone()
                     if row:
                         return dict(row)
@@ -665,7 +663,8 @@ def format_statusline(
     drift_severity: str = None,
     gate_decision: str = None,
     goal: dict = None,
-    open_counts: dict = None
+    open_counts: dict = None,
+    project_name: str = None
 ) -> str:
     """Format the statusline based on mode."""
 
@@ -673,7 +672,13 @@ def format_statusline(
     confidence = calculate_confidence(vectors)
     conf_str = format_confidence(confidence)
 
-    parts = [f"{Colors.GREEN}[empirica]{Colors.RESET} {conf_str}"]
+    # Show project name instead of generic "empirica" branding
+    # Truncate long names to keep statusline compact
+    label = project_name or 'empirica'
+    if len(label) > 20:
+        label = label[:18] + '..'
+
+    parts = [f"{Colors.GREEN}[{label}]{Colors.RESET} {conf_str}"]
 
     if mode == 'basic':
         # Just confidence + drift
@@ -744,7 +749,7 @@ def format_statusline(
         # Everything (for developers/debugging)
         ai_id = session.get('ai_id', 'unknown')
         session_id = session.get('session_id', '????')[:4]
-        parts = [f"{Colors.BRIGHT_CYAN}[empirica:{ai_id}@{session_id}]{Colors.RESET}"]
+        parts = [f"{Colors.BRIGHT_CYAN}[{label}:{ai_id}@{session_id}]{Colors.RESET}"]
 
         # Goal progress with more detail
         if goal:
@@ -822,23 +827,43 @@ def main():
         else:
             # No local .empirica/ found - show "no project" instead of using global data
             # This prevents showing Empirica project data in unrelated projects
-            print(f"{Colors.GRAY}[empirica]{Colors.RESET} │ {Colors.GRAY}no project{Colors.RESET}")
+            print(f"{Colors.GRAY}[no project]{Colors.RESET}")
             return
 
         session = get_active_session(db, ai_id)
 
-        # Get project_id from session for filtering
+        # Get project_id and project_name from session for filtering and display
         project_id = None
+        project_name = None
         if session:
             cursor = db.conn.cursor()
             cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session['session_id'],))
             row = cursor.fetchone()
-            if row:
+            if row and row[0]:
                 project_id = row[0]
+                cursor.execute("SELECT name FROM projects WHERE id = ?", (project_id,))
+                prow = cursor.fetchone()
+                if prow:
+                    project_name = prow[0]
+
+        # If no session yet, still try to get project name from the most recent session
+        if not project_name:
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT p.name FROM projects p
+                JOIN sessions s ON s.project_id = p.id
+                ORDER BY s.start_time DESC LIMIT 1
+            """)
+            prow = cursor.fetchone()
+            if prow:
+                project_name = prow[0]
 
         if not session:
-            # No active session - show minimal status
-            print(f"{Colors.GRAY}[empirica:{ai_id}:inactive]{Colors.RESET}")
+            # No active session - show project name so user knows which pane this is
+            label = project_name or ai_id
+            if len(label) > 20:
+                label = label[:18] + '..'
+            print(f"{Colors.GRAY}[{label}:inactive]{Colors.RESET}")
             db.close()
             return
 
@@ -878,7 +903,8 @@ def main():
         output = format_statusline(
             session, phase, vectors, drift_state, deltas, mode,
             drift_detected=drift_detected, drift_severity=drift_severity,
-            gate_decision=gate_decision, goal=goal, open_counts=open_counts
+            gate_decision=gate_decision, goal=goal, open_counts=open_counts,
+            project_name=project_name
         )
         print(output)
 
