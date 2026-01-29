@@ -1,0 +1,13 @@
+{
+  "unknown_id": "36f84ffc-121b-4ac0-bb54-bd57f5b877e9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "47784a70-c610-4a31-865b-917932572e59",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T13:51:39.813197+00:00",
+  "unknown": "What formally defines the boundary of an epistemic transaction? Current candidates: (1) coherence of changes (fuzzy), (2) user decision (explicit but arbitrary), (3) natural work pivot (implicit but hard to detect), (4) goal completion (too granular), (5) confidence inflection (measurable but requires continuous monitoring). May need to accept this is inherently fuzzy like defining 'a thought' and optimize for pragmatic heuristics rather than formal boundaries.",
+  "goal_id": "5e019f75-04ca-4f89-a215-95c2a563fe8a",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
