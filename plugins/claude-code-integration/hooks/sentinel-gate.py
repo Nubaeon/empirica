@@ -106,6 +106,18 @@ UNCERTAINTY_THRESHOLD = 0.35
 MAX_CHECK_AGE_MINUTES = 30
 
 
+PAUSE_FILE = Path.home() / '.empirica' / 'sentinel_paused'
+
+
+def is_empirica_paused() -> bool:
+    """Check if Empirica tracking is paused (off-the-record mode).
+
+    Signal file: ~/.empirica/sentinel_paused (JSON with timestamp, reason).
+    This is the cheapest check - no DB needed. Called before any other logic.
+    """
+    return PAUSE_FILE.exists()
+
+
 def respond(decision, reason=""):
     """Output in Claude Code's expected format."""
     output = {
@@ -313,6 +325,11 @@ def main():
     # Rule 3: Everything else is PRAXIC - requires CHECK authorization
     # This includes: Edit, Write, NotebookEdit, unsafe Bash, unknown tools
 
+    # OFF-RECORD CHECK: If Empirica is paused, allow everything (cheapest check first)
+    if is_empirica_paused():
+        respond("allow", "Empirica paused (off-record)")
+        sys.exit(0)
+
     # Check if sentinel looping is disabled (escape hatch)
     if os.getenv('EMPIRICA_SENTINEL_LOOPING', 'true').lower() == 'false':
         respond("allow", "Sentinel disabled")
@@ -448,7 +465,7 @@ def main():
         ORDER BY timestamp DESC LIMIT 1
     """, (session_id,))
     check_row = cursor.fetchone()
-    db.close()
+    # NOTE: db kept open - reused for anti-gaming check below (single connection per invocation)
 
     if not check_row:
         respond("deny", f"Insufficient understanding (know={raw_know:.2f}, unc={raw_unc:.2f}). Investigate before acting.")
@@ -472,20 +489,18 @@ def main():
 
         if noetic_duration < MIN_NOETIC_DURATION:
             # Check for evidence of investigation (findings or unknowns logged)
-            db_check = SessionDatabase()
-            cursor_check = db_check.conn.cursor()
-            cursor_check.execute("""
+            # Reuse existing db connection (single connection per sentinel invocation)
+            cursor.execute("""
                 SELECT COUNT(*) FROM findings
                 WHERE session_id = ? AND timestamp > ? AND timestamp < ?
             """, (session_id, preflight_ts, check_ts))
-            findings_count = cursor_check.fetchone()[0]
+            findings_count = cursor.fetchone()[0]
 
-            cursor_check.execute("""
+            cursor.execute("""
                 SELECT COUNT(*) FROM unknowns
                 WHERE session_id = ? AND timestamp > ? AND timestamp < ?
             """, (session_id, preflight_ts, check_ts))
-            unknowns_count = cursor_check.fetchone()[0]
-            db_check.close()
+            unknowns_count = cursor.fetchone()[0]
 
             if findings_count == 0 and unknowns_count == 0:
                 respond("deny", f"Rushed assessment ({noetic_duration:.0f}s). Investigate and log learnings first.")

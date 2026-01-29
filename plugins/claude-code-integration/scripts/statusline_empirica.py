@@ -780,6 +780,21 @@ def main():
         mode = os.getenv('EMPIRICA_STATUS_MODE', 'default').lower()
         ai_id = get_ai_id()
 
+        # OFF-RECORD CHECK: If Empirica is paused, show collapsed statusline
+        pause_file = Path.home() / '.empirica' / 'sentinel_paused'
+        if pause_file.exists():
+            try:
+                import json as _json
+                import time as _time
+                pause_data = _json.loads(pause_file.read_text())
+                paused_at = pause_data.get('paused_at', 0)
+                gap_minutes = int((_time.time() - paused_at) / 60) if paused_at else 0
+                gap_str = f"{gap_minutes}m" if gap_minutes < 60 else f"{gap_minutes // 60}h{gap_minutes % 60}m"
+                print(f"{Colors.GRAY}[empirica]{Colors.RESET} {Colors.YELLOW}OFF-RECORD{Colors.RESET} {Colors.GRAY}({gap_str}){Colors.RESET}")
+            except Exception:
+                print(f"{Colors.GRAY}[empirica]{Colors.RESET} {Colors.YELLOW}OFF-RECORD{Colors.RESET}")
+            return
+
         # Auto-detect project from current directory (like git does with .git/)
         # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) .empirica/ in cwd or parents
         # NOTE: We do NOT fall back to global ~/.empirica/ to prevent cross-project data leakage
