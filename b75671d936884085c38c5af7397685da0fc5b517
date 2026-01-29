@@ -1,0 +1,16 @@
+{
+  "finding_id": "17b1f17c-30f1-4701-8062-41f670369d09",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "782f2ed0",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T17:33:39.536646+00:00",
+  "finding": "tmux 3.6a installed on Laptop (philipps-macbook-pro). iMac and edit1 need Homebrew + tmux installed manually (requires sudo password).",
+  "impact": 0.5,
+  "goal_id": "c5981e2f-29f9-4758-b781-13747507f498",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "tmux 3.6a installed on Laptop (philipps-macbook-pro). iMac and edit1 need Homebrew + tmux installed manually (requires sudo password).",
+    "impact": 0.5
+  }
+}
