@@ -1,0 +1,16 @@
+{
+  "finding_id": "d3093e64-d43c-460e-9038-1d3bbebc9b87",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "782f2ed0",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T17:33:53.092465+00:00",
+  "finding": "Tailscale machines: Laptop (100.79.215.20), edit1s-imac-pro (100.106.229.34 - active), ffps-imac (100.117.71.127 - idle), ffpwindows (offline 6d), iPad/iPhone (offline).",
+  "impact": 0.5,
+  "goal_id": "c5981e2f-29f9-4758-b781-13747507f498",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Tailscale machines: Laptop (100.79.215.20), edit1s-imac-pro (100.106.229.34 - active), ffps-imac (100.117.71.127 - idle), ffpwindows (offline 6d), iPad/iPhone (offline).",
+    "impact": 0.5
+  }
+}
