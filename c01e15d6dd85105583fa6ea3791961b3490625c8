@@ -1,0 +1,16 @@
+{
+  "finding_id": "8cd2b570-7c08-4361-bbc0-4f72ab64b8fe",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "b197fbe6-dd55-4c00-a924-36ad1ef095d3",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T19:47:07.820383+00:00",
+  "finding": "Schema consolidation complete: (1) Migrated session_unknowns/findings/dead_ends into project_* tables (nearly all were content dupes). (2) Removed all UNION queries from breadcrumbs.py, query_commands.py, session_database.py. (3) Fixed 42 goal rows with inconsistent status/is_completed. (4) Deprecated log_session_* methods with redirects. (5) Statusline now shows project name instead of generic 'empirica' branding, and queries project_unknowns directly with is_completed=0 for goals.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Schema consolidation complete: (1) Migrated session_unknowns/findings/dead_ends into project_* tables (nearly all were content dupes). (2) Removed all UNION queries from breadcrumbs.py, query_commands.py, session_database.py. (3) Fixed 42 goal rows with inconsistent status/is_completed. (4) Deprecated log_session_* methods with redirects. (5) Statusline now shows project name instead of generic 'empirica' branding, and queries project_unknowns directly with is_completed=0 for goals.",
+    "impact": 0.9
+  }
+}
