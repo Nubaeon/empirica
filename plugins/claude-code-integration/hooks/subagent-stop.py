@@ -130,7 +130,8 @@ def extract_findings_from_transcript(transcript_path: str) -> dict:
     }
 
 
-def rollup_to_parent(parent_session_id: str, agent_name: str, extracted: dict):
+def rollup_to_parent(parent_session_id: str, agent_name: str, extracted: dict,
+                     subagent_data: dict = None):
     """Log extracted findings/unknowns to parent session via epistemic rollup gate.
 
     Uses EpistemicRollupGate to score and filter findings before logging.
@@ -149,7 +150,8 @@ def rollup_to_parent(parent_session_id: str, agent_name: str, extracted: dict):
         # Try to use the epistemic rollup gate for scored rollup
         raw_findings = extracted.get("findings", [])
         gated = _gated_rollup(
-            parent_session_id, project_id, agent_name, raw_findings, db
+            parent_session_id, project_id, agent_name, raw_findings, db,
+            subagent_data=subagent_data
         )
 
         if gated is not None:
@@ -221,18 +223,27 @@ def rollup_to_parent(parent_session_id: str, agent_name: str, extracted: dict):
     return logged
 
 
-def _gated_rollup(parent_session_id, project_id, agent_name, raw_findings, db):
+def _gated_rollup(parent_session_id, project_id, agent_name, raw_findings, db,
+                  subagent_data=None):
     """Run findings through EpistemicRollupGate. Returns None if gate unavailable."""
     try:
         from empirica.core.epistemic_rollup import (
             EpistemicRollupGate, log_rollup_decision
         )
-        # attention_budget module used for budget queries below
 
         gate = EpistemicRollupGate(
             min_score=0.3,
             jaccard_threshold=0.7,
         )
+
+        # Extract domain from subagent session's budget allocation
+        domain = "general"
+        confidence = 0.7
+        if subagent_data and subagent_data.get("budget"):
+            budget_data = subagent_data["budget"]
+            domain = budget_data.get("domain", "general")
+            # Use priority as confidence proxy (higher priority = more trusted)
+            confidence = budget_data.get("priority", 0.7)
 
         # Get existing findings for dedup
         existing = []
@@ -263,12 +274,12 @@ def _gated_rollup(parent_session_id, project_id, agent_name, raw_findings, db):
         except Exception:
             pass
 
-        # Run rollup pipeline
+        # Run rollup pipeline with actual domain and confidence
         result = gate.process(
             raw_findings=raw_findings,
             agent_name=agent_name,
-            domain="general",
-            confidence=0.7,
+            domain=domain,
+            confidence=confidence,
             existing_findings=existing,
             budget_remaining=budget_remaining,
             project_id=project_id,
@@ -304,6 +315,62 @@ def _gated_rollup(parent_session_id, project_id, agent_name, raw_findings, db):
         return None
 
 
+def _check_regulation(parent_session_id: str, logged: dict) -> dict:
+    """Check if more agents should be spawned based on budget and information gain.
+
+    Returns regulation recommendation for inclusion in hook output.
+    """
+    regulation = {
+        "budget_total": 20,
+        "budget_remaining": 20,
+        "should_spawn_more": True,
+        "reason": "No budget tracking available",
+    }
+
+    try:
+        from empirica.data.session_database import SessionDatabase
+        from empirica.core.information_gain import should_spawn_more
+
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Get current budget state
+        cursor.execute("""
+            SELECT total_budget, remaining FROM attention_budgets
+            WHERE session_id = ? ORDER BY created_at DESC LIMIT 1
+        """, (parent_session_id,))
+        row = cursor.fetchone()
+
+        if row:
+            regulation["budget_total"] = row[0]
+            regulation["budget_remaining"] = row[1]
+
+            rounds_without_novel = 0 if logged.get("findings", 0) > 0 else 1
+
+            spawn = should_spawn_more(
+                budget_remaining=row[1],
+                gain_estimate=0.5,  # Moderate default
+                rounds_without_novel=rounds_without_novel,
+            )
+            regulation["should_spawn_more"] = spawn
+
+            if not spawn:
+                if row[1] <= 0:
+                    regulation["reason"] = "Budget exhausted"
+                else:
+                    regulation["reason"] = "Low information gain"
+            elif logged.get("findings", 0) > 2:
+                regulation["reason"] = "High novelty — consider spawning more"
+            else:
+                regulation["reason"] = "Moderate gain — continue"
+
+        db.close()
+    except (ImportError, Exception):
+        pass
+
+    return regulation
+
+
 def main():
     try:
         input_data = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
@@ -334,7 +401,8 @@ def main():
     # Roll up to parent session
     logged = {"findings": 0, "unknowns": 0, "dead_ends": 0}
     if parent_session_id and total_extracted > 0:
-        logged = rollup_to_parent(parent_session_id, agent_name, extracted)
+        logged = rollup_to_parent(parent_session_id, agent_name, extracted,
+                                  subagent_data=subagent_data)
 
     # Mark session completed
     if subagent_data.get("_file_path"):
@@ -346,12 +414,28 @@ def main():
 
     rejected_count = logged.get("rejected", 0)
     accepted_count = logged.get("findings", 0) + logged.get("unknowns", 0) + logged.get("dead_ends", 0)
+
+    # Check regulation: should more agents be spawned?
+    regulation = {}
+    if parent_session_id:
+        regulation = _check_regulation(parent_session_id, logged)
+
+    budget_msg = ""
+    if regulation.get("budget_total"):
+        remaining = regulation.get("budget_remaining", "?")
+        total = regulation.get("budget_total", "?")
+        reason = regulation.get("reason", "")
+        action = "continue" if regulation.get("should_spawn_more") else "stop"
+        budget_msg = f" Budget: {remaining}/{total} remaining. Regulation: {action} ({reason})."
+
     result = {
         "continue": True,
         "message": f"SubagentStop: Agent '{agent_name}' completed. "
                    f"Extracted {total_extracted} artifacts, accepted {accepted_count}, "
                    f"rejected {rejected_count} via rollup gate. "
                    f"Parent: {parent_session_id[:8] if parent_session_id else 'none'}."
+                   f"{budget_msg}",
+        "regulation": regulation,
     }
     print(json.dumps(result))
 

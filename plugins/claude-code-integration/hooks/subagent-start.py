@@ -125,6 +125,71 @@ def get_budget_allocation(parent_session_id: str, agent_name: str) -> dict:
         return {}
 
 
+def _create_default_budget(parent_session_id: str) -> dict:
+    """Auto-create a default attention budget for spontaneous agent spawning.
+
+    When agents are spawned without `agent-parallel` planning, create a
+    default budget so the rollup gate has something to work with.
+    Only creates if no budget exists for this session (idempotent).
+    """
+    try:
+        import sys
+        sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
+        from empirica.core.attention_budget import (
+            AttentionBudget, DomainAllocation, persist_budget
+        )
+        from empirica.data.session_database import SessionDatabase
+        import uuid
+
+        # Check if budget already exists (idempotent)
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+        cursor.execute("""
+            SELECT id, remaining FROM attention_budgets
+            WHERE session_id = ? ORDER BY created_at DESC LIMIT 1
+        """, (parent_session_id,))
+        existing = cursor.fetchone()
+        db.close()
+
+        if existing:
+            return {
+                "budget_id": existing[0],
+                "budget_remaining": existing[1],
+                "strategy": "existing",
+                "domain": "general",
+                "domain_budget": existing[1],
+            }
+
+        # Create default budget
+        budget = AttentionBudget(
+            id=str(uuid.uuid4()),
+            session_id=parent_session_id,
+            total_budget=20,
+            allocated=0,
+            remaining=20,
+            strategy="spontaneous",
+            allocations=[
+                DomainAllocation(
+                    domain="general",
+                    budget=20,
+                    priority=0.5,
+                    expected_gain=0.5,
+                )
+            ],
+        )
+        persist_budget(budget)
+
+        return {
+            "budget_id": budget.id,
+            "budget_remaining": 20,
+            "strategy": "spontaneous",
+            "domain": "general",
+            "domain_budget": 20,
+        }
+    except Exception:
+        return {}
+
+
 def store_subagent_session(agent_name: str, child_session_id: str, parent_session_id: str):
     """Store subagent session mapping for later rollup by SubagentStop."""
     subagent_dir = Path.cwd() / '.empirica' / 'subagent_sessions'
@@ -135,8 +200,10 @@ def store_subagent_session(agent_name: str, child_session_id: str, parent_sessio
     safe_name = agent_name.replace(":", "_").replace("/", "_")
     session_file = subagent_dir / f"{safe_name}_{timestamp}.json"
 
-    # Get budget allocation for this agent
+    # Get budget allocation for this agent (or auto-create default)
     budget_info = get_budget_allocation(parent_session_id, agent_name)
+    if not budget_info:
+        budget_info = _create_default_budget(parent_session_id)
 
     session_data = {
         "agent_name": agent_name,
