@@ -1,0 +1,16 @@
+{
+  "finding_id": "9cf9fe9a-65b4-45cb-a743-f81d3e8c40cc",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "782f2ed0",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T17:33:47.270149+00:00",
+  "finding": "Tailscale SSH for David: (1) Install Tailscale, (2) Get invited to tailnet, (3) Accept + tailscale up, (4) SSH directly to ffp@ffps-imac or edit1@edit1s-imac-pro. No SSH keys needed.",
+  "impact": 0.7,
+  "goal_id": "c5981e2f-29f9-4758-b781-13747507f498",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Tailscale SSH for David: (1) Install Tailscale, (2) Get invited to tailnet, (3) Accept + tailscale up, (4) SSH directly to ffp@ffps-imac or edit1@edit1s-imac-pro. No SSH keys needed.",
+    "impact": 0.7
+  }
+}
