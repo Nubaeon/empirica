@@ -1,0 +1,31 @@
+{
+  "goal_id": "3744a220-7edc-4f5f-a5fb-5717f7d2d504",
+  "session_id": "a9063529-1a40-4b53-95e0-7d8c6c9a03d2",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-29T22:22:40.328714+00:00",
+  "goal_data": {
+    "objective": "Blindspot Detector v0: LLM-based inference over artifacts during CHECK phase. No trained model yet - use existing LLM to scan artifact topology and surface adjacent uncovered concepts as warnings. This bootstraps training data for the dedicated model.",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "CHECK phase includes blindspot scan over session artifacts",
+      "Surfaces ranked blindspot candidates with reasoning",
+      "Predictions logged as a new artifact type for future training signal",
+      "Tested on Tailscale case - would it have caught the iptables gap?"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-29T22:22:40.328732+00:00",
+      "action": "created"
+    }
+  ]
+}
