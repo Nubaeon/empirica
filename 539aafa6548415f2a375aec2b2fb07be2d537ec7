@@ -1,0 +1,32 @@
+{
+  "goal_id": "4636400f-4a29-4aa6-9e42-71f3f9c5f324",
+  "session_id": "152c089e-c074-464d-a568-eaaa304b6c1e",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-29T13:29:53.718476+00:00",
+  "goal_data": {
+    "objective": "Replace auto-commit in pre-compact hook with git stash to preserve uncommitted work without polluting the working branch",
+    "scope": {
+      "breadth": 0.2,
+      "duration": 0.1,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "pre-compact hook uses git stash instead of git add -A && git commit",
+      "uncommitted code changes preserved across compaction",
+      "no auto-commits on working branch",
+      "git notes epistemic trail unchanged",
+      "pull.rebase no longer needed for empirica divergence"
+    ],
+    "estimated_complexity": 0.3,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-29T13:29:53.718493+00:00",
+      "action": "created"
+    }
+  ]
+}
