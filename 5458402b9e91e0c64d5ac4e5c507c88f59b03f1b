@@ -1,0 +1,16 @@
+{
+  "finding_id": "d7296f39-e995-4e71-a22b-02a1a0766a99",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "47784a70-c610-4a31-865b-917932572e59",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T13:56:55.140566+00:00",
+  "finding": "Quantum epistemics analogy: Epistemic state between measurements is wave-like (continuous, fuzzy). PREFLIGHT/POSTFLIGHT are measurements that collapse to particles (discrete vectors). Decoherence=compaction. Entanglement=collaborative partners sharing state. Observer effect=self-assessment changes approach. Key insight: AI must be PROACTIVE about loop management because its own coherence depends on measurement. Users forget (AFK, project switching). AI should surface PREFLIGHT/CHECK/POSTFLIGHT suggestions at natural boundaries like a co-pilot calling altitude checks. Current behavior too passive.",
+  "impact": 0.9,
+  "goal_id": "5e019f75-04ca-4f89-a215-95c2a563fe8a",
+  "subtask_id": null,
+  "subject": "epistemic-architecture",
+  "finding_data": {
+    "finding": "Quantum epistemics analogy: Epistemic state between measurements is wave-like (continuous, fuzzy). PREFLIGHT/POSTFLIGHT are measurements that collapse to particles (discrete vectors). Decoherence=compaction. Entanglement=collaborative partners sharing state. Observer effect=self-assessment changes approach. Key insight: AI must be PROACTIVE about loop management because its own coherence depends on measurement. Users forget (AFK, project switching). AI should surface PREFLIGHT/CHECK/POSTFLIGHT suggestions at natural boundaries like a co-pilot calling altitude checks. Current behavior too passive.",
+    "impact": 0.9
+  }
+}
