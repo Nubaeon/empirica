@@ -1,0 +1,16 @@
+{
+  "finding_id": "2e6cc0fa-57b1-4a7e-9fad-14b11f76d5a8",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "47784a70-c610-4a31-865b-917932572e59",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T13:25:13.254574+00:00",
+  "finding": "/empirica on/off design spec: (1) Signal file at ~/.empirica/sentinel_paused (global, not per-project) (2) Must be outside epistemic loop to toggle - POSTFLIGHT required first (3) Sentinel checks signal file BEFORE DB queries (cheapest early exit) (4) Statusline collapses to OFF-RECORD with cumulative stats only (5) Transitions logged as findings for epistemic timeline continuity (6) State machine: LOOP_CLOSED -> OFF-RECORD -> /empirica on -> PREFLIGHT. On-the-record/off-the-record metaphor for user UX.",
+  "impact": 0.8,
+  "goal_id": "5e019f75-04ca-4f89-a215-95c2a563fe8a",
+  "subtask_id": null,
+  "subject": "empirica-toggle",
+  "finding_data": {
+    "finding": "/empirica on/off design spec: (1) Signal file at ~/.empirica/sentinel_paused (global, not per-project) (2) Must be outside epistemic loop to toggle - POSTFLIGHT required first (3) Sentinel checks signal file BEFORE DB queries (cheapest early exit) (4) Statusline collapses to OFF-RECORD with cumulative stats only (5) Transitions logged as findings for epistemic timeline continuity (6) State machine: LOOP_CLOSED -> OFF-RECORD -> /empirica on -> PREFLIGHT. On-the-record/off-the-record metaphor for user UX.",
+    "impact": 0.8
+  }
+}
