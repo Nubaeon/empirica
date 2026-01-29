@@ -1,0 +1,16 @@
+{
+  "finding_id": "d64f35c2-bcdb-4f04-a4d9-8a81901e0db2",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "02655d0c-9e47-4593-aaa8-3c53e7f6fea1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T20:57:33.421551+00:00",
+  "finding": "Local plist fix is independent of repo. Editing ~/Library/LaunchAgents/com.empirica.qdrant.plist directly works immediately after launchctl unload/load. Repo fix is for new installs and other users.",
+  "impact": 0.5,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Local plist fix is independent of repo. Editing ~/Library/LaunchAgents/com.empirica.qdrant.plist directly works immediately after launchctl unload/load. Repo fix is for new installs and other users.",
+    "impact": 0.5
+  }
+}
