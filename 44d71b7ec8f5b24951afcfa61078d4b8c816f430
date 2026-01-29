@@ -1,0 +1,13 @@
+{
+  "unknown_id": "8d492133-e603-44fd-bef8-a04c567a55b2",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a9063529-1a40-4b53-95e0-7d8c6c9a03d2",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T22:22:14.575553+00:00",
+  "unknown": "Privacy architecture for personal Cognitive Vault: How to train a predictive model on personal epistemic data (health, finance, career decisions) without that data leaving the user's device? Federated learning? On-device fine-tuning? What's the smallest model that can do useful blindspot prediction?",
+  "goal_id": "fa1f0fbc-f6de-4fa7-b412-edc7b544e881",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
