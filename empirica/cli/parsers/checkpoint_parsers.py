@@ -660,6 +660,7 @@ def add_checkpoint_parsers(subparsers):
     session_create_parser.add_argument('--user-id', help='User identifier (legacy)')
     session_create_parser.add_argument('--project-id', help='Project UUID to link session to (optional, auto-detected from git remote if omitted)')
     session_create_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
+    session_create_parser.add_argument('--parent-session-id', help='Parent session UUID for sub-agent lineage tracking')
     session_create_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
     session_create_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 

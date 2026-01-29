@@ -719,6 +719,29 @@ def migration_022_reflexes_project_id(cursor: sqlite3.Cursor):
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_reflexes_project ON reflexes(project_id)")
 
 
+# Migration 23: Add parent_session_id to sessions for sub-agent lineage tracking
+def migration_023_sessions_parent_session_id(cursor: sqlite3.Cursor):
+    """
+    Add parent_session_id to sessions table for epistemic lineage tracking.
+
+    When a sub-agent (e.g., test-goal-agent) creates its own session,
+    parent_session_id links it back to the spawning session. This enables:
+    - Epistemic lineage queries (who spawned whom)
+    - Finding rollup from child sessions to parent
+    - Preventing session file stomping (child sessions are explicitly linked)
+    - Multi-agent coordination with clear provenance
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    add_column_if_missing(cursor, "sessions", "parent_session_id", "TEXT")
+
+    # Index for parent-child queries (find all children of a session)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_parent ON sessions(parent_session_id)")
+
+    logger.info("✓ Added parent_session_id to sessions table")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -742,4 +765,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("020_client_projects", "Add client_projects junction table for client-project relationships", migration_020_client_projects),
     ("021_engagements_project_id", "Add project_id to engagements for direct project scoping", migration_021_engagements_project_id),
     ("022_reflexes_project_id", "Add project_id to reflexes for project-aware PREFLIGHT tracking", migration_022_reflexes_project_id),
+    ("023_sessions_parent_session_id", "Add parent_session_id to sessions for sub-agent lineage tracking", migration_023_sessions_parent_session_id),
 ]

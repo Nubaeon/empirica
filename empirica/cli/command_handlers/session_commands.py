@@ -611,10 +611,11 @@ def handle_memory_compact_command(args):
         if create_continuation:
             logger.info("Creating continuation session...")
 
-            # Create new session linked via git notes (metadata linkage for future)
+            # Create new session linked to parent via parent_session_id
             continuation_session_id = db.create_session(
                 ai_id=ai_id,
-                subject=None
+                subject=None,
+                parent_session_id=session_id
             )
 
             # Set project_id for continuation session

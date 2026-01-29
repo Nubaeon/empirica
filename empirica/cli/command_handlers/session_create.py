@@ -173,6 +173,7 @@ def handle_session_create_command(args):
             ai_id = config_data.get('ai_id')
             user_id = config_data.get('user_id')
             project_id = config_data.get('project_id')  # Optional explicit project ID
+            parent_session_id = config_data.get('parent_session_id')
             output_format = 'json'
 
             # Validate required fields
@@ -188,6 +189,7 @@ def handle_session_create_command(args):
             ai_id = args.ai_id
             user_id = getattr(args, 'user_id', None)
             project_id = getattr(args, 'project_id', None)  # Optional explicit project ID
+            parent_session_id = getattr(args, 'parent_session_id', None)
             output_format = getattr(args, 'output', 'json')  # Default to JSON
 
             # Validate required fields for legacy mode
@@ -359,7 +361,8 @@ def handle_session_create_command(args):
         session_id = db.create_session(
             ai_id=ai_id,
             components_loaded=6,  # Standard component count
-            subject=subject
+            subject=subject,
+            parent_session_id=parent_session_id
         )
         db.close()  # Close connection before auto-capture (prevents lock)
 
@@ -442,6 +445,7 @@ def handle_session_create_command(args):
                 "ai_id": ai_id,
                 "user_id": user_id,
                 "project_id": project_id,
+                "parent_session_id": parent_session_id,
                 "auto_init_performed": auto_init_performed,
                 "message": "Session created successfully",
                 "lifecycle": {

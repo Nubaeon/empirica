@@ -21,6 +21,7 @@ SCHEMAS = [
                     drift_detected BOOLEAN DEFAULT 0,
                     session_notes TEXT,
                     bootstrap_level INTEGER DEFAULT 1,
+                    parent_session_id TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
     """,

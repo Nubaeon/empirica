@@ -17,7 +17,8 @@ class SessionRepository(BaseRepository):
         user_id: Optional[str] = None,
         subject: Optional[str] = None,
         bootstrap_level: int = 1,
-        instance_id: Optional[str] = None
+        instance_id: Optional[str] = None,
+        parent_session_id: Optional[str] = None
     ) -> str:
         """
         Create a new session
@@ -30,6 +31,8 @@ class SessionRepository(BaseRepository):
             bootstrap_level: Bootstrap configuration level (1-3, default 1)
             instance_id: Optional instance identifier for multi-instance isolation.
                          If None, auto-detected from environment (TMUX_PANE, etc.)
+            parent_session_id: Optional parent session UUID for sub-agent lineage.
+                               Links child sessions back to the spawning session.
 
         Returns:
             session_id: UUID string
@@ -42,11 +45,12 @@ class SessionRepository(BaseRepository):
         session_id = str(uuid.uuid4())
         cursor = self._execute("""
             INSERT INTO sessions (
-                session_id, ai_id, user_id, start_time, components_loaded, subject, bootstrap_level, instance_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                session_id, ai_id, user_id, start_time, components_loaded,
+                subject, bootstrap_level, instance_id, parent_session_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             session_id, ai_id, user_id, datetime.now(timezone.utc).isoformat(),
-            components_loaded, subject, bootstrap_level, instance_id
+            components_loaded, subject, bootstrap_level, instance_id, parent_session_id
         ))
         return session_id
 
@@ -167,6 +171,23 @@ class SessionRepository(BaseRepository):
 
         row = cursor.fetchone()
         return dict(row) if row else None
+
+    def get_child_sessions(self, parent_session_id: str) -> List[Dict]:
+        """
+        Get all child sessions spawned by a parent session.
+
+        Args:
+            parent_session_id: Parent session UUID
+
+        Returns:
+            List of child session dictionaries, ordered by start_time
+        """
+        cursor = self._execute("""
+            SELECT * FROM sessions
+            WHERE parent_session_id = ?
+            ORDER BY start_time ASC
+        """, (parent_session_id,))
+        return [dict(row) for row in cursor.fetchall()]
 
     def get_session_summary(self, session_id: str, detail_level: str = "summary") -> Optional[Dict]:
         """
