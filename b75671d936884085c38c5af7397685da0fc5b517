@@ -1,0 +1,13 @@
+{
+  "unknown_id": "e3f8e064-a83b-4414-80f7-ebdb86a61560",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "782f2ed0",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T10:53:44.897913+00:00",
+  "unknown": "ASK DAVID: Is git config pull.rebase true the correct setting for Empirica repo? Local has auto-snapshot commits that diverge from remote develop. Currently set to rebase - confirm this is the right approach for the team workflow.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
