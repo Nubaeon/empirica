@@ -1,0 +1,28 @@
+{
+  "goal_id": "c5981e2f-29f9-4758-b781-13747507f498",
+  "session_id": "782f2ed0",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-29T17:16:53.686951+00:00",
+  "goal_data": {
+    "objective": "Install tmux on all machines",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-29T17:16:53.687289+00:00",
+      "action": "created"
+    }
+  ]
+}
