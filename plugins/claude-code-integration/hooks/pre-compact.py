@@ -179,17 +179,11 @@ def main():
         }))
         sys.exit(0)
 
-    # Auto-commit working directory before snapshot
-    # This ensures snapshot captures all recent work (uncommitted changes would be lost on compact)
+    # Stash uncommitted work before snapshot (preserves WIP without polluting branch history)
+    # Git notes handle the epistemic breadcrumb trail; stash handles uncommitted code.
+    stash_created = False
     try:
-        subprocess.run(
-            ['git', 'add', '-A'],
-            cwd=os.getcwd(),
-            capture_output=True,
-            timeout=5
-        )
-
-        # Only commit if there are changes staged
+        # Check if there are changes to stash
         status_result = subprocess.run(
             ['git', 'status', '--porcelain'],
             cwd=os.getcwd(),
@@ -199,15 +193,17 @@ def main():
         )
 
         if status_result.stdout.strip():
-            subprocess.run(
-                ['git', 'commit', '-m', f'[auto] Pre-compact snapshot - {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'],
+            stash_msg = f"empirica: pre-compact {empirica_session[:8]} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            result = subprocess.run(
+                ['git', 'stash', 'push', '-m', stash_msg, '--include-untracked'],
                 cwd=os.getcwd(),
                 capture_output=True,
                 text=True,
                 timeout=10
             )
+            stash_created = result.returncode == 0
     except Exception:
-        # Auto-commit failure is not fatal
+        # Stash failure is not fatal
         pass
 
     # =========================================================================
@@ -329,6 +325,21 @@ def main():
                 breadcrumbs_summary=snapshot['breadcrumbs_summary']
             )
 
+            # Restore stashed work (working directory back to pre-snapshot state)
+            stash_restored = False
+            if stash_created:
+                try:
+                    pop_result = subprocess.run(
+                        ['git', 'stash', 'pop'],
+                        cwd=os.getcwd(),
+                        capture_output=True,
+                        text=True,
+                        timeout=10
+                    )
+                    stash_restored = pop_result.returncode == 0
+                except Exception:
+                    pass  # Stash pop failure is non-fatal; user can manually pop
+
             # Determine which vectors to display
             display_vectors = fresh_vectors or fallback_vectors
             vector_source = "canonical" if fresh_vectors else "fallback"
@@ -340,6 +351,8 @@ def main():
                 "snapshot_saved": True,
                 "snapshot_path": str(snapshot_path),
                 "git_notes_written": git_notes_written,
+                "stash_created": stash_created,
+                "stash_restored": stash_restored,
                 "vectors_source": vector_source,
                 "vectors_captured": len(display_vectors),
                 "goals_marked_stale": stale_goals_count,
@@ -352,6 +365,7 @@ def main():
 
             stale_msg = f", {stale_goals_count} goals marked stale" if stale_goals_count > 0 else ""
             notes_msg = "✓" if git_notes_written else "✗"
+            stash_msg = " (stash: saved+restored)" if stash_created else ""
             print(f"""
 📸 Empirica: Pre-compact snapshot saved
    Session: {session_display}...
@@ -359,7 +373,7 @@ def main():
    Vectors: {vector_source} ({len(display_vectors)} captured){stale_msg}
    know={display_vectors.get('know', 'N/A')}, unc={display_vectors.get('uncertainty', 'N/A')}
    Snapshot: {snapshot_path.name}
-   Git notes: {notes_msg}
+   Git notes: {notes_msg}{stash_msg}
 """, file=sys.stderr)
 
             sys.exit(0)
