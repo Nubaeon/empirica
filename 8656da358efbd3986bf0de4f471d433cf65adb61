@@ -1,0 +1,16 @@
+{
+  "finding_id": "113863f1-6d52-4b52-9e0c-a4253dc192a8",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "55e18089-30eb-43ae-ac83-df8e6ceda71d",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T16:51:27.265565+00:00",
+  "finding": "Parallel subagent scaling requires epistemically-gated rollup: filter findings by impact >= 0.7, Qdrant deduplication, persona reputation weighting, and domain relevance. This is an attention mechanism built from epistemic primitives. The capacity bound is not context window size but epistemic absorption rate \u2014 how much shifts the parent's vectors. Adaptive attention budget (pre-allocate by uncertainty headroom, rank by expected vector delta, cap at diminishing returns) would make the system self-regulating.",
+  "impact": 0.95,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Parallel subagent scaling requires epistemically-gated rollup: filter findings by impact >= 0.7, Qdrant deduplication, persona reputation weighting, and domain relevance. This is an attention mechanism built from epistemic primitives. The capacity bound is not context window size but epistemic absorption rate \u2014 how much shifts the parent's vectors. Adaptive attention budget (pre-allocate by uncertainty headroom, rank by expected vector delta, cap at diminishing returns) would make the system self-regulating.",
+    "impact": 0.95
+  }
+}
