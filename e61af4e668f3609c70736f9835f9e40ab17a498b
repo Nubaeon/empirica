@@ -1,0 +1,10 @@
+{
+  "subtask_id": "be0ac615-a024-4d4f-9681-afe4f16a618b",
+  "goal_id": "34f0e837-ff42-47b1-9ad5-5b8296f48545",
+  "description": "Add validation for complexity range (0-1)",
+  "epistemic_importance": "medium",
+  "completed_timestamp": 1769696032.201329,
+  "completion_evidence": null,
+  "actual_tokens": null,
+  "estimated_tokens": 200
+}
