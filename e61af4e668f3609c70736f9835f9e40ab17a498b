@@ -1,0 +1,16 @@
+{
+  "finding_id": "de777f19-88cc-4a39-9961-26c20c72ef9e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "152c089e-c074-464d-a568-eaaa304b6c1e",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T14:14:33.198072+00:00",
+  "finding": "Pre-existing test failure: test_goal_handoff_regression::test_lineage_preserved_on_resume - add_lineage doesn't append when lineage already has 2 entries. Unrelated to statusline fix.",
+  "impact": 0.4,
+  "goal_id": "4636400f-4a29-4aa6-9e42-71f3f9c5f324",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Pre-existing test failure: test_goal_handoff_regression::test_lineage_preserved_on_resume - add_lineage doesn't append when lineage already has 2 entries. Unrelated to statusline fix.",
+    "impact": 0.4
+  }
+}
