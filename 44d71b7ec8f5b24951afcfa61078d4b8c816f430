@@ -1,0 +1,11 @@
+{
+  "dead_end_id": "344bc85d-cc9d-4894-91d4-66ab59373100",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a9063529-1a40-4b53-95e0-7d8c6c9a03d2",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T21:52:50.053693+00:00",
+  "approach": "Using tmate for shared terminal sessions between AIworkhorse and Philipp's MacBook",
+  "why_failed": "tmate.io SSH server is unreachable from our network (nc -zw3 ssh.tmate.io 22 fails). Likely blocked at ISP or DNS level. Self-hosted tmate server would work but is overkill.",
+  "goal_id": null,
+  "subtask_id": null
+}
