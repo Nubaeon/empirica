@@ -1,0 +1,16 @@
+{
+  "finding_id": "68e8d092-ddcf-41ec-9673-1d06638d3f76",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "84f36ab2-fc7d-4e9a-8a12-29ff8e22f59a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T23:13:17.167189+00:00",
+  "finding": "SSH to aiworkhorse (100.98.104.78) requires being on David's tailnet (soulentheo@gmail.com) as a full member, not a shared node. Node sharing invite only gives shared access which is blocked by ACLs. Fix: tailscale switch soulentheo@gmail.com. Switch back: tailscale switch p.schwinger@gmail.com. The machine name is 'aiworkhorse' not 'yogapad' (yogapad is offline 143d). User is 'yogapad' on the machine.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "SSH to aiworkhorse (100.98.104.78) requires being on David's tailnet (soulentheo@gmail.com) as a full member, not a shared node. Node sharing invite only gives shared access which is blocked by ACLs. Fix: tailscale switch soulentheo@gmail.com. Switch back: tailscale switch p.schwinger@gmail.com. The machine name is 'aiworkhorse' not 'yogapad' (yogapad is offline 143d). User is 'yogapad' on the machine.",
+    "impact": 0.8
+  }
+}
