@@ -1,0 +1,16 @@
+{
+  "finding_id": "e1aaea29-a071-47c4-87c2-02a4d6bb4072",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "152c089e-c074-464d-a568-eaaa304b6c1e",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T13:35:36.973115+00:00",
+  "finding": "Pre-compact hook replaced git add -A && git commit with git stash push/pop. Eliminates auto-commits on working branch that caused divergence from remote, requiring pull.rebase=true. Git notes (epistemic breadcrumb trail) unaffected since they attach to HEAD commit object, not working tree. Stash preserves uncommitted code locally without polluting branch history.",
+  "impact": 0.7,
+  "goal_id": "4636400f-4a29-4aa6-9e42-71f3f9c5f324",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Pre-compact hook replaced git add -A && git commit with git stash push/pop. Eliminates auto-commits on working branch that caused divergence from remote, requiring pull.rebase=true. Git notes (epistemic breadcrumb trail) unaffected since they attach to HEAD commit object, not working tree. Stash preserves uncommitted code locally without polluting branch history.",
+    "impact": 0.7
+  }
+}
