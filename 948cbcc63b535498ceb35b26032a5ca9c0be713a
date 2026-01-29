@@ -1,0 +1,16 @@
+{
+  "finding_id": "f555ba90-f421-4811-92a0-e823bfd4ae34",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "152c089e-c074-464d-a568-eaaa304b6c1e",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T15:39:41.997719+00:00",
+  "finding": "Key architectural insight: Claude Code custom agents (plugin agents/) can be GENERATED from Empirica persona profiles in Qdrant. CapabilitiesConfig maps directly to tool access (can_modify_code\u2192Edit/Write, can_call_external_tools\u2192Bash). Focus domains become system prompt expertise. Sentinel thresholds become per-agent hook parameters. EmergedPersona extraction (from successful branches) auto-generates new agents \u2014 immune system analog. No match triggers parallel branch decomposition for new persona creation.",
+  "impact": 0.9,
+  "goal_id": "4636400f-4a29-4aa6-9e42-71f3f9c5f324",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Key architectural insight: Claude Code custom agents (plugin agents/) can be GENERATED from Empirica persona profiles in Qdrant. CapabilitiesConfig maps directly to tool access (can_modify_code\u2192Edit/Write, can_call_external_tools\u2192Bash). Focus domains become system prompt expertise. Sentinel thresholds become per-agent hook parameters. EmergedPersona extraction (from successful branches) auto-generates new agents \u2014 immune system analog. No match triggers parallel branch decomposition for new persona creation.",
+    "impact": 0.9
+  }
+}
