@@ -86,24 +86,34 @@ class GoalRepository:
     def save_goal(self, goal: Goal, session_id: Optional[str] = None) -> bool:
         """
         Save goal to database
-        
+
         Args:
             goal: Goal object to save
             session_id: Optional session ID to associate with goal
-            
+
         Returns:
             True if successful
         """
         try:
             # Serialize full goal as JSON for easy retrieval
             goal_data = json.dumps(goal.to_dict())
-            
+
+            # Resolve project_id from session (goals inherit project scope)
+            project_id = None
+            if session_id:
+                row = self.db.conn.execute(
+                    "SELECT project_id FROM sessions WHERE session_id = ?",
+                    (session_id,)
+                ).fetchone()
+                if row:
+                    project_id = row[0]
+
             # Insert main goal record
             self.db.conn.execute("""
-                INSERT OR REPLACE INTO goals 
-                (id, session_id, objective, scope, estimated_complexity, 
-                 created_timestamp, completed_timestamp, is_completed, goal_data)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR REPLACE INTO goals
+                (id, session_id, objective, scope, estimated_complexity,
+                 created_timestamp, completed_timestamp, is_completed, goal_data, project_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 goal.id,
                 session_id,
@@ -113,7 +123,8 @@ class GoalRepository:
                 goal.created_timestamp,
                 goal.completed_timestamp,
                 goal.is_completed,
-                goal_data
+                goal_data,
+                project_id
             ))
             
             # Insert success criteria (delete old ones first)
