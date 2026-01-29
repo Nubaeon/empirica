@@ -1,0 +1,16 @@
+{
+  "finding_id": "fe6b1af0-c120-48ee-b0fc-206e0843e1eb",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a9063529-1a40-4b53-95e0-7d8c6c9a03d2",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T22:07:41.263139+00:00",
+  "finding": "Epistemic Blindspot Detector concept: A fine-tuned local model trained on Empirica's accumulated artifacts can predict unknown unknowns. Training data is self-labeling - every mistake and late-discovery finding provides (artifact_topology_at_time_T \u2192 missing_concept_at_T+1) pairs. The model learns topological patterns in knowledge graphs, not domain knowledge. Architecture: artifact topology encoder + negative space predictor using contrastive learning. Network effect: every project using Empirica contributes training data, making predictions better for all users. This is a Predictive Epistemic AI - a standalone capability that emerges from Empirica's data flywheel.",
+  "impact": 1.0,
+  "goal_id": "fa1f0fbc-f6de-4fa7-b412-edc7b544e881",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Epistemic Blindspot Detector concept: A fine-tuned local model trained on Empirica's accumulated artifacts can predict unknown unknowns. Training data is self-labeling - every mistake and late-discovery finding provides (artifact_topology_at_time_T \u2192 missing_concept_at_T+1) pairs. The model learns topological patterns in knowledge graphs, not domain knowledge. Architecture: artifact topology encoder + negative space predictor using contrastive learning. Network effect: every project using Empirica contributes training data, making predictions better for all users. This is a Predictive Epistemic AI - a standalone capability that emerges from Empirica's data flywheel.",
+    "impact": 1.0
+  }
+}
