@@ -742,6 +742,62 @@ def migration_023_sessions_parent_session_id(cursor: sqlite3.Cursor):
     logger.info("✓ Added parent_session_id to sessions table")
 
 
+# Migration 24: Add attention_budgets and rollup_logs tables for epistemic attention budget
+def migration_024_attention_budgets(cursor: sqlite3.Cursor):
+    """
+    Add tables for Epistemic Attention Budget system.
+
+    attention_budgets: Track token/finding budgets allocated to parallel agent orchestration.
+    rollup_logs: Record scored rollup decisions (accepted/rejected findings from sub-agents).
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS attention_budgets (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            total_budget INTEGER NOT NULL,
+            allocated INTEGER DEFAULT 0,
+            remaining INTEGER NOT NULL,
+            strategy TEXT DEFAULT 'information_gain',
+            domain_allocations TEXT,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL,
+
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_attention_budgets_session ON attention_budgets(session_id)")
+    logger.info("✓ Created attention_budgets table")
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rollup_logs (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            budget_id TEXT,
+            agent_name TEXT NOT NULL,
+            finding_hash TEXT NOT NULL,
+            finding_text TEXT,
+            score REAL NOT NULL,
+            accepted BOOLEAN NOT NULL,
+            reason TEXT,
+            novelty REAL,
+            domain_relevance REAL,
+            timestamp REAL NOT NULL,
+
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+            FOREIGN KEY (budget_id) REFERENCES attention_budgets(id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rollup_logs_session ON rollup_logs(session_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rollup_logs_budget ON rollup_logs(budget_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rollup_logs_hash ON rollup_logs(finding_hash)")
+    logger.info("✓ Created rollup_logs table")
+
+    logger.info("✅ Migration 024 complete: Attention budget tables created")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -766,4 +822,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("021_engagements_project_id", "Add project_id to engagements for direct project scoping", migration_021_engagements_project_id),
     ("022_reflexes_project_id", "Add project_id to reflexes for project-aware PREFLIGHT tracking", migration_022_reflexes_project_id),
     ("023_sessions_parent_session_id", "Add parent_session_id to sessions for sub-agent lineage tracking", migration_023_sessions_parent_session_id),
+    ("024_attention_budgets", "Add attention_budgets and rollup_logs tables for epistemic attention budget", migration_024_attention_budgets),
 ]

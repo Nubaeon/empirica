@@ -9,6 +9,7 @@ from empirica.cli.command_handlers.agent_commands import (
     handle_agent_export_command,
     handle_agent_import_command,
     handle_agent_discover_command,
+    handle_agent_parallel_command,
 )
 
 
@@ -80,3 +81,21 @@ def add_agent_parsers(subparsers):
     discover_parser.add_argument('--limit', type=int, default=10, help='Maximum results')
     discover_parser.add_argument('--output', choices=['text', 'json'], default='text')
     discover_parser.set_defaults(func=handle_agent_discover_command)
+
+    # agent-parallel (orchestrated parallel investigation)
+    parallel_parser = subparsers.add_parser(
+        'agent-parallel',
+        help='Plan and orchestrate parallel epistemic agents with attention budget'
+    )
+    parallel_parser.add_argument('--session-id', required=True, help='Parent session ID')
+    parallel_parser.add_argument('--task', required=True, help='Investigation task')
+    parallel_parser.add_argument('--budget', type=int, default=20,
+        help='Total findings budget (default: 20)')
+    parallel_parser.add_argument('--max-agents', type=int, default=5,
+        help='Maximum parallel agents (default: 5)')
+    parallel_parser.add_argument('--strategy', choices=['information_gain', 'uniform', 'priority'],
+        default='information_gain', help='Budget allocation strategy')
+    parallel_parser.add_argument('--domains', nargs='+',
+        help='Override investigation domains (auto-detected if not specified)')
+    parallel_parser.add_argument('--output', choices=['text', 'json'], default='text')
+    parallel_parser.set_defaults(func=handle_agent_parallel_command)

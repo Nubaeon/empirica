@@ -548,6 +548,102 @@ def handle_agent_discover_command(args) -> dict:
         return 1
 
 
+def handle_agent_parallel_command(args) -> dict:
+    """
+    Plan and orchestrate parallel epistemic agents with attention budget.
+
+    Usage:
+        empirica agent-parallel --session-id <ID> --task "Investigate X" --budget 20 --max-agents 3
+        empirica agent-parallel --session-id <ID> --task "Review Y" --domains security architecture
+
+    Returns orchestration plan with agent allocations and budget.
+    """
+
+    session_id = getattr(args, 'session_id', None)
+    task = getattr(args, 'task', None)
+    budget = getattr(args, 'budget', 20)
+    max_agents = getattr(args, 'max_agents', 5)
+    strategy = getattr(args, 'strategy', 'information_gain')
+    domains = getattr(args, 'domains', None)
+    output_format = getattr(args, 'output', 'text')
+
+    if not session_id:
+        return {"ok": False, "error": "session_id required"}
+
+    if not task:
+        return {"ok": False, "error": "task required"}
+
+    try:
+        from empirica.core.parallel_orchestrator import ParallelOrchestrator
+
+        orchestrator = ParallelOrchestrator(
+            session_id=session_id,
+            max_agents=max_agents,
+            total_budget=budget,
+            strategy=strategy,
+        )
+
+        plan = orchestrator.plan(
+            task=task,
+            domains=domains,
+        )
+
+        response = {
+            "ok": True,
+            "session_id": session_id,
+            "task": task,
+            "budget": {
+                "id": plan.budget.id,
+                "total": plan.budget.total_budget,
+                "remaining": plan.budget.remaining,
+                "strategy": plan.budget.strategy,
+            },
+            "agents": [a.to_dict() for a in plan.agents],
+            "agent_count": len(plan.agents),
+            "usage": (
+                "Launch agents in parallel via Claude Code Task tool. "
+                "Each agent's SubagentStart/Stop hooks will handle session "
+                "creation, budget tracking, and scored rollup automatically."
+            ),
+        }
+
+        if output_format == 'json':
+            print(json.dumps(response, indent=2))
+        else:
+            print(f"Parallel Orchestration Plan")
+            print(f"{'='*50}")
+            print(f"Task: {task}")
+            print(f"Budget: {plan.budget.total_budget} findings")
+            print(f"Strategy: {plan.budget.strategy}")
+            print(f"Agents: {len(plan.agents)}")
+            print()
+
+            for i, agent in enumerate(plan.agents, 1):
+                print(f"  Agent {i}: {agent.agent_name}")
+                print(f"    Domain: {agent.domain}")
+                print(f"    Persona: {agent.persona_id}")
+                print(f"    Budget: {agent.budget} findings")
+                print(f"    Priority: {agent.priority:.2f}")
+                print(f"    Expected Gain: {agent.expected_gain:.3f}")
+                print()
+
+            print(f"Budget ID: {plan.budget.id}")
+            print(f"\nLaunch agents with:")
+            for agent in plan.agents:
+                print(f"  empirica agent-spawn --session-id {session_id} "
+                      f"--task \"{agent.task_focus}\" --turtle")
+
+        return 0
+
+    except Exception as e:
+        error_msg = f"Parallel orchestration failed: {e}"
+        if output_format == 'json':
+            print(json.dumps({"ok": False, "error": error_msg}))
+        else:
+            print(f"Error: {error_msg}")
+        return 1
+
+
 def register_agent_parsers(subparsers):
     """Register agent command parsers."""
 

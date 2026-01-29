@@ -80,6 +80,51 @@ def create_child_session(parent_session_id: str, agent_name: str) -> dict:
         }
 
 
+def get_budget_allocation(parent_session_id: str, agent_name: str) -> dict:
+    """Get attention budget allocation for this agent, if one exists."""
+    try:
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Find active budget for parent session
+        cursor.execute("""
+            SELECT id, remaining, domain_allocations, strategy
+            FROM attention_budgets
+            WHERE session_id = ? ORDER BY created_at DESC LIMIT 1
+        """, (parent_session_id,))
+        row = cursor.fetchone()
+        db.close()
+
+        if not row:
+            return {}
+
+        budget_id, remaining, alloc_json, strategy = row
+        allocations = json.loads(alloc_json) if alloc_json else []
+
+        # Find domain allocation for this agent
+        # Agent name format: "empirica-integration:security" -> domain "security"
+        agent_domain = agent_name.split(":")[-1] if ":" in agent_name else "general"
+
+        domain_alloc = None
+        for alloc in allocations:
+            if alloc.get("domain") == agent_domain:
+                domain_alloc = alloc
+                break
+
+        return {
+            "budget_id": budget_id,
+            "budget_remaining": remaining,
+            "strategy": strategy,
+            "domain": agent_domain,
+            "domain_budget": domain_alloc.get("budget", 5) if domain_alloc else 5,
+            "expected_gain": domain_alloc.get("expected_gain", 0.5) if domain_alloc else 0.5,
+            "priority": domain_alloc.get("priority", 0.5) if domain_alloc else 0.5,
+        }
+    except Exception:
+        return {}
+
+
 def store_subagent_session(agent_name: str, child_session_id: str, parent_session_id: str):
     """Store subagent session mapping for later rollup by SubagentStop."""
     subagent_dir = Path.cwd() / '.empirica' / 'subagent_sessions'
@@ -90,12 +135,16 @@ def store_subagent_session(agent_name: str, child_session_id: str, parent_sessio
     safe_name = agent_name.replace(":", "_").replace("/", "_")
     session_file = subagent_dir / f"{safe_name}_{timestamp}.json"
 
+    # Get budget allocation for this agent
+    budget_info = get_budget_allocation(parent_session_id, agent_name)
+
     session_data = {
         "agent_name": agent_name,
         "child_session_id": child_session_id,
         "parent_session_id": parent_session_id,
         "started_at": datetime.now().isoformat(),
-        "status": "active"
+        "status": "active",
+        "budget": budget_info,
     }
 
     session_file.write_text(json.dumps(session_data, indent=2))

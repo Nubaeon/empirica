@@ -131,8 +131,12 @@ def extract_findings_from_transcript(transcript_path: str) -> dict:
 
 
 def rollup_to_parent(parent_session_id: str, agent_name: str, extracted: dict):
-    """Log extracted findings/unknowns to parent session."""
-    logged = {"findings": 0, "unknowns": 0, "dead_ends": 0}
+    """Log extracted findings/unknowns to parent session via epistemic rollup gate.
+
+    Uses EpistemicRollupGate to score and filter findings before logging.
+    Falls back to naive rollup if the gate module is unavailable.
+    """
+    logged = {"findings": 0, "unknowns": 0, "dead_ends": 0, "rejected": 0}
 
     try:
         from empirica.data.session_database import SessionDatabase
@@ -142,18 +146,41 @@ def rollup_to_parent(parent_session_id: str, agent_name: str, extracted: dict):
         parent = db.sessions.get_session(parent_session_id)
         project_id = parent.get("project_id", "") if parent else ""
 
-        for finding in extracted.get("findings", []):
-            try:
-                db.log_finding(
-                    project_id=project_id,
-                    session_id=parent_session_id,
-                    finding=f"[{agent_name}] {finding}",
-                    impact=0.5
-                )
-                logged["findings"] += 1
-            except Exception:
-                pass
+        # Try to use the epistemic rollup gate for scored rollup
+        raw_findings = extracted.get("findings", [])
+        gated = _gated_rollup(
+            parent_session_id, project_id, agent_name, raw_findings, db
+        )
 
+        if gated is not None:
+            # Gated rollup succeeded — log only accepted findings
+            for scored in gated.get("accepted", []):
+                try:
+                    db.log_finding(
+                        project_id=project_id,
+                        session_id=parent_session_id,
+                        finding=f"[{agent_name}] {scored['finding']}",
+                        impact=min(1.0, scored.get("score", 0.5))
+                    )
+                    logged["findings"] += 1
+                except Exception:
+                    pass
+            logged["rejected"] = len(gated.get("rejected", []))
+        else:
+            # Fallback: naive rollup (no gate available)
+            for finding in raw_findings:
+                try:
+                    db.log_finding(
+                        project_id=project_id,
+                        session_id=parent_session_id,
+                        finding=f"[{agent_name}] {finding}",
+                        impact=0.5
+                    )
+                    logged["findings"] += 1
+                except Exception:
+                    pass
+
+        # Unknowns and dead ends pass through without gating
         for unknown in extracted.get("unknowns", []):
             try:
                 db.log_unknown(
@@ -192,6 +219,89 @@ def rollup_to_parent(parent_session_id: str, agent_name: str, extracted: dict):
         pass
 
     return logged
+
+
+def _gated_rollup(parent_session_id, project_id, agent_name, raw_findings, db):
+    """Run findings through EpistemicRollupGate. Returns None if gate unavailable."""
+    try:
+        from empirica.core.epistemic_rollup import (
+            EpistemicRollupGate, log_rollup_decision
+        )
+        # attention_budget module used for budget queries below
+
+        gate = EpistemicRollupGate(
+            min_score=0.3,
+            jaccard_threshold=0.7,
+        )
+
+        # Get existing findings for dedup
+        existing = []
+        try:
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT finding FROM project_findings
+                WHERE session_id = ?
+                ORDER BY created_timestamp DESC LIMIT 50
+            """, (parent_session_id,))
+            existing = [row[0] for row in cursor.fetchall()]
+        except Exception:
+            pass
+
+        # Load budget if one exists for this session
+        budget_id = None
+        budget_remaining = 20  # Default max
+        try:
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT id, remaining FROM attention_budgets
+                WHERE session_id = ? ORDER BY created_at DESC LIMIT 1
+            """, (parent_session_id,))
+            row = cursor.fetchone()
+            if row:
+                budget_id = row[0]
+                budget_remaining = row[1]
+        except Exception:
+            pass
+
+        # Run rollup pipeline
+        result = gate.process(
+            raw_findings=raw_findings,
+            agent_name=agent_name,
+            domain="general",
+            confidence=0.7,
+            existing_findings=existing,
+            budget_remaining=budget_remaining,
+            project_id=project_id,
+        )
+
+        # Log decisions
+        log_rollup_decision(parent_session_id, budget_id, result)
+
+        # Update budget remaining
+        if budget_id and result.budget_consumed > 0:
+            try:
+                cursor = db.conn.cursor()
+                cursor.execute("""
+                    UPDATE attention_budgets
+                    SET allocated = allocated + ?,
+                        remaining = remaining - ?,
+                        updated_at = ?
+                    WHERE id = ?
+                """, (result.budget_consumed, result.budget_consumed,
+                      datetime.now().timestamp(), budget_id))
+                db.conn.commit()
+            except Exception:
+                pass
+
+        return {
+            "accepted": [f.to_dict() for f in result.accepted],
+            "rejected": [f.to_dict() for f in result.rejected],
+        }
+
+    except ImportError:
+        return None
+    except Exception:
+        return None
 
 
 def main():
@@ -234,11 +344,14 @@ def main():
             "transcript_path": transcript_path
         })
 
-    total_logged = sum(logged.values())
+    rejected_count = logged.get("rejected", 0)
+    accepted_count = logged.get("findings", 0) + logged.get("unknowns", 0) + logged.get("dead_ends", 0)
     result = {
         "continue": True,
         "message": f"SubagentStop: Agent '{agent_name}' completed. "
-                   f"Extracted {total_extracted} artifacts, rolled up {total_logged} to parent {parent_session_id[:8] if parent_session_id else 'none'}."
+                   f"Extracted {total_extracted} artifacts, accepted {accepted_count}, "
+                   f"rejected {rejected_count} via rollup gate. "
+                   f"Parent: {parent_session_id[:8] if parent_session_id else 'none'}."
     }
     print(json.dumps(result))
 
