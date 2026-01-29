@@ -1,0 +1,16 @@
+{
+  "finding_id": "b940de7a-1559-48c0-97db-4a6d4eacf162",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "02655d0c-9e47-4593-aaa8-3c53e7f6fea1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T20:38:58.779534+00:00",
+  "finding": "Qdrant OS error 24: macOS launchd default 256 fd limit too low. 174 collections need 8300 fds. Fix: add SoftResourceLimits/HardResourceLimits 65536 to com.empirica.qdrant.plist. This is a deployment bug - any Mac user hitting ~50+ collections will encounter this. PR needed to fix the plist template.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Qdrant OS error 24: macOS launchd default 256 fd limit too low. 174 collections need 8300 fds. Fix: add SoftResourceLimits/HardResourceLimits 65536 to com.empirica.qdrant.plist. This is a deployment bug - any Mac user hitting ~50+ collections will encounter this. PR needed to fix the plist template.",
+    "impact": 0.9
+  }
+}
