@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.empirica.qdrant</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__QDRANT_BINARY__</string>
+        <string>--config-path</string>
+        <string>__QDRANT_CONFIG__</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+    </dict>
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/qdrant.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/qdrant.error.log</string>
+</dict>
+</plist>

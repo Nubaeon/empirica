@@ -668,11 +668,89 @@ def show_qdrant_instructions():
    Sign up at: https://cloud.qdrant.io
    Set EMPIRICA_QDRANT_URL to your cloud instance URL
 
+{Colors.BOLD}Option 4: macOS launchd (auto-start on boot){Colors.ENDC}
+   Installs Qdrant as a macOS background service with proper file descriptor
+   limits (65536). Required for heavy usage — macOS defaults to 256 fd which
+   causes "Too many open files" errors with 50+ collections.
+
+   Run: python3 scripts/install.py --setup-qdrant-launchd
+
 {Colors.BLUE}Qdrant enables:{Colors.ENDC}
    - Semantic search across findings, unknowns, dead-ends
    - Pattern retrieval during PREFLIGHT
    - Cross-project knowledge sharing
 """)
+
+
+def setup_qdrant_launchd():
+    """Install Qdrant as a macOS launchd service with proper file descriptor limits.
+
+    macOS launchd defaults to 256 file descriptors per process. Qdrant with many
+    collections (50+) will exceed this, causing 'Too many open files' (OS error 24).
+    This sets SoftResourceLimits/HardResourceLimits to 65536.
+    """
+    if platform.system() != "Darwin":
+        print(f"{Colors.RED}This option is macOS only.{Colors.ENDC}")
+        return
+
+    home = Path.home()
+    launch_agents = home / "Library" / "LaunchAgents"
+    plist_dest = launch_agents / "com.empirica.qdrant.plist"
+    template = Path(__file__).parent / "templates" / "com.empirica.qdrant.plist"
+
+    # Find qdrant binary
+    qdrant_bin = shutil.which("qdrant") or str(home / ".local" / "bin" / "qdrant")
+    if not Path(qdrant_bin).exists():
+        print(f"{Colors.YELLOW}Qdrant binary not found at {qdrant_bin}{Colors.ENDC}")
+        qdrant_bin = input(f"Enter path to qdrant binary: ").strip()
+        if not Path(qdrant_bin).exists():
+            print(f"{Colors.RED}Binary not found. Aborting.{Colors.ENDC}")
+            return
+
+    # Config path
+    qdrant_config = home / ".qdrant" / "config.yaml"
+    if not qdrant_config.exists():
+        qdrant_config.parent.mkdir(parents=True, exist_ok=True)
+        qdrant_config.write_text(
+            f"storage:\n"
+            f"  storage_path: {home / '.empirica' / '.qdrant_data'}\n"
+            f"  snapshots_path: {home / '.qdrant' / 'snapshots'}\n\n"
+            f"service:\n"
+            f"  host: 127.0.0.1\n"
+            f"  http_port: 6333\n"
+            f"  grpc_port: 6334\n"
+        )
+        print(f"{Colors.GREEN}Created config: {qdrant_config}{Colors.ENDC}")
+
+    # Read template and substitute paths
+    if not template.exists():
+        print(f"{Colors.RED}Template not found: {template}{Colors.ENDC}")
+        return
+
+    plist_content = template.read_text()
+    plist_content = plist_content.replace("__QDRANT_BINARY__", str(qdrant_bin))
+    plist_content = plist_content.replace("__QDRANT_CONFIG__", str(qdrant_config))
+
+    # Unload existing if present
+    if plist_dest.exists():
+        print(f"{Colors.YELLOW}Existing plist found. Unloading...{Colors.ENDC}")
+        subprocess.run(["launchctl", "unload", str(plist_dest)], capture_output=True)
+
+    # Write plist
+    launch_agents.mkdir(parents=True, exist_ok=True)
+    plist_dest.write_text(plist_content)
+    print(f"{Colors.GREEN}Wrote plist: {plist_dest}{Colors.ENDC}")
+
+    # Load service
+    result = subprocess.run(["launchctl", "load", str(plist_dest)], capture_output=True, text=True)
+    if result.returncode == 0:
+        print(f"{Colors.GREEN}Qdrant service loaded successfully.{Colors.ENDC}")
+        print(f"  File descriptor limit: 65536 (macOS default is 256)")
+        print(f"  Binary: {qdrant_bin}")
+        print(f"  Config: {qdrant_config}")
+        print(f"  Logs: /tmp/qdrant.log, /tmp/qdrant.error.log")
+    else:
+        print(f"{Colors.RED}Failed to load service: {result.stderr}{Colors.ENDC}")
 
 
 def interactive_setup() -> dict:
@@ -817,7 +895,14 @@ def main():
     parser.add_argument("--skip-plugin", action="store_true", help="Skip Claude Code plugin")
     parser.add_argument("--skip-skill", action="store_true", help="Skip skill installation")
     parser.add_argument("--skip-env", action="store_true", help="Skip environment setup")
+    parser.add_argument("--setup-qdrant-launchd", action="store_true",
+                        help="Install Qdrant as macOS launchd service with proper fd limits (65536)")
     args = parser.parse_args()
+
+    # Handle standalone commands
+    if args.setup_qdrant_launchd:
+        setup_qdrant_launchd()
+        sys.exit(0)
 
     try:
         # Step 1: Check prerequisites
