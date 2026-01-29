@@ -1,0 +1,16 @@
+{
+  "finding_id": "7dcd0140-1a3c-4c3a-bda0-d564d826bd18",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "782f2ed0",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T18:00:03.077066+00:00",
+  "finding": "David SSH passwordless login working on Laptop (philippschwinger@philipps-macbook-pro). Key: SHA256:GqRY8SQ+qAFPOZ1CFznJhvZZzVXm+N4Jj2NVJ1XAiK4 (empirica-workspace RSA 4096). Also added to iMac (ffp@ffps-imac). edit1 offline - needs key added when back online.",
+  "impact": 0.8,
+  "goal_id": "c5981e2f-29f9-4758-b781-13747507f498",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "David SSH passwordless login working on Laptop (philippschwinger@philipps-macbook-pro). Key: SHA256:GqRY8SQ+qAFPOZ1CFznJhvZZzVXm+N4Jj2NVJ1XAiK4 (empirica-workspace RSA 4096). Also added to iMac (ffp@ffps-imac). edit1 offline - needs key added when back online.",
+    "impact": 0.8
+  }
+}
