@@ -1,0 +1,28 @@
+{
+  "goal_id": "211397aa-c859-4ff1-931a-10d6a31277fa",
+  "session_id": "47784a70-c610-4a31-865b-917932572e59",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-29T16:13:37.477935+00:00",
+  "goal_data": {
+    "objective": "Empirica Ecosystem Diagram: Visual schema showing how projects, global config, CRM, workspace, and all DB schemas interconnect. For AIs and humans. Cross-project relationships, four-layer storage, noetic container architecture.",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.5,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-29T16:13:37.477951+00:00",
+      "action": "created"
+    }
+  ]
+}
