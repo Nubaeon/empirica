@@ -1,0 +1,16 @@
+{
+  "finding_id": "e8ae2d76-1f87-4970-b942-997cdec428b1",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a9063529-1a40-4b53-95e0-7d8c6c9a03d2",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T21:53:07.117343+00:00",
+  "finding": "Philipp's MacBook SSH details: username is `philippschwinger` (macOS uses full account name, not short name). Tailscale IP: 100.79.215.20. DERP relay: nue (Nuremberg). Connection is relayed, not direct. SSH command: `ssh philippschwinger@100.79.215.20`",
+  "impact": 0.6,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Philipp's MacBook SSH details: username is `philippschwinger` (macOS uses full account name, not short name). Tailscale IP: 100.79.215.20. DERP relay: nue (Nuremberg). Connection is relayed, not direct. SSH command: `ssh philippschwinger@100.79.215.20`",
+    "impact": 0.6
+  }
+}
