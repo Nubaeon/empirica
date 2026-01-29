@@ -1,0 +1,14 @@
+{
+  "mistake_id": "f0522a5a-3dfc-4bd9-ab68-52341ae20bd7",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a9063529-1a40-4b53-95e0-7d8c6c9a03d2",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T21:53:08.068515+00:00",
+  "mistake": "Spent hours debugging Tailscale SSH ACL rules when the actual blocker was the ts-input iptables chain DROP rule. We assumed ACL changes would propagate to the local firewall for shared nodes.",
+  "why_wrong": "Tailscale SSH ACL is a separate system from regular SSH over Tailscale. The ts-input iptables chain is the LOCAL enforcement layer and doesn't auto-populate per-peer ACCEPT rules for cross-tailnet shared nodes. We should have checked iptables first when tcpdump showed zero inbound packets.",
+  "prevention": "When Tailscale connectivity fails: (1) FIRST check `sudo iptables -L ts-input -n` for DROP rules, (2) tcpdump showing zero packets = local filter problem not ACL problem, (3) Don't conflate Tailscale SSH (managed SSH) with regular SSH over Tailscale tunnel",
+  "cost_estimate": "3 hours",
+  "root_cause_vector": "CONTEXT",
+  "goal_id": null,
+  "subtask_id": null
+}
