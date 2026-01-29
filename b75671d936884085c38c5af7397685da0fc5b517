@@ -1,0 +1,28 @@
+{
+  "goal_id": "248d23f9-c4b5-4556-8cdd-fbefdcf3f222",
+  "session_id": "0ec4af33",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-29T20:18:38.252725+00:00",
+  "goal_data": {
+    "objective": "Reformulate email to Adriaan based on David's rewritten RECURSIVE.md. Key changes: paper title now 'Empirica: Epistemic Infrastructure for Trustworthy AI' with DOI, 298,987 observations (up from 82,380), new 'What This Means for Reliability Engineering' section, additional presentation decks listed.",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-29T20:18:38.253196+00:00",
+      "action": "created"
+    }
+  ]
+}
