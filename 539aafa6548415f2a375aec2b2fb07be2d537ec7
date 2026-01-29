@@ -1,0 +1,28 @@
+{
+  "goal_id": "5e019f75-04ca-4f89-a215-95c2a563fe8a",
+  "session_id": "47784a70-c610-4a31-865b-917932572e59",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-29T13:24:44.471701+00:00",
+  "goal_data": {
+    "objective": "Implement /empirica on/off toggle - on-the-record vs off-the-record epistemic tracking with Sentinel integration and statusline display",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-29T13:24:44.471719+00:00",
+      "action": "created"
+    }
+  ]
+}
