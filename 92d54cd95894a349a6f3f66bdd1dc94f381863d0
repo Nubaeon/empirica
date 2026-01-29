@@ -1,0 +1,16 @@
+{
+  "finding_id": "d3f80abc-fa51-4d08-a4f6-c04ec8ebba65",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "84f36ab2-fc7d-4e9a-8a12-29ff8e22f59a",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T21:12:44.322927+00:00",
+  "finding": "Yogapad (100.98.104.78) is a SHARED device owned by soulentheo@gmail.com. Tailscale shows it as 'device-of-shared-to-user'. Tailscale ping works (DERP relay via Madrid, ~100-250ms), but SSH port 22 times out. This means: Layer 3 (Tailscale tunnel) works, Layer 4 (TCP port 22) is blocked. The remote device either has SSH disabled, a firewall blocking port 22, or sshd not running.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Yogapad (100.98.104.78) is a SHARED device owned by soulentheo@gmail.com. Tailscale shows it as 'device-of-shared-to-user'. Tailscale ping works (DERP relay via Madrid, ~100-250ms), but SSH port 22 times out. This means: Layer 3 (Tailscale tunnel) works, Layer 4 (TCP port 22) is blocked. The remote device either has SSH disabled, a firewall blocking port 22, or sshd not running.",
+    "impact": 0.8
+  }
+}
