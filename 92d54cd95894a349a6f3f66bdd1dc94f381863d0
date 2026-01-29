@@ -1,0 +1,28 @@
+{
+  "goal_id": "1e97cc18-aa96-44ac-86e3-f622f701243d",
+  "session_id": "0ec4af33-74f0-4d8d-9c64-0a50780898c3",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-29T20:33:46.246861+00:00",
+  "goal_data": {
+    "objective": "Fix Qdrant 'too many open files' error (OS error 24) preventing episodic memory embedding",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-29T20:33:46.247203+00:00",
+      "action": "created"
+    }
+  ]
+}
