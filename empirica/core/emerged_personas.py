@@ -386,3 +386,198 @@ def sentinel_match_persona(
 
     scored.sort(key=lambda x: x[0], reverse=True)
     return scored[0][1] if scored else None
+
+
+def match_or_decompose(
+    task: str,
+    session_id: str,
+    grounding_vectors: Dict[str, float] = None,
+    min_reputation: float = 0.3,
+    store_path: str = None
+) -> Dict[str, Any]:
+    """
+    Attempt to match a persona for a task. If no match, trigger decomposition.
+
+    This is the adaptive growth path (immune system analog):
+    1. Try to match existing persona via sentinel_match_persona
+    2. If match found → return persona config for agent routing
+    3. If no match → return decomposition directive for the caller
+       (parallel branch investigation → extract emerged persona → embed → regenerate)
+
+    Args:
+        task: Task description to match
+        session_id: Current session for context
+        grounding_vectors: Current epistemic state
+        min_reputation: Minimum reputation threshold
+        store_path: Custom persona store path
+
+    Returns:
+        Dict with either:
+        - {"matched": True, "persona": EmergedPersona, "agent_name": str}
+        - {"matched": False, "decompose": True, "task": str, "reason": str}
+    """
+    persona = sentinel_match_persona(
+        task=task,
+        grounding_vectors=grounding_vectors,
+        min_reputation=min_reputation,
+        store_path=store_path
+    )
+
+    if persona:
+        # Convert persona_id to agent name format
+        agent_name = persona.persona_id.replace("_", "-")
+        logger.info(
+            f"Persona matched: {persona.name} (rep={persona.reputation_score:.2f}) "
+            f"for task: {task[:50]}"
+        )
+        return {
+            "matched": True,
+            "persona": persona.to_dict(),
+            "agent_name": agent_name,
+            "persona_id": persona.persona_id,
+            "reputation": persona.reputation_score,
+            "domains": persona.task_domains
+        }
+
+    # No match — signal decomposition needed
+    logger.info(
+        f"No persona match for task: {task[:50]}. "
+        f"Decomposition recommended (parallel branch → emerged persona)."
+    )
+    return {
+        "matched": False,
+        "decompose": True,
+        "task": task,
+        "session_id": session_id,
+        "reason": "No existing persona matches this task's domain profile. "
+                  "A parallel investigation branch should explore this task, "
+                  "and the resulting epistemic pattern will be extracted as "
+                  "a new emerged persona for future use.",
+        "suggested_action": "empirica investigate --session-id {session_id} "
+                          "--investigation-goal \"{task}\" --turtle",
+        "post_action": "After investigation completes, run: "
+                      "python generate_agents.py --force "
+                      "to regenerate agent definitions from new personas."
+    }
+
+
+def convert_emerged_to_persona_json(emerged: EmergedPersona) -> Dict[str, Any]:
+    """
+    Convert an EmergedPersona to the standard persona JSON format
+    used by generate_agents.py for Claude Code agent generation.
+
+    This bridges the gap between emerged personas (extracted from
+    investigation branches) and persona profiles (.empirica/personas/*.json).
+    """
+    # Map emerged persona vectors to epistemic config priors
+    priors = {}
+    for key in ["engagement", "know", "do", "context", "clarity", "coherence",
+                "signal", "density", "state", "change", "completion", "impact", "uncertainty"]:
+        if key in emerged.final_vectors:
+            priors[key] = emerged.final_vectors[key]
+        elif key in emerged.initial_vectors:
+            priors[key] = emerged.initial_vectors[key]
+        else:
+            priors[key] = 0.5  # Default
+
+    # Derive thresholds from convergence characteristics
+    thresholds = {
+        "uncertainty_trigger": min(emerged.convergence_threshold * 10, 0.4),
+        "confidence_to_proceed": max(0.7, emerged.reputation_score),
+        "signal_quality_min": 0.6,
+        "engagement_gate": 0.6
+    }
+
+    # Determine capabilities from reputation and scope
+    can_modify = emerged.reputation_score >= 0.6
+    can_external = emerged.reputation_score >= 0.7
+
+    return {
+        "persona_id": emerged.persona_id,
+        "name": emerged.name,
+        "version": "1.0.0-emerged",
+        "signing_identity": {
+            "user_id": "emerged",
+            "identity_name": emerged.persona_id,
+            "public_key": "",
+            "reputation_score": emerged.reputation_score
+        },
+        "epistemic_config": {
+            "priors": priors,
+            "thresholds": thresholds,
+            "weights": {
+                "foundation": 0.30,
+                "comprehension": 0.30,
+                "execution": 0.25,
+                "engagement": 0.15
+            },
+            "focus_domains": emerged.task_domains
+        },
+        "capabilities": {
+            "can_spawn_subpersonas": False,
+            "can_call_external_tools": can_external,
+            "can_modify_code": can_modify,
+            "can_read_files": True,
+            "requires_human_approval": False,
+            "max_investigation_depth": max(emerged.loops_to_converge, 3),
+            "restricted_operations": []
+        },
+        "sentinel_config": {
+            "reporting_frequency": "per_phase",
+            "escalation_triggers": [],
+            "timeout_minutes": 30,
+            "max_cost_usd": 5.0,
+            "requires_sentinel_approval_before_act": False
+        },
+        "metadata": {
+            "created_by": "emerged",
+            "created_at": emerged.extracted_at,
+            "modified_at": emerged.extracted_at,
+            "description": f"Auto-extracted from session {emerged.source_session_id[:8]}",
+            "tags": emerged.task_keywords[:5],
+            "parent_persona": None,
+            "derived_from": emerged.source_branch_id,
+            "verified_sessions": emerged.uses_count
+        }
+    }
+
+
+def promote_emerged_to_personas_dir(
+    persona_id: str,
+    personas_dir: str = None,
+    store_path: str = None
+) -> Optional[str]:
+    """
+    Promote an emerged persona to the standard personas directory,
+    making it available for agent generation.
+
+    Args:
+        persona_id: ID of the emerged persona to promote
+        personas_dir: Target directory (default: .empirica/personas/)
+        store_path: Emerged persona store path
+
+    Returns:
+        Path to the written persona JSON file, or None on failure
+    """
+    store = EmergedPersonaStore(store_path)
+    emerged = store.load(persona_id)
+
+    if not emerged:
+        logger.warning(f"Emerged persona not found: {persona_id}")
+        return None
+
+    # Convert to standard format
+    persona_json = convert_emerged_to_persona_json(emerged)
+
+    # Write to personas directory
+    if personas_dir is None:
+        personas_dir = str(Path.cwd() / ".empirica" / "personas")
+
+    target_dir = Path(personas_dir)
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    output_path = target_dir / f"{persona_id}.json"
+    output_path.write_text(json.dumps(persona_json, indent=2))
+
+    logger.info(f"Promoted emerged persona to: {output_path}")
+    return str(output_path)
