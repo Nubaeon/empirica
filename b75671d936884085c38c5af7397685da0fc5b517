@@ -1,0 +1,16 @@
+{
+  "finding_id": "38c0df64-faea-4ae4-8908-fc1888c5c99f",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "b80d64cb-0251-4a0d-8bbb-cf458adc9f05",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T15:34:17.303787+00:00",
+  "finding": "Empirica's core differentiator (outreach): The only system that epistemically assesses tasks, selects the right specialized agent based on knowledge-fit, remembers what worked in Qdrant, and gates every action through a confidence-based sentinel. Three-part moat: epistemic selection + persistent memory + confidence gating. One-liner: 'Empirica knows which AI expert to deploy, remembers what worked, and won't let them act until they're confident enough.'",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Empirica's core differentiator (outreach): The only system that epistemically assesses tasks, selects the right specialized agent based on knowledge-fit, remembers what worked in Qdrant, and gates every action through a confidence-based sentinel. Three-part moat: epistemic selection + persistent memory + confidence gating. One-liner: 'Empirica knows which AI expert to deploy, remembers what worked, and won't let them act until they're confident enough.'",
+    "impact": 0.9
+  }
+}
