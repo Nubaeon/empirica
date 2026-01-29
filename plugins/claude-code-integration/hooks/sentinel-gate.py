@@ -56,8 +56,10 @@ SAFE_BASH_PREFIXES = (
     # Environment inspection
     'pwd', 'echo ', 'printf ', 'env', 'printenv', 'set',
     'whoami', 'id', 'hostname', 'uname', 'date', 'cal',
-    # Empirica CLI (has its own auth)
-    'empirica ',
+    # Empirica CLI: read-only commands only (tiered whitelist - see is_safe_empirica_command)
+    # NOTE: State-changing empirica commands (preflight-submit, goals-create, etc.)
+    # are handled separately in is_safe_empirica_command() with loop-state checks.
+    # Blanket 'empirica ' whitelist removed to prevent prompt injection bypass.
     # Package inspection (not install)
     'pip show', 'pip list', 'pip freeze', 'pip index',
     'npm list', 'npm ls', 'npm view', 'npm info',
@@ -116,6 +118,93 @@ def is_empirica_paused() -> bool:
     This is the cheapest check - no DB needed. Called before any other logic.
     """
     return PAUSE_FILE.exists()
+
+
+# Tiered Empirica CLI whitelist (replaces blanket 'empirica ' whitelist)
+# Tier 1: Read-only commands - always safe, no state changes
+EMPIRICA_TIER1_PREFIXES = (
+    'empirica epistemics-list', 'empirica epistemics-show',
+    'empirica goals-list', 'empirica get-goal-progress', 'empirica get-goal-subtasks',
+    'empirica project-bootstrap', 'empirica project-search',
+    'empirica session-snapshot', 'empirica get-session-summary',
+    'empirica get-epistemic-state', 'empirica get-calibration-report',
+    'empirica monitor', 'empirica check-drift',
+    'empirica workspace-overview', 'empirica workspace-map',
+    'empirica efficiency-report', 'empirica skill-suggest',
+    'empirica goals-ready', 'empirica list-goals',
+    'empirica query-mistakes', 'empirica query-handoff',
+    'empirica discover-goals', 'empirica list-identities',
+    'empirica issue-list',
+    'empirica --help', 'empirica -h',
+    'empirica version',
+)
+
+# Tier 2: State-changing commands - allowed (these ARE the epistemic workflow)
+# These need to pass through to enable PREFLIGHT/CHECK/POSTFLIGHT and breadcrumbs.
+# The Sentinel already gates praxic actions via vectors - these commands
+# are HOW the AI satisfies those gates.
+EMPIRICA_TIER2_PREFIXES = (
+    'empirica preflight-submit', 'empirica check-submit', 'empirica postflight-submit',
+    'empirica finding-log', 'empirica unknown-log', 'empirica deadend-log',
+    'empirica mistake-log', 'empirica log-mistake',
+    'empirica goals-create', 'empirica goals-complete', 'empirica goals-add-subtask',
+    'empirica goals-complete-subtask', 'empirica goals-claim',
+    'empirica session-create', 'empirica session-end',
+    'empirica create-goal', 'empirica add-subtask', 'empirica complete-subtask',
+    'empirica create-handoff', 'empirica resume-goal',
+    'empirica unknown-resolve', 'empirica issue-handoff',
+    'empirica project-init', 'empirica project-embed',
+    'empirica create-git-checkpoint', 'empirica load-git-checkpoint',
+    'empirica memory-compact', 'empirica resume-previous-session',
+    'empirica agent-spawn', 'empirica investigate',
+    'empirica refdoc-add',
+)
+
+
+def is_safe_empirica_command(command: str) -> bool:
+    """Tiered whitelist for empirica CLI commands.
+
+    Tier 1: Read-only (always allowed)
+    Tier 2: State-changing (allowed - these are the epistemic workflow itself)
+
+    Toggle operations are NOT whitelisted here - they use self-exemption
+    in the main gate logic to prevent prompt injection bypass.
+    """
+    cmd = command.lstrip()
+    if not cmd.startswith('empirica '):
+        return False
+
+    # Tier 1: Read-only - always safe
+    for prefix in EMPIRICA_TIER1_PREFIXES:
+        if cmd.startswith(prefix):
+            return True
+
+    # Tier 2: State-changing - allowed (these enable the workflow)
+    for prefix in EMPIRICA_TIER2_PREFIXES:
+        if cmd.startswith(prefix):
+            return True
+
+    return False
+
+
+def is_toggle_command(command: str) -> Optional[str]:
+    """Detect if a command is writing or removing the Sentinel pause file.
+
+    Returns 'pause' if writing, 'unpause' if removing, None otherwise.
+    This enables Sentinel self-exemption for the toggle without
+    whitelisting it as a general safe command.
+    """
+    cmd = command.lstrip()
+
+    # Detect pause file write (python3 -c "..." writing sentinel_paused)
+    if 'sentinel_paused' in cmd and ('write_text' in cmd or 'open(' in cmd):
+        return 'pause'
+
+    # Detect pause file removal
+    if cmd.startswith('rm ') and ('sentinel_paused' in cmd):
+        return 'unpause'
+
+    return None
 
 
 def respond(decision, reason=""):
@@ -227,8 +316,8 @@ def is_safe_bash_command(tool_input: dict) -> bool:
     if not command:
         return False
 
-    # EMPIRICA CLI: Always safe - needs stdin for JSON
-    if command.lstrip().startswith('empirica '):
+    # EMPIRICA CLI: Tiered whitelist (not blanket - prevents prompt injection bypass)
+    if is_safe_empirica_command(command):
         return True
 
     # Check for dangerous shell operators (command injection prevention)
@@ -441,6 +530,20 @@ def main():
             postflight_ts = float(postflight_timestamp)
 
             if postflight_ts > preflight_ts:
+                # SELF-EXEMPTION: Allow toggle commands when loop is closed
+                # This is the only way to write/remove the pause file.
+                # Prevents prompt injection: toggle ONLY works when loop is genuinely closed.
+                if tool_name == 'Bash':
+                    toggle_action = is_toggle_command(tool_input.get('command', ''))
+                    if toggle_action == 'pause':
+                        db.close()
+                        respond("allow", "Sentinel self-exemption: pause toggle (loop closed)")
+                        sys.exit(0)
+                    elif toggle_action == 'unpause':
+                        db.close()
+                        respond("allow", "Sentinel self-exemption: unpause toggle")
+                        sys.exit(0)
+
                 db.close()
                 respond("deny", f"Epistemic loop closed (POSTFLIGHT completed). Run new PREFLIGHT to start next goal.")
                 sys.exit(0)
