@@ -1,0 +1,16 @@
+{
+  "finding_id": "116a0563-d844-4c5d-9321-13037853848b",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "782f2ed0",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T17:33:58.886818+00:00",
+  "finding": "Empirica updated from 1.4.3 to 1.4.4. New: atomic writes, IMMEDIATE isolation, single sentinel connection (race condition fixes). Use git config pull.rebase true for future pulls.",
+  "impact": 0.8,
+  "goal_id": "c5981e2f-29f9-4758-b781-13747507f498",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Empirica updated from 1.4.3 to 1.4.4. New: atomic writes, IMMEDIATE isolation, single sentinel connection (race condition fixes). Use git config pull.rebase true for future pulls.",
+    "impact": 0.8
+  }
+}
