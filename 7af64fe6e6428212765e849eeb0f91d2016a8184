@@ -1,0 +1,28 @@
+{
+  "goal_id": "f5599d39-e775-402e-9135-641eb3bcb30f",
+  "session_id": "47784a70-c610-4a31-865b-917932572e59",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-29T15:10:43.981989+00:00",
+  "goal_data": {
+    "objective": "Secure Sentinel toggle: replace blanket empirica CLI whitelist with tiered permissions, add self-exemption for pause file write when loop is closed",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-29T15:10:43.982006+00:00",
+      "action": "created"
+    }
+  ]
+}
