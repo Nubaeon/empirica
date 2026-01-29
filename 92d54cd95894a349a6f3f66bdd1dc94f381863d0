@@ -1,0 +1,16 @@
+{
+  "finding_id": "c679c521-cc86-43ee-962c-5a04ee309170",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "02655d0c-9e47-4593-aaa8-3c53e7f6fea1",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-29T20:57:28.120480+00:00",
+  "finding": "GitHub fork workflow not appropriate for this team. Philipp has pull-only on Nubaeon/empirica. Correct pattern: create GitHub issue with implementation spec, David implements, Philipp pulls from develop and pip installs.",
+  "impact": 0.6,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "GitHub fork workflow not appropriate for this team. Philipp has pull-only on Nubaeon/empirica. Correct pattern: create GitHub issue with implementation spec, David implements, Philipp pulls from develop and pip installs.",
+    "impact": 0.6
+  }
+}
