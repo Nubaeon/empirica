@@ -1,0 +1,13 @@
+{
+  "unknown_id": "c904a935-81e2-4bfe-95c3-0f5140dcac34",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T13:36:46.443750+00:00",
+  "unknown": "How does Claude Code's agent description matching work internally? Is it purely keyword-based from the description field, or does it also consider the examples in frontmatter? Understanding the matching algorithm determines how to write competitive agent descriptions.",
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
