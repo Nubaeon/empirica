@@ -1,0 +1,13 @@
+{
+  "unknown_id": "ebc8906e-1fad-48f8-b83b-4b4b69a5051a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9c5decc7-6648-4fd0-b1d7-58c3a01c4d43",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T16:06:30.223590+00:00",
+  "unknown": "How would cross-agent calibration work via A2A? An agent claiming know:0.99 with poor calibration is indistinguishable from a well-calibrated agent at know:0.70 at the protocol level. Need external verification mechanism.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
