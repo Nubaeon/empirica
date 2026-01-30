@@ -1,0 +1,31 @@
+{
+  "goal_id": "8e094513-34d5-42fb-b356-336292e877ff",
+  "session_id": "15877882-008f-48d3-8c7b-427497219830",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-30T15:56:10.152676+00:00",
+  "goal_data": {
+    "objective": "Wire blindspot detector into CHECK phase and add CLI commands - make it actually run during CASCADE workflow",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "blindspot-scan CLI command works standalone",
+      "CHECK phase automatically includes blindspot predictions in output",
+      "Plugin registration wires observer on startup",
+      "Training data collection triggers on POSTFLIGHT"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-30T15:56:10.152687+00:00",
+      "action": "created"
+    }
+  ]
+}
