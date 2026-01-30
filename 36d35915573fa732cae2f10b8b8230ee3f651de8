@@ -1,0 +1,16 @@
+{
+  "finding_id": "5e6ba110-2718-44e6-91f2-2a503a4d1f75",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T15:12:45.615887+00:00",
+  "finding": "Sikka 'Hallucination Stations' paper (arXiv:2507.07505) proves single transformer forward pass bounded at O(N\u00b2\u00b7d) - correct but trivially obvious for probabilistic systems. The headline 'AI agents mathematically incapable' conflates bare LLM with agentic systems. Paper's own author acknowledges scaffolding overcomes limitations. CASCADE (PREFLIGHT\u2192CHECK\u2192POSTFLIGHT) is the architectural answer: decompose high-complexity tasks into measurable chunks within quadratic bound, measure epistemic state at each step, gate on calibrated confidence, validate against external criteria. This is not a workaround \u2014 it's why epistemic measurement infrastructure is essential, not decorative.",
+  "impact": 0.8,
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sikka 'Hallucination Stations' paper (arXiv:2507.07505) proves single transformer forward pass bounded at O(N\u00b2\u00b7d) - correct but trivially obvious for probabilistic systems. The headline 'AI agents mathematically incapable' conflates bare LLM with agentic systems. Paper's own author acknowledges scaffolding overcomes limitations. CASCADE (PREFLIGHT\u2192CHECK\u2192POSTFLIGHT) is the architectural answer: decompose high-complexity tasks into measurable chunks within quadratic bound, measure epistemic state at each step, gate on calibrated confidence, validate against external criteria. This is not a workaround \u2014 it's why epistemic measurement infrastructure is essential, not decorative.",
+    "impact": 0.8
+  }
+}
