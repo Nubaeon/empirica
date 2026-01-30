@@ -1,0 +1,16 @@
+{
+  "finding_id": "e9e18a6a-7679-4b11-a89b-f8dc7f69afbf",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T13:36:26.217431+00:00",
+  "finding": "skill_suggest MCP tool exists but is rudimentary \u2014 just lists local YAML skill files and online sources. No vector-based assessment, no agent recommendation, no task-to-tool matching. This is the natural extension point for the Epistemic Tool Router.",
+  "impact": 0.8,
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "skill_suggest MCP tool exists but is rudimentary \u2014 just lists local YAML skill files and online sources. No vector-based assessment, no agent recommendation, no task-to-tool matching. This is the natural extension point for the Epistemic Tool Router.",
+    "impact": 0.8
+  }
+}
