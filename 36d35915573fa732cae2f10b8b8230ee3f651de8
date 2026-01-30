@@ -1,0 +1,16 @@
+{
+  "finding_id": "2c87044b-4654-48d9-84ab-584a0fe0ae0e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T13:31:47.109770+00:00",
+  "finding": "The skill SKILL.md mentions 'EMPIRICA_EPISTEMIC_MODE=true to enable VectorRouter' on line 318 \u2014 this suggests a VectorRouter concept already exists or was planned. Need to investigate if this is implemented or just documented aspirationally. Also: skills are lazy-loaded based on the 'description' field in frontmatter \u2014 Claude only reads the full skill when the description matches. This means the description is the ONLY thing Claude sees by default.",
+  "impact": 0.8,
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "The skill SKILL.md mentions 'EMPIRICA_EPISTEMIC_MODE=true to enable VectorRouter' on line 318 \u2014 this suggests a VectorRouter concept already exists or was planned. Need to investigate if this is implemented or just documented aspirationally. Also: skills are lazy-loaded based on the 'description' field in frontmatter \u2014 Claude only reads the full skill when the description matches. This means the description is the ONLY thing Claude sees by default.",
+    "impact": 0.8
+  }
+}
