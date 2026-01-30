@@ -1109,6 +1109,59 @@ def handle_check_submit_command(args):
                 } if SentinelHooks.is_enabled() else None
             }
 
+            # BLINDSPOT SCAN: Run negative-space inference on knowledge topology
+            # Surfaces unknown unknowns from artifact patterns. Optional - only runs
+            # if empirica-prediction is installed. Non-fatal on any error.
+            try:
+                from empirica_prediction.blindspots.predictor import BlindspotPredictor
+                project_id = (bootstrap_result or {}).get('project_id') or bootstrap_status.get('project_id')
+                if project_id:
+                    bs_predictor = BlindspotPredictor(project_id=project_id)
+                    bs_report = bs_predictor.predict(
+                        session_id=session_id,
+                        max_predictions=5,
+                        min_confidence=0.5,
+                    )
+                    bs_predictor.close()
+
+                    if bs_report.predictions:
+                        result["blindspots"] = {
+                            "count": len(bs_report.predictions),
+                            "critical_count": bs_report.critical_count,
+                            "high_count": bs_report.high_count,
+                            "uncertainty_adjustment": bs_report.uncertainty_adjustment,
+                            "missing_layers": bs_report.missing_layers,
+                            "predictions": [
+                                {
+                                    "severity": p.severity,
+                                    "description": p.description,
+                                    "suggested_action": p.suggested_action,
+                                    "confidence": p.confidence,
+                                }
+                                for p in bs_report.predictions[:5]
+                            ],
+                        }
+
+                        # Critical blindspots override decision to investigate
+                        if bs_report.critical_count > 0 and decision == "proceed":
+                            result["blindspots"]["override"] = {
+                                "original_decision": decision,
+                                "new_decision": "investigate",
+                                "reason": f"{bs_report.critical_count} critical blindspot(s) detected"
+                            }
+                            decision = "investigate"
+                            result["decision"] = decision
+
+                        logger.info(f"Blindspot scan: {len(bs_report.predictions)} predictions, "
+                                    f"uncertainty_adj={bs_report.uncertainty_adjustment}")
+                    else:
+                        result["blindspots"] = {"count": 0, "note": "No blindspots detected"}
+            except ImportError:
+                pass  # empirica-prediction not installed
+            except Exception as e:
+                logger.debug(f"Blindspot scan skipped: {e}")
+                result["blindspots"] = {"count": 0, "error": str(e)}
+
             # AUTO-POSTFLIGHT TRIGGER: Check if goal completion detected
             # Uses completion and impact vectors to determine if a goal was completed
             # This closes the epistemic loop automatically without user intervention

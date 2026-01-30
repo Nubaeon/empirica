@@ -473,6 +473,23 @@ async def list_tools() -> List[types.Tool]:
             }
         ),
 
+        # ========== Blindspot Detection (Direct Python) ==========
+
+        types.Tool(
+            name="blindspot_scan",
+            description="Scan for epistemic blindspots (unknown unknowns) by analyzing the negative space of knowledge topology. Returns predicted gaps in understanding based on artifact patterns. Requires empirica-prediction plugin.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_id": {"type": "string", "description": "Project ID (auto-detects if not provided)"},
+                    "session_id": {"type": "string", "description": "Session ID for context"},
+                    "max_predictions": {"type": "integer", "description": "Maximum predictions to return (default: 10)"},
+                    "min_confidence": {"type": "number", "description": "Minimum confidence threshold (default: 0.4)"},
+                },
+                "required": []
+            }
+        ),
+
         # ========== Epistemic Monitoring (Route to CLI) ==========
 
         types.Tool(
@@ -964,6 +981,10 @@ async def _call_tool_impl(name: str, arguments: dict) -> List[types.TextContent]
         elif name == "vision_log":
             return await route_to_cli("vision-log", arguments)
 
+        # Category 2b: Blindspot detection (direct Python, optional dependency)
+        elif name == "blindspot_scan":
+            return await handle_blindspot_scan_direct(arguments)
+
         # Category 3: All other tools (route to CLI)
         else:
             return await route_to_cli(name, arguments)
@@ -997,6 +1018,85 @@ async def _call_tool_impl(name: str, arguments: dict) -> List[types.TextContent]
 # ============================================================================
 # Direct Python Handlers (AI-Centric)
 # ============================================================================
+
+async def handle_blindspot_scan_direct(arguments: dict) -> List[types.TextContent]:
+    """Scan for epistemic blindspots using the prediction plugin.
+
+    Direct Python handler - imports empirica-prediction at runtime.
+    Returns topology analysis and predicted unknown unknowns.
+    """
+    try:
+        from empirica_prediction.blindspots.predictor import BlindspotPredictor
+    except ImportError:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "ok": False,
+                "error": "empirica-prediction not installed. Install with: pip install -e ../empirica-prediction",
+                "tool": "blindspot_scan"
+            }, indent=2)
+        )]
+
+    try:
+        project_id = arguments.get("project_id")
+
+        # Auto-detect project from DB if not provided
+        if not project_id:
+            from pathlib import Path
+            import sqlite3
+            db_path = Path.cwd() / ".empirica" / "sessions" / "sessions.db"
+            if db_path.exists():
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cwd_name = Path.cwd().name
+                cursor.execute("""
+                    SELECT id FROM projects
+                    WHERE name LIKE ? OR repos LIKE ?
+                    ORDER BY last_activity_timestamp DESC LIMIT 1
+                """, (f"%{cwd_name}%", f"%{cwd_name}%"))
+                row = cursor.fetchone()
+                conn.close()
+                if row:
+                    project_id = row[0]
+
+        if not project_id:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "ok": False,
+                    "error": "Could not determine project ID. Use --project-id or run from a project directory."
+                }, indent=2)
+            )]
+
+        predictor = BlindspotPredictor(project_id=project_id)
+        report = predictor.predict(
+            session_id=arguments.get("session_id"),
+            max_predictions=arguments.get("max_predictions", 10),
+            min_confidence=arguments.get("min_confidence", 0.4),
+        )
+        predictor.close()
+
+        result = {
+            "ok": True,
+            "project_id": report.project_id,
+            "blindspot_count": len(report.predictions),
+            "critical_count": report.critical_count,
+            "high_count": report.high_count,
+            "uncertainty_adjustment": report.uncertainty_adjustment,
+            "topology_summary": report.topology_summary,
+            "covered_layers": report.covered_layers,
+            "missing_layers": report.missing_layers,
+            "predictions": [p.to_dict() for p in report.predictions],
+        }
+
+        return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
+
+    except Exception as e:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({"ok": False, "error": str(e), "tool": "blindspot_scan"}, indent=2)
+        )]
+
 
 async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
     """Handle create_goal directly in Python (no CLI conversion)
