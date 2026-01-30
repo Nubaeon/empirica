@@ -1,0 +1,16 @@
+{
+  "finding_id": "0b380593-5078-4468-9770-f25c4a77ab63",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a9063529-1a40-4b53-95e0-7d8c6c9a03d2",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T13:02:39.111799+00:00",
+  "finding": "Theoretical grounding for blindspot detector: Friston's free-energy principle and predictive coding establish that confabulation is structural in prediction-based systems (biological and artificial). Hallucination = gap-filling with most coherent inference. Therefore: if you can map the gaps (negative space in knowledge topology), you can predict WHERE confabulation will occur. Empirica's epistemic vectors (uncertainty, know, signal, density) already measure confabulation-likelihood conditions. The blindspot detector extends this by predicting the LOCATION of likely confabulation, not just the probability. One-liner: 'You can't stop a prediction engine from guessing, but you can predict where its guesses are most likely to be wrong.'",
+  "impact": 0.95,
+  "goal_id": "fa1f0fbc-f6de-4fa7-b412-edc7b544e881",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Theoretical grounding for blindspot detector: Friston's free-energy principle and predictive coding establish that confabulation is structural in prediction-based systems (biological and artificial). Hallucination = gap-filling with most coherent inference. Therefore: if you can map the gaps (negative space in knowledge topology), you can predict WHERE confabulation will occur. Empirica's epistemic vectors (uncertainty, know, signal, density) already measure confabulation-likelihood conditions. The blindspot detector extends this by predicting the LOCATION of likely confabulation, not just the probability. One-liner: 'You can't stop a prediction engine from guessing, but you can predict where its guesses are most likely to be wrong.'",
+    "impact": 0.95
+  }
+}
