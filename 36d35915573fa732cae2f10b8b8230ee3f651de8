@@ -1,0 +1,16 @@
+{
+  "finding_id": "5d0099b4-eede-4651-89fc-64cd459b6ff6",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a9063529-1a40-4b53-95e0-7d8c6c9a03d2",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T11:26:45.618492+00:00",
+  "finding": "Tailscale cross-tailnet solution: `tailscale switch` is the correct approach for cross-user collaboration. Instead of node sharing (which creates surgically-excluded packet filter entries), the external user joins your tailnet directly via `tailscale login` with your tailnet's URL, then uses `tailscale switch` to move between their own tailnet and yours. This makes them a full member, packet filter includes them, SSH works normally. Philipp's new IP on our tailnet: 100.100.3.125 (vs old shared IP 100.79.215.20 which was excluded).",
+  "impact": 1.0,
+  "goal_id": "ea9a80c4-ba88-47ba-8787-cc0dbc1a586c",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Tailscale cross-tailnet solution: `tailscale switch` is the correct approach for cross-user collaboration. Instead of node sharing (which creates surgically-excluded packet filter entries), the external user joins your tailnet directly via `tailscale login` with your tailnet's URL, then uses `tailscale switch` to move between their own tailnet and yours. This makes them a full member, packet filter includes them, SSH works normally. Philipp's new IP on our tailnet: 100.100.3.125 (vs old shared IP 100.79.215.20 which was excluded).",
+    "impact": 1.0
+  }
+}
