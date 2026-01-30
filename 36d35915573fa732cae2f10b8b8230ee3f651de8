@@ -1,0 +1,31 @@
+{
+  "goal_id": "1b34eb6e-5c12-4d32-9199-782543ba45f4",
+  "session_id": "15877882-008f-48d3-8c7b-427497219830",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-30T17:55:15.709338+00:00",
+  "goal_data": {
+    "objective": "Add blindspot scanning to MCP check-submit tool so predictions surface automatically during CHECK phase in Claude Code",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "check-submit MCP tool includes blindspot_predictions in response",
+      "Uncertainty vector auto-adjusted when blindspots detected",
+      "Critical blindspots force investigate decision",
+      "New blindspot-scan MCP tool for standalone use"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-30T17:55:15.709348+00:00",
+      "action": "created"
+    }
+  ]
+}
