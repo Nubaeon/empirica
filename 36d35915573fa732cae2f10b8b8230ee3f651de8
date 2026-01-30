@@ -1,0 +1,16 @@
+{
+  "finding_id": "8a77d73c-7431-4754-9985-816df3e7810f",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T13:36:35.787462+00:00",
+  "finding": "EpistemicMiddleware (epistemic_middleware.py) wraps MCP tool calls with vector assessment but is opt-in (EMPIRICA_EPISTEMIC_MODE=true) and only affects Empirica MCP tools \u2014 NOT Claude Code's decision about which built-in tools/agents to use. The middleware is the wrong layer for tool routing because it runs AFTER Claude has already chosen to call an Empirica MCP tool.",
+  "impact": 0.8,
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "EpistemicMiddleware (epistemic_middleware.py) wraps MCP tool calls with vector assessment but is opt-in (EMPIRICA_EPISTEMIC_MODE=true) and only affects Empirica MCP tools \u2014 NOT Claude Code's decision about which built-in tools/agents to use. The middleware is the wrong layer for tool routing because it runs AFTER Claude has already chosen to call an Empirica MCP tool.",
+    "impact": 0.8
+  }
+}
