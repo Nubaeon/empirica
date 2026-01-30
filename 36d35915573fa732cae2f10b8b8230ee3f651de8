@@ -1,0 +1,16 @@
+{
+  "finding_id": "768f4b05-6aa5-4350-9795-fe702ebe2a56",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9c5decc7-6648-4fd0-b1d7-58c3a01c4d43",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T16:07:30.669819+00:00",
+  "finding": "Concrete integration priority: (1) Add HTTP/SSE transport to Empirica MCP server - makes it runtime-agnostic, any MCP client (ADK, Claude Code, custom) gets epistemic tracking. (2) Define A2A epistemic extension URI (empirica.dev/ext/epistemic-vectors/v1) for inter-agent confidence signaling. (3) Prototype ADK agent with CASCADE workflow (PREFLIGHT at task start, CHECK before action, POSTFLIGHT after completion) using Gemini models to validate cross-model epistemic measurement.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Concrete integration priority: (1) Add HTTP/SSE transport to Empirica MCP server - makes it runtime-agnostic, any MCP client (ADK, Claude Code, custom) gets epistemic tracking. (2) Define A2A epistemic extension URI (empirica.dev/ext/epistemic-vectors/v1) for inter-agent confidence signaling. (3) Prototype ADK agent with CASCADE workflow (PREFLIGHT at task start, CHECK before action, POSTFLIGHT after completion) using Gemini models to validate cross-model epistemic measurement.",
+    "impact": 0.9
+  }
+}
