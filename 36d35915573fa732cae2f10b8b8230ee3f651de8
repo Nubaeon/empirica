@@ -1,0 +1,16 @@
+{
+  "finding_id": "d31b7856-b18c-483e-9239-1e1021811e4f",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9c5decc7-6648-4fd0-b1d7-58c3a01c4d43",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T16:07:29.663407+00:00",
+  "finding": "Cross-cutting theme across all Google Labs experiments: AI systems that act proactively (CC, GenTabs, Jules) without epistemic self-awareness. Industry data shows 84% AI adoption but only 33% trust - the gap is calibration, not capability. Three characteristics predict high epistemic value: (1) multi-step processing where errors compound (Opal, Agent Designer), (2) proactive action where false positives erode trust (CC, Jules), (3) world modeling where the system must know what it knows (Genie 3). Google builds beliefs without tracking confidence in those beliefs - Empirica fills this exact gap.",
+  "impact": 0.95,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Cross-cutting theme across all Google Labs experiments: AI systems that act proactively (CC, GenTabs, Jules) without epistemic self-awareness. Industry data shows 84% AI adoption but only 33% trust - the gap is calibration, not capability. Three characteristics predict high epistemic value: (1) multi-step processing where errors compound (Opal, Agent Designer), (2) proactive action where false positives erode trust (CC, Jules), (3) world modeling where the system must know what it knows (Genie 3). Google builds beliefs without tracking confidence in those beliefs - Empirica fills this exact gap.",
+    "impact": 0.95
+  }
+}
