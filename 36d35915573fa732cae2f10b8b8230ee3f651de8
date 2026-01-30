@@ -1,0 +1,13 @@
+{
+  "unknown_id": "cd053777-6afb-493b-85f8-cac20ba1a642",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9c5decc7-6648-4fd0-b1d7-58c3a01c4d43",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T16:06:29.305702+00:00",
+  "unknown": "How to add HTTP/SSE transport to Empirica MCP server without breaking existing stdio transport for Claude Code. Need to support both transport modes simultaneously.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
