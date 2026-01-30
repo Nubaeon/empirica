@@ -1,0 +1,11 @@
+{
+  "dead_end_id": "832802ae-4a55-40c2-ab0c-5c6fc8fe7251",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a9063529-1a40-4b53-95e0-7d8c6c9a03d2",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T11:26:47.330775+00:00",
+  "approach": "Tailscale node sharing for cross-user SSH collaboration",
+  "why_failed": "Shared nodes from other tailnets get surgically excluded from the daemon-level packet filter (visible in `tailscale debug netmap` \u2192 PacketFilter). 114 CIDR entries carve out the exact shared IP. No ACL, iptables, or UFW change can override this. The `*` wildcard in ACLs does not include cross-tailnet shared nodes. Use `tailscale switch` (direct join) instead.",
+  "goal_id": "ea9a80c4-ba88-47ba-8787-cc0dbc1a586c",
+  "subtask_id": null
+}
