@@ -1,0 +1,13 @@
+{
+  "unknown_id": "3b1fd71f-40f8-44ec-b7b9-1f3721dd6765",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9c5decc7-6648-4fd0-b1d7-58c3a01c4d43",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T16:06:31.120283+00:00",
+  "unknown": "Can ADK agents meaningfully self-assess epistemic vectors (13 floats) without explicit instructions? LLM-driven agents may need simplified interfaces or wrapper tools that abstract the vector construction.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
