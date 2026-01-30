@@ -1,0 +1,16 @@
+{
+  "finding_id": "92df5ecd-77c6-427c-9f74-2398c575c9d0",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T13:36:36.833860+00:00",
+  "finding": "Three viable insertion points for epistemic tool routing: (1) UserPromptSubmit hook \u2014 runs before Claude starts reasoning, can inject tool/agent recommendations. (2) Enhanced skill_suggest MCP tool \u2014 vector-aware, returns ranked tool/agent recommendations. (3) Sentinel gate PreToolUse \u2014 already runs on every tool, could suggest better alternatives. UserPromptSubmit is most promising because it influences Claude's initial reasoning BEFORE tool selection happens.",
+  "impact": 0.9,
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Three viable insertion points for epistemic tool routing: (1) UserPromptSubmit hook \u2014 runs before Claude starts reasoning, can inject tool/agent recommendations. (2) Enhanced skill_suggest MCP tool \u2014 vector-aware, returns ranked tool/agent recommendations. (3) Sentinel gate PreToolUse \u2014 already runs on every tool, could suggest better alternatives. UserPromptSubmit is most promising because it influences Claude's initial reasoning BEFORE tool selection happens.",
+    "impact": 0.9
+  }
+}
