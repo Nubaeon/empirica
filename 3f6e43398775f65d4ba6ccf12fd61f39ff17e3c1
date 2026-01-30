@@ -1,0 +1,16 @@
+{
+  "finding_id": "a18befc5-f811-48f9-85c9-7ff73d3c7b13",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc47aa2c-138b-4874-a482-c05c00530ede",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T18:04:18.511196+00:00",
+  "finding": "MCP handler project auto-detection works but selects projects by cwd name match, which can return a different project than the session's project_id. The CHECK handler gets project_id from bootstrap_result/bootstrap_status (accurate). The MCP handler does a LIKE query against project name/repos. These are different code paths with different accuracy \u2014 the MCP handler should also accept session_id and look up the project from the session table.",
+  "impact": 0.6,
+  "goal_id": "1b34eb6e-5c12-4d32-9199-782543ba45f4",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "MCP handler project auto-detection works but selects projects by cwd name match, which can return a different project than the session's project_id. The CHECK handler gets project_id from bootstrap_result/bootstrap_status (accurate). The MCP handler does a LIKE query against project name/repos. These are different code paths with different accuracy \u2014 the MCP handler should also accept session_id and look up the project from the session table.",
+    "impact": 0.6
+  }
+}
