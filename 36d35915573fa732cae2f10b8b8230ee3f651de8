@@ -1,0 +1,16 @@
+{
+  "finding_id": "6f74c363-37df-4488-a3f4-d85f80fd2cf9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T13:31:38.889013+00:00",
+  "finding": "Current plugin architecture: 9 agents exist (architecture, security, security-expert, performance, ux, ux-specialist, outreach-scout/search/factscorer). But the agent descriptions are WRONG \u2014 architecture.md says 'Security Expert' in its body despite being named 'architecture'. These were auto-generated from personas but the descriptions don't differentiate them from built-in agents. Claude Code sees these alongside built-in Explore/Plan agents and has no epistemic signal to prefer them.",
+  "impact": 0.85,
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Current plugin architecture: 9 agents exist (architecture, security, security-expert, performance, ux, ux-specialist, outreach-scout/search/factscorer). But the agent descriptions are WRONG \u2014 architecture.md says 'Security Expert' in its body despite being named 'architecture'. These were auto-generated from personas but the descriptions don't differentiate them from built-in agents. Claude Code sees these alongside built-in Explore/Plan agents and has no epistemic signal to prefer them.",
+    "impact": 0.85
+  }
+}
