@@ -1,0 +1,13 @@
+{
+  "unknown_id": "8bf01bd5-3b3c-4cf7-8497-d913f5bdb7f3",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9c5decc7-6648-4fd0-b1d7-58c3a01c4d43",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T15:57:30.116465+00:00",
+  "unknown": "Can ADK agents use external MCP servers directly? Need to verify if our existing Empirica MCP server would work out-of-the-box with ADK or if A2A wrapper is needed",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
