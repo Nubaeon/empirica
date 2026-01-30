@@ -1,0 +1,16 @@
+{
+  "finding_id": "c2442630-d6bc-4260-998b-e3f6ab478f7e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T15:12:47.002815+00:00",
+  "finding": "Statusline cross-pane bleeding root cause: three vectors - (1) generic active_session file fallback when instance-specific file fails, (2) OR instance_id IS NULL in DB queries matching 160+ orphaned legacy sessions, (3) stale active_session_tmux_N files for non-existent panes. Fix: strict pane isolation - instance-specific files only when instance_id known, exact instance_id match in DB (no NULL fallback), cleanup of stale files. This is a recurring issue because each fix addressed symptoms not the NULL fallback root cause.",
+  "impact": 0.7,
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Statusline cross-pane bleeding root cause: three vectors - (1) generic active_session file fallback when instance-specific file fails, (2) OR instance_id IS NULL in DB queries matching 160+ orphaned legacy sessions, (3) stale active_session_tmux_N files for non-existent panes. Fix: strict pane isolation - instance-specific files only when instance_id known, exact instance_id match in DB (no NULL fallback), cleanup of stale files. This is a recurring issue because each fix addressed symptoms not the NULL fallback root cause.",
+    "impact": 0.7
+  }
+}
