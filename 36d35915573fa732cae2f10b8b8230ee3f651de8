@@ -1,0 +1,16 @@
+{
+  "finding_id": "0ba73844-ffb8-4710-afe0-53d2779cf45b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T13:36:25.215624+00:00",
+  "finding": "VectorRouter (empirica-mcp/epistemic/router.py) routes to 5 behavioral MODES (clarify, load_context, investigate, confident/cautious_implementation) but has NO concept of tool/agent/skill selection. This is the key gap \u2014 it knows WHAT to do but not WITH WHAT.",
+  "impact": 0.9,
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "VectorRouter (empirica-mcp/epistemic/router.py) routes to 5 behavioral MODES (clarify, load_context, investigate, confident/cautious_implementation) but has NO concept of tool/agent/skill selection. This is the key gap \u2014 it knows WHAT to do but not WITH WHAT.",
+    "impact": 0.9
+  }
+}
