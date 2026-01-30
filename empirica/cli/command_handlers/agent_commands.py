@@ -280,7 +280,7 @@ def handle_agent_aggregate_command(args) -> dict:
         # Run merge
         merge_result = db.branches.merge_branches(
             session_id=session_id,
-            round_number=investigation_round
+            investigation_round=investigation_round
         )
 
         response = {
