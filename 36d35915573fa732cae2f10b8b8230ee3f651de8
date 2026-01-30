@@ -1,0 +1,16 @@
+{
+  "finding_id": "1e12b84f-d386-4065-80fb-8cae93c9e2a9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T13:30:56.853677+00:00",
+  "finding": "Three architectural layers for tool routing, each with different characteristics: (1) Skills = lazy-loaded on demand based on description matching, Claude doesn't read full context upfront; (2) MCP tools = always available, programmatic, vector-capable; (3) Hooks = event-driven intercepts, can block/redirect, fully programmatic. The user sees making agents show up AS Claude Code agents as the most natural path.",
+  "impact": 0.85,
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Three architectural layers for tool routing, each with different characteristics: (1) Skills = lazy-loaded on demand based on description matching, Claude doesn't read full context upfront; (2) MCP tools = always available, programmatic, vector-capable; (3) Hooks = event-driven intercepts, can block/redirect, fully programmatic. The user sees making agents show up AS Claude Code agents as the most natural path.",
+    "impact": 0.85
+  }
+}
