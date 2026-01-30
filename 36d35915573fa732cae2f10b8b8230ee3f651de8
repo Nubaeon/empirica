@@ -1,0 +1,16 @@
+{
+  "finding_id": "ad3cae57-91f5-4a32-99b1-0c69f1fafab0",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9c5decc7-6648-4fd0-b1d7-58c3a01c4d43",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T16:06:12.479304+00:00",
+  "finding": "A2A Protocol has ZERO native epistemic concepts (confidence, uncertainty, calibration, trust scoring). Confirmed across complete protobuf schema, all spec sections. But the extension mechanism is well-suited: AgentExtension (URI + description + required + params), metadata maps on Task/Message/Artifact (google.protobuf.Struct), and DataPart with custom media_type. Three integration approaches: (A) Static Agent Card extension declaring epistemic capability, (B) Per-message metadata with lightweight vector snapshots, (C) DataPart full epistemic payloads. Extension negotiation via A2A-Extensions HTTP header. Versioned URIs support schema evolution.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "A2A Protocol has ZERO native epistemic concepts (confidence, uncertainty, calibration, trust scoring). Confirmed across complete protobuf schema, all spec sections. But the extension mechanism is well-suited: AgentExtension (URI + description + required + params), metadata maps on Task/Message/Artifact (google.protobuf.Struct), and DataPart with custom media_type. Three integration approaches: (A) Static Agent Card extension declaring epistemic capability, (B) Per-message metadata with lightweight vector snapshots, (C) DataPart full epistemic payloads. Extension negotiation via A2A-Extensions HTTP header. Versioned URIs support schema evolution.",
+    "impact": 0.9
+  }
+}
