@@ -1,0 +1,13 @@
+{
+  "unknown_id": "1833f035-a101-4af6-998f-6d5aa2174f90",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "8aff2e70-90ef-40be-83ea-8e58187ea6f6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T13:36:45.475658+00:00",
+  "unknown": "Can a UserPromptSubmit hook inject context that meaningfully changes which agents Claude Code selects? The hook can add additionalContext but it's unclear if Claude weighs hook-injected agent recommendations over its own built-in agent matching logic.",
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
