@@ -1,0 +1,16 @@
+{
+  "finding_id": "9ddd2107-b144-4fff-9fe0-7d15bbf6dd1d",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "15877882-008f-48d3-8c7b-427497219830",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T15:12:24.517685+00:00",
+  "finding": "Dual integration pattern (EpistemicObserver + SuggestionGenerator) works cleanly. BlindspotObserver listens for CHECK_COMPLETE and POSTFLIGHT_COMPLETE events. On CHECK it runs the scan, on POSTFLIGHT it collects training data. The suggestion generator can independently inject predictions into the SuggestionEngine's CHECK phase.",
+  "impact": 0.8,
+  "goal_id": "aa8cb8fa-414f-44d4-8490-396835d49730",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Dual integration pattern (EpistemicObserver + SuggestionGenerator) works cleanly. BlindspotObserver listens for CHECK_COMPLETE and POSTFLIGHT_COMPLETE events. On CHECK it runs the scan, on POSTFLIGHT it collects training data. The suggestion generator can independently inject predictions into the SuggestionEngine's CHECK phase.",
+    "impact": 0.8
+  }
+}
