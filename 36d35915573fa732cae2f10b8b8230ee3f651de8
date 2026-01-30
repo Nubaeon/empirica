@@ -1,0 +1,16 @@
+{
+  "finding_id": "4b93a38d-da18-41ed-8b3d-f3d1307f7ef8",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9c5decc7-6648-4fd0-b1d7-58c3a01c4d43",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-30T16:06:14.153493+00:00",
+  "finding": "ADK McpToolset is plug-and-play with Empirica MCP server. McpToolset(connection_params=SseConnectionParams(url=...)) discovers tools via list_tools, proxies via call_tool. Supports stdio, SSE, and Streamable HTTP transports. Key gap: Empirica MCP server currently stdio-only, needs HTTP transport for ADK integration. ADK state management (session.state with prefix scoping) can thread Empirica session_id across multi-agent pipelines. tool_filter enables role-based epistemic tool exposure per agent.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "ADK McpToolset is plug-and-play with Empirica MCP server. McpToolset(connection_params=SseConnectionParams(url=...)) discovers tools via list_tools, proxies via call_tool. Supports stdio, SSE, and Streamable HTTP transports. Key gap: Empirica MCP server currently stdio-only, needs HTTP transport for ADK integration. ADK state management (session.state with prefix scoping) can thread Empirica session_id across multi-agent pipelines. tool_filter enables role-based epistemic tool exposure per agent.",
+    "impact": 0.85
+  }
+}
