@@ -186,7 +186,9 @@ An epistemic transaction is a measurement window bounded by PREFLIGHT (BEGIN) an
 - Bounded by coherence of changes, not by goals or time
 - Multiple goals can exist within one transaction
 - One goal can span multiple transactions
-- Compact without POSTFLIGHT = uncaptured state change (implicit rollback)
+- Transactions survive compaction — file-based `transaction_id` tracking persists across sessions
+- A single transaction can span 1..N sessions (PREFLIGHT in session A, POSTFLIGHT in session B)
+- Tracked via `transaction_id` (UUID) stored in all artifact tables and reflexes
 
 ### 4.2 Session
 
@@ -214,9 +216,11 @@ Sessions, goals, and transactions are orthogonal, not hierarchical:
 |---------|------|-----------|--------------------------|
 | **Session** | Temporal | Context windows | No — each is an interval |
 | **Goal** | Structural | Completion criteria | Yes — indefinitely |
-| **Transaction** | Measurement | Coherence of changes | No — state snapshots |
+| **Transaction** | Measurement | Coherence of changes | Yes — file-based tracking survives compaction |
 
-**Dual linkage:** Every artifact carries both `session_id` (when) and `goal_id` (what). This is intentional — don't collapse them.
+**Cardinality:** 1 transaction : 1..N sessions (spans compaction). 1 session : 0..N transactions.
+
+**Triple linkage:** Every artifact carries `session_id` (when), `goal_id` (what), and `transaction_id` (which measurement window). This is intentional — don't collapse them.
 
 ---
 
@@ -391,7 +395,7 @@ The boundary within which a concept applies.
 |-------|----------|---------|
 | **Ecosystem** | All projects, all agents | Cross-project lessons, global calibration |
 | **Project** | One repository / codebase | Goals, findings, unknowns, project config |
-| **Transaction** | One PREFLIGHT→POSTFLIGHT cycle | Vectors, deltas, assessments |
+| **Transaction** | One PREFLIGHT→POSTFLIGHT cycle (can span sessions) | Vectors, deltas, assessments, transaction_id |
 | **Session** | One context window | Session ID, temporal artifact linkage |
 
 ---
@@ -419,8 +423,8 @@ Every Empirica term mapped to its closest developer-familiar equivalent. Where t
 | **PREFLIGHT** | Sprint planning / baseline | Opens epistemic transaction (BEGIN) |
 | **CHECK** | Quality gate / PR review | Auto-computed readiness with bias correction |
 | **POSTFLIGHT** | Retrospective / post-mortem | Closes transaction, captures learning delta (COMMIT) |
-| **Transaction** | Sprint / iteration | Bounded by coherence of changes, not time |
-| **Session** | Context window / connection | Temporal interval, new one on compaction |
+| **Transaction** | Sprint / iteration | Bounded by coherence of changes, not time. Survives compaction. |
+| **Session** | Context window / connection | Temporal interval, new one on compaction. Transactions span sessions. |
 | **Noetic phase** | Research / spike / investigation | Produces noetic artifacts, no code changes |
 | **Praxic phase** | Implementation / execution | Produces code, gated by Sentinel |
 | **CASCADE** | CI/CD pipeline (for knowledge) | Enforces measurement, not deployment |
@@ -429,7 +433,7 @@ Every Empirica term mapped to its closest developer-familiar equivalent. Where t
 | **Tool Router** | Load balancer / request router | Routes by epistemic vectors, not traffic |
 | **Blindspot Detector** | Coverage analyzer / gap analysis | Infers from what's missing, not what's present |
 | **Bootstrap** | Project onboarding / context loading | Depth scales with uncertainty level |
-| **Compact** | Garbage collection / summarization | Creates new session, can lose uncaptured state |
+| **Compact** | Garbage collection / summarization | Creates new session. Transactions survive (file-based tracking). |
 | **Handoff** | Runbook / shift handover | Structured epistemic transfer between agents |
 
 ---
