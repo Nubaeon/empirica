@@ -1,12 +1,31 @@
 """
 Flask application for Empirica Dashboard API
+
+Uses SessionDatabase through the existing abstraction layer.
+Backend selection (SQLite/PostgreSQL) is driven by environment:
+  - EMPIRICA_DB_TYPE=postgresql + EMPIRICA_DB_HOST/PORT/NAME/USER/PASSWORD
+  - Or defaults to SQLite via config.yaml / path_resolver
 """
 
+import os
 import logging
-import json
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 
 logger = logging.getLogger(__name__)
+
+# Module-level database instance (shared across requests)
+_db = None
+
+
+def get_db():
+    """Get or create the shared SessionDatabase instance."""
+    global _db
+    if _db is None:
+        from empirica.data.session_database import SessionDatabase
+        db_type = os.environ.get("EMPIRICA_DB_TYPE")
+        _db = SessionDatabase(db_type=db_type)
+        logger.info(f"Database initialized: dialect={_db.adapter.dialect}")
+    return _db
 
 
 def create_app() -> Flask:
@@ -18,29 +37,48 @@ def create_app() -> Flask:
         static_folder="./static"
     )
 
-    # Enable CORS manually (flask-cors not installed)
+    # CORS: restrict to same-origin in production, allow all in development
+    allowed_origin = os.environ.get("CORS_ORIGIN", "*")
+
     @app.after_request
     def add_cors_headers(response):
         """Add CORS headers to all responses."""
-        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Origin'] = allowed_origin
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         return response
+
+    # Eagerly initialize database (creates tables if needed)
+    try:
+        db = get_db()
+        logger.info(f"API database ready: {db.adapter.dialect}")
+    except Exception as e:
+        logger.warning(f"Database init deferred: {e}")
 
     # Health check endpoint
     @app.route("/health", methods=["GET"])
     def health_check():
         """Return API health status."""
-        return jsonify({"status": "ok", "service": "empirica-api"})
+        try:
+            db = get_db()
+            dialect = db.adapter.dialect
+        except Exception:
+            dialect = "unavailable"
+        return jsonify({
+            "status": "ok",
+            "service": "empirica-api",
+            "backend": dialect
+        })
 
     # Register blueprints
-    from .routes import sessions, deltas, verification, heatmaps, comparison
+    from .routes import sessions, deltas, verification, heatmaps, comparison, project
 
     app.register_blueprint(sessions.bp, url_prefix="/api/v1")
     app.register_blueprint(deltas.bp, url_prefix="/api/v1")
     app.register_blueprint(verification.bp, url_prefix="/api/v1")
     app.register_blueprint(heatmaps.bp, url_prefix="/api/v1")
     app.register_blueprint(comparison.bp, url_prefix="/api/v1")
+    app.register_blueprint(project.bp, url_prefix="/api/v1")
 
     # Global error handler
     @app.errorhandler(Exception)
@@ -54,7 +92,7 @@ def create_app() -> Flask:
             "status_code": 500
         }), 500
 
-    logger.info("✅ Empirica Dashboard API initialized")
+    logger.info("Empirica Dashboard API initialized")
     return app
 
 

@@ -1455,8 +1455,34 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
             result["postflight"] = None
             result["message"] = "POSTFLIGHT not yet completed - run submit_postflight_assessment to enable calibration"
         
+        # Add grounded verification data if available
+        try:
+            gdb = SessionDatabase(db_path=str(get_session_db_path()))
+            gcursor = gdb.conn.cursor()
+            gcursor.execute("""
+                SELECT grounded_vectors, calibration_gaps,
+                       grounded_coverage, overall_calibration_score,
+                       evidence_count, sources_available
+                FROM grounded_verifications
+                WHERE session_id = ?
+                ORDER BY created_at DESC LIMIT 1
+            """, (session_id,))
+            gv_row = gcursor.fetchone()
+            if gv_row:
+                result["grounded_verification"] = {
+                    "grounded_vectors": json.loads(gv_row[0]) if gv_row[0] else {},
+                    "calibration_gaps": json.loads(gv_row[1]) if gv_row[1] else {},
+                    "grounded_coverage": gv_row[2],
+                    "overall_calibration_score": gv_row[3],
+                    "evidence_count": gv_row[4],
+                    "sources": json.loads(gv_row[5]) if gv_row[5] else [],
+                }
+            gdb.close()
+        except Exception:
+            pass  # Grounded data is optional
+
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
-        
+
     except Exception as e:
         return [types.TextContent(
             type="text",
