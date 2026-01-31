@@ -1,0 +1,31 @@
+{
+  "goal_id": "389e3d6d-e48c-44d1-863a-ffb5086d0810",
+  "session_id": "d677a51b-3aee-43e1-bec2-44a4e24e37d6",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-31T12:52:15.055571+00:00",
+  "goal_data": {
+    "objective": "Create canonical Empirica taxonomy as docs/reference/TAXONOMY.md \u2014 the single source of truth for all Empirica concepts, relationships, and developer translations",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All Empirica concepts formally defined",
+      "Relationships between concepts mapped",
+      "Developer Rosetta Stone translation table",
+      "Structured for AI consumption, readable for humans"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-31T12:52:15.055584+00:00",
+      "action": "created"
+    }
+  ]
+}
