@@ -1,0 +1,16 @@
+{
+  "finding_id": "b6285c2a-ecf6-4749-b67c-e33e71b06f3a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "4d9c2903-d568-4be0-933e-a9440b260aac",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T13:31:19.929724+00:00",
+  "finding": "project_dead_ends table was missing from VALID_TABLES allowlist in migration_runner.py (both column_exists and add_column_if_missing functions). This caused migration failures when trying to add columns to that table.",
+  "impact": 0.8,
+  "goal_id": "f4ba30f1-fcf3-4dda-a47b-578015ed8821",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "project_dead_ends table was missing from VALID_TABLES allowlist in migration_runner.py (both column_exists and add_column_if_missing functions). This caused migration failures when trying to add columns to that table.",
+    "impact": 0.8
+  }
+}
