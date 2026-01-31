@@ -1,0 +1,16 @@
+{
+  "finding_id": "077d9796-15ab-48d5-a169-c965815e07d3",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a73c9387-ecc6-4469-8c3f-f30181fff62e",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T16:14:55.528624+00:00",
+  "finding": "Transaction_id implementation confirmed end-to-end working. All 8 integration tests pass: PREFLIGHT writes, CLI reads, all 4 breadcrumb types + reflexes store correctly in DB, POSTFLIGHT clears. Transactions survive compaction (file-based tracking) \u2014 1 transaction : 1..N sessions cardinality.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Transaction_id implementation confirmed end-to-end working. All 8 integration tests pass: PREFLIGHT writes, CLI reads, all 4 breadcrumb types + reflexes store correctly in DB, POSTFLIGHT clears. Transactions survive compaction (file-based tracking) \u2014 1 transaction : 1..N sessions cardinality.",
+    "impact": 0.8
+  }
+}
