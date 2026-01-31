@@ -1,0 +1,16 @@
+{
+  "finding_id": "d9dd4cdc-4c1a-46e4-8f42-ee5766ea58b5",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "b12fddd0-a838-4fae-9f64-6b4f0a2861fc",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T12:50:34.576166+00:00",
+  "finding": "No dedicated taxonomy/glossary/ontology files found in active docs. However, comprehensive conceptual documentation exists: 05_EPISTEMIC_VECTORS_EXPLAINED.md (80+ lines on 13 vectors across 4 tiers), EMPIRICA_EXPLAINED_SIMPLE.md (conceptual overview for humans), PERSONA_PROFILE.md (persona data structures), DATABASE_SCHEMA_UNIFIED.md (36 tables schema). Architecture/README.md provides system layering model. Key reference: docs/reference/CONFIGURATION_REFERENCE.md (28KB, unified config). Most ontology knowledge is distributed across multiple docs rather than centralized.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "No dedicated taxonomy/glossary/ontology files found in active docs. However, comprehensive conceptual documentation exists: 05_EPISTEMIC_VECTORS_EXPLAINED.md (80+ lines on 13 vectors across 4 tiers), EMPIRICA_EXPLAINED_SIMPLE.md (conceptual overview for humans), PERSONA_PROFILE.md (persona data structures), DATABASE_SCHEMA_UNIFIED.md (36 tables schema). Architecture/README.md provides system layering model. Key reference: docs/reference/CONFIGURATION_REFERENCE.md (28KB, unified config). Most ontology knowledge is distributed across multiple docs rather than centralized.",
+    "impact": 0.8
+  }
+}
