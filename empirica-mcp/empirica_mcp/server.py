@@ -640,11 +640,12 @@ async def list_tools() -> List[types.Tool]:
 
         types.Tool(
             name="skill_suggest",
-            description="AI capability discovery - suggest relevant skills for a given task based on project context.",
+            description="AI capability discovery - suggest relevant skills, agents, and tools for a given task. Vector-aware: uses current epistemic state to recommend investigation tools when uncertainty is high, implementation tools when confidence is high, and blindspot scanning when starting new work.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "task": {"type": "string", "description": "Task description to suggest skills for"},
+                    "session_id": {"type": "string", "description": "Session ID to load current epistemic vectors"},
                     "project_id": {"type": "string", "description": "Project ID for context-aware suggestions"},
                     "verbose": {"type": "boolean", "description": "Show detailed suggestions"}
                 },
@@ -985,6 +986,10 @@ async def _call_tool_impl(name: str, arguments: dict) -> List[types.TextContent]
         elif name == "blindspot_scan":
             return await handle_blindspot_scan_direct(arguments)
 
+        # Category 2c: Vector-aware skill/tool suggestion (direct Python)
+        elif name == "skill_suggest":
+            return await handle_skill_suggest_direct(arguments)
+
         # Category 3: All other tools (route to CLI)
         else:
             return await route_to_cli(name, arguments)
@@ -1095,6 +1100,90 @@ async def handle_blindspot_scan_direct(arguments: dict) -> List[types.TextConten
         return [types.TextContent(
             type="text",
             text=json.dumps({"ok": False, "error": str(e), "tool": "blindspot_scan"}, indent=2)
+        )]
+
+
+async def handle_skill_suggest_direct(arguments: dict) -> List[types.TextContent]:
+    """Vector-aware skill/tool suggestion using ToolRouter.
+
+    Combines epistemic vector routing (mode + tool recommendations) with
+    local skill discovery for comprehensive tool guidance.
+    """
+    try:
+        from empirica_mcp.epistemic.tool_router import ToolRouter
+
+        task = arguments.get("task", "")
+        session_id = arguments.get("session_id")
+        verbose = arguments.get("verbose", False)
+
+        # Load epistemic vectors from session if available
+        vectors = {}
+        if session_id:
+            try:
+                import sqlite3
+                from pathlib import Path
+                db_path = Path.cwd() / ".empirica" / "sessions" / "sessions.db"
+                if db_path.exists():
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT vectors FROM epistemic_assessments
+                        WHERE session_id = ?
+                        ORDER BY created_timestamp DESC LIMIT 1
+                    """, (session_id,))
+                    row = cursor.fetchone()
+                    conn.close()
+                    if row:
+                        vectors = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+            except Exception:
+                pass
+
+        result: dict = {"ok": True, "task": task}
+
+        # Vector-aware routing (if we have task text)
+        if task:
+            router = ToolRouter()
+            advice = router.route(vectors or {}, task)
+            result["routing"] = {
+                "mode": advice.mode,
+                "mode_confidence": advice.mode_confidence,
+                "mode_reasoning": advice.mode_reasoning,
+                "tools": [t.to_dict() for t in advice.tools],
+                "context_depth": advice.context_depth,
+            }
+            if verbose:
+                result["routing"]["prompt_text"] = advice.format_for_prompt()
+
+        # Local skill discovery (existing behavior)
+        try:
+            import yaml  # type: ignore
+            from pathlib import Path
+            skills_dir = Path.cwd() / "project_skills"
+            local_skills = []
+            if skills_dir.exists():
+                for f in skills_dir.iterdir():
+                    if f.suffix in (".yaml", ".yml"):
+                        try:
+                            with open(f) as fh:
+                                skill = yaml.safe_load(fh)
+                                if skill:
+                                    local_skills.append({
+                                        "name": skill.get("title", skill.get("id", f.stem)),
+                                        "id": skill.get("id", f.stem),
+                                        "tags": skill.get("tags", []),
+                                    })
+                        except Exception:
+                            pass
+            result["local_skills"] = local_skills
+        except ImportError:
+            result["local_skills"] = []
+
+        return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
+
+    except Exception as e:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({"ok": False, "error": str(e), "tool": "skill_suggest"}, indent=2)
         )]
 
 
@@ -1705,7 +1794,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "issue_handoff": ["issue-handoff"],
         "workspace_overview": ["workspace-overview"],
         "efficiency_report": ["efficiency-report"],
-        "skill_suggest": ["skill-suggest"],
+        # skill_suggest: handled by handle_skill_suggest_direct (vector-aware)
         "workspace_map": ["workspace-map"],
         "unknown_resolve": ["unknown-resolve"],
     }

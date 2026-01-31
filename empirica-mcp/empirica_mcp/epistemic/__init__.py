@@ -20,6 +20,7 @@ from .personality import (
     list_personalities
 )
 from .modes import EpistemicModes
+from .tool_router import ToolRouter, ToolRecommendation, RoutingAdvice
 
 __all__ = [
     "EpistemicStateMachine",
@@ -33,5 +34,8 @@ __all__ = [
     "ADAPTIVE_LEARNER",
     "get_personality",
     "list_personalities",
-    "EpistemicModes"
+    "EpistemicModes",
+    "ToolRouter",
+    "ToolRecommendation",
+    "RoutingAdvice",
 ]
