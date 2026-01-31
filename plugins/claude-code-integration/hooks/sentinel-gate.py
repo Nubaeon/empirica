@@ -594,13 +594,13 @@ def main():
             # Check for evidence of investigation (findings or unknowns logged)
             # Reuse existing db connection (single connection per sentinel invocation)
             cursor.execute("""
-                SELECT COUNT(*) FROM findings
+                SELECT COUNT(*) FROM project_findings
                 WHERE session_id = ? AND timestamp > ? AND timestamp < ?
             """, (session_id, preflight_ts, check_ts))
             findings_count = cursor.fetchone()[0]
 
             cursor.execute("""
-                SELECT COUNT(*) FROM unknowns
+                SELECT COUNT(*) FROM project_unknowns
                 WHERE session_id = ? AND timestamp > ? AND timestamp < ?
             """, (session_id, preflight_ts, check_ts))
             unknowns_count = cursor.fetchone()[0]
