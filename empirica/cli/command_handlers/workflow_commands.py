@@ -1725,6 +1725,33 @@ def handle_postflight_submit_command(args):
             except Exception as e:
                 logger.debug(f"Bayesian belief update failed (non-fatal): {e}")
 
+            # GROUNDED VERIFICATION: Post-test evidence-based calibration (parallel track)
+            # Collects objective evidence → maps to vectors → Bayesian update → trajectory → export
+            grounded_verification = None
+            try:
+                from empirica.core.post_test.grounded_calibration import run_grounded_verification
+
+                db = SessionDatabase()
+                session = db.get_session(session_id)
+                project_id = session.get('project_id') if session else None
+
+                grounded_verification = run_grounded_verification(
+                    session_id=session_id,
+                    postflight_vectors=vectors,
+                    db=db,
+                    project_id=project_id,
+                )
+
+                if grounded_verification:
+                    logger.debug(
+                        f"Grounded verification: {grounded_verification['evidence_count']} evidence items, "
+                        f"coverage={grounded_verification['grounded_coverage']}, "
+                        f"score={grounded_verification['calibration_score']}"
+                    )
+                db.close()
+            except Exception as e:
+                logger.debug(f"Grounded verification skipped (non-fatal): {e}")
+
             # EPISTEMIC TRAJECTORY STORAGE: Store learning deltas to Qdrant (if available)
             trajectory_stored = False
             try:
@@ -1904,6 +1931,7 @@ def handle_postflight_submit_command(args):
                 "calibration_issues_detected": len(calibration_issues),
                 "calibration_issues": calibration_issues if calibration_issues else None,
                 "bayesian_beliefs_updated": len(belief_updates) if belief_updates else 0,
+                "grounded_verification": grounded_verification,
                 "auto_checkpoint_created": True,
                 "persisted": True,
                 "storage_layers": {
@@ -1914,7 +1942,8 @@ def handle_postflight_submit_command(args):
                     "breadcrumbs_calibration": calibration_exported,
                     "episodic_memory": episodic_stored,
                     "epistemic_snapshots": snapshot_created,
-                    "qdrant_memory": memory_synced > 0
+                    "qdrant_memory": memory_synced > 0,
+                    "grounded_verification": grounded_verification is not None
                 },
                 "breadcrumbs": {
                     "calibration_exported": calibration_exported,

@@ -124,3 +124,7 @@ Data Quality Filtering (default):
         help='Generate copy-paste ready calibration table for system prompts')
     calibration_parser.add_argument('--verbose', action='store_true',
         help='Show detailed per-vector analysis')
+    calibration_parser.add_argument('--grounded', action='store_true',
+        help='Include grounded (evidence-based) calibration alongside self-referential')
+    calibration_parser.add_argument('--trajectory', action='store_true',
+        help='Show POSTFLIGHT-to-POSTFLIGHT calibration trend (closing/widening/stable)')

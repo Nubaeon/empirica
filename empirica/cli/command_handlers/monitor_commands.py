@@ -2207,5 +2207,132 @@ def handle_calibration_report_command(args):
             print()
             print("=" * 70)
 
+        # GROUNDED CALIBRATION (--grounded flag)
+        show_grounded = getattr(args, 'grounded', False)
+        show_trajectory = getattr(args, 'trajectory', False)
+
+        if show_grounded or show_trajectory:
+            try:
+                from empirica.data.session_database import SessionDatabase
+                db = SessionDatabase()
+
+                if show_grounded:
+                    from empirica.core.post_test.grounded_calibration import GroundedCalibrationManager
+                    gcm = GroundedCalibrationManager(db)
+                    grounded_beliefs = gcm.get_grounded_beliefs(ai_id)
+                    grounded_adjustments = gcm.get_grounded_adjustments(ai_id)
+                    divergence = gcm.get_calibration_divergence(ai_id)
+
+                    total_grounded_evidence = sum(
+                        b.evidence_count for b in grounded_beliefs.values()
+                    )
+
+                    if output_format == 'json':
+                        grounded_result = {
+                            "grounded_calibration": {
+                                "observations": total_grounded_evidence,
+                                "adjustments": grounded_adjustments,
+                                "divergence": divergence,
+                            }
+                        }
+                        print(json.dumps(grounded_result, indent=2))
+                    else:
+                        print()
+                        print("=" * 70)
+                        print("🔬 GROUNDED CALIBRATION (evidence-based)")
+                        print("=" * 70)
+                        print(f"Total evidence observations: {total_grounded_evidence}")
+                        print()
+
+                        if divergence:
+                            print("📊 SELF-REF vs GROUNDED DIVERGENCE:")
+                            print("-" * 70)
+                            print(f"{'Vector':<15} {'Self-Ref':>10} {'Grounded':>10} {'Gap':>8} {'Evidence':>10}")
+                            print("-" * 70)
+
+                            sorted_div = sorted(
+                                divergence.items(),
+                                key=lambda x: abs(x[1]['gap']),
+                                reverse=True,
+                            )
+                            for vector, data in sorted_div:
+                                gap = data['gap']
+                                sign = "+" if gap >= 0 else ""
+                                prefix = "⚠️ " if abs(gap) >= 0.15 else "   "
+                                print(
+                                    f"{prefix}{vector:<12} "
+                                    f"{data['self_referential_mean']:>10.2f} "
+                                    f"{data['grounded_mean']:>10.2f} "
+                                    f"{sign}{gap:>7.2f} "
+                                    f"{data['grounded_evidence']:>10}"
+                                )
+                            print("-" * 70)
+                        else:
+                            print("   No grounded data yet. Run POSTFLIGHT sessions to collect evidence.")
+
+                        if grounded_adjustments:
+                            print()
+                            print("📋 GROUNDED BIAS CORRECTIONS:")
+                            for vector, adj in sorted(
+                                grounded_adjustments.items(),
+                                key=lambda x: abs(x[1]),
+                                reverse=True,
+                            ):
+                                sign = "+" if adj >= 0 else ""
+                                print(f"   {vector}: {sign}{adj:.2f}")
+                        print()
+
+                if show_trajectory:
+                    from empirica.core.post_test.trajectory_tracker import TrajectoryTracker
+                    tracker = TrajectoryTracker(db)
+                    summary = tracker.get_trajectory_summary(ai_id)
+
+                    if output_format == 'json':
+                        print(json.dumps({"trajectory": summary}, indent=2))
+                    else:
+                        print()
+                        print("=" * 70)
+                        print("📈 CALIBRATION TRAJECTORY")
+                        print("=" * 70)
+
+                        if summary['status'] == 'insufficient_data':
+                            print(f"   {summary['message']}")
+                        else:
+                            print(f"Overall direction: {summary['overall_direction']}")
+                            print(f"Sessions analyzed: {summary['sessions_analyzed']}")
+                            print()
+
+                            trend_summary = summary.get('summary', {})
+                            if trend_summary.get('closing'):
+                                print(f"   ✅ Closing (improving): {', '.join(trend_summary['closing'])}")
+                            if trend_summary.get('widening'):
+                                print(f"   ⚠️  Widening (degrading): {', '.join(trend_summary['widening'])}")
+                            if trend_summary.get('stable'):
+                                print(f"   ➡️  Stable: {', '.join(trend_summary['stable'])}")
+
+                            if verbose:
+                                print()
+                                print("-" * 70)
+                                print(f"{'Vector':<15} {'Direction':>10} {'Slope':>8} {'Recent Gap':>12} {'Mean Gap':>10} {'Points':>8}")
+                                print("-" * 70)
+                                for vector, data in sorted(summary['vectors'].items()):
+                                    print(
+                                        f"   {vector:<12} "
+                                        f"{data['direction']:>10} "
+                                        f"{data['slope']:>8.4f} "
+                                        f"{data['recent_gap']:>12.3f} "
+                                        f"{data['mean_gap']:>10.3f} "
+                                        f"{data['points']:>8}"
+                                    )
+                                print("-" * 70)
+                        print()
+
+                db.close()
+            except Exception as e:
+                if output_format == 'json':
+                    print(json.dumps({"grounded_error": str(e)}, indent=2))
+                else:
+                    print(f"\n   Grounded calibration unavailable: {e}")
+
     except Exception as e:
         handle_cli_error(e, "Calibration Report", getattr(args, 'verbose', False))
