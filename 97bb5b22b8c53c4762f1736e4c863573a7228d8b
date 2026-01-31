@@ -1,0 +1,16 @@
+{
+  "finding_id": "6c073a46-c78e-45bf-82da-cf96886a17df",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "e7568f7b-316f-4654-a107-6d656fdceb16",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T23:44:20.793341+00:00",
+  "finding": "Empirica 1.4.4 installed from source (ahead of PyPI 1.4.2). No pip update needed. Multi-project routing already exists but ai-launcher bypasses it by starting from home dir. Fix is to wire launcher into Empirica workspace features, not rewrite routing.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Empirica 1.4.4 installed from source (ahead of PyPI 1.4.2). No pip update needed. Multi-project routing already exists but ai-launcher bypasses it by starting from home dir. Fix is to wire launcher into Empirica workspace features, not rewrite routing.",
+    "impact": 0.85
+  }
+}
