@@ -1,0 +1,16 @@
+{
+  "finding_id": "9811183c-0055-4f0f-9cfd-28a9a4bc1e00",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "d677a51b-3aee-43e1-bec2-44a4e24e37d6",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T12:54:46.362240+00:00",
+  "finding": "Empirica taxonomy created at docs/reference/TAXONOMY.md. Covers 9 major sections: Artifacts (noetic + praxic), Epistemic State (vectors, assessments, derived measurements), Phases (thinking + workflow), Structural Concepts (transaction, session, goal + three axes), Systems (CASCADE, Sentinel, Immune, Tool Router, Blindspot Detector), Context, Agents, Operations, Properties. Includes Rosetta Stone mapping all terms to developer analogues, concept map diagram, and alphabetical index.",
+  "impact": 0.9,
+  "goal_id": "389e3d6d-e48c-44d1-863a-ffb5086d0810",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Empirica taxonomy created at docs/reference/TAXONOMY.md. Covers 9 major sections: Artifacts (noetic + praxic), Epistemic State (vectors, assessments, derived measurements), Phases (thinking + workflow), Structural Concepts (transaction, session, goal + three axes), Systems (CASCADE, Sentinel, Immune, Tool Router, Blindspot Detector), Context, Agents, Operations, Properties. Includes Rosetta Stone mapping all terms to developer analogues, concept map diagram, and alphabetical index.",
+    "impact": 0.9
+  }
+}
