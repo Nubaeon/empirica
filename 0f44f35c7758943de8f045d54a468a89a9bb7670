@@ -1,0 +1,16 @@
+{
+  "finding_id": "1b1d4c41-626e-4f92-999e-88a89d52f117",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc47aa2c-138b-4874-a482-c05c00530ede",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T12:21:43.040070+00:00",
+  "finding": "Vocabulary formalization compressed SKILL.md while improving structural clarity - organized by artifact type (noetic/praxic/epistemic/context) with canonical terms throughout. Net reduction of 32 lines despite absorbing reference content from CLAUDE.md.",
+  "impact": 0.7,
+  "goal_id": "43d9b3ea",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Vocabulary formalization compressed SKILL.md while improving structural clarity - organized by artifact type (noetic/praxic/epistemic/context) with canonical terms throughout. Net reduction of 32 lines despite absorbing reference content from CLAUDE.md.",
+    "impact": 0.7
+  }
+}
