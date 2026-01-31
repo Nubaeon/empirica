@@ -1,0 +1,16 @@
+{
+  "finding_id": "fc070ba9-6be8-4966-9e8d-068da5a267ca",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a73c9387-ecc6-4469-8c3f-f30181fff62e",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T16:14:50.497591+00:00",
+  "finding": "Sentinel CHECK gate had two bugs: (1) default fallback was PROCEED instead of INVESTIGATE when readiness gate failed, (2) hardcoded bias corrections in wrong direction (know -0.05, uncertainty +0.10) when actual calibration shows know +0.22, uncertainty -0.21. Fixed with dynamic calibration from .breadcrumbs.yaml via load_bias_corrections() utility.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sentinel CHECK gate had two bugs: (1) default fallback was PROCEED instead of INVESTIGATE when readiness gate failed, (2) hardcoded bias corrections in wrong direction (know -0.05, uncertainty +0.10) when actual calibration shows know +0.22, uncertainty -0.21. Fixed with dynamic calibration from .breadcrumbs.yaml via load_bias_corrections() utility.",
+    "impact": 0.9
+  }
+}
