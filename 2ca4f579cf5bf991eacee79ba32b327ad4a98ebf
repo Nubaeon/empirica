@@ -1,0 +1,16 @@
+{
+  "finding_id": "c94cad46-b6bd-4ae1-a6ef-6bc562a30636",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a02f6d2a-b534-4966-ab84-ce7bc41f454f",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T18:07:37.098103+00:00",
+  "finding": "Sentinel hook crash on praxic commands (git add/commit) caused by stale table names: findings\u2192project_findings, unknowns\u2192project_unknowns. Schema consolidation (422f03bb) renamed tables but sentinel anti-gaming check (lines 596-606) was not updated. Fix: 2ca4f579.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sentinel hook crash on praxic commands (git add/commit) caused by stale table names: findings\u2192project_findings, unknowns\u2192project_unknowns. Schema consolidation (422f03bb) renamed tables but sentinel anti-gaming check (lines 596-606) was not updated. Fix: 2ca4f579.",
+    "impact": 0.8
+  }
+}
