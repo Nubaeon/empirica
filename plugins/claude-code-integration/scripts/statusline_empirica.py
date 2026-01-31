@@ -362,12 +362,15 @@ def format_confidence(confidence: float) -> str:
 
 def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     """
-    Get the active session, with smart fallback logic.
+    Get the active session with strict pane isolation.
 
     Priority:
-    1. Check ~/.empirica/active_session file for explicit session
-    2. Match exact ai_id (filtered by instance_id for multi-instance isolation)
-    3. Match ai_id prefix (e.g., 'claude-code' matches 'claude-code-multimachine')
+    1. Instance-specific active_session file (active_session_tmux_N)
+    2. Exact ai_id + exact instance_id match in DB (NO NULL fallback)
+    3. Generic active_session file (only if no instance_id available)
+
+    IMPORTANT: Never fall back to instance_id IS NULL - that causes
+    cross-pane bleeding where any pane picks up legacy sessions.
     """
     cursor = db.conn.cursor()
 
@@ -378,46 +381,43 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     except ImportError:
         current_instance_id = None
 
-    # Priority 1: Check instance-specific active_session file
-    # Uses instance_id (e.g., tmux:%0) to prevent cross-pane bleeding
-    # Search UPWARD from CWD like git does for .git/
-
-    # Get instance_id for per-pane isolation
+    # Build instance-specific filename suffix
     instance_suffix = ""
     if current_instance_id:
-        # Sanitize instance_id for filename (replace special chars)
         safe_instance = current_instance_id.replace(":", "_").replace("%", "")
         instance_suffix = f"_{safe_instance}"
 
-    local_active_session = None
-    current = Path.cwd()
-    for parent in [current] + list(current.parents):
-        # Try instance-specific file first, then generic
-        for filename in [f'active_session{instance_suffix}', 'active_session']:
-            candidate = parent / '.empirica' / filename
+    # Priority 1: Instance-specific active_session file ONLY
+    # Do NOT fall through to generic 'active_session' when instance_id is known
+    # That's the primary bleeding vector - generic file has no pane isolation
+    if instance_suffix:
+        # Search upward for instance-specific file only
+        current = Path.cwd()
+        for parent in [current] + list(current.parents):
+            candidate = parent / '.empirica' / f'active_session{instance_suffix}'
             if candidate.exists():
-                local_active_session = candidate
+                try:
+                    session_id = candidate.read_text().strip()
+                    if session_id:
+                        cursor.execute("""
+                            SELECT session_id, ai_id, start_time
+                            FROM sessions
+                            WHERE session_id = ? AND end_time IS NULL
+                        """, (session_id,))
+                        row = cursor.fetchone()
+                        if row:
+                            return dict(row)
+                except Exception:
+                    pass
+                break  # Found file but session ended - don't keep searching
+            if parent == Path.home() or parent == parent.parent:
                 break
-        if local_active_session:
-            break
-        if parent == Path.home() or parent == parent.parent:
-            break  # Stop at home or filesystem root
 
-    global_active_session = Path.home() / '.empirica' / f'active_session{instance_suffix}'
-    global_active_session_fallback = Path.home() / '.empirica' / 'active_session'
-
-    # Build list of files to check (instance-specific first)
-    files_to_check = []
-    if local_active_session:
-        files_to_check.append(local_active_session)
-    files_to_check.append(global_active_session)
-    if global_active_session != global_active_session_fallback:
-        files_to_check.append(global_active_session_fallback)
-
-    for active_session_file in files_to_check:
-        if active_session_file.exists():
+        # Also check global instance-specific file
+        global_instance_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
+        if global_instance_file.exists():
             try:
-                session_id = active_session_file.read_text().strip()
+                session_id = global_instance_file.read_text().strip()
                 if session_id:
                     cursor.execute("""
                         SELECT session_id, ai_id, start_time
@@ -428,20 +428,45 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
                     if row:
                         return dict(row)
             except Exception:
-                pass  # Try next file
+                pass
+    else:
+        # No instance_id - use generic file (legacy mode)
+        current = Path.cwd()
+        for parent in [current] + list(current.parents):
+            candidate = parent / '.empirica' / 'active_session'
+            if candidate.exists():
+                try:
+                    session_id = candidate.read_text().strip()
+                    if session_id:
+                        cursor.execute("""
+                            SELECT session_id, ai_id, start_time
+                            FROM sessions
+                            WHERE session_id = ? AND end_time IS NULL
+                        """, (session_id,))
+                        row = cursor.fetchone()
+                        if row:
+                            return dict(row)
+                except Exception:
+                    pass
+                break
+            if parent == Path.home() or parent == parent.parent:
+                break
 
-    # Priority 2: Exact ai_id match (with instance isolation)
+    # Priority 2: Exact ai_id + STRICT instance_id match (no NULL fallback)
     if current_instance_id:
-        # Filter by instance_id OR legacy sessions (NULL instance_id)
         cursor.execute("""
             SELECT session_id, ai_id, start_time
             FROM sessions
             WHERE end_time IS NULL AND ai_id = ?
-              AND (instance_id = ? OR instance_id IS NULL)
+              AND instance_id = ?
             ORDER BY start_time DESC
             LIMIT 1
         """, (ai_id, current_instance_id))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
     else:
+        # No instance isolation available - match any for this ai_id
         cursor.execute("""
             SELECT session_id, ai_id, start_time
             FROM sessions
@@ -449,30 +474,11 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
             ORDER BY start_time DESC
             LIMIT 1
         """, (ai_id,))
-    row = cursor.fetchone()
-    if row:
-        return dict(row)
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
 
-    # Priority 3: Prefix match (e.g., 'claude-code' matches 'claude-code-xyz')
-    if current_instance_id:
-        cursor.execute("""
-            SELECT session_id, ai_id, start_time
-            FROM sessions
-            WHERE end_time IS NULL AND ai_id LIKE ?
-              AND (instance_id = ? OR instance_id IS NULL)
-            ORDER BY start_time DESC
-            LIMIT 1
-        """, (f"{ai_id}%", current_instance_id))
-    else:
-        cursor.execute("""
-            SELECT session_id, ai_id, start_time
-            FROM sessions
-            WHERE end_time IS NULL AND ai_id LIKE ?
-            ORDER BY start_time DESC
-            LIMIT 1
-        """, (f"{ai_id}%",))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    return None
 
 
 def get_latest_vectors(db: SessionDatabase, session_id: str) -> tuple:
