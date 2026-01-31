@@ -1,0 +1,16 @@
+{
+  "finding_id": "bae85ba7-4066-464e-8095-6b0c8e91344b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "86fbd73f-43a2-4d8f-8fa8-3827104f52f0",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T16:21:04.056158+00:00",
+  "finding": "Created ecosystem.yaml manifest at workspace root with 33 projects, 9 roles, full dependency graph. Schema uses depends_on/optional_depends/exports/entry_points/tags per project.",
+  "impact": 0.8,
+  "goal_id": "2c0b3702-04b8-452a-9d72-60743df91bf7",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Created ecosystem.yaml manifest at workspace root with 33 projects, 9 roles, full dependency graph. Schema uses depends_on/optional_depends/exports/entry_points/tags per project.",
+    "impact": 0.8
+  }
+}
