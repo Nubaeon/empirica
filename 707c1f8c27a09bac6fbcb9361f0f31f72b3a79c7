@@ -1,0 +1,31 @@
+{
+  "goal_id": "43d9b3ea-84a1-4296-813d-80d5659305be",
+  "session_id": "bc47aa2c-138b-4874-a482-c05c00530ede",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-31T12:14:50.455845+00:00",
+  "goal_data": {
+    "objective": "Formalize Empirica vocabulary taxonomy and refactor CLAUDE.md + empirica-framework skill to use canonical terms. The vocabulary (noetic/praxic/epistemic/context) compresses documentation and improves AI comprehension.",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Formal vocabulary reference section in CLAUDE.md",
+      "CLAUDE.md shrunk by using canonical terms instead of re-explaining concepts",
+      "empirica-framework skill refactored to use vocabulary",
+      "Clear separation of what belongs in prompt vs skill vs protocol vs CLI"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-31T12:14:50.455854+00:00",
+      "action": "created"
+    }
+  ]
+}
