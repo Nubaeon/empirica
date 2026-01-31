@@ -1,0 +1,13 @@
+{
+  "unknown_id": "04933cad-f2cb-4b72-8dea-8ceb0444af49",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "b12fddd0-a838-4fae-9f64-6b4f0a2861fc",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T12:50:00.134424+00:00",
+  "unknown": "Complete doc structure of Empirica project: need to understand distribution of human-facing vs AI-facing docs, location of all schema/taxonomy/ontology files, doc tooling configuration (mkdocs, docusaurus, etc.), and structured data definitions",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
