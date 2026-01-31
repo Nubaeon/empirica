@@ -1,0 +1,16 @@
+{
+  "finding_id": "0805b422-019e-4ce5-b4e6-381050ca684b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "4d9c2903-d568-4be0-933e-a9440b260aac",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T13:18:08.261289+00:00",
+  "finding": "transaction_id is purely conceptual \u2014 no DB column, no tracking. Cascade_id exists in reflexes/cascades tables and is created per PREFLIGHT, but is NOT propagated to artifact tables (findings, unknowns, dead-ends, mistakes). Delta computation uses implicit ordering (ORDER BY timestamp DESC LIMIT 1). Latest migration is 024. Active session tracking uses file-based pattern with instance_id suffix + atomic writes.",
+  "impact": 0.8,
+  "goal_id": "389e3d6d-e48c-44d1-863a-ffb5086d0810",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "transaction_id is purely conceptual \u2014 no DB column, no tracking. Cascade_id exists in reflexes/cascades tables and is created per PREFLIGHT, but is NOT propagated to artifact tables (findings, unknowns, dead-ends, mistakes). Delta computation uses implicit ordering (ORDER BY timestamp DESC LIMIT 1). Latest migration is 024. Active session tracking uses file-based pattern with instance_id suffix + atomic writes.",
+    "impact": 0.8
+  }
+}
