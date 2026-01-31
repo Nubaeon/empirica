@@ -1,0 +1,16 @@
+{
+  "finding_id": "b7218ac4-6733-4acc-8c74-1d455dc7992d",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a73c9387-ecc6-4469-8c3f-f30181fff62e",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T16:14:52.555699+00:00",
+  "finding": "Empirica ecosystem has 30+ projects, 26 with .empirica directories. Existing workspace tooling (workspace-map, workspace-overview, workspace-list, workspace-init) discovers and displays projects independently but lacks structural linkage \u2014 no dependency graph, no impact analysis, no cross-project epistemic propagation.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Empirica ecosystem has 30+ projects, 26 with .empirica directories. Existing workspace tooling (workspace-map, workspace-overview, workspace-list, workspace-init) discovers and displays projects independently but lacks structural linkage \u2014 no dependency graph, no impact analysis, no cross-project epistemic propagation.",
+    "impact": 0.8
+  }
+}
