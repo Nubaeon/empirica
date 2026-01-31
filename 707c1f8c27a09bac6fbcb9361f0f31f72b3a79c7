@@ -1,0 +1,16 @@
+{
+  "finding_id": "b8b803f2-95e2-4add-9751-c72acd9a03db",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc47aa2c-138b-4874-a482-c05c00530ede",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T10:35:35.629647+00:00",
+  "finding": "Tool Router has two implementations by design: (1) ToolRouter class in empirica-mcp/epistemic/tool_router.py \u2014 full Python class used by MCP handlers and programmatic callers, depends on VectorRouter. (2) Lightweight duplicate in UserPromptSubmit hook (tool-router.py) \u2014 self-contained subprocess script, no heavy imports, fast (<2s target). The hook duplicates AGENT_DOMAINS and mode logic deliberately for performance. Trade-off: knowledge can drift between the two. Mitigation: both are in the same codebase and should be synced on changes.",
+  "impact": 0.7,
+  "goal_id": "6ad825c7-02f5-4f43-abe9-421dca59162a",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Tool Router has two implementations by design: (1) ToolRouter class in empirica-mcp/epistemic/tool_router.py \u2014 full Python class used by MCP handlers and programmatic callers, depends on VectorRouter. (2) Lightweight duplicate in UserPromptSubmit hook (tool-router.py) \u2014 self-contained subprocess script, no heavy imports, fast (<2s target). The hook duplicates AGENT_DOMAINS and mode logic deliberately for performance. Trade-off: knowledge can drift between the two. Mitigation: both are in the same codebase and should be synced on changes.",
+    "impact": 0.7
+  }
+}
