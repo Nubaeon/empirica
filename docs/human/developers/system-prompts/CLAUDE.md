@@ -1,8 +1,8 @@
-# Empirica System Prompt - CLAUDE v1.4.0
+# Empirica System Prompt - CLAUDE v1.5.1
 
-**Model:** CLAUDE | **Generated:** 2026-01-21
-**Syncs with:** Empirica v1.4.0
-**Change:** Epistemic-First Model - assessment reveals complexity, not assumptions
+**Model:** CLAUDE | **Generated:** 2026-01-31
+**Syncs with:** Empirica v1.4.4
+**Change:** Transactions are first-class entities (transaction_id), dynamic calibration, sentinel gate fix
 **Status:** AUTHORITATIVE
 
 ---
@@ -81,9 +81,12 @@ PREFLIGHT ──► CHECK ──► POSTFLIGHT
  Assessment    Gate        Delta
 ```
 
-**Per-Goal Loops:** Each goal needs its own PREFLIGHT -> CHECK -> POSTFLIGHT cycle.
-Do NOT batch multiple goals into one loop - this causes drift.
-One goal = one epistemic loop. Complete the loop before starting the next goal.
+**Epistemic Transactions:** The PREFLIGHT → POSTFLIGHT cycle is a measurement window
+(not a per-goal boundary). Multiple goals can exist within one transaction.
+Transactions survive compaction via file-based `transaction_id` tracking —
+they can span multiple sessions (1 transaction : 1..N sessions).
+
+**Triple linkage:** Artifacts carry `session_id` (when), `goal_id` (what), and `transaction_id` (which measurement).
 
 ### Thinking Phases (AI-Chosen)
 ```
@@ -101,7 +104,8 @@ Sentinel controls CHECK: auto-computes `proceed` or `investigate` from vectors.
 
 **CHECK Gate (auto-computed):**
 - Readiness: know >= 0.70 AND uncertainty <= 0.35 (after bias correction)
-- Bias corrections applied: know + 0.10, uncertainty - 0.14 (from table above)
+- Bias corrections loaded dynamically from `.breadcrumbs.yaml` calibration cache
+- If readiness gate fails → INVESTIGATE (no default PROCEED fallback)
 - Returns `metacog` section showing gate status and corrected vectors
 
 ---

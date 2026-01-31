@@ -497,9 +497,15 @@ def default_epistemic_evaluator(checkpoint_data: Dict[str, Any]) -> SentinelDeci
     know = vectors.get('know', 0.5)
     engagement = vectors.get('engagement', 0.7)
 
-    # Apply bias corrections (from CLAUDE.md)
-    corrected_uncertainty = uncertainty + 0.10
-    corrected_know = know - 0.05
+    # Apply bias corrections from .breadcrumbs.yaml (dynamic, not hardcoded)
+    try:
+        from empirica.core.bayesian_beliefs import load_bias_corrections
+        corrections = load_bias_corrections()
+    except Exception:
+        corrections = {}
+
+    corrected_know = know + corrections.get('know', 0.0)
+    corrected_uncertainty = uncertainty + corrections.get('uncertainty', 0.0)
 
     # Escalate if engagement too low
     if engagement < 0.5:
@@ -517,8 +523,8 @@ def default_epistemic_evaluator(checkpoint_data: Dict[str, Any]) -> SentinelDeci
     if corrected_know >= 0.70 and corrected_uncertainty <= 0.35:
         return SentinelDecision.PROCEED
 
-    # Default: proceed (but Sentinel is watching)
-    return SentinelDecision.PROCEED
+    # Readiness gate failed — investigate to improve vectors
+    return SentinelDecision.INVESTIGATE
 
 
 # Alias for backwards compatibility

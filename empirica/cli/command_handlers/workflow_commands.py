@@ -811,11 +811,16 @@ def handle_check_submit_command(args):
 
         # AUTO-COMPUTE DECISION from vectors if not provided
         # Readiness gate (from CLAUDE.md): know >= 0.70 AND uncertainty <= 0.35
-        # Apply bias corrections: uncertainty +0.10, know -0.05
+        # Apply bias corrections from .breadcrumbs.yaml (dynamic calibration)
         know = vectors.get('know', 0.5)
         uncertainty = vectors.get('uncertainty', 0.5)
-        corrected_know = know - 0.05  # AI overestimates knowing
-        corrected_uncertainty = uncertainty + 0.10  # AI underestimates doubt
+        try:
+            from empirica.core.bayesian_beliefs import load_bias_corrections
+            _corrections = load_bias_corrections()
+        except Exception:
+            _corrections = {}
+        corrected_know = know + _corrections.get('know', 0.0)
+        corrected_uncertainty = uncertainty + _corrections.get('uncertainty', 0.0)
 
         # DIMINISHING RETURNS DETECTION: Analyze if investigation is still improving
         # Key insight: Speed and correctness are ALIGNED when calibration is good.

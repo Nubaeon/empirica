@@ -538,3 +538,63 @@ calibration:
         return True
     except Exception:
         return False
+
+
+def load_bias_corrections(git_root: str = None) -> Dict[str, float]:
+    """
+    Load bias corrections from .breadcrumbs.yaml calibration cache.
+
+    Returns a dict of vector_name → correction (positive = AI underestimates,
+    negative = AI overestimates). Apply corrections as: corrected = raw + correction.
+
+    Falls back to empty dict if .breadcrumbs.yaml unavailable.
+    """
+    import os
+    import subprocess
+
+    if not git_root:
+        try:
+            result = subprocess.run(
+                ['git', 'rev-parse', '--show-toplevel'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                git_root = result.stdout.strip()
+            else:
+                return {}
+        except Exception:
+            return {}
+
+    breadcrumbs_path = os.path.join(git_root, '.breadcrumbs.yaml')
+    if not os.path.exists(breadcrumbs_path):
+        return {}
+
+    try:
+        with open(breadcrumbs_path, 'r') as f:
+            content = f.read()
+
+        # Simple YAML parsing for bias_corrections block (avoid yaml dependency)
+        corrections = {}
+        in_corrections = False
+        for line in content.split('\n'):
+            stripped = line.strip()
+            if stripped == 'bias_corrections:':
+                in_corrections = True
+                continue
+            if in_corrections:
+                if stripped and not stripped.startswith('#'):
+                    if ':' in stripped and not stripped.endswith(':'):
+                        key, val = stripped.split(':', 1)
+                        key = key.strip()
+                        val = val.strip()
+                        try:
+                            corrections[key] = float(val)
+                        except ValueError:
+                            continue
+                    elif stripped.endswith(':'):
+                        # New section started — stop parsing
+                        break
+
+        return corrections
+    except Exception:
+        return {}
