@@ -1,0 +1,16 @@
+{
+  "finding_id": "6611b52c-7b5d-4da7-8bb8-3c2b162ec691",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "1d5e5d98-db51-44af-b647-46cb07561384",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T18:10:55.596315+00:00",
+  "finding": "Fixed all 23 high-severity docs issues for v1.5.0: 20 orphaned CLI references to removed commands across 9 files, plus added documentation for 3 new CLI commands (agent-parallel, workspace-list, ecosystem-check) in CLI_COMMANDS_UNIFIED.md",
+  "impact": 0.75,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Fixed all 23 high-severity docs issues for v1.5.0: 20 orphaned CLI references to removed commands across 9 files, plus added documentation for 3 new CLI commands (agent-parallel, workspace-list, ecosystem-check) in CLI_COMMANDS_UNIFIED.md",
+    "impact": 0.75
+  }
+}
