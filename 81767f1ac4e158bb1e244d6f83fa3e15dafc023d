@@ -1,0 +1,16 @@
+{
+  "finding_id": "3c1bdad0-b750-4db7-a67e-6486eb2daec5",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "86fbd73f-43a2-4d8f-8fa8-3827104f52f0",
+  "ai_id": "claude-code",
+  "created_at": "2026-01-31T16:26:25.496049+00:00",
+  "finding": "workspace-map handler had double-print bug: returned dict result AND printed JSON, causing CLI dispatch to print again. Fixed by returning None from JSON path.",
+  "impact": 0.5,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "workspace-map handler had double-print bug: returned dict result AND printed JSON, causing CLI dispatch to print again. Fixed by returning None from JSON path.",
+    "impact": 0.5
+  }
+}
