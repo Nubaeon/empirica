@@ -1,0 +1,31 @@
+{
+  "goal_id": "948f259a-5c76-4ba3-82ad-12a4b4a2f9f9",
+  "session_id": "8cc75faf-2462-4fff-8eaf-b443fe97e363",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-31T17:36:22.771403+00:00",
+  "goal_data": {
+    "objective": "Post-Test Verification: Ground epistemic calibration in objective evidence. Dual-track Bayesian system \u2014 self-referential (existing) + grounded (new). PostTestCollector gathers deterministic signals, EvidenceMapper maps to vector estimates, GroundedCalibrationManager runs parallel Bayesian track, TrajectoryTracker measures POSTFLIGHT-to-POSTFLIGHT evolution.",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "POSTFLIGHT response includes grounded_verification with evidence count and calibration gaps",
+      ".breadcrumbs.yaml has grounded_calibration section with divergence data",
+      "calibration-report --grounded shows dual-track comparison",
+      "System degrades gracefully when no test results available"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-31T17:36:22.771453+00:00",
+      "action": "created"
+    }
+  ]
+}
