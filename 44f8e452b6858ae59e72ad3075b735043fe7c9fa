@@ -1,0 +1,28 @@
+{
+  "goal_id": "c55f8eba-93da-4a75-8ad6-b4ea783760ca",
+  "session_id": "ba594e09-086b-4a3b-b1b5-59a540cd065f",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-01-31T17:52:45.245084+00:00",
+  "goal_data": {
+    "objective": "Bump to v1.5.0 and assess/refactor documentation for the release",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-01-31T17:52:45.245104+00:00",
+      "action": "created"
+    }
+  ]
+}
