@@ -35,6 +35,14 @@ def handle_mistake_log_command(args):
             if row and row['project_id']:
                 project_id = row['project_id']
 
+        # Auto-derive active transaction_id
+        transaction_id = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction
+            transaction_id = read_active_transaction()
+        except Exception:
+            pass
+
         # PROJECT-SCOPED: All mistakes are project-scoped (session_id preserved for provenance)
         mistake_id = db.log_mistake(
             session_id=session_id,
@@ -44,7 +52,8 @@ def handle_mistake_log_command(args):
             root_cause_vector=root_cause_vector,
             prevention=prevention,
             goal_id=goal_id,
-            project_id=project_id
+            project_id=project_id,
+            transaction_id=transaction_id
         )
 
         # Get ai_id from session for git notes

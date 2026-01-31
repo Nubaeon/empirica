@@ -1,7 +1,10 @@
 """Database schema migrations"""
+import logging
 import sqlite3
 from typing import List, Tuple, Callable
 from .migration_runner import add_column_if_missing
+
+logger = logging.getLogger(__name__)
 
 
 # Migration 1: Add CASCADE workflow columns to cascades table
@@ -798,6 +801,43 @@ def migration_024_attention_budgets(cursor: sqlite3.Cursor):
     logger.info("✅ Migration 024 complete: Attention budget tables created")
 
 
+def migration_025_transaction_id(cursor: sqlite3.Cursor):
+    """
+    Add transaction_id to epistemic artifact tables.
+
+    Makes epistemic transactions first-class entities. A transaction_id (UUID)
+    is generated at PREFLIGHT and links all artifacts (findings, unknowns,
+    dead-ends, mistakes, assessments) created within that measurement window
+    through to POSTFLIGHT.
+
+    Enables:
+    - Query all work within a transaction boundary
+    - Explicit PREFLIGHT↔POSTFLIGHT linkage (replaces implicit timestamp ordering)
+    - Cross-goal transaction boundaries for multi-goal sessions
+    """
+    # Core assessment table
+    add_column_if_missing(cursor, "reflexes", "transaction_id", "TEXT")
+
+    # Noetic artifact tables
+    add_column_if_missing(cursor, "project_findings", "transaction_id", "TEXT")
+    add_column_if_missing(cursor, "project_unknowns", "transaction_id", "TEXT")
+    add_column_if_missing(cursor, "project_dead_ends", "transaction_id", "TEXT")
+    add_column_if_missing(cursor, "mistakes_made", "transaction_id", "TEXT")
+
+    # Praxic artifact table
+    add_column_if_missing(cursor, "goals", "transaction_id", "TEXT")
+
+    # Indexes for transaction queries
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_reflexes_transaction ON reflexes(transaction_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_transaction ON project_findings(transaction_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_unknowns_transaction ON project_unknowns(transaction_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_dead_ends_transaction ON project_dead_ends(transaction_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_mistakes_transaction ON mistakes_made(transaction_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_goals_transaction ON goals(transaction_id)")
+
+    logger.info("✓ Migration 025: Added transaction_id columns and indexes")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -823,4 +863,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("022_reflexes_project_id", "Add project_id to reflexes for project-aware PREFLIGHT tracking", migration_022_reflexes_project_id),
     ("023_sessions_parent_session_id", "Add parent_session_id to sessions for sub-agent lineage tracking", migration_023_sessions_parent_session_id),
     ("024_attention_budgets", "Add attention_budgets and rollup_logs tables for epistemic attention budget", migration_024_attention_budgets),
+    ("025_transaction_id", "Add transaction_id to epistemic artifact tables for first-class transaction tracking", migration_025_transaction_id),
 ]

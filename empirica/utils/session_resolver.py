@@ -322,3 +322,71 @@ def get_instance_id() -> Optional[str]:
     # Priority 5: No isolation (legacy behavior)
     logger.debug("No instance_id available - using legacy behavior")
     return None
+
+
+def _get_instance_suffix() -> str:
+    """Get the instance-specific filename suffix for file-based tracking."""
+    instance_id = get_instance_id()
+    if instance_id:
+        safe = instance_id.replace(":", "_").replace("%", "")
+        return f"_{safe}"
+    return ""
+
+
+def _get_tracking_file(name: str) -> 'Path':
+    """Get the path for a tracking file (active_session, active_transaction, etc.)."""
+    from pathlib import Path
+    suffix = _get_instance_suffix()
+    local_empirica = Path.cwd() / '.empirica'
+    if local_empirica.exists():
+        return local_empirica / f'{name}{suffix}'
+    return Path.home() / '.empirica' / f'{name}{suffix}'
+
+
+def write_active_transaction(transaction_id: str) -> None:
+    """Atomically write the active transaction ID to a tracking file."""
+    import os
+    import tempfile
+    path = _get_tracking_file('active_transaction')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_fd, tmp_path = tempfile.mkstemp(dir=str(path.parent))
+    try:
+        with os.fdopen(tmp_fd, 'w') as tmp_f:
+            tmp_f.write(transaction_id)
+        os.rename(tmp_path, str(path))
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def read_active_transaction() -> Optional[str]:
+    """Read the active transaction ID from the tracking file. Returns None if no active transaction."""
+    from pathlib import Path
+    suffix = _get_instance_suffix()
+    # Search local then global
+    for base in [Path.cwd() / '.empirica', Path.home() / '.empirica']:
+        candidate = base / f'active_transaction{suffix}'
+        if candidate.exists():
+            try:
+                tid = candidate.read_text().strip()
+                if tid:
+                    return tid
+            except Exception:
+                pass
+    return None
+
+
+def clear_active_transaction() -> None:
+    """Remove the active transaction tracking file (called on POSTFLIGHT)."""
+    from pathlib import Path
+    suffix = _get_instance_suffix()
+    for base in [Path.cwd() / '.empirica', Path.home() / '.empirica']:
+        candidate = base / f'active_transaction{suffix}'
+        if candidate.exists():
+            try:
+                candidate.unlink()
+            except Exception:
+                pass

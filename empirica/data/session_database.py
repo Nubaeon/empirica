@@ -937,9 +937,9 @@ class SessionDatabase:
         
         return None
 
-    def store_vectors(self, session_id: str, phase: str, vectors: Dict[str, float], cascade_id: Optional[str] = None, round_num: int = 1, metadata: Optional[Dict] = None, reasoning: Optional[str] = None):
+    def store_vectors(self, session_id: str, phase: str, vectors: Dict[str, float], cascade_id: Optional[str] = None, round_num: int = 1, metadata: Optional[Dict] = None, reasoning: Optional[str] = None, transaction_id: Optional[str] = None):
         """Store epistemic vectors (delegates to VectorRepository)"""
-        return self.vectors.store_vectors(session_id, phase, vectors, cascade_id, round_num, metadata, reasoning)
+        return self.vectors.store_vectors(session_id, phase, vectors, cascade_id, round_num, metadata, reasoning, transaction_id=transaction_id)
 
     def get_latest_vectors(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict]:
         """Get latest epistemic vectors for session (delegates to VectorRepository)"""
@@ -2054,7 +2054,8 @@ class SessionDatabase:
         goal_id: Optional[str] = None,
         subtask_id: Optional[str] = None,
         subject: Optional[str] = None,
-        impact: Optional[float] = None
+        impact: Optional[float] = None,
+        transaction_id: Optional[str] = None
     ) -> str:
         """Log a project finding (delegates to BreadcrumbRepository)"""
         # Auto-derive impact from latest CASCADE if not provided
@@ -2062,7 +2063,8 @@ class SessionDatabase:
             impact = self._get_latest_impact_score(session_id)
 
         return self.breadcrumbs.log_finding(
-            project_id, session_id, finding, goal_id, subtask_id, subject, impact
+            project_id, session_id, finding, goal_id, subtask_id, subject, impact,
+            transaction_id=transaction_id
         )
     
     def log_session_finding(
@@ -2142,7 +2144,8 @@ class SessionDatabase:
         goal_id: Optional[str] = None,
         subtask_id: Optional[str] = None,
         subject: Optional[str] = None,
-        impact: Optional[float] = None
+        impact: Optional[float] = None,
+        transaction_id: Optional[str] = None
     ) -> str:
         """Log a project unknown (delegates to BreadcrumbRepository)"""
         # Auto-derive impact from latest CASCADE if not provided
@@ -2150,7 +2153,8 @@ class SessionDatabase:
             impact = self._get_latest_impact_score(session_id)
 
         return self.breadcrumbs.log_unknown(
-            project_id, session_id, unknown, goal_id, subtask_id, subject, impact
+            project_id, session_id, unknown, goal_id, subtask_id, subject, impact,
+            transaction_id=transaction_id
         )
     
     def resolve_unknown(self, unknown_id: str, resolved_by: str):
@@ -2166,19 +2170,22 @@ class SessionDatabase:
         goal_id: Optional[str] = None,
         subtask_id: Optional[str] = None,
         subject: Optional[str] = None,
-        impact: Optional[float] = None
+        impact: Optional[float] = None,
+        transaction_id: Optional[str] = None
     ) -> str:
         """Log a project dead end (delegates to BreadcrumbRepository)
 
         Args:
             impact: Impact score 0.0-1.0 (importance). If None, auto-derives from latest CASCADE.
+            transaction_id: Optional epistemic transaction ID.
         """
         # Auto-derive impact from latest CASCADE if not provided
         if impact is None:
             impact = self._get_latest_impact_score(session_id)
 
         return self.breadcrumbs.log_dead_end(project_id, session_id, approach,
-                                             why_failed, goal_id, subtask_id, subject, impact)
+                                             why_failed, goal_id, subtask_id, subject, impact,
+                                             transaction_id=transaction_id)
     
     def add_reference_doc(
         self,
@@ -2359,7 +2366,8 @@ class SessionDatabase:
         root_cause_vector: Optional[str] = None,
         prevention: Optional[str] = None,
         goal_id: Optional[str] = None,
-        project_id: Optional[str] = None
+        project_id: Optional[str] = None,
+        transaction_id: Optional[str] = None
     ) -> str:
         """Log a mistake for learning (delegates to BreadcrumbRepository)
 
@@ -2371,12 +2379,14 @@ class SessionDatabase:
             root_cause_vector: Epistemic vector that caused the mistake (e.g., "KNOW", "CONTEXT")
             prevention: How to prevent this mistake in the future
             goal_id: Optional goal identifier this mistake relates to
+            transaction_id: Optional epistemic transaction ID.
 
         Returns:
             mistake_id: UUID string
         """
         return self.breadcrumbs.log_mistake(session_id, mistake, why_wrong,
-                                           cost_estimate, root_cause_vector, prevention, goal_id, project_id)
+                                           cost_estimate, root_cause_vector, prevention, goal_id, project_id,
+                                           transaction_id=transaction_id)
     
     def get_mistakes(
         self,

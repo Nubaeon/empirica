@@ -46,7 +46,8 @@ class VectorRepository(BaseRepository):
         round_num: int = 1,
         metadata: Optional[Dict] = None,
         reasoning: Optional[str] = None,
-        project_id: Optional[str] = None
+        project_id: Optional[str] = None,
+        transaction_id: Optional[str] = None
     ) -> int:
         """
         Store epistemic vectors in the reflexes table
@@ -86,7 +87,8 @@ class VectorRepository(BaseRepository):
             'round': round_num,
             'vectors': vectors,
             'timestamp': time.time(),
-            'project_id': project_id
+            'project_id': project_id,
+            'transaction_id': transaction_id
         }
 
         # Merge in any additional metadata if provided
@@ -99,14 +101,15 @@ class VectorRepository(BaseRepository):
                 engagement, know, do, context,
                 clarity, coherence, signal, density,
                 state, change, completion, impact, uncertainty,
-                reflex_data, reasoning, project_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                reflex_data, reasoning, project_id, transaction_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             session_id, cascade_id, phase, round_num, time.time(),
             *vector_values,  # Unpack the 13 vector values
             json.dumps(reflex_data),
             reasoning,
-            project_id
+            project_id,
+            transaction_id
         ))
 
         self.commit()

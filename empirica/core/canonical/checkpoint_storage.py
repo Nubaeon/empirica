@@ -92,7 +92,8 @@ class CheckpointStorage:
                     cascade_id=metadata_dict.get('cascade_id'),
                     round_num=round_num,
                     metadata=metadata_dict,
-                    reasoning=metadata_dict.get('reasoning')
+                    reasoning=metadata_dict.get('reasoning'),
+                    transaction_id=metadata_dict.get('transaction_id')
                 )
 
                 logger.debug(

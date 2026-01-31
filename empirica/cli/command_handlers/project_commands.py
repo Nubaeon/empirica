@@ -1232,6 +1232,14 @@ def handle_finding_log_command(args):
                 goal_id = active_goal['id']
                 # Note: subtask_id remains None unless explicitly provided
 
+        # Auto-derive active transaction_id
+        transaction_id = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction
+            transaction_id = read_active_transaction()
+        except Exception:
+            pass
+
         # PROJECT-SCOPED: All findings are project-scoped (session_id preserved for provenance)
         finding_id = db.log_finding(
             project_id=project_id,
@@ -1240,7 +1248,8 @@ def handle_finding_log_command(args):
             goal_id=goal_id,
             subtask_id=subtask_id,
             subject=subject,
-            impact=impact
+            impact=impact,
+            transaction_id=transaction_id
         )
 
         # Get ai_id from session for git notes
@@ -1502,6 +1511,14 @@ def handle_unknown_log_command(args):
             if active_goal:
                 goal_id = active_goal['id']
 
+        # Auto-derive active transaction_id
+        transaction_id = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction
+            transaction_id = read_active_transaction()
+        except Exception:
+            pass
+
         # PROJECT-SCOPED: All unknowns are project-scoped (session_id preserved for provenance)
         unknown_id = db.log_unknown(
             project_id=project_id,
@@ -1510,7 +1527,8 @@ def handle_unknown_log_command(args):
             goal_id=goal_id,
             subtask_id=subtask_id,
             subject=subject,
-            impact=impact
+            impact=impact,
+            transaction_id=transaction_id
         )
 
         # Get ai_id from session for git notes
@@ -1745,6 +1763,14 @@ def handle_deadend_log_command(args):
             if active_goal:
                 goal_id = active_goal['id']
 
+        # Auto-derive active transaction_id
+        transaction_id = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction
+            transaction_id = read_active_transaction()
+        except Exception:
+            pass
+
         # PROJECT-SCOPED: All dead ends are project-scoped (session_id preserved for provenance)
         dead_end_id = db.log_dead_end(
             project_id=project_id,
@@ -1754,7 +1780,8 @@ def handle_deadend_log_command(args):
             goal_id=goal_id,
             subtask_id=subtask_id,
             subject=subject,
-            impact=impact
+            impact=impact,
+            transaction_id=transaction_id
         )
 
         # Get ai_id from session for git notes
