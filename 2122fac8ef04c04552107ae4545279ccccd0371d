@@ -1,0 +1,33 @@
+{
+  "goal_id": "f4ba30f1-fcf3-4dda-a47b-578015ed8821",
+  "session_id": "4d9c2903-d568-4be0-933e-a9440b260aac",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-01-31T13:18:15.564193+00:00",
+  "goal_data": {
+    "objective": "Make epistemic transactions first-class entities with transaction_id \u2014 schema migration, PREFLIGHT/CHECK/POSTFLIGHT handler wiring, breadcrumb threading, active_transaction file tracking",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.4,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Migration 025 adds transaction_id to all relevant tables",
+      "PREFLIGHT generates transaction_id UUID",
+      "CHECK and POSTFLIGHT use active transaction_id",
+      "Breadcrumb handlers thread transaction_id to artifacts",
+      "Active transaction tracked via file (like active_session)",
+      "POSTFLIGHT clears active transaction"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-01-31T13:18:15.564205+00:00",
+      "action": "created"
+    }
+  ]
+}
