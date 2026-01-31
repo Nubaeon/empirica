@@ -1,7 +1,7 @@
-# Rovo Model Delta - v1.4.0
+# Rovo Model Delta - v1.5.0
 
 **Applies to:** Atlassian Rovo
-**Last Updated:** 2026-01-21
+**Last Updated:** 2026-01-31
 
 This delta contains Rovo-specific guidance to be used with the base Empirica system prompt.
 

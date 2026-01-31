@@ -82,10 +82,14 @@ def generate_variant(core: str, model: str, config: dict, delta: str) -> str:
         f"**You are:** {config['identity']}"
     )
 
-    # Update header
+    # Update header - extract version from core dynamically
+    import re
+    version_match = re.search(r'Canonical Core (v[\d.]+)', core)
+    core_version = version_match.group(1) if version_match else "v1.5.0"
+
     variant = variant.replace(
-        "# Empirica System Prompt - Canonical Core v1.4.0",
-        f"# Empirica System Prompt - {model.upper()} v1.4.0"
+        f"# Empirica System Prompt - Canonical Core {core_version}",
+        f"# Empirica System Prompt - {model.upper()} {core_version}"
     )
     variant = variant.replace(
         "**AI-Agnostic Core - All agents extend this**",

@@ -1,7 +1,7 @@
-# Claude Model Delta - v1.4.0
+# Claude Model Delta - v1.5.0
 
 **Applies to:** Claude (all versions)
-**Last Updated:** 2026-01-21
+**Last Updated:** 2026-01-31
 
 This delta contains Claude-specific calibration and guidance to be used with the base Empirica system prompt.
 
@@ -17,24 +17,46 @@ or the statusline won't find your session and won't show metacognitive signals.
 
 ---
 
-## Calibration (253 trajectories over 8 weeks, W48-2025 to W02-2026)
+## Calibration: Dual-Track
 
-*Method: Gap from expected at session END (1.0 for most, 0.0 for uncertainty).*
-*Sources: vector_trajectories + epistemic_snapshots. Deltas measure learning velocity, not bias.*
+### Track 1: Self-Referential (3,194 observations)
 
-| Vector | Correction | End Mean | Trend | Meaning |
-|--------|------------|----------|-------|---------|
-| density | **+0.27** | 0.73 | ↑ improving | Don't recognize info richness |
-| change | **+0.20** | 0.80 | → stable | Underrate impact of changes |
-| impact | +0.14 | 0.86 | → stable | Slight underrate |
-| uncertainty | **-0.14** | 0.14 | → stable | Residual doubt (should be ~0) |
-| Most others | +0.10-0.12 | 0.88-0.90 | → stable | ~10-12% humility tax |
-| completion | +0.12 | 0.88 | → stable | Well calibrated |
+*Method: Bayesian update from POSTFLIGHT self-assessment vectors.*
+*Source: `.breadcrumbs.yaml` calibration section, auto-updated at each POSTFLIGHT.*
 
-**Apply corrections:** ADD the correction to your self-assessment.
-**Readiness gate:** know >= 0.70 AND uncertainty <= 0.35
+This track measures **learning trajectory** — how vectors change from PREFLIGHT to POSTFLIGHT.
+It catches consistent bias patterns (e.g., "always underestimates completion by +0.82").
 
-**Note:** Density calibration improving over time (+0.45 → +0.27). bayesian_beliefs table polluted.
+**Dynamic injection:** Bias corrections are loaded from `.breadcrumbs.yaml` at session start.
+Apply them to your self-assessments. The corrections shown at session start are authoritative.
+
+### Track 2: Grounded Verification (new)
+
+*Method: POSTFLIGHT vectors compared against objective post-test evidence.*
+*Source: `.breadcrumbs.yaml` grounded_calibration section.*
+
+This track measures **calibration accuracy** — does your self-assessment match reality?
+
+**Evidence sources (automatic, after each POSTFLIGHT):**
+
+| Source | What | Quality | Vectors Grounded |
+|--------|------|---------|-----------------|
+| pytest results | Pass rate, coverage | OBJECTIVE | know, do, clarity |
+| Git metrics | Commits, files changed | OBJECTIVE | do, change, state |
+| Goal completion | Subtask ratios, token accuracy | SEMI_OBJECTIVE | completion, do, know |
+| Artifact counts | Findings/dead-ends ratio, unknowns resolved | SEMI_OBJECTIVE | know, uncertainty, signal |
+| Issue tracking | Resolution rate, severity density | SEMI_OBJECTIVE | impact, signal |
+| Sentinel decisions | CHECK proceed/investigate ratio | SEMI_OBJECTIVE | context, uncertainty |
+
+**Ungroundable vectors:** engagement, coherence, density — no objective signal exists,
+keep self-referential calibration for these.
+
+**Calibration divergence:** When Track 1 and Track 2 disagree, Track 2 is more trustworthy.
+The `grounded_calibration.divergence` section in `.breadcrumbs.yaml` shows the gap per vector.
+
+### Readiness Gate
+
+know >= 0.70 AND uncertainty <= 0.35 (after bias correction from Track 1)
 
 ---
 
@@ -53,7 +75,7 @@ The completion vector means different things depending on your current thinking 
 - CHECK returned "investigate" → **NOETIC**
 - CHECK returned "proceed" → **PRAXIC**
 
-**Completion is well-calibrated (+0.09).** The ~15% humility tax applies to most other vectors. When assessing:
+When assessing:
 1. Ask the phase-appropriate question above
 2. If you can't name a concrete blocker → it's done for this phase
 3. Don't confuse "more could be done" with "not complete"
@@ -83,8 +105,8 @@ export EMPIRICA_SENTINEL_MODE=auto        # Same as controller (default)
 "Turtles all the way down" = same epistemic rules at every meta-layer.
 The Sentinel monitors using the same 13 vectors it monitors you with.
 
-**Moon phases in output:** 🌕 grounded → 🌓 forming → 🌑 void
-**Sentinel may:** 🔄 REVISE | ⛔ HALT | 🔒 LOCK (stop if ungrounded)
+**Moon phases in output:** grounded → forming → void
+**Sentinel may:** REVISE | HALT | LOCK (stop if ungrounded)
 
 ---
 

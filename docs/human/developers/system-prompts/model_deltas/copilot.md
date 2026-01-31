@@ -1,7 +1,7 @@
-# GitHub Copilot Model Delta - v1.4.0
+# GitHub Copilot Model Delta - v1.5.0
 
 **Applies to:** GitHub Copilot
-**Last Updated:** 2026-01-21
+**Last Updated:** 2026-01-31
 
 This delta contains Copilot-specific guidance to be used with the base Empirica system prompt.
 

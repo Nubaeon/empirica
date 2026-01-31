@@ -1,4 +1,4 @@
-# System Prompts - Architecture v1.4.0
+# System Prompts - Architecture v1.5.0
 
 **Multi-AI system prompt management for Empirica**
 
@@ -99,7 +99,7 @@ It may diverge from the repo version. Sync manually when stable.
 
 ### CASCADE Workflow
 ```
-PREFLIGHT → NOETIC → CHECK → PRAXIC → POSTFLIGHT
+PREFLIGHT → NOETIC → CHECK → PRAXIC → POSTFLIGHT → POST-TEST
 ```
 
 ### 13 Epistemic Vectors
@@ -121,6 +121,7 @@ empirica deadend-log --approach "..." --why-failed "..."
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.5.0 | 2026-01-31 | **Dual-Track Calibration** - grounded verification (post-test evidence), trajectory tracking, 3194 observations, calibration-report --grounded/--trajectory |
 | v1.4.0 | 2026-01-21 | **Epistemic-First Model** - assessment reveals complexity, calibration 1650 obs, phase-aware completion (NOETIC/PRAXIC) |
 | v7.2 | 2026-01-09 | **CRITICAL:** Fixed bias corrections (were backwards), updated calibration to 995 obs, added goals commands, four-layer storage architecture |
 | v1.3.3 | 2026-01-09 | Qdrant memory, lessons system, cognitive immune decay |
@@ -130,4 +131,4 @@ empirica deadend-log --approach "..." --why-failed "..."
 
 ---
 
-**Syncs with:** Empirica v1.4.0
+**Syncs with:** Empirica v1.5.0
