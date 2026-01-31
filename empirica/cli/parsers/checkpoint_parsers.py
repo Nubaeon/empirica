@@ -310,6 +310,20 @@ def add_checkpoint_parsers(subparsers):
     workspace_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     workspace_list_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
+    # Ecosystem check command - analyze cross-project dependencies and impact
+    ecosystem_check_parser = subparsers.add_parser(
+        'ecosystem-check',
+        help='Analyze ecosystem dependencies, impact, and health from ecosystem.yaml'
+    )
+    ecosystem_check_parser.add_argument('--file', help='File or module path to check impact for')
+    ecosystem_check_parser.add_argument('--project', help='Project name to check downstream/upstream')
+    ecosystem_check_parser.add_argument('--role', help='Filter projects by role (core, extension, ecosystem-tool, etc.)')
+    ecosystem_check_parser.add_argument('--tag', help='Filter projects by tag')
+    ecosystem_check_parser.add_argument('--validate', action='store_true', help='Validate manifest integrity')
+    ecosystem_check_parser.add_argument('--manifest', help='Path to ecosystem.yaml (auto-detected if not specified)')
+    ecosystem_check_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    ecosystem_check_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+
     # Project semantic search command (Qdrant-backed)
     project_search_parser = subparsers.add_parser(
         'project-search',
