@@ -57,10 +57,12 @@
 - **project-embed** - Create embeddings for project files
 - **doc-check** - Check documentation quality and completeness
 
-### 5. Workspace (3 commands)
+### 5. Workspace (5 commands)
 - **workspace-init** - Initialize workspace for multi-project work
 - **workspace-map** - Map all projects in workspace
 - **workspace-overview** - Show overview of all projects in workspace
+- **workspace-list** - List workspace projects with filtering by type, tags, hierarchy
+- **ecosystem-check** - Check ecosystem topology, dependencies, and file impact
 
 ### 6. Checkpoints (7 commands)
 - **checkpoint-create** - Create checkpoint from current state
@@ -117,13 +119,14 @@
 - **skill-fetch** - Fetch skill from repository
 - **skill-extract** - Extract decision frameworks from skills to meta-agent config
 
-### 14. Agent Commands (6 commands)
+### 14. Agent Commands (7 commands)
 - **agent-spawn** - Spawn epistemic sub-agent for investigation
 - **agent-report** - Report findings from sub-agent back to parent
 - **agent-aggregate** - Aggregate findings from multiple sub-agents
 - **agent-discover** - Discover available agent capabilities
 - **agent-export** - Export agent state for handoff
 - **agent-import** - Import agent state from handoff
+- **agent-parallel** - Run parallel investigation with epistemic attention budget
 
 ### 15. Persona Commands (4 commands)
 - **persona-list** - List available personas for AI identity
@@ -162,8 +165,7 @@
 - **concept-top** - Show top concepts by frequency
 - **concept-related** - Find semantically related concepts
 
-### 21. Utilities (5 commands)
-- **goal-analysis** - Analyze goal completion patterns
+### 21. Utilities (4 commands)
 - **log-token-saving** - Log token savings from compression
 - **config** - Configure Empirica settings
 - **performance** - Show performance metrics
@@ -435,6 +437,35 @@
 **Purpose:** Show overview of all projects in workspace
 **Usage:** `empirica workspace-overview`
 
+#### `workspace-list`
+**Purpose:** List workspace projects with filtering by type, tags, and hierarchy
+**Usage:** `empirica workspace-list [options]`
+**Options:**
+- `--type`: Filter by project type (product, application, feature, research, documentation, infrastructure, operations)
+- `--tags`: Filter by tags (comma-separated, matches any)
+- `--parent`: Show only children of this project ID
+- `--tree`: Show hierarchical tree view
+- `--output`: Output format (human, json)
+
+#### `ecosystem-check`
+**Purpose:** Check ecosystem topology, project dependencies, and file impact analysis
+**Usage:** `empirica ecosystem-check [options]`
+**Options:**
+- `--file`: File or module path to check downstream impact
+- `--project`: Project name to show upstream/downstream dependencies
+- `--role`: Filter projects by role (core, extension, ecosystem-tool, etc.)
+- `--tag`: Filter projects by tag
+- `--validate`: Validate ecosystem manifest integrity
+- `--manifest`: Path to ecosystem.yaml (auto-detected if not specified)
+- `--output`: Output format (human, json)
+
+**Modes:**
+- Default: Ecosystem summary (roles, types, roots, leaves, dependency tree)
+- `--file F`: Show which downstream projects are affected by changes to file F
+- `--project X`: Show upstream dependencies and downstream dependents of project X
+- `--role R` / `--tag T`: Filter projects by role or tag
+- `--validate`: Check manifest for missing projects, circular deps, undefined references
+
 ---
 
 ### Checkpoint Commands
@@ -695,10 +726,6 @@ empirica calibration-report --output json --weeks 4
 
 ### Utilities Commands
 
-#### `goal-analysis`
-**Purpose:** Analyze goal completion patterns
-**Usage:** `empirica goal-analysis --session-id <session_id>`
-
 #### `log-token-saving`
 **Purpose:** Log token savings from compression
 **Usage:** `empirica log-token-saving --session-id <session_id> --tokens-saved <count>`
@@ -800,6 +827,20 @@ Data Quality Filtering (default):
 #### `agent-import`
 **Purpose:** Import agent state from external handoff file
 **Usage:** `empirica agent-import --input-path <path> --session-id <session_id>`
+
+#### `agent-parallel`
+**Purpose:** Run parallel investigation with epistemic attention budget allocation
+**Usage:** `empirica agent-parallel --session-id <session_id> --task "<task>" [options]`
+**Options:**
+- `--budget`: Total findings budget across all agents (default: 20)
+- `--max-agents`: Maximum parallel agents to spawn (default: 5)
+- `--strategy`: Budget allocation strategy (information_gain, uniform, priority)
+- `--domains`: Override investigation domains (auto-detected if not specified)
+- `--output`: Output format (text, json)
+
+**Description:** Spawns multiple investigation agents in parallel, each assigned a domain
+and findings budget. Uses the AttentionBudget system to allocate resources based on
+expected information gain. Results are aggregated via `agent-aggregate`.
 
 ---
 

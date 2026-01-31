@@ -262,7 +262,7 @@ store_trajectory(
 ### Example 1: Find Similar Learning Experiences
 
 ```bash
-empirica epistemics-search \
+empirica project-search \
   --project-id <UUID> \
   --query "OAuth2 PKCE authentication flow learning" \
   --min-learning 0.2 \
@@ -328,7 +328,7 @@ results = search(
 ### Example 3: Project-Wide Learning Stats
 
 ```bash
-empirica epistemics-stats --project-id <UUID> --output json
+empirica calibration-report --project-id <UUID> --output json
 ```
 
 **Returns:**
@@ -578,14 +578,14 @@ empirica deadend-log --project-id <UUID> --deadend "..."
 empirica mistake-log --session-id <UUID> --mistake "..." --why-wrong "..."
 
 # Semantic search
-empirica epistemics-search \
+empirica project-search \
   --project-id <UUID> \
   --query "OAuth2 learning" \
   --min-learning 0.2 \
   --limit 10
 
 # Project stats
-empirica epistemics-stats --project-id <UUID>
+empirica calibration-report --project-id <UUID>
 
 # Embed project docs
 empirica project-embed --project-id <UUID>

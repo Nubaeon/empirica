@@ -399,10 +399,7 @@ ls -lh ~/.empirica/empirica.db
 # Vacuum database to optimize
 sqlite3 ~/.empirica/empirica.db "VACUUM;"
 
-# Clean old sessions (optional)
-empirica sessions-list --output json | \
-    jq -r '.sessions[] | select(.last_activity < "2024-01-01") | .id' | \
-    xargs -I {} empirica sessions-delete --session-id {}
+# Note: sessions are auto-managed. Old sessions are closed automatically.
 ```
 
 ---

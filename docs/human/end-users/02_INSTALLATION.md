@@ -38,7 +38,7 @@ empirica session-create --ai-id myai
 pip install empirica
 
 # Specific version
-pip install empirica==1.4.0
+pip install empirica==1.5.0
 
 # With MCP server for Claude Desktop/Cursor
 pip install empirica empirica-mcp

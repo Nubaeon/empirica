@@ -176,7 +176,7 @@ empirica goals-progress --goal-id <ID>
 empirica goals-complete-subtask --subtask-id <ID> --evidence "commit:abc1234"
 
 # Get session metrics
-empirica session-metrics --session-id <ID>
+empirica monitor --session-id <ID>
 ```
 
 ---

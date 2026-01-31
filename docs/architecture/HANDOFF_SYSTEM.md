@@ -223,10 +223,10 @@ status = storage.check_sync_status(session_id)
 empirica project-handoff --session-id <ID> --output json
 
 # Load handoff for new session
-empirica handoff-load --session-id <ID>
+empirica project-bootstrap --session-id <ID>
 
 # List recent handoffs
-empirica handoff-list --ai-id claude-code --limit 5
+empirica query-handoff-reports --ai-id claude-code --limit 5
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Version Update Command Design
 
-**Status:** Draft
+**Status:** Archived (not implemented)
 **Author:** Claude Code
 **Date:** 2026-01-14
 **Version:** 0.1.0

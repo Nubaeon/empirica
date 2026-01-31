@@ -77,10 +77,8 @@ Acts as **circuit breaker** for privacy leaks.
 
 ### 5. Git Hook Integration
 **Pre-push validation:**
-```bash
-empirica privacy-install-hook --strict
-# Blocks pushes if privacy issues detected
-```
+> **Note:** Privacy enforcement is now handled by the Sentinel permission system.
+> See the tiered permission model in v1.5.0.
 
 ---
 
@@ -95,16 +93,10 @@ empirica privacy-scan --verbose
 
 # Auto-fix issues
 empirica privacy-scan --auto-fix
-
-# Check specific file
-empirica privacy-check .gitignore
-
-# Install pre-push hook
-empirica privacy-install-hook
-
-# Strict mode (blocks pushes)
-empirica privacy-install-hook --strict
 ```
+
+> **Note (v1.5.0):** `privacy-check` and `privacy-install-hook` have been removed.
+> Privacy enforcement is now handled by the Sentinel's tiered permission system.
 
 ---
 

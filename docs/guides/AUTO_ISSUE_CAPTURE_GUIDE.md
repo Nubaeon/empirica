@@ -252,7 +252,7 @@ empirica issue-export \
 SESSION_ID_2=$(empirica session-create --ai-id ai-optimizer | jq -r '.session_id')
 
 # AI-2 imports issues from AI-1
-# (This would be implemented as: empirica issue-import /tmp/handoff.json)
+# Issues are transferred via git notes and project-bootstrap (no explicit import needed)
 
 # AI-2 works on each issue
 empirica issue-list --session-id $SESSION_ID_2 --status handoff
