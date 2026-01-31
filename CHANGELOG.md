@@ -5,6 +5,76 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-01-31
+
+### Added
+- **Epistemic Transactions** - First-class measurement windows with `transaction_id`:
+  - PREFLIGHT→POSTFLIGHT cycles are now discrete measurement transactions
+  - Multiple goals can exist within one transaction; one goal can span multiple transactions
+  - Transaction boundaries defined by coherence of changes, not by goal boundaries
+  - Adds `transaction_id` column to epistemic assessments for precise delta tracking
+
+- **Ecosystem Topology** - Declarative project dependency graph:
+  - `ecosystem.yaml` manifest at workspace root (32 projects, 18 dependency edges)
+  - `EcosystemGraph` loader with transitive downstream/upstream traversal, impact analysis, validation
+  - `empirica ecosystem-check` CLI with 5 modes: summary, file impact, project deps, role/tag filter, validate
+  - `workspace-map` enriched with ecosystem role, type, and dependency data per repo
+
+- **Multi-Agent Orchestration** - Parallel investigation with epistemic lineage:
+  - `AttentionBudget` for parallel agent token allocation and monitoring
+  - Agent generator with persona-derived Claude Code agents
+  - `SubagentStart`/`SubagentStop` lifecycle hooks for epistemic lineage tracking
+  - `parent_session_id` schema for sub-agent session hierarchy
+  - No-match decomposition and emerged persona promotion
+
+- **Blindspot Detection** - Epistemic gap identification:
+  - Wired into CHECK phase for automatic blind spot surfacing
+  - Integrated into MCP server tools
+
+- **Epistemic Tool Router** - Vector-aware skill suggestion:
+  - Routes to appropriate tools based on current epistemic state vectors
+  - Integrated into MCP `skill_suggest` tool
+
+- **On/Off Toggle** - On-the-record vs off-the-record tracking:
+  - `/empirica on|off|status` command for Claude Code plugin
+  - Controls sentinel enforcement and epistemic tracking
+
+- **Eidetic Rehydration** - Full Qdrant restore via `project-embed`:
+  - Rebuilds eidetic memory from cold storage to search layer
+
+- **Auto-Init Sessions** - `--auto-init` flag on `session-create`:
+  - Automatically initializes project if not yet tracked (closes #25)
+
+- **Collaborator Config Sync** - `empirica-collab-sync.sh` script:
+  - Syncs breadcrumbs, calibration, and plugin config between collaborators
+
+### Changed
+- **Schema Consolidation** - `session_*` tables consolidated into `project_*` as canonical source
+- **Sentinel Path Resolution** - Refactored to use canonical `path_resolver` instead of custom logic
+- **System Prompts v1.5.0** - CANONICAL_CORE and all model deltas updated:
+  - Dual-track calibration (self-referential + grounded verification)
+  - Post-test evidence collection triggers automatically on POSTFLIGHT
+  - Trajectory tracking across transactions
+- **Dynamic Calibration** - Sentinel now uses per-session bias corrections from `.breadcrumbs.yaml`
+- **Vocabulary Taxonomy** - Formalized Empirica concept reference and taxonomy in SKILL.md v2.0.0
+
+### Fixed
+- **Sentinel Gate Failures** - Dynamic calibration + INVESTIGATE default when gate computation fails
+- **Sentinel Loop Enforcement** - POSTFLIGHT now properly closes epistemic loops; warns on unclosed loops during project switch
+- **Race Conditions** - Atomic writes with IMMEDIATE transaction isolation and single sentinel connection
+- **Sub-Agent Session Hijacking** - Statusline filters active session by `ai_id`
+- **Pre-Compact Branch Divergence** - Replaced auto-commit with `git stash` to prevent branch divergence
+- **Goal Project Resolution** - `project_id` correctly resolved from session when saving goals
+- **Agent Aggregate Merge** - Corrected kwarg name in agent merge call
+- **Project Init Idempotency** - Prevents orphaned findings on re-initialization
+- **Session Instance Isolation** - Respects `instance_id` in auto-close for multi-tmux-pane support
+- **Finding Deduplication** - Deduplicates on insert; archives stale plans on session init
+- **PREFLIGHT Pattern Retrieval** - Falls back to reasoning when Qdrant unavailable
+- **Migration Safety** - Skips migration 021 if engagements table missing; adds client_projects to valid tables
+
+### Security
+- **Tiered Sentinel Permissions** - Replaced blanket `empirica` CLI whitelist with role-based permission tiers (read-only, write, admin)
+
 ## [1.4.2] - 2026-01-25
 
 ### Added
