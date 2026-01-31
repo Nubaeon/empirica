@@ -20,7 +20,9 @@ SCHEMAS = [
                     goal_data TEXT NOT NULL,
                     status TEXT DEFAULT 'in_progress',  -- 'in_progress' | 'complete' | 'blocked'
                     beads_issue_id TEXT,  -- Optional: Link to BEADS issue tracker (e.g., bd-a1b2)
-    
+                    project_id TEXT,
+                    transaction_id TEXT,
+
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id)
                 )
     """,

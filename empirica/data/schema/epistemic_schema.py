@@ -92,7 +92,9 @@ SCHEMAS = [
                     reflex_data TEXT,
                     reasoning TEXT,
                     evidence TEXT,
-    
+                    project_id TEXT,
+                    transaction_id TEXT,
+
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id)
                 )
     """,

@@ -101,6 +101,49 @@ class DatabaseAdapter(ABC):
         """Return raw connection object (for repositories)"""
         pass
 
+    @property
+    @abstractmethod
+    def dialect(self) -> str:
+        """Return database dialect identifier: 'sqlite' or 'postgresql'"""
+        pass
+
+    def column_exists(self, table: str, column: str) -> bool:
+        """Check if a column exists in a table (dialect-aware)"""
+        if self.dialect == "sqlite":
+            self.execute(
+                "SELECT COUNT(*) FROM pragma_table_info(?) WHERE name=?",
+                (table, column)
+            )
+        else:
+            self.execute(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                "WHERE table_name = ? AND column_name = ?",
+                (table, column)
+            )
+        row = self.fetchone()
+        if row is None:
+            return False
+        # Row is a dict — get the first value
+        return list(row.values())[0] > 0
+
+    def table_exists(self, table: str) -> bool:
+        """Check if a table exists (dialect-aware)"""
+        if self.dialect == "sqlite":
+            self.execute(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
+                (table,)
+            )
+        else:
+            self.execute(
+                "SELECT COUNT(*) FROM information_schema.tables "
+                "WHERE table_schema = 'public' AND table_name = ?",
+                (table,)
+            )
+        row = self.fetchone()
+        if row is None:
+            return False
+        return list(row.values())[0] > 0
+
 
 class SQLiteAdapter(DatabaseAdapter):
     """SQLite implementation of database adapter"""
@@ -145,6 +188,10 @@ class SQLiteAdapter(DatabaseAdapter):
     def conn(self):
         """Return raw SQLite connection"""
         return self._conn
+
+    @property
+    def dialect(self) -> str:
+        return "sqlite"
 
     def begin_immediate(self):
         """Begin an IMMEDIATE transaction for write operations.
@@ -258,6 +305,10 @@ class PostgreSQLAdapter(DatabaseAdapter):
     def conn(self):
         """Return raw psycopg2 connection"""
         return self._conn
+
+    @property
+    def dialect(self) -> str:
+        return "postgresql"
 
     def execute(self, query: str, params: Optional[Tuple] = None) -> "PostgreSQLAdapter":
         """

@@ -177,19 +177,23 @@ class SessionDatabase:
             )
     
     def _create_tables(self):
-        """Create all database tables from schema modules"""
+        """Create all database tables from schema modules (dialect-aware)"""
         from empirica.data.schema import ALL_SCHEMAS
-        from empirica.data.migrations import MigrationRunner, ALL_MIGRATIONS
+        from empirica.data.schema.dialect import adapt_all_schemas
 
+        dialect = self.adapter.dialect
         cursor = self.conn.cursor()
 
-        # Execute all table schemas
-        for schema_sql in ALL_SCHEMAS:
+        # Adapt and execute all table schemas for current dialect
+        adapted_schemas = adapt_all_schemas(list(ALL_SCHEMAS), dialect)
+        for schema_sql in adapted_schemas:
             cursor.execute(schema_sql)
 
-        # Run tracked migrations (only executes once per migration)
-        migration_runner = MigrationRunner(self.conn)
-        migration_runner.run_all(ALL_MIGRATIONS)
+        # Run tracked migrations (SQLite only — PostgreSQL gets fresh schema)
+        if dialect == "sqlite":
+            from empirica.data.migrations import MigrationRunner, ALL_MIGRATIONS
+            migration_runner = MigrationRunner(self.conn)
+            migration_runner.run_all(ALL_MIGRATIONS)
 
         # Create indexes for performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_ai ON sessions(ai_id)")
@@ -198,8 +202,7 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_cascades_confidence ON cascades(final_confidence)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_beliefs_cascade ON bayesian_beliefs(cascade_id)")
         # BEADS integration index (check if column exists first)
-        cursor.execute("SELECT COUNT(*) FROM pragma_table_info('goals') WHERE name='beads_issue_id'")
-        if cursor.fetchone()[0] > 0:
+        if self.adapter.column_exists("goals", "beads_issue_id"):
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_goals_beads_issue_id ON goals(beads_issue_id)")
         # Index for reflexes table (replaces old cascade_metadata index)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_session ON epistemic_snapshots(session_id)")
@@ -2036,15 +2039,22 @@ class SessionDatabase:
 
     def _get_latest_impact_score(self, session_id: str) -> float:
         """Get impact score from latest CASCADE assessment (PREFLIGHT/CHECK/POSTFLIGHT)"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT impact FROM reflexes
-            WHERE session_id = ?
-            ORDER BY timestamp DESC
-            LIMIT 1
-        """, (session_id,))
-        row = cursor.fetchone()
-        return row['impact'] if row and row['impact'] is not None else 0.5  # Default: moderate impact
+        try:
+            result = self.adapter.execute("""
+                SELECT impact FROM reflexes
+                WHERE session_id = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """, (session_id,))
+            row = result.fetchone()
+            if row is None:
+                return 0.5
+            # Handle both dict (PostgreSQL RealDictCursor) and tuple (SQLite) rows
+            if isinstance(row, dict):
+                return row.get('impact', 0.5) or 0.5
+            return row[0] if row[0] is not None else 0.5
+        except Exception:
+            return 0.5
 
     def log_finding(
         self,

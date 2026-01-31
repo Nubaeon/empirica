@@ -2,10 +2,11 @@
 """
 Database Configuration Loader
 
-Loads database configuration from:
-1. Environment variables (EMPIRICA_DB_TYPE, EMPIRICA_DB_*)
-2. config.yaml (database section)
-3. Defaults to SQLite
+Loads database configuration from (in priority order):
+1. DATABASE_URL (standard postgres://... URL, Docker/Heroku convention)
+2. EMPIRICA_DB_TYPE + EMPIRICA_DB_* environment variables
+3. config.yaml (database section)
+4. Defaults to SQLite
 
 Example config.yaml:
     database:
@@ -41,7 +42,23 @@ def get_database_config() -> Dict[str, Any]:
             "postgresql": {...}  # if type=postgresql
         }
     """
-    # Check environment variable first
+    # Check DATABASE_URL first (standard Docker/Heroku convention)
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url and database_url.startswith("postgresql"):
+        from urllib.parse import urlparse
+        parsed = urlparse(database_url)
+        return {
+            "type": "postgresql",
+            "postgresql": {
+                "host": parsed.hostname or "localhost",
+                "port": parsed.port or 5432,
+                "database": (parsed.path or "/empirica").lstrip("/"),
+                "user": parsed.username or "empirica",
+                "password": parsed.password or "",
+            }
+        }
+
+    # Check EMPIRICA_DB_TYPE environment variable
     db_type = os.environ.get("EMPIRICA_DB_TYPE", "sqlite")
 
     if db_type == "postgresql":

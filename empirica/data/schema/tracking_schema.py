@@ -27,6 +27,7 @@ SCHEMAS = [
                     prevention TEXT,
                     created_timestamp REAL NOT NULL,
                     mistake_data TEXT NOT NULL,
+                    transaction_id TEXT,
 
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id),
                     FOREIGN KEY (goal_id) REFERENCES goals(id),

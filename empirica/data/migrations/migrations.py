@@ -838,6 +838,112 @@ def migration_025_transaction_id(cursor: sqlite3.Cursor):
     logger.info("✓ Migration 025: Added transaction_id columns and indexes")
 
 
+# Migration 26: Add post-test verification tables for grounded calibration
+def migration_026_grounded_verification(cursor: sqlite3.Cursor):
+    """
+    Add tables for post-test verification system.
+
+    Grounds epistemic calibration in objective evidence (test results,
+    artifact counts, goal completion) rather than self-referential
+    PREFLIGHT-to-POSTFLIGHT deltas.
+
+    grounded_beliefs: Parallel Bayesian track using evidence as observations.
+    verification_evidence: Raw evidence records per session.
+    grounded_verifications: Per-session comparison of self-assessed vs grounded.
+    calibration_trajectory: POSTFLIGHT-to-POSTFLIGHT evolution tracking.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS grounded_beliefs (
+            belief_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            ai_id TEXT NOT NULL,
+            vector_name TEXT NOT NULL,
+            mean REAL NOT NULL,
+            variance REAL NOT NULL,
+            evidence_count INTEGER DEFAULT 0,
+            last_observation REAL,
+            last_observation_source TEXT,
+            self_referential_mean REAL,
+            divergence REAL,
+            last_updated REAL,
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_grounded_beliefs_ai_vector
+            ON grounded_beliefs(ai_id, vector_name)
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS verification_evidence (
+            evidence_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            source TEXT NOT NULL,
+            metric_name TEXT NOT NULL,
+            raw_value TEXT,
+            normalized_value REAL NOT NULL,
+            quality TEXT NOT NULL,
+            supports_vectors TEXT NOT NULL,
+            collected_at REAL NOT NULL,
+            metadata TEXT,
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_verification_evidence_session
+            ON verification_evidence(session_id)
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS grounded_verifications (
+            verification_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            ai_id TEXT NOT NULL,
+            self_assessed_vectors TEXT NOT NULL,
+            grounded_vectors TEXT,
+            calibration_gaps TEXT,
+            grounded_coverage REAL,
+            overall_calibration_score REAL,
+            evidence_count INTEGER DEFAULT 0,
+            sources_available TEXT,
+            sources_failed TEXT,
+            domain TEXT,
+            goal_id TEXT,
+            created_at REAL,
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_grounded_verifications_session
+            ON grounded_verifications(session_id)
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS calibration_trajectory (
+            point_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            ai_id TEXT NOT NULL,
+            vector_name TEXT NOT NULL,
+            self_assessed REAL NOT NULL,
+            grounded REAL,
+            gap REAL,
+            domain TEXT,
+            goal_id TEXT,
+            timestamp REAL NOT NULL,
+            FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_calibration_trajectory_ai_vector
+            ON calibration_trajectory(ai_id, vector_name, timestamp)
+    """)
+
+    logger.info("✅ Migration 026 complete: Post-test verification tables created")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -864,4 +970,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("023_sessions_parent_session_id", "Add parent_session_id to sessions for sub-agent lineage tracking", migration_023_sessions_parent_session_id),
     ("024_attention_budgets", "Add attention_budgets and rollup_logs tables for epistemic attention budget", migration_024_attention_budgets),
     ("025_transaction_id", "Add transaction_id to epistemic artifact tables for first-class transaction tracking", migration_025_transaction_id),
+    ("026_grounded_verification", "Add post-test verification tables for grounded calibration", migration_026_grounded_verification),
 ]

@@ -21,8 +21,11 @@ SCHEMAS = [
                     total_sessions INTEGER DEFAULT 0,
                     total_goals INTEGER DEFAULT 0,
                     total_epistemic_deltas TEXT,
-                    
-                    project_data TEXT NOT NULL
+
+                    project_data TEXT NOT NULL,
+                    project_type TEXT DEFAULT 'product',
+                    project_tags TEXT,
+                    parent_project_id TEXT
                 )
     """,
 
@@ -86,7 +89,8 @@ SCHEMAS = [
                     finding_data TEXT NOT NULL,
                     subject TEXT,
                     impact REAL DEFAULT 0.5,
-                    
+                    transaction_id TEXT,
+
                     FOREIGN KEY (project_id) REFERENCES projects(id),
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id),
                     FOREIGN KEY (goal_id) REFERENCES goals(id),
@@ -110,7 +114,8 @@ SCHEMAS = [
                     unknown_data TEXT NOT NULL,
                     subject TEXT,
                     impact REAL DEFAULT 0.5,
-                    
+                    transaction_id TEXT,
+
                     FOREIGN KEY (project_id) REFERENCES projects(id),
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id),
                     FOREIGN KEY (goal_id) REFERENCES goals(id),
@@ -132,7 +137,8 @@ SCHEMAS = [
                     dead_end_data TEXT NOT NULL,
                     subject TEXT,
                     impact REAL DEFAULT 0.5,
-                    
+                    transaction_id TEXT,
+
                     FOREIGN KEY (project_id) REFERENCES projects(id),
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id),
                     FOREIGN KEY (goal_id) REFERENCES goals(id),

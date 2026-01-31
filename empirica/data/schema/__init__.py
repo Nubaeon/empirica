@@ -12,6 +12,8 @@ from .projects_schema import SCHEMAS as PROJECTS_SCHEMAS
 from .tracking_schema import SCHEMAS as TRACKING_SCHEMAS
 from .trajectory_schema import SCHEMAS as TRAJECTORY_SCHEMAS
 from .concept_graph_schema import SCHEMAS as CONCEPT_GRAPH_SCHEMAS
+from .extended_schema import SCHEMAS as EXTENDED_SCHEMAS
+from .verification_schema import SCHEMAS as VERIFICATION_SCHEMAS
 
 # All schemas in execution order
 ALL_SCHEMAS = (
@@ -21,7 +23,9 @@ ALL_SCHEMAS = (
     PROJECTS_SCHEMAS +
     TRACKING_SCHEMAS +
     TRAJECTORY_SCHEMAS +
-    CONCEPT_GRAPH_SCHEMAS
+    CONCEPT_GRAPH_SCHEMAS +
+    EXTENDED_SCHEMAS +
+    VERIFICATION_SCHEMAS
 )
 
 __all__ = [
@@ -33,4 +37,6 @@ __all__ = [
     'TRACKING_SCHEMAS',
     'TRAJECTORY_SCHEMAS',
     'CONCEPT_GRAPH_SCHEMAS',
+    'EXTENDED_SCHEMAS',
+    'VERIFICATION_SCHEMAS',
 ]

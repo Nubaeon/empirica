@@ -22,6 +22,9 @@ SCHEMAS = [
                     session_notes TEXT,
                     bootstrap_level INTEGER DEFAULT 1,
                     parent_session_id TEXT,
+                    project_id TEXT,
+                    subject TEXT,
+                    instance_id TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
     """,
@@ -55,7 +58,8 @@ SCHEMAS = [
                     engagement_gate_passed BOOLEAN,
                     bayesian_active BOOLEAN DEFAULT 0,
                     drift_monitored BOOLEAN DEFAULT 0,
-                    
+                    epistemic_delta TEXT,
+
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id)
                 )
     """,
