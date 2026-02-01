@@ -1,0 +1,16 @@
+{
+  "finding_id": "87634e11-0080-4120-a46f-d9e0dff259a1",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T19:05:47.596387+00:00",
+  "finding": "Complete POSIX-to-Empirica mapping reveals Empirica is a cognitive operating system, not just an epistemic tracking tool. Kernel=Sentinel+CASCADE, Processes=Agents, Scheduler=Goal manager, Memory=Context Budget Manager (4-layer: HOT/WARM/SEARCH/COLD), Filesystem=Storage layers, Bus=MCP protocol, Boot=SessionStart+PREFLIGHT, Security=capability-based ACL via hooks, I/O=Breadcrumbs, Networking=A2A protocol. The framing shift: from 'epistemic tracking for AI agents' to 'a cognitive OS that manages AI execution the way POSIX manages process execution.'",
+  "impact": 0.95,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Complete POSIX-to-Empirica mapping reveals Empirica is a cognitive operating system, not just an epistemic tracking tool. Kernel=Sentinel+CASCADE, Processes=Agents, Scheduler=Goal manager, Memory=Context Budget Manager (4-layer: HOT/WARM/SEARCH/COLD), Filesystem=Storage layers, Bus=MCP protocol, Boot=SessionStart+PREFLIGHT, Security=capability-based ACL via hooks, I/O=Breadcrumbs, Networking=A2A protocol. The framing shift: from 'epistemic tracking for AI agents' to 'a cognitive OS that manages AI execution the way POSIX manages process execution.'",
+    "impact": 0.95
+  }
+}
