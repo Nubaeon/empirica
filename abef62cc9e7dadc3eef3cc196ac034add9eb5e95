@@ -1,0 +1,31 @@
+{
+  "goal_id": "6e967f5a-6abc-40a2-bb51-45289acb887d",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T11:40:05.077276+00:00",
+  "goal_data": {
+    "objective": "Fix installers for v1.5.0: Python version discovery, version bump, test on Philipp's machine",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "install.sh bumped to 1.5.0 with Python version checking",
+      "install.py handles macOS framework Python",
+      "Philipp's machine runs canonical installer successfully",
+      "No ad-hoc symlinks remain on Philipp's system"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T11:40:05.077286+00:00",
+      "action": "created"
+    }
+  ]
+}
