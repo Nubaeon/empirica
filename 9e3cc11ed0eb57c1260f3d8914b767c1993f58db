@@ -1,0 +1,31 @@
+{
+  "goal_id": "f0586df3-2244-428a-9ff6-3a8307cd4354",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T10:57:05.396112+00:00",
+  "goal_data": {
+    "objective": "Goal-bound epistemic agents: attach investigation agents to goals/subtasks based on epistemic context (unknowns, uncertainty vectors, scope). Goals become agent orchestration primitives.",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.7,
+      "coordination": 0.5
+    },
+    "success_criteria": [
+      "Agent spawning can be triggered by goal/subtask epistemic context",
+      "Agents inherit epistemic state from parent goal",
+      "Agent findings auto-link to originating goal/subtask",
+      "Attention budget derived from goal uncertainty vectors"
+    ],
+    "estimated_complexity": 0.8,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T10:57:05.396122+00:00",
+      "action": "created"
+    }
+  ]
+}
