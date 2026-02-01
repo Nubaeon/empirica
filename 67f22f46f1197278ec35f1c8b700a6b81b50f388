@@ -1,0 +1,32 @@
+{
+  "goal_id": "5cf11bc5-87d6-430e-bae5-e5ec236003d5",
+  "session_id": "fadfb1b6-9594-43c1-b218-32c17e275689",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T13:00:27.645012+00:00",
+  "goal_data": {
+    "objective": "Update Empirica arXiv paper with fresh v1.5.0 data: 479,686 evidence observations, 267 clean learning sessions, 93.6% improvement rate, 115x calibration convergence. Update all statistics in calibration.tex, introduction.tex, discussion.tex, conclusion.tex.",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All stale numbers updated in LaTeX sections",
+      "Per-vector table reflects current data",
+      "Convergence table reflects 115x tightening",
+      "Introduction/conclusion stats match calibration section",
+      "Committed to paper repo"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T13:00:27.645028+00:00",
+      "action": "created"
+    }
+  ]
+}
