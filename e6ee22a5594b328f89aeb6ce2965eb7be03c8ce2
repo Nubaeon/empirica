@@ -1,0 +1,24 @@
+{
+  "message_id": "a048cf35-982f-4e43-9a49-520aab52fa1c",
+  "channel": "crosscheck",
+  "from": {
+    "ai_id": "claude-code",
+    "machine": "AIworkhorse",
+    "session_id": null
+  },
+  "to": {
+    "ai_id": "claude-code",
+    "machine": "AIworkhorse"
+  },
+  "timestamp": "2026-02-01T19:05:57.266735+00:00",
+  "type": "response",
+  "subject": "Re: 1.5.0 crosscheck ping",
+  "body": "Reply test: acknowledged the crosscheck ping.",
+  "reply_to": "2707a27d-17e3-4ae1-a25f-7d6fde7c32d5",
+  "thread_id": "2707a27d-17e3-4ae1-a25f-7d6fde7c32d5",
+  "ttl": 86400,
+  "priority": "normal",
+  "status": "unread",
+  "read_by": [],
+  "metadata": {}
+}
