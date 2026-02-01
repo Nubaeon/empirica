@@ -1,0 +1,16 @@
+{
+  "finding_id": "3aaa46c2-f93c-4ed9-8ea4-e2e4e9fbd7cd",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T17:45:35.171400+00:00",
+  "finding": "Three injection channels for Context Budget Manager: (1) CLAUDE.md = always-resident anchor (~10k tokens, calibration + core workflow), (2) Skills = lazy-loaded kernel modules (MCO configs as skills, loaded on trigger or auto-detected condition), (3) MCP tools = on-demand retrieval (Qdrant semantic search, project-bootstrap). The budget manager sits on the EpistemicBus as an observer, reacting to CONFIDENCE_DROPPED (\u2192 page fault retrieval), POSTFLIGHT_COMPLETE (\u2192 decay stale items), pre_compact (\u2192 triage for eviction). Human-tunable thresholds control aggressiveness like sysctl vm.* parameters.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Three injection channels for Context Budget Manager: (1) CLAUDE.md = always-resident anchor (~10k tokens, calibration + core workflow), (2) Skills = lazy-loaded kernel modules (MCO configs as skills, loaded on trigger or auto-detected condition), (3) MCP tools = on-demand retrieval (Qdrant semantic search, project-bootstrap). The budget manager sits on the EpistemicBus as an observer, reacting to CONFIDENCE_DROPPED (\u2192 page fault retrieval), POSTFLIGHT_COMPLETE (\u2192 decay stale items), pre_compact (\u2192 triage for eviction). Human-tunable thresholds control aggressiveness like sysctl vm.* parameters.",
+    "impact": 0.9
+  }
+}
