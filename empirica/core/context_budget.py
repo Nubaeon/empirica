@@ -38,6 +38,7 @@ Usage:
 import json
 import logging
 import math
+import os
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
@@ -280,8 +281,10 @@ class ContextBudgetManager(EpistemicObserver):
         session_id: str,
         thresholds: Optional[BudgetThresholds] = None,
         auto_subscribe: bool = True,
+        node_id: Optional[str] = None,
     ):
         self.session_id = session_id
+        self.node_id = node_id or os.getenv("EMPIRICA_AI_ID", "unknown")
         self.thresholds = thresholds or BudgetThresholds()
         self._inventory: Dict[str, ContextItem] = {}
         self._eviction_log: List[EvictionResult] = []
@@ -748,6 +751,7 @@ class ContextBudgetManager(EpistemicObserver):
         total = self._get_total_usage()
         cap = self.thresholds.total_capacity
         return {
+            "node_id": self.node_id,
             "tokens_used": total,
             "tokens_available": max(0, cap - total),
             "utilization_pct": round(total / max(cap, 1) * 100, 1),
@@ -769,9 +773,9 @@ class ContextBudgetManager(EpistemicObserver):
             bus = get_global_bus()
             bus.publish(EpistemicEvent(
                 event_type=event_type,
-                agent_id="context_budget_manager",
+                agent_id=f"cbm:{self.node_id}",
                 session_id=self.session_id,
-                data=data,
+                data={**data, "node_id": self.node_id},
             ))
         except Exception as e:
             logger.debug(f"Could not publish event: {e}")
@@ -791,6 +795,7 @@ class ContextBudgetManager(EpistemicObserver):
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS context_budget_state (
                     session_id TEXT PRIMARY KEY,
+                    node_id TEXT,
                     inventory_json TEXT,
                     thresholds_json TEXT,
                     page_faults INTEGER,
@@ -807,11 +812,12 @@ class ContextBudgetManager(EpistemicObserver):
 
             cursor.execute("""
                 INSERT OR REPLACE INTO context_budget_state
-                (session_id, inventory_json, thresholds_json,
+                (session_id, node_id, inventory_json, thresholds_json,
                  page_faults, evictions, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 self.session_id,
+                self.node_id,
                 json.dumps(inventory_data),
                 json.dumps(self.thresholds.to_dict()),
                 self._page_fault_count,
@@ -871,6 +877,7 @@ _global_manager: Optional[ContextBudgetManager] = None
 def get_budget_manager(
     session_id: Optional[str] = None,
     thresholds: Optional[BudgetThresholds] = None,
+    node_id: Optional[str] = None,
 ) -> ContextBudgetManager:
     """Get or create the global Context Budget Manager."""
     global _global_manager
@@ -886,6 +893,7 @@ def get_budget_manager(
         _global_manager = ContextBudgetManager(
             session_id=session_id,
             thresholds=thresholds,
+            node_id=node_id,
         )
         logger.info(
             f"Created global ContextBudgetManager for session {session_id}"

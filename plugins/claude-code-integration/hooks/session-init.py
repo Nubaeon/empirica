@@ -249,6 +249,81 @@ EOF
         print(json.dumps(output))
         sys.exit(0)
 
+    # Initialize Context Budget Manager (bootloader phase)
+    budget_summary = None
+    try:
+        sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
+        from empirica.core.context_budget import (
+            ContextBudgetManager, ContextItem, MemoryZone, ContentType,
+            InjectionChannel, estimate_tokens,
+        )
+
+        manager = ContextBudgetManager(
+            session_id=result["session_id"],
+            auto_subscribe=False,  # No bus in subprocess
+        )
+
+        # Register anchor zone: CLAUDE.md, calibration, session state
+        manager.register_item(ContextItem(
+            id="claude_md",
+            zone=MemoryZone.ANCHOR,
+            content_type=ContentType.SYSTEM_PROMPT,
+            source="CLAUDE.md",
+            channel=InjectionChannel.HOOK,
+            label="CLAUDE.md system prompt + calibration",
+            estimated_tokens=12000,
+            epistemic_value=1.0,
+            evictable=False,
+        ))
+        manager.register_item(ContextItem(
+            id="session_state",
+            zone=MemoryZone.ANCHOR,
+            content_type=ContentType.CALIBRATION,
+            source="session-init",
+            channel=InjectionChannel.HOOK,
+            label=f"Session {result['session_id'][:8]} state",
+            estimated_tokens=1000,
+            epistemic_value=1.0,
+            evictable=False,
+        ))
+
+        # Register bootstrap context as cache items
+        ctx = result.get("project_context", {})
+        if ctx.get("goals"):
+            for i, g in enumerate(ctx["goals"]):
+                obj = g.get("objective", str(g)) if isinstance(g, dict) else str(g)
+                manager.register_item(ContextItem(
+                    id=f"boot_goal_{i}",
+                    zone=MemoryZone.WORKING,
+                    content_type=ContentType.GOAL,
+                    source="project-bootstrap",
+                    channel=InjectionChannel.HOOK,
+                    label=obj[:80],
+                    estimated_tokens=200,
+                    epistemic_value=0.8,
+                    evictable=False,
+                ))
+        if ctx.get("findings"):
+            for i, f in enumerate(ctx["findings"]):
+                text = f.get("finding", str(f)) if isinstance(f, dict) else str(f)
+                impact = f.get("impact", 0.5) if isinstance(f, dict) else 0.5
+                manager.register_item(ContextItem(
+                    id=f"boot_finding_{i}",
+                    zone=MemoryZone.CACHE,
+                    content_type=ContentType.FINDING,
+                    source="project-bootstrap",
+                    channel=InjectionChannel.HOOK,
+                    label=text[:80],
+                    estimated_tokens=estimate_tokens(text),
+                    epistemic_value=float(impact) if impact else 0.5,
+                ))
+
+        # Persist and get summary
+        manager.persist_state()
+        budget_summary = manager.get_inventory_summary()
+    except Exception as e:
+        budget_summary = {"error": str(e)}
+
     # Success - generate PREFLIGHT prompt
     session_id = result["session_id"]
     context_text = format_context(result.get("project_context"))
@@ -297,11 +372,14 @@ EOF
 
     # User-visible message
     archive_msg = f"\n🗄️  Archived {len(archived_plans)} stale plan(s)" if archived_plans else ""
+    budget_msg = ""
+    if budget_summary and not budget_summary.get("error"):
+        budget_msg = f"\n📊 Budget: {budget_summary.get('tokens_used', 0):,}t used / {budget_summary.get('tokens_available', 0):,}t avail ({budget_summary.get('utilization_pct', 0)}%)"
     print(f"""
 🚀 Empirica: New Session Initialized
 
 ✅ Session created: {session_id}
-✅ Project context loaded{archive_msg}
+✅ Project context loaded{archive_msg}{budget_msg}
 
 📋 Run PREFLIGHT to establish baseline, then CHECK before actions.
 """, file=sys.stderr)

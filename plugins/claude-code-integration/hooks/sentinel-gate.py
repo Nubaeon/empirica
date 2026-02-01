@@ -111,6 +111,12 @@ UNCERTAINTY_THRESHOLD = 0.35
 MAX_CHECK_AGE_MINUTES = 30
 
 
+# Ask-before-investigate thresholds (from ask_before_investigate.yaml)
+# Hardcoded to avoid YAML dependency in hook (hooks must be fast + minimal deps)
+ASK_UNCERTAINTY_THRESHOLD = 0.65   # Uncertainty >= this triggers ask-first
+ASK_CONTEXT_THRESHOLD = 0.50       # Context >= this means we CAN formulate questions
+ASK_SIGNAL_THRESHOLD = 0.40        # Signal >= this means not completely lost
+
 PAUSE_FILE = Path.home() / '.empirica' / 'sentinel_paused'
 
 
@@ -393,6 +399,69 @@ def is_safe_pipe_chain(command: str) -> bool:
     return True
 
 
+def _get_preflight_context(cursor, session_id: str) -> float:
+    """Extract context vector from PREFLIGHT reflex_data.
+
+    Returns the context score (0.0-1.0) from the most recent PREFLIGHT.
+    Falls back to 0.0 if not available.
+    """
+    try:
+        cursor.execute("""
+            SELECT reflex_data FROM reflexes
+            WHERE session_id = ? AND phase = 'PREFLIGHT'
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
+        row = cursor.fetchone()
+        if row and row[0]:
+            data = json.loads(row[0])
+            vectors = data.get('vectors', {})
+            return float(vectors.get('context', 0.0))
+    except Exception:
+        pass
+    return 0.0
+
+
+def _get_check_context(reflex_data: Optional[str]) -> float:
+    """Extract context vector from CHECK reflex_data.
+
+    Returns the context score (0.0-1.0) from CHECK data.
+    Falls back to 0.0 if not available.
+    """
+    if not reflex_data:
+        return 0.0
+    try:
+        data = json.loads(reflex_data)
+        vectors = data.get('vectors', {})
+        return float(vectors.get('context', 0.0))
+    except Exception:
+        return 0.0
+
+
+def _check_ask_before_investigate(know: float, uncertainty: float, context: float) -> Optional[str]:
+    """Check if vectors match ask-before-investigate thresholds.
+
+    Returns an escalation message if the AI should ask the user first,
+    or None if normal flow should continue.
+
+    Triggers when:
+    - Uncertainty is high (>= 0.65) - significant doubt
+    - Context is sufficient (>= 0.50) - enough info to formulate questions
+    - Know is below gate (< 0.70) - not ready to proceed
+
+    This prevents wasteful investigation loops when the AI has enough
+    context to ask targeted questions instead.
+    """
+    if (uncertainty >= ASK_UNCERTAINTY_THRESHOLD
+            and context >= ASK_CONTEXT_THRESHOLD
+            and know < KNOW_THRESHOLD):
+        return (
+            f"ESCALATE: High uncertainty ({uncertainty:.2f}) with sufficient context ({context:.2f}). "
+            f"Ask the user before investigating. You have enough context to formulate specific questions. "
+            f"Use AskUserQuestion to clarify approach, then CHECK again."
+        )
+    return None
+
+
 def main():
     try:
         hook_input = json.loads(sys.stdin.read() or '{}')
@@ -563,6 +632,15 @@ def main():
         respond("allow", f"PREFLIGHT passed gate (know={raw_know:.2f}, unc={raw_unc:.2f}) - auto-proceed")
         sys.exit(0)
 
+    # ESCALATION CHECK: High uncertainty but context exists → ask user first
+    # Uses ask_before_investigate.yaml thresholds (loaded from MCO config)
+    preflight_context = _get_preflight_context(cursor, session_id)
+    escalation = _check_ask_before_investigate(raw_know, raw_unc, preflight_context)
+    if escalation:
+        db.close()
+        respond("deny", escalation)
+        sys.exit(0)
+
     # PREFLIGHT confidence too low - require explicit CHECK
     cursor.execute("""
         SELECT know, uncertainty, reflex_data, timestamp
@@ -625,7 +703,15 @@ def main():
 
     # Check if decision was "investigate" (not authorized for praxic)
     if decision == 'investigate':
-        respond("deny", f"CHECK returned 'investigate'. Continue noetic phase first.")
+        # ESCALATION: If ask-before-investigate thresholds match, suggest asking
+        check_know = know or 0
+        check_unc = uncertainty or 1
+        check_context = _get_check_context(reflex_data)
+        escalation = _check_ask_before_investigate(check_know, check_unc, check_context)
+        if escalation:
+            respond("deny", escalation)
+        else:
+            respond("deny", f"CHECK returned 'investigate'. Continue noetic phase first.")
         sys.exit(0)
 
     # Optional: Check age expiry

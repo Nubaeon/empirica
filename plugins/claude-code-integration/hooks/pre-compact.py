@@ -228,6 +228,34 @@ def main():
         pass
 
     # =========================================================================
+    # STEP 0.7: Context Budget triage (evict low-priority before compaction)
+    # =========================================================================
+    budget_report = None
+    try:
+        sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
+        from empirica.core.context_budget import (
+            ContextBudgetManager, load_thresholds_from_config,
+        )
+
+        thresholds = load_thresholds_from_config()
+        manager = ContextBudgetManager(
+            session_id=empirica_session,
+            thresholds=thresholds,
+            auto_subscribe=False,
+        )
+
+        # Decay all items and evict stale ones before compaction
+        manager._decay_all_items()
+
+        # Get budget report for snapshot metadata
+        budget_report = manager.get_inventory_summary()
+
+        # Persist final state
+        manager.persist_state()
+    except Exception:
+        pass  # Budget triage failure is non-fatal
+
+    # =========================================================================
     # STEP 1: Capture FRESH epistemic vectors (canonical via assess-state)
     # =========================================================================
     # This is the AI's self-assessed state BEFORE compaction.
@@ -309,7 +337,8 @@ def main():
                     "unknowns_count": len(breadcrumbs.get('unknowns', [])),
                     "goals_count": len(breadcrumbs.get('goals', [])),
                     "dead_ends_count": len(breadcrumbs.get('dead_ends', []))
-                }
+                },
+                "context_budget": budget_report,  # Token budget state at compaction
             }
 
             with open(snapshot_path, 'w') as f:
