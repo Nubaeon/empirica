@@ -1,0 +1,13 @@
+{
+  "unknown_id": "676da6e7-6fa4-4f2f-86c3-eea9c5707e54",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T10:56:32.481730+00:00",
+  "unknown": "How should goal-bound agents inherit epistemic state? Options: (a) inherit from parent session vectors, (b) derive from goal's logged unknowns, (c) synthesize from both. Also unclear: should agent findings auto-link to the goal that spawned them?",
+  "goal_id": "f7b402a9-b679-4804-af28-273de4009769",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
