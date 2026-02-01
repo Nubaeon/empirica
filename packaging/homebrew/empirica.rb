@@ -14,7 +14,7 @@ class Empirica < Formula
   desc "Epistemic self-assessment framework for AI agents"
   homepage "https://github.com/Nubaeon/empirica"
   url "https://files.pythonhosted.org/packages/source/e/empirica/empirica-1.5.0.tar.gz"
-  sha256 "d42023e8284d35aa7aeba58a16cc3e62a83fd78348e6e5ce4e09b1e89f190d15"  # TODO: Update sha256 for v1.5.0 release
+  sha256 "0000000000000000000000000000000000000000000000000000000000000000"  # RELEASE: Compute with `shasum -a 256 empirica-1.5.0.tar.gz` after PyPI publish
   license "MIT"
 
   depends_on "python@3.11"

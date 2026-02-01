@@ -14,35 +14,38 @@
     <description>
 Empirica is an epistemic self-assessment framework for AI agents. It provides:
 
-- CASCADE workflow (PREFLIGHT → Investigate → Plan → Act → CHECK → POSTFLIGHT)
-- 13-vector epistemic state tracking
+- 4-phase CASCADE workflow (PREFLIGHT → CHECK → POSTFLIGHT → POST-TEST)
+- Dual-track calibration (self-referential + grounded verification)
+- 13-vector epistemic state tracking with Bayesian belief updates
 - Goal orchestration with dependency management
 - Git-based session checkpoints and handoff reports
 - MCP (Model Context Protocol) server integration
-- Multi-provider AI adapter support (Claude, Gemini, GPT, Qwen, etc.)
+- Qdrant semantic memory (eidetic facts, episodic narratives, pattern retrieval)
 
 Perfect for AI agents that need genuine metacognitive awareness and calibration.
     </description>
     <summary>Epistemic self-assessment framework for AI agents with CASCADE workflow</summary>
     <releaseNotes>
+Release 1.5.0 (Grounded Calibration):
+- Dual-track calibration: self-referential (PREFLIGHT→POSTFLIGHT) + grounded (POSTFLIGHT→evidence)
+- 4-phase CASCADE: PREFLIGHT → CHECK → POSTFLIGHT → POST-TEST (automatic)
+- PostTestCollector: 6 evidence sources (pytest, git, goals, artifacts, issues, sentinel)
+- EvidenceMapper with quality-weighted vector estimation
+- GroundedCalibrationManager with parallel Bayesian tracking
+- CalibrationTrajectory for trend detection (closing/widening/stable)
+- 4 new verification schema tables
+- CLI: calibration-report --grounded, calibration-report --trajectory
+- 3,220+ calibration observations
+
 Release 1.0.3 (Patch):
-- MCP moved to optional dependencies (core empirica no longer requires mcp package)
-- Fixed duplicate mcp entry in optional dependencies
-- Users who only need CLI don't have to install mcp
+- MCP moved to optional dependencies
 - Better package separation between empirica and empirica-mcp
 
-Release 1.0.1 (Patch):
-- Fixed SEMANTIC_INDEX.yaml v2.0 with correct documentation paths
-- Moved Docker documentation to proper location (.docker/)
-- Updated README with all installation methods
-- Published empirica-mcp v1.0.0 to PyPI
-
 Release 1.0.0 (Stable):
-- MCO (Model-Centric Operations) system with persona support
+- MCO system with persona support
 - Complete CASCADE workflow (PREFLIGHT/CHECK/POSTFLIGHT)
 - Unified storage via GitEnhancedReflexLogger
 - Project bootstrap with uncertainty-driven context loading
-- Session management with 97.5% token reduction
     </releaseNotes>
     <tags>ai llm epistemic metacognition self-assessment calibration python cli</tags>
     <dependencies>
