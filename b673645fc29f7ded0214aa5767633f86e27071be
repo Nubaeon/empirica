@@ -1,0 +1,13 @@
+{
+  "unknown_id": "85790897-e3f4-4a71-896c-ffd9f726c49c",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:06:28.530415+00:00",
+  "unknown": "How to normalize git timing signals across different AI models and hardware. Commit timestamp gaps depend on model inference speed, tool latency, and human interruptions \u2014 need to isolate the epistemic signal (investigation vs execution) from infrastructure noise.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
