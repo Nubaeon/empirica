@@ -1,0 +1,16 @@
+{
+  "finding_id": "a6a0c111-8c52-4ac8-bee3-7626c5ca9cf3",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:06:21.821334+00:00",
+  "finding": "Full git evidence collector mapping for grounded verification: reflog (uncertainty, signal \u2014 Objective), word-diff precision (know, clarity \u2014 Objective), diff-filter A/M/D ratio (state, change, completion \u2014 Objective), file churn (uncertainty, coherence \u2014 Objective), commit timing (do, state \u2014 Objective), branch topology (context, signal \u2014 Objective), commit-message-vs-diff (clarity, signal \u2014 Semi-objective), stash list (uncertainty, completion \u2014 Objective). 8 new collectors, 7 of which are Tier 1 objective.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Full git evidence collector mapping for grounded verification: reflog (uncertainty, signal \u2014 Objective), word-diff precision (know, clarity \u2014 Objective), diff-filter A/M/D ratio (state, change, completion \u2014 Objective), file churn (uncertainty, coherence \u2014 Objective), commit timing (do, state \u2014 Objective), branch topology (context, signal \u2014 Objective), commit-message-vs-diff (clarity, signal \u2014 Semi-objective), stash list (uncertainty, completion \u2014 Objective). 8 new collectors, 7 of which are Tier 1 objective.",
+    "impact": 0.9
+  }
+}
