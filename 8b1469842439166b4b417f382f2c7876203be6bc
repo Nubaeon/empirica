@@ -1,0 +1,16 @@
+{
+  "finding_id": "8046075a-a426-4216-ad0c-e1516f7f0367",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "dff47577-4480-44c4-980e-533df7c6269f",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T12:38:39.649000+00:00",
+  "finding": "Claude Code bug: input prompt disappears after SessionEnd hooks fire in tmux. Process stays alive (statusline renders) but no input area. Escape/Enter/Ctrl+C ineffective, only Ctrl+D exits. Filed as anthropics/claude-code#22368.",
+  "impact": 0.5,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Claude Code bug: input prompt disappears after SessionEnd hooks fire in tmux. Process stays alive (statusline renders) but no input area. Escape/Enter/Ctrl+C ineffective, only Ctrl+D exits. Filed as anthropics/claude-code#22368.",
+    "impact": 0.5
+  }
+}
