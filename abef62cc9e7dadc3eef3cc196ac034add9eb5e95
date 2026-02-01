@@ -1,0 +1,32 @@
+{
+  "goal_id": "410272df-8d46-4ca7-a602-4384003e38ae",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T11:34:07.584515+00:00",
+  "goal_data": {
+    "objective": "Restructure Qdrant collections to align with Empirica vocabulary taxonomy \u2014 noetic/praxic/eidetic/episodic/calibration/context layers with appropriate decay functions and search semantics",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.6,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Collections map to taxonomy: noetic, praxic, eidetic, episodic, calibration, context",
+      "Each collection has appropriate decay function",
+      "Migration from current memory/goals/epistemics collections",
+      "All search functions updated for new structure",
+      "Pattern retrieval uses taxonomy-aware routing"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T11:34:07.584525+00:00",
+      "action": "created"
+    }
+  ]
+}
