@@ -1,0 +1,16 @@
+{
+  "finding_id": "70556623-2a8d-448c-b9cb-ce67e86ee40a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T17:56:00.638605+00:00",
+  "finding": "Sibling tool call cascade bug confirmed again in production: sentinel-gate.py blocking Write (due to missing PREFLIGHT) also killed a parallel Read call with 'Sibling tool call errored'. This is a Claude Code platform behavior, not Empirica bug. Workaround: make tool calls sequentially when any might be blocked by sentinel. Root cause: PreToolUse hook rejection of one tool cancels all parallel sibling tools in the same message.",
+  "impact": 0.7,
+  "goal_id": "6fe26512-6f6b-405d-9179-2154d4da5a5e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sibling tool call cascade bug confirmed again in production: sentinel-gate.py blocking Write (due to missing PREFLIGHT) also killed a parallel Read call with 'Sibling tool call errored'. This is a Claude Code platform behavior, not Empirica bug. Workaround: make tool calls sequentially when any might be blocked by sentinel. Root cause: PreToolUse hook rejection of one tool cancels all parallel sibling tools in the same message.",
+    "impact": 0.7
+  }
+}
