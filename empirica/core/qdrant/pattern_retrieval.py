@@ -82,6 +82,111 @@ def _search_memory_by_type(
         return []
 
 
+def _search_calibration_for_task(
+    project_id: str,
+    task_context: str,
+    limit: int = DEFAULT_LIMIT,
+) -> List[Dict]:
+    """
+    Search calibration collection for relevant patterns from similar past tasks.
+
+    Returns calibration warnings like:
+    - "For similar tasks, you overestimated completion by 0.31"
+    - "Your know vector was accurate for this type of work"
+    """
+    try:
+        from .vector_store import search_calibration_patterns
+
+        results = search_calibration_patterns(
+            project_id=project_id,
+            query=task_context,
+            entry_type="grounded_verification",
+            limit=limit,
+        )
+
+        warnings = []
+        for r in results:
+            gaps = r.get("calibration_gaps", {})
+            significant_gaps = {
+                v: g for v, g in gaps.items() if abs(g) > 0.15
+            }
+            if significant_gaps:
+                overestimates = [f"{v} by +{g:.2f}" for v, g in significant_gaps.items() if g > 0]
+                underestimates = [f"{v} by {g:.2f}" for v, g in significant_gaps.items() if g < 0]
+
+                warning = {
+                    "session_id": r.get("session_id"),
+                    "score": r.get("calibration_score"),
+                    "similarity": r.get("score"),
+                }
+                if overestimates:
+                    warning["overestimates"] = f"Overestimated: {', '.join(overestimates)}"
+                if underestimates:
+                    warning["underestimates"] = f"Underestimated: {', '.join(underestimates)}"
+                warnings.append(warning)
+
+        return warnings
+    except Exception as e:
+        logger.debug(f"_search_calibration_for_task failed: {e}")
+        return []
+
+
+def _check_calibration_bias(
+    project_id: str,
+    approach: str,
+    vectors: Optional[Dict] = None,
+) -> Optional[str]:
+    """
+    Check if historical calibration data suggests systematic bias for this type of work.
+
+    Returns a warning string if bias detected, None otherwise.
+    """
+    try:
+        from .vector_store import search_calibration_patterns
+
+        results = search_calibration_patterns(
+            project_id=project_id,
+            query=approach,
+            entry_type="grounded_verification",
+            limit=5,
+        )
+
+        if len(results) < 2:
+            return None  # Not enough data for pattern detection
+
+        # Aggregate gaps across similar sessions
+        gap_totals: Dict[str, List[float]] = {}
+        for r in results:
+            for v, g in r.get("calibration_gaps", {}).items():
+                if v not in gap_totals:
+                    gap_totals[v] = []
+                gap_totals[v].append(g)
+
+        # Find vectors with consistent bias (same direction across sessions)
+        biases = []
+        for v, gaps in gap_totals.items():
+            if len(gaps) < 2:
+                continue
+            avg_gap = sum(gaps) / len(gaps)
+            # All gaps same sign and average > 0.1
+            if abs(avg_gap) > 0.1 and all(g > 0 for g in gaps):
+                biases.append(f"{v}: consistently overestimate by +{avg_gap:.2f}")
+            elif abs(avg_gap) > 0.1 and all(g < 0 for g in gaps):
+                biases.append(f"{v}: consistently underestimate by {avg_gap:.2f}")
+
+        if biases:
+            return (
+                f"Calibration bias detected for similar tasks ({len(results)} past sessions): "
+                + "; ".join(biases)
+                + ". Consider applying corrections to your self-assessment."
+            )
+
+        return None
+    except Exception as e:
+        logger.debug(f"_check_calibration_bias failed: {e}")
+        return None
+
+
 def retrieve_task_patterns(
     project_id: str,
     task_context: str,
@@ -165,10 +270,14 @@ def retrieve_task_patterns(
         for f in findings_raw
     ]
 
+    # Search for calibration warnings (grounded verification gaps from similar tasks)
+    calibration_warnings = _search_calibration_for_task(project_id, task_context, limit)
+
     return {
         "lessons": lessons,
         "dead_ends": dead_ends,
-        "relevant_findings": relevant_findings
+        "relevant_findings": relevant_findings,
+        "calibration_warnings": calibration_warnings,
     }
 
 
@@ -246,8 +355,17 @@ def check_against_patterns(
                 "Proceeding without understanding current state increases mistake probability."
             )
 
+    # Check calibration history for systematic bias
+    calibration_bias = _check_calibration_bias(project_id, current_approach, vectors)
+    if calibration_bias:
+        warnings["calibration_bias"] = calibration_bias
+
     # Set has_warnings flag
-    warnings["has_warnings"] = bool(warnings["dead_end_matches"]) or bool(warnings["mistake_risk"])
+    warnings["has_warnings"] = (
+        bool(warnings["dead_end_matches"])
+        or bool(warnings["mistake_risk"])
+        or bool(warnings.get("calibration_bias"))
+    )
 
     return warnings
 

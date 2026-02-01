@@ -1752,6 +1752,65 @@ def handle_postflight_submit_command(args):
             except Exception as e:
                 logger.debug(f"Grounded verification skipped (non-fatal): {e}")
 
+            # GROUNDED CALIBRATION EMBEDDING: Embed verification to Qdrant for semantic search
+            grounded_embedded = False
+            try:
+                if grounded_verification and grounded_verification.get('evidence_count', 0) > 0:
+                    from empirica.core.qdrant.vector_store import (
+                        embed_grounded_verification,
+                        embed_calibration_trajectory,
+                        _check_qdrant_available,
+                    )
+
+                    if _check_qdrant_available():
+                        db = SessionDatabase()
+                        session = db.get_session(session_id)
+                        project_id = session.get('project_id') if session else None
+
+                        if project_id:
+                            import uuid as uuid_mod
+
+                            # Extract grounded vector values from gaps
+                            grounded_vectors = {}
+                            for v_name, gap in grounded_verification.get('gaps', {}).items():
+                                self_val = vectors.get(v_name, 0.5)
+                                grounded_vectors[v_name] = round(self_val - gap, 4)
+
+                            # Embed verification summary
+                            embed_grounded_verification(
+                                project_id=project_id,
+                                verification_id=str(uuid_mod.uuid4()),
+                                session_id=session_id,
+                                ai_id=session.get('ai_id', 'claude-code'),
+                                self_assessed=vectors,
+                                grounded_vectors=grounded_vectors,
+                                calibration_gaps=grounded_verification.get('gaps', {}),
+                                grounded_coverage=grounded_verification.get('grounded_coverage', 0),
+                                calibration_score=grounded_verification.get('calibration_score', 0),
+                                evidence_count=grounded_verification.get('evidence_count', 0),
+                                sources=grounded_verification.get('sources', []),
+                                goal_id=session.get('current_goal_id'),
+                                timestamp=time.time(),
+                            )
+
+                            # Embed trajectory point
+                            embed_calibration_trajectory(
+                                project_id=project_id,
+                                session_id=session_id,
+                                ai_id=session.get('ai_id', 'claude-code'),
+                                self_assessed=vectors,
+                                grounded_vectors=grounded_vectors,
+                                calibration_gaps=grounded_verification.get('gaps', {}),
+                                goal_id=session.get('current_goal_id'),
+                                timestamp=time.time(),
+                            )
+
+                            grounded_embedded = True
+                            logger.debug(f"Embedded grounded calibration to Qdrant for session {session_id[:8]}")
+                        db.close()
+            except Exception as e:
+                logger.debug(f"Grounded calibration embedding skipped (non-fatal): {e}")
+
             # EPISTEMIC TRAJECTORY STORAGE: Store learning deltas to Qdrant (if available)
             trajectory_stored = False
             try:
@@ -1790,8 +1849,24 @@ def handle_postflight_submit_command(args):
                         "partial" if deltas.get("completion", 0) > 0 else "abandoned"
                     )
 
-                    # Build narrative from reasoning and context
+                    # Build narrative from reasoning and grounded calibration context
                     narrative = reasoning or f"Session completed with learning delta: {deltas}"
+
+                    # Enrich narrative with grounded calibration context if available
+                    if grounded_verification and grounded_verification.get('evidence_count', 0) > 0:
+                        cal_score = grounded_verification.get('calibration_score', 0)
+                        coverage = grounded_verification.get('grounded_coverage', 0)
+                        gaps = grounded_verification.get('gaps', {})
+                        significant = {v: g for v, g in gaps.items() if abs(g) > 0.15}
+                        if significant:
+                            gap_desc = "; ".join(
+                                f"{v}: {'over' if g > 0 else 'under'} by {abs(g):.2f}"
+                                for v, g in significant.items()
+                            )
+                            narrative += (
+                                f" Grounded calibration: score={cal_score:.3f}, "
+                                f"coverage={coverage:.0%}. Significant gaps: {gap_desc}."
+                            )
 
                     # Create episodic memory entry (session narrative with temporal decay)
                     episodic_stored = embed_episodic(
@@ -1943,7 +2018,8 @@ def handle_postflight_submit_command(args):
                     "episodic_memory": episodic_stored,
                     "epistemic_snapshots": snapshot_created,
                     "qdrant_memory": memory_synced > 0,
-                    "grounded_verification": grounded_verification is not None
+                    "grounded_verification": grounded_verification is not None,
+                    "grounded_calibration_embedded": grounded_embedded
                 },
                 "breadcrumbs": {
                     "calibration_exported": calibration_exported,
