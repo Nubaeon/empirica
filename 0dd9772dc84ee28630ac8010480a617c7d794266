@@ -1,0 +1,31 @@
+{
+  "goal_id": "a9345ff4-d994-4b0a-b34f-c4fe56cef11d",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T11:07:53.190445+00:00",
+  "goal_data": {
+    "objective": "Align Claude Code plugin version to v1.5.0 \u2014 plugin manifest, hook headers, description, cache cleanup",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Plugin manifest (plugin.json) version bumped to 1.5.0",
+      "All hook file version headers updated",
+      "Plugin description mentions 4-phase CASCADE and grounded verification",
+      "Stale plugin cache cleared"
+    ],
+    "estimated_complexity": 0.3,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T11:07:53.190454+00:00",
+      "action": "created"
+    }
+  ]
+}
