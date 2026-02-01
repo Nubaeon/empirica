@@ -1,0 +1,16 @@
+{
+  "finding_id": "f36657a2-5ba9-4c57-b4c2-66c3fd2a779e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:06:16.011484+00:00",
+  "finding": "Commit timestamps encode noetic-to-praxic transitions passively. Long gaps between commits = investigation phase, rapid bursts = execution phase. The timing pattern is objective evidence of the AI's actual workflow rhythm, detectable from git alone without any self-assessment. Maps to do, state vectors.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Commit timestamps encode noetic-to-praxic transitions passively. Long gaps between commits = investigation phase, rapid bursts = execution phase. The timing pattern is objective evidence of the AI's actual workflow rhythm, detectable from git alone without any self-assessment. Maps to do, state vectors.",
+    "impact": 0.8
+  }
+}
