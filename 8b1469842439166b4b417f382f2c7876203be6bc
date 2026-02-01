@@ -1,0 +1,31 @@
+{
+  "goal_id": "cd656484-5e52-4e30-9ea9-1a652fb603cc",
+  "session_id": "95fb76e8-d82b-46f0-8c49-69a33a7495db",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T12:17:59.381892+00:00",
+  "goal_data": {
+    "objective": "Extract fresh dataset from Empirica production DB for paper revision v2",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.1,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Fresh CSV export of all key tables with updated counts",
+      "Data manifest updated with current metrics",
+      "Export includes new grounded verification tables",
+      "Files placed in empirica-paper/data/ ready for analysis"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T12:17:59.381903+00:00",
+      "action": "created"
+    }
+  ]
+}
