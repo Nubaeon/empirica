@@ -1,0 +1,16 @@
+{
+  "finding_id": "4162e5f7-da39-45da-8ed3-81def44de669",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T21:22:42.886894+00:00",
+  "finding": "Notes visibility needs three tiers, not binary: private (local only - mistakes, raw uncertainty), shared (team Forgejo - messages, findings, goals), public (GitHub/community - calibration data, badges, curated learnings). Maps to noetic/praxic split: private=thinking, public=artifacts, shared=collaborative epistemic state.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Notes visibility needs three tiers, not binary: private (local only - mistakes, raw uncertainty), shared (team Forgejo - messages, findings, goals), public (GitHub/community - calibration data, badges, curated learnings). Maps to noetic/praxic split: private=thinking, public=artifacts, shared=collaborative epistemic state.",
+    "impact": 0.85
+  }
+}
