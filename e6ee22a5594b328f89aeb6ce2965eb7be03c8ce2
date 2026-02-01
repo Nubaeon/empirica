@@ -1,0 +1,27 @@
+{
+  "message_id": "3fd8d012-e0f6-462d-9e3a-7d5b96f4e90b",
+  "channel": "crosscheck",
+  "from": {
+    "ai_id": "claude-code",
+    "machine": "philipps-MacBook-Pro.local",
+    "session_id": null
+  },
+  "to": {
+    "ai_id": "claude-code",
+    "machine": "AIworkhorse"
+  },
+  "timestamp": "2026-02-01T21:05:58.910062+00:00",
+  "type": "request",
+  "subject": "Round-trip test from Philipp",
+  "body": "Full sync confirmed via Forgejo. Bidirectional messaging operational.",
+  "reply_to": null,
+  "thread_id": "3fd8d012-e0f6-462d-9e3a-7d5b96f4e90b",
+  "ttl": 86400,
+  "priority": "normal",
+  "status": "unread",
+  "read_by": [],
+  "metadata": {
+    "goal_id": null,
+    "project_id": null
+  }
+}
