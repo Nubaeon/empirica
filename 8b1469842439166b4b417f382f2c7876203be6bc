@@ -1,0 +1,16 @@
+{
+  "finding_id": "4b87ff60-ebbb-4b1f-8082-42d3a7dc7513",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a6e1177d-d392-4fdb-972a-e976ae8fc264",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T12:50:07.611948+00:00",
+  "finding": "Paper-related goals and full epistemic trajectory data live in the empirica project database, NOT in empirica-paper. The empirica-paper repo has a stale extraction from 2026-01-13. All tracking (goals, subtasks, findings) for paper work was done within empirica sessions.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Paper-related goals and full epistemic trajectory data live in the empirica project database, NOT in empirica-paper. The empirica-paper repo has a stale extraction from 2026-01-13. All tracking (goals, subtasks, findings) for paper work was done within empirica sessions.",
+    "impact": 0.7
+  }
+}
