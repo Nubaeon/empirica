@@ -1,0 +1,31 @@
+{
+  "goal_id": "13ccc860-f828-4863-b272-3e0ff6292285",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T11:07:56.083712+00:00",
+  "goal_data": {
+    "objective": "Embed grounded calibration data to Qdrant for semantic search and cross-session meta-learning",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "grounded_verifications embedded to Qdrant after POSTFLIGHT",
+      "Calibration trajectory points searchable via semantic query",
+      "Pattern retrieval includes calibration history in PREFLIGHT/CHECK responses",
+      "Episodic narratives include grounded calibration context"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T11:07:56.083723+00:00",
+      "action": "created"
+    }
+  ]
+}
