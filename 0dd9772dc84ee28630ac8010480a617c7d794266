@@ -1,0 +1,16 @@
+{
+  "finding_id": "150fab33-86d2-45e2-8b3c-865126289e40",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T11:02:29.014081+00:00",
+  "finding": "Plugin template CLAUDE.md on Philipp's machine is v1.4.1, not v1.5.0. The template at ~/.claude/plugins/local/empirica-integration/templates/CLAUDE.md needs updating. This affects any fresh install or remediation that copies from the template.",
+  "impact": 0.5,
+  "goal_id": "f7b402a9-b679-4804-af28-273de4009769",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Plugin template CLAUDE.md on Philipp's machine is v1.4.1, not v1.5.0. The template at ~/.claude/plugins/local/empirica-integration/templates/CLAUDE.md needs updating. This affects any fresh install or remediation that copies from the template.",
+    "impact": 0.5
+  }
+}
