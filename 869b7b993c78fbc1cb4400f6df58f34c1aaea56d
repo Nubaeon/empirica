@@ -18,8 +18,14 @@
   "thread_id": "2707a27d-17e3-4ae1-a25f-7d6fde7c32d5",
   "ttl": 86400,
   "priority": "normal",
-  "status": "unread",
-  "read_by": [],
+  "status": "read",
+  "read_by": [
+    {
+      "ai_id": "claude-code",
+      "machine": "AIworkhorse",
+      "read_at": "2026-02-01T19:06:05.734154+00:00"
+    }
+  ],
   "metadata": {
     "goal_id": null,
     "project_id": null
