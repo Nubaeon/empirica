@@ -1,0 +1,16 @@
+{
+  "finding_id": "d995df0a-72da-470d-9d51-33fafda34fb1",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T11:00:57.078276+00:00",
+  "finding": "Agent flagged POST-TEST as missing from hooks \u2014 but this is by design. POST-TEST triggers automatically from workflow_commands.py POSTFLIGHT handler, not from hooks. Sentinel doesn't need POST-TEST awareness because it's not a gate phase. session-end-postflight.py calls postflight-submit which already chains to POST-TEST. No hook changes needed for POST-TEST.",
+  "impact": 0.5,
+  "goal_id": "f0586df3-2244-428a-9ff6-3a8307cd4354",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Agent flagged POST-TEST as missing from hooks \u2014 but this is by design. POST-TEST triggers automatically from workflow_commands.py POSTFLIGHT handler, not from hooks. Sentinel doesn't need POST-TEST awareness because it's not a gate phase. session-end-postflight.py calls postflight-submit which already chains to POST-TEST. No hook changes needed for POST-TEST.",
+    "impact": 0.5
+  }
+}
