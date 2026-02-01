@@ -1,0 +1,13 @@
+{
+  "unknown_id": "e89437f4-bb41-4a4b-bb01-df9631784cf8",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T21:22:53.967163+00:00",
+  "unknown": "What should the public-facing noetic layer look like? Curated findings, calibration data, epistemic badges are candidates. Need to design the export/promotion workflow and determine what format is useful to the community (JSON? YAML? API? GitHub Actions badge endpoint?).",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
