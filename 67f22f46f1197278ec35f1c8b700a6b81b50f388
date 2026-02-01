@@ -1,0 +1,13 @@
+{
+  "unknown_id": "49fa5f8e-0656-4fac-8b1d-77baad570714",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "84f1b8b5-241a-48b0-8d20-8d4eab1f0146",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T16:39:11.920589+00:00",
+  "unknown": "What is the convergence rate of verification schema expansion? How many trajectory iterations (blindspot detections) are needed to achieve a target coverage level in a given domain? Is there a diminishing returns curve?",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
