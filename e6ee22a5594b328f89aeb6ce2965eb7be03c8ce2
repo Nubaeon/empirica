@@ -1,0 +1,13 @@
+{
+  "unknown_id": "5b1c46cd-5c61-43dd-b833-c4037da6d851",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T19:05:50.069928+00:00",
+  "unknown": "Should the paper's primary framing shift from 'epistemic self-assessment framework' to 'cognitive operating system'? The OS mapping is complete and compelling but changes the positioning significantly. May warrant a separate paper or may strengthen this one by providing the architectural argument for why all the subsystems are needed together.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
