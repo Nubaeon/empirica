@@ -1,0 +1,31 @@
+{
+  "goal_id": "b70520eb-5190-4f91-9acd-fdafd916b41f",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T21:23:05.421752+00:00",
+  "goal_data": {
+    "objective": "Audit and migrate Philipp's orphaned global DB (~/.empirica/sessions.db, 2.3MB) - determine what data is there, redistribute to per-project DBs where possible, archive the rest",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Global DB contents audited and catalogued",
+      "Recoverable session/goal data migrated to correct per-project DBs",
+      "Global DB archived or deleted",
+      "No data loss"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T21:23:05.421761+00:00",
+      "action": "created"
+    }
+  ]
+}
