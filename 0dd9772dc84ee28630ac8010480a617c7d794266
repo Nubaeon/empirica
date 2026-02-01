@@ -1,0 +1,31 @@
+{
+  "goal_id": "00eaa410-726a-4c3a-b01d-6e5fbc4b1b28",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T11:07:50.728896+00:00",
+  "goal_data": {
+    "objective": "Fix packaging distribution files for v1.5.0 release \u2014 Chocolatey install script, Homebrew SHA256, release notes",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Chocolatey install script references v1.5.0 with correct URL",
+      "Homebrew SHA256 resolved or marked with build-time generation",
+      "Chocolatey release notes include v1.5.0 changes",
+      "All packaging files pass version consistency check"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T11:07:50.728907+00:00",
+      "action": "created"
+    }
+  ]
+}
