@@ -1,0 +1,16 @@
+{
+  "finding_id": "126245a8-766f-416e-9313-be37b22fd44b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "1327bc20-fd62-496d-960a-0e829bd3971e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T21:09:27.670401+00:00",
+  "finding": "Implemented scope-weighted artifact counting in PostTestCollector._collect_artifact_metrics(). All artifact tables (project_unknowns, project_findings, project_dead_ends) have goal_id columns. When session has goals, artifacts linked to session goals count at weight 1.0, unscoped artifacts (no goal_id) count at UNSCOPED_ARTIFACT_WEIGHT=0.3. Fallback: sessions without goals use equal weighting. In the canonical bug scenario (3 task unknowns resolved + 6 research unknowns unresolved), KNOW grounding improves from 0.33 to 0.62 \u2014 87.5% improvement. Mistakes are NOT scope-weighted as all mistakes are task-relevant regardless of goal linkage.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Implemented scope-weighted artifact counting in PostTestCollector._collect_artifact_metrics(). All artifact tables (project_unknowns, project_findings, project_dead_ends) have goal_id columns. When session has goals, artifacts linked to session goals count at weight 1.0, unscoped artifacts (no goal_id) count at UNSCOPED_ARTIFACT_WEIGHT=0.3. Fallback: sessions without goals use equal weighting. In the canonical bug scenario (3 task unknowns resolved + 6 research unknowns unresolved), KNOW grounding improves from 0.33 to 0.62 \u2014 87.5% improvement. Mistakes are NOT scope-weighted as all mistakes are task-relevant regardless of goal linkage.",
+    "impact": 0.85
+  }
+}
