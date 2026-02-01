@@ -1,0 +1,16 @@
+{
+  "finding_id": "6d5e904e-1b2e-4abf-b3f1-52b4e149f51a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T10:40:53.200584+00:00",
+  "finding": "Philipp's system diagnosis: (1) Python 3.9.6 causes 'cannot import UTC from datetime' crash in statusline/hooks - UTC added in 3.11, he HAS 3.11 at /Library/Frameworks/Python.framework/Versions/3.11/bin/python3.11. (2) empirica CLI not in PATH despite pip install. (3) Empirica v1.0.0b0 (editable from ~/empirica/) vs current v1.5.0. (4) Plugin missing plugin.json manifest. (5) Old hooks in ~/.claude/hooks/ (empirica-start.sh with hardcoded Syncthing key, wrong ai_id claude-opus, wrong paths). (6) Custom commands use claude-opus AI ID. (7) CLAUDE.md is v1.4.0. (8) ~/.empirica/ has fragmented databases (database.db, empirica.db, hub.db). (9) ~/empirica/ source dir has corrupted files (bare words in ls output).",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Philipp's system diagnosis: (1) Python 3.9.6 causes 'cannot import UTC from datetime' crash in statusline/hooks - UTC added in 3.11, he HAS 3.11 at /Library/Frameworks/Python.framework/Versions/3.11/bin/python3.11. (2) empirica CLI not in PATH despite pip install. (3) Empirica v1.0.0b0 (editable from ~/empirica/) vs current v1.5.0. (4) Plugin missing plugin.json manifest. (5) Old hooks in ~/.claude/hooks/ (empirica-start.sh with hardcoded Syncthing key, wrong ai_id claude-opus, wrong paths). (6) Custom commands use claude-opus AI ID. (7) CLAUDE.md is v1.4.0. (8) ~/.empirica/ has fragmented databases (database.db, empirica.db, hub.db). (9) ~/empirica/ source dir has corrupted files (bare words in ls output).",
+    "impact": 0.9
+  }
+}
