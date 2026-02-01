@@ -1,0 +1,13 @@
+{
+  "unknown_id": "38fea05b-4e57-40dc-923d-092bd788e80a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T10:00:06.380463+00:00",
+  "unknown": "What exactly did Philipp do to his Claude Code install? What was the auto-initialiser menu he tried to build? What is the current state of his system - is Claude Code completely broken, partially working, or just the Empirica integration broken?",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
