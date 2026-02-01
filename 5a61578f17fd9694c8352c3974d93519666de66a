@@ -1,0 +1,28 @@
+{
+  "goal_id": "0637f926-3acd-4106-8c7a-d3baad2de3c5",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-01T20:44:59.338483+00:00",
+  "goal_data": {
+    "objective": "Design and implement unified Noetic OS dashboard - a /proc-style observability layer that aggregates MCOLoader, ContextBudgetManager, EpistemicBus, BusPersistence, AttentionBudget, MemoryGapDetector, and Sentinel into a single coherent system status surface. Bus-backed (option 2): a SystemDashboard class that observes all subsystems via the bus and exposes a cached aggregate view through CLI and MCP.",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.4,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-01T20:44:59.338499+00:00",
+      "action": "created"
+    }
+  ]
+}
