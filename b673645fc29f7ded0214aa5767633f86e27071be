@@ -1,0 +1,16 @@
+{
+  "finding_id": "bc899083-5eb1-41d7-b0e8-5f2bbc05c041",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:06:17.081403+00:00",
+  "finding": "Commit message vs actual diff comparison is a semi-objective CLARITY and SIGNAL grounding signal. If the AI describes 'refactored auth module' but the diff shows a one-line typo fix, that's measurable miscalibration between stated and actual work. Automatable via NLP comparison of message semantics against diff structure.",
+  "impact": 0.75,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Commit message vs actual diff comparison is a semi-objective CLARITY and SIGNAL grounding signal. If the AI describes 'refactored auth module' but the diff shows a one-line typo fix, that's measurable miscalibration between stated and actual work. Automatable via NLP comparison of message semantics against diff structure.",
+    "impact": 0.75
+  }
+}
