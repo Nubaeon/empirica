@@ -1,0 +1,16 @@
+{
+  "finding_id": "0a8117c3-040d-48e1-bdb1-7ab469e9d590",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "dc29a88b-72b3-4421-a36b-e0023d4aaf5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T15:39:22.750600+00:00",
+  "finding": "Database mismatch: sentinel-gate.py and statusline search upward from cwd for .empirica/ and stop at home dir. But EMPIRICA_WORKSPACE_ROOT=HOME causes session-create to write to global ~/.empirica/. When cwd is ~/empirica (source), sentinel finds local ~/empirica/.empirica/ which has different sessions. Fix: sentinel/statusline must respect EMPIRICA_WORKSPACE_ROOT or session-create must write locally.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Database mismatch: sentinel-gate.py and statusline search upward from cwd for .empirica/ and stop at home dir. But EMPIRICA_WORKSPACE_ROOT=HOME causes session-create to write to global ~/.empirica/. When cwd is ~/empirica (source), sentinel finds local ~/empirica/.empirica/ which has different sessions. Fix: sentinel/statusline must respect EMPIRICA_WORKSPACE_ROOT or session-create must write locally.",
+    "impact": 0.9
+  }
+}
