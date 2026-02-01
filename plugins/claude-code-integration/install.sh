@@ -5,7 +5,7 @@
 set -e
 
 PLUGIN_NAME="empirica-integration"
-PLUGIN_VERSION="1.4.2"
+PLUGIN_VERSION="1.5.0"
 PLUGIN_DIR="$HOME/.claude/plugins/local/$PLUGIN_NAME"
 MARKETPLACE_DIR="$HOME/.claude/plugins/local/.claude-plugin"
 SETTINGS_FILE="$HOME/.claude/settings.json"
@@ -13,6 +13,8 @@ INSTALLED_PLUGINS_FILE="$HOME/.claude/plugins/installed_plugins.json"
 KNOWN_MARKETPLACES_FILE="$HOME/.claude/plugins/known_marketplaces.json"
 REPO_URL="https://github.com/Nubaeon/empirica.git"
 PLUGIN_PATH="plugins/claude-code-integration"
+MIN_PYTHON_MAJOR=3
+MIN_PYTHON_MINOR=10
 
 echo "🧠 Installing $PLUGIN_NAME plugin for Claude Code..."
 echo ""
@@ -25,11 +27,64 @@ if ! command -v git &>/dev/null; then
     exit 1
 fi
 
-# Check Python 3 is available
-if ! command -v python3 &>/dev/null; then
-    echo "❌ Error: python3 is required but not installed"
+# Find a suitable Python >= 3.10
+# On macOS, system python3 is often 3.9 — check versioned binaries and framework paths
+find_python() {
+    local candidates=()
+
+    # Check common versioned binaries (highest first)
+    for ver in 13 12 11 10; do
+        command -v "python3.${ver}" &>/dev/null && candidates+=("python3.${ver}")
+    done
+
+    # Check plain python3
+    command -v python3 &>/dev/null && candidates+=("python3")
+
+    # Check macOS framework paths
+    for ver in 13 12 11 10; do
+        local fw="/Library/Frameworks/Python.framework/Versions/3.${ver}/bin/python3.${ver}"
+        [ -f "$fw" ] && candidates+=("$fw")
+    done
+
+    # Check Homebrew paths (Apple Silicon + Intel)
+    for ver in 13 12 11 10; do
+        for prefix in /opt/homebrew /usr/local; do
+            local brew="${prefix}/bin/python3.${ver}"
+            [ -f "$brew" ] && candidates+=("$brew")
+        done
+    done
+
+    # Test each candidate for minimum version
+    for py in "${candidates[@]}"; do
+        local py_ver
+        py_ver=$("$py" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null) || continue
+        local major minor
+        major=$(echo "$py_ver" | cut -d. -f1)
+        minor=$(echo "$py_ver" | cut -d. -f2)
+        if [ "$major" -ge "$MIN_PYTHON_MAJOR" ] && [ "$minor" -ge "$MIN_PYTHON_MINOR" ]; then
+            echo "$py"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+PYTHON_CMD=$(find_python)
+if [ -z "$PYTHON_CMD" ]; then
+    echo "❌ Error: Python ${MIN_PYTHON_MAJOR}.${MIN_PYTHON_MINOR}+ is required"
+    echo ""
+    python3 --version 2>&1 | sed 's/^/   Found: /' || echo "   python3 not found"
+    echo ""
+    echo "   Install Python 3.10+ via:"
+    echo "     macOS:  brew install python@3.11"
+    echo "     Ubuntu: sudo apt install python3.11"
+    echo "     pyenv:  pyenv install 3.11 && pyenv global 3.11"
     exit 1
 fi
+
+PYTHON_VERSION=$("$PYTHON_CMD" --version 2>&1)
+echo "   Using: $PYTHON_CMD ($PYTHON_VERSION)"
 
 # Check jq is available (required for JSON manipulation)
 if ! command -v jq &>/dev/null; then
@@ -114,7 +169,7 @@ echo "   ✓ Plugin enabled in settings.json"
 
 # Add StatusLine if not present
 if ! jq -e '.statusLine' "$SETTINGS_FILE" >/dev/null 2>&1; then
-    jq --arg cmd "python3 $PLUGIN_DIR/scripts/statusline_empirica.py" \
+    jq --arg cmd "$PYTHON_CMD $PLUGIN_DIR/scripts/statusline_empirica.py" \
        '.statusLine = {"type": "command", "command": $cmd}' \
        "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
     echo "   ✓ StatusLine configured"
@@ -129,7 +184,7 @@ fi
 
 # Check if sentinel hooks already present
 if ! jq -e '.hooks.PreToolUse[] | select(.hooks[].command | contains("sentinel-gate"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
-    jq --arg sentinel_cmd "python3 $PLUGIN_DIR/hooks/sentinel-gate.py" \
+    jq --arg sentinel_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/sentinel-gate.py" \
        '.hooks.PreToolUse = (.hooks.PreToolUse // []) + [
          {
            "matcher": "Edit|Write",
@@ -147,7 +202,7 @@ fi
 
 # Add PreCompact hook (empirica pre-compact snapshot)
 if ! jq -e '.hooks.PreCompact[] | select(.hooks[].command | contains("pre-compact.py"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
-    jq --arg precompact_cmd "python3 $PLUGIN_DIR/hooks/pre-compact.py" \
+    jq --arg precompact_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/pre-compact.py" \
        '.hooks.PreCompact = (.hooks.PreCompact // []) + [
          {
            "matcher": "auto|manual",
@@ -161,8 +216,8 @@ fi
 
 # Add SessionStart hooks (post-compact bootstrap + session-init)
 if ! jq -e '.hooks.SessionStart[] | select(.hooks[].command | contains("post-compact.py"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
-    jq --arg postcompact_cmd "python3 $PLUGIN_DIR/hooks/post-compact.py" \
-       --arg sessioninit_cmd "python3 $PLUGIN_DIR/hooks/session-init.py" \
+    jq --arg postcompact_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/post-compact.py" \
+       --arg sessioninit_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/session-init.py" \
        '.hooks.SessionStart = (.hooks.SessionStart // []) + [
          {
            "matcher": "compact",
@@ -180,8 +235,8 @@ fi
 
 # Add SessionEnd hooks (postflight + snapshot curation)
 if ! jq -e '.hooks.SessionEnd[] | select(.hooks[].command | contains("session-end-postflight.py"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
-    jq --arg postflight_cmd "python3 $PLUGIN_DIR/hooks/session-end-postflight.py" \
-       --arg curate_cmd "python3 $PLUGIN_DIR/hooks/curate-snapshots.py --output json" \
+    jq --arg postflight_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/session-end-postflight.py" \
+       --arg curate_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/curate-snapshots.py --output json" \
        '.hooks.SessionEnd = (.hooks.SessionEnd // []) + [
          {
            "matcher": ".*",

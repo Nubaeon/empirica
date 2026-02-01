@@ -181,14 +181,59 @@ def check_command_exists(cmd: str) -> bool:
 
 
 def get_python_command() -> str:
-    """Get the correct Python command for this system."""
-    # Try python3 first (Unix convention)
-    if check_command_exists("python3"):
-        return "python3"
-    # Fall back to python (Windows, or unified installs)
-    if check_command_exists("python"):
-        return "python"
-    return "python"
+    """Get a Python command that meets the minimum version requirement.
+
+    On macOS, system python3 may be 3.9 which is too old. This function
+    checks versioned binaries (python3.13, python3.12, ...) and macOS
+    framework paths before falling back to plain python3.
+    """
+    def python_meets_min(cmd: str) -> bool:
+        """Check if a python command meets MIN_PYTHON_VERSION."""
+        try:
+            result = subprocess.run(
+                [cmd, "-c", "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode != 0:
+                return False
+            parts = result.stdout.strip().split(".")
+            return (int(parts[0]), int(parts[1])) >= MIN_PYTHON_VERSION
+        except Exception:
+            return False
+
+    candidates = []
+
+    # Check versioned binaries (highest first)
+    for minor in range(13, MIN_PYTHON_VERSION[1] - 1, -1):
+        cmd = f"python3.{minor}"
+        if check_command_exists(cmd):
+            candidates.append(cmd)
+
+    # Check plain python3 and python
+    for cmd in ("python3", "python"):
+        if check_command_exists(cmd):
+            candidates.append(cmd)
+
+    # Check macOS framework paths
+    if platform.system() == "Darwin":
+        for minor in range(13, MIN_PYTHON_VERSION[1] - 1, -1):
+            fw = f"/Library/Frameworks/Python.framework/Versions/3.{minor}/bin/python3.{minor}"
+            if os.path.isfile(fw):
+                candidates.append(fw)
+        # Homebrew paths (Apple Silicon + Intel)
+        for minor in range(13, MIN_PYTHON_VERSION[1] - 1, -1):
+            for prefix in ("/opt/homebrew", "/usr/local"):
+                brew = f"{prefix}/bin/python3.{minor}"
+                if os.path.isfile(brew):
+                    candidates.append(brew)
+
+    # Return first candidate that meets version requirement
+    for cmd in candidates:
+        if python_meets_min(cmd):
+            return cmd
+
+    # Last resort — return python3 and let the version check at main() catch it
+    return "python3"
 
 
 # =============================================================================
@@ -360,8 +405,8 @@ def install_claude_plugin(source_dir: Optional[Path] = None):
         with open(hooks_json) as f:
             hooks = json.load(f)
 
-        # Use 'python' on Windows, 'python3' elsewhere
-        python_cmd = "python" if platform.system() == "Windows" else "python3"
+        # Use the discovered Python command for hook scripts
+        python_cmd = get_python_command()
         hooks_str = json.dumps(hooks)
         hooks_str = hooks_str.replace("python3 ", f"{python_cmd} ")
         hooks = json.loads(hooks_str)
