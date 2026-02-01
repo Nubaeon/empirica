@@ -1,0 +1,16 @@
+{
+  "finding_id": "648f8511-4e68-4499-8cf5-703b1a9dd775",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:06:19.082343+00:00",
+  "finding": "git diff --diff-filter=A/M/D ratio (Added vs Modified vs Deleted files) maps to epistemic phase: high Add ratio = creation/exploration, high Modify = iteration/refinement, high Delete = cleanup/completion. This provides objective STATE and COMPLETION grounding per session without self-report.",
+  "impact": 0.75,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "git diff --diff-filter=A/M/D ratio (Added vs Modified vs Deleted files) maps to epistemic phase: high Add ratio = creation/exploration, high Modify = iteration/refinement, high Delete = cleanup/completion. This provides objective STATE and COMPLETION grounding per session without self-report.",
+    "impact": 0.75
+  }
+}
