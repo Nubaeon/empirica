@@ -1,0 +1,16 @@
+{
+  "finding_id": "2d6223f5-9b9f-4a7b-9c58-4ab770d593c3",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T17:55:56.205441+00:00",
+  "finding": "Context Budget Manager implemented as empirica/core/context_budget.py - the missing memory manager kernel subsystem. Three zones (ANCHOR=non-evictable 15k, WORKING=active 150k, CACHE=evictable 35k), priority scoring using epistemic_value * recency_decay * log(refs) * zone_weight, LRU-style page replacement, bus integration (6 event handlers + 4 published event types), human-tunable thresholds in context_budget.yaml, injection request system with channel routing (hook/skill/MCP/direct). Total ~830 lines. Passes 8 integration tests.",
+  "impact": 0.95,
+  "goal_id": "6fe26512-6f6b-405d-9179-2154d4da5a5e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Context Budget Manager implemented as empirica/core/context_budget.py - the missing memory manager kernel subsystem. Three zones (ANCHOR=non-evictable 15k, WORKING=active 150k, CACHE=evictable 35k), priority scoring using epistemic_value * recency_decay * log(refs) * zone_weight, LRU-style page replacement, bus integration (6 event handlers + 4 published event types), human-tunable thresholds in context_budget.yaml, injection request system with channel routing (hook/skill/MCP/direct). Total ~830 lines. Passes 8 integration tests.",
+    "impact": 0.95
+  }
+}
