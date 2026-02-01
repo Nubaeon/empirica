@@ -2,10 +2,10 @@
 
 **Module:** `empirica.core.sentinel`
 
-The Sentinel is the gate controller of Empirica's cognitive architecture. It governs the transition between noetic (investigation) and praxic (action) phases, enforces compliance, and tracks epistemic loops.
+The Sentinel is the gate controller of Empirica's cognitive architecture. It governs the transition between noetic (investigation) and praxic (action) phases, enforces compliance, and tracks epistemic transactions.
 
 **Related docs:**
-- [NOETIC_PRAXIC_FRAMEWORK.md](./NOETIC_PRAXIC_FRAMEWORK.md) - The autonomous epistemic loop
+- [NOETIC_PRAXIC_FRAMEWORK.md](./NOETIC_PRAXIC_FRAMEWORK.md) - The noetic/praxic phase framework
 - [CASCADE Workflow](../../plugins/claude-code-integration/skills/empirica-framework/references/cascade-workflow.md) - PREFLIGHT→CHECK→POSTFLIGHT phases
 - [CONFIGURATION_REFERENCE.md](../reference/CONFIGURATION_REFERENCE.md) - EMPIRICA_SENTINEL_LOOPING and autopilot settings
 - [Architecture README](./README.md) - System overview
@@ -182,7 +182,7 @@ profile = DomainProfile(
 ### Loop Tracking
 
 #### LoopRecord
-Record of a single epistemic loop (PREFLIGHT → POSTFLIGHT).
+Record of a single epistemic transaction (PREFLIGHT → POSTFLIGHT).
 
 ```python
 record = LoopRecord(
@@ -197,7 +197,7 @@ record = LoopRecord(
 ```
 
 #### EpistemicLoopTracker
-Tracks epistemic loops for convergence detection and termination.
+Tracks epistemic transactions for convergence detection and termination.
 
 ```python
 tracker = EpistemicLoopTracker(

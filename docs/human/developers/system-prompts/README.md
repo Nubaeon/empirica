@@ -123,11 +123,11 @@ empirica deadend-log --approach "..." --why-failed "..."
 |---------|------|---------|
 | v1.5.0 | 2026-01-31 | **Dual-Track Calibration** - grounded verification (post-test evidence), trajectory tracking, 3194 observations, calibration-report --grounded/--trajectory |
 | v1.4.0 | 2026-01-21 | **Epistemic-First Model** - assessment reveals complexity, calibration 1650 obs, phase-aware completion (NOETIC/PRAXIC) |
-| v7.2 | 2026-01-09 | **CRITICAL:** Fixed bias corrections (were backwards), updated calibration to 995 obs, added goals commands, four-layer storage architecture |
+| v1.3.4 | 2026-01-09 | **CRITICAL:** Fixed bias corrections (were backwards), updated calibration to 995 obs, added goals commands, four-layer storage architecture |
 | v1.3.3 | 2026-01-09 | Qdrant memory, lessons system, cognitive immune decay |
 | v1.2.3 | 2026-01-06 | Add self-serve knowledge (docs-explain), Claude calibration data |
 | v1.2.2 | 2026-01-01 | Canonical core + model deltas architecture |
-| v4.0 | 2025-12 | Single canonical prompt (deprecated) |
+| v1.0.0 | 2025-12 | Single canonical prompt (deprecated) |
 
 ---
 

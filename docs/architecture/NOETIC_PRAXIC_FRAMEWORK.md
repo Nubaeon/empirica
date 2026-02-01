@@ -353,7 +353,7 @@ GATE 4: POST-TEST (Grounded Verification)
 **Ralph's loop:** `for i in range(50): invoke_claude(prompt)`  
 **Empirica's loop:** `while not_confident(state): investigate(state); update_state(findings)`
 
-The epistemic loop is **self-healing**:
+The epistemic transaction cycle is **self-healing**:
 1. AI doesn't know something → high uncertainty
 2. High uncertainty triggers CHECK → fails gate
 3. Failure redirects to NOETIC → investigation

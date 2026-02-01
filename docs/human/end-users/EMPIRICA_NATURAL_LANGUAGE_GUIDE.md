@@ -452,9 +452,9 @@ Over time, the epistemic workflow will become second nature, and you'll naturall
 
 ## 📖 Further Reading
 
-- [CASCADE Workflow Guide](CASCADE_WORKFLOW.md) - Complete workflow reference
+- [Sentinel Architecture](../../architecture/SENTINEL_ARCHITECTURE.md) - Complete CASCADE workflow reference
 - [Epistemic Vectors Explained](05_EPISTEMIC_VECTORS_EXPLAINED.md) - Understanding the vectors
 - [First-Time Setup](guides/FIRST_TIME_SETUP.md) - Getting started
-- [System Prompt](system-prompts/CANONICAL_SYSTEM_PROMPT.md) - Full reference
+- [System Prompt](../developers/system-prompts/CANONICAL_CORE.md) - Full reference
 
 **Happy epistemic tracking!** 🧠✨

@@ -326,7 +326,7 @@ empirica deadend-log --project-id $PROJECT_ID \
 ## What's Next?
 
 - **Learn about vectors:** [05_EPISTEMIC_VECTORS_EXPLAINED.md](05_EPISTEMIC_VECTORS_EXPLAINED.md) *(to be created)*
-- **Understand CASCADE:** [07_CASCADE_WORKFLOW.md](07_CASCADE_WORKFLOW.md) *(to be created)*
+- **Understand CASCADE:** [Sentinel Architecture](../../architecture/SENTINEL_ARCHITECTURE.md) - PREFLIGHT→CHECK→POSTFLIGHT workflow
 - **See all commands:** [reference/CLI_COMMANDS_COMPLETE.md](reference/CLI_COMMANDS_COMPLETE.md)
 - **Try MCP integration:** [03_QUICKSTART_MCP.md](03_QUICKSTART_MCP.md)
 - **Having issues?** [06_TROUBLESHOOTING.md](06_TROUBLESHOOTING.md)
