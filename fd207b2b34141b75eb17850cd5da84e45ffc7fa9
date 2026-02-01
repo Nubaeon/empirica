@@ -1,0 +1,32 @@
+{
+  "goal_id": "0346ecba-46ac-4aa2-a4f2-31934239bf4f",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T21:23:02.591210+00:00",
+  "goal_data": {
+    "objective": "Implement three-tier notes visibility (private/shared/public) with per-note visibility field, sync-time enforcement, and public export workflow for community-facing epistemic artifacts",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.6,
+      "coordination": 0.5
+    },
+    "success_criteria": [
+      "Individual notes have visibility field (private/shared/public)",
+      "sync-push filters notes by visibility against remote type",
+      "Public export command generates curated findings/calibration for GitHub",
+      "Channel-level default visibility with per-note override",
+      "Existing notes default to shared visibility (backward compatible)"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T21:23:02.591221+00:00",
+      "action": "created"
+    }
+  ]
+}
