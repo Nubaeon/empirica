@@ -1,0 +1,16 @@
+{
+  "finding_id": "dfab8032-c56f-4f9a-9d9a-e69ccb764215",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:36:04.561073+00:00",
+  "finding": "Qdrant client >= 1.7 uses query_points() instead of deprecated search(). Parameters: query (not query_vector), returns QueryResponse with .points attribute. Consistent across entire Empirica codebase except persona_registry.py which still uses old API.",
+  "impact": 0.6,
+  "goal_id": "6fe26512-6f6b-405d-9179-2154d4da5a5e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Qdrant client >= 1.7 uses query_points() instead of deprecated search(). Parameters: query (not query_vector), returns QueryResponse with .points attribute. Consistent across entire Empirica codebase except persona_registry.py which still uses old API.",
+    "impact": 0.6
+  }
+}
