@@ -24,10 +24,12 @@ logger = logging.getLogger(__name__)
 # Default sync configuration
 DEFAULT_SYNC_CONFIG = {
     'enabled': True,
-    'remote': 'origin',
+    'remote': 'forgejo',
     'visibility': 'private',  # 'private' or 'public' - determines warnings
-    'provider': 'auto',  # 'github', 'gitlab', 'forgejo', 'bitbucket', 'auto'
+    'provider': 'forgejo',  # 'github', 'gitlab', 'forgejo', 'bitbucket', 'auto'
     'auto_push_on': [],  # ['postflight', 'session_end'] - future auto-push triggers
+    'code_remote': 'origin',  # remote for code pushes (public)
+    'notes_remote': 'forgejo',  # remote for epistemic notes (private)
 }
 
 
@@ -94,13 +96,18 @@ def _detect_provider(remote_url: str) -> str:
         return 'github'
     elif 'gitlab.com' in remote_lower or 'gitlab' in remote_lower:
         return 'gitlab'
-    elif 'forgejo' in remote_lower or 'codeberg.org' in remote_lower:
+    elif 'forgejo' in remote_lower or 'codeberg.org' in remote_lower or 'getempirica.com' in remote_lower:
         return 'forgejo'
     elif 'bitbucket.org' in remote_lower:
         return 'bitbucket'
     elif 'gitea' in remote_lower:
         return 'gitea'
     else:
+        # Check configured provider as fallback
+        sync_config = _load_sync_config()
+        configured = sync_config.get('provider', 'auto')
+        if configured != 'auto':
+            return configured
         return 'unknown'
 
 
@@ -220,7 +227,7 @@ def handle_sync_config_command(args):
 
         # If setting a value
         if key and value is not None:
-            valid_keys = ['enabled', 'remote', 'visibility', 'provider']
+            valid_keys = ['enabled', 'remote', 'visibility', 'provider', 'code_remote', 'notes_remote']
             if key not in valid_keys:
                 result = {
                     "ok": False,
@@ -323,15 +330,21 @@ def handle_sync_config_command(args):
 
             print(f"\n   Config file: {_get_config_path()}")
 
-            # Show private sync hint if visibility is private but using public provider
-            visibility = sync_config.get('visibility', 'private')
-            if visibility == 'private' and detected_provider in ('github', 'gitlab', 'bitbucket'):
-                print("\n   💡 Private Sync Tip:")
-                print("      Your visibility is 'private' but using a public provider.")
-                print("      To keep epistemic notes private:")
-                print("      1. Create a private repo for notes")
-                print("      2. git remote add notes-private <private-repo-url>")
-                print("      3. empirica sync-config remote notes-private")
+            # Show dual-remote config
+            notes_remote = sync_config.get('notes_remote', current_remote)
+            code_remote = sync_config.get('code_remote', 'origin')
+            if notes_remote != code_remote:
+                print(f"\n   Dual-remote mode:")
+                print(f"      Code:  {code_remote} (public)")
+                print(f"      Notes: {notes_remote} (private)")
+
+            # Show private sync hint if notes remote is a public provider
+            if detected_provider in ('github', 'gitlab', 'bitbucket'):
+                print("\n   WARNING: Notes remote points to a public provider!")
+                print("      Epistemic notes contain private data (findings, mistakes, messages).")
+                print("      Switch to a private remote:")
+                print("      empirica sync-config remote forgejo")
+                print("      empirica sync-config notes_remote <private-remote>")
 
             print("\n   Set with: empirica sync-config <key> <value>")
             print("   Keys: enabled, remote, visibility, provider")
@@ -376,15 +389,31 @@ def handle_sync_push_command(args):
             print(json.dumps(result, indent=2))
             return 1
 
-        # Visibility warning for public repos
-        visibility = sync_config.get('visibility', 'private')
+        # Safety check: block pushing notes to public providers unless forced
         remote_url = _get_remote_url(remote)
-        if visibility == 'public' and not force:
-            # Show warning but continue
-            if output_format != 'json':
-                print("⚠️  Warning: visibility=public - epistemic notes will be visible in the repo")
-                print("   Use 'empirica sync-config visibility private' if this repo should be private")
-                print()
+        detected = _detect_provider(remote_url) if remote_url else 'unknown'
+        public_providers = ('github', 'gitlab', 'bitbucket')
+        if detected in public_providers and not force:
+            result = {
+                "ok": False,
+                "error": f"Refusing to push epistemic notes to public provider ({detected})",
+                "remote": remote,
+                "remote_url": remote_url,
+                "hint": (
+                    f"Notes contain private epistemic data (findings, mistakes, messages). "
+                    f"Use a private remote: 'empirica sync-config remote forgejo' or "
+                    f"'empirica sync-config notes_remote <private-remote>'. "
+                    f"Use --force to override."
+                )
+            }
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                print(f"BLOCKED: Won't push notes to {detected} ({remote_url})")
+                print(f"   Notes contain private epistemic data.")
+                print(f"   Set a private remote: empirica sync-config remote forgejo")
+                print(f"   Or use --force to override.")
+            return 1
 
         # Count local notes
         local_counts = _count_local_notes()
