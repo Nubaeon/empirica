@@ -1,0 +1,16 @@
+{
+  "finding_id": "d6a86ded-6326-4c6b-ab2c-f551fdb23cb2",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T19:05:43.982895+00:00",
+  "finding": "Sentinel functions as a capability-based ACL (RBAC/ABAC hybrid) for noetic and praxic layers, not just an epistemic gate. Via hooks (PreToolUse/PostToolUse), different tools are available in different epistemic phases: noetic phase allows read-only tools (read, search, explore), praxic phase unlocks write tools (edit, write, bash). This is the security module (LSM equivalent) in the cognitive OS architecture. The gate decision (proceed/investigate) determines the capability set, not just a binary go/no-go.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sentinel functions as a capability-based ACL (RBAC/ABAC hybrid) for noetic and praxic layers, not just an epistemic gate. Via hooks (PreToolUse/PostToolUse), different tools are available in different epistemic phases: noetic phase allows read-only tools (read, search, explore), praxic phase unlocks write tools (edit, write, bash). This is the security module (LSM equivalent) in the cognitive OS architecture. The gate decision (proceed/investigate) determines the capability set, not just a binary go/no-go.",
+    "impact": 0.9
+  }
+}
