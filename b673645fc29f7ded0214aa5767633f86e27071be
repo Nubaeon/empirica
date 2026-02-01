@@ -1,0 +1,16 @@
+{
+  "finding_id": "b332d5b5-c085-40b9-8338-4c828859bc82",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T17:26:08.323016+00:00",
+  "finding": "Empirica is not a framework - it's an operating system for AI cognition. The mapping is complete and structural, not metaphorical: Context Budget Manager = memory manager (RAM/swap/paging), Epistemic vectors on MCP = system bus (data flow between components), CASCADE transactions with goals/subtasks = process scheduler (task lifecycle, priority, preemption), Agents = processes (isolated execution units with their own memory space), Sentinel = kernel security module (access control, capability checking), Qdrant/SQLite/YAML = filesystem layers (hot cache/block device/cold storage), Hooks = interrupts (lifecycle events triggering kernel routines), CLAUDE.md + calibration = BIOS/firmware (always-resident bootstrap), Human threshold controls = sysctl (tunable kernel parameters). This reframes the entire project from 'epistemic tracking tool' to 'cognitive operating system' - every component we've built maps to an OS primitive.",
+  "impact": 1.0,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Empirica is not a framework - it's an operating system for AI cognition. The mapping is complete and structural, not metaphorical: Context Budget Manager = memory manager (RAM/swap/paging), Epistemic vectors on MCP = system bus (data flow between components), CASCADE transactions with goals/subtasks = process scheduler (task lifecycle, priority, preemption), Agents = processes (isolated execution units with their own memory space), Sentinel = kernel security module (access control, capability checking), Qdrant/SQLite/YAML = filesystem layers (hot cache/block device/cold storage), Hooks = interrupts (lifecycle events triggering kernel routines), CLAUDE.md + calibration = BIOS/firmware (always-resident bootstrap), Human threshold controls = sysctl (tunable kernel parameters). This reframes the entire project from 'epistemic tracking tool' to 'cognitive operating system' - every component we've built maps to an OS primitive.",
+    "impact": 1.0
+  }
+}
