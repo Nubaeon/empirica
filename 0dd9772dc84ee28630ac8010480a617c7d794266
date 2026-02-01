@@ -1,0 +1,16 @@
+{
+  "finding_id": "2ded56ce-2a50-486b-a22f-819c3bcf6123",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T11:01:16.572947+00:00",
+  "finding": "Grounded calibration data (verification_evidence, grounded_verifications, calibration_trajectory) stores to SQLite only \u2014 NOT embedded to Qdrant. Core calibration works, but semantic search can't find calibration patterns across sessions. Pattern retrieval (PREFLIGHT/CHECK) is blind to calibration history. Enhancement, not blocker.",
+  "impact": 0.6,
+  "goal_id": "f0586df3-2244-428a-9ff6-3a8307cd4354",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Grounded calibration data (verification_evidence, grounded_verifications, calibration_trajectory) stores to SQLite only \u2014 NOT embedded to Qdrant. Core calibration works, but semantic search can't find calibration patterns across sessions. Pattern retrieval (PREFLIGHT/CHECK) is blind to calibration history. Enhancement, not blocker.",
+    "impact": 0.6
+  }
+}
