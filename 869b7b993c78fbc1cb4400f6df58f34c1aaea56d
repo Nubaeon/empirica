@@ -1,0 +1,32 @@
+{
+  "goal_id": "efb78753-045f-4be5-ba16-2e6c5b450f87",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T18:25:27.052275+00:00",
+  "goal_data": {
+    "objective": "Wire Context Budget Manager into live hooks and promote EpistemicBus to Qdrant-backed cross-node fabric with fallback. Three tracks: (1) Hook integration - SessionStart registers anchors, PreCompact triggers eviction, (2) Bus promotion - Qdrant event persistence with in-process fallback, (3) Sentinel ask-the-human escalation path.",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "SessionStart hook initializes ContextBudgetManager with anchor items",
+      "PreCompact hook triggers budget triage/eviction",
+      "EpistemicBus persists events to Qdrant with graceful fallback to in-process",
+      "Sentinel gate has third path: escalate to human via AskUserQuestion",
+      "Node identity tracked in budget state for cluster awareness"
+    ],
+    "estimated_complexity": 0.75,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T18:25:27.052288+00:00",
+      "action": "created"
+    }
+  ]
+}
