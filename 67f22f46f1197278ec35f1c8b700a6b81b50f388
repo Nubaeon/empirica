@@ -1,0 +1,13 @@
+{
+  "unknown_id": "3bbffa90-dcc0-4e57-9056-356ce2e0a4c9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "84f1b8b5-241a-48b0-8d20-8d4eab1f0146",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T16:39:10.348037+00:00",
+  "unknown": "How to formally measure the entropy state of an epistemic trajectory \u2014 what metric captures the gap between verification schema coverage and full output space? Is it expressible as a ratio, a distribution, or requires domain-specific formalization?",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
