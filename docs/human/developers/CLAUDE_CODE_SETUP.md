@@ -17,7 +17,7 @@ This guide sets up Empirica for Claude Code users on Linux, macOS, or Windows.
 | Statusline | Real-time epistemic status display | Plugin scripts/ |
 | MCP config | MCP server configuration | `~/.claude/mcp.json` |
 
-The plugin (v1.4.2) now bundles everything in one package:
+The plugin (v1.5.0) now bundles everything in one package:
 - **Sentinel gate** - Noetic firewall that gates praxic tools until CHECK passes
 - **Session hooks** - Auto-creates sessions, bootstraps projects, captures POSTFLIGHT
 - **Statusline script** - Shows epistemic state in terminal
@@ -68,7 +68,7 @@ pip install empirica-mcp
 Verify:
 ```bash
 empirica --version
-# Should show: 1.4.0 (or later)
+# Should show: 1.5.0 (or later)
 ```
 
 ---
@@ -97,7 +97,7 @@ The authoritative system prompt is maintained at:
 Copy the full contents of that file to `~/.claude/CLAUDE.md`.
 
 **What the system prompt includes:**
-- Calibration data (253 trajectories, bias corrections per vector)
+- Calibration data (3,194 observations, bias corrections per vector)
 - CASCADE workflow (PREFLIGHT → CHECK → POSTFLIGHT)
 - Core commands with correct flags
 - Memory commands (Qdrant integration)
@@ -165,7 +165,7 @@ cat ~/.claude/plugins/local/empirica-integration/templates/settings-statusline.j
 
 ## Step 4: Install Empirica Plugin (Recommended)
 
-The plugin (v1.4.2) enforces the CASCADE workflow and preserves epistemic state automatically.
+The plugin (v1.5.0) enforces the CASCADE workflow and preserves epistemic state automatically.
 
 **What it includes:**
 - **Noetic firewall** (`sentinel-gate.py`): Gates praxic tools (Edit/Write/Bash) until CHECK passes
@@ -220,7 +220,7 @@ cp ~/.claude/plugins/local/empirica-integration/templates/mcp.json ~/.claude/mcp
       {
         "scope": "user",
         "installPath": "~/.claude/plugins/local/empirica-integration",
-        "version": "1.4.2",
+        "version": "1.5.0",
         "isLocal": true
       }
     ]
@@ -346,7 +346,7 @@ The MCP server gives Claude direct access to Empirica tools.
 }
 ```
 
-### Multi-Project Workspace Configuration (v1.4.2+)
+### Multi-Project Workspace Configuration (v1.5.0+)
 
 The MCP server needs to know which project's `.empirica/` directory to use. Without this, sessions may be created in the wrong location.
 

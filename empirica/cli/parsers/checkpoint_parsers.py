@@ -736,3 +736,12 @@ def add_checkpoint_parsers(subparsers):
     rebuild_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
     rebuild_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
+    # artifacts-generate command
+    artifacts_parser = subparsers.add_parser(
+        'artifacts-generate',
+        help='Generate browsable .empirica/ markdown files from git notes'
+    )
+    artifacts_parser.add_argument('--output-dir', help='Output directory (default: .empirica/)')
+    artifacts_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    artifacts_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+

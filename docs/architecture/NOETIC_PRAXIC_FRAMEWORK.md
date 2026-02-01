@@ -95,6 +95,14 @@ This framework is NOT about checkpoints, snapshots, or memory management.
                       │      │ │ Findings logged → Git notes (450 tokens)    │        │
                       │      │ │ Bootstrap loads for NEXT session             │        │
                       │      │ └─────────────────────────────────────────────┘        │
+                      │      │                                                         │
+                      │      │ POST-TEST (Grounded Verification)                      │
+                      │      │ ┌─────────────────────────────────────────────┐        │
+                      │      │ │ Automatic, evidence-based calibration:      │        │
+                      │      │ │ • Compare POSTFLIGHT claims to evidence     │        │
+                      │      │ │ • Verify completion against actual outcomes │        │
+                      │      │ │ • Calibrate confidence for future sessions  │        │
+                      │      │ └─────────────────────────────────────────────┘        │
                       │      └─────────────────────────────────────────────────────────┘
                       │
                       └────────────────────────────────────────┘
@@ -128,7 +136,7 @@ Common words carry "human baggage" - consciousness assumptions that don't map cl
 
 | Layer | Purpose | Components | Nature |
 |-------|---------|------------|--------|
-| **CASCADE Gates** | Compliance checkpoints | PREFLIGHT → CHECK → POSTFLIGHT | Prescribed (external oversight) |
+| **CASCADE Gates** | Compliance checkpoints | PREFLIGHT → CHECK → POSTFLIGHT → POST-TEST | Prescribed (external oversight) |
 | **Cognitive Phase** | Actual cognitive state | NOETIC ↔ THRESHOLD ↔ PRAXIC | Emergent (observed from vectors) |
 
 ```
@@ -322,6 +330,12 @@ GATE 3: POSTFLIGHT Delta
   AI measures: "What did I actually learn?"
   → Compare know/uncertainty/completion from PREFLIGHT to now
   → This delta becomes input to next session's PREFLIGHT
+
+GATE 4: POST-TEST (Grounded Verification)
+  Automatic evidence-based calibration:
+  → Compare POSTFLIGHT self-assessment to actual outcomes
+  → Verify completion claims against evidence (tests, commits, reviews)
+  → Feed calibration data back for future accuracy
 ```
 
 ### When CHECK is Mandatory vs Discretionary

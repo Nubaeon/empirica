@@ -45,7 +45,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Project Management': ['project-init', 'project-create', 'project-list', 'project-switch', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
                     'Workspace': ['workspace-init', 'workspace-map', 'workspace-list', 'workspace-overview', 'ecosystem-check'],
                     'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
-                    'Sync': ['sync-config', 'sync-push', 'sync-pull', 'sync-status', 'rebuild'],
+                    'Sync': ['sync-config', 'sync-push', 'sync-pull', 'sync-status', 'rebuild', 'artifacts-generate'],
                     'Identity': ['identity-create', 'identity-export', 'identity-list', 'identity-verify'],
                     'Handoffs': ['handoff-create', 'handoff-query'],
                     'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
@@ -352,6 +352,7 @@ def main(args=None):
             'sync-pull': handle_sync_pull_command,
             'sync-status': handle_sync_status_command,
             'rebuild': handle_rebuild_command,
+            'artifacts-generate': handle_artifacts_generate_command,
 
             # Goals commands
             'goals-create': handle_goals_create_command,

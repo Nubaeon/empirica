@@ -1,7 +1,7 @@
 # Empirica Storage Architecture - Complete Data Flow
 
-**Version:** 2.2
-**Date:** 2026-01-09
+**Version:** 2.3
+**Date:** 2026-02-01
 **Purpose:** Document complete storage flow for dashboard/crypto-signing integration
 
 **Related docs:**
@@ -152,6 +152,113 @@ CREATE TABLE reflexes (
 - Analytics (aggregate queries)
 - Debugging (full history)
 - Fallback (if git notes unavailable)
+
+#### Verification Tables (v1.5.0 — Grounded Calibration)
+
+Four tables support post-test verification, providing objective grounding for epistemic calibration via deterministic evidence (test results, artifact counts, goal completion).
+
+**Table:** `grounded_beliefs`
+
+```sql
+CREATE TABLE IF NOT EXISTS grounded_beliefs (
+    belief_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    ai_id TEXT NOT NULL,
+    vector_name TEXT NOT NULL,
+
+    mean REAL NOT NULL,
+    variance REAL NOT NULL,
+    evidence_count INTEGER DEFAULT 0,
+
+    last_observation REAL,
+    last_observation_source TEXT,
+
+    self_referential_mean REAL,
+    divergence REAL,
+
+    last_updated REAL,
+
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+);
+```
+
+Parallel to `bayesian_beliefs` but evidence-based. Tracks grounded belief distributions per AI per vector, with divergence from self-assessed values.
+
+**Table:** `verification_evidence`
+
+```sql
+CREATE TABLE IF NOT EXISTS verification_evidence (
+    evidence_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+
+    source TEXT NOT NULL,
+    metric_name TEXT NOT NULL,
+    raw_value TEXT,
+    normalized_value REAL NOT NULL,
+    quality TEXT NOT NULL,
+
+    supports_vectors TEXT NOT NULL,
+
+    collected_at REAL NOT NULL,
+    metadata TEXT,
+
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+);
+```
+
+Raw objective evidence records per session. Each record identifies which epistemic vectors it supports, enabling grounded vector computation.
+
+**Table:** `grounded_verifications`
+
+```sql
+CREATE TABLE IF NOT EXISTS grounded_verifications (
+    verification_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    ai_id TEXT NOT NULL,
+
+    self_assessed_vectors TEXT NOT NULL,
+    grounded_vectors TEXT,
+    calibration_gaps TEXT,
+
+    grounded_coverage REAL,
+    overall_calibration_score REAL,
+    evidence_count INTEGER DEFAULT 0,
+    sources_available TEXT,
+    sources_failed TEXT,
+
+    domain TEXT,
+    goal_id TEXT,
+
+    created_at REAL DEFAULT (strftime('%s', 'now')),
+
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+);
+```
+
+Per-session comparison results: self-assessed vectors vs grounded vectors, with calibration gap analysis and coverage metrics.
+
+**Table:** `calibration_trajectory`
+
+```sql
+CREATE TABLE IF NOT EXISTS calibration_trajectory (
+    point_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    ai_id TEXT NOT NULL,
+    vector_name TEXT NOT NULL,
+
+    self_assessed REAL NOT NULL,
+    grounded REAL,
+    gap REAL,
+
+    domain TEXT,
+    goal_id TEXT,
+    timestamp REAL NOT NULL,
+
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+);
+```
+
+POSTFLIGHT-to-POSTFLIGHT trajectory points. Tracks how self-assessed vs grounded values evolve over time per vector, enabling long-term calibration trend analysis.
 
 ---
 
@@ -467,6 +574,37 @@ cursor.execute("""
     WHERE know < 0.5 OR uncertainty > 0.7
     ORDER BY timestamp DESC
 ")
+```
+
+### Pattern 5: Grounded Calibration (v1.5.0)
+
+```python
+# Compare self-assessed vs grounded vectors for a session
+cursor.execute("""
+    SELECT vector_name, self_assessed, grounded, gap
+    FROM calibration_trajectory
+    WHERE session_id = ? AND ai_id = ?
+    ORDER BY timestamp ASC
+""", (session_id, ai_id))
+```
+
+```python
+# Get calibration trend over time for a specific vector
+cursor.execute("""
+    SELECT ct.session_id, ct.self_assessed, ct.grounded, ct.gap, ct.timestamp
+    FROM calibration_trajectory ct
+    WHERE ct.ai_id = ? AND ct.vector_name = ?
+    ORDER BY ct.timestamp ASC
+""", (ai_id, "know"))
+```
+
+```python
+# Get overall grounded calibration score for a session
+cursor.execute("""
+    SELECT overall_calibration_score, grounded_coverage, evidence_count
+    FROM grounded_verifications
+    WHERE session_id = ?
+""", (session_id,))
 ```
 
 ---

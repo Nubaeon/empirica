@@ -1,10 +1,10 @@
 # Empirica Database Schema (Unified)
 
-**Total Tables:** 36 (active)
+**Total Tables:** 40 (active)
 **Database Type:** SQLite (with PostgreSQL adapter support)
 **Architecture:** Modular with unified goal/task system
 **Every project (mapped to git repo) has its own SQLite database**
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-02-01
 
 ---
 
@@ -38,6 +38,20 @@ sessions (1) ──> (N) epistemic_snapshots
 **Relationships:**
 ```
 cascades (1) ──> (N) bayesian_beliefs
+```
+
+### 3a. Verification & Grounded Calibration (4 tables, v1.5.0)
+- **grounded_beliefs** - Parallel to bayesian_beliefs but evidence-based (objective grounding)
+- **verification_evidence** - Raw objective evidence records per session
+- **grounded_verifications** - Per-session self-assessed vs grounded comparison results
+- **calibration_trajectory** - POSTFLIGHT-to-POSTFLIGHT tracking points for long-term calibration
+
+**Relationships:**
+```
+sessions (1) ──> (N) grounded_beliefs
+sessions (1) ──> (N) verification_evidence
+sessions (1) ──> (N) grounded_verifications
+sessions (1) ──> (N) calibration_trajectory
 ```
 
 ### 4. Goals & Tasks System (6 tables)
@@ -314,6 +328,76 @@ projects (1) ──> (N) auto_captured_issues
 
 ---
 
+### Verification & Grounded Calibration Tables (v1.5.0)
+
+#### `grounded_beliefs`
+**12 columns**
+- `belief_id` TEXT PRIMARY KEY
+- `session_id` TEXT NOT NULL (FK: sessions.session_id)
+- `ai_id` TEXT NOT NULL
+- `vector_name` TEXT NOT NULL
+- `mean` REAL NOT NULL
+- `variance` REAL NOT NULL
+- `evidence_count` INTEGER DEFAULT 0
+- `last_observation` REAL
+- `last_observation_source` TEXT
+- `self_referential_mean` REAL
+- `divergence` REAL
+- `last_updated` REAL
+
+> Parallel to `bayesian_beliefs` but evidence-based. Tracks grounded belief distributions per AI per vector, with divergence from self-assessed values. Indexed on `(ai_id, vector_name)`.
+
+#### `verification_evidence`
+**10 columns**
+- `evidence_id` TEXT PRIMARY KEY
+- `session_id` TEXT NOT NULL (FK: sessions.session_id)
+- `source` TEXT NOT NULL
+- `metric_name` TEXT NOT NULL
+- `raw_value` TEXT
+- `normalized_value` REAL NOT NULL
+- `quality` TEXT NOT NULL
+- `supports_vectors` TEXT NOT NULL
+- `collected_at` REAL NOT NULL
+- `metadata` TEXT
+
+> Raw objective evidence records per session. Each record identifies which epistemic vectors it supports via `supports_vectors` (JSON array). Sources include test results, artifact counts, goal completion rates. Indexed on `(session_id)`.
+
+#### `grounded_verifications`
+**13 columns**
+- `verification_id` TEXT PRIMARY KEY
+- `session_id` TEXT NOT NULL (FK: sessions.session_id)
+- `ai_id` TEXT NOT NULL
+- `self_assessed_vectors` TEXT NOT NULL
+- `grounded_vectors` TEXT
+- `calibration_gaps` TEXT
+- `grounded_coverage` REAL
+- `overall_calibration_score` REAL
+- `evidence_count` INTEGER DEFAULT 0
+- `sources_available` TEXT
+- `sources_failed` TEXT
+- `domain` TEXT
+- `goal_id` TEXT
+- `created_at` REAL DEFAULT (strftime('%s', 'now'))
+
+> Per-session comparison results: self-assessed vectors vs objectively grounded vectors, with calibration gap analysis, coverage metrics, and source diagnostics. Indexed on `(session_id)`.
+
+#### `calibration_trajectory`
+**10 columns**
+- `point_id` TEXT PRIMARY KEY
+- `session_id` TEXT NOT NULL (FK: sessions.session_id)
+- `ai_id` TEXT NOT NULL
+- `vector_name` TEXT NOT NULL
+- `self_assessed` REAL NOT NULL
+- `grounded` REAL
+- `gap` REAL
+- `domain` TEXT
+- `goal_id` TEXT
+- `timestamp` REAL NOT NULL
+
+> POSTFLIGHT-to-POSTFLIGHT trajectory points. Tracks how self-assessed vs grounded values evolve over time per vector, enabling long-term calibration trend analysis. Indexed on `(ai_id, vector_name, timestamp)`.
+
+---
+
 ### Goals & Tasks Tables
 
 #### `goals`
@@ -579,22 +663,22 @@ projects (1) ──> (N) auto_captured_issues
                            │ (1:N)
                            │
                     ┌──────▼──────┐
-                    │  sessions   │───────┐
-                    └──────┬──────┘       │
-                           │              │
-              ┌────────────┼──────────┐   │
-              │            │          │   │
-         (1:N)│       (1:N)│     (1:N)│   │(1:N)
-              │            │          │   │
-       ┌──────▼───┐  ┌────▼────┐  ┌─▼───▼───┐
-       │ cascades │  │ reflexes│  │  goals   │
-       └──────┬───┘  └─────────┘  └─────┬────┘
-              │                          │
-         (1:N)│                     (1:N)│
-              │                          │
-    ┌─────────▼────────┐          ┌──────▼──────┐
-    │ bayesian_beliefs │          │  subtasks   │
-    └──────────────────┘          └─────────────┘
+                    │  sessions   │───────────────────┐
+                    └──────┬──────┘                    │
+                           │                          │
+              ┌────────────┼──────────┐               │
+              │            │          │               │(1:N)
+         (1:N)│       (1:N)│     (1:N)│               │
+              │            │          │               │
+       ┌──────▼───┐  ┌────▼────┐  ┌─▼───▼───┐  ┌────▼──────────────────┐
+       │ cascades │  │ reflexes│  │  goals   │  │ verification (v1.5.0) │
+       └──────┬───┘  └─────────┘  └─────┬────┘  ├───────────────────────┤
+              │                          │       │ grounded_beliefs      │
+         (1:N)│                     (1:N)│       │ verification_evidence │
+              │                          │       │ grounded_verifications│
+    ┌─────────▼────────┐          ┌──────▼────┐  │ calibration_trajectory│
+    │ bayesian_beliefs │          │  subtasks  │  └───────────────────────┘
+    └──────────────────┘          └───────────┘
 ```
 
 ---
@@ -628,7 +712,8 @@ projects (1) ──> (N) auto_captured_issues
 - **Modular Architecture**: Tables are organized in logical modules (sessions, epistemic, goals, projects, tracking)
 - **Indexing**: All tables have appropriate indexes for performance
 - **Every project has its own SQLite database** mapped to the git repository
+- **Grounded Calibration (v1.5.0)**: Four verification tables provide post-test objective grounding for epistemic calibration, enabling comparison of self-assessed vs evidence-based vector values
 
 ---
 
-Generated: 2025-12-27
+Generated: 2026-02-01

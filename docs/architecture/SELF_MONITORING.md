@@ -185,13 +185,13 @@ if not result['ok']:
 ### With CASCADE Workflow
 
 ```
-PREFLIGHT ──────────► CHECK ──────────► POSTFLIGHT
-    │                   │                   │
-    ▼                   ▼                   ▼
-MemoryGapDetector   MirrorDrift        Update baseline
-(validate claims)   Monitor             for future drift
-                    (compare to         detection
-                     history)
+PREFLIGHT ──────────► CHECK ──────────► POSTFLIGHT ──────────► POST-TEST
+    │                   │                   │                      │
+    ▼                   ▼                   ▼                      ▼
+MemoryGapDetector   MirrorDrift        Update baseline       Grounded Verification
+(validate claims)   Monitor             for future drift     (evidence-based
+                    (compare to         detection             calibration against
+                     history)                                  actual outcomes)
 ```
 
 ### With EpistemicBus

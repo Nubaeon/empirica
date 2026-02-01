@@ -5,6 +5,30 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-02-01 - Grounded Calibration
+
+### Added
+- **Dual-Track Calibration** — grounded verification using objective evidence (tests, artifacts, git, goals)
+- 4-phase CASCADE workflow with POST-TEST (automatic grounded verification after POSTFLIGHT)
+- `calibration-report --grounded` — compare self-assessment vs objective evidence
+- `calibration-report --trajectory` — track calibration improvement over time
+- PostTestCollector with 6 evidence sources (pytest, git, goals, artifacts, issues, sentinel)
+- EvidenceMapper with quality-weighted aggregation (OBJECTIVE=1.0, SEMI_OBJECTIVE=0.7)
+- GroundedCalibrationManager with Bayesian updates using obs_variance=0.05
+- TrajectoryTracker with linear regression trend detection (closing/widening/stable)
+- 4 new schema tables: grounded_beliefs, verification_evidence, grounded_verifications, calibration_trajectory
+- New modules: `empirica/core/post_test/` (collector.py, mapper.py, grounded_calibration.py, trajectory_tracker.py)
+- 3,220 calibration observations
+
+### Changed
+- POSTFLIGHT now triggers automatic grounded verification
+- MCP `get_calibration_report` returns `grounded_verification` field
+- `.breadcrumbs.yaml` includes `grounded_calibration` section
+- System prompts updated to v1.5.0 (CANONICAL_CORE, all model deltas)
+- All package versions bumped to 1.5.0
+
+---
+
 ## [1.4.0] - 2026-01-21 - Epistemic-First Model
 
 ### Added
@@ -254,5 +278,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-**Current Version:** 1.4.0 (Epistemic-First Model)
-**Previous Milestone:** 1.0.0 (Phase 4 - Production Release, November 2025)
+**Current Version:** 1.5.0 (Grounded Calibration)
+**Previous Milestone:** 1.4.0 (Epistemic-First Model, January 2026)

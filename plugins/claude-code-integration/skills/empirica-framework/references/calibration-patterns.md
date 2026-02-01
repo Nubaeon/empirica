@@ -2,16 +2,21 @@
 
 ## What is Calibration?
 
-Calibration measures how well your predictions (PREFLIGHT) match outcomes (POSTFLIGHT).
+Empirica uses **dual-track calibration** to measure accuracy from two angles:
 
 ```
-Calibration = accuracy of self-assessment over time
+Track 1 (self-referential): PREFLIGHT → POSTFLIGHT delta = learning measurement
+Track 2 (grounded):         POSTFLIGHT → Objective Evidence = calibration accuracy
 ```
+
+**Track 1** measures how well your predictions (PREFLIGHT) match outcomes (POSTFLIGHT).
+**Track 2** measures how well your self-assessment matches objective reality.
 
 Good calibration means:
 - When you predict 0.7 KNOW, you actually have ~0.7 understanding
 - When you predict 0.3 UNCERTAINTY, you encounter ~30% unknowns
 - Your confidence correlates with actual outcomes
+- Your POSTFLIGHT self-assessment matches objective evidence (Track 2)
 
 ## The Three Patterns
 
@@ -233,3 +238,43 @@ After each POSTFLIGHT, ask:
 **Month 2+:** Apply corrections (adjust starting estimates)
 
 Target: Average delta < 0.15 across vectors.
+
+## Grounded Verification (Track 2)
+
+Track 2 compares your POSTFLIGHT self-assessment against objective evidence:
+
+### Evidence Sources
+
+| Source | Quality | Vectors Grounded |
+|--------|---------|-----------------|
+| pytest results | OBJECTIVE (weight 1.0) | know, do, clarity |
+| Git metrics | OBJECTIVE (weight 1.0) | do, change, state |
+| Goal completion | SEMI_OBJECTIVE (weight 0.7) | completion, do, know |
+| Artifact counts | SEMI_OBJECTIVE (weight 0.7) | know, uncertainty, signal |
+| Issue tracking | SEMI_OBJECTIVE (weight 0.7) | impact, signal |
+| Sentinel decisions | SEMI_OBJECTIVE (weight 0.7) | context, uncertainty |
+
+**Ungroundable vectors:** engagement, coherence, density — no objective signal exists.
+These vectors use Track 1 only.
+
+### Track Divergence
+
+When Track 1 and Track 2 disagree:
+- **Track 2 is more trustworthy** (objective evidence vs self-assessment)
+- `.breadcrumbs.yaml` → `grounded_calibration.divergence` shows per-vector gaps
+- Large divergence = systematic self-assessment error
+
+### Calibration Trajectory
+
+Over time, grounded calibration tracks whether your accuracy is improving:
+
+```bash
+# Is calibration getting better?
+empirica calibration-report --trajectory
+
+# Returns: closing (improving), widening (worsening), or stable
+```
+
+**Closing:** Gap between self-assessment and evidence is shrinking. Good.
+**Widening:** Gap is growing. Self-awareness may be degrading.
+**Stable:** Consistent gap. Apply fixed correction.

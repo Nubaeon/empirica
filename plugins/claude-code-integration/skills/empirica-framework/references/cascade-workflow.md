@@ -11,11 +11,14 @@
 CASCADE is the epistemic workflow that ensures you measure what you know before and after tasks.
 
 ```
-PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT
-    ↓           ↓          ↓       ↓        ↓
- Baseline    Reduce     Gate    Execute   Measure
-  state    uncertainty  check    work     learning
+PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT → POST-TEST
+    ↓           ↓          ↓       ↓        ↓            ↓
+ Baseline    Reduce     Gate    Execute   Measure     Grounded
+  state    uncertainty  check    work     learning   Verification
 ```
+
+POST-TEST is automatic — triggered by POSTFLIGHT. It collects objective evidence
+(tests, artifacts, git, goals) and compares to self-assessed vectors for grounded calibration.
 
 ## Phase 1: PREFLIGHT (Baseline Assessment)
 
@@ -154,9 +157,29 @@ empirica postflight-submit - << 'EOF'
 EOF
 ```
 
-## Calibration Report
+## Phase 6: POST-TEST (Grounded Verification) — Automatic
 
-The system compares PREFLIGHT → POSTFLIGHT to measure:
+**Purpose:** Compare self-assessed vectors against objective evidence.
+
+**Triggered automatically** by POSTFLIGHT. No manual step needed.
+
+**Evidence collected:**
+| Source | Quality | Vectors Grounded |
+|--------|---------|-----------------|
+| pytest results | OBJECTIVE | know, do, clarity |
+| Git metrics | OBJECTIVE | do, change, state |
+| Goal completion | SEMI_OBJECTIVE | completion, do, know |
+| Artifact counts | SEMI_OBJECTIVE | know, uncertainty, signal |
+| Issue tracking | SEMI_OBJECTIVE | impact, signal |
+| Sentinel decisions | SEMI_OBJECTIVE | context, uncertainty |
+
+**Ungroundable vectors:** engagement, coherence, density — no objective signal exists.
+
+## Dual-Track Calibration
+
+The system uses two parallel calibration tracks:
+
+### Track 1: Self-Referential (PREFLIGHT → POSTFLIGHT)
 
 **Learning delta:**
 ```
@@ -165,34 +188,52 @@ uncertainty: 0.5 → 0.2 = -0.3 (uncertainty reduced)
 context: 0.4 → 0.9 = +0.5 (major context gain)
 ```
 
-**Calibration quality:**
-- Were your PREFLIGHT estimates accurate?
-- Did you over/underestimate your knowledge?
-- How can you calibrate better next time?
+### Track 2: Grounded (POSTFLIGHT → Objective Evidence)
+
+**Calibration accuracy:**
+```
+POSTFLIGHT know=0.85 vs evidence know=0.80 → gap = +0.05 (well calibrated)
+POSTFLIGHT completion=0.9 vs evidence completion=0.6 → gap = +0.30 (overestimate)
+```
+
+When tracks disagree, Track 2 (grounded) is more trustworthy.
+
+```bash
+# Self-referential calibration
+empirica calibration-report
+
+# Grounded calibration — self-assessment vs evidence
+empirica calibration-report --grounded
+
+# Trajectory — is calibration improving over time?
+empirica calibration-report --trajectory
+```
 
 ## Workflow Variations
 
 ### Quick Task (< 30 min)
 ```
-PREFLIGHT → ACT → POSTFLIGHT
+PREFLIGHT → ACT → POSTFLIGHT → POST-TEST
 ```
 Skip CHECK for low-risk, well-understood tasks.
 
 ### Investigation Task
 ```
-PREFLIGHT → INVESTIGATE → POSTFLIGHT
+PREFLIGHT → INVESTIGATE → POSTFLIGHT → POST-TEST
 ```
 When the goal is understanding, not action.
 
 ### Complex Feature
 ```
-PREFLIGHT → Goal + Subtasks → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT
+PREFLIGHT → Goal + Subtasks → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT → POST-TEST
 ```
 Multiple CHECK cycles as uncertainty is reduced.
 
 ### Multi-Session
 ```
 Session 1: PREFLIGHT → INVESTIGATE → CHECK → Handoff
-Session 2: Load Handoff → PREFLIGHT → ACT → POSTFLIGHT
+Session 2: Load Handoff → PREFLIGHT → ACT → POSTFLIGHT → POST-TEST
 ```
 Handoffs preserve epistemic state across sessions.
+
+POST-TEST is automatic — triggered by POSTFLIGHT. No manual step needed.

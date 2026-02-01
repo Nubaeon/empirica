@@ -46,11 +46,11 @@ This visual overview describes the complete architecture of the Empirica system 
 │                CASCADE WORKFLOW (Epistemic Process)                     │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  PREFLIGHT → [CHECK]* → POSTFLIGHT → Δ (Deltas)                       │
-│     ↓            ↓           ↓           ↓                             │
-│  Assess      Decision    Measure    Calculate                          │
-│  baseline    gates       learning    epistemic                         │
-│  state       (0-N)       outcome     change                            │
+│  PREFLIGHT → [CHECK]* → POSTFLIGHT → POST-TEST → Δ (Deltas)           │
+│     ↓            ↓           ↓           ↓           ↓                 │
+│  Assess      Decision    Measure    Grounded    Calculate              │
+│  baseline    gates       learning   Verification epistemic             │
+│  state       (0-N)       outcome    (evidence)   change                │
 │                                                                         │
 │  Each phase uses 13 EPISTEMIC VECTORS:                                 │
 │  ┌───────────────────────────────────────────────────────────────┐    │

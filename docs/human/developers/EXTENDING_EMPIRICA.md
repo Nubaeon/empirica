@@ -1,6 +1,6 @@
 # Extending Empirica
 
-**Version:** 1.4.0 | **Status:** Production
+**Version:** 1.5.0 | **Status:** Production
 
 Build applications on top of Empirica's epistemic foundation.
 
@@ -281,7 +281,7 @@ my-empirica-extension/
 name = "my-empirica-extension"
 version = "0.1.0"
 dependencies = [
-    "empirica>=1.4.0",  # Pin to minimum required version
+    "empirica>=1.5.0",  # Pin to minimum required version
 ]
 
 [project.scripts]
@@ -303,7 +303,7 @@ my_ext = "my_extension:register_plugin"
 **Recommendation:** Always depend directly on `empirica`:
 ```toml
 dependencies = [
-    "empirica>=1.4.0",      # Direct dependency
+    "empirica>=1.5.0",      # Direct dependency
     "docpistemic>=0.1.0",   # If you need it
 ]
 ```
@@ -349,7 +349,7 @@ class MyRepository(BaseRepository):
 
 **Problem:** Older extensions used inconsistent minimum versions (`>=1.2.3`, `>=1.2.4`, `>=1.3.0`).
 
-**Resolution:** All extensions should now use `>=1.4.0` (current stable). Update older dependencies.
+**Resolution:** All extensions should now use `>=1.5.0` (current stable). Update older dependencies.
 
 ---
 
@@ -387,9 +387,9 @@ def test_my_extension(db, bus):
 
 | Extension | Depends On | Key Pattern |
 |-----------|------------|-------------|
-| `empirica-mcp` | `empirica>=1.4.0` | Wraps CLI as MCP tools |
-| `empirica-crm` | `empirica>=1.4.0` | Custom repository + entry points |
-| `docpistemic` | `empirica>=1.4.0` | Uses docs-assess agent |
+| `empirica-mcp` | `empirica>=1.5.0` | Wraps CLI as MCP tools |
+| `empirica-crm` | `empirica>=1.5.0` | Custom repository + entry points |
+| `docpistemic` | `empirica>=1.5.0` | Uses docs-assess agent |
 | `carapace` | `docpistemic` | Builds on another extension |
 
 ---
@@ -398,7 +398,7 @@ def test_my_extension(db, bus):
 
 1. **Keep it minimal** - Don't duplicate core functionality
 2. **Use the bus** - Observe, don't modify
-3. **Pin versions** - `empirica>=1.4.0` minimum
+3. **Pin versions** - `empirica>=1.5.0` minimum
 4. **Test independently** - Use `:memory:` databases
 5. **Document vectors** - Which vectors does your extension affect?
 

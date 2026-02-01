@@ -154,11 +154,11 @@ Task completion metadata is stored in git notes for:
 ## Integration with CASCADE
 
 ```
-PREFLIGHT ──────► CHECK ──────► POSTFLIGHT
-    │               │               │
-    ▼               ▼               ▼
-Set goals     Track progress    Record completion
-              CompletionTracker  Update metrics
+PREFLIGHT ──────► CHECK ──────► POSTFLIGHT ──────► POST-TEST
+    │               │               │                  │
+    ▼               ▼               ▼                  ▼
+Set goals     Track progress    Record completion  Grounded Verification
+              CompletionTracker  Update metrics    (evidence-based calibration)
               ↓
               Goals auto-mark complete when
               completion_percentage >= 1.0

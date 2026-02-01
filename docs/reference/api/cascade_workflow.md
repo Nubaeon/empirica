@@ -7,9 +7,10 @@
 The CASCADE workflow defines the epistemic phases for AI self-assessment:
 
 ```
-PREFLIGHT → CHECK → POSTFLIGHT
-    │         │          │
- Baseline   Gate     Learning
+PREFLIGHT → CHECK → POSTFLIGHT → POST-TEST
+    │         │          │            │
+ Baseline   Gate     Learning    Grounded
+                                Verification
 ```
 
 ## Core Functions

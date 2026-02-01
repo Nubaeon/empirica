@@ -18,11 +18,11 @@ Empirica uses multiple context injection layers, each with a specific purpose. T
 
 ### Workflow Phases (Mandatory, Structural)
 ```
-PREFLIGHT ────────► CHECK ────────► POSTFLIGHT
-   │                  │                  │
-   │                  │                  │
- Baseline         Sentinel            Learning
- Assessment        Gate               Delta
+PREFLIGHT ────────► CHECK ────────► POSTFLIGHT ────────► POST-TEST
+   │                  │                  │                    │
+   │                  │                  │                    │
+ Baseline         Sentinel            Learning           Grounded
+ Assessment        Gate               Delta            Verification
 ```
 
 The workflow is **mandatory**. Every significant task must have:
@@ -54,11 +54,11 @@ The AI **chooses** when to use noetic vs praxic thinking. CHECK gates the transi
 
 ### How They Interact
 ```
-PREFLIGHT → [noetic/praxic as needed] → CHECK → [noetic/praxic as needed] → POSTFLIGHT
-    │                                      │
-    │                                      │
-    └── AI may use noetic heavily          └── If "investigate": more noetic
-        if uncertain                           If "proceed": can go praxic
+PREFLIGHT → [noetic/praxic as needed] → CHECK → [noetic/praxic as needed] → POSTFLIGHT → POST-TEST
+    │                                      │                                                │
+    │                                      │                                                │
+    └── AI may use noetic heavily          └── If "investigate": more noetic         Grounded
+        if uncertain                           If "proceed": can go praxic         Verification
 ```
 
 ---
@@ -73,7 +73,7 @@ PREFLIGHT → [noetic/praxic as needed] → CHECK → [noetic/praxic as needed] 
 | AI identity (ai-id, model) | How-to tutorials |
 | Bias corrections (+0.10 uncertainty, -0.05 know) | Full command reference |
 | Readiness gate formula (know ≥0.70, uncertainty ≤0.35) | Detailed examples |
-| Workflow diagram (PRE→CHECK→POST) | Deep-dive explanations |
+| Workflow diagram (PRE→CHECK→POST→POST-TEST) | Deep-dive explanations |
 | Thinking phase definitions (noetic/praxic) | Anti-pattern catalogs |
 | Self-improvement protocol | Calibration pattern examples |
 | Documentation policy | Version history |
@@ -369,7 +369,7 @@ Before committing changes, verify:
 - [ ] SKILL.md ≤2KB, references/ ≤5KB each
 - [ ] No how-to in system prompt
 - [ ] No identity in skill
-- [ ] Workflow (PRE→CHECK→POST) mentioned in both (system = authority, skill = reference)
+- [ ] Workflow (PRE→CHECK→POST→POST-TEST) mentioned in both (system = authority, skill = reference)
 - [ ] Thinking phases (noetic/praxic) explained in skill
 - [ ] Bias corrections in skill (for self-sufficiency)
 - [ ] Subagent spawning in skill

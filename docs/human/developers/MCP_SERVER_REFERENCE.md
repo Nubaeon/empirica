@@ -698,9 +698,57 @@ Get calibration report for session.
 **Parameters:**
 - `session_id` (required): Session UUID
 
-**Returns:** Calibration metrics (predicted vs actual confidence)
+**Returns:** Calibration metrics including:
 
-**Use when:** Checking if self-assessment is accurate
+```json
+{
+  "ok": true,
+  "session_id": "uuid",
+  "calibration": {
+    "per_vector": { ... },
+    "overall_bias": 0.12,
+    "sample_size": 42
+  },
+  "grounded_verification": {
+    "coverage": 0.85,
+    "evidence_count": 24,
+    "sources": ["pytest", "git", "goals", "artifacts", "issues", "sentinel"],
+    "gaps": [
+      {
+        "vector": "do",
+        "self_assessed": 0.9,
+        "grounded": 0.72,
+        "gap": 0.18,
+        "evidence_type": "OBJECTIVE"
+      }
+    ],
+    "track1_vs_track2": {
+      "track1_self_referential": { ... },
+      "track2_grounded": { ... },
+      "divergence": 0.15
+    }
+  }
+}
+```
+
+**`grounded_verification` field (v1.5.0):**
+
+The `grounded_verification` field provides **Track 2 (grounded) calibration** data, comparing AI self-assessment against objective evidence:
+
+- **`coverage`** (float): Fraction of vectors with grounded evidence (0.0-1.0)
+- **`evidence_count`** (int): Total evidence items collected from all sources
+- **`sources`** (array): Active evidence sources used (pytest, git, goals, artifacts, issues, sentinel)
+- **`gaps`** (array): Vectors where self-assessment diverges from grounded evidence
+  - `vector`: Epistemic vector name
+  - `self_assessed`: AI's self-reported score
+  - `grounded`: Evidence-based score (quality-weighted: OBJECTIVE=1.0, SEMI_OBJECTIVE=0.7)
+  - `gap`: Absolute difference between self-assessed and grounded
+  - `evidence_type`: Quality tier of evidence (`OBJECTIVE` or `SEMI_OBJECTIVE`)
+- **`track1_vs_track2`** (object): Comparison between self-referential (Track 1) and grounded (Track 2) calibration with divergence metric
+
+**Grounded verification** is automatically triggered after POSTFLIGHT (the POST-TEST phase of the 4-phase CASCADE). Use `calibration-report --grounded` via CLI for the full report, or `calibration-report --trajectory` for trend analysis.
+
+**Use when:** Checking if self-assessment is accurate, comparing self-reported vs evidence-based calibration
 
 ---
 
@@ -974,7 +1022,7 @@ get_session_summary(session_id="latest:active:copilot")
 
 ---
 
-**Last Updated:** 2025-12-16  
-**MCP Server:** empirica-v2  
-**Total Tools:** 38  
+**Last Updated:** 2026-02-01
+**MCP Server:** empirica-v2
+**Total Tools:** 38
 **Protocol:** MCP (stdio)

@@ -319,12 +319,12 @@ compliance = sentinel.check_compliance(
 ## Integration with CASCADE
 
 ```
-PREFLIGHT ──────────────────► CHECK ──────────────────► POSTFLIGHT
-    │                           │                           │
-    │                           │                           │
-    ▼                           ▼                           ▼
-sentinel.start_loop()    sentinel.check_compliance()   sentinel.complete_loop()
-                               │
+PREFLIGHT ──────────────────► CHECK ──────────────────► POSTFLIGHT ──────────────────► POST-TEST
+    │                           │                           │                              │
+    │                           │                           │                              │
+    ▼                           ▼                           ▼                              ▼
+sentinel.start_loop()    sentinel.check_compliance()   sentinel.complete_loop()    sentinel.verify_grounded()
+                               │                                                   (Grounded Verification)
                                ▼
                         ┌──────────────┐
                         │ GateActions  │

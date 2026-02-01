@@ -164,8 +164,8 @@ The CHECK gate controls the noetic→praxic transition. Sentinel enforces it.
 The mandatory measurement framework. Every significant task follows this sequence:
 
 ```
-PREFLIGHT → [work] → CHECK → [work] → POSTFLIGHT
-  BEGIN       noetic    GATE    praxic    COMMIT
+PREFLIGHT → [work] → CHECK → [work] → POSTFLIGHT → POST-TEST
+  BEGIN       noetic    GATE    praxic    COMMIT      VERIFY
 ```
 
 | Phase | Role | Analogy |
@@ -173,6 +173,7 @@ PREFLIGHT → [work] → CHECK → [work] → POSTFLIGHT
 | **PREFLIGHT** | Baseline measurement. Opens the epistemic transaction. | `BEGIN TRANSACTION` |
 | **CHECK** | Sentinel gate. Evaluates readiness to transition from noetic to praxic. | Quality gate / code review |
 | **POSTFLIGHT** | Learning measurement. Closes the epistemic transaction. Captures delta. | `COMMIT` |
+| **POST-TEST** | Grounded verification. Automatic, evidence-based calibration against actual outcomes. | `VERIFY` / integration test |
 
 ---
 
@@ -228,7 +229,7 @@ Sessions, goals, and transactions are orthogonal, not hierarchical:
 
 ### 5.1 CASCADE
 
-The workflow framework. Enforces measurement discipline: PREFLIGHT → CHECK → POSTFLIGHT. Named for the phase sequence that cascades from investigation to action.
+The workflow framework. Enforces measurement discipline: PREFLIGHT → CHECK → POSTFLIGHT → POST-TEST. Named for the phase sequence that cascades from investigation to action to grounded verification.
 
 ### 5.2 Sentinel
 

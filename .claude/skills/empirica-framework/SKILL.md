@@ -1,20 +1,28 @@
 ---
 name: empirica-framework
 description: "This skill should be used when the user asks to 'assess my knowledge state', 'run preflight', 'do a postflight', 'use CASCADE workflow', 'track what I know', 'measure learning', 'check epistemic drift', 'spawn investigation agents', 'create handoff', or mentions epistemic vectors, calibration, noetic/praxic phases, functional self-awareness, or structured investigation before coding tasks."
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Empirica: Epistemic Framework Reference
 
 Measure what you know. Track what you learn. Prevent overconfidence.
 
-**v2.0.0:** Formal vocabulary taxonomy. See CLAUDE.md for canonical terms (noetic/praxic/epistemic/context).
+**v2.1.0:** Dual-track calibration (grounded verification), 4-phase CASCADE with POST-TEST.
+See CLAUDE.md for canonical terms (noetic/praxic/epistemic/context).
 
 ---
 
 ## CASCADE Workflow
 
-Every significant task follows: **PREFLIGHT → CHECK → POSTFLIGHT**
+Every significant task follows: **PREFLIGHT → CHECK → POSTFLIGHT → POST-TEST**
+
+```
+PREFLIGHT ──► CHECK ──► POSTFLIGHT ──► POST-TEST
+    │           │            │              │
+ Baseline    Sentinel     Learning      Grounded
+ Assessment    Gate        Delta       Verification
+```
 
 ### PREFLIGHT (Measure baseline)
 
@@ -59,7 +67,7 @@ Returns `proceed` or `investigate` based on readiness gate: `know >= 0.70 AND un
 - Post-compact (context reduced)
 - Before irreversible actions
 
-### POSTFLIGHT (Measure delta)
+### POSTFLIGHT (Measure delta + trigger grounded verification)
 
 Submit AFTER completing work — the delta between PREFLIGHT and POSTFLIGHT is your learning measurement:
 
@@ -75,6 +83,10 @@ empirica postflight-submit - << 'EOF'
 }
 EOF
 ```
+
+**POST-TEST (automatic):** POSTFLIGHT automatically triggers grounded verification —
+objective evidence (tests, artifacts, git, goals) is collected and compared to your
+self-assessed vectors. The gap = real calibration error. See [Dual-Track Calibration](#dual-track-calibration).
 
 ---
 
@@ -115,22 +127,51 @@ Rate each 0.0 to 1.0 with honest reasoning:
 
 ---
 
-## Bias Corrections
+## Dual-Track Calibration
 
-Apply these to your self-assessments. Updated automatically on each POSTFLIGHT.
+Empirica uses two parallel calibration tracks:
 
-**Most underestimated (add to raw score):**
-- **Completion:** ~+0.77 (massively underestimate progress)
-- **Change:** ~+0.61 (underestimate impact of work)
-- **Do:** ~+0.54 (underestimate execution ability)
+### Track 1: Self-Referential (PREFLIGHT → POSTFLIGHT)
 
-**Moderately underestimated:**
-- **Clarity/State/Density/Know/Signal/Coherence/Context:** +0.23 to +0.35
+Measures **learning trajectory** — how vectors change during work.
+Updated automatically on each POSTFLIGHT via Bayesian update.
 
-**Overestimated (subtract from raw score):**
-- **Uncertainty:** ~-0.41 (overestimate doubt)
+*Example bias corrections (exact values injected from `.breadcrumbs.yaml`):*
+- **Completion:** ~+0.52 (underestimate progress)
+- **Impact:** ~+0.29 (underestimate significance)
+- **Density/Signal/Change:** ~+0.10 to +0.13
 
-**Well calibrated:** Impact, Engagement
+### Track 2: Grounded Verification (POSTFLIGHT → Objective Evidence)
+
+Measures **calibration accuracy** — does your self-assessment match reality?
+Triggered automatically after each POSTFLIGHT.
+
+**Evidence sources (collected automatically):**
+
+| Source | Quality | Vectors Grounded |
+|--------|---------|-----------------|
+| pytest results | OBJECTIVE | know, do, clarity |
+| Git metrics | OBJECTIVE | do, change, state |
+| Goal completion | SEMI_OBJECTIVE | completion, do, know |
+| Artifact counts | SEMI_OBJECTIVE | know, uncertainty, signal |
+| Issue tracking | SEMI_OBJECTIVE | impact, signal |
+| Sentinel decisions | SEMI_OBJECTIVE | context, uncertainty |
+
+**Ungroundable vectors:** engagement, coherence, density — no objective signal exists.
+
+**When tracks disagree:** Track 2 (grounded) is more trustworthy. The `grounded_calibration.divergence`
+section in `.breadcrumbs.yaml` shows the gap per vector.
+
+```bash
+# Self-referential calibration (Track 1)
+empirica calibration-report
+
+# Grounded calibration (Track 2) — compare self-assessment vs evidence
+empirica calibration-report --grounded
+
+# Trajectory — is calibration improving over time?
+empirica calibration-report --trajectory
+```
 
 *Exact values injected from `.breadcrumbs.yaml` at session start.*
 
@@ -204,7 +245,7 @@ empirica project-embed --project-id <ID> --output json
 
 **Automatic ingestion (when Qdrant available):**
 - `finding-log` → eidetic facts + immune decay on lessons
-- `postflight-submit` → episodic narratives + auto-embed
+- `postflight-submit` → episodic narratives + auto-embed + **grounded verification** (post-test evidence)
 - `SessionStart` hook → retrieves relevant memories post-compact
 
 **Pattern retrieval (auto-triggered):**
@@ -291,23 +332,25 @@ export EMPIRICA_SENTINEL_REQUIRE_BOOTSTRAP=true
 
 ### Quick Task
 ```
-PREFLIGHT → [praxic work] → POSTFLIGHT
+PREFLIGHT → [praxic work] → POSTFLIGHT → POST-TEST
 ```
 
 ### Investigation → Implementation
 ```
-PREFLIGHT → [noetic: explore] → CHECK → [praxic: implement] → POSTFLIGHT
+PREFLIGHT → [noetic: explore] → CHECK → [praxic: implement] → POSTFLIGHT → POST-TEST
 ```
 
 ### Complex Feature
 ```
-PREFLIGHT → Goal + Subtasks → [CHECK at each gate] → POSTFLIGHT
+PREFLIGHT → Goal + Subtasks → [CHECK at each gate] → POSTFLIGHT → POST-TEST
 ```
 
 ### Parallel Investigation
 ```
-PREFLIGHT → agent-spawn (×N) → agent-aggregate → CHECK → POSTFLIGHT
+PREFLIGHT → agent-spawn (×N) → agent-aggregate → CHECK → POSTFLIGHT → POST-TEST
 ```
+
+POST-TEST is automatic — triggered by POSTFLIGHT. No manual step needed.
 
 ---
 
@@ -346,7 +389,9 @@ empirica deadend-log --approach "..."    # Log noetic artifact (dead-end)
 empirica goals-create --objective "..."  # Create praxic artifact (goal)
 empirica goals-list                      # Show active goals
 empirica check-drift --session-id <ID>   # Detect epistemic drift
-empirica calibration-report              # Analyze calibration
+empirica calibration-report              # Self-referential calibration (Track 1)
+empirica calibration-report --grounded   # Grounded calibration (Track 2)
+empirica calibration-report --trajectory # Calibration trend over time
 empirica agent-spawn --task "..."        # Spawn domain agent
 empirica agent-parallel --task "..."     # Parallel investigation
 empirica handoff-create ...              # Create handoff
@@ -358,11 +403,13 @@ empirica project-search --task "..."     # Semantic memory search
 ## Best Practices
 
 **DO:**
-- Apply bias corrections from `.breadcrumbs.yaml`
+- Apply bias corrections from `.breadcrumbs.yaml` (both self-ref and grounded)
 - Be honest about uncertainty (it's data, not failure)
 - Log noetic artifacts as you discover them (also anti-gaming evidence)
 - Use CHECK before major praxic actions
-- Compare POSTFLIGHT to PREFLIGHT (the delta is the signal)
+- Compare POSTFLIGHT to PREFLIGHT (Track 1: learning delta)
+- Check `calibration-report --grounded` to see if self-assessment matches evidence (Track 2)
+- Use `calibration-report --trajectory` to see if calibration is improving
 
 **DON'T:**
 - Inflate scores (Sentinel detects rushed assessments)
@@ -370,6 +417,7 @@ empirica project-search --task "..."     # Semantic memory search
 - Ignore high uncertainty signals
 - Proceed without CHECK when uncertainty > 0.5
 - Rush PREFLIGHT→CHECK without actual noetic work
+- Trust Track 1 over Track 2 when they diverge (grounded evidence wins)
 
 ---
 
