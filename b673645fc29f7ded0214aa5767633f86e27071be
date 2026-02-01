@@ -1,0 +1,16 @@
+{
+  "finding_id": "839f902e-1d0e-4114-9698-e59280154cc2",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T17:57:34.024665+00:00",
+  "finding": "MCOLoader converted from eager to lazy loading via __getattr__ + _CONFIG_REGISTRY pattern. Zero configs loaded at init (was 5). Each config loads on first attribute access. _load_count tracks lazy loads. eager=True parameter for legacy compat. is_loaded(), loaded_configs, available_configs introspection. Also fixed pre-existing type annotations (str=None -> Optional[str]=None). Full backward compatibility verified: get_model_bias, get_persona, export_snapshot, infer_persona, infer_model all work unchanged.",
+  "impact": 0.85,
+  "goal_id": "6fe26512-6f6b-405d-9179-2154d4da5a5e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "MCOLoader converted from eager to lazy loading via __getattr__ + _CONFIG_REGISTRY pattern. Zero configs loaded at init (was 5). Each config loads on first attribute access. _load_count tracks lazy loads. eager=True parameter for legacy compat. is_loaded(), loaded_configs, available_configs introspection. Also fixed pre-existing type annotations (str=None -> Optional[str]=None). Full backward compatibility verified: get_model_bias, get_persona, export_snapshot, infer_persona, infer_model all work unchanged.",
+    "impact": 0.85
+  }
+}
