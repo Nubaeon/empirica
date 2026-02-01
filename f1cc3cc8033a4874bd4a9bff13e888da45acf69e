@@ -1,0 +1,16 @@
+{
+  "finding_id": "11f90752-992c-48f7-b302-87a30da4b4df",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "461ee68f-3029-4cf1-9d10-090a6e546c88",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T21:30:26.800932+00:00",
+  "finding": "Calibration storage is dual: SQLite is source of truth (bayesian_beliefs: 4301 rows, grounded_beliefs: 54, calibration_trajectory: 140), .breadcrumbs.yaml is hot-layer export for session-start injection. Docs already reflect this correctly \u2014 no update needed. The SKILL.md reference to 'calibration use SQLite' is accurate.",
+  "impact": 0.3,
+  "goal_id": "984c6602-622c-42ab-b844-8f33f579a9c0",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Calibration storage is dual: SQLite is source of truth (bayesian_beliefs: 4301 rows, grounded_beliefs: 54, calibration_trajectory: 140), .breadcrumbs.yaml is hot-layer export for session-start injection. Docs already reflect this correctly \u2014 no update needed. The SKILL.md reference to 'calibration use SQLite' is accurate.",
+    "impact": 0.3
+  }
+}
