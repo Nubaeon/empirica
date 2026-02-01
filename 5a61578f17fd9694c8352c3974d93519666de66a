@@ -1,0 +1,16 @@
+{
+  "finding_id": "09caacb6-ada9-4425-b15c-c20f15c640d9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T20:47:08.880395+00:00",
+  "finding": "Current subsystem query surface is fragmented across 7 different interfaces: MCOLoader exposes loaded/available configs, CBM has get_inventory_summary() and get_budget_report(), EpistemicBus has get_observer_count()/get_event_count(), AttentionBudget has allocations/remaining/utilization, MemoryGapDetector has detect_gaps(), BusPersistence has query_events()/query_semantic(), and monitor CLI has _display_turtle_health(). No shared base type or serialization convention.",
+  "impact": 0.8,
+  "goal_id": "0637f926-3acd-4106-8c7a-d3baad2de3c5",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Current subsystem query surface is fragmented across 7 different interfaces: MCOLoader exposes loaded/available configs, CBM has get_inventory_summary() and get_budget_report(), EpistemicBus has get_observer_count()/get_event_count(), AttentionBudget has allocations/remaining/utilization, MemoryGapDetector has detect_gaps(), BusPersistence has query_events()/query_semantic(), and monitor CLI has _display_turtle_health(). No shared base type or serialization convention.",
+    "impact": 0.8
+  }
+}
