@@ -1,0 +1,16 @@
+{
+  "finding_id": "24a7a1c5-f426-4970-bb8b-3120112eefff",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T17:44:35.418445+00:00",
+  "finding": "Existing kernel subsystem inventory: (1) EpistemicBus (epistemic_bus.py) = system bus with pub/sub, standard EventTypes for CASCADE/goals/sessions/calibration, global singleton, observer pattern. (2) MemoryGapDetector (memory_gap_detector.py) = partial memory manager - detects confabulation, unreferenced findings, compaction impact. Has 4 enforcement modes (inform/warn/strict/block) and expected-knowledge calculation from 5 signals. (3) AttentionBudgetCalculator (attention_budget.py) = resource scheduler using Shannon information gain for parallel agent allocation. Diminishing returns, dead-end penalties, per-domain budgets persisted to SQLite. These three + sentinel-gate.py + hooks + four-layer storage = most of the OS kernel. Missing: Context Budget Manager (token-level memory management) and unified orchestration layer.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Existing kernel subsystem inventory: (1) EpistemicBus (epistemic_bus.py) = system bus with pub/sub, standard EventTypes for CASCADE/goals/sessions/calibration, global singleton, observer pattern. (2) MemoryGapDetector (memory_gap_detector.py) = partial memory manager - detects confabulation, unreferenced findings, compaction impact. Has 4 enforcement modes (inform/warn/strict/block) and expected-knowledge calculation from 5 signals. (3) AttentionBudgetCalculator (attention_budget.py) = resource scheduler using Shannon information gain for parallel agent allocation. Diminishing returns, dead-end penalties, per-domain budgets persisted to SQLite. These three + sentinel-gate.py + hooks + four-layer storage = most of the OS kernel. Missing: Context Budget Manager (token-level memory management) and unified orchestration layer.",
+    "impact": 0.9
+  }
+}
