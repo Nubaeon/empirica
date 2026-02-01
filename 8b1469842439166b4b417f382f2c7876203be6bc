@@ -1,0 +1,16 @@
+{
+  "finding_id": "5ad658c6-91e8-4667-9bc5-2ff9ad8e7153",
+  "project_id": "5f2f7a4d-b44e-4dd5-a854-a0fab9e3bbb7",
+  "session_id": "dc29a88b-72b3-4421-a36b-e0023d4aaf5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T15:39:35.722351+00:00",
+  "finding": "Deleting Claude JSONL session files is safe for Empirica data. Findings, goals, unknowns, dead_ends, reflexes are all in SQLite (.empirica/sessions/sessions.db). Session arcs are embedded in Qdrant. JSONL files only contain raw conversation transcripts for resume/re-read.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Deleting Claude JSONL session files is safe for Empirica data. Findings, goals, unknowns, dead_ends, reflexes are all in SQLite (.empirica/sessions/sessions.db). Session arcs are embedded in Qdrant. JSONL files only contain raw conversation transcripts for resume/re-read.",
+    "impact": 0.8
+  }
+}
