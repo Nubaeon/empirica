@@ -56,6 +56,13 @@ class EvidenceBundle:
     coverage: float = 0.0
 
 
+
+# Weight applied to artifacts not linked to any session goal.
+# Unscoped unknowns (future research, general observations) still contribute
+# but with reduced influence so they don't artificially depress KNOW grounding.
+UNSCOPED_ARTIFACT_WEIGHT = 0.3
+
+
 class PostTestCollector:
     """Collects objective evidence from multiple sources."""
 
@@ -65,6 +72,7 @@ class PostTestCollector:
         self.project_id = project_id
         self._db = db
         self._owns_db = False
+        self._session_goal_ids: Optional[List[str]] = None
 
     def _get_db(self):
         if self._db is None:
@@ -78,6 +86,19 @@ class PostTestCollector:
             self._db.close()
             self._db = None
             self._owns_db = False
+
+    def _get_session_goal_ids(self) -> List[str]:
+        """Get goal IDs for this session (cached)."""
+        if self._session_goal_ids is not None:
+            return self._session_goal_ids
+        db = self._get_db()
+        cursor = db.conn.cursor()
+        cursor.execute(
+            "SELECT id FROM goals WHERE session_id = ?",
+            (self.session_id,),
+        )
+        self._session_goal_ids = [row[0] for row in cursor.fetchall()]
+        return self._session_goal_ids
 
     def collect_all(self) -> EvidenceBundle:
         """Collect evidence from all available sources."""
@@ -175,57 +196,139 @@ class PostTestCollector:
         return items
 
     def _collect_artifact_metrics(self) -> List[EvidenceItem]:
-        """Collect noetic artifact counts for this session."""
+        """Collect scope-weighted noetic artifact counts for this session.
+
+        Artifacts linked to session goals count at full weight.
+        Unscoped artifacts (no goal_id — typically future research or general
+        observations) count at UNSCOPED_ARTIFACT_WEIGHT to avoid artificially
+        depressing KNOW grounding when forward-looking unknowns are captured.
+        """
         items = []
         db = self._get_db()
         cursor = db.conn.cursor()
+        goal_ids = self._get_session_goal_ids()
+        has_goals = len(goal_ids) > 0
 
-        # Findings count
-        cursor.execute("""
-            SELECT COUNT(*) FROM project_findings
-            WHERE session_id = ?
-        """, (self.session_id,))
-        findings_count = cursor.fetchone()[0]
+        # --- Scope-weighted unknowns ---
+        if has_goals:
+            placeholders = ",".join("?" for _ in goal_ids)
+            # Goal-scoped unknowns (full weight)
+            cursor.execute(f"""
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN is_resolved = 1 THEN 1 ELSE 0 END) as resolved
+                FROM project_unknowns
+                WHERE session_id = ?
+                  AND goal_id IN ({placeholders})
+            """, (self.session_id, *goal_ids))
+            row = cursor.fetchone()
+            scoped_total = row[0] if row else 0
+            scoped_resolved = row[1] or 0 if row else 0
 
-        # Unknowns: total and resolved
-        cursor.execute("""
-            SELECT
-                COUNT(*) as total,
-                SUM(CASE WHEN is_resolved = 1 THEN 1 ELSE 0 END) as resolved
-            FROM project_unknowns
-            WHERE session_id = ?
-        """, (self.session_id,))
-        row = cursor.fetchone()
-        unknowns_total = row[0] if row else 0
-        unknowns_resolved = row[1] if row else 0
+            # Unscoped unknowns (reduced weight)
+            cursor.execute(f"""
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN is_resolved = 1 THEN 1 ELSE 0 END) as resolved
+                FROM project_unknowns
+                WHERE session_id = ?
+                  AND (goal_id IS NULL OR goal_id = ''
+                       OR goal_id NOT IN ({placeholders}))
+            """, (self.session_id, *goal_ids))
+            row = cursor.fetchone()
+            unscoped_total = row[0] if row else 0
+            unscoped_resolved = row[1] or 0 if row else 0
 
-        # Dead-ends count
-        cursor.execute("""
-            SELECT COUNT(*) FROM project_dead_ends
-            WHERE session_id = ?
-        """, (self.session_id,))
-        dead_ends_count = cursor.fetchone()[0]
+            w = UNSCOPED_ARTIFACT_WEIGHT
+            unknowns_weighted_total = scoped_total + (unscoped_total * w)
+            unknowns_weighted_resolved = scoped_resolved + (unscoped_resolved * w)
+        else:
+            # No goals in session — all artifacts count equally (no scope info)
+            cursor.execute("""
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN is_resolved = 1 THEN 1 ELSE 0 END) as resolved
+                FROM project_unknowns
+                WHERE session_id = ?
+            """, (self.session_id,))
+            row = cursor.fetchone()
+            unknowns_weighted_total = row[0] if row else 0
+            unknowns_weighted_resolved = row[1] or 0 if row else 0
+            scoped_total = 0
+            unscoped_total = unknowns_weighted_total
 
-        # Mistakes count
+        # --- Scope-weighted findings ---
+        if has_goals:
+            placeholders = ",".join("?" for _ in goal_ids)
+            cursor.execute(f"""
+                SELECT
+                    SUM(CASE WHEN goal_id IN ({placeholders}) THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN goal_id IS NULL OR goal_id = ''
+                             OR goal_id NOT IN ({placeholders}) THEN 1 ELSE 0 END)
+                FROM project_findings
+                WHERE session_id = ?
+            """, (*goal_ids, *goal_ids, self.session_id))
+            row = cursor.fetchone()
+            scoped_findings = row[0] or 0 if row else 0
+            unscoped_findings = row[1] or 0 if row else 0
+            findings_count = scoped_findings + (unscoped_findings * UNSCOPED_ARTIFACT_WEIGHT)
+        else:
+            cursor.execute("""
+                SELECT COUNT(*) FROM project_findings
+                WHERE session_id = ?
+            """, (self.session_id,))
+            findings_count = cursor.fetchone()[0]
+            scoped_findings = 0
+            unscoped_findings = findings_count
+
+        # --- Scope-weighted dead-ends ---
+        if has_goals:
+            placeholders = ",".join("?" for _ in goal_ids)
+            cursor.execute(f"""
+                SELECT
+                    SUM(CASE WHEN goal_id IN ({placeholders}) THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN goal_id IS NULL OR goal_id = ''
+                             OR goal_id NOT IN ({placeholders}) THEN 1 ELSE 0 END)
+                FROM project_dead_ends
+                WHERE session_id = ?
+            """, (*goal_ids, *goal_ids, self.session_id))
+            row = cursor.fetchone()
+            scoped_dead_ends = row[0] or 0 if row else 0
+            unscoped_dead_ends = row[1] or 0 if row else 0
+            dead_ends_count = scoped_dead_ends + (unscoped_dead_ends * UNSCOPED_ARTIFACT_WEIGHT)
+        else:
+            cursor.execute("""
+                SELECT COUNT(*) FROM project_dead_ends
+                WHERE session_id = ?
+            """, (self.session_id,))
+            dead_ends_count = cursor.fetchone()[0]
+
+        # Mistakes count (not scope-weighted — all mistakes are relevant)
         cursor.execute("""
             SELECT COUNT(*) FROM mistakes_made
             WHERE session_id = ?
         """, (self.session_id,))
         mistakes_count = cursor.fetchone()[0]
 
-        # Unknown resolution ratio → know proxy
-        if unknowns_total > 0:
-            resolution_ratio = unknowns_resolved / unknowns_total
+        # Unknown resolution ratio → know proxy (scope-weighted)
+        if unknowns_weighted_total > 0:
+            resolution_ratio = unknowns_weighted_resolved / unknowns_weighted_total
             items.append(EvidenceItem(
                 source="artifacts",
                 metric_name="unknown_resolution_ratio",
                 value=resolution_ratio,
-                raw_value={"resolved": unknowns_resolved, "total": unknowns_total},
+                raw_value={
+                    "resolved_weighted": round(unknowns_weighted_resolved, 2),
+                    "total_weighted": round(unknowns_weighted_total, 2),
+                    "scoped_total": scoped_total,
+                    "unscoped_total": unscoped_total,
+                    "unscoped_weight": UNSCOPED_ARTIFACT_WEIGHT,
+                },
                 quality=EvidenceQuality.SEMI_OBJECTIVE,
                 supports_vectors=["know"],
             ))
 
-        # Productive exploration ratio → signal quality
+        # Productive exploration ratio → signal quality (scope-weighted)
         # (findings / (findings + dead_ends)) — higher = more productive
         total_exploration = findings_count + dead_ends_count
         if total_exploration > 0:
@@ -234,34 +337,40 @@ class PostTestCollector:
                 source="artifacts",
                 metric_name="productive_exploration_ratio",
                 value=productivity,
-                raw_value={"findings": findings_count, "dead_ends": dead_ends_count},
+                raw_value={
+                    "findings_weighted": round(findings_count, 2),
+                    "dead_ends_weighted": round(dead_ends_count, 2),
+                },
                 quality=EvidenceQuality.SEMI_OBJECTIVE,
                 supports_vectors=["signal", "know"],
             ))
 
-        # Dead-end ratio → uncertainty proxy (inverted)
+        # Dead-end ratio → uncertainty proxy (inverted, scope-weighted)
         # More dead-ends relative to findings = higher actual uncertainty
         if total_exploration > 0:
             dead_end_ratio = dead_ends_count / total_exploration
-            # Invert: low dead-end ratio = low uncertainty
             uncertainty_evidence = dead_end_ratio
             items.append(EvidenceItem(
                 source="artifacts",
                 metric_name="dead_end_ratio",
                 value=uncertainty_evidence,
-                raw_value={"dead_ends": dead_ends_count, "total": total_exploration},
+                raw_value={
+                    "dead_ends_weighted": round(dead_ends_count, 2),
+                    "total_weighted": round(total_exploration, 2),
+                },
                 quality=EvidenceQuality.SEMI_OBJECTIVE,
                 supports_vectors=["uncertainty"],
             ))
 
-        # Mistake density → inverse signal
-        if findings_count > 0:
-            mistake_ratio = mistakes_count / (findings_count + mistakes_count)
+        # Mistake density → inverse signal (uses raw findings for denominator)
+        raw_findings = (scoped_findings + unscoped_findings) if has_goals else findings_count
+        if raw_findings > 0:
+            mistake_ratio = mistakes_count / (raw_findings + mistakes_count)
             items.append(EvidenceItem(
                 source="artifacts",
                 metric_name="mistake_ratio",
                 value=1.0 - mistake_ratio,  # Invert: fewer mistakes = better
-                raw_value={"mistakes": mistakes_count, "findings": findings_count},
+                raw_value={"mistakes": mistakes_count, "findings": raw_findings},
                 quality=EvidenceQuality.INFERRED,
                 supports_vectors=["signal"],
             ))

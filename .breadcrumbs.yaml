@@ -161,51 +161,55 @@ task:
 
 
 
+
+
+
 # Bayesian calibration (auto-updated by Empirica POSTFLIGHT)
 calibration:
-  last_updated: "2026-02-01T19:24:27.268277"
+  last_updated: "2026-02-01T22:09:36.271605"
   ai_id: claude-code
-  observations: 3324
+  observations: 3363
   bias_corrections:
-    completion: +0.68
-    do: +0.52
+    completion: +0.78
     change: +0.40
-    state: +0.14
-    density: +0.13
+    density: +0.27
+    state: +0.24
+    context: +0.18
+    uncertainty: -0.12
+    know: +0.10
     signal: +0.06
-    impact: -0.06
-    clarity: +0.05
     coherence: +0.05
-    know: +0.04
-    context: +0.03
-    engagement: -0.03
-    uncertainty: +0.00
+    impact: +0.04
+    engagement: +0.02
+    do: +0.02
+    clarity: +0.00
   readiness:
     min_know: 0.70
     max_uncertainty: 0.35
   summary:
-    overestimates: []
-    underestimates: [completion, change, state, density, do]
-    well_calibrated: [uncertainty, impact, signal, coherence, clarity]
+    overestimates: [uncertainty]
+    underestimates: [completion, change, state, density, context, know]
+    well_calibrated: [impact, signal, coherence, clarity, do]
 
 # Grounded calibration (auto-updated by Empirica post-test verification)
 grounded_calibration:
-  last_updated: "2026-02-01T19:24:27.322312"
+  last_updated: "2026-02-01T22:09:36.325535"
   ai_id: claude-code
-  observations: 49
-  grounded_coverage: 0.60
+  observations: 69
+  grounded_coverage: 0.70
   divergence:
-    completion: +0.17
-    do: +0.17
-    signal: -0.16
-    know: -0.10
-    uncertainty: +0.09
-    context: -0.05
+    impact: +0.68
+    signal: -0.13
+    uncertainty: +0.10
+    completion: +0.09
+    do: +0.09
+    context: -0.08
+    know: -0.08
   ungrounded: [coherence, density, engagement]
   grounded_bias_corrections:
-    signal: +0.48
+    signal: +0.45
     uncertainty: -0.41
-    know: +0.38
-    context: +0.27
-    do: +0.05
-    completion: +0.05
+    know: +0.40
+    context: +0.37
+    do: +0.09
+    completion: +0.09
