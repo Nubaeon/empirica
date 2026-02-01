@@ -108,6 +108,7 @@ from .parsers import (
     add_trajectory_parsers,
     add_concept_graph_parsers,
     add_mcp_parsers,
+    add_message_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -156,6 +157,15 @@ from .command_handlers.concept_graph_commands import (
     handle_concept_stats,
     handle_concept_top,
     handle_concept_related,
+)
+from .command_handlers.message_commands import (
+    handle_message_send_command,
+    handle_message_inbox_command,
+    handle_message_read_command,
+    handle_message_reply_command,
+    handle_message_thread_command,
+    handle_message_channels_command,
+    handle_message_cleanup_command,
 )
 
 
@@ -219,6 +229,7 @@ def create_argument_parser():
     add_trajectory_parsers(subparsers)
     add_concept_graph_parsers(subparsers)
     add_mcp_parsers(subparsers)
+    add_message_parsers(subparsers)
 
     return parser
 
@@ -462,6 +473,15 @@ def main(args=None):
             'mcp-list-tools': handle_mcp_list_tools_command,
             'mcp-call': handle_mcp_call_command,
 
+            # Inter-agent messaging commands
+            'message-send': handle_message_send_command,
+            'message-inbox': handle_message_inbox_command,
+            'message-read': handle_message_read_command,
+            'message-reply': handle_message_reply_command,
+            'message-thread': handle_message_thread_command,
+            'message-channels': handle_message_channels_command,
+            'message-cleanup': handle_message_cleanup_command,
+
             # === ALIASES ===
             # Argparse registers aliases for --help, but handler lookup needs them too
             # CASCADE aliases
@@ -493,6 +513,14 @@ def main(args=None):
             # Project aliases
             'pb': handle_project_bootstrap_command,
             'bootstrap': handle_project_bootstrap_command,
+            # Message aliases
+            'msg-send': handle_message_send_command,
+            'ms': handle_message_send_command,
+            'msg-inbox': handle_message_inbox_command,
+            'mi': handle_message_inbox_command,
+            'msg-read': handle_message_read_command,
+            'mr': handle_message_read_command,
+            'msg-reply': handle_message_reply_command,
         }
         
         if parsed_args.command in command_handlers:

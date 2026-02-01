@@ -157,6 +157,7 @@ EMPIRICA_NOTES_REFS = [
     'empirica/mistakes',
     'empirica/sessions',
     'empirica/checkpoints',
+    'empirica/messages',
     'empirica-precompact',
     'breadcrumbs',
 ]

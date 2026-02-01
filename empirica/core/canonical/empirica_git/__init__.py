@@ -20,6 +20,7 @@ from .checkpoint_manager import CheckpointManager, auto_checkpoint
 from .goal_store import GitGoalStore
 from .session_sync import SessionSync
 from .sentinel_hooks import SentinelHooks, SentinelDecision, SentinelState, TurtleStatus
+from .message_store import GitMessageStore
 
 __all__ = [
     'CheckpointManager',
@@ -29,5 +30,6 @@ __all__ = [
     'SentinelHooks',
     'SentinelDecision',
     'SentinelState',
-    'TurtleStatus'
+    'TurtleStatus',
+    'GitMessageStore'
 ]
