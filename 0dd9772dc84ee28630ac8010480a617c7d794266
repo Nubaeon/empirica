@@ -1,0 +1,16 @@
+{
+  "finding_id": "b700a025-3880-48f6-8dbc-496a53802479",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T11:00:58.815898+00:00",
+  "finding": "StatusLine script (v2.1.0) is current but could show grounded calibration data. Nice-to-have, not blocking. Tool-router, EWM loader, curate-snapshots, epistemic_summarizer all version-agnostic \u2014 no functional changes needed.",
+  "impact": 0.3,
+  "goal_id": "f0586df3-2244-428a-9ff6-3a8307cd4354",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "StatusLine script (v2.1.0) is current but could show grounded calibration data. Nice-to-have, not blocking. Tool-router, EWM loader, curate-snapshots, epistemic_summarizer all version-agnostic \u2014 no functional changes needed.",
+    "impact": 0.3
+  }
+}
