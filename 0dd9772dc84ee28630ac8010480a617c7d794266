@@ -1,0 +1,16 @@
+{
+  "finding_id": "c78b515a-8dcd-4e52-a90a-74efa09b62a6",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T11:00:30.749020+00:00",
+  "finding": "Homebrew formula has TODO for SHA256 verification \u2014 hash needs recalculating from actual v1.5.0 tarball before release. No GitHub Actions CI found for version consistency checks.",
+  "impact": 0.6,
+  "goal_id": "f0586df3-2244-428a-9ff6-3a8307cd4354",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Homebrew formula has TODO for SHA256 verification \u2014 hash needs recalculating from actual v1.5.0 tarball before release. No GitHub Actions CI found for version consistency checks.",
+    "impact": 0.6
+  }
+}
