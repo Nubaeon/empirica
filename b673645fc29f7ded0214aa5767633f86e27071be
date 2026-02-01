@@ -1,0 +1,16 @@
+{
+  "finding_id": "77c5697d-5853-4984-9880-ae4bfa4d14d0",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:06:11.820146+00:00",
+  "finding": "File churn rate (same file edited N times in one session via git log --numstat) is objective evidence of iteration/uncertainty about a component, regardless of AI self-report. Precise word-level edits (git diff --word-diff) vs wholesale rewrites indicate KNOW level \u2014 surgical changes suggest understanding, rewrites suggest exploration. Both are Tier 1 signals.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "File churn rate (same file edited N times in one session via git log --numstat) is objective evidence of iteration/uncertainty about a component, regardless of AI self-report. Precise word-level edits (git diff --word-diff) vs wholesale rewrites indicate KNOW level \u2014 surgical changes suggest understanding, rewrites suggest exploration. Both are Tier 1 signals.",
+    "impact": 0.85
+  }
+}
