@@ -1,0 +1,16 @@
+{
+  "finding_id": "4819560b-c6fc-490a-bca7-f11b53ea5e53",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:36:01.941339+00:00",
+  "finding": "Node identity in CBM uses EMPIRICA_AI_ID env var as default, with explicit override via node_id param. Bus events now carry cbm:{node_id} as agent_id and include node_id in event data payload. This enables cross-node budget discovery via SQLite and Qdrant queries.",
+  "impact": 0.7,
+  "goal_id": "6fe26512-6f6b-405d-9179-2154d4da5a5e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Node identity in CBM uses EMPIRICA_AI_ID env var as default, with explicit override via node_id param. Bus events now carry cbm:{node_id} as agent_id and include node_id in event data payload. This enables cross-node budget discovery via SQLite and Qdrant queries.",
+    "impact": 0.7
+  }
+}
