@@ -1,0 +1,13 @@
+{
+  "unknown_id": "8862c8f7-2c8a-4b28-be7a-471215ceb9a4",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:06:30.771600+00:00",
+  "unknown": "How to handle git reflog in multi-agent scenarios where multiple AIs share a repo. Attribution of resets, rebases, and abandoned branches to specific agents is needed for per-agent calibration. Current reflog doesn't tag by AI identity.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
