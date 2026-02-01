@@ -1,0 +1,16 @@
+{
+  "finding_id": "71b104e7-1dcb-4787-8191-3d7f2aa25d15",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a6e1177d-d392-4fdb-972a-e976ae8fc264",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T12:50:05.561747+00:00",
+  "finding": "Sentinel gate design gaps surfaced by user: (1) High uncertainty should trigger human-ask, not just block. Current sentinel blocks praxic work but doesn't escalate to AskUserQuestion for clarification \u2014 missing the 'ask the principal' path. (2) Read-only commands (git status, ls, cat) should be allowed during investigation phase \u2014 they ARE investigation. (3) 'Resume previous session' is wrong abstraction \u2014 sessions are temporal, transactions are what matter. Should resume/close transactions, not sessions.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sentinel gate design gaps surfaced by user: (1) High uncertainty should trigger human-ask, not just block. Current sentinel blocks praxic work but doesn't escalate to AskUserQuestion for clarification \u2014 missing the 'ask the principal' path. (2) Read-only commands (git status, ls, cat) should be allowed during investigation phase \u2014 they ARE investigation. (3) 'Resume previous session' is wrong abstraction \u2014 sessions are temporal, transactions are what matter. Should resume/close transactions, not sessions.",
+    "impact": 0.8
+  }
+}
