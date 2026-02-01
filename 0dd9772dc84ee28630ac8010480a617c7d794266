@@ -1,0 +1,14 @@
+{
+  "mistake_id": "2ead67ba-ff19-43e1-863e-64e22f9a67f1",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T11:07:12.331638+00:00",
+  "mistake": "Used Claude Code built-in Task agents for parallel investigation instead of Empirica's own epistemic agent system (agent-spawn/agent-parallel). The built-in agents don't track epistemic state, don't link to sessions, and don't produce structured noetic artifacts.",
+  "why_wrong": "Empirica's agent system exists precisely for this use case \u2014 parallel investigation with epistemic tracking. Using generic agents bypasses the framework we're building and loses the meta-learning data. The results were useful but unstructured and not linked to the session's epistemic graph.",
+  "prevention": "When spawning investigation agents, always use Empirica's agent-spawn or agent-parallel commands. Reserve Claude Code's Task tool for non-epistemic work (file operations, simple searches).",
+  "cost_estimate": "30 minutes",
+  "root_cause_vector": "DO",
+  "goal_id": null,
+  "subtask_id": null
+}
