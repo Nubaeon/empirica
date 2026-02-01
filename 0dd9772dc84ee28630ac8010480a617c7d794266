@@ -1,0 +1,16 @@
+{
+  "finding_id": "eea11843-1a22-4ff6-9807-5d06ea911e92",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T11:00:54.292904+00:00",
+  "finding": "Plugin manifest (plugin.json) is at v0.9.0, all hook file headers are v0.9.0. Cache directory claims v1.5.0 but contains v0.9.0 hooks. Need version bump across all 11 hook files and plugin manifest.",
+  "impact": 0.6,
+  "goal_id": "f0586df3-2244-428a-9ff6-3a8307cd4354",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Plugin manifest (plugin.json) is at v0.9.0, all hook file headers are v0.9.0. Cache directory claims v1.5.0 but contains v0.9.0 hooks. Need version bump across all 11 hook files and plugin manifest.",
+    "impact": 0.6
+  }
+}
