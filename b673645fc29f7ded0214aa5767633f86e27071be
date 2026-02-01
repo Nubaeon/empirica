@@ -1,0 +1,16 @@
+{
+  "finding_id": "dbd9829b-4880-4202-a4c2-d4e0031799f6",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T17:45:31.195197+00:00",
+  "finding": "MCOLoader._load_all() is eager - loads all 12 YAMLs (~180KB) on first access. export_snapshot() dumps full epistemic_conduct + ask_before_investigate into prompt. No lazy loading, no budget awareness, no relevance filtering. This is the equivalent of loading all kernel modules at boot regardless of whether hardware is present. Context Budget Manager should convert MCO configs to lazy-loaded skill modules that inject only when relevant conditions are detected (uncertainty spike \u2192 ask_before_investigate, drift \u2192 drift_thresholds). Skills are the ideal injection channel because Claude Code already has lazy-loading infrastructure for them.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "MCOLoader._load_all() is eager - loads all 12 YAMLs (~180KB) on first access. export_snapshot() dumps full epistemic_conduct + ask_before_investigate into prompt. No lazy loading, no budget awareness, no relevance filtering. This is the equivalent of loading all kernel modules at boot regardless of whether hardware is present. Context Budget Manager should convert MCO configs to lazy-loaded skill modules that inject only when relevant conditions are detected (uncertainty spike \u2192 ask_before_investigate, drift \u2192 drift_thresholds). Skills are the ideal injection channel because Claude Code already has lazy-loading infrastructure for them.",
+    "impact": 0.85
+  }
+}
