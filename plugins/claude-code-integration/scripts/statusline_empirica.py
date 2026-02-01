@@ -808,14 +808,27 @@ def main():
                 print(f"{Colors.GRAY}[empirica]{Colors.RESET} {Colors.YELLOW}OFF-RECORD{Colors.RESET}")
             return
 
-        # Auto-detect project from current directory (like git does with .git/)
-        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) .empirica/ in cwd or parents
+        # Auto-detect project from current directory
+        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) path_resolver, 3) manual upward search
         # NOTE: We do NOT fall back to global ~/.empirica/ to prevent cross-project data leakage
         project_path = os.getenv('EMPIRICA_PROJECT_PATH')
         is_local_project = False
 
         if not project_path:
-            # Search UPWARD for .empirica/ like git does for .git/
+            # Try canonical path_resolver (same logic as sentinel-gate.py)
+            try:
+                from empirica.config.path_resolver import get_empirica_root
+                empirica_root = get_empirica_root()
+                if empirica_root and empirica_root.exists():
+                    db_candidate = empirica_root / 'sessions' / 'sessions.db'
+                    if db_candidate.exists():
+                        project_path = str(empirica_root.parent)
+                        is_local_project = True
+            except (ImportError, Exception):
+                pass
+
+        if not project_path:
+            # Fallback: Search UPWARD for .empirica/ like git does for .git/
             current = Path.cwd()
             for parent in [current] + list(current.parents):
                 candidate_db = parent / '.empirica' / 'sessions' / 'sessions.db'

@@ -62,6 +62,9 @@ SAFE_BASH_PREFIXES = (
     # Blanket 'empirica ' whitelist removed to prevent prompt injection bypass.
     # Package inspection (not install)
     'pip show', 'pip list', 'pip freeze', 'pip index',
+    'pip3 show', 'pip3 list', 'pip3 freeze', 'pip3 index',
+    # Database inspection (read-only)
+    'sqlite3 ',
     'npm list', 'npm ls', 'npm view', 'npm info',
     'cargo tree', 'cargo metadata',
     # Process inspection
