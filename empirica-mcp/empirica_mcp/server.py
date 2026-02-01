@@ -566,6 +566,19 @@ async def list_tools() -> List[types.Tool]:
         ),
 
         types.Tool(
+            name="system_status",
+            description="Unified Noetic OS system status - aggregates config, memory, bus, attention, integrity, and gate status into a single /proc-style snapshot. Shows token utilization, event throughput, gate state, and node identity.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID (auto-detects if omitted)"},
+                    "summary": {"type": "boolean", "description": "Return one-line summary instead of full status"},
+                },
+                "required": []
+            }
+        ),
+
+        types.Tool(
             name="check_drift",
             description="Detect epistemic drift - when AI confidence diverges from actual performance. Critical for trust calibration.",
             inputSchema={
@@ -1815,6 +1828,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
 
         # Human Copilot Tools
         "monitor": ["monitor"],
+        "system_status": ["system-status"],
         "check_drift": ["check-drift"],
         "issue_list": ["issue-list"],
         "issue_handoff": ["issue-handoff"],

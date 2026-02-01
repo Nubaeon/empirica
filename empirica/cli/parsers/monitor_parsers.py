@@ -68,6 +68,15 @@ def add_monitor_parsers(subparsers):
     trajectory_parser.add_argument('--verbose', action='store_true',
         help='Show detailed reasoning for each path')
 
+    # System status command - unified /proc-style kernel overview
+    system_status_parser = subparsers.add_parser('system-status',
+        help='Unified Noetic OS system status (config, memory, bus, gate, integrity)')
+    system_status_parser.add_argument('--session-id', help='Session UUID (auto-detects if omitted)')
+    system_status_parser.add_argument('--output', choices=['human', 'json'], default='human',
+        help='Output format (default: human)')
+    system_status_parser.add_argument('--summary', action='store_true',
+        help='One-line summary (for statusline)')
+
     # REMOVED: monitor-export, monitor-reset, monitor-cost
     # Use: monitor --export FILE, monitor --reset, monitor --cost
 

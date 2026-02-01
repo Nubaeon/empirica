@@ -2336,3 +2336,50 @@ def handle_calibration_report_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Calibration Report", getattr(args, 'verbose', False))
+
+
+def handle_system_status_command(args):
+    """
+    Unified Noetic OS system status.
+
+    Aggregates all kernel subsystems into a single view:
+    config, memory, bus, attention, integrity, gate.
+    """
+    try:
+        output_format = getattr(args, 'output', 'human')
+        summary_mode = getattr(args, 'summary', False)
+        session_id = getattr(args, 'session_id', None)
+
+        # Auto-detect session if not provided
+        if not session_id:
+            try:
+                from empirica.utils.session_resolver import get_latest_session_id
+                session_id = get_latest_session_id(ai_id='claude-code', active_only=True)
+            except Exception:
+                pass
+
+        if not session_id:
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": "No active session found"}))
+            else:
+                print("\n  No active Empirica session found.")
+                print("  Run: empirica session-create --ai-id claude-code")
+            return
+
+        # Create dashboard and get status
+        from empirica.core.system_dashboard import SystemDashboard
+        dashboard = SystemDashboard(
+            session_id=session_id,
+            auto_subscribe=False,  # CLI is one-shot, no bus subscription
+        )
+        status = dashboard.get_system_status()
+
+        if output_format == 'json':
+            print(json.dumps(status.to_dict(), indent=2, default=str))
+        elif summary_mode:
+            print(status.format_summary())
+        else:
+            print(status.format_display())
+
+    except Exception as e:
+        handle_cli_error(e, "System Status", getattr(args, 'verbose', False))

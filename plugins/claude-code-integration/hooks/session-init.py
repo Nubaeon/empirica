@@ -324,6 +324,20 @@ EOF
     except Exception as e:
         budget_summary = {"error": str(e)}
 
+    # Initialize System Dashboard (observability layer)
+    dashboard_status = None
+    try:
+        from empirica.core.system_dashboard import SystemDashboard
+        dashboard = SystemDashboard(
+            session_id=result["session_id"],
+            node_id=ai_id,
+            auto_subscribe=False,  # No bus in subprocess
+        )
+        status = dashboard.get_system_status()
+        dashboard_status = status.format_summary()
+    except Exception:
+        pass  # Dashboard failure is non-fatal
+
     # Success - generate PREFLIGHT prompt
     session_id = result["session_id"]
     context_text = format_context(result.get("project_context"))
@@ -375,11 +389,12 @@ EOF
     budget_msg = ""
     if budget_summary and not budget_summary.get("error"):
         budget_msg = f"\n📊 Budget: {budget_summary.get('tokens_used', 0):,}t used / {budget_summary.get('tokens_available', 0):,}t avail ({budget_summary.get('utilization_pct', 0)}%)"
+    dash_msg = f"\n🖥️  {dashboard_status}" if dashboard_status else ""
     print(f"""
 🚀 Empirica: New Session Initialized
 
 ✅ Session created: {session_id}
-✅ Project context loaded{archive_msg}{budget_msg}
+✅ Project context loaded{archive_msg}{budget_msg}{dash_msg}
 
 📋 Run PREFLIGHT to establish baseline, then CHECK before actions.
 """, file=sys.stderr)

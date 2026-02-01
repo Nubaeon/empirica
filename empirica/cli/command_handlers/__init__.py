@@ -123,7 +123,7 @@ from .monitor_commands import (
     handle_monitor_reset_command, handle_monitor_cost_command,
     handle_check_drift_command, handle_mco_load_command,
     handle_assess_state_command, handle_trajectory_project_command,
-    handle_calibration_report_command
+    handle_calibration_report_command, handle_system_status_command,
 )
 from .compact_analysis import handle_compact_analysis
 from .investigation_commands import (
@@ -300,6 +300,7 @@ __all__ = [
     'handle_assess_state_command',
     'handle_trajectory_project_command',
     'handle_calibration_report_command',
+    'handle_system_status_command',
     'handle_compact_analysis',
 
     # Investigation commands
