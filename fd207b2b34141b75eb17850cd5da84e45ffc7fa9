@@ -1,0 +1,13 @@
+{
+  "unknown_id": "4c3d3e41-0452-4f02-8247-6ce2c08969ea",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T21:22:49.263187+00:00",
+  "unknown": "How should per-note visibility work? Need a visibility field on individual notes (private/shared/public) with enforcement at sync time. Questions: should visibility be inherited from channel? Should there be a promotion workflow (private->shared->public)? How does this interact with the immune system and lesson cold storage?",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
