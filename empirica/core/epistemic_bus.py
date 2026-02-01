@@ -192,6 +192,12 @@ class EventTypes:
     CONFIDENCE_DROPPED = "confidence_dropped"
     ENGAGEMENT_GATE_FAILED = "engagement_gate_failed"
 
+    # Context Budget Manager events
+    MEMORY_PRESSURE = "memory_pressure"
+    CONTEXT_EVICTED = "context_evicted"
+    CONTEXT_INJECTED = "context_injected"
+    PAGE_FAULT = "page_fault"
+
 
 class LoggingObserver(EpistemicObserver):
     """

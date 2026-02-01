@@ -28,7 +28,6 @@ import logging
 import yaml
 from pathlib import Path
 from typing import Any, Dict, Optional
-import copy
 
 logger = logging.getLogger(__name__)
 
@@ -38,30 +37,48 @@ class MCOLoader:
     Loads and manages all MCO (Meta-Agent Configuration Object) configs.
 
     Singleton pattern ensures consistent config across all components.
+
+    Lazy loading: configs are loaded on first access, not all at init.
+    This reduces context window usage by ~180KB when only a subset is needed.
     """
 
     _instance: Optional['MCOLoader'] = None
 
-    def __init__(self, config_dir: Optional[Path] = None):
+    # Config registry: maps attribute name to (filename, top-level key or None)
+    _CONFIG_REGISTRY = {
+        'model_profiles': ('model_profiles.yaml', 'model_profiles'),
+        'personas': ('personas.yaml', 'personas'),
+        'epistemic_conduct': ('epistemic_conduct.yaml', None),
+        'ask_before_investigate': ('ask_before_investigate.yaml', None),
+        'protocols': ('protocols.yaml', 'protocols'),
+    }
+
+    def __init__(self, config_dir: Optional[Path] = None, eager: bool = False):
         """
         Initialize MCO loader.
 
         Args:
             config_dir: Path to mco/ directory (defaults to empirica/config/mco/)
+            eager: If True, load all configs immediately (legacy behavior)
         """
         if config_dir is None:
             config_dir = Path(__file__).parent / 'mco'
 
         self.config_dir = config_dir
-        self.model_profiles: Dict[str, Any] = {}
-        self.personas: Dict[str, Any] = {}
-        self.epistemic_conduct: Dict[str, Any] = {}
-        self.ask_before_investigate: Dict[str, Any] = {}
-        self.protocols: Dict[str, Any] = {}
+        self._loaded: Dict[str, Any] = {}   # Lazily populated configs
+        self._load_count = 0                 # Track how many configs loaded
         self.metadata: Dict[str, Dict[str, Any]] = {}
 
-        # Load all MCO configs
-        self._load_all()
+        if eager:
+            self._load_all()
+
+    def __getattr__(self, name: str) -> Any:
+        """Lazy-load configs on first attribute access."""
+        if name in self._CONFIG_REGISTRY:
+            if name not in self._loaded:
+                self._load_config(name)
+            return self._loaded.get(name, {})
+        raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")
 
     @classmethod
     def get_instance(cls, config_dir: Optional[Path] = None) -> 'MCOLoader':
@@ -75,52 +92,56 @@ class MCOLoader:
         """Reset singleton (for testing)"""
         cls._instance = None
 
-    def _load_all(self):
-        """Load all MCO configuration files"""
+    def _load_config(self, name: str) -> None:
+        """Load a single config by name (lazy)."""
+        if name not in self._CONFIG_REGISTRY:
+            logger.warning(f"Unknown config: {name}")
+            self._loaded[name] = {}
+            return
+
+        filename, top_key = self._CONFIG_REGISTRY[name]
+        filepath = self.config_dir / filename
+
+        if not filepath.exists():
+            logger.debug(f"Config file not found: {filepath}")
+            self._loaded[name] = {}
+            return
+
         try:
-            # Load model profiles
-            model_profiles_path = self.config_dir / 'model_profiles.yaml'
-            if model_profiles_path.exists():
-                with open(model_profiles_path) as f:
-                    data = yaml.safe_load(f)
-                    self.model_profiles = data.get('model_profiles', {})
-                    self.metadata['model_profiles'] = data.get('metadata', {})
-                    logger.info(f"✅ Loaded {len(self.model_profiles)} model profiles")
+            with open(filepath) as f:
+                data = yaml.safe_load(f) or {}
 
-            # Load personas
-            personas_path = self.config_dir / 'personas.yaml'
-            if personas_path.exists():
-                with open(personas_path) as f:
-                    data = yaml.safe_load(f)
-                    self.personas = data.get('personas', {})
-                    self.metadata['personas'] = data.get('metadata', {})
-                    logger.info(f"✅ Loaded {len(self.personas)} personas")
+            if top_key:
+                self._loaded[name] = data.get(top_key, {})
+                self.metadata[name] = data.get('metadata', {})
+            else:
+                self._loaded[name] = data
 
-            # Load epistemic conduct
-            conduct_path = self.config_dir / 'epistemic_conduct.yaml'
-            if conduct_path.exists():
-                with open(conduct_path) as f:
-                    self.epistemic_conduct = yaml.safe_load(f) or {}
-                    logger.info("✅ Loaded epistemic conduct config")
-
-            # Load ask_before_investigate
-            ask_path = self.config_dir / 'ask_before_investigate.yaml'
-            if ask_path.exists():
-                with open(ask_path) as f:
-                    self.ask_before_investigate = yaml.safe_load(f) or {}
-                    logger.info("✅ Loaded ask_before_investigate config")
-
-            # Load protocols
-            protocols_path = self.config_dir / 'protocols.yaml'
-            if protocols_path.exists():
-                with open(protocols_path) as f:
-                    data = yaml.safe_load(f)
-                    self.protocols = data.get('protocols', {})
-                    self.metadata['protocols'] = data.get('metadata', {})
-                    logger.info(f"✅ Loaded {len(self.protocols)} protocols")
-
+            self._load_count += 1
+            logger.info(f"Lazy-loaded MCO config: {name} ({filepath.name})")
         except Exception as e:
-            logger.error(f"Failed to load MCO configs: {e}")
+            logger.error(f"Failed to load MCO config {name}: {e}")
+            self._loaded[name] = {}
+
+    def _load_all(self):
+        """Load all MCO configuration files (eager mode, legacy compat)."""
+        for name in self._CONFIG_REGISTRY:
+            if name not in self._loaded:
+                self._load_config(name)
+
+    def is_loaded(self, name: str) -> bool:
+        """Check if a specific config has been loaded."""
+        return name in self._loaded
+
+    @property
+    def loaded_configs(self) -> list:
+        """List of currently loaded config names."""
+        return list(self._loaded.keys())
+
+    @property
+    def available_configs(self) -> list:
+        """List of all available config names."""
+        return list(self._CONFIG_REGISTRY.keys())
 
     def get_model_bias(self, model_name: str) -> Dict[str, Any]:
         """
@@ -146,7 +167,7 @@ class MCOLoader:
         """Get persona configuration"""
         return self.personas.get(persona_name, {})
 
-    def infer_persona(self, ai_id: str = None, task_type: str = None) -> str:
+    def infer_persona(self, ai_id: Optional[str] = None, task_type: Optional[str] = None) -> str:
         """
         Infer persona based on AI ID or task type.
 
@@ -175,7 +196,7 @@ class MCOLoader:
         # Default to implementer
         return 'implementer'
 
-    def infer_model(self, ai_id: str = None) -> str:
+    def infer_model(self, ai_id: Optional[str] = None) -> str:
         """
         Infer model type from AI ID.
 
@@ -202,8 +223,8 @@ class MCOLoader:
         # Default
         return 'claude_sonnet'
 
-    def export_snapshot(self, session_id: str, ai_id: str = None,
-                       model: str = None, persona: str = None,
+    def export_snapshot(self, session_id: str, ai_id: Optional[str] = None,
+                       model: Optional[str] = None, persona: Optional[str] = None,
                        cascade_style: str = 'default') -> Dict[str, Any]:
         """
         Export MCO configuration snapshot for pre-compact saving.

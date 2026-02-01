@@ -1,0 +1,85 @@
+# Context Budget Manager - Human-tunable thresholds
+#
+# Like sysctl vm.* parameters in Linux, these control how aggressively
+# the context budget manager allocates, evicts, and injects items in
+# the AI's context window.
+#
+# The context window (~200k tokens) is divided into three zones:
+#   ANCHOR  - Always-resident (CLAUDE.md, calibration) - non-evictable
+#   WORKING - Active task context (goals, findings, code) - managed by priority
+#   CACHE   - Preloaded but evictable (protocols, history) - evicted first
+#
+# Tune these based on:
+#   - Model context limit (200k for Claude, 128k for others)
+#   - Task complexity (more working set for complex tasks)
+#   - Session duration (higher decay for long sessions)
+
+context_budget:
+  # Total context window capacity (tokens)
+  # Claude: 200000, GPT-4: 128000, smaller models: 32000
+  total_capacity: 200000
+
+  # Anchor zone: reserved for non-evictable items
+  # CLAUDE.md (~10k), calibration data (~2k), session state (~1k)
+  anchor_reserve: 15000
+
+  # Working set: target size for active task context
+  # Goals, current findings, code files being edited, conversation
+  working_set_target: 150000
+
+  # Cache zone: preloaded but evictable under pressure
+  # MCO protocols, historical findings, dead-ends, skills
+  cache_limit: 35000
+
+  # Eviction aggressiveness: how eagerly to evict under pressure
+  # 0.0 = lazy (only evict when absolutely necessary)
+  # 0.5 = balanced (moderate eviction)
+  # 1.0 = aggressive (proactively evict low-value items)
+  eviction_aggressiveness: 0.5
+
+  # Recency decay rate: how fast items lose priority when unreferenced
+  # Higher = faster decay = more aggressive replacement
+  # 0.05 = slow (items stay relevant for ~20 minutes)
+  # 0.1  = moderate (items stay relevant for ~10 minutes)
+  # 0.2  = fast (items stay relevant for ~5 minutes)
+  decay_rate: 0.1
+
+  # Minimum priority threshold: items below this are eviction candidates
+  # Lower = keep more items, higher = evict more aggressively
+  min_priority_threshold: 0.05
+
+  # Page fault retrieval limit: max items to retrieve per confidence drop
+  # Controls how much context is loaded when a gap is detected
+  page_fault_retrieval_limit: 5
+
+  # Memory pressure threshold: utilization level that triggers pressure events
+  # At this point, the manager starts recommending evictions
+  pressure_threshold: 0.85
+
+# Protocol injection rules: when to lazy-load MCO protocols
+# Maps epistemic signals to protocol injection triggers
+protocol_triggers:
+  epistemic_conduct:
+    trigger: "challenge_detected"
+    priority: "normal"
+    estimated_tokens: 3000
+
+  ask_before_investigate:
+    trigger: "uncertainty_above_0.65"
+    priority: "normal"
+    estimated_tokens: 1500
+
+  model_profiles:
+    trigger: "session_start"
+    priority: "normal"
+    estimated_tokens: 2000
+
+  personas:
+    trigger: "agent_spawn"
+    priority: "low"
+    estimated_tokens: 2500
+
+  drift_thresholds:
+    trigger: "drift_detected"
+    priority: "normal"
+    estimated_tokens: 1000

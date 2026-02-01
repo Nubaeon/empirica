@@ -13,7 +13,21 @@ from .epistemic_bus import (
     set_global_bus
 )
 
+from .context_budget import (
+    ContextBudgetManager,
+    ContextItem,
+    MemoryZone,
+    ContentType,
+    InjectionChannel,
+    BudgetThresholds,
+    BudgetEventTypes,
+    get_budget_manager,
+    reset_budget_manager,
+    estimate_tokens,
+)
+
 __all__ = [
+    # Epistemic Bus
     'EpistemicBus',
     'EpistemicEvent',
     'EpistemicObserver',
@@ -21,5 +35,16 @@ __all__ = [
     'LoggingObserver',
     'CallbackObserver',
     'get_global_bus',
-    'set_global_bus'
+    'set_global_bus',
+    # Context Budget Manager
+    'ContextBudgetManager',
+    'ContextItem',
+    'MemoryZone',
+    'ContentType',
+    'InjectionChannel',
+    'BudgetThresholds',
+    'BudgetEventTypes',
+    'get_budget_manager',
+    'reset_budget_manager',
+    'estimate_tokens',
 ]
