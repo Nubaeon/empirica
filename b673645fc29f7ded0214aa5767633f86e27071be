@@ -1,0 +1,13 @@
+{
+  "unknown_id": "7834c7a3-70f7-4cba-b715-2ee187cbf160",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:06:35.623360+00:00",
+  "unknown": "How to detect and handle git squash/rebase workflows that destroy intermediate history. Some teams squash before merge, losing the fine-grained trajectory data. Need either pre-squash extraction or alternative evidence collection for squash-heavy workflows.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
