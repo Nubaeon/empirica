@@ -1,0 +1,16 @@
+{
+  "finding_id": "a1511518-2520-4a88-aac6-65695c12d466",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "fadfb1b6-9594-43c1-b218-32c17e275689",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T13:04:09.731716+00:00",
+  "finding": "Paper statistics updated across 9 LaTeX files. Key data shifts: evidence grew 5.8x (82K\u2192480K), calibration convergence nearly doubled (62x\u2192115x), COMPLETION delta grew dramatically (+0.397\u2192+0.704 \u2014 AI underestimates completion even more than previously measured), KNOW delta increased (+0.172\u2192+0.200), improvement rate rose (91.3%\u219293.6%). Session count decreased (849\u2192638) due to DB cleanup of orphaned/test sessions \u2014 this is data quality improvement, not data loss.",
+  "impact": 0.9,
+  "goal_id": "5cf11bc5-87d6-430e-bae5-e5ec236003d5",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Paper statistics updated across 9 LaTeX files. Key data shifts: evidence grew 5.8x (82K\u2192480K), calibration convergence nearly doubled (62x\u2192115x), COMPLETION delta grew dramatically (+0.397\u2192+0.704 \u2014 AI underestimates completion even more than previously measured), KNOW delta increased (+0.172\u2192+0.200), improvement rate rose (91.3%\u219293.6%). Session count decreased (849\u2192638) due to DB cleanup of orphaned/test sessions \u2014 this is data quality improvement, not data loss.",
+    "impact": 0.9
+  }
+}
