@@ -1,0 +1,16 @@
+{
+  "finding_id": "5c5398ea-e7fd-4ceb-8349-b588b93acacc",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:35:59.699913+00:00",
+  "finding": "Sentinel escalation uses deny response with ESCALATE prefix to redirect AI to AskUserQuestion. No new response type needed in Claude Code hook protocol - semantic routing via message content is sufficient. Thresholds hardcoded in sentinel-gate.py to avoid YAML dependency (hooks must be fast).",
+  "impact": 0.7,
+  "goal_id": "6fe26512-6f6b-405d-9179-2154d4da5a5e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sentinel escalation uses deny response with ESCALATE prefix to redirect AI to AskUserQuestion. No new response type needed in Claude Code hook protocol - semantic routing via message content is sufficient. Thresholds hardcoded in sentinel-gate.py to avoid YAML dependency (hooks must be fast).",
+    "impact": 0.7
+  }
+}
