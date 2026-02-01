@@ -1,0 +1,16 @@
+{
+  "finding_id": "2aa70b78-6918-4bb9-800a-6128ffeee2f9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T11:01:39.293739+00:00",
+  "finding": "Plugin config audit: plugin.json at 0.9.0, empirica-autopilot requires >=1.3.3 (stale). MCP wiring correct (empirica-mcp 1.5.0, stdio, EMPIRICA_EPISTEMIC_MODE=true). CLAUDE.md template at v1.5.0 with 4-phase CASCADE \u2014 current. Skills, protocols, settings all functional. Main gap is version labels, not functionality.",
+  "impact": 0.5,
+  "goal_id": "f0586df3-2244-428a-9ff6-3a8307cd4354",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Plugin config audit: plugin.json at 0.9.0, empirica-autopilot requires >=1.3.3 (stale). MCP wiring correct (empirica-mcp 1.5.0, stdio, EMPIRICA_EPISTEMIC_MODE=true). CLAUDE.md template at v1.5.0 with 4-phase CASCADE \u2014 current. Skills, protocols, settings all functional. Main gap is version labels, not functionality.",
+    "impact": 0.5
+  }
+}
