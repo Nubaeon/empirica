@@ -1,0 +1,16 @@
+{
+  "finding_id": "de68a56c-0586-4db9-af8b-c3d5a81f09f2",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:00:08.755188+00:00",
+  "finding": "Multi-agent Empirica maps to NUMA clustering, not SMP. Each AI instance has isolated context window (local RAM, 200k tokens) with shared persistent storage (SQLite/Qdrant/git = network filesystem). Existing cluster primitives: agent-spawn (fork), handoffs (state migration), goals-claim (distributed locking), identity (node auth), discover_goals (work discovery), breadcrumbs (distributed shared memory). Context Budget Manager is per-node memory manager. AttentionBudgetCalculator is the cluster scheduler. Missing: cluster-aware routing (data locality - send work to the node with relevant context already loaded) and bus promotion from in-process to cross-node (breadcrumbs already do this asynchronously).",
+  "impact": 0.95,
+  "goal_id": "6fe26512-6f6b-405d-9179-2154d4da5a5e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Multi-agent Empirica maps to NUMA clustering, not SMP. Each AI instance has isolated context window (local RAM, 200k tokens) with shared persistent storage (SQLite/Qdrant/git = network filesystem). Existing cluster primitives: agent-spawn (fork), handoffs (state migration), goals-claim (distributed locking), identity (node auth), discover_goals (work discovery), breadcrumbs (distributed shared memory). Context Budget Manager is per-node memory manager. AttentionBudgetCalculator is the cluster scheduler. Missing: cluster-aware routing (data locality - send work to the node with relevant context already loaded) and bus promotion from in-process to cross-node (breadcrumbs already do this asynchronously).",
+    "impact": 0.95
+  }
+}
