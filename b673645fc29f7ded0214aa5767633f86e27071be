@@ -1,0 +1,13 @@
+{
+  "unknown_id": "c647f66d-3047-49bf-883b-736a23c474f9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:06:33.397640+00:00",
+  "unknown": "What is the right weighting between git-derived evidence and existing POST-TEST evidence sources? Git signals are abundant (every session produces commits) but may be noisy. Need empirical calibration of git evidence quality weights vs artifact/goal/sentinel evidence.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
