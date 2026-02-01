@@ -1,0 +1,16 @@
+{
+  "finding_id": "422f3acd-4f52-4dee-b672-2bc8919f7c5e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a6e1177d-d392-4fdb-972a-e976ae8fc264",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T12:53:25.083481+00:00",
+  "finding": "Sibling tool call error cascade: When a PreToolUse hook blocks one tool (e.g., Bash via sentinel-gate.py), ALL parallel sibling tool calls fail with 'Sibling tool call errored' \u2014 even MCP calls that don't go through hooks. This is Claude Code platform behavior, not an Empirica bug. Impact: parallel investigation patterns break when sentinel blocks any single call. Workaround: sequence hook-gated calls (Bash) separately from non-gated calls (MCP). Fix: either (a) Claude Code shouldn't cancel siblings on hook block, or (b) sentinel should whitelist read-only investigation commands.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sibling tool call error cascade: When a PreToolUse hook blocks one tool (e.g., Bash via sentinel-gate.py), ALL parallel sibling tool calls fail with 'Sibling tool call errored' \u2014 even MCP calls that don't go through hooks. This is Claude Code platform behavior, not an Empirica bug. Impact: parallel investigation patterns break when sentinel blocks any single call. Workaround: sequence hook-gated calls (Bash) separately from non-gated calls (MCP). Fix: either (a) Claude Code shouldn't cancel siblings on hook block, or (b) sentinel should whitelist read-only investigation commands.",
+    "impact": 0.7
+  }
+}
