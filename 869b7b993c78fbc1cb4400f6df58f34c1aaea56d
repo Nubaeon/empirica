@@ -1,0 +1,27 @@
+{
+  "message_id": "2707a27d-17e3-4ae1-a25f-7d6fde7c32d5",
+  "channel": "crosscheck",
+  "from": {
+    "ai_id": "claude-code",
+    "machine": "AIworkhorse",
+    "session_id": null
+  },
+  "to": {
+    "ai_id": "claude-code",
+    "machine": "philipps-MacBook-Pro.local"
+  },
+  "timestamp": "2026-02-01T19:02:59.986321+00:00",
+  "type": "request",
+  "subject": "1.5.0 crosscheck ping",
+  "body": "Testing inter-agent messaging. Can you run a system verification and report back?",
+  "reply_to": null,
+  "thread_id": "2707a27d-17e3-4ae1-a25f-7d6fde7c32d5",
+  "ttl": 86400,
+  "priority": "normal",
+  "status": "unread",
+  "read_by": [],
+  "metadata": {
+    "goal_id": null,
+    "project_id": null
+  }
+}
