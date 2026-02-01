@@ -1,0 +1,16 @@
+{
+  "finding_id": "86140d38-c915-4063-b8b9-15c56c6d21bd",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "84f1b8b5-241a-48b0-8d20-8d4eab1f0146",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T16:39:03.501392+00:00",
+  "finding": "Grounded verification has a clean input/output separation: AI input is stochastic (epistemic vectors, work product), verification logic is deterministic (defined per-domain pass/fail rules). The path to safe autonomy is systematically shrinking the stochastic surface area by expanding deterministic verification coverage through trajectory analysis and blindspot detection. Each blindspot detected becomes a new deterministic check, reducing human verification requirements proportionally.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Grounded verification has a clean input/output separation: AI input is stochastic (epistemic vectors, work product), verification logic is deterministic (defined per-domain pass/fail rules). The path to safe autonomy is systematically shrinking the stochastic surface area by expanding deterministic verification coverage through trajectory analysis and blindspot detection. Each blindspot detected becomes a new deterministic check, reducing human verification requirements proportionally.",
+    "impact": 0.9
+  }
+}
