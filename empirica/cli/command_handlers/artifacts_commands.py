@@ -1,30 +1,25 @@
 """
-Generate browsable .empirica/ artifact files from git notes.
+Generate browsable .empirica/ audit trail from git notes.
 
-Reads epistemic data from git notes (the canonical source) and generates
-markdown files that render in any git forge (Forgejo, GitHub, GitLab).
+Reads epistemic data from git notes (canonical source) + cold storage
+and generates consolidated markdown files — one per artifact type.
 
-Directory structure:
+Output structure:
     .empirica/
-    ├── README.md              # Project epistemic dashboard
-    ├── findings/
-    │   ├── README.md          # Index sorted by impact/time
-    │   └── {short-id}.md      # Individual finding
-    ├── unknowns/
-    │   ├── README.md          # Unresolved unknowns index
-    │   └── {short-id}.md      # Individual unknown
-    ├── dead-ends/
-    │   ├── README.md          # Dead ends index
-    │   └── {short-id}.md      # Individual dead end
-    ├── mistakes/
-    │   ├── README.md          # Mistakes index
-    │   └── {short-id}.md      # Individual mistake
-    ├── goals/
-    │   ├── README.md          # Goals index with progress
-    │   └── {short-id}.md      # Individual goal with subtasks
-    └── sessions/
-        ├── README.md          # Session timeline
-        └── {short-id}.md      # Session summary
+    ├── README.md           # Project epistemic dashboard
+    ├── findings.md         # All findings (knowledge artifacts)
+    ├── unknowns.md         # Open questions
+    ├── dead-ends.md        # Failed approaches
+    ├── mistakes.md         # Errors with prevention
+    ├── goals.md            # Work units with subtasks
+    ├── transactions.md     # PREFLIGHT→CHECK→POSTFLIGHT trajectories
+    ├── sessions.md         # Session timeline
+    ├── handoffs.md         # Session continuity reports
+    ├── cascades.md         # Investigation decision logs
+    ├── lessons.md          # Procedural knowledge (cold storage)
+    ├── sources.md          # Reference documents
+    ├── signatures.md       # Cryptographic provenance
+    └── calibration.md      # Bias corrections, drift state
 """
 
 import json
@@ -34,11 +29,16 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
+import yaml
+
 logger = logging.getLogger(__name__)
 
 
+# ── Utility ──
+
+
 def _short_id(uuid_str):
-    """First 8 chars of UUID for file naming."""
+    """First 8 chars of UUID for anchors."""
     return str(uuid_str)[:8] if uuid_str else "unknown"
 
 
@@ -78,30 +78,40 @@ def _truncate(text, length=100):
     """Truncate text with ellipsis."""
     if not text:
         return ""
-    text = text.replace("\n", " ").strip()
+    text = str(text).replace("\n", " ").strip()
     return text[:length] + "\u2026" if len(text) > length else text
 
 
-def _type_emoji(artifact_type):
-    """Emoji for artifact type."""
-    return {
-        "finding": "\U0001f4dd",
-        "unknown": "\u2753",
-        "dead_end": "\U0001f6ab",
-        "mistake": "\u26a0\ufe0f",
-        "goal": "\U0001f3af",
-        "session": "\U0001f4ca",
-    }.get(artifact_type, "\u25c8")
+def _vector_bar(value):
+    """Render a vector value as mini bar."""
+    if value is None:
+        return ""
+    v = float(value)
+    n = int(v * 10)
+    return "\u2588" * n + "\u2591" * (10 - n) + f" {v:.2f}"
+
+
+def _get_ts(data):
+    """Extract sortable timestamp from data dict."""
+    ts = data.get("created_at") or data.get("created_timestamp") or data.get("timestamp") or 0
+    if isinstance(ts, str):
+        try:
+            return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return 0
+    return float(ts) if ts else 0
+
+
+# ── Git Notes Reader ──
 
 
 def _read_note_blob(workspace, ref):
-    """Read the JSON content from a git notes ref.
+    """Read JSON content from a git notes ref.
 
-    Git notes refs point to commits whose trees contain blobs keyed by
-    the annotated commit SHA. We walk: ref → commit → tree → first blob.
+    Git notes refs point to commits whose trees contain blobs.
+    Walk: ref → commit → tree → first blob → JSON content.
     """
     try:
-        # Get the tree from the commit
         tree_result = subprocess.run(
             ["git", "cat-file", "-p", ref],
             cwd=workspace, capture_output=True, text=True, timeout=10
@@ -109,15 +119,14 @@ def _read_note_blob(workspace, ref):
         if tree_result.returncode != 0:
             return None
 
-        # Parse tree SHA from commit output (first line: "tree <sha>")
+        tree_sha = None
         for cline in tree_result.stdout.split("\n"):
             if cline.startswith("tree "):
                 tree_sha = cline.split()[1]
                 break
-        else:
+        if not tree_sha:
             return None
 
-        # List blobs in the tree
         ls_result = subprocess.run(
             ["git", "ls-tree", tree_sha],
             cwd=workspace, capture_output=True, text=True, timeout=10
@@ -125,7 +134,6 @@ def _read_note_blob(workspace, ref):
         if ls_result.returncode != 0 or not ls_result.stdout.strip():
             return None
 
-        # Read first blob (there's typically one per note ref)
         first_line = ls_result.stdout.strip().split("\n")[0]
         blob_sha = first_line.split()[2]
 
@@ -140,381 +148,199 @@ def _read_note_blob(workspace, ref):
     return None
 
 
-def _read_git_notes(workspace, ref_prefix):
-    """Read all notes under a git notes ref prefix.
+def _read_note_raw(workspace, ref):
+    """Read raw text from a git notes ref (for non-JSON formats like cascades)."""
+    try:
+        tree_result = subprocess.run(
+            ["git", "cat-file", "-p", ref],
+            cwd=workspace, capture_output=True, text=True, timeout=10
+        )
+        if tree_result.returncode != 0:
+            return None
 
-    Returns list of (id, data_dict) tuples.
-    """
+        tree_sha = None
+        for cline in tree_result.stdout.split("\n"):
+            if cline.startswith("tree "):
+                tree_sha = cline.split()[1]
+                break
+        if not tree_sha:
+            return None
+
+        ls_result = subprocess.run(
+            ["git", "ls-tree", tree_sha],
+            cwd=workspace, capture_output=True, text=True, timeout=10
+        )
+        if ls_result.returncode != 0 or not ls_result.stdout.strip():
+            return None
+
+        first_line = ls_result.stdout.strip().split("\n")[0]
+        blob_sha = first_line.split()[2]
+
+        blob_result = subprocess.run(
+            ["git", "cat-file", "-p", blob_sha],
+            cwd=workspace, capture_output=True, text=True, timeout=10
+        )
+        if blob_result.returncode == 0:
+            return blob_result.stdout
+    except (subprocess.TimeoutExpired, IndexError):
+        pass
+    return None
+
+
+def _read_all_notes(workspace, namespace):
+    """Read all notes under a namespace. Returns list of (id, data_dict)."""
     items = []
     try:
         result = subprocess.run(
-            ["git", "for-each-ref", f"refs/notes/empirica/{ref_prefix}/"],
+            ["git", "for-each-ref", "--format=%(refname)",
+             f"refs/notes/empirica/{namespace}/"],
             cwd=workspace, capture_output=True, text=True, timeout=30
         )
         if result.returncode != 0 or not result.stdout.strip():
             return items
 
-        for line in result.stdout.strip().split("\n"):
-            if not line.strip():
+        for ref in result.stdout.strip().split("\n"):
+            ref = ref.strip()
+            if not ref:
                 continue
-            parts = line.split("\t")
-            if len(parts) < 2:
-                continue
-            ref = parts[1]
             item_id = ref.split("/")[-1]
-
             data = _read_note_blob(workspace, ref)
             if data:
                 items.append((item_id, data))
     except subprocess.TimeoutExpired:
-        logger.warning(f"Timeout reading git notes for {ref_prefix}")
+        logger.warning(f"Timeout reading git notes for {namespace}")
     return items
 
 
-# ── Individual artifact page generators ──
+def _read_session_refs(workspace):
+    """Read all session epistemic refs. Returns dict: session_id -> list of checkpoint dicts."""
+    sessions = {}
+    try:
+        result = subprocess.run(
+            ["git", "for-each-ref", "--format=%(refname)",
+             "refs/notes/empirica/session/"],
+            cwd=workspace, capture_output=True, text=True, timeout=60
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            return sessions
+
+        for ref in result.stdout.strip().split("\n"):
+            ref = ref.strip()
+            if not ref:
+                continue
+            # ref: refs/notes/empirica/session/{session_id}/{PHASE}/{round}
+            parts = ref.split("/")
+            if len(parts) >= 7:
+                sid = parts[4]
+                data = _read_note_blob(workspace, ref)
+                if data:
+                    sessions.setdefault(sid, []).append(data)
+    except subprocess.TimeoutExpired:
+        logger.warning("Timeout reading session refs")
+    return sessions
 
 
-def _generate_finding_page(finding_id, data, workspace_root=None):
-    """Generate markdown for a single finding."""
-    short = _short_id(finding_id)
-    finding_text = data.get("finding") or data.get("finding_data", {}).get("finding", "")
-    impact = data.get("impact", 0.5)
-    session_id = data.get("session_id", "")
-    goal_id = data.get("goal_id", "")
-    ai_id = data.get("ai_id", "unknown")
-    date = data.get("created_at") or data.get("created_timestamp", "")
-    subject = data.get("subject", "")
+def _read_cascade_refs(workspace):
+    """Read cascade (investigation decision) refs. Returns list of (transaction_id, entries)."""
+    cascades = []
+    try:
+        result = subprocess.run(
+            ["git", "for-each-ref", "--format=%(refname)",
+             "refs/notes/empirica/cascades/"],
+            cwd=workspace, capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            return cascades
 
-    lines = [
-        f"# \U0001f4dd Finding: {short}",
-        "",
-    ]
-    if subject:
-        lines.append(f"> **Subject:** {subject}")
-        lines.append("")
-    lines.extend([
-        finding_text,
-        "",
-        "## Context",
-        "",
-        "| Field | Value |",
-        "|-------|-------|",
-        f"| **Impact** | {_impact_bar(impact)} |",
-        f"| **AI Agent** | `{ai_id}` |",
-        f"| **Date** | {_format_date(date)} |",
-        f"| **Session** | [{_short_id(session_id)}](../sessions/{_short_id(session_id)}.md) |",
-    ])
-    if goal_id:
-        lines.append(f"| **Goal** | [{_short_id(goal_id)}](../goals/{_short_id(goal_id)}.md) |")
-    lines.extend([
-        "",
-        "---",
-        f"*Finding ID: `{finding_id}`*",
-    ])
-    return "\n".join(lines)
+        for ref in result.stdout.strip().split("\n"):
+            ref = ref.strip()
+            if not ref:
+                continue
+            parts = ref.split("/")
+            # refs/notes/empirica/cascades/{session_id}/{transaction_id}
+            tid = parts[-1] if len(parts) >= 6 else ref.split("/")[-1]
+            sid = parts[4] if len(parts) >= 6 else "unknown"
 
-
-def _generate_unknown_page(unknown_id, data):
-    """Generate markdown for a single unknown."""
-    short = _short_id(unknown_id)
-    text = data.get("unknown", "")
-    resolved = data.get("resolved") or data.get("is_resolved", False)
-    resolved_by = data.get("resolved_by", "")
-    session_id = data.get("session_id", "")
-    goal_id = data.get("goal_id", "")
-    ai_id = data.get("ai_id", "unknown")
-    date = data.get("created_at") or data.get("created_timestamp", "")
-
-    status = "\u2705 Resolved" if resolved else "\U0001f534 Open"
-    lines = [
-        f"# \u2753 Unknown: {short}",
-        "",
-        f"**Status:** {status}",
-        "",
-        text,
-        "",
-        "## Context",
-        "",
-        "| Field | Value |",
-        "|-------|-------|",
-        f"| **AI Agent** | `{ai_id}` |",
-        f"| **Date** | {_format_date(date)} |",
-        f"| **Session** | [{_short_id(session_id)}](../sessions/{_short_id(session_id)}.md) |",
-    ]
-    if goal_id:
-        lines.append(f"| **Goal** | [{_short_id(goal_id)}](../goals/{_short_id(goal_id)}.md) |")
-    if resolved_by:
-        lines.append(f"| **Resolved by** | {resolved_by} |")
-    lines.extend([
-        "",
-        "---",
-        f"*Unknown ID: `{unknown_id}`*",
-    ])
-    return "\n".join(lines)
+            raw = _read_note_raw(workspace, ref)
+            if raw:
+                entries = []
+                for line in raw.strip().split("\n"):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    # Format: LABEL: {json}
+                    colon_pos = line.find(":")
+                    if colon_pos > 0:
+                        label = line[:colon_pos].strip()
+                        try:
+                            payload = json.loads(line[colon_pos + 1:].strip())
+                            entries.append({"decision": label, "data": payload})
+                        except json.JSONDecodeError:
+                            entries.append({"decision": label, "data": {"raw": line[colon_pos + 1:].strip()}})
+                    else:
+                        entries.append({"decision": "UNKNOWN", "data": {"raw": line}})
+                cascades.append((sid, tid, entries))
+    except subprocess.TimeoutExpired:
+        logger.warning("Timeout reading cascade refs")
+    return cascades
 
 
-def _generate_dead_end_page(dead_end_id, data):
-    """Generate markdown for a single dead end."""
-    short = _short_id(dead_end_id)
-    approach = data.get("approach", "")
-    why_failed = data.get("why_failed", "")
-    session_id = data.get("session_id", "")
-    goal_id = data.get("goal_id", "")
-    ai_id = data.get("ai_id", "unknown")
-    date = data.get("created_at") or data.get("created_timestamp", "")
-
-    lines = [
-        f"# \U0001f6ab Dead End: {short}",
-        "",
-        "## Approach Tried",
-        "",
-        approach,
-        "",
-        "## Why It Failed",
-        "",
-        why_failed,
-        "",
-        "## Context",
-        "",
-        "| Field | Value |",
-        "|-------|-------|",
-        f"| **AI Agent** | `{ai_id}` |",
-        f"| **Date** | {_format_date(date)} |",
-        f"| **Session** | [{_short_id(session_id)}](../sessions/{_short_id(session_id)}.md) |",
-    ]
-    if goal_id:
-        lines.append(f"| **Goal** | [{_short_id(goal_id)}](../goals/{_short_id(goal_id)}.md) |")
-    lines.extend([
-        "",
-        "---",
-        f"*Dead End ID: `{dead_end_id}`*",
-    ])
-    return "\n".join(lines)
+def _read_lessons(workspace):
+    """Read lessons from YAML cold storage."""
+    lessons = []
+    lessons_dir = Path(workspace) / ".empirica" / "lessons"
+    if not lessons_dir.exists():
+        return lessons
+    for f in lessons_dir.glob("*.yaml"):
+        try:
+            with open(f) as fh:
+                data = yaml.safe_load(fh)
+                if data:
+                    lessons.append((f.stem, data))
+        except (yaml.YAMLError, IOError):
+            pass
+    return lessons
 
 
-def _generate_mistake_page(mistake_id, data):
-    """Generate markdown for a single mistake."""
-    short = _short_id(mistake_id)
-    mistake = data.get("mistake", "")
-    why_wrong = data.get("why_wrong", "")
-    prevention = data.get("prevention", "")
-    cost = data.get("cost_estimate", "")
-    root_cause = data.get("root_cause_vector", "")
-    session_id = data.get("session_id", "")
-    goal_id = data.get("goal_id", "")
-    ai_id = data.get("ai_id", "unknown")
-    date = data.get("created_at") or data.get("created_timestamp", "")
+def _read_ref_docs(workspace):
+    """Read reference documents listing."""
+    docs = []
+    ref_dir = Path(workspace) / ".empirica" / "ref-docs"
+    if not ref_dir.exists():
+        return docs
+    for f in sorted(ref_dir.iterdir()):
+        if f.is_file() and not f.name.startswith("."):
+            docs.append((f.name, {"path": str(f), "size": f.stat().st_size}))
+    return docs
+
+
+def _read_calibration(workspace):
+    """Read calibration data from .breadcrumbs.yaml."""
+    bc_path = Path(workspace) / ".breadcrumbs.yaml"
+    if not bc_path.exists():
+        return None
+    try:
+        with open(bc_path) as f:
+            return yaml.safe_load(f)
+    except (yaml.YAMLError, IOError):
+        return None
+
+
+# ── Markdown Generators (one function per artifact type) ──
+
+
+def _render_findings(findings):
+    """Render findings.md — all findings sorted by date descending."""
+    findings.sort(key=lambda x: _get_ts(x[1]), reverse=True)
 
     lines = [
-        f"# \u26a0\ufe0f Mistake: {short}",
+        "# Findings",
         "",
-        "## What Went Wrong",
+        "> Knowledge artifacts — discoveries, validated learnings, confirmed facts.",
+        f"> {len(findings)} total",
         "",
-        mistake,
-        "",
-        "## Why It Was Wrong",
-        "",
-        why_wrong,
-        "",
-        "## Prevention",
-        "",
-        prevention,
-        "",
-        "## Context",
-        "",
-        "| Field | Value |",
-        "|-------|-------|",
-    ]
-    if cost:
-        lines.append(f"| **Cost** | {cost} |")
-    if root_cause:
-        lines.append(f"| **Root Cause Vector** | `{root_cause}` |")
-    lines.extend([
-        f"| **AI Agent** | `{ai_id}` |",
-        f"| **Date** | {_format_date(date)} |",
-        f"| **Session** | [{_short_id(session_id)}](../sessions/{_short_id(session_id)}.md) |",
-    ])
-    if goal_id:
-        lines.append(f"| **Goal** | [{_short_id(goal_id)}](../goals/{_short_id(goal_id)}.md) |")
-    lines.extend([
-        "",
-        "---",
-        f"*Mistake ID: `{mistake_id}`*",
-    ])
-    return "\n".join(lines)
-
-
-def _generate_goal_page(goal_id, data):
-    """Generate markdown for a single goal."""
-    short = _short_id(goal_id)
-    objective = data.get("objective", "")
-    scope = data.get("scope", {})
-    complexity = data.get("estimated_complexity", "")
-    is_completed = data.get("is_completed", False)
-    status = data.get("status", "active")
-    subtasks = data.get("subtasks", [])
-    lineage = data.get("lineage", [])
-    session_id = data.get("session_id", "")
-    ai_id = data.get("ai_id", "unknown")
-    date = data.get("created_at") or data.get("created_timestamp", "")
-
-    total = len(subtasks)
-    completed = sum(1 for s in subtasks if s.get("status") == "completed")
-    pct = int(completed / total * 100) if total > 0 else 0
-    status_icon = "\u2705" if is_completed else "\u23f3"
-
-    lines = [
-        f"# \U0001f3af Goal: {short}",
-        "",
-        f"**Status:** {status_icon} {status}",
-        f"**Progress:** {completed}/{total} subtasks ({pct}%)",
-        "",
-        f"> {objective}",
-        "",
-    ]
-
-    if scope:
-        lines.extend([
-            "## Scope",
-            "",
-            "| Dimension | Value |",
-            "|-----------|-------|",
-            f"| Breadth | {scope.get('breadth', '?')} |",
-            f"| Duration | {scope.get('duration', '?')} |",
-            f"| Coordination | {scope.get('coordination', '?')} |",
-        ])
-        if complexity:
-            lines.append(f"| Complexity | {complexity} |")
-        lines.append("")
-
-    if subtasks:
-        lines.append("## Subtasks")
-        lines.append("")
-        for st in subtasks:
-            st_status = st.get("status", "pending")
-            icon = "\u2705" if st_status == "completed" else "\u2b1c" if st_status == "pending" else "\U0001f7e1"
-            desc = _truncate(st.get("description", ""), 120)
-            importance = st.get("epistemic_importance", "")
-            imp_tag = f" `{importance}`" if importance else ""
-            lines.append(f"- {icon} {desc}{imp_tag}")
-        lines.append("")
-
-    if lineage:
-        lines.extend([
-            "## Lineage",
-            "",
-            "| AI | Action | Session | Date |",
-            "|----|--------|---------|------|",
-        ])
-        for entry in lineage:
-            lines.append(
-                f"| `{entry.get('ai_id', '?')}` "
-                f"| {entry.get('action', '?')} "
-                f"| [{_short_id(entry.get('session_id', ''))}](../sessions/{_short_id(entry.get('session_id', ''))}.md) "
-                f"| {_format_date_short(entry.get('timestamp', ''))} |"
-            )
-        lines.append("")
-
-    lines.extend([
-        "## Context",
-        "",
-        "| Field | Value |",
-        "|-------|-------|",
-        f"| **AI Agent** | `{ai_id}` |",
-        f"| **Date** | {_format_date(date)} |",
-        f"| **Session** | [{_short_id(session_id)}](../sessions/{_short_id(session_id)}.md) |",
-        "",
-        "---",
-        f"*Goal ID: `{goal_id}`*",
-    ])
-    return "\n".join(lines)
-
-
-def _generate_session_page(session_id, checkpoints):
-    """Generate markdown for a session from its checkpoints."""
-    short = _short_id(session_id)
-    phase_order = {"PREFLIGHT": 0, "CHECK": 1, "ACT": 2, "POSTFLIGHT": 3}
-    checkpoints.sort(key=lambda c: (
-        c.get("round") or 0,
-        phase_order.get(c.get("phase", ""), 99)
-    ))
-
-    first = checkpoints[0] if checkpoints else {}
-    ai_id = first.get("ai_id", "unknown")
-    date = first.get("timestamp", "")
-
-    lines = [
-        f"# \U0001f4ca Session: {short}",
-        "",
-        "| Field | Value |",
-        "|-------|-------|",
-        f"| **AI Agent** | `{ai_id}` |",
-        f"| **Started** | {_format_date(date)} |",
-        f"| **Checkpoints** | {len(checkpoints)} |",
-        "",
-    ]
-
-    for cp in checkpoints:
-        phase = cp.get("phase", "?")
-        rnd = cp.get("round", 1)
-        vectors = cp.get("vectors", {})
-        reasoning = cp.get("reasoning", "")
-        decision = cp.get("decision", "")
-
-        lines.append(f"## {phase} (Round {rnd})")
-        lines.append("")
-        if decision:
-            lines.append(f"**Decision:** {decision}")
-            lines.append("")
-
-        if vectors:
-            lines.extend(["| Vector | Value |", "|--------|-------|"])
-            for k, v in sorted(vectors.items()):
-                if isinstance(v, dict):
-                    for sub_k, sub_v in sorted(v.items()):
-                        lines.append(f"| {sub_k} | {sub_v} |")
-                else:
-                    lines.append(f"| {k} | {v} |")
-            lines.append("")
-
-        if reasoning:
-            lines.extend([
-                "<details>",
-                "<summary>Reasoning</summary>",
-                "",
-                reasoning,
-                "",
-                "</details>",
-                "",
-            ])
-
-        delta = cp.get("learning_delta", {})
-        if delta:
-            lines.extend(["### Learning Delta", "", "| Vector | Change |", "|--------|--------|"])
-            for k, v in sorted(delta.items()):
-                if isinstance(v, (int, float)):
-                    sign = "+" if v > 0 else ""
-                    lines.append(f"| {k} | {sign}{v:.2f} |")
-            lines.append("")
-
-    lines.extend(["---", f"*Session ID: `{session_id}`*"])
-    return "\n".join(lines)
-
-
-# ── Index page generators ──
-
-
-def _generate_index_findings(findings):
-    """Generate findings/README.md index."""
-    findings.sort(key=lambda x: -(x[1].get("impact", 0) or 0))
-
-    lines = [
-        f"# \U0001f4dd Findings ({len(findings)})",
-        "",
-        "> Discoveries, learnings, and validated knowledge",
-        "",
-        "| Impact | Finding | AI | Date |",
-        "|--------|---------|-----|------|",
+        "| Date | Impact | Finding | AI | Session |",
+        "|------|--------|---------|-----|---------|",
     ]
     for fid, data in findings:
         short = _short_id(fid)
@@ -522,20 +348,29 @@ def _generate_index_findings(findings):
         text = _truncate(data.get("finding", data.get("finding_data", {}).get("finding", "")), 80)
         ai = data.get("ai_id", "?")
         date = _format_date_short(data.get("created_at") or data.get("created_timestamp", ""))
-        lines.append(f"| {float(impact):.1f} | [{text}]({short}.md) | `{ai}` | {date} |")
+        sid = _short_id(data.get("session_id", ""))
+        lines.append(
+            f"| {date} | {float(impact):.1f} | "
+            f"<a id=\"finding-{short}\"></a>{text} | "
+            f"`{ai}` | [{sid}](transactions.md#{sid}) |"
+        )
 
+    lines.extend(["", "---", "*Generated by [Empirica](https://getempirica.com)*"])
     return "\n".join(lines)
 
 
-def _generate_index_unknowns(unknowns):
-    """Generate unknowns/README.md index."""
+def _render_unknowns(unknowns):
+    """Render unknowns.md — open questions and resolved ones."""
+    unknowns.sort(key=lambda x: _get_ts(x[1]), reverse=True)
+
     lines = [
-        f"# \u2753 Unknowns ({len(unknowns)})",
+        "# Unknowns",
         "",
-        "> Questions, gaps, and areas needing investigation",
+        "> Open questions, gaps, and areas needing investigation.",
+        f"> {len(unknowns)} total",
         "",
-        "| Status | Unknown | AI | Date |",
-        "|--------|---------|-----|------|",
+        "| Date | Status | Unknown | AI | Session |",
+        "|------|--------|---------|-----|---------|",
     ]
     for uid, data in unknowns:
         short = _short_id(uid)
@@ -544,150 +379,638 @@ def _generate_index_unknowns(unknowns):
         text = _truncate(data.get("unknown", ""), 80)
         ai = data.get("ai_id", "?")
         date = _format_date_short(data.get("created_at") or data.get("created_timestamp", ""))
-        lines.append(f"| {status} | [{text}]({short}.md) | `{ai}` | {date} |")
+        sid = _short_id(data.get("session_id", ""))
+        resolved_by = data.get("resolved_by", "")
+        extra = f" *Resolved: {_truncate(resolved_by, 40)}*" if resolved_by else ""
+        lines.append(
+            f"| {date} | {status} | "
+            f"<a id=\"unknown-{short}\"></a>{text}{extra} | "
+            f"`{ai}` | [{sid}](transactions.md#{sid}) |"
+        )
 
+    lines.extend(["", "---", "*Generated by [Empirica](https://getempirica.com)*"])
     return "\n".join(lines)
 
 
-def _generate_index_dead_ends(dead_ends):
-    """Generate dead-ends/README.md index."""
+def _render_dead_ends(dead_ends):
+    """Render dead-ends.md — failed approaches to prevent re-exploration."""
+    dead_ends.sort(key=lambda x: _get_ts(x[1]), reverse=True)
+
     lines = [
-        f"# \U0001f6ab Dead Ends ({len(dead_ends)})",
+        "# Dead Ends",
         "",
         "> Approaches that were tried and failed. Prevents re-exploration.",
+        f"> {len(dead_ends)} total",
         "",
-        "| Approach | Why Failed | Date |",
-        "|----------|-----------|------|",
     ]
     for did, data in dead_ends:
         short = _short_id(did)
-        approach = _truncate(data.get("approach", ""), 60)
-        why = _truncate(data.get("why_failed", ""), 60)
+        approach = data.get("approach", "")
+        why_failed = data.get("why_failed", "")
+        ai = data.get("ai_id", "?")
         date = _format_date_short(data.get("created_at") or data.get("created_timestamp", ""))
-        lines.append(f"| [{approach}]({short}.md) | {why} | {date} |")
+        sid = _short_id(data.get("session_id", ""))
 
+        lines.extend([
+            f"<a id=\"deadend-{short}\"></a>",
+            f"### {_truncate(approach, 80)}",
+            "",
+            f"**Why it failed:** {why_failed}",
+            "",
+            f"`{ai}` | {date} | Session [{sid}](transactions.md#{sid})",
+            "",
+            "---",
+            "",
+        ])
+
+    lines.append("*Generated by [Empirica](https://getempirica.com)*")
     return "\n".join(lines)
 
 
-def _generate_index_mistakes(mistakes):
-    """Generate mistakes/README.md index."""
+def _render_mistakes(mistakes):
+    """Render mistakes.md — errors with root cause and prevention."""
+    mistakes.sort(key=lambda x: _get_ts(x[1]), reverse=True)
+
     lines = [
-        f"# \u26a0\ufe0f Mistakes ({len(mistakes)})",
+        "# Mistakes",
         "",
-        "> Errors made and how to prevent them in the future",
+        "> Errors made with root cause analysis and prevention strategies.",
+        f"> {len(mistakes)} total",
         "",
-        "| Mistake | Root Cause | Cost | Date |",
-        "|---------|-----------|------|------|",
     ]
     for mid, data in mistakes:
         short = _short_id(mid)
-        text = _truncate(data.get("mistake", ""), 60)
-        root = data.get("root_cause_vector", "")
+        mistake = data.get("mistake", "")
+        why_wrong = data.get("why_wrong", "")
+        prevention = data.get("prevention", "")
         cost = data.get("cost_estimate", "")
+        root_cause = data.get("root_cause_vector", "")
+        ai = data.get("ai_id", "?")
         date = _format_date_short(data.get("created_at") or data.get("created_timestamp", ""))
-        lines.append(f"| [{text}]({short}.md) | `{root}` | {cost} | {date} |")
+        sid = _short_id(data.get("session_id", ""))
 
+        lines.extend([
+            f"<a id=\"mistake-{short}\"></a>",
+            f"### {_truncate(mistake, 80)}",
+            "",
+            f"**Why wrong:** {why_wrong}",
+            "",
+            f"**Prevention:** {prevention}",
+            "",
+        ])
+        meta_parts = [f"`{ai}`", date, f"Session [{sid}](transactions.md#{sid})"]
+        if cost:
+            meta_parts.append(f"Cost: {cost}")
+        if root_cause:
+            meta_parts.append(f"Root cause: `{root_cause}`")
+        lines.extend([" | ".join(meta_parts), "", "---", ""])
+
+    lines.append("*Generated by [Empirica](https://getempirica.com)*")
     return "\n".join(lines)
 
 
-def _generate_index_goals(goals):
-    """Generate goals/README.md index."""
+def _render_goals(goals, tasks_by_goal):
+    """Render goals.md — all goals with subtasks inline."""
+    # Sort by most recent first
+    goals.sort(key=lambda x: _get_ts(x[1]), reverse=True)
+
     lines = [
-        f"# \U0001f3af Goals ({len(goals)})",
+        "# Goals",
         "",
-        "> Work units with subtasks and epistemic tracking",
+        "> Work units with subtasks and epistemic tracking.",
+        f"> {len(goals)} total",
         "",
-        "| Progress | Objective | AI | Status |",
-        "|----------|-----------|-----|--------|",
     ]
+
     for gid, data in goals:
         short = _short_id(gid)
-        objective = _truncate(data.get("objective", ""), 70)
-        ai = data.get("ai_id", "?")
-        subtasks = data.get("subtasks", [])
-        total = len(subtasks)
-        completed = sum(1 for s in subtasks if s.get("status") == "completed")
-        pct = int(completed / total * 100) if total > 0 else 0
-        is_done = data.get("is_completed", False)
-        status = "\u2705 Done" if is_done else f"{completed}/{total}"
-        lines.append(f"| {pct}% | [{objective}]({short}.md) | `{ai}` | {status} |")
+        goal_data = data.get("goal_data", {})
+        objective = goal_data.get("objective", "") or data.get("objective", "")
+        scope = goal_data.get("scope", {}) or data.get("scope", {})
+        lineage = data.get("lineage", [])
+        ai_id = data.get("ai_id", "unknown")
+        date = _format_date_short(data.get("created_at") or data.get("created_timestamp", ""))
+        sid = _short_id(data.get("session_id", ""))
 
+        # Get subtasks from tasks namespace
+        subtasks = tasks_by_goal.get(gid, [])
+        total = len(subtasks)
+        completed = sum(1 for s in subtasks if s.get("completed_timestamp"))
+        pct = int(completed / total * 100) if total > 0 else 0
+        progress = f"{completed}/{total} ({pct}%)" if total > 0 else "no subtasks"
+
+        lines.extend([
+            f"<a id=\"goal-{short}\"></a>",
+            f"### {objective or '(no objective)'}",
+            "",
+            f"**Progress:** {progress} | **AI:** `{ai_id}` | **Date:** {date} | **Session:** [{sid}](transactions.md#{sid})",
+            "",
+        ])
+
+        if scope and isinstance(scope, dict):
+            lines.append(
+                f"Scope: breadth={scope.get('breadth', '?')} "
+                f"duration={scope.get('duration', '?')} "
+                f"coordination={scope.get('coordination', '?')}"
+            )
+            lines.append("")
+
+        if subtasks:
+            for st in subtasks:
+                done = bool(st.get("completed_timestamp"))
+                icon = "\u2705" if done else "\u2b1c"
+                desc = _truncate(st.get("description", ""), 100)
+                imp = st.get("epistemic_importance", "")
+                imp_tag = f" `{imp}`" if imp else ""
+                lines.append(f"- {icon} {desc}{imp_tag}")
+            lines.append("")
+
+        if lineage and len(lineage) > 1:
+            lines.append("<details><summary>Lineage</summary>")
+            lines.append("")
+            for entry in lineage:
+                lines.append(
+                    f"- `{entry.get('ai_id', '?')}` {entry.get('action', '?')} "
+                    f"({_format_date_short(entry.get('timestamp', ''))})"
+                )
+            lines.extend(["", "</details>", ""])
+
+        lines.extend(["---", ""])
+
+    lines.append("*Generated by [Empirica](https://getempirica.com)*")
     return "\n".join(lines)
 
 
-def _generate_index_sessions(sessions_map):
-    """Generate sessions/README.md index."""
-    items = sorted(sessions_map.items(), key=lambda x: x[0], reverse=True)[:50]
+def _render_transactions(sessions_map):
+    """Render transactions.md — PREFLIGHT→CHECK→POSTFLIGHT trajectories."""
+    phase_order = {"PREFLIGHT": 0, "CHECK": 1, "ACT": 2, "POSTFLIGHT": 3}
+
+    # Sort sessions by earliest timestamp
+    sorted_sessions = sorted(
+        sessions_map.items(),
+        key=lambda x: min((_get_ts(cp) for cp in x[1]), default=0),
+        reverse=True
+    )
+
     lines = [
-        f"# \U0001f4ca Sessions ({len(sessions_map)})",
+        "# Epistemic Transactions",
         "",
-        "> Work sessions with epistemic state snapshots",
+        "> PREFLIGHT \u2192 CHECK \u2192 POSTFLIGHT trajectories with 13-vector epistemic snapshots.",
+        f"> {len(sessions_map)} sessions, {sum(len(v) for v in sessions_map.values())} checkpoints",
         "",
-        "| Session | AI | Checkpoints | Date |",
-        "|---------|-----|-------------|------|",
     ]
-    for sid, checkpoints in items:
+
+    for sid, checkpoints in sorted_sessions:
+        short = _short_id(sid)
+        checkpoints.sort(key=lambda c: (
+            c.get("round") or 0,
+            phase_order.get(c.get("phase", ""), 99)
+        ))
+
+        first = checkpoints[0] if checkpoints else {}
+        ai_id = first.get("ai_id", "unknown")
+        date = _format_date(first.get("timestamp", ""))
+
+        lines.extend([
+            f"<a id=\"{short}\"></a>",
+            f"## Session {short}",
+            "",
+            f"**AI:** `{ai_id}` | **Started:** {date} | **Checkpoints:** {len(checkpoints)}",
+            "",
+        ])
+
+        for cp in checkpoints:
+            phase = cp.get("phase", "?")
+            rnd = cp.get("round") or 1
+            vectors = cp.get("vectors", {})
+            reasoning = cp.get("reasoning", "") or (cp.get("meta", {}) or {}).get("reasoning", "")
+            decision = cp.get("decision", "")
+            confidence = cp.get("overall_confidence", "")
+
+            lines.append(f"### {phase} (Round {rnd})")
+            lines.append("")
+
+            if decision:
+                lines.append(f"**Decision:** `{decision}`")
+                lines.append("")
+            if confidence:
+                lines.append(f"**Overall confidence:** {confidence}")
+                lines.append("")
+
+            if vectors:
+                lines.extend(["| Vector | Value |", "|--------|-------|"])
+                for k in ["know", "uncertainty", "engagement", "do", "context",
+                           "clarity", "coherence", "signal", "density",
+                           "state", "change", "completion", "impact"]:
+                    v = vectors.get(k)
+                    if v is not None:
+                        lines.append(f"| {k} | {_vector_bar(v)} |")
+                lines.append("")
+
+            # Show deltas if this is POSTFLIGHT
+            deltas = (cp.get("meta", {}) or {}).get("deltas", {})
+            if deltas:
+                lines.append("**Learning delta:**")
+                lines.append("")
+                delta_parts = []
+                for k, v in sorted(deltas.items()):
+                    if isinstance(v, (int, float)) and abs(v) > 0.001:
+                        sign = "+" if v > 0 else ""
+                        delta_parts.append(f"{k}: {sign}{v:.2f}")
+                if delta_parts:
+                    lines.append(", ".join(delta_parts))
+                    lines.append("")
+
+            if reasoning:
+                lines.extend([
+                    "<details><summary>Reasoning</summary>",
+                    "",
+                    reasoning,
+                    "",
+                    "</details>",
+                    "",
+                ])
+
+        lines.extend(["---", ""])
+
+    lines.append("*Generated by [Empirica](https://getempirica.com)*")
+    return "\n".join(lines)
+
+
+def _render_sessions(sessions_map):
+    """Render sessions.md — timeline overview (summary, not full vectors)."""
+    sorted_sessions = sorted(
+        sessions_map.items(),
+        key=lambda x: min((_get_ts(cp) for cp in x[1]), default=0),
+        reverse=True
+    )
+
+    lines = [
+        "# Sessions",
+        "",
+        "> Work sessions with epistemic state snapshots.",
+        f"> {len(sessions_map)} total",
+        "",
+        "| Session | AI | Phases | Date | Confidence |",
+        "|---------|-----|--------|------|------------|",
+    ]
+
+    for sid, checkpoints in sorted_sessions:
         short = _short_id(sid)
         first = checkpoints[0] if checkpoints else {}
         ai = first.get("ai_id", "?")
         date = _format_date_short(first.get("timestamp", ""))
-        lines.append(f"| [{short}]({short}.md) | `{ai}` | {len(checkpoints)} | {date} |")
+        phases = sorted(set(c.get("phase", "?") for c in checkpoints))
+        phase_str = " \u2192 ".join(phases)
+        conf = first.get("overall_confidence", "")
+        conf_str = f"{conf:.2f}" if isinstance(conf, (int, float)) else str(conf)
+        lines.append(
+            f"| [{short}](transactions.md#{short}) | `{ai}` | {phase_str} | {date} | {conf_str} |"
+        )
 
+    lines.extend(["", "---", "*Generated by [Empirica](https://getempirica.com)*"])
     return "\n".join(lines)
 
 
-# ── Root dashboard ──
+def _render_handoffs(handoffs):
+    """Render handoffs.md — session continuity reports."""
+    handoffs.sort(key=lambda x: _get_ts(x[1]), reverse=True)
 
-
-def _generate_root_readme(counts, recent_items):
-    """Generate the top-level .empirica/README.md dashboard."""
     lines = [
-        "# Empirica Epistemic State",
+        "# Handoff Reports",
         "",
-        "> Knowledge state of this project, tracked by [Empirica](https://getempirica.com)",
+        "> Session continuity reports for context transfer between sessions.",
+        f"> {len(handoffs)} total",
+        "",
+    ]
+
+    for hid, data in handoffs:
+        short = _short_id(hid)
+        # Handoffs use compressed keys: s, ai, ts, task, dur, deltas, findings, gaps, unknowns, next
+        sid = data.get("s", data.get("session_id", ""))
+        ai = data.get("ai", data.get("ai_id", "?"))
+        ts = data.get("ts", data.get("timestamp", ""))
+        task = data.get("task", data.get("task_summary", ""))
+        duration = data.get("dur", data.get("duration", ""))
+        findings = data.get("findings", data.get("key_findings", []))
+        unknowns_list = data.get("unknowns", data.get("remaining_unknowns", []))
+        next_ctx = data.get("next", data.get("next_session_context", ""))
+        cal = data.get("cal", data.get("calibration", ""))
+
+        lines.extend([
+            f"<a id=\"handoff-{short}\"></a>",
+            f"### Session {_short_id(sid)} \u2192 next",
+            "",
+            f"**AI:** `{ai}` | **Date:** {_format_date(ts)}",
+        ])
+        if duration:
+            lines.append(f" | **Duration:** {duration:.0f}s" if isinstance(duration, (int, float)) else f" | **Duration:** {duration}")
+        lines.append("")
+
+        if task:
+            lines.extend([f"**Summary:** {task}", ""])
+
+        if findings:
+            lines.append("**Key findings:**")
+            for f in findings:
+                lines.append(f"- {f}")
+            lines.append("")
+
+        if unknowns_list:
+            lines.append("**Remaining unknowns:**")
+            for u in unknowns_list:
+                lines.append(f"- {u}")
+            lines.append("")
+
+        if next_ctx:
+            lines.extend([f"**Next session context:** {next_ctx}", ""])
+
+        if cal:
+            lines.extend([f"**Calibration:** {cal}", ""])
+
+        lines.extend(["---", ""])
+
+    lines.append("*Generated by [Empirica](https://getempirica.com)*")
+    return "\n".join(lines)
+
+
+def _render_cascades(cascades):
+    """Render cascades.md — investigation decision logs."""
+    lines = [
+        "# Investigation Cascades",
+        "",
+        "> INVESTIGATE/PROCEED decision logs from CHECK gates.",
+        f"> {len(cascades)} cascade{'s' if len(cascades) != 1 else ''}",
+        "",
+    ]
+
+    for sid, tid, entries in cascades:
+        lines.extend([
+            f"<a id=\"cascade-{_short_id(tid)}\"></a>",
+            f"## Session {_short_id(sid)} / Transaction {_short_id(tid)}",
+            "",
+        ])
+
+        for i, entry in enumerate(entries):
+            decision = entry.get("decision", "?")
+            payload = entry.get("data", {})
+            ts = payload.get("timestamp", "")
+            findings = payload.get("findings", [])
+
+            icon = "\U0001f50d" if decision == "INVESTIGATE" else "\u2705" if decision == "PROCEED" else "\u2753"
+            lines.append(f"### {icon} {decision}")
+            if ts:
+                lines.append(f"*{_format_date(ts)}*")
+            lines.append("")
+
+            if findings:
+                for f in findings:
+                    lines.append(f"- {_truncate(f, 120)}")
+                lines.append("")
+
+        lines.extend(["---", ""])
+
+    lines.append("*Generated by [Empirica](https://getempirica.com)*")
+    return "\n".join(lines)
+
+
+def _render_lessons(lessons):
+    """Render lessons.md — procedural knowledge from YAML cold storage."""
+    lines = [
+        "# Lessons",
+        "",
+        "> Procedural knowledge (antibodies) from cold storage.",
+        "> Lessons decay when contradicted by new findings.",
+        f"> {len(lessons)} total",
+        "",
+    ]
+
+    for lid, data in lessons:
+        title = data.get("title", lid)
+        domain = data.get("domain", "general")
+        confidence = data.get("source_confidence", data.get("confidence", "?"))
+        trigger = data.get("trigger", "")
+        procedure = data.get("procedure", "")
+        anti_pattern = data.get("anti_pattern", "")
+        created = data.get("created_at", "")
+
+        lines.extend([
+            f"<a id=\"lesson-{lid[:8]}\"></a>",
+            f"### {title}",
+            "",
+            f"**Domain:** `{domain}` | **Confidence:** {confidence} | **Created:** {_format_date_short(created)}",
+            "",
+        ])
+
+        if trigger:
+            lines.extend([f"**Trigger:** {trigger}", ""])
+        if procedure:
+            if isinstance(procedure, list):
+                for step in procedure:
+                    lines.append(f"1. {step}")
+            else:
+                lines.append(str(procedure))
+            lines.append("")
+        if anti_pattern:
+            lines.extend([f"**Anti-pattern:** {anti_pattern}", ""])
+
+        lines.extend(["---", ""])
+
+    lines.append("*Generated by [Empirica](https://getempirica.com)*")
+    return "\n".join(lines)
+
+
+def _render_sources(ref_docs):
+    """Render sources.md — reference documents."""
+    lines = [
+        "# Sources",
+        "",
+        "> Reference documents added to project knowledge base.",
+        f"> {len(ref_docs)} total",
+        "",
+        "| Document | Size |",
+        "|----------|------|",
+    ]
+
+    for name, data in ref_docs:
+        size = data.get("size", 0)
+        size_str = f"{size:,}" if size else "?"
+        lines.append(f"| <a id=\"source-{name[:8]}\"></a>{name} | {size_str} bytes |")
+
+    lines.extend(["", "---", "*Generated by [Empirica](https://getempirica.com)*"])
+    return "\n".join(lines)
+
+
+def _render_signatures(signatures):
+    """Render signatures.md — cryptographic provenance chain."""
+    lines = [
+        "# Signatures",
+        "",
+        "> Ed25519 cryptographic signatures of epistemic checkpoints.",
+        f"> {len(signatures)} total",
+        "",
+    ]
+
+    for sig_id, data in signatures:
+        short = _short_id(sig_id)
+        ai = data.get("ai_id", "?")
+        signed_at = data.get("signed_at", "")
+        checkpoint_ref = data.get("checkpoint_ref", "")
+        pubkey = data.get("public_key", "")
+        sig = data.get("signature", "")
+
+        lines.extend([
+            f"<a id=\"sig-{short}\"></a>",
+            f"### Checkpoint: {checkpoint_ref}",
+            "",
+            f"**AI:** `{ai}` | **Signed:** {_format_date(signed_at)}",
+            "",
+            f"**Public key:** `{pubkey[:16]}...`",
+            "",
+            f"**Signature:** `{sig[:32]}...`",
+            "",
+            "---",
+            "",
+        ])
+
+    lines.append("*Generated by [Empirica](https://getempirica.com)*")
+    return "\n".join(lines)
+
+
+def _render_calibration(cal_data):
+    """Render calibration.md — bias corrections and drift state."""
+    lines = [
+        "# Calibration",
+        "",
+        "> Bias corrections from Bayesian calibration of epistemic self-assessments.",
+        "",
+    ]
+
+    if not cal_data:
+        lines.append("*No calibration data found in .breadcrumbs.yaml*")
+        return "\n".join(lines)
+
+    cal = cal_data.get("calibration", {})
+    if not cal:
+        lines.append("*No calibration section in .breadcrumbs.yaml*")
+        return "\n".join(lines)
+
+    ai_id = cal.get("ai_id", "?")
+    observations = cal.get("observations", 0)
+    last_updated = cal.get("last_updated", "")
+
+    lines.extend([
+        f"**AI:** `{ai_id}` | **Observations:** {observations} | **Updated:** {_format_date(last_updated)}",
+        "",
+    ])
+
+    corrections = cal.get("bias_corrections", {})
+    if corrections:
+        lines.extend([
+            "## Bias Corrections",
+            "",
+            "| Vector | Correction | Direction |",
+            "|--------|------------|-----------|",
+        ])
+        for k, v in sorted(corrections.items(), key=lambda x: abs(x[1]), reverse=True):
+            sign = "+" if v > 0 else ""
+            direction = "\u2b06\ufe0f underestimates" if v > 0.02 else "\u2b07\ufe0f overestimates" if v < -0.02 else "\u2194\ufe0f well calibrated"
+            lines.append(f"| {k} | {sign}{v:.3f} | {direction} |")
+        lines.append("")
+
+    readiness = cal.get("readiness", {})
+    if readiness:
+        lines.extend([
+            "## Readiness Gate",
+            "",
+            f"- **min_know:** {readiness.get('min_know', '?')}",
+            f"- **max_uncertainty:** {readiness.get('max_uncertainty', '?')}",
+            "",
+        ])
+
+    summary = cal.get("summary", {})
+    if summary:
+        over = summary.get("overestimates", [])
+        under = summary.get("underestimates", [])
+        if over:
+            lines.append(f"**Overestimates:** {', '.join(over)}")
+        if under:
+            lines.append(f"**Underestimates:** {', '.join(under)}")
+        lines.append("")
+
+    lines.extend(["---", "*Generated by [Empirica](https://getempirica.com)*"])
+    return "\n".join(lines)
+
+
+def _render_readme(counts, recent_items):
+    """Render root README.md — project epistemic dashboard."""
+    total = sum(counts.values())
+    lines = [
+        "# Empirica Epistemic Audit Trail",
+        "",
+        "> Complete knowledge state of this project, tracked by [Empirica](https://getempirica.com).",
         "",
         "## Overview",
         "",
-        "| Metric | Count |",
-        "|--------|-------|",
-        f"| \U0001f4dd [Findings](findings/) | **{counts.get('findings', 0)}** |",
-        f"| \u2753 [Unknowns](unknowns/) | **{counts.get('unknowns', 0)}** |",
-        f"| \U0001f6ab [Dead Ends](dead-ends/) | **{counts.get('dead_ends', 0)}** |",
-        f"| \u26a0\ufe0f [Mistakes](mistakes/) | **{counts.get('mistakes', 0)}** |",
-        f"| \U0001f3af [Goals](goals/) | **{counts.get('goals', 0)}** |",
-        f"| \U0001f4ca [Sessions](sessions/) | **{counts.get('sessions', 0)}** |",
+        "| Artifact | Count | Description |",
+        "|----------|-------|-------------|",
+        f"| \U0001f4dd [Findings](findings.md) | **{counts.get('findings', 0)}** | Validated knowledge |",
+        f"| \u2753 [Unknowns](unknowns.md) | **{counts.get('unknowns', 0)}** | Open questions |",
+        f"| \U0001f6ab [Dead Ends](dead-ends.md) | **{counts.get('dead_ends', 0)}** | Failed approaches |",
+        f"| \u26a0\ufe0f [Mistakes](mistakes.md) | **{counts.get('mistakes', 0)}** | Errors + prevention |",
+        f"| \U0001f3af [Goals](goals.md) | **{counts.get('goals', 0)}** | Work units + subtasks |",
+        f"| \U0001f4ca [Sessions](sessions.md) | **{counts.get('sessions', 0)}** | Session timeline |",
+        f"| \U0001f9ec [Transactions](transactions.md) | **{counts.get('transactions', 0)}** | Epistemic trajectories |",
+        f"| \U0001f91d [Handoffs](handoffs.md) | **{counts.get('handoffs', 0)}** | Session continuity |",
+        f"| \U0001f50d [Cascades](cascades.md) | **{counts.get('cascades', 0)}** | Investigation decisions |",
+        f"| \U0001f4d6 [Lessons](lessons.md) | **{counts.get('lessons', 0)}** | Procedural knowledge |",
+        f"| \U0001f4ce [Sources](sources.md) | **{counts.get('sources', 0)}** | Reference documents |",
+        f"| \U0001f510 [Signatures](signatures.md) | **{counts.get('signatures', 0)}** | Crypto provenance |",
+        f"| \U0001f3af [Calibration](calibration.md) | \u2014 | Bias corrections |",
         "",
-        "## Recent Activity",
-        "",
-        "| Date | Type | Summary |",
-        "|------|------|---------|",
     ]
 
-    for item_type, item_id, item_data in recent_items[:15]:
-        date = _format_date_short(
-            item_data.get("created_at") or item_data.get("created_timestamp", "")
-        )
-        emoji = _type_emoji(item_type)
-        short = _short_id(item_id)
-
+    if recent_items:
         type_dirs = {
-            "finding": "findings",
-            "unknown": "unknowns",
-            "dead_end": "dead-ends",
-            "mistake": "mistakes",
-            "goal": "goals",
+            "finding": ("findings.md", "finding"),
+            "unknown": ("unknowns.md", "unknown"),
+            "dead_end": ("dead-ends.md", "deadend"),
+            "mistake": ("mistakes.md", "mistake"),
+            "goal": ("goals.md", "goal"),
         }
-        link_dir = type_dirs.get(item_type, "sessions")
-
-        text_keys = {
+        type_emoji = {
+            "finding": "\U0001f4dd",
+            "unknown": "\u2753",
+            "dead_end": "\U0001f6ab",
+            "mistake": "\u26a0\ufe0f",
+            "goal": "\U0001f3af",
+        }
+        text_extractors = {
             "finding": lambda d: d.get("finding", d.get("finding_data", {}).get("finding", "")),
             "unknown": lambda d: d.get("unknown", ""),
             "dead_end": lambda d: d.get("approach", ""),
             "mistake": lambda d: d.get("mistake", ""),
-            "goal": lambda d: d.get("objective", ""),
+            "goal": lambda d: d.get("goal_data", {}).get("objective", "") or d.get("objective", ""),
         }
-        text = _truncate(text_keys.get(item_type, lambda d: "Session")(item_data), 80)
-        lines.append(f"| {date} | {emoji} [{item_type}]({link_dir}/{short}.md) | {text} |")
+
+        lines.extend([
+            "## Recent Activity",
+            "",
+            "| Date | Type | Summary |",
+            "|------|------|---------|",
+        ])
+
+        for item_type, item_id, item_data in recent_items[:20]:
+            date = _format_date_short(
+                item_data.get("created_at") or item_data.get("created_timestamp", "")
+            )
+            emoji = type_emoji.get(item_type, "\u25c8")
+            short = _short_id(item_id)
+            file_name, anchor_prefix = type_dirs.get(item_type, ("sessions.md", "session"))
+            text = _truncate(text_extractors.get(item_type, lambda d: "")(item_data), 80)
+            lines.append(
+                f"| {date} | {emoji} | [{text}]({file_name}#{anchor_prefix}-{short}) |"
+            )
 
     lines.extend([
         "",
@@ -697,11 +1020,11 @@ def _generate_root_readme(counts, recent_items):
     return "\n".join(lines)
 
 
-# ── Main generation function ──
+# ── Main Generation ──
 
 
 def generate_artifacts(workspace_root, output_dir=None, verbose=False):
-    """Read git notes and generate .empirica/ markdown files.
+    """Read git notes + cold storage and generate .empirica/ markdown audit trail.
 
     Args:
         workspace_root: Git repository root path
@@ -713,90 +1036,71 @@ def generate_artifacts(workspace_root, output_dir=None, verbose=False):
     """
     workspace = str(workspace_root)
     out = Path(output_dir or os.path.join(workspace, ".empirica"))
+    out.mkdir(parents=True, exist_ok=True)
 
     if verbose:
         print(f"Reading git notes from {workspace}...")
 
-    # Read all artifact types
-    findings = _read_git_notes(workspace, "findings")
-    unknowns = _read_git_notes(workspace, "unknowns")
-    dead_ends = _read_git_notes(workspace, "dead_ends")
-    mistakes = _read_git_notes(workspace, "mistakes")
-    goals = _read_git_notes(workspace, "goals")
+    # Read all artifact types from git notes
+    findings = _read_all_notes(workspace, "findings")
+    unknowns = _read_all_notes(workspace, "unknowns")
+    dead_ends = _read_all_notes(workspace, "dead_ends")
+    mistakes = _read_all_notes(workspace, "mistakes")
+    goals = _read_all_notes(workspace, "goals")
+    handoffs = _read_all_notes(workspace, "handoff")
+    signatures = _read_all_notes(workspace, "signatures")
 
-    # Read session checkpoints (nested ref structure)
-    sessions_map = {}
-    try:
-        result = subprocess.run(
-            ["git", "for-each-ref", "refs/notes/empirica/session/"],
-            cwd=workspace, capture_output=True, text=True, timeout=60
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            for line in result.stdout.strip().split("\n"):
-                if not line.strip():
-                    continue
-                parts = line.split("\t")
-                if len(parts) < 2:
-                    continue
-                ref = parts[1]
-                # ref: refs/notes/empirica/session/{session_id}/{phase}/{round}
-                ref_parts = ref.split("/")
-                if len(ref_parts) >= 7:
-                    sid = ref_parts[4]
-                    data = _read_note_blob(workspace, ref)
-                    if data:
-                        if sid not in sessions_map:
-                            sessions_map[sid] = []
-                        sessions_map[sid].append(data)
-    except subprocess.TimeoutExpired:
-        logger.warning("Timeout reading session checkpoints")
+    # Tasks (subtasks) — index by goal_id
+    raw_tasks = _read_all_notes(workspace, "tasks")
+    tasks_by_goal = {}
+    for tid, tdata in raw_tasks:
+        gid = tdata.get("goal_id", "")
+        tasks_by_goal.setdefault(gid, []).append(tdata)
+
+    # Session trajectories (nested ref structure)
+    sessions_map = _read_session_refs(workspace)
+
+    # Cascades (multi-line append-only format)
+    cascades = _read_cascade_refs(workspace)
+
+    # Cold storage
+    lessons = _read_lessons(workspace)
+    ref_docs = _read_ref_docs(workspace)
+    calibration = _read_calibration(workspace)
 
     if verbose:
-        print(f"  Findings: {len(findings)}")
-        print(f"  Unknowns: {len(unknowns)}")
-        print(f"  Dead ends: {len(dead_ends)}")
-        print(f"  Mistakes: {len(mistakes)}")
-        print(f"  Goals: {len(goals)}")
-        print(f"  Sessions: {len(sessions_map)}")
+        print(f"  Findings:     {len(findings)}")
+        print(f"  Unknowns:     {len(unknowns)}")
+        print(f"  Dead ends:    {len(dead_ends)}")
+        print(f"  Mistakes:     {len(mistakes)}")
+        print(f"  Goals:        {len(goals)}")
+        print(f"  Subtasks:     {len(raw_tasks)}")
+        print(f"  Sessions:     {len(sessions_map)}")
+        print(f"  Transactions: {sum(len(v) for v in sessions_map.values())} checkpoints")
+        print(f"  Handoffs:     {len(handoffs)}")
+        print(f"  Cascades:     {len(cascades)}")
+        print(f"  Lessons:      {len(lessons)}")
+        print(f"  Sources:      {len(ref_docs)}")
+        print(f"  Signatures:   {len(signatures)}")
 
-    # Create directory structure
-    for subdir in ["findings", "unknowns", "dead-ends", "mistakes", "goals", "sessions"]:
-        (out / subdir).mkdir(parents=True, exist_ok=True)
+    # Generate all markdown files
+    files = {
+        "findings.md": _render_findings(findings),
+        "unknowns.md": _render_unknowns(unknowns),
+        "dead-ends.md": _render_dead_ends(dead_ends),
+        "mistakes.md": _render_mistakes(mistakes),
+        "goals.md": _render_goals(goals, tasks_by_goal),
+        "transactions.md": _render_transactions(sessions_map),
+        "sessions.md": _render_sessions(sessions_map),
+        "handoffs.md": _render_handoffs(handoffs),
+        "cascades.md": _render_cascades(cascades),
+        "lessons.md": _render_lessons(lessons),
+        "sources.md": _render_sources(ref_docs),
+        "signatures.md": _render_signatures(signatures),
+        "calibration.md": _render_calibration(calibration),
+    }
 
-    # Generate individual artifact pages
-    for fid, data in findings:
-        (out / "findings" / f"{_short_id(fid)}.md").write_text(
-            _generate_finding_page(fid, data, workspace))
-
-    for uid, data in unknowns:
-        (out / "unknowns" / f"{_short_id(uid)}.md").write_text(
-            _generate_unknown_page(uid, data))
-
-    for did, data in dead_ends:
-        (out / "dead-ends" / f"{_short_id(did)}.md").write_text(
-            _generate_dead_end_page(did, data))
-
-    for mid, data in mistakes:
-        (out / "mistakes" / f"{_short_id(mid)}.md").write_text(
-            _generate_mistake_page(mid, data))
-
-    for gid, data in goals:
-        (out / "goals" / f"{_short_id(gid)}.md").write_text(
-            _generate_goal_page(gid, data))
-
-    for sid, checkpoints in sessions_map.items():
-        (out / "sessions" / f"{_short_id(sid)}.md").write_text(
-            _generate_session_page(sid, checkpoints))
-
-    # Generate index pages
-    (out / "findings" / "README.md").write_text(_generate_index_findings(findings))
-    (out / "unknowns" / "README.md").write_text(_generate_index_unknowns(unknowns))
-    (out / "dead-ends" / "README.md").write_text(_generate_index_dead_ends(dead_ends))
-    (out / "mistakes" / "README.md").write_text(_generate_index_mistakes(mistakes))
-    (out / "goals" / "README.md").write_text(_generate_index_goals(goals))
-    (out / "sessions" / "README.md").write_text(_generate_index_sessions(sessions_map))
-
-    # Build recent items for root dashboard
+    # Build recent items for dashboard
     recent_items = []
     for fid, data in findings:
         recent_items.append(("finding", fid, data))
@@ -806,18 +1110,9 @@ def generate_artifacts(workspace_root, output_dir=None, verbose=False):
         recent_items.append(("dead_end", did, data))
     for mid, data in mistakes:
         recent_items.append(("mistake", mid, data))
-
-    def _get_ts(item):
-        d = item[2]
-        ts = d.get("created_at") or d.get("created_timestamp") or 0
-        if isinstance(ts, str):
-            try:
-                return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
-            except ValueError:
-                return 0
-        return float(ts) if ts else 0
-
-    recent_items.sort(key=_get_ts, reverse=True)
+    for gid, data in goals:
+        recent_items.append(("goal", gid, data))
+    recent_items.sort(key=lambda x: _get_ts(x[2]), reverse=True)
 
     counts = {
         "findings": len(findings),
@@ -826,11 +1121,21 @@ def generate_artifacts(workspace_root, output_dir=None, verbose=False):
         "mistakes": len(mistakes),
         "goals": len(goals),
         "sessions": len(sessions_map),
+        "transactions": sum(len(v) for v in sessions_map.values()),
+        "handoffs": len(handoffs),
+        "cascades": len(cascades),
+        "lessons": len(lessons),
+        "sources": len(ref_docs),
+        "signatures": len(signatures),
     }
 
-    (out / "README.md").write_text(_generate_root_readme(counts, recent_items))
+    files["README.md"] = _render_readme(counts, recent_items)
 
-    total_files = sum(counts.values()) + 7  # +7 for README index files
+    # Write all files
+    for filename, content in files.items():
+        (out / filename).write_text(content)
+
+    total_files = len(files)
     if verbose:
         print(f"\nGenerated {total_files} files in {out}/")
 
@@ -842,7 +1147,7 @@ def generate_artifacts(workspace_root, output_dir=None, verbose=False):
     }
 
 
-# ── CLI handler ──
+# ── CLI Handler ──
 
 
 def handle_artifacts_generate_command(args):
@@ -872,14 +1177,20 @@ def handle_artifacts_generate_command(args):
             print(json.dumps(result, indent=2))
         else:
             counts = result["counts"]
-            print(f"\n\u2705 Generated .empirica/ artifacts:")
-            print(f"   \U0001f4dd Findings:  {counts['findings']}")
-            print(f"   \u2753 Unknowns:  {counts['unknowns']}")
-            print(f"   \U0001f6ab Dead Ends: {counts['dead_ends']}")
-            print(f"   \u26a0\ufe0f  Mistakes:  {counts['mistakes']}")
-            print(f"   \U0001f3af Goals:     {counts['goals']}")
-            print(f"   \U0001f4ca Sessions:  {counts['sessions']}")
-            print(f"\n   Total: {result['total_files']} files in {result['output_dir']}")
+            print(f"\n\u2705 Generated .empirica/ audit trail:")
+            print(f"   \U0001f4dd Findings:      {counts['findings']}")
+            print(f"   \u2753 Unknowns:      {counts['unknowns']}")
+            print(f"   \U0001f6ab Dead Ends:     {counts['dead_ends']}")
+            print(f"   \u26a0\ufe0f  Mistakes:      {counts['mistakes']}")
+            print(f"   \U0001f3af Goals:         {counts['goals']}")
+            print(f"   \U0001f4ca Sessions:      {counts['sessions']}")
+            print(f"   \U0001f9ec Transactions:  {counts['transactions']} checkpoints")
+            print(f"   \U0001f91d Handoffs:      {counts['handoffs']}")
+            print(f"   \U0001f50d Cascades:      {counts['cascades']}")
+            print(f"   \U0001f4d6 Lessons:       {counts['lessons']}")
+            print(f"   \U0001f4ce Sources:       {counts['sources']}")
+            print(f"   \U0001f510 Signatures:    {counts['signatures']}")
+            print(f"\n   {result['total_files']} files in {result['output_dir']}")
 
         return 0
 
