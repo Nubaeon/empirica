@@ -1,0 +1,32 @@
+{
+  "goal_id": "f5b4c7a3-3a98-42e1-b82d-03a0d1c7bf73",
+  "session_id": "db47fdc7-3b6c-4bb8-91ed-a2e3ef8d09c4",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-01T16:33:19.183425+00:00",
+  "goal_data": {
+    "objective": "Docs audit remediation: fix stale references, sync system prompts, archive deprecated docs",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "System prompts use 'epistemic transaction' not 'epistemic loop'",
+      "All generated prompts re-synced from CANONICAL_CORE",
+      "Version anomalies fixed",
+      "Stale docs archived",
+      "Broken cross-references fixed"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-01T16:33:19.183435+00:00",
+      "action": "created"
+    }
+  ]
+}
