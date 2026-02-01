@@ -1,0 +1,16 @@
+{
+  "finding_id": "8d2674ac-3782-4424-b5f2-5c8d4aeb6b00",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T10:00:00.259512+00:00",
+  "finding": "Philipp (business partner) is on Tailscale network at philipps-macbook-pro.tail052328.ts.net. SSH key already available locally. He attempted to create an auto-initialiser menu to bypass Empirica CLI, which broke his Claude Code install. Work should be done in empirica-support project to avoid polluting core empirica with disjointed artifacts.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Philipp (business partner) is on Tailscale network at philipps-macbook-pro.tail052328.ts.net. SSH key already available locally. He attempted to create an auto-initialiser menu to bypass Empirica CLI, which broke his Claude Code install. Work should be done in empirica-support project to avoid polluting core empirica with disjointed artifacts.",
+    "impact": 0.7
+  }
+}
