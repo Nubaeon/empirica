@@ -1,0 +1,16 @@
+{
+  "finding_id": "a6db553e-0f15-42ab-8c9e-6beb0261baff",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a46e16f8-5f07-4571-95f0-2ba416264a5d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T10:56:30.221391+00:00",
+  "finding": "Goals and subtasks carry sufficient epistemic context (vectors, unknowns, scope dimensions, domain from objective text) to automatically determine what kind of investigation agent to attach, its focus, and attention budget. The goal graph becomes an agent orchestration layer \u2014 epistemic state routes attention rather than manual human routing.",
+  "impact": 0.8,
+  "goal_id": "f7b402a9-b679-4804-af28-273de4009769",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Goals and subtasks carry sufficient epistemic context (vectors, unknowns, scope dimensions, domain from objective text) to automatically determine what kind of investigation agent to attach, its focus, and attention budget. The goal graph becomes an agent orchestration layer \u2014 epistemic state routes attention rather than manual human routing.",
+    "impact": 0.8
+  }
+}
