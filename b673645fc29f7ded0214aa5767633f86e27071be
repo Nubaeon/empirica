@@ -1,0 +1,16 @@
+{
+  "finding_id": "7291f9ce-284c-4775-815d-445232dc2471",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T18:06:09.578570+00:00",
+  "finding": "git reflog is the strongest untapped grounded verification signal. It captures every reset, rebase, abandoned branch, and course correction \u2014 objective dead-end detection that the AI cannot contaminate or omit from self-report. This is Tier 1 verification happening passively just by using git. Maps to uncertainty, signal vectors.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "git reflog is the strongest untapped grounded verification signal. It captures every reset, rebase, abandoned branch, and course correction \u2014 objective dead-end detection that the AI cannot contaminate or omit from self-report. This is Tier 1 verification happening passively just by using git. Maps to uncertainty, signal vectors.",
+    "impact": 0.9
+  }
+}
