@@ -1,0 +1,16 @@
+{
+  "finding_id": "285ac838-9467-4b8c-8baa-1f04a614a96a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "5a546740-17a4-4a8c-a965-45deb5da8550",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-01T15:48:10.658345+00:00",
+  "finding": "Comprehensive documentation inventory completed for Empirica. Total of 80+ active documentation files across 6 major directories. Root README.md (v1.5.0) is the main user-facing entry point. Docs organized into: docs/human/ (13.8k lines, split into end-users and developers), docs/architecture/ (7.6k lines, 19 files), docs/reference/ (7.7k lines including API subdocs, 7 main files), docs/guides/ (797 lines, 2 guides), examples/ (minimal), and _archive/ (deprecated). Key reference docs: DATABASE_SCHEMA_UNIFIED.md (40 active tables), TAXONOMY.md (v1.0.0), CONFIGURATION_REFERENCE.md (v4.0). Plugin docs (claude-code-integration, 800 lines) cover integration, distribution, and changelog. Script docs (557 lines) cover release process and deletion workarounds. No version drift detected - all docs reference v1.5.0 or later (current version).",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Comprehensive documentation inventory completed for Empirica. Total of 80+ active documentation files across 6 major directories. Root README.md (v1.5.0) is the main user-facing entry point. Docs organized into: docs/human/ (13.8k lines, split into end-users and developers), docs/architecture/ (7.6k lines, 19 files), docs/reference/ (7.7k lines including API subdocs, 7 main files), docs/guides/ (797 lines, 2 guides), examples/ (minimal), and _archive/ (deprecated). Key reference docs: DATABASE_SCHEMA_UNIFIED.md (40 active tables), TAXONOMY.md (v1.0.0), CONFIGURATION_REFERENCE.md (v4.0). Plugin docs (claude-code-integration, 800 lines) cover integration, distribution, and changelog. Script docs (557 lines) cover release process and deletion workarounds. No version drift detected - all docs reference v1.5.0 or later (current version).",
+    "impact": 0.85
+  }
+}
