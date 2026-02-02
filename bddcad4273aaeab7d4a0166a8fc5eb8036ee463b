@@ -1,0 +1,33 @@
+{
+  "goal_id": "e1eabad2-d97e-4268-8ff4-8bd3e4ab82a9",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-02T16:46:00.276977+00:00",
+  "goal_data": {
+    "objective": "Decouple learning tracking from calibration corrections in Bayesian system \u2014 self-referential PREFLIGHT\u2192POSTFLIGHT deltas measure learning (track only), not bias. True calibration corrections must come from grounded evidence (POSTFLIGHT vs post-test/snapshot) or learning trajectory analysis (weighted recent deltas). Sentinel should use grounded corrections where available, raw vectors where not. Cap all corrections as safety net.",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Sentinel CHECK handler uses grounded corrections (not learning deltas) for readiness gate",
+      "Self-referential track clearly labeled as 'learning trajectory' \u2014 tracked but not used for bias correction",
+      "True bias corrections derived from grounded evidence or weighted learning trajectory analysis",
+      "MAX_CORRECTION_MAGNITUDE cap applies to all correction sources",
+      ".breadcrumbs.yaml clearly separates learning_trajectory from bias_corrections sections",
+      "Philipp's machine deployed and verified"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-02T16:46:00.276988+00:00",
+      "action": "created"
+    }
+  ]
+}
