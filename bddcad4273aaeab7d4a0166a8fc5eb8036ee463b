@@ -1,0 +1,13 @@
+{
+  "unknown_id": "b18109ca-837c-4cac-be44-2c4cd5ce1774",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T17:15:00.007054+00:00",
+  "unknown": "OBSERVE pages are data visualization but the user mentioned linking to GitHub/Forgejo for actual code-file management, or thinking of a better way. The explore/code browsing aspect of per-project pages is undefined \u2014 should there be a Code tab in the project horizontal nav that links out to the repo, or an embedded file browser, or something else?",
+  "goal_id": "d94a8c80-9310-4a73-b5c0-9cc897ad76cb",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
