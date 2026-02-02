@@ -1,0 +1,16 @@
+{
+  "finding_id": "9436178c-46cc-4cbf-970d-7f70a75c8709",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T10:49:02.890545+00:00",
+  "finding": "Grafana confirmed as wrong tool for epistemic domain visualization. Can't model transactions (measurement windows), trajectories (learning arcs with context), or artifact navigation (drill-down from transaction to linked findings/goals). Works well for metric gauges and time-series. Decision: keep Grafana for infrastructure/container monitoring of empirica-platform, build primary epistemic dashboard in NiceGUI (event-driven, FastAPI backend, native WebSocket, Python-native SQLite access).",
+  "impact": 0.85,
+  "goal_id": "cd7bc14f-0e71-41e3-a891-5a3852085412",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Grafana confirmed as wrong tool for epistemic domain visualization. Can't model transactions (measurement windows), trajectories (learning arcs with context), or artifact navigation (drill-down from transaction to linked findings/goals). Works well for metric gauges and time-series. Decision: keep Grafana for infrastructure/container monitoring of empirica-platform, build primary epistemic dashboard in NiceGUI (event-driven, FastAPI backend, native WebSocket, Python-native SQLite access).",
+    "impact": 0.85
+  }
+}
