@@ -1,0 +1,16 @@
+{
+  "finding_id": "731a655c-042a-47a3-8212-40093a39319d",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T16:07:48.283508+00:00",
+  "finding": "Dashboard navigation restructured: OBSERVE pages (Overview, Transactions, Trajectories, Goals, Knowledge, Calibration) are now horizontal tabs within project context using NiceGUI ui.tabs(). Sidebar simplified to Projects + MANAGE + CONNECT. OBSERVE pages redirect to /projects if no project selected. 63 test projects deleted (test-switch-*, Test*, Empirica Workspace duplicates), leaving 6 real projects.",
+  "impact": 0.8,
+  "goal_id": "61cb4217-7994-4c79-88b8-66dc047055e6",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Dashboard navigation restructured: OBSERVE pages (Overview, Transactions, Trajectories, Goals, Knowledge, Calibration) are now horizontal tabs within project context using NiceGUI ui.tabs(). Sidebar simplified to Projects + MANAGE + CONNECT. OBSERVE pages redirect to /projects if no project selected. 63 test projects deleted (test-switch-*, Test*, Empirica Workspace duplicates), leaving 6 real projects.",
+    "impact": 0.8
+  }
+}
