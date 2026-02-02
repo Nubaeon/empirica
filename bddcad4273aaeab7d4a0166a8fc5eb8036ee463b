@@ -1,0 +1,16 @@
+{
+  "finding_id": "1189e6c6-bdef-40d8-acbb-b5625de63728",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0e3c1624-7e09-4d03-b2f0-70855023ca4c",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T11:11:04.565856+00:00",
+  "finding": "NiceGUI dashboard built and running. Key architecture: 7 pages (Overview, Transactions, Trajectories, Goals, Knowledge, Comms, Calibration), async SQLite with immutable mode URI for read-only mounts, Apache ECharts for radar/bar/time-series charts, dark theme with custom Noetic OS styling. Docker image based on zauberzeug/nicegui:2.9.1, builds in ~35s, starts in ~3s. All pages return HTTP 200 against live sessions.db (193MB, 40 tables).",
+  "impact": 0.85,
+  "goal_id": "f7b9a9cb-6da6-4627-b9f2-e743cbac94b9",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "NiceGUI dashboard built and running. Key architecture: 7 pages (Overview, Transactions, Trajectories, Goals, Knowledge, Comms, Calibration), async SQLite with immutable mode URI for read-only mounts, Apache ECharts for radar/bar/time-series charts, dark theme with custom Noetic OS styling. Docker image based on zauberzeug/nicegui:2.9.1, builds in ~35s, starts in ~3s. All pages return HTTP 200 against live sessions.db (193MB, 40 tables).",
+    "impact": 0.85
+  }
+}
