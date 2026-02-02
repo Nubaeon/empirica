@@ -1,0 +1,13 @@
+{
+  "unknown_id": "df6c5287-5ff0-4e85-a30b-d7d68321f378",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T16:26:11.183105+00:00",
+  "unknown": "For MANAGE pages (OS-level): Should they aggregate across ALL 37 project DBs to show workspace-wide stats? Or should they primarily show Qdrant/global data? The main empirica DB (185MB, 691 sessions) has concept_edges taking 97% of space (417K rows). Performance implications of opening multiple SQLite connections per page load need evaluation.",
+  "goal_id": "61cb4217-7994-4c79-88b8-66dc047055e6",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
