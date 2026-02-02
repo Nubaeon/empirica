@@ -1,0 +1,32 @@
+{
+  "goal_id": "09463583-18c0-4be8-be0c-524a24278581",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-02T18:08:16.070865+00:00",
+  "goal_data": {
+    "objective": "Noetic Dashboard: MANAGE page editability \u2014 transform read-only config displays into editable controls (System MCO configs, Sentinel thresholds/modes, Memory CBM parameters, Injection surface management)",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "MANAGE pages have editable controls that write back to config files",
+      "System page: MCO config YAML editing",
+      "Sentinel page: threshold adjustment, mode switching with env var writes",
+      "Memory page: CBM parameter tuning that persists to context_budget.yaml",
+      "Changes validated before write, with rollback on error"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-02T18:08:16.070877+00:00",
+      "action": "created"
+    }
+  ]
+}
