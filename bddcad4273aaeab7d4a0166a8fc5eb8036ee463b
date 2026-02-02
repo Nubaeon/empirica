@@ -1,0 +1,33 @@
+{
+  "goal_id": "f7b9a9cb-6da6-4627-b9f2-e743cbac94b9",
+  "session_id": "0e3c1624-7e09-4d03-b2f0-70855023ca4c",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-02T11:03:24.758383+00:00",
+  "goal_data": {
+    "objective": "Build NiceGUI epistemic dashboard for empirica-platform with communication layer (inter-instance comms via git notes, chat interface reuse)",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.6,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "NiceGUI app serving on port in docker-compose stack",
+      "Basic overview page with session state and epistemic vectors",
+      "Advanced page with trajectories and calibration",
+      "Goals page with tree view and breadcrumbs",
+      "Communication page with inter-instance messaging",
+      "Docker container in empirica-platform compose file"
+    ],
+    "estimated_complexity": 0.75,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-02T11:03:24.758393+00:00",
+      "action": "created"
+    }
+  ]
+}
