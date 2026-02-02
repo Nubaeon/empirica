@@ -1,0 +1,33 @@
+{
+  "goal_id": "cd7bc14f-0e71-41e3-a891-5a3852085412",
+  "session_id": "bc16edc2-06c6-4f7d-89b9-29c0d9bc4552",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-02T10:03:14.065340+00:00",
+  "goal_data": {
+    "objective": "Add Grafana control panel to empirica-platform with provisioned dashboards for Noetic OS observability (basic + advanced views), SQLite datasource wired to sessions.db",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "Grafana container running in empirica-platform docker-compose",
+      "SQLite datasource configured and querying sessions.db",
+      "Basic Overview dashboard with system health, vector gauges, active goals, recent findings",
+      "Advanced dashboard with 13-vector radar, calibration drift, session history",
+      "nginx routing /grafana to Grafana container",
+      "Dashboards provisioned via YAML/JSON (version-controlled)"
+    ],
+    "estimated_complexity": 0.65,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-02T10:03:14.065351+00:00",
+      "action": "created"
+    }
+  ]
+}
