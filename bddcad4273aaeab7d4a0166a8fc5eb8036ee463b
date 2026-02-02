@@ -1,0 +1,16 @@
+{
+  "finding_id": "960eaf98-d4a5-4f19-8c2a-d985df73f29b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T17:40:46.952807+00:00",
+  "finding": "MANAGE pages now functional with real data: System shows 7 subsystems + 13 MCO configs in 6 categories with push/pull architecture diagram. Sentinel shows 13 vector configs, 5 drift tiers, 4 sentinel actions, 3 domain profiles, drift detection thresholds (4 overconfidence + 4 underconfidence heuristics), bias corrections, grounded calibration. Memory shows CBM 9 thresholds with zone allocation pie chart (15k anchor + 150k working + 35k cache = 200k), 5 protocol injection triggers, Qdrant status, lessons browser. All reading from config files \u2014 no in-process dependencies.",
+  "impact": 0.85,
+  "goal_id": "d94a8c80-9310-4a73-b5c0-9cc897ad76cb",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "MANAGE pages now functional with real data: System shows 7 subsystems + 13 MCO configs in 6 categories with push/pull architecture diagram. Sentinel shows 13 vector configs, 5 drift tiers, 4 sentinel actions, 3 domain profiles, drift detection thresholds (4 overconfidence + 4 underconfidence heuristics), bias corrections, grounded calibration. Memory shows CBM 9 thresholds with zone allocation pie chart (15k anchor + 150k working + 35k cache = 200k), 5 protocol injection triggers, Qdrant status, lessons browser. All reading from config files \u2014 no in-process dependencies.",
+    "impact": 0.85
+  }
+}
