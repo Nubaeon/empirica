@@ -1,0 +1,31 @@
+{
+  "goal_id": "2b233b87-5374-446f-bd9d-26d3c5858b0c",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-02T17:14:36.687021+00:00",
+  "goal_data": {
+    "objective": "Noetic Dashboard: OBSERVE pages \u2014 per-project epistemic data visualization",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All 6 OBSERVE pages read from selected project db_path via filesystem discovery",
+      "Projects page uses discovery.py to scan workspace for .empirica/sessions/sessions.db",
+      "Horizontal tab navigation between OBSERVE pages within project context",
+      "Docker mounts workspace as /workspace:ro for filesystem discovery"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-02T17:14:36.687032+00:00",
+      "action": "created"
+    }
+  ]
+}
