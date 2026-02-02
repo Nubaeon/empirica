@@ -1,0 +1,13 @@
+{
+  "unknown_id": "a81055d8-85ba-4ac2-89ed-14d08de04ec4",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T17:35:28.655738+00:00",
+  "unknown": "Injection page data discovery is wrong: shows 10 CLAUDE.md files (should be 1 authoritative), 70 skills (should be more), only 4 personas (should be more). Search paths and filtering logic need investigation \u2014 likely not scanning correct directories or over/under-filtering.",
+  "goal_id": "d94a8c80-9310-4a73-b5c0-9cc897ad76cb",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
