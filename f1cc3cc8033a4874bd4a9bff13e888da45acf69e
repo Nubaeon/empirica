@@ -1,0 +1,13 @@
+{
+  "unknown_id": "d00ffb86-381c-4a93-84f8-6fdd34c01d97",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "461ee68f-3029-4cf1-9d10-090a6e546c88",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T09:16:11.832714+00:00",
+  "unknown": "mq does not support .tex files and fails to extract headings from LaTeX-compiled PDFs. Heading detection in PDF parser likely relies on font-size heuristics that don't match LaTeX's formatting. Two potential fixes: (1) add .tex format support to mq (parse \\section{}, \\subsection{} etc.), (2) improve PDF heading detection for academic papers. This blocks using mq for paper review workflows.",
+  "goal_id": "b64da40e-5797-4283-a0eb-8cc1065213c3",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
