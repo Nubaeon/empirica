@@ -1,0 +1,31 @@
+{
+  "goal_id": "b64da40e-5797-4283-a0eb-8cc1065213c3",
+  "session_id": "461ee68f-3029-4cf1-9d10-090a6e546c88",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-02T09:13:55.562032+00:00",
+  "goal_data": {
+    "objective": "Use mq to structurally review the Empirica paper \u2014 check consistency, accuracy, and identify sections needing updates",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All paper sections reviewed for accuracy against codebase",
+      "Inconsistencies between paper claims and implementation identified",
+      "Stale future-work items reclassified",
+      "Statistics verified against production data"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-02T09:13:55.562043+00:00",
+      "action": "created"
+    }
+  ]
+}
