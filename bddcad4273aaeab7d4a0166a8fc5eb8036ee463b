@@ -1,0 +1,16 @@
+{
+  "finding_id": "d1fdfdd0-0100-4b3c-b2fc-4a0d95f25ce1",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "aa5948d7-eae6-43cb-abb2-b9a4322b1d64",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T09:38:43.417269+00:00",
+  "finding": "Paper updated: theory.tex artifact taxonomy expanded from 4 to 6 noetic artifact types (added blindspots and lessons), with explicit separation rationale between noetic and praxic artifacts. discussion.tex OS section expanded with /proc row in mapping table, plus 4 new paragraphs: memory management (4-layer hierarchy with compaction and immune decay), system observability (/proc-equivalent dashboard with 7 subsystem modules), routed investigation/gated execution principle (separation of stochastic reasoning from deterministic action gating), and working implementation framing (deployed middleware, 479K observations, no model modifications required). Paper compiles clean at 43 pages.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Paper updated: theory.tex artifact taxonomy expanded from 4 to 6 noetic artifact types (added blindspots and lessons), with explicit separation rationale between noetic and praxic artifacts. discussion.tex OS section expanded with /proc row in mapping table, plus 4 new paragraphs: memory management (4-layer hierarchy with compaction and immune decay), system observability (/proc-equivalent dashboard with 7 subsystem modules), routed investigation/gated execution principle (separation of stochastic reasoning from deterministic action gating), and working implementation framing (deployed middleware, 479K observations, no model modifications required). Paper compiles clean at 43 pages.",
+    "impact": 0.7
+  }
+}
