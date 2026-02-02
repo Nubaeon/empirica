@@ -1,0 +1,14 @@
+{
+  "mistake_id": "77a3827f-6c75-4998-a698-cc19f8d85b32",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T17:14:24.857707+00:00",
+  "mistake": "Conflated MANAGE pages with OBSERVE pages \u2014 applied per-project db_path scoping to System, Sentinel, Memory, Injection pages when they should be OS-level configuration management pages that read from config files, env vars, and shared services (Qdrant), not per-project SQLite databases.",
+  "why_wrong": "Assumed all dashboard pages follow the same data model. Didn't investigate what system_dashboard.py actually exposes. Extrapolated the per-project pattern to pages that have a fundamentally different purpose: configuration management vs data visualization.",
+  "prevention": "Always investigate the actual source/architecture before applying patterns. MANAGE pages = config files + env vars + shared services. OBSERVE pages = per-project SQLite. These are orthogonal data sources.",
+  "cost_estimate": "30 minutes",
+  "root_cause_vector": "CONTEXT",
+  "goal_id": null,
+  "subtask_id": null
+}
