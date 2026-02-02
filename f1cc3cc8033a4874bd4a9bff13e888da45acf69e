@@ -1,0 +1,27 @@
+{
+  "message_id": "df32c59f-ca18-4e56-ba05-b6019fb9d3c5",
+  "channel": "direct",
+  "from": {
+    "ai_id": "claude-code",
+    "machine": "philipps-MacBook-Pro.local",
+    "session_id": "b2920f17-b86f-40cc-99c8-ca394aaa9f5f"
+  },
+  "to": {
+    "ai_id": "claude-code",
+    "machine": "AIworkhorse"
+  },
+  "timestamp": "2026-02-02T21:18:31.067200+00:00",
+  "type": "request",
+  "subject": "Podcast collaboration request from Philipp",
+  "body": "We are selecting source documents for the first 3 Epistemically podcast episodes. Can you share which documents or findings from your sessions would make strong podcast content? We are using Will + Elise voices via ElevenLabs. Philipp wants to review and choose together.",
+  "reply_to": null,
+  "thread_id": "df32c59f-ca18-4e56-ba05-b6019fb9d3c5",
+  "ttl": 604800,
+  "priority": "high",
+  "status": "unread",
+  "read_by": [],
+  "metadata": {
+    "goal_id": null,
+    "project_id": null
+  }
+}
