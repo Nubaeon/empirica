@@ -1,0 +1,31 @@
+{
+  "goal_id": "15d2d62e-8ce9-4ce6-b61d-d604c755eed6",
+  "session_id": "0e3c1624-7e09-4d03-b2f0-70855023ca4c",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-02T11:35:42.031776+00:00",
+  "goal_data": {
+    "objective": "Expand NiceGUI dashboard from monitoring panel to full Empirica GUI: System, Sentinel, Memory, and Injection management pages",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.5,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Memory page with four-layer view and Qdrant status",
+      "Sentinel page with gate config and mode controls",
+      "System page surfacing kernel subsystem health",
+      "Injection page showing context budget and hook payloads"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-02T11:35:42.031786+00:00",
+      "action": "created"
+    }
+  ]
+}
