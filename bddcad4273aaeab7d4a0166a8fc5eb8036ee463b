@@ -1,0 +1,16 @@
+{
+  "finding_id": "b7b3e4ef-65ad-43ba-880f-80e41a0a282b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "236a6607-8802-495b-8aab-7551c0d7a993",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T10:27:04.279990+00:00",
+  "finding": "Paper figures updated: UNCERTAINTY displayed as CERTAINTY (green bars) across fig1, fig2, fig3, fig4 (right panel), and fig6. All bars now grow consistently upward. fig3 was the most impactful fix \u2014 the inverted bar with red annotation was visually misleading. fig4 retains UNCERTAINTY on the left panel (raw asymmetry) with CERTAINTY on the right (unified view) \u2014 the pedagogical contrast is the point of that figure. CASCADE TikZ diagram redesigned from scratch with vertical flow, proper layering (feedback arrow as gray background path), and no arrow-over-text crossings.",
+  "impact": 0.6,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Paper figures updated: UNCERTAINTY displayed as CERTAINTY (green bars) across fig1, fig2, fig3, fig4 (right panel), and fig6. All bars now grow consistently upward. fig3 was the most impactful fix \u2014 the inverted bar with red annotation was visually misleading. fig4 retains UNCERTAINTY on the left panel (raw asymmetry) with CERTAINTY on the right (unified view) \u2014 the pedagogical contrast is the point of that figure. CASCADE TikZ diagram redesigned from scratch with vertical flow, proper layering (feedback arrow as gray background path), and no arrow-over-text crossings.",
+    "impact": 0.6
+  }
+}
