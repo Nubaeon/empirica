@@ -1,0 +1,16 @@
+{
+  "finding_id": "8e9941df-3cfe-493f-b7b0-3ec9eb7ed290",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "461ee68f-3029-4cf1-9d10-090a6e546c88",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T09:14:58.534114+00:00",
+  "finding": "Anti-gaming hook audit: Located at sentinel-gate.py:669-691. Logic: if CHECK submitted <30s after PREFLIGHT AND no findings/unknowns logged in that window, block with 'Rushed assessment'. Issues: (1) Addresses a non-existent threat \u2014 LLMs don't strategically inflate vectors across sessions, they follow instructions. The paper itself argues this in 'Why Would the AI Be Honest?' section. (2) Trivially bypassable \u2014 logging any trivial finding satisfies the check. (3) Double-gates what Sentinel already handles \u2014 if KNOW is genuinely low, the gate returns INVESTIGATE regardless. (4) False positive risk \u2014 legitimate fast CHECKs after bootstrap/compact are penalized. (5) Only gates Bash-routed commands, not MCP submissions \u2014 inconsistent enforcement. (6) CoherenceValidator (trajectory analysis) exists in validation_utils.py but is NEVER called from any workflow handler \u2014 dead code.",
+  "impact": 0.75,
+  "goal_id": "edb34b62-caff-4f22-8436-f886fbaabf2b",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Anti-gaming hook audit: Located at sentinel-gate.py:669-691. Logic: if CHECK submitted <30s after PREFLIGHT AND no findings/unknowns logged in that window, block with 'Rushed assessment'. Issues: (1) Addresses a non-existent threat \u2014 LLMs don't strategically inflate vectors across sessions, they follow instructions. The paper itself argues this in 'Why Would the AI Be Honest?' section. (2) Trivially bypassable \u2014 logging any trivial finding satisfies the check. (3) Double-gates what Sentinel already handles \u2014 if KNOW is genuinely low, the gate returns INVESTIGATE regardless. (4) False positive risk \u2014 legitimate fast CHECKs after bootstrap/compact are penalized. (5) Only gates Bash-routed commands, not MCP submissions \u2014 inconsistent enforcement. (6) CoherenceValidator (trajectory analysis) exists in validation_utils.py but is NEVER called from any workflow handler \u2014 dead code.",
+    "impact": 0.75
+  }
+}
