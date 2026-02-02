@@ -1,0 +1,16 @@
+{
+  "finding_id": "57c4c380-810e-4f4f-8281-0ec36876c8a1",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0e3c1624-7e09-4d03-b2f0-70855023ca4c",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T11:11:07.488933+00:00",
+  "finding": "SQLite immutable mode (file:path?mode=ro&immutable=1) solves the WAL read-only mount problem. Unlike Grafana's SQLite plugin which couldn't handle this, aiosqlite's uri=True parameter allows specifying immutable mode which skips journal file creation entirely. This is the correct pattern for any dashboard reading from a mounted SQLite database.",
+  "impact": 0.7,
+  "goal_id": "f7b9a9cb-6da6-4627-b9f2-e743cbac94b9",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "SQLite immutable mode (file:path?mode=ro&immutable=1) solves the WAL read-only mount problem. Unlike Grafana's SQLite plugin which couldn't handle this, aiosqlite's uri=True parameter allows specifying immutable mode which skips journal file creation entirely. This is the correct pattern for any dashboard reading from a mounted SQLite database.",
+    "impact": 0.7
+  }
+}
