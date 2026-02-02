@@ -1,0 +1,33 @@
+{
+  "goal_id": "d94a8c80-9310-4a73-b5c0-9cc897ad76cb",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-02T17:14:40.654576+00:00",
+  "goal_data": {
+    "objective": "Noetic Dashboard: MANAGE pages \u2014 OS-level configuration management (System, Sentinel, Memory, Injection)",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.5,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "System page mirrors system_dashboard.py 7 subsystems (CONFIG, MEMORY, BUS, ATTENTION, INTEGRITY, GATE, NODE) + Signaling layer",
+      "Sentinel page shows gate thresholds, 13 vector configs, drift tiers, domain profiles, loop tracker, env vars, bias corrections",
+      "Memory page shows CBM 9 tunable thresholds, zone allocation, Qdrant status+collections, lessons browser",
+      "Injection page catalogs full injection surface: CLAUDE.md files, 13 hooks, skills, commands, agents, MCP servers, workflow protocol, personas, env vars, breadcrumbs calibration",
+      "No per-project db_path scoping on any MANAGE page",
+      "Data sources: config files (~/.empirica/, ~/.claude/), env vars, Qdrant HTTP, signaling.py constants, filesystem scanning"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-02T17:14:40.654592+00:00",
+      "action": "created"
+    }
+  ]
+}
