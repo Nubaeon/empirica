@@ -1,0 +1,16 @@
+{
+  "finding_id": "94cca75d-e576-45ba-8b3e-fc117a3aec31",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T17:36:50.974211+00:00",
+  "finding": "Dashboard runs in Docker (separate process) so cannot call in-process Python singletons (SystemDashboard, ContextBudgetManager). MANAGE pages must read config files directly: YAML configs from /workspace/empirica/empirica/config/mco/, Python constants via regex extraction from signaling.py, .breadcrumbs.yaml for calibration. This is config visibility, not live runtime monitoring.",
+  "impact": 0.8,
+  "goal_id": "d94a8c80-9310-4a73-b5c0-9cc897ad76cb",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Dashboard runs in Docker (separate process) so cannot call in-process Python singletons (SystemDashboard, ContextBudgetManager). MANAGE pages must read config files directly: YAML configs from /workspace/empirica/empirica/config/mco/, Python constants via regex extraction from signaling.py, .breadcrumbs.yaml for calibration. This is config visibility, not live runtime monitoring.",
+    "impact": 0.8
+  }
+}
