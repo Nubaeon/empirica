@@ -1,0 +1,31 @@
+{
+  "goal_id": "61cb4217-7994-4c79-88b8-66dc047055e6",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-02T16:03:04.417402+00:00",
+  "goal_data": {
+    "objective": "Restructure dashboard navigation: OBSERVE pages as horizontal tabs within project context, clean up test projects, track work properly",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "OBSERVE pages render as horizontal tabs within project detail view",
+      "Test projects removed from database",
+      "Left sidebar simplified to Projects + MANAGE + CONNECT",
+      "All routes verified working"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-02T16:03:04.417412+00:00",
+      "action": "created"
+    }
+  ]
+}
