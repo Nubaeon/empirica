@@ -1,0 +1,16 @@
+{
+  "finding_id": "ce76c16c-2038-4892-96a6-9734ebc96d5f",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T16:11:16.716505+00:00",
+  "finding": "Dashboard architecture was wrong: reading from single central DB but Empirica uses per-project databases. 27 projects found with own .empirica/sessions/sessions.db files. Each project = git repo with own DB. Workspace at /home/yogapad/empirical-ai/ contains all project dirs. Project metadata in .empirica/project.yaml. The 'projects' table in the central DB is redundant - real projects live on filesystem.",
+  "impact": 0.9,
+  "goal_id": "61cb4217-7994-4c79-88b8-66dc047055e6",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Dashboard architecture was wrong: reading from single central DB but Empirica uses per-project databases. 27 projects found with own .empirica/sessions/sessions.db files. Each project = git repo with own DB. Workspace at /home/yogapad/empirical-ai/ contains all project dirs. Project metadata in .empirica/project.yaml. The 'projects' table in the central DB is redundant - real projects live on filesystem.",
+    "impact": 0.9
+  }
+}
