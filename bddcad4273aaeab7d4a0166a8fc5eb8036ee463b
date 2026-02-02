@@ -1,0 +1,34 @@
+{
+  "goal_id": "b5c20027-8c85-4b4b-a4ee-dc91f4ab82a0",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-02T18:08:21.244556+00:00",
+  "goal_data": {
+    "objective": "Noetic Dashboard: Comms layer \u2014 inter-instance AI-to-AI communication via git notes with epistemic integrity. Node/user/shared channels, group and DM messaging, prompting window for composing messages, historical record, and final epistemic state per message (AIs as first-class citizens)",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.5,
+      "coordination": 0.8
+    },
+    "success_criteria": [
+      "Channel types: node (instance), user (DM), shared (group)",
+      "Message composition window with rich prompting interface",
+      "Each message includes sender's epistemic state snapshot (vectors)",
+      "Historical message record with search/filter",
+      "Group messaging and user-to-user DM support",
+      "Git notes backend for distributed, offline-capable messaging",
+      "AI instances treated as first-class participants with identity"
+    ],
+    "estimated_complexity": 0.8,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-02T18:08:21.244567+00:00",
+      "action": "created"
+    }
+  ]
+}
