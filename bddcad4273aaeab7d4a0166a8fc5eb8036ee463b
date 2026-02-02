@@ -1,0 +1,16 @@
+{
+  "finding_id": "f3cc9e2b-c80d-45df-9e74-f3ecc008fe97",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "187114a9-baa2-4305-b4bc-eb4952c89367",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T11:08:25.573529+00:00",
+  "finding": "Confirmed paper fig6 grounded calibration data was stale (pre-scope-fix). Old data: DO gap +0.385, COMPLETION gap +0.125 (from N=7 verifications). Current data after scope-awareness fix (UNSCOPED_ARTIFACT_WEIGHT=0.3): DO gap -0.042, COMPLETION gap -0.025 (from N=18 verifications, 100 evidence observations). The old overestimation was a methodological artifact \u2014 open/incomplete goals were depressing evidence-derived scores. Updated paper fig6 data, calibration.tex table and narrative, discussion.tex references. Current dominant miscalibration is SIGNAL underestimation (-0.176) not DO overestimation.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Confirmed paper fig6 grounded calibration data was stale (pre-scope-fix). Old data: DO gap +0.385, COMPLETION gap +0.125 (from N=7 verifications). Current data after scope-awareness fix (UNSCOPED_ARTIFACT_WEIGHT=0.3): DO gap -0.042, COMPLETION gap -0.025 (from N=18 verifications, 100 evidence observations). The old overestimation was a methodological artifact \u2014 open/incomplete goals were depressing evidence-derived scores. Updated paper fig6 data, calibration.tex table and narrative, discussion.tex references. Current dominant miscalibration is SIGNAL underestimation (-0.176) not DO overestimation.",
+    "impact": 0.8
+  }
+}
