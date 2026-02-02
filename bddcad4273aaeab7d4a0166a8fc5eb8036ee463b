@@ -1,0 +1,16 @@
+{
+  "finding_id": "c0e0a19d-2803-4925-9187-3443b3e738c4",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T16:49:34.156102+00:00",
+  "finding": "CRITICAL: Self-referential Bayesian calibration (PREFLIGHT\u2192POSTFLIGHT) was measuring LEARNING, not calibration accuracy, and feeding it to the Sentinel as bias corrections. Over 3400+ observations, corrections drifted to +0.47 (know), -0.47 (uncertainty), completely overriding honest low-confidence self-assessments. Fix: Sentinel now reads grounded corrections (from post-test evidence), learning trajectory tracked separately (not consumed by Sentinel), all corrections capped at \u00b10.25.",
+  "impact": 0.95,
+  "goal_id": "e1eabad2-d97e-4268-8ff4-8bd3e4ab82a9",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CRITICAL: Self-referential Bayesian calibration (PREFLIGHT\u2192POSTFLIGHT) was measuring LEARNING, not calibration accuracy, and feeding it to the Sentinel as bias corrections. Over 3400+ observations, corrections drifted to +0.47 (know), -0.47 (uncertainty), completely overriding honest low-confidence self-assessments. Fix: Sentinel now reads grounded corrections (from post-test evidence), learning trajectory tracked separately (not consumed by Sentinel), all corrections capped at \u00b10.25.",
+    "impact": 0.95
+  }
+}
