@@ -1,0 +1,13 @@
+{
+  "unknown_id": "68aa7f6a-a981-44a1-bd0d-911385c632c1",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-02T16:26:14.292390+00:00",
+  "unknown": "User said 'the empirica project now only has 200 odd sessions' but investigation found 691 in that DB. Of those: 210 belong to the actual Empirica Framework project_id, 294 are orphans (referencing deleted project_id ea2f33a4), 184 have NULL project_id. The '200 odd' may refer to the 210 properly-linked sessions. Need to clarify if orphan/NULL sessions should be cleaned up or reassigned.",
+  "goal_id": "61cb4217-7994-4c79-88b8-66dc047055e6",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
