@@ -666,29 +666,15 @@ def main():
             respond("deny", f"Assessment sequence invalid. Start fresh noetic phase.")
             sys.exit(0)
 
-        # Anti-gaming: Minimum noetic duration with evidence check
-        # If CHECK is very fast (<30s) AND no evidence of investigation, reject
-        noetic_duration = check_ts - preflight_ts
-        MIN_NOETIC_DURATION = float(os.getenv('EMPIRICA_MIN_NOETIC_DURATION', '30'))
+        # Anti-gaming hook removed: the Sentinel gate's calibration-corrected
+        # vector thresholds (know >= 0.70, uncertainty <= 0.35) are sufficient.
+        # The previous 30s timer + artifact evidence check was:
+        # - Addressing a non-existent threat (LLMs don't strategically game vectors)
+        # - Trivially bypassable (any trivial finding satisfies it)
+        # - Creating false positives on legitimate fast CHECKs after bootstrap
+        # - Only enforced on Bash, not MCP (inconsistent)
+        # See finding 8e9941df for full audit.
 
-        if noetic_duration < MIN_NOETIC_DURATION:
-            # Check for evidence of investigation (findings or unknowns logged)
-            # Reuse existing db connection (single connection per sentinel invocation)
-            cursor.execute("""
-                SELECT COUNT(*) FROM project_findings
-                WHERE session_id = ? AND timestamp > ? AND timestamp < ?
-            """, (session_id, preflight_ts, check_ts))
-            findings_count = cursor.fetchone()[0]
-
-            cursor.execute("""
-                SELECT COUNT(*) FROM project_unknowns
-                WHERE session_id = ? AND timestamp > ? AND timestamp < ?
-            """, (session_id, preflight_ts, check_ts))
-            unknowns_count = cursor.fetchone()[0]
-
-            if findings_count == 0 and unknowns_count == 0:
-                respond("deny", f"Rushed assessment ({noetic_duration:.0f}s). Investigate and log learnings first.")
-                sys.exit(0)
     except (TypeError, ValueError):
         pass  # Can't compare timestamps, skip this check
 

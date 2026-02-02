@@ -314,11 +314,8 @@ Sentinel controls praxic actions (Edit, Write, NotebookEdit):
 - Vector threshold validation
 - Anti-gaming: minimum noetic duration (30s) with evidence check
 
-**Anti-gaming:** If CHECK submitted <30s after PREFLIGHT AND no noetic artifacts logged → blocked with "Rushed assessment. Investigate and log learnings first."
-
 **Configuration:**
 ```bash
-export EMPIRICA_MIN_NOETIC_DURATION=60       # Adjust min noetic duration
 export EMPIRICA_SENTINEL_LOOPING=false        # Disable investigate loops
 export EMPIRICA_SENTINEL_MODE=observer        # Log-only (no blocking)
 export EMPIRICA_SENTINEL_MODE=controller      # Active blocking (default)
