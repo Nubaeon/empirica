@@ -1,0 +1,31 @@
+{
+  "goal_id": "4e7a3559-cec9-439b-b73b-b768680df91b",
+  "session_id": "567650e5-1bb6-46da-82bc-00f945eb51c7",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T16:09:44.242408+00:00",
+  "goal_data": {
+    "objective": "Wire relational docs into memory retrieval pipeline - when retrieving eidetic facts, lessons, or findings, also retrieve related reference documents that provide supporting context",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Reference docs linked to memory entries via tags/metadata",
+      "retrieve_task_patterns() returns related_docs when relevant",
+      "refdoc_add wired to tag docs with topic keywords",
+      "PREFLIGHT injection includes supporting reference docs"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T16:09:44.242418+00:00",
+      "action": "created"
+    }
+  ]
+}
