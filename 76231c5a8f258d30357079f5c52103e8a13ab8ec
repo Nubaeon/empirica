@@ -1,0 +1,31 @@
+{
+  "goal_id": "6ec8403d-444b-414e-aa26-a6029e84d5a3",
+  "session_id": "f37dd044-6669-459f-89ed-fd6ec385d16d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T23:43:48.995892+00:00",
+  "goal_data": {
+    "objective": "Wire memory-prime CLI/MCP: Expose AttentionBudgetCalculator for epistemic priming before work - allocate attention budget across domains using Shannon information gain",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "CLI command: empirica memory-prime --session-id <ID> --domains '<json>' --budget <tokens>",
+      "MCP tool: memory_prime with same params",
+      "Returns: per-domain token allocations with diminishing returns applied",
+      "Uses existing attention_budget.py infrastructure"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T23:43:48.995903+00:00",
+      "action": "created"
+    }
+  ]
+}
