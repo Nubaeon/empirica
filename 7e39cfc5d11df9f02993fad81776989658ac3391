@@ -1,0 +1,16 @@
+{
+  "finding_id": "5e2b5c68-fb22-4cc2-a702-6de5845c8c7e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "cf3e46c9-4c41-4fe4-b88d-58b211dce949",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T11:46:58.653045+00:00",
+  "finding": "Comms page now integrates with optional Noetic Firewall via EMPIRICA_FIREWALL_URL. Outgoing messages are scanned before sending; blocked messages return error with reason. Graceful degradation if firewall unavailable. Firewall decision stored in message epistemic_envelope for audit trail.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Comms page now integrates with optional Noetic Firewall via EMPIRICA_FIREWALL_URL. Outgoing messages are scanned before sending; blocked messages return error with reason. Graceful degradation if firewall unavailable. Firewall decision stored in message epistemic_envelope for audit trail.",
+    "impact": 0.8
+  }
+}
