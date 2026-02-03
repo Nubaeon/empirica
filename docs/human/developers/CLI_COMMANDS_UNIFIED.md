@@ -185,6 +185,21 @@
 - **release-ready** - Check if codebase is ready for release (6-point verification)
 - **docs-assess** - Assess documentation coverage using epistemic vectors
 
+### 26. Inter-Agent Messaging (7 commands)
+- **message-send** - Send message to another AI agent via git notes
+- **message-inbox** - Check inbox for messages (filtered by channel, status)
+- **message-read** - Mark a message as read
+- **message-reply** - Reply to a message (preserves thread)
+- **message-thread** - View conversation thread
+- **message-channels** - List channels with unread counts
+- **message-cleanup** - Remove expired messages
+
+### 27. Workspace Database (4 commands)
+- **workspace-discover** - Discover and register projects under a directory
+- **workspace-sync** - Sync stats from all registered projects
+- **workspace-patterns** - Search cross-project patterns
+- **workspace-link** - Create knowledge transfer link between projects
+
 ---
 
 ## Command Details
@@ -1102,6 +1117,84 @@ expected information gain. Results are aggregated via `agent-aggregate`.
 - `uncertainty`: Documentation gaps (0.0-1.0)
 - `coverage`: Percentage of features documented
 - `recommendations`: Specific documentation gaps to address
+
+---
+
+### Inter-Agent Messaging Commands
+
+Messages are stored in git notes at `refs/notes/empirica/messages/<channel>/<id>` and sync via normal git push/pull.
+
+#### `message-send`
+**Purpose:** Send message to another AI agent
+**Usage:** `empirica message-send --to-ai-id <ai_id> --subject <text> --body <text> [options]`
+**Options:**
+- `--to-ai-id`: Recipient AI identifier (required)
+- `--channel`: Message channel (default: direct)
+- `--subject`: Message subject (required)
+- `--body`: Message body (required)
+- `--priority`: Priority level (normal, high)
+- `--ttl`: Time to live in seconds (default: 86400)
+
+#### `message-inbox`
+**Purpose:** Check inbox for messages
+**Usage:** `empirica message-inbox --ai-id <ai_id> [options]`
+**Options:**
+- `--ai-id`: Your AI identifier (required)
+- `--channel`: Filter by channel
+- `--status`: Filter by status (unread, read, all) - default: unread
+- `--limit`: Maximum messages to return (default: 50)
+
+#### `message-read`
+**Purpose:** Mark a message as read
+**Usage:** `empirica message-read --message-id <id> --channel <channel> --ai-id <ai_id>`
+
+#### `message-reply`
+**Purpose:** Reply to a message (preserves thread)
+**Usage:** `empirica message-reply --message-id <id> --channel <channel> --body <text>`
+
+#### `message-thread`
+**Purpose:** View conversation thread
+**Usage:** `empirica message-thread --thread-id <id> [--channel <channel>]`
+
+#### `message-channels`
+**Purpose:** List channels with unread counts
+**Usage:** `empirica message-channels [--ai-id <ai_id>]`
+
+#### `message-cleanup`
+**Purpose:** Remove expired messages
+**Usage:** `empirica message-cleanup [--dry-run]`
+
+---
+
+### Workspace Database Commands
+
+The workspace database (`~/.empirica/workspace/workspace.db`) provides a global registry of all projects with trajectory pointers for cross-project pattern matching.
+
+#### `workspace-discover`
+**Purpose:** Discover and register projects under a directory
+**Usage:** `empirica workspace-discover --path <directory>`
+**Notes:** Scans for directories with `.empirica/` subdirectories and registers them in the global workspace.
+
+#### `workspace-sync`
+**Purpose:** Sync statistics from all registered projects
+**Usage:** `empirica workspace-sync [--project-id <id>]`
+**Notes:** Pulls transaction counts, findings, unknowns, etc. from each project's local database into the workspace registry.
+
+#### `workspace-patterns`
+**Purpose:** Search cross-project patterns
+**Usage:** `empirica workspace-patterns [options]`
+**Options:**
+- `--type`: Pattern type (learning, mistake, dead_end, success)
+- `--domain`: Filter by domain (e.g., caching, auth)
+- `--min-confidence`: Minimum confidence threshold
+
+#### `workspace-link`
+**Purpose:** Create knowledge transfer link between projects
+**Usage:** `empirica workspace-link --source <project_id> --target <project_id> --type <link_type>`
+**Options:**
+- `--type`: Link type (shared_learning, dependency, related, derived)
+- `--artifact-id`: Specific artifact being linked
+- `--notes`: Link description
 
 ---
 

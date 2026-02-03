@@ -224,13 +224,68 @@ cp -r .empirica/ empirica-backup-$(date +%Y%m%d)/
 cp -r empirica-backup-*/.empirica/ .
 ```
 
+## Global Workspace: Cross-Project View
+
+Beyond individual projects, Empirica maintains a **global workspace registry** at `~/.empirica/workspace/workspace.db`.
+
+### Why This Matters
+
+Each project has its own `.empirica/` directory with findings, unknowns, goals, and transactions. The workspace database provides:
+
+- **Portfolio view**: See all 27+ projects at a glance
+- **Cross-project patterns**: "Every time I approach caching, I underestimate complexity"
+- **Anti-patterns**: "Redis approach failed in 3/5 projects — avoid unless X"
+- **Knowledge transfer**: Link findings across projects
+
+### Workspace Commands
+
+```bash
+# Discover all projects under a directory
+empirica workspace-init --path ~/projects
+
+# List all registered projects with stats
+empirica workspace-overview
+
+# Sync stats from a project's local database
+empirica workspace-map
+```
+
+### What Gets Tracked Globally
+
+| Per-Project | Global Workspace |
+|-------------|------------------|
+| Findings, unknowns, dead-ends | Project registry with trajectory paths |
+| Goals, subtasks | Cross-project patterns |
+| Sessions, transactions | Knowledge transfer links |
+| Epistemic state | Summary statistics |
+
+---
+
+## Sessions vs Transactions
+
+**Important distinction:**
+
+| Concept | What It Is | Scope |
+|---------|------------|-------|
+| **Session** | Context window (compact boundary) | AI internal |
+| **Transaction** | PREFLIGHT→work→POSTFLIGHT→post-test | Epistemic measurement |
+
+- Sessions can span multiple transactions
+- Transactions can span multiple sessions (if compaction happens mid-transaction)
+- **Transactions are the atomic unit** for epistemic trajectories
+
+All noetic artifacts (findings, unknowns, dead-ends) include a `transaction_id` linking them to the measurement window they belong to.
+
+---
+
 ## Summary
 
 **Key Points:**
 1. ✅ **Auto-switching**: Empirica detects projects from git remote
 2. ✅ **Auto-migrations**: Database schema updates automatically
 3. ✅ **Isolation**: Each project has separate database/config
-4. ✅ **No manual DB management**: Empirica handles everything
-5. ✅ **Context loading**: Always bootstrap when starting work
+4. ✅ **Global registry**: Workspace database tracks all projects
+5. ✅ **Cross-project patterns**: Learn from trajectories across projects
+6. ✅ **Transaction tracking**: All artifacts linked to measurement windows
 
 **Need help?** Check `empirica project-list` and `empirica project-bootstrap --help`

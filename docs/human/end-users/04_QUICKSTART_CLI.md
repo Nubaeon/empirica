@@ -354,7 +354,27 @@ empirica unknown-log --project-id <ID>        # Clarify
 empirica goals-discover                       # Find work
 empirica goals-claim --goal-id <ID>           # Start
 empirica goals-complete --goal-id <ID>        # Finish
+
+# Global Workspace (cross-project)
+empirica workspace-overview                   # Portfolio view
+empirica workspace-map                        # Refresh stats
 ```
+
+---
+
+## Sessions vs Transactions
+
+**Key distinction** for understanding Empirica:
+
+| Concept | What It Is | When It Ends |
+|---------|------------|--------------|
+| **Session** | Context window | When Claude compacts memory |
+| **Transaction** | Epistemic measurement unit | POSTFLIGHT completes |
+
+- **Sessions** are internal (context boundaries)
+- **Transactions** are the real unit (PREFLIGHT→work→POSTFLIGHT)
+- All findings/unknowns/dead-ends have a `transaction_id`
+- Transactions can span multiple sessions (if compaction happens mid-work)
 
 ---
 

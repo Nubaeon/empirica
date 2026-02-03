@@ -52,18 +52,24 @@ Claude logs this as a *finding* in that project. It stays with the project, trav
 
 ### 3. Workspace Data (Your Portfolio)
 
-**What:** An overview of all your projects
-**Where:** Workspace configuration (`.empirica-workspace` file)
+**What:** Global registry of all your projects with trajectory pointers
+**Where:** `~/.empirica/workspace/workspace.db`
 
 If you work on multiple projects, the workspace layer gives you:
-- Which projects are active vs dormant
-- Portfolio-level analytics
-- Cross-project search
+- **Project registry**: All projects with paths to their `.empirica/` directories
+- **Cross-project patterns**: "I consistently underestimate caching complexity"
+- **Anti-patterns**: "Redis approach failed in 3/5 projects — avoid unless X"
+- **Knowledge transfer links**: Connect related learnings across codebases
+- **Portfolio analytics**: Transaction counts, findings, dormancy detection
 
 **Example conversation with Claude:**
 > "What projects have I been neglecting lately?"
 
-Claude checks your workspace to see which projects haven't had activity.
+Claude checks the workspace database for projects with stale `last_transaction_timestamp`.
+
+> "What have I learned about authentication across all projects?"
+
+Claude searches cross-project patterns and linked findings.
 
 ---
 
@@ -80,21 +86,26 @@ Claude checks your workspace to see which projects haven't had activity.
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  GLOBAL (CRM)                    │  PROJECT              │
-│  ~/.empirica/crm/                 │  project/.empirica/   │
-│                                   │                       │
-│  • Clients                        │  • Goals              │
-│  • Engagements                    │  • Findings           │
-│  • Relationship memories          │  • Unknowns           │
-│  • Contact preferences            │  • Sessions           │
-│                                   │  • Learning progress  │
-│  Cross-project, follows you       │  Stays with project   │
-└───────────────────────────────────┴───────────────────────┘
+│  GLOBAL (~/.empirica/)                                       │
+├─────────────────────────────────────────────────────────────┤
+│  crm/crm.db           │  workspace/workspace.db             │
+│  • Clients            │  • Project registry                 │
+│  • Engagements        │  • Trajectory pointers              │
+│  • Relationship       │  • Cross-project patterns           │
+│    memories           │  • Knowledge transfer links         │
+└───────────────────────┴─────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  WORKSPACE (Portfolio View)                                  │
-│  Sees all your projects, their health, your activity        │
+│  PER-PROJECT (project/.empirica/)                            │
+├─────────────────────────────────────────────────────────────┤
+│  sessions/sessions.db                                        │
+│  • Goals, subtasks                                           │
+│  • Findings, unknowns, dead-ends (with transaction_id)      │
+│  • Epistemic reflexes (PREFLIGHT/CHECK/POSTFLIGHT)          │
+│  • Session history                                           │
+│                                                              │
+│  Stays with project, travels with code via git notes        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -177,6 +188,30 @@ All of this works without touching any code or command line.
 | "Link this finding to [client]" | Both (with link) | Connects the two layers |
 | "What do I know about [client]?" | CRM + linked findings | Queries across layers |
 | "Show me my active projects" | Workspace | Portfolio overview |
+
+---
+
+## Sessions vs Transactions
+
+A key distinction that helps understand how Empirica tracks learning:
+
+| Concept | What It Is | Purpose |
+|---------|------------|---------|
+| **Session** | A context window | Tracks when Claude's memory compacts |
+| **Transaction** | PREFLIGHT→work→POSTFLIGHT | Measures actual learning |
+
+**Sessions** are the AI's "context windows" — they end when memory compacts. They're internal bookkeeping.
+
+**Transactions** are the real unit of epistemic measurement:
+1. PREFLIGHT: "Here's what I know before starting"
+2. Work: Findings, unknowns, dead-ends logged
+3. POSTFLIGHT: "Here's what I learned"
+4. Post-test: Grounded verification against evidence
+
+All noetic artifacts (findings, unknowns, dead-ends) have a `transaction_id` linking them to this measurement window. This enables:
+- "Show me everything learned in transaction X"
+- "What was the learning delta for this chunk of work?"
+- "How did my confidence change during this investigation?"
 
 ---
 
