@@ -1,0 +1,16 @@
+{
+  "finding_id": "4be27171-a858-48c9-a8ba-56d5ffff1056",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "18ffe36e-7bdc-4586-bd94-9fa731a08d81",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T22:58:41.485752+00:00",
+  "finding": "empirica-workspace architecture: WorkspaceDiscovery (locates DBs), WorkspaceContext (snapshot with EpistemicState), PortfolioAnalytics (cross-project queries). TUI dashboard exists (Textual), web mode stubbed. Three scopes: Project (per-repo .empirica/), Workspace (aggregated sessions.db), Global (CRM spans workspaces). Project hierarchies via parent_project_id. Client-project linking via engagements table.",
+  "impact": 0.8,
+  "goal_id": "7a5306cd-c7a4-42bc-9772-f36044ffa945",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "empirica-workspace architecture: WorkspaceDiscovery (locates DBs), WorkspaceContext (snapshot with EpistemicState), PortfolioAnalytics (cross-project queries). TUI dashboard exists (Textual), web mode stubbed. Three scopes: Project (per-repo .empirica/), Workspace (aggregated sessions.db), Global (CRM spans workspaces). Project hierarchies via parent_project_id. Client-project linking via engagements table.",
+    "impact": 0.8
+  }
+}
