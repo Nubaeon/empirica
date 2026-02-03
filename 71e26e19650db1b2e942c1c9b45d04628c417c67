@@ -1,0 +1,16 @@
+{
+  "finding_id": "a399236e-8a46-4881-a28d-8e04263de813",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:09:31.687002+00:00",
+  "finding": "Llama Guard 3: 8B and 1B variants on Ollama (llama-guard3:8b, llama-guard3:1b). 13 hazard categories from MLCommons taxonomy. 1B version for low-latency, 8B for code interpreter safety (S14). Quantized versions reduce size ~40% with minimal performance impact. Multi-lingual (8 languages).",
+  "impact": 0.8,
+  "goal_id": "2125c0a9-10dc-4a9d-91d2-3c4c6aece556",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Llama Guard 3: 8B and 1B variants on Ollama (llama-guard3:8b, llama-guard3:1b). 13 hazard categories from MLCommons taxonomy. 1B version for low-latency, 8B for code interpreter safety (S14). Quantized versions reduce size ~40% with minimal performance impact. Multi-lingual (8 languages).",
+    "impact": 0.8
+  }
+}
