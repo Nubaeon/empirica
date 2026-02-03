@@ -1,0 +1,16 @@
+{
+  "finding_id": "4c573d0f-53ee-4122-b5d3-bdb97a2db8d5",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:19:33.843549+00:00",
+  "finding": "LLM Guard (Protect AI): 2.5M downloads, ONNX-optimized for CPU (5x cheaper than GPU), FastAPI deployment ready. Dual-gate architecture (input + output validation). GPU-optimized ONNX models available on HuggingFace. Production-ready modular scanner system.",
+  "impact": 0.8,
+  "goal_id": "70f657eb-3d35-4256-8e0d-1569996cd689",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "LLM Guard (Protect AI): 2.5M downloads, ONNX-optimized for CPU (5x cheaper than GPU), FastAPI deployment ready. Dual-gate architecture (input + output validation). GPU-optimized ONNX models available on HuggingFace. Production-ready modular scanner system.",
+    "impact": 0.8
+  }
+}
