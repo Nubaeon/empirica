@@ -1,0 +1,13 @@
+{
+  "unknown_id": "4d54686b-c888-4e14-8441-a417f2d2da1b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T09:01:21.429659+00:00",
+  "unknown": "How should learning trajectory data be used if not for bias correction? Options: (1) Pure analytics/dashboards, (2) Inform retrieval depth at PREFLIGHT (high learning velocity \u2192 less context needed), (3) Detect learning plateaus (trigger different investigation strategies), (4) All of the above",
+  "goal_id": "e1eabad2-d97e-4268-8ff4-8bd3e4ab82a9",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
