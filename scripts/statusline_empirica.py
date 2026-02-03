@@ -397,7 +397,14 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
             candidate = parent / '.empirica' / f'active_session{instance_suffix}'
             if candidate.exists():
                 try:
-                    session_id = candidate.read_text().strip()
+                    content = candidate.read_text().strip()
+                    # Handle JSON format (new) or plain session_id (legacy)
+                    if content.startswith('{'):
+                        import json as _json
+                        data = _json.loads(content)
+                        session_id = data.get('session_id', '')
+                    else:
+                        session_id = content
                     if session_id:
                         cursor.execute("""
                             SELECT session_id, ai_id, start_time
@@ -417,7 +424,14 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
         global_instance_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
         if global_instance_file.exists():
             try:
-                session_id = global_instance_file.read_text().strip()
+                content = global_instance_file.read_text().strip()
+                # Handle JSON format (new) or plain session_id (legacy)
+                if content.startswith('{'):
+                    import json as _json
+                    data = _json.loads(content)
+                    session_id = data.get('session_id', '')
+                else:
+                    session_id = content
                 if session_id:
                     cursor.execute("""
                         SELECT session_id, ai_id, start_time
@@ -436,7 +450,14 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
             candidate = parent / '.empirica' / 'active_session'
             if candidate.exists():
                 try:
-                    session_id = candidate.read_text().strip()
+                    content = candidate.read_text().strip()
+                    # Handle JSON format (new) or plain session_id (legacy)
+                    if content.startswith('{'):
+                        import json as _json
+                        data = _json.loads(content)
+                        session_id = data.get('session_id', '')
+                    else:
+                        session_id = content
                     if session_id:
                         cursor.execute("""
                             SELECT session_id, ai_id, start_time
@@ -808,14 +829,49 @@ def main():
                 print(f"{Colors.GRAY}[empirica]{Colors.RESET} {Colors.YELLOW}OFF-RECORD{Colors.RESET}")
             return
 
-        # Auto-detect project from current directory (like git does with .git/)
-        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) .empirica/ in cwd or parents
-        # NOTE: We do NOT fall back to global ~/.empirica/ to prevent cross-project data leakage
-        project_path = os.getenv('EMPIRICA_PROJECT_PATH')
+        # Auto-detect project from ACTIVE SESSION first (prevents confusion when cwd changes)
+        # Priority: 1) active_session file with project_path, 2) EMPIRICA_PROJECT_PATH env, 3) cwd search
+        # This ensures statusline shows the EMPIRICA project, not just whichever git repo we're in
+        project_path = None
         is_local_project = False
 
+        # Priority 1: Check active_session file for project_path (instance-specific)
+        # This is the key fix - session knows its project even when cwd changes
+        try:
+            from empirica.utils.session_resolver import get_instance_id
+            current_instance_id = get_instance_id()
+            instance_suffix = ""
+            if current_instance_id:
+                safe_instance = current_instance_id.replace(":", "_").replace("%", "")
+                instance_suffix = f"_{safe_instance}"
+
+            # Check global first (more reliable for cross-directory work)
+            for base in [Path.home() / '.empirica', Path.cwd() / '.empirica']:
+                candidate = base / f'active_session{instance_suffix}'
+                if candidate.exists():
+                    try:
+                        content = candidate.read_text().strip()
+                        # Try JSON format (new) first, fall back to plain session_id (legacy)
+                        if content.startswith('{'):
+                            import json as _json
+                            data = _json.loads(content)
+                            if 'project_path' in data:
+                                project_path = data['project_path']
+                                is_local_project = True
+                                break
+                    except Exception:
+                        pass
+        except ImportError:
+            pass
+
+        # Priority 2: EMPIRICA_PROJECT_PATH env var
         if not project_path:
-            # Search UPWARD for .empirica/ like git does for .git/
+            project_path = os.getenv('EMPIRICA_PROJECT_PATH')
+            if project_path:
+                is_local_project = True
+
+        # Priority 3: Search UPWARD for .empirica/ like git does for .git/
+        if not project_path:
             current = Path.cwd()
             for parent in [current] + list(current.parents):
                 candidate_db = parent / '.empirica' / 'sessions' / 'sessions.db'
@@ -828,11 +884,13 @@ def main():
 
         if project_path:
             db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
+            if not Path(db_path).exists():
+                print(f"{Colors.GRAY}[no db]{Colors.RESET}")
+                return
             db = SessionDatabase(db_path=str(db_path))
             is_local_project = True
         else:
-            # No local .empirica/ found - show "no project" instead of using global data
-            # This prevents showing Empirica project data in unrelated projects
+            # No project found - show "no project" instead of using global data
             print(f"{Colors.GRAY}[no project]{Colors.RESET}")
             return
 

@@ -385,11 +385,19 @@ def handle_session_create_command(args):
             active_session_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
         active_session_file.parent.mkdir(parents=True, exist_ok=True)
         # Atomic write: temp file + rename prevents partial reads from concurrent access
+        # Store JSON with session_id AND project_path so statusline can find
+        # the correct DB even when cwd changes (prevents user confusion about data loss)
         import tempfile
+        import json as _json
+        active_session_data = {
+            "session_id": session_id,
+            "project_path": str(Path.cwd()),
+            "ai_id": ai_id
+        }
         tmp_fd, tmp_path = tempfile.mkstemp(dir=str(active_session_file.parent))
         try:
             with os.fdopen(tmp_fd, 'w') as tmp_f:
-                tmp_f.write(session_id)
+                tmp_f.write(_json.dumps(active_session_data))
             os.rename(tmp_path, str(active_session_file))
         except BaseException:
             try:

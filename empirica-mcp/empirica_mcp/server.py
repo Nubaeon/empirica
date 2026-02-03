@@ -1719,7 +1719,14 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
             else:
                 active_session_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
             active_session_file.parent.mkdir(parents=True, exist_ok=True)
-            active_session_file.write_text(session_id)
+            # Store JSON with session_id AND project_path so statusline can find
+            # the correct DB even when cwd changes (prevents user confusion about data loss)
+            active_session_data = {
+                "session_id": session_id,
+                "project_path": str(Path.cwd()),
+                "ai_id": ai_id
+            }
+            active_session_file.write_text(json.dumps(active_session_data))
 
             result = {
                 "ok": True,
