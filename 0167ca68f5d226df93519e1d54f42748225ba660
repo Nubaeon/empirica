@@ -1,0 +1,16 @@
+{
+  "finding_id": "a947a50f-4ef1-4045-ac72-4c865e654b09",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:19:26.227774+00:00",
+  "finding": "Qwen3Guard (Alibaba Oct 2025): 0.6B/4B/8B variants with dual modes - Gen (full-context classifier) and Stream (token-level for streaming responses). Tri-level risk labeling, 119 language support. Stream mode enables early intervention with lower latency. Open-weights Apache 2.0.",
+  "impact": 0.85,
+  "goal_id": "70f657eb-3d35-4256-8e0d-1569996cd689",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Qwen3Guard (Alibaba Oct 2025): 0.6B/4B/8B variants with dual modes - Gen (full-context classifier) and Stream (token-level for streaming responses). Tri-level risk labeling, 119 language support. Stream mode enables early intervention with lower latency. Open-weights Apache 2.0.",
+    "impact": 0.85
+  }
+}
