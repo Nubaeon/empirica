@@ -1,0 +1,16 @@
+{
+  "finding_id": "7131f5d3-a5df-489e-afb6-684e5604ea11",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T09:01:00.535228+00:00",
+  "finding": "CASCADE phases have distinct retrieval vs storage roles: PREFLIGHT and CHECK are RETRIEVAL phases (inject context \u2014 eidetic facts, episodic narratives, patterns, dead-ends, warnings). POSTFLIGHT is the STORAGE phase (extract from conversation \u2014 findings, unknowns, session arcs, capability beliefs). This is the formal contract for Noetic RAG.",
+  "impact": 0.9,
+  "goal_id": "e1eabad2-d97e-4268-8ff4-8bd3e4ab82a9",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CASCADE phases have distinct retrieval vs storage roles: PREFLIGHT and CHECK are RETRIEVAL phases (inject context \u2014 eidetic facts, episodic narratives, patterns, dead-ends, warnings). POSTFLIGHT is the STORAGE phase (extract from conversation \u2014 findings, unknowns, session arcs, capability beliefs). This is the formal contract for Noetic RAG.",
+    "impact": 0.9
+  }
+}
