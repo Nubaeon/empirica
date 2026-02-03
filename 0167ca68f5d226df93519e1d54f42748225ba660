@@ -1,0 +1,16 @@
+{
+  "finding_id": "627c7e90-3b5d-4b3d-8589-e031c144f02e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:19:31.179119+00:00",
+  "finding": "Chinese model safety paradox: Qwen-2.5 has 82% jailbreak failure rate (worse than DeepSeek's 37.6%), but only 1.2% prompt injection failure vs DeepSeek's 57.1%. Different models excel at different attack types - confirms need for layered defense with multiple classifiers.",
+  "impact": 0.85,
+  "goal_id": "70f657eb-3d35-4256-8e0d-1569996cd689",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Chinese model safety paradox: Qwen-2.5 has 82% jailbreak failure rate (worse than DeepSeek's 37.6%), but only 1.2% prompt injection failure vs DeepSeek's 57.1%. Different models excel at different attack types - confirms need for layered defense with multiple classifiers.",
+    "impact": 0.85
+  }
+}
