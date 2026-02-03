@@ -1,0 +1,32 @@
+{
+  "goal_id": "1cbf73f6-cbb4-4b29-b1c8-57a3b0a83abb",
+  "session_id": "567650e5-1bb6-46da-82bc-00f945eb51c7",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T13:17:19.332449+00:00",
+  "goal_data": {
+    "objective": "Integrate Epistemic Avatar as floating widget in Noetic Dashboard with real-time session state streaming",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Avatar widget component in NiceGUI",
+      "Static file serving for avatar assets",
+      "WebSocket endpoint streams session epistemic state",
+      "Avatar visible on dashboard pages",
+      "Avatar reacts to live session changes"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T13:17:19.332461+00:00",
+      "action": "created"
+    }
+  ]
+}
