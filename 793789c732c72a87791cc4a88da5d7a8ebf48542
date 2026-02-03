@@ -1,0 +1,16 @@
+{
+  "finding_id": "6d8f3a46-43b2-48a7-a988-6c361f1e0357",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T09:10:28.688340+00:00",
+  "finding": "OpenClaw epistemic assessment: Extremely popular (100k+ GitHub stars in 2 months) but fundamentally ungrounded. Core issues: (1) CVE-2026-25253 allows 1-click RCE via auth token exfiltration, (2) Moltbook agents vulnerable to indirect prompt injection from other agents, (3) 400+ malicious skills distributed via ClawHub, (4) ZeroLeaks scored it 2/100 with 84% extraction rate and 91% injection success. Architecture has Lane Queue for serial execution but lacks epistemic integrity layer \u2014 no confidence tracking, no grounded verification, no sentinel gates. Memory is simple JSONL + MEMORY.md but no calibration or drift detection.",
+  "impact": 0.9,
+  "goal_id": "b5c20027-8c85-4b4b-a4ee-dc91f4ab82a0",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "OpenClaw epistemic assessment: Extremely popular (100k+ GitHub stars in 2 months) but fundamentally ungrounded. Core issues: (1) CVE-2026-25253 allows 1-click RCE via auth token exfiltration, (2) Moltbook agents vulnerable to indirect prompt injection from other agents, (3) 400+ malicious skills distributed via ClawHub, (4) ZeroLeaks scored it 2/100 with 84% extraction rate and 91% injection success. Architecture has Lane Queue for serial execution but lacks epistemic integrity layer \u2014 no confidence tracking, no grounded verification, no sentinel gates. Memory is simple JSONL + MEMORY.md but no calibration or drift detection.",
+    "impact": 0.9
+  }
+}
