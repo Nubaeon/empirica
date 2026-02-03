@@ -1,0 +1,13 @@
+{
+  "unknown_id": "0a4d0d68-7139-46c0-bddc-69a5fc5c8c43",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:12:05.607544+00:00",
+  "unknown": "Implementation design for adaptive retrieval depth: Where should time gap detection live? Options: (1) In PREFLIGHT handler \u2014 check last session timestamp, adjust limit params to search_eidetic/search_episodic. (2) In project-bootstrap \u2014 already has session context. (3) In pattern_retrieval.py \u2014 add depth parameter to retrieve_task_patterns(). Need to decide canonical location.",
+  "goal_id": "9a502aa2-b4c5-4373-8932-40668f499e7c",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
