@@ -1,0 +1,16 @@
+{
+  "finding_id": "402f7c79-acc3-4f28-b03d-21236d83aecf",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:05:03.560835+00:00",
+  "finding": "Git notes inter-agent messaging is operational. Found 2 unread messages from philipps-MacBook-Pro.local dated Feb 1. Message schema already has: from/to (ai_id + machine), channel, subject, body, thread_id, reply_to, status, read_by array, ttl, priority, metadata. Missing from current schema: epistemic vectors (13), evidence pointers, cryptographic signature. This is the foundation for the Noetic Firewall comms layer.",
+  "impact": 0.8,
+  "goal_id": "2125c0a9-10dc-4a9d-91d2-3c4c6aece556",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Git notes inter-agent messaging is operational. Found 2 unread messages from philipps-MacBook-Pro.local dated Feb 1. Message schema already has: from/to (ai_id + machine), channel, subject, body, thread_id, reply_to, status, read_by array, ttl, priority, metadata. Missing from current schema: epistemic vectors (13), evidence pointers, cryptographic signature. This is the foundation for the Noetic Firewall comms layer.",
+    "impact": 0.8
+  }
+}
