@@ -1,0 +1,16 @@
+{
+  "finding_id": "b03ae46f-45e4-439d-ba92-5bcbf039653f",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "f37dd044-6669-459f-89ed-fd6ec385d16d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T23:50:34.402797+00:00",
+  "finding": "Wired memory budget infrastructure to CLI: memory-prime (attention budget), memory-scope (context zones), memory-value (info-gain retrieval), pattern-check (real-time sentinel), session-rollup (agent aggregation), memory-report (budget report). All 6 commands functional via empirica CLI.",
+  "impact": 0.8,
+  "goal_id": "00b4fa06-92a1-4151-80d8-00012788c17b",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Wired memory budget infrastructure to CLI: memory-prime (attention budget), memory-scope (context zones), memory-value (info-gain retrieval), pattern-check (real-time sentinel), session-rollup (agent aggregation), memory-report (budget report). All 6 commands functional via empirica CLI.",
+    "impact": 0.8
+  }
+}
