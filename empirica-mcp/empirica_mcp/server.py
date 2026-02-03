@@ -1623,6 +1623,12 @@ async def route_to_cli(tool_name: str, arguments: dict) -> List[types.TextConten
     # Build CLI command
     cmd = build_cli_command(tool_name, arguments)
 
+    # Determine working directory for CLI execution
+    # session_create with project_path runs from target project (enables project switch without cd)
+    cwd = None
+    if tool_name == "session_create" and arguments.get("project_path"):
+        cwd = arguments["project_path"]
+
     # Execute in async executor (non-blocking)
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(
@@ -1631,7 +1637,7 @@ async def route_to_cli(tool_name: str, arguments: dict) -> List[types.TextConten
             cmd,
             capture_output=True,
             text=True,
-            cwd=None  # Use current working directory where .empirica/ exists
+            cwd=cwd  # Use project_path if specified, else current working directory
         )
     )
 
@@ -1900,6 +1906,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "check-submit": ["confidence_to_proceed"],  # check-submit doesn't use confidence_to_proceed
         "checkpoint-create": ["vectors"],  # checkpoint-create doesn't accept --vectors, should be in metadata
         "project-bootstrap": ["mode"],  # project-bootstrap doesn't accept --mode (MCP-only parameter for future use)
+        "session-create": ["project_path"],  # project_path is used as cwd, not CLI flag
     }
 
     cmd = [EMPIRICA_CLI] + tool_map.get(tool_name, [tool_name])

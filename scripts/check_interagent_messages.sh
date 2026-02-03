@@ -1,0 +1,127 @@
+#!/bin/bash
+# check_interagent_messages.sh - Cron job for checking interagent messages
+#
+# Syncs git notes from remotes and checks for new messages.
+# Sends desktop notification if unread messages exist.
+#
+# Usage:
+#   Add to crontab: */5 * * * * /path/to/check_interagent_messages.sh
+#
+# Environment:
+#   EMPIRICA_AI_ID - AI identity to check inbox for (default: claude-code)
+#   EMPIRICA_WORKSPACE - Workspace root to scan (default: ~/empirical-ai)
+#   EMPIRICA_NOTIFY - Notification method: desktop, log, none (default: desktop)
+
+set -euo pipefail
+
+AI_ID="${EMPIRICA_AI_ID:-claude-code}"
+WORKSPACE="${EMPIRICA_WORKSPACE:-$HOME/empirical-ai}"
+NOTIFY="${EMPIRICA_NOTIFY:-desktop}"
+LOG_FILE="${HOME}/.empirica/message_check.log"
+EMPIRICA_BIN="${HOME}/.venv/tmux/bin/empirica"
+
+# Ensure log directory exists
+mkdir -p "$(dirname "$LOG_FILE")"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
+}
+
+notify() {
+    local title="$1"
+    local body="$2"
+
+    case "$NOTIFY" in
+        desktop)
+            # Try notify-send (Linux) or osascript (macOS)
+            if command -v notify-send &> /dev/null; then
+                notify-send -u normal -i mail-unread "$title" "$body"
+            elif command -v osascript &> /dev/null; then
+                osascript -e "display notification \"$body\" with title \"$title\""
+            fi
+            ;;
+        log)
+            log "NOTIFICATION: $title - $body"
+            ;;
+        none)
+            ;;
+    esac
+}
+
+# Find all repos with .empirica directories
+find_empirica_repos() {
+    find "$WORKSPACE" -maxdepth 2 -type d -name ".empirica" 2>/dev/null | while read -r dir; do
+        dirname "$dir"
+    done
+}
+
+# Sync git notes from all remotes for a repo
+sync_notes() {
+    local repo="$1"
+    cd "$repo" || return 1
+
+    # Get all remotes
+    local remotes
+    remotes=$(git remote 2>/dev/null || echo "")
+
+    for remote in $remotes; do
+        # Fetch message notes specifically
+        git fetch "$remote" 'refs/notes/empirica/messages/*:refs/notes/empirica/messages/*' 2>/dev/null || true
+    done
+}
+
+# Check inbox for a specific repo
+check_inbox() {
+    local repo="$1"
+    cd "$repo" || return 1
+
+    # Get unread message count
+    local result
+    result=$("$EMPIRICA_BIN" message-inbox --ai-id "$AI_ID" --status unread --output json 2>/dev/null || echo '{"count": 0}')
+
+    local count
+    count=$(echo "$result" | jq -r '.count // 0' 2>/dev/null || echo "0")
+
+    echo "$count"
+}
+
+main() {
+    log "Starting message check for $AI_ID"
+
+    local total_unread=0
+    local repos_with_messages=""
+
+    # Scan all repos
+    while IFS= read -r repo; do
+        if [[ -z "$repo" ]]; then
+            continue
+        fi
+
+        repo_name=$(basename "$repo")
+
+        # Sync notes from remotes
+        sync_notes "$repo" 2>/dev/null
+
+        # Check inbox
+        local count
+        count=$(check_inbox "$repo")
+
+        if [[ "$count" -gt 0 ]]; then
+            total_unread=$((total_unread + count))
+            repos_with_messages="$repos_with_messages $repo_name($count)"
+            log "Found $count unread message(s) in $repo_name"
+        fi
+    done < <(find_empirica_repos)
+
+    # Notify if there are unread messages
+    if [[ "$total_unread" -gt 0 ]]; then
+        notify "Empirica Messages" "$total_unread unread message(s):$repos_with_messages"
+        log "Total: $total_unread unread message(s)"
+    else
+        log "No unread messages"
+    fi
+
+    log "Message check complete"
+}
+
+main "$@"
