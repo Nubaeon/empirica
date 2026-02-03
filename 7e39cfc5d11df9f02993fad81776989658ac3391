@@ -1,0 +1,32 @@
+{
+  "goal_id": "508510a5-3f7e-49a0-a5b5-fea566256193",
+  "session_id": "f8a35faa-a4b4-4700-9726-37e35c1ea536",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T12:32:44.180031+00:00",
+  "goal_data": {
+    "objective": "Build Epistemic Avatar Phase 1: Fork TalkingHead, implement basic VectorMapper (5 key vectors), WebSocket connection to Empirica, demo page with manual sliders",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "TalkingHead forked and building locally",
+      "VectorMapper handles know, uncertainty, engagement, completion, phase",
+      "WebSocket subscribes to Empirica session state",
+      "Demo page renders avatar with manual vector controls",
+      "Avatar expression changes visibly with vector changes"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T12:32:44.180051+00:00",
+      "action": "created"
+    }
+  ]
+}
