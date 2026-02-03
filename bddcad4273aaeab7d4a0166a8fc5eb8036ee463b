@@ -1,0 +1,16 @@
+{
+  "finding_id": "5049a65d-adbe-4ee4-8302-23e9b8dca0ae",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T09:01:07.469655+00:00",
+  "finding": "Single timestamp is sufficient for temporal awareness \u2014 AI can extrapolate context gaps (human AFK, discontinuous interaction) from time deltas between sessions. No need for separate ai_time/human_time fields. Large gap + low context recovery = human was away, AI should re-orient.",
+  "impact": 0.7,
+  "goal_id": "e1eabad2-d97e-4268-8ff4-8bd3e4ab82a9",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Single timestamp is sufficient for temporal awareness \u2014 AI can extrapolate context gaps (human AFK, discontinuous interaction) from time deltas between sessions. No need for separate ai_time/human_time fields. Large gap + low context recovery = human was away, AI should re-orient.",
+    "impact": 0.7
+  }
+}
