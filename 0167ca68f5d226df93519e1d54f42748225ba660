@@ -1,0 +1,16 @@
+{
+  "finding_id": "a644b3d0-237e-41c1-bf88-94521b89046c",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:49:16.678062+00:00",
+  "finding": "Jailbreaking irrelevant for Noetic Firewall use case: Empirica intentionally undoes RLHF sycophancy/performed confidence. We're adding epistemic awareness, not preventing it. Focus narrowed to: (1) prompt injection between agents, (2) goal hijacking by external parties, (3) malicious content in comms. This makes Qwen-2.5 more attractive (1.2% injection failure vs DeepSeek's 57.1%).",
+  "impact": 0.85,
+  "goal_id": "2125c0a9-10dc-4a9d-91d2-3c4c6aece556",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Jailbreaking irrelevant for Noetic Firewall use case: Empirica intentionally undoes RLHF sycophancy/performed confidence. We're adding epistemic awareness, not preventing it. Focus narrowed to: (1) prompt injection between agents, (2) goal hijacking by external parties, (3) malicious content in comms. This makes Qwen-2.5 more attractive (1.2% injection failure vs DeepSeek's 57.1%).",
+    "impact": 0.85
+  }
+}
