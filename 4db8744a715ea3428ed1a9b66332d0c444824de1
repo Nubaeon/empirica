@@ -1,0 +1,31 @@
+{
+  "goal_id": "0f479ddb-1d1c-4d3d-9d85-31eace19937e",
+  "session_id": "e0a7af82-22db-499c-bc20-08cbe681f81d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T23:56:16.985190+00:00",
+  "goal_data": {
+    "objective": "Fix Clients page - CRM database schema alignment",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Clients page loads without error",
+      "Schema matches actual CRM database tables",
+      "Client list displays with correct fields",
+      "Engagements and interactions show correctly"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T23:56:16.985200+00:00",
+      "action": "created"
+    }
+  ]
+}
