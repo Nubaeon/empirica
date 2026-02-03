@@ -1,0 +1,13 @@
+{
+  "unknown_id": "1f4a03b0-3104-466b-939c-7547ef4829bd",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "18ffe36e-7bdc-4586-bd94-9fa731a08d81",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T23:24:12.390407+00:00",
+  "unknown": "TalkingHead 3D avatar integration: Should we replace the lightweight emoji-based avatar or run them in parallel? TalkingHead requires Three.js/WebGL which is heavy for iframe embedding. The emoji avatar works and is fast. Options: (1) Build 3D version as separate standalone page, (2) Add toggle for users to choose, (3) Keep emoji for dashboard widget, 3D for dedicated avatar page.",
+  "goal_id": "7a5306cd-c7a4-42bc-9772-f36044ffa945",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
