@@ -1,0 +1,31 @@
+{
+  "goal_id": "2185b58c-5c2f-4709-8476-ccdd618bf24f",
+  "session_id": "f37dd044-6669-459f-89ed-fd6ec385d16d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T23:43:52.351589+00:00",
+  "goal_data": {
+    "objective": "Wire memory-scope CLI/MCP: Expose scope-vector based retrieval using ContextBudgetManager zones (ANCHOR/WORKING/CACHE) for tiered memory access",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "CLI command: empirica memory-scope --session-id <ID> --scope-breadth <0-1> --scope-duration <0-1>",
+      "MCP tool: memory_scope with same params",
+      "Returns: zone-appropriate memories (ANCHOR=high-confidence, WORKING=active, CACHE=spillover)",
+      "Uses existing context_budget.py infrastructure"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T23:43:52.351600+00:00",
+      "action": "created"
+    }
+  ]
+}
