@@ -1,0 +1,32 @@
+{
+  "goal_id": "7a5306cd-c7a4-42bc-9772-f36044ffa945",
+  "session_id": "18ffe36e-7bdc-4586-bd94-9fa731a08d81",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T22:56:45.148109+00:00",
+  "goal_data": {
+    "objective": "Noetic OS Dashboard Phase 2: Complete the OS GUI with CRM/Workspace integration and TalkingHead avatar",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.6,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "CRM pages integrated (clients, engagements, memories)",
+      "Workspace page integrated (portfolio view)",
+      "TalkingHead 3D avatar rendering epistemic state",
+      "All existing pages reviewed and polished",
+      "Consistent UX across all dashboard sections"
+    ],
+    "estimated_complexity": 0.8,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T22:56:45.148121+00:00",
+      "action": "created"
+    }
+  ]
+}
