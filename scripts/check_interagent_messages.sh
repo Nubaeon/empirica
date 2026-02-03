@@ -15,7 +15,8 @@
 set -euo pipefail
 
 AI_ID="${EMPIRICA_AI_ID:-claude-code}"
-WORKSPACE="${EMPIRICA_WORKSPACE:-$HOME/empirical-ai}"
+# Messages live in the canonical empirica repo only (not scattered across all projects)
+EMPIRICA_REPO="${EMPIRICA_REPO:-$HOME/empirical-ai/empirica}"
 NOTIFY="${EMPIRICA_NOTIFY:-desktop}"
 LOG_FILE="${HOME}/.empirica/message_check.log"
 EMPIRICA_BIN="${HOME}/.venv/tmux/bin/empirica"
@@ -48,11 +49,9 @@ notify() {
     esac
 }
 
-# Find all repos with .empirica directories
-find_empirica_repos() {
-    find "$WORKSPACE" -maxdepth 2 -type d -name ".empirica" 2>/dev/null | while read -r dir; do
-        dirname "$dir"
-    done
+# Messages centralized in empirica repo (no multi-repo scanning)
+get_message_repo() {
+    echo "$EMPIRICA_REPO"
 }
 
 # Sync git notes from all remotes for a repo
@@ -88,35 +87,24 @@ check_inbox() {
 main() {
     log "Starting message check for $AI_ID"
 
-    local total_unread=0
-    local repos_with_messages=""
+    local repo
+    repo=$(get_message_repo)
 
-    # Scan all repos
-    while IFS= read -r repo; do
-        if [[ -z "$repo" ]]; then
-            continue
-        fi
+    if [[ ! -d "$repo/.git" ]]; then
+        log "ERROR: Empirica repo not found at $repo"
+        exit 1
+    fi
 
-        repo_name=$(basename "$repo")
+    # Sync notes from remotes
+    sync_notes "$repo" 2>/dev/null
 
-        # Sync notes from remotes
-        sync_notes "$repo" 2>/dev/null
+    # Check inbox
+    local count
+    count=$(check_inbox "$repo")
 
-        # Check inbox
-        local count
-        count=$(check_inbox "$repo")
-
-        if [[ "$count" -gt 0 ]]; then
-            total_unread=$((total_unread + count))
-            repos_with_messages="$repos_with_messages $repo_name($count)"
-            log "Found $count unread message(s) in $repo_name"
-        fi
-    done < <(find_empirica_repos)
-
-    # Notify if there are unread messages
-    if [[ "$total_unread" -gt 0 ]]; then
-        notify "Empirica Messages" "$total_unread unread message(s):$repos_with_messages"
-        log "Total: $total_unread unread message(s)"
+    if [[ "$count" -gt 0 ]]; then
+        notify "Empirica Messages" "$count unread message(s)"
+        log "Found $count unread message(s)"
     else
         log "No unread messages"
     fi
