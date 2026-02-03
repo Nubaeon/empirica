@@ -1,0 +1,33 @@
+{
+  "goal_id": "2125c0a9-10dc-4a9d-91d2-3c4c6aece556",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T10:03:50.885202+00:00",
+  "goal_data": {
+    "objective": "Noetic Firewall: Isolated comms layer with security-tuned LLM + multimodal model on Halo Strix, Empirica scaffolding, epistemic envelope for all inter-agent messages",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.6,
+      "coordination": 0.7
+    },
+    "success_criteria": [
+      "Security model selected and running on Halo Strix (LlamaFirewall, Llama Guard, or better)",
+      "Multimodal/voice model selected and running alongside",
+      "API boundary defined between comms layer and main system",
+      "Epistemic envelope schema (13 vectors + evidence + signature)",
+      "Git notes messaging integration for audit trail",
+      "Prompt injection detection tested and validated"
+    ],
+    "estimated_complexity": 0.8,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T10:03:50.885213+00:00",
+      "action": "created"
+    }
+  ]
+}
