@@ -1,0 +1,16 @@
+{
+  "finding_id": "59fee592-9eaa-406e-b932-7892a710a15b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "567650e5-1bb6-46da-82bc-00f945eb51c7",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T13:23:34.277973+00:00",
+  "finding": "Adaptive retrieval depth implemented: light (<30min, 1x), moderate (<4hr, 2x), deep (>4hr, 3x) based on time since last session. This enables context-gap-aware memory retrieval where human AFK periods trigger deeper episodic/eidetic retrieval for re-orientation.",
+  "impact": 0.7,
+  "goal_id": "9a502aa2-b4c5-4373-8932-40668f499e7c",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Adaptive retrieval depth implemented: light (<30min, 1x), moderate (<4hr, 2x), deep (>4hr, 3x) based on time since last session. This enables context-gap-aware memory retrieval where human AFK periods trigger deeper episodic/eidetic retrieval for re-orientation.",
+    "impact": 0.7
+  }
+}
