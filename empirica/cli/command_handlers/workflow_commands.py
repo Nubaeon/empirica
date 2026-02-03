@@ -307,6 +307,7 @@ def handle_preflight_submit_command(args):
                         last_session_timestamp=last_session_ts,
                         include_eidetic=True,  # Include eidetic facts in PREFLIGHT
                         include_episodic=True,  # Include episodic narratives in PREFLIGHT
+                        include_related_docs=True,  # Include related reference docs
                     )
                     if patterns and any(v for k, v in patterns.items() if k != 'time_gap'):
                         time_gap = patterns.get('time_gap', {})
@@ -315,7 +316,8 @@ def handle_preflight_submit_command(args):
                                    f"{len(patterns.get('dead_ends', []))} dead_ends, "
                                    f"{len(patterns.get('relevant_findings', []))} findings, "
                                    f"{len(patterns.get('eidetic_facts', []))} eidetic, "
-                                   f"{len(patterns.get('episodic_narratives', []))} episodic")
+                                   f"{len(patterns.get('episodic_narratives', []))} episodic, "
+                                   f"{len(patterns.get('related_docs', []))} docs")
                 except Exception as e:
                     logger.debug(f"Pattern retrieval failed (optional): {e}")
 

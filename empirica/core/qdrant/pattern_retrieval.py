@@ -147,6 +147,58 @@ def _search_memory_by_type(
         return []
 
 
+def _search_related_docs(
+    project_id: str,
+    query_text: str,
+    limit: int = DEFAULT_LIMIT,
+    min_score: float = DEFAULT_THRESHOLD
+) -> List[Dict]:
+    """
+    Search docs collection for documents related to a query.
+    Used to find supporting documentation for retrieved memory entries.
+
+    Returns list of related docs with path, description, and relevance score.
+    """
+    try:
+        from .vector_store import _check_qdrant_available, _get_embedding_safe, _get_qdrant_client, _docs_collection
+
+        if not _check_qdrant_available():
+            return []
+
+        qvec = _get_embedding_safe(query_text)
+        if qvec is None:
+            return []
+
+        client = _get_qdrant_client()
+        coll = _docs_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return []
+
+        results = client.query_points(
+            collection_name=coll,
+            query=qvec,
+            limit=limit,
+            with_payload=True
+        )
+
+        # Format results
+        return [
+            {
+                "doc_path": (r.payload or {}).get("doc_path", ""),
+                "description": (r.payload or {}).get("description", ""),
+                "doc_type": (r.payload or {}).get("doc_type", ""),
+                "tags": (r.payload or {}).get("tags", []),
+                "score": getattr(r, 'score', 0.0) or 0.0
+            }
+            for r in results.points
+            if (getattr(r, 'score', 0.0) or 0.0) >= min_score
+        ]
+    except Exception as e:
+        logger.debug(f"_search_related_docs failed: {e}")
+        return []
+
+
 def _search_calibration_for_task(
     project_id: str,
     task_context: str,
@@ -260,6 +312,7 @@ def retrieve_task_patterns(
     last_session_timestamp: Optional[float] = None,
     include_eidetic: bool = False,
     include_episodic: bool = False,
+    include_related_docs: bool = False,
 ) -> Dict[str, any]:
     """
     PREFLIGHT hook: Retrieve relevant patterns for a task.
@@ -270,6 +323,7 @@ def retrieve_task_patterns(
     - relevant_findings: High-impact facts
     - eidetic_facts: Stable facts with confidence (optional)
     - episodic_narratives: Recent session arcs (optional)
+    - related_docs: Reference documents related to retrieved memory (optional)
     - time_gap: Metadata about time since last session (for human context awareness)
 
     Args:
@@ -280,6 +334,7 @@ def retrieve_task_patterns(
         last_session_timestamp: Used to compute time gap metadata
         include_eidetic: Include eidetic facts in retrieval
         include_episodic: Include episodic narratives in retrieval
+        include_related_docs: Include related reference docs in retrieval
 
     Returns:
         {
@@ -289,6 +344,7 @@ def retrieve_task_patterns(
             "calibration_warnings": [...],
             "eidetic_facts": [...],  # if include_eidetic
             "episodic_narratives": [...],  # if include_episodic
+            "related_docs": [...],  # if include_related_docs
             "time_gap": {gap_seconds, gap_human_readable, gap_category, note}
         }
     """
@@ -410,6 +466,30 @@ def retrieve_task_patterns(
         except Exception as e:
             logger.debug(f"Episodic retrieval failed: {e}")
             result["episodic_narratives"] = []
+
+    # Optional: Include related reference docs (cross-reference with retrieved memory)
+    if include_related_docs:
+        try:
+            # Search docs collection using the task context
+            related_raw = _search_related_docs(
+                project_id,
+                task_context,
+                limit=limit,
+                min_score=threshold
+            )
+            result["related_docs"] = [
+                {
+                    "doc_path": d.get("doc_path", ""),
+                    "description": d.get("description", ""),
+                    "doc_type": d.get("doc_type", ""),
+                    "tags": d.get("tags", []),
+                    "score": d.get("score", 0.0)
+                }
+                for d in related_raw
+            ]
+        except Exception as e:
+            logger.debug(f"Related docs retrieval failed: {e}")
+            result["related_docs"] = []
 
     return result
 

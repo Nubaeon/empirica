@@ -46,6 +46,9 @@ def handle_project_embed_command(args):
         if sync_global:
             init_global_collection()
 
+        # Initialize DB early for reference docs
+        db = SessionDatabase()
+
         # Prepare docs from semantic index
         idx = _load_semantic_index(root)
         docs_cfg = idx.get('index', {})
@@ -66,10 +69,42 @@ def handle_project_embed_command(args):
                 }
             })
             did += 1
+
+        # Also include reference docs from project_reference_docs table
+        # These are dynamically added via refdoc-add command
+        try:
+            refdocs = db.get_project_reference_docs(project_id)
+            for rdoc in refdocs:
+                doc_path = rdoc.get('doc_path', '')
+                text = _read_file(doc_path) if doc_path else ''
+                if not text:
+                    # Use description as text if file not readable
+                    text = rdoc.get('description', '') or f"Reference: {doc_path}"
+
+                # Extract keywords from description and doc_type for matching
+                description = rdoc.get('description', '') or ''
+                doc_type = rdoc.get('doc_type', '') or ''
+                keywords = [w.lower() for w in (description + ' ' + doc_type).split() if len(w) > 3]
+
+                docs_to_upsert.append({
+                    'id': did,
+                    'text': text,
+                    'metadata': {
+                        'doc_path': doc_path,
+                        'doc_type': doc_type,
+                        'description': description,
+                        'tags': keywords,  # Use extracted keywords as tags
+                        'source': 'refdoc',  # Mark source for filtering
+                    }
+                })
+                did += 1
+            logger.debug(f"Added {len(refdocs)} reference docs to embedding queue")
+        except Exception as e:
+            logger.debug(f"Could not load reference docs: {e}")
+
         upsert_docs(project_id, docs_to_upsert)
 
-        # Prepare memory from DB
-        db = SessionDatabase()
+        # Prepare memory from DB (db already initialized above)
         findings = db.get_project_findings(project_id)
         unknowns = db.get_project_unknowns(project_id)
         # mistakes: join via sessions already built into breadcrumbs; simple select here
