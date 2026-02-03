@@ -1,0 +1,14 @@
+{
+  "mistake_id": "a63cd906-556f-4215-b071-de54b7605911",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T09:01:42.832900+00:00",
+  "mistake": "Conflated learning trajectory with capability belief - fed learning deltas to Sentinel as bias corrections",
+  "why_wrong": "Learning grows naturally over time; capability belief should be stable. Using learning as calibration = more learning means more correction - backwards.",
+  "prevention": "Ask: is this LEARNING or CALIBRATION? Learning=track only. Calibration=grounded in evidence.",
+  "cost_estimate": "3+ hours",
+  "root_cause_vector": "COHERENCE",
+  "goal_id": null,
+  "subtask_id": null
+}
