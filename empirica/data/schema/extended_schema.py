@@ -16,82 +16,11 @@ Tables:
 """
 
 SCHEMAS = [
-    # ── Session-scoped breadcrumbs (migration 013) ──
-
-    """
-    CREATE TABLE IF NOT EXISTS session_findings (
-                    id TEXT PRIMARY KEY,
-                    session_id TEXT NOT NULL,
-                    goal_id TEXT,
-                    subtask_id TEXT,
-                    finding TEXT NOT NULL,
-                    created_timestamp REAL NOT NULL,
-                    finding_data TEXT NOT NULL,
-                    subject TEXT,
-                    impact REAL,
-
-                    FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                    FOREIGN KEY (goal_id) REFERENCES goals(id),
-                    FOREIGN KEY (subtask_id) REFERENCES subtasks(id)
-                )
-    """,
-
-    """
-    CREATE TABLE IF NOT EXISTS session_unknowns (
-                    id TEXT PRIMARY KEY,
-                    session_id TEXT NOT NULL,
-                    goal_id TEXT,
-                    subtask_id TEXT,
-                    unknown TEXT NOT NULL,
-                    is_resolved BOOLEAN DEFAULT FALSE,
-                    resolved_by TEXT,
-                    created_timestamp REAL NOT NULL,
-                    resolved_timestamp REAL,
-                    unknown_data TEXT NOT NULL,
-                    subject TEXT,
-                    impact REAL DEFAULT 0.5,
-
-                    FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                    FOREIGN KEY (goal_id) REFERENCES goals(id),
-                    FOREIGN KEY (subtask_id) REFERENCES subtasks(id)
-                )
-    """,
-
-    """
-    CREATE TABLE IF NOT EXISTS session_dead_ends (
-                    id TEXT PRIMARY KEY,
-                    session_id TEXT NOT NULL,
-                    goal_id TEXT,
-                    subtask_id TEXT,
-                    approach TEXT NOT NULL,
-                    why_failed TEXT NOT NULL,
-                    created_timestamp REAL NOT NULL,
-                    dead_end_data TEXT NOT NULL,
-                    subject TEXT,
-
-                    FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                    FOREIGN KEY (goal_id) REFERENCES goals(id),
-                    FOREIGN KEY (subtask_id) REFERENCES subtasks(id)
-                )
-    """,
-
-    """
-    CREATE TABLE IF NOT EXISTS session_mistakes (
-                    id TEXT PRIMARY KEY,
-                    session_id TEXT NOT NULL,
-                    goal_id TEXT,
-                    mistake TEXT NOT NULL,
-                    why_wrong TEXT NOT NULL,
-                    cost_estimate TEXT,
-                    root_cause_vector TEXT,
-                    prevention TEXT,
-                    created_timestamp REAL NOT NULL,
-                    mistake_data TEXT NOT NULL,
-
-                    FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                    FOREIGN KEY (goal_id) REFERENCES goals(id)
-                )
-    """,
+    # ── Session-scoped breadcrumbs REMOVED (migration 027) ──
+    # session_findings, session_unknowns, session_dead_ends, session_mistakes
+    # were deprecated in favor of project_* tables with transaction_id.
+    # Sessions delineate compact windows only; transactions are the atomic unit.
+    # See: migration_027_drop_session_noetic_tables
 
     # ── Lessons and knowledge graph (migration 014) ──
 

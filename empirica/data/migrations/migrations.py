@@ -944,6 +944,59 @@ def migration_026_grounded_verification(cursor: sqlite3.Cursor):
     logger.info("✅ Migration 026 complete: Post-test verification tables created")
 
 
+# Migration 27: Drop deprecated session-scoped noetic tables
+def migration_027_drop_session_noetic_tables(cursor: sqlite3.Cursor):
+    """
+    Drop deprecated session-scoped noetic artifact tables.
+
+    These tables were created in migration 013 as part of a "dual-scope" approach
+    that stored breadcrumbs in both session_* and project_* tables. This design
+    was superseded:
+
+    1. All noetic artifacts now go to project_* tables (with session_id + transaction_id)
+    2. The session_* methods in BreadcrumbRepository are deprecated stubs
+    3. Sessions delineate compact windows only — not epistemic boundaries
+    4. Transactions are the atomic unit for epistemic measurement
+
+    Tables dropped:
+    - session_findings → use project_findings
+    - session_unknowns → use project_unknowns
+    - session_dead_ends → use project_dead_ends
+    - session_mistakes → use mistakes_made
+
+    This enables cleaner cross-trajectory pattern matching since all artifacts
+    live in project-scoped tables with transaction_id linkage.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    tables_to_drop = [
+        'session_findings',
+        'session_unknowns',
+        'session_dead_ends',
+        'session_mistakes',
+    ]
+
+    for table in tables_to_drop:
+        try:
+            # Check if table exists before dropping
+            cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
+            if cursor.fetchone():
+                # Check row count for logging
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                count = cursor.fetchone()[0]
+                if count > 0:
+                    logger.warning(f"⚠️  Dropping {table} with {count} rows (data migrated to project_* tables)")
+                cursor.execute(f"DROP TABLE {table}")
+                logger.info(f"✓ Dropped deprecated table: {table}")
+            else:
+                logger.debug(f"✓ Table {table} already dropped or never existed")
+        except Exception as e:
+            logger.warning(f"⚠️  Could not drop {table}: {e}")
+
+    logger.info("✅ Migration 027 complete: Deprecated session noetic tables dropped")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -971,4 +1024,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("024_attention_budgets", "Add attention_budgets and rollup_logs tables for epistemic attention budget", migration_024_attention_budgets),
     ("025_transaction_id", "Add transaction_id to epistemic artifact tables for first-class transaction tracking", migration_025_transaction_id),
     ("026_grounded_verification", "Add post-test verification tables for grounded calibration", migration_026_grounded_verification),
+    ("027_drop_session_noetic_tables", "Drop deprecated session-scoped noetic tables (sessions delineate compact windows only)", migration_027_drop_session_noetic_tables),
 ]
