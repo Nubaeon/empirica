@@ -1,0 +1,16 @@
+{
+  "finding_id": "4fae031e-a452-4f11-90b2-0b044c7f4b9d",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "cf3e46c9-4c41-4fe4-b88d-58b211dce949",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T11:48:51.143125+00:00",
+  "finding": "Channel taxonomy defined for inter-agent comms: operational (direct, broadcast, handoff), epistemic (findings, unknowns, warnings), coordination (goals, sync), and system (heartbeat, emergency) channels. Each channel has description and priority. Also added recipient-side message verification button for defense-in-depth firewall scanning.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Channel taxonomy defined for inter-agent comms: operational (direct, broadcast, handoff), epistemic (findings, unknowns, warnings), coordination (goals, sync), and system (heartbeat, emergency) channels. Each channel has description and priority. Also added recipient-side message verification button for defense-in-depth firewall scanning.",
+    "impact": 0.7
+  }
+}
