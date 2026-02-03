@@ -278,16 +278,43 @@ def handle_preflight_submit_command(args):
 
             # PATTERN RETRIEVAL: Load relevant patterns based on task_context or reasoning
             # This arms the AI with lessons, dead_ends, and findings BEFORE starting work
+            # Includes adaptive retrieval depth based on time since last session
             patterns = None
             search_context = task_context or reasoning  # Fall back to reasoning if no task_context
             if search_context and project_id:
                 try:
                     from empirica.core.qdrant.pattern_retrieval import retrieve_task_patterns
-                    patterns = retrieve_task_patterns(project_id, search_context)
-                    if patterns and any(patterns.values()):
-                        logger.debug(f"Retrieved patterns: {len(patterns.get('lessons', []))} lessons, "
+
+                    # Get last session timestamp for adaptive depth calculation
+                    last_session_ts = None
+                    try:
+                        cursor = db.conn.cursor()
+                        cursor.execute("""
+                            SELECT MAX(updated_at) FROM sessions
+                            WHERE project_id = ? AND session_id != ?
+                        """, (project_id, session_id))
+                        row = cursor.fetchone()
+                        if row and row[0]:
+                            # Convert ISO timestamp to unix timestamp
+                            from datetime import datetime
+                            last_session_ts = datetime.fromisoformat(row[0].replace('Z', '+00:00')).timestamp()
+                    except Exception:
+                        pass
+
+                    patterns = retrieve_task_patterns(
+                        project_id,
+                        search_context,
+                        last_session_timestamp=last_session_ts,
+                        include_eidetic=True,  # Include eidetic facts in PREFLIGHT
+                        include_episodic=True,  # Include episodic narratives in PREFLIGHT
+                    )
+                    if patterns and any(v for k, v in patterns.items() if k != 'retrieval_depth'):
+                        depth = patterns.get('retrieval_depth', 'unknown')
+                        logger.debug(f"Retrieved patterns (depth={depth}): {len(patterns.get('lessons', []))} lessons, "
                                    f"{len(patterns.get('dead_ends', []))} dead_ends, "
-                                   f"{len(patterns.get('relevant_findings', []))} findings")
+                                   f"{len(patterns.get('relevant_findings', []))} findings, "
+                                   f"{len(patterns.get('eidetic_facts', []))} eidetic, "
+                                   f"{len(patterns.get('episodic_narratives', []))} episodic")
                 except Exception as e:
                     logger.debug(f"Pattern retrieval failed (optional): {e}")
 

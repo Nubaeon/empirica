@@ -22,6 +22,54 @@ logger = logging.getLogger(__name__)
 DEFAULT_THRESHOLD = 0.5
 DEFAULT_LIMIT = 3
 
+# Adaptive retrieval depth thresholds (in seconds)
+DEPTH_THRESHOLDS = {
+    "light": 30 * 60,      # < 30 minutes = continuation, minimal retrieval
+    "moderate": 4 * 60 * 60,  # < 4 hours = standard retrieval
+    # > 4 hours = deep retrieval (human was AFK, need re-orientation)
+}
+
+# Limit multipliers per depth level
+DEPTH_MULTIPLIERS = {
+    "light": 1,      # Default limits
+    "moderate": 2,   # 2x limits
+    "deep": 3,       # 3x limits for full re-orientation
+}
+
+
+def compute_retrieval_depth(last_session_timestamp: Optional[float] = None) -> str:
+    """
+    Compute retrieval depth based on time gap since last session.
+
+    Large gaps indicate human was AFK and AI needs deeper context recovery.
+    Small gaps indicate continuation where minimal retrieval suffices.
+
+    Args:
+        last_session_timestamp: Unix timestamp of last session end (or None if unknown)
+
+    Returns:
+        "light" | "moderate" | "deep"
+    """
+    import time
+
+    if last_session_timestamp is None:
+        return "moderate"  # Default when unknown
+
+    gap_seconds = time.time() - last_session_timestamp
+
+    if gap_seconds < DEPTH_THRESHOLDS["light"]:
+        return "light"
+    elif gap_seconds < DEPTH_THRESHOLDS["moderate"]:
+        return "moderate"
+    else:
+        return "deep"
+
+
+def get_depth_limits(depth: str, base_limit: int = DEFAULT_LIMIT) -> int:
+    """Get adjusted limit based on retrieval depth."""
+    multiplier = DEPTH_MULTIPLIERS.get(depth, 1)
+    return base_limit * multiplier
+
 
 def get_qdrant_url() -> Optional[str]:
     """Check if Qdrant is configured."""
@@ -191,7 +239,11 @@ def retrieve_task_patterns(
     project_id: str,
     task_context: str,
     threshold: float = DEFAULT_THRESHOLD,
-    limit: int = DEFAULT_LIMIT
+    limit: int = DEFAULT_LIMIT,
+    depth: Optional[str] = None,
+    last_session_timestamp: Optional[float] = None,
+    include_eidetic: bool = False,
+    include_episodic: bool = False,
 ) -> Dict[str, List[Dict]]:
     """
     PREFLIGHT hook: Retrieve relevant patterns for a task.
@@ -200,29 +252,46 @@ def retrieve_task_patterns(
     - lessons: Procedural knowledge (HOW to do things)
     - dead_ends: Failed approaches (what NOT to try)
     - relevant_findings: High-impact facts
+    - eidetic_facts: Stable facts with confidence (optional)
+    - episodic_narratives: Recent session arcs (optional)
 
     Args:
         project_id: Project ID
         task_context: Description of the task being undertaken
-        threshold: Minimum similarity score (default 0.7)
+        threshold: Minimum similarity score (default 0.5)
         limit: Max patterns per type (default 3)
+        depth: Retrieval depth ("light", "moderate", "deep") - auto-computed if None
+        last_session_timestamp: Used to auto-compute depth from time gap
+        include_eidetic: Include eidetic facts in retrieval
+        include_episodic: Include episodic narratives in retrieval
 
     Returns:
         {
             "lessons": [{name, description, domain, confidence, score}],
             "dead_ends": [{approach, why_failed, score}],
-            "relevant_findings": [{finding, impact, score}]
+            "relevant_findings": [{finding, impact, score}],
+            "calibration_warnings": [...],
+            "eidetic_facts": [...],  # if include_eidetic
+            "episodic_narratives": [...],  # if include_episodic
+            "retrieval_depth": "light|moderate|deep"
         }
     """
     if not get_qdrant_url():
-        return {"lessons": [], "dead_ends": [], "relevant_findings": []}
+        return {"lessons": [], "dead_ends": [], "relevant_findings": [], "retrieval_depth": "none"}
+
+    # Auto-compute depth from time gap if not provided
+    if depth is None:
+        depth = compute_retrieval_depth(last_session_timestamp)
+
+    # Adjust limit based on depth
+    effective_limit = get_depth_limits(depth, limit)
 
     # Search for lessons (procedural knowledge)
     lessons_raw = _search_memory_by_type(
         project_id,
         f"How to: {task_context}",
         "lesson",
-        limit,
+        effective_limit,
         threshold
     )
     lessons = [
@@ -241,7 +310,7 @@ def retrieve_task_patterns(
         project_id,
         f"Approach for: {task_context}",
         "dead_end",
-        limit,
+        effective_limit,
         threshold
     )
     dead_ends = [
@@ -258,7 +327,7 @@ def retrieve_task_patterns(
         project_id,
         task_context,
         "finding",
-        limit,
+        effective_limit,
         threshold
     )
     relevant_findings = [
@@ -271,14 +340,66 @@ def retrieve_task_patterns(
     ]
 
     # Search for calibration warnings (grounded verification gaps from similar tasks)
-    calibration_warnings = _search_calibration_for_task(project_id, task_context, limit)
+    calibration_warnings = _search_calibration_for_task(project_id, task_context, effective_limit)
 
-    return {
+    # Build result
+    result = {
         "lessons": lessons,
         "dead_ends": dead_ends,
         "relevant_findings": relevant_findings,
         "calibration_warnings": calibration_warnings,
+        "retrieval_depth": depth,
     }
+
+    # Optional: Include eidetic facts (stable facts with confidence)
+    if include_eidetic:
+        try:
+            from .vector_store import search_eidetic
+            eidetic_raw = search_eidetic(
+                project_id,
+                task_context,
+                min_confidence=0.5,
+                limit=effective_limit
+            )
+            result["eidetic_facts"] = [
+                {
+                    "content": e.get("content", ""),
+                    "confidence": e.get("confidence", 0.5),
+                    "domain": e.get("domain"),
+                    "confirmation_count": e.get("confirmation_count", 1),
+                    "score": e.get("score", 0.0)
+                }
+                for e in eidetic_raw
+            ]
+        except Exception as e:
+            logger.debug(f"Eidetic retrieval failed: {e}")
+            result["eidetic_facts"] = []
+
+    # Optional: Include episodic narratives (session arcs with recency decay)
+    if include_episodic:
+        try:
+            from .vector_store import search_episodic
+            episodic_raw = search_episodic(
+                project_id,
+                task_context,
+                limit=effective_limit,
+                apply_recency_decay=True
+            )
+            result["episodic_narratives"] = [
+                {
+                    "narrative": ep.get("narrative", ""),
+                    "outcome": ep.get("outcome"),
+                    "learning_delta": ep.get("learning_delta", {}),
+                    "recency_weight": ep.get("recency_weight", 1.0),
+                    "score": ep.get("score", 0.0)
+                }
+                for ep in episodic_raw
+            ]
+        except Exception as e:
+            logger.debug(f"Episodic retrieval failed: {e}")
+            result["episodic_narratives"] = []
+
+    return result
 
 
 def check_against_patterns(
