@@ -142,7 +142,8 @@ async def list_tools() -> List[types.Tool]:
                 "type": "object",
                 "properties": {
                     "ai_id": {"type": "string", "description": "AI agent identifier"},
-                    "session_type": {"type": "string", "description": "Session type (development, production, testing)"}
+                    "session_type": {"type": "string", "description": "Session type (development, production, testing)"},
+                    "project_path": {"type": "string", "description": "Path to project directory (uses cwd if not specified). Enables project switch without changing cwd."}
                 },
                 "required": ["ai_id"]
             }
@@ -1713,7 +1714,14 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
                 safe_instance = instance_id.replace(":", "_").replace("%", "")
                 instance_suffix = f"_{safe_instance}"
 
-            local_empirica = Path.cwd() / '.empirica'
+            # Use project_path if specified, otherwise cwd (enables project switch without cd)
+            target_project_path = arguments.get('project_path')
+            if target_project_path:
+                project_dir = Path(target_project_path)
+            else:
+                project_dir = Path.cwd()
+
+            local_empirica = project_dir / '.empirica'
             if local_empirica.exists():
                 active_session_file = local_empirica / f'active_session{instance_suffix}'
             else:
@@ -1723,7 +1731,7 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
             # the correct DB even when cwd changes (prevents user confusion about data loss)
             active_session_data = {
                 "session_id": session_id,
-                "project_path": str(Path.cwd()),
+                "project_path": str(project_dir),
                 "ai_id": ai_id
             }
             active_session_file.write_text(json.dumps(active_session_data))
