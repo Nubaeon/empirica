@@ -1,0 +1,16 @@
+{
+  "finding_id": "c56ff349-db97-4715-9109-c0e68cbfa7a4",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:46:23.427229+00:00",
+  "finding": "Comms Dashboard implementation: Full message timeline with direction indicators (incoming blue, outgoing green), compose dialog with channel/recipient selection, sync/push buttons for Forgejo, channel filtering. Security: basic schema validation before send. Next: add cron/polling for auto-refresh.",
+  "impact": 0.75,
+  "goal_id": "70f657eb-3d35-4256-8e0d-1569996cd689",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Comms Dashboard implementation: Full message timeline with direction indicators (incoming blue, outgoing green), compose dialog with channel/recipient selection, sync/push buttons for Forgejo, channel filtering. Security: basic schema validation before send. Next: add cron/polling for auto-refresh.",
+    "impact": 0.75
+  }
+}
