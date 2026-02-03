@@ -1,0 +1,33 @@
+{
+  "goal_id": "9a502aa2-b4c5-4373-8932-40668f499e7c",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T09:01:53.884085+00:00",
+  "goal_data": {
+    "objective": "Formalize Noetic RAG architecture: document and enforce the retrieval/storage contracts for CASCADE phases. PREFLIGHT/CHECK = retrieval (inject eidetic facts, episodic narratives, patterns, dead-ends). POSTFLIGHT = storage (extract findings, unknowns, session arcs, capability beliefs). Clear separation of learning trajectory vs capability belief Bayesian tracks.",
+    "scope": {
+      "breadth": 0.6,
+      "duration": 0.5,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Architecture documented in .empirica/ref-docs/ or similar",
+      "PREFLIGHT hook retrieves: eidetic facts, episodic narratives, patterns (with temporal gap awareness)",
+      "CHECK hook retrieves: dead-end warnings, mistake patterns for current approach",
+      "POSTFLIGHT stores: findings\u2192eidetic, session arc\u2192episodic, capability belief\u2192grounded calibration",
+      "Learning trajectory tracked separately (analytics only, not consumed by Sentinel)",
+      "Retrieval depth adapts to context gap (large gap = deeper retrieval)"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T09:01:53.884096+00:00",
+      "action": "created"
+    }
+  ]
+}
