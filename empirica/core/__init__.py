@@ -26,6 +26,16 @@ from .context_budget import (
     estimate_tokens,
 )
 
+from .statusline_cache import (
+    StatuslineCache,
+    StatuslineCacheEntry,
+    get_instance_id,
+    write_statusline_cache,
+    read_statusline_cache,
+    update_statusline_vectors,
+    update_statusline_phase,
+)
+
 __all__ = [
     # Epistemic Bus
     'EpistemicBus',
@@ -47,4 +57,12 @@ __all__ = [
     'get_budget_manager',
     'reset_budget_manager',
     'estimate_tokens',
+    # Statusline Cache
+    'StatuslineCache',
+    'StatuslineCacheEntry',
+    'get_instance_id',
+    'write_statusline_cache',
+    'read_statusline_cache',
+    'update_statusline_vectors',
+    'update_statusline_phase',
 ]

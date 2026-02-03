@@ -37,6 +37,11 @@ from empirica.core.signaling import (
     format_drift_status,
     read_drift_cache,
 )
+from empirica.core.statusline_cache import (
+    StatuslineCache,
+    read_statusline_cache,
+    get_instance_id,
+)
 
 
 # ANSI color codes
@@ -888,6 +893,38 @@ def main():
 
         session_id = session['session_id']
 
+        # FAST PATH: Try central cache first (avoids DB query if fresh)
+        cached = read_statusline_cache(project_path=project_path, max_age=60.0)
+        if cached and cached.session_id == session_id and cached.vectors:
+            # Cache hit - use cached data directly
+            phase = cached.phase
+            vectors = cached.vectors
+            gate_decision = cached.gate_decision
+            drift_detected = cached.drift_detected
+            drift_severity = cached.drift_severity
+            open_counts = {
+                'open_goals': cached.open_goals,
+                'open_unknowns': cached.open_unknowns,
+                'goal_linked_unknowns': cached.goal_linked_unknowns,
+                'completion': cached.vectors.get('completion', 0.0) if cached.vectors else 0.0,
+            }
+            deltas = {}  # Deltas require DB - skip in fast path
+            goal = None  # Goal details require DB - skip in fast path
+            drift_state = None
+
+            db.close()
+
+            # Format and output from cache
+            output = format_statusline(
+                session, phase, vectors, drift_state, deltas, mode,
+                drift_detected=drift_detected, drift_severity=drift_severity,
+                gate_decision=gate_decision, goal=goal, open_counts=open_counts,
+                project_name=project_name
+            )
+            print(output)
+            return
+
+        # SLOW PATH: Query DB for fresh data
         # Get vectors from DB (real-time)
         phase, vectors, gate_decision = get_latest_vectors(db, session_id)
 
@@ -917,6 +954,26 @@ def main():
             )
 
         db.close()
+
+        # Update central cache for future fast-path hits
+        try:
+            from empirica.core.statusline_cache import write_statusline_cache
+            write_statusline_cache(
+                session_id=session_id,
+                ai_id=ai_id,
+                phase=phase,
+                vectors=vectors,
+                gate_decision=gate_decision,
+                project_path=project_path,
+                project_name=project_name,
+                drift_detected=drift_detected,
+                drift_severity=drift_severity,
+                open_goals=open_counts.get('open_goals', 0) if open_counts else 0,
+                open_unknowns=open_counts.get('open_unknowns', 0) if open_counts else 0,
+                confidence=calculate_confidence(vectors) if vectors else None,
+            )
+        except Exception:
+            pass  # Cache update failure shouldn't break statusline
 
         # Format and output
         output = format_statusline(

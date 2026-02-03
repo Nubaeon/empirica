@@ -207,19 +207,56 @@ class EmpiricaActionHooks:
             print(f"Warning: Could not update snapshot monitor feed: {e}")
 
     @staticmethod
-    def update_statusline_cache(session_id: str, ai_id: str, phase: str, vectors: Dict[str, float] = None):
+    def update_statusline_cache(
+        session_id: str,
+        ai_id: str,
+        phase: str,
+        vectors: Dict[str, float] = None,
+        gate_decision: str = None,
+        project_path: str = None,
+        project_name: str = None,
+        drift_detected: bool = False,
+        drift_severity: str = None,
+        open_goals: int = 0,
+        open_unknowns: int = 0,
+    ):
         """Update statusline cache for fast rendering during action replay.
 
         This allows statusline to be triggered/refreshed automatically when
         CASCADE phases change, providing real-time audit trail.
+
+        Writes to TWO locations:
+        1. Central cache (~/.empirica/statusline_cache/) - persistent, multi-instance safe
+        2. Realtime cache (/tmp/empirica_realtime/) - tmux pane updates (legacy)
         """
         try:
+            # 1. Write to central cache (persistent, multi-instance)
+            try:
+                from empirica.core.statusline_cache import write_statusline_cache
+                write_statusline_cache(
+                    session_id=session_id,
+                    ai_id=ai_id,
+                    phase=phase,
+                    vectors=vectors,
+                    gate_decision=gate_decision,
+                    project_path=project_path,
+                    project_name=project_name,
+                    drift_detected=drift_detected,
+                    drift_severity=drift_severity,
+                    open_goals=open_goals,
+                    open_unknowns=open_unknowns,
+                )
+            except ImportError:
+                pass  # Central cache module not available
+
+            # 2. Write to realtime cache (legacy, tmux pane updates)
             statusline_data = {
                 "timestamp": time.time(),
                 "session_id": session_id,
                 "ai_id": ai_id,
                 "phase": phase,
                 "vectors": vectors or {},
+                "gate_decision": gate_decision,
                 "display_mode": os.getenv('EMPIRICA_STATUS_MODE', 'balanced')
             }
 
@@ -312,14 +349,48 @@ def log_thought(thought: str, phase: str = "ACT", goal: str = None):
     hooks = EmpiricaActionHooks()
     hooks.update_chain_of_thought(thought, phase, goal)
 
-def log_statusline(session_id: str, ai_id: str, phase: str, vectors: Dict[str, float] = None):
+def log_statusline(
+    session_id: str,
+    ai_id: str,
+    phase: str,
+    vectors: Dict[str, float] = None,
+    gate_decision: str = None,
+    project_path: str = None,
+    project_name: str = None,
+    drift_detected: bool = False,
+    drift_severity: str = None,
+    open_goals: int = 0,
+    open_unknowns: int = 0,
+):
     """Directly update statusline cache for audit trail.
 
     Use this after CASCADE phase transitions to trigger statusline updates
     during action replay.
+
+    Args:
+        session_id: Current session UUID
+        ai_id: AI identifier (e.g., 'claude-code')
+        phase: CASCADE phase (PREFLIGHT, CHECK, POSTFLIGHT)
+        vectors: Current epistemic vectors
+        gate_decision: CHECK result ('proceed' or 'investigate')
+        project_path: Path to project root
+        project_name: Display name for project
+        drift_detected: Whether drift was detected
+        drift_severity: Drift level ('none', 'low', 'medium', 'high', 'critical')
+        open_goals: Count of open goals
+        open_unknowns: Count of unresolved unknowns
     """
     hooks = EmpiricaActionHooks()
-    hooks.update_statusline_cache(session_id, ai_id, phase, vectors)
+    hooks.update_statusline_cache(
+        session_id, ai_id, phase, vectors,
+        gate_decision=gate_decision,
+        project_path=project_path,
+        project_name=project_name,
+        drift_detected=drift_detected,
+        drift_severity=drift_severity,
+        open_goals=open_goals,
+        open_unknowns=open_unknowns,
+    )
 
 # Auto-initialize tmux dashboard when action hooks are imported
 def initialize_tmux_dashboard():
