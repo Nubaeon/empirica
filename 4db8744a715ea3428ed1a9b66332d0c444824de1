@@ -1,0 +1,31 @@
+{
+  "goal_id": "309ef507-1e8a-4b0c-b60b-e1df23f965a4",
+  "session_id": "e0a7af82-22db-499c-bc20-08cbe681f81d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T23:56:11.026597+00:00",
+  "goal_data": {
+    "objective": "Fix Projects page - restore project discovery and selection",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Projects page loads without 500 error",
+      "Shows list of projects from ~/empirical-ai/",
+      "Project selection works and stores in user session",
+      "Navigates to Overview after selection"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T23:56:11.026607+00:00",
+      "action": "created"
+    }
+  ]
+}
