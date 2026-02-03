@@ -22,53 +22,70 @@ logger = logging.getLogger(__name__)
 DEFAULT_THRESHOLD = 0.5
 DEFAULT_LIMIT = 3
 
-# Adaptive retrieval depth thresholds (in seconds)
-DEPTH_THRESHOLDS = {
-    "light": 30 * 60,      # < 30 minutes = continuation, minimal retrieval
-    "moderate": 4 * 60 * 60,  # < 4 hours = standard retrieval
-    # > 4 hours = deep retrieval (human was AFK, need re-orientation)
-}
-
-# Limit multipliers per depth level
-DEPTH_MULTIPLIERS = {
-    "light": 1,      # Default limits
-    "moderate": 2,   # 2x limits
-    "deep": 3,       # 3x limits for full re-orientation
+# Time gap thresholds for human context awareness (in seconds)
+# These are metadata signals for Claude, not retrieval quantity controls
+TIME_GAP_THRESHOLDS = {
+    "continuation": 30 * 60,      # < 30 minutes = likely same work session
+    "short_break": 4 * 60 * 60,   # < 4 hours = human took a break
+    # > 4 hours = human was away for extended period
 }
 
 
-def compute_retrieval_depth(last_session_timestamp: Optional[float] = None) -> str:
+def compute_time_gap_info(last_session_timestamp: Optional[float] = None) -> Dict[str, any]:
     """
-    Compute retrieval depth based on time gap since last session.
+    Compute time gap information since last session.
 
-    Large gaps indicate human was AFK and AI needs deeper context recovery.
-    Small gaps indicate continuation where minimal retrieval suffices.
+    Returns metadata for Claude to understand human time context.
+    This is a SIGNAL for awareness, not a control for retrieval quantity.
 
     Args:
         last_session_timestamp: Unix timestamp of last session end (or None if unknown)
 
     Returns:
-        "light" | "moderate" | "deep"
+        {
+            "gap_seconds": float,
+            "gap_human_readable": "4h 23m",
+            "gap_category": "continuation" | "short_break" | "extended_away",
+            "note": "Human-friendly context note"
+        }
     """
     import time
 
     if last_session_timestamp is None:
-        return "moderate"  # Default when unknown
+        return {
+            "gap_seconds": None,
+            "gap_human_readable": "unknown",
+            "gap_category": "unknown",
+            "note": "No previous session timestamp available"
+        }
 
     gap_seconds = time.time() - last_session_timestamp
 
-    if gap_seconds < DEPTH_THRESHOLDS["light"]:
-        return "light"
-    elif gap_seconds < DEPTH_THRESHOLDS["moderate"]:
-        return "moderate"
+    # Format human-readable
+    hours = int(gap_seconds // 3600)
+    minutes = int((gap_seconds % 3600) // 60)
+    if hours > 0:
+        gap_human_readable = f"{hours}h {minutes}m"
     else:
-        return "deep"
+        gap_human_readable = f"{minutes}m"
 
+    # Categorize
+    if gap_seconds < TIME_GAP_THRESHOLDS["continuation"]:
+        category = "continuation"
+        note = "Continuing recent work session"
+    elif gap_seconds < TIME_GAP_THRESHOLDS["short_break"]:
+        category = "short_break"
+        note = f"Returning after {gap_human_readable} break"
+    else:
+        category = "extended_away"
+        note = f"Human was away for {gap_human_readable} - may benefit from context recap"
 
-def get_depth_limits(depth: str, base_limit: int = DEFAULT_LIMIT) -> int:
-    """Get adjusted limit based on retrieval depth."""
-    multiplier = DEPTH_MULTIPLIERS.get(depth, 1)
-    return base_limit * multiplier
+    return {
+        "gap_seconds": gap_seconds,
+        "gap_human_readable": gap_human_readable,
+        "gap_category": category,
+        "note": note
+    }
 
 
 def get_qdrant_url() -> Optional[str]:
@@ -240,11 +257,10 @@ def retrieve_task_patterns(
     task_context: str,
     threshold: float = DEFAULT_THRESHOLD,
     limit: int = DEFAULT_LIMIT,
-    depth: Optional[str] = None,
     last_session_timestamp: Optional[float] = None,
     include_eidetic: bool = False,
     include_episodic: bool = False,
-) -> Dict[str, List[Dict]]:
+) -> Dict[str, any]:
     """
     PREFLIGHT hook: Retrieve relevant patterns for a task.
 
@@ -254,14 +270,14 @@ def retrieve_task_patterns(
     - relevant_findings: High-impact facts
     - eidetic_facts: Stable facts with confidence (optional)
     - episodic_narratives: Recent session arcs (optional)
+    - time_gap: Metadata about time since last session (for human context awareness)
 
     Args:
         project_id: Project ID
         task_context: Description of the task being undertaken
         threshold: Minimum similarity score (default 0.5)
         limit: Max patterns per type (default 3)
-        depth: Retrieval depth ("light", "moderate", "deep") - auto-computed if None
-        last_session_timestamp: Used to auto-compute depth from time gap
+        last_session_timestamp: Used to compute time gap metadata
         include_eidetic: Include eidetic facts in retrieval
         include_episodic: Include episodic narratives in retrieval
 
@@ -273,25 +289,21 @@ def retrieve_task_patterns(
             "calibration_warnings": [...],
             "eidetic_facts": [...],  # if include_eidetic
             "episodic_narratives": [...],  # if include_episodic
-            "retrieval_depth": "light|moderate|deep"
+            "time_gap": {gap_seconds, gap_human_readable, gap_category, note}
         }
     """
+    # Compute time gap metadata (signal for Claude, not retrieval control)
+    time_gap_info = compute_time_gap_info(last_session_timestamp)
+
     if not get_qdrant_url():
-        return {"lessons": [], "dead_ends": [], "relevant_findings": [], "retrieval_depth": "none"}
-
-    # Auto-compute depth from time gap if not provided
-    if depth is None:
-        depth = compute_retrieval_depth(last_session_timestamp)
-
-    # Adjust limit based on depth
-    effective_limit = get_depth_limits(depth, limit)
+        return {"lessons": [], "dead_ends": [], "relevant_findings": [], "time_gap": time_gap_info}
 
     # Search for lessons (procedural knowledge)
     lessons_raw = _search_memory_by_type(
         project_id,
         f"How to: {task_context}",
         "lesson",
-        effective_limit,
+        limit,
         threshold
     )
     lessons = [
@@ -310,7 +322,7 @@ def retrieve_task_patterns(
         project_id,
         f"Approach for: {task_context}",
         "dead_end",
-        effective_limit,
+        limit,
         threshold
     )
     dead_ends = [
@@ -327,7 +339,7 @@ def retrieve_task_patterns(
         project_id,
         task_context,
         "finding",
-        effective_limit,
+        limit,
         threshold
     )
     relevant_findings = [
@@ -340,7 +352,7 @@ def retrieve_task_patterns(
     ]
 
     # Search for calibration warnings (grounded verification gaps from similar tasks)
-    calibration_warnings = _search_calibration_for_task(project_id, task_context, effective_limit)
+    calibration_warnings = _search_calibration_for_task(project_id, task_context, limit)
 
     # Build result
     result = {
@@ -348,7 +360,7 @@ def retrieve_task_patterns(
         "dead_ends": dead_ends,
         "relevant_findings": relevant_findings,
         "calibration_warnings": calibration_warnings,
-        "retrieval_depth": depth,
+        "time_gap": time_gap_info,
     }
 
     # Optional: Include eidetic facts (stable facts with confidence)
@@ -359,7 +371,7 @@ def retrieve_task_patterns(
                 project_id,
                 task_context,
                 min_confidence=0.5,
-                limit=effective_limit
+                limit=limit
             )
             result["eidetic_facts"] = [
                 {
@@ -382,7 +394,7 @@ def retrieve_task_patterns(
             episodic_raw = search_episodic(
                 project_id,
                 task_context,
-                limit=effective_limit,
+                limit=limit,
                 apply_recency_decay=True
             )
             result["episodic_narratives"] = [

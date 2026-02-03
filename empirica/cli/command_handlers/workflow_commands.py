@@ -308,9 +308,10 @@ def handle_preflight_submit_command(args):
                         include_eidetic=True,  # Include eidetic facts in PREFLIGHT
                         include_episodic=True,  # Include episodic narratives in PREFLIGHT
                     )
-                    if patterns and any(v for k, v in patterns.items() if k != 'retrieval_depth'):
-                        depth = patterns.get('retrieval_depth', 'unknown')
-                        logger.debug(f"Retrieved patterns (depth={depth}): {len(patterns.get('lessons', []))} lessons, "
+                    if patterns and any(v for k, v in patterns.items() if k != 'time_gap'):
+                        time_gap = patterns.get('time_gap', {})
+                        gap_note = time_gap.get('note', '') if time_gap else ''
+                        logger.debug(f"Retrieved patterns ({gap_note}): {len(patterns.get('lessons', []))} lessons, "
                                    f"{len(patterns.get('dead_ends', []))} dead_ends, "
                                    f"{len(patterns.get('relevant_findings', []))} findings, "
                                    f"{len(patterns.get('eidetic_facts', []))} eidetic, "
