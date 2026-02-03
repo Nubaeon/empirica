@@ -1721,11 +1721,10 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
             else:
                 project_dir = Path.cwd()
 
-            local_empirica = project_dir / '.empirica'
-            if local_empirica.exists():
-                active_session_file = local_empirica / f'active_session{instance_suffix}'
-            else:
-                active_session_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
+            # ALWAYS write to global ~/.empirica/ for instance-specific files
+            # This ensures statusline can find active session regardless of cwd
+            # The project_path in the JSON tells us which project's DB to use
+            active_session_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
             active_session_file.parent.mkdir(parents=True, exist_ok=True)
             # Store JSON with session_id AND project_path so statusline can find
             # the correct DB even when cwd changes (prevents user confusion about data loss)

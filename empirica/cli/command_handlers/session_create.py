@@ -378,11 +378,10 @@ def handle_session_create_command(args):
             safe_instance = instance_id.replace(":", "_").replace("%", "")
             instance_suffix = f"_{safe_instance}"
 
-        local_empirica = Path.cwd() / '.empirica'
-        if local_empirica.exists():
-            active_session_file = local_empirica / f'active_session{instance_suffix}'
-        else:
-            active_session_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
+        # ALWAYS write to global ~/.empirica/ for instance-specific files
+        # This ensures statusline can find active session regardless of cwd
+        # The project_path in the JSON tells us which project's DB to use
+        active_session_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
         active_session_file.parent.mkdir(parents=True, exist_ok=True)
         # Atomic write: temp file + rename prevents partial reads from concurrent access
         # Store JSON with session_id AND project_path so statusline can find

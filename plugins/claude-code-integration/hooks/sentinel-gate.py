@@ -62,9 +62,6 @@ SAFE_BASH_PREFIXES = (
     # Blanket 'empirica ' whitelist removed to prevent prompt injection bypass.
     # Package inspection (not install)
     'pip show', 'pip list', 'pip freeze', 'pip index',
-    'pip3 show', 'pip3 list', 'pip3 freeze', 'pip3 index',
-    # Database inspection (read-only)
-    'sqlite3 ',
     'npm list', 'npm ls', 'npm view', 'npm info',
     'cargo tree', 'cargo metadata',
     # Process inspection
@@ -110,12 +107,15 @@ KNOW_THRESHOLD = 0.70
 UNCERTAINTY_THRESHOLD = 0.35
 MAX_CHECK_AGE_MINUTES = 30
 
+# Transition commands - allowed after POSTFLIGHT to enable new cycle
+# These are the commands needed to properly switch projects or start new sessions
+TRANSITION_COMMANDS = (
+    'cd ',                           # Directory change (project switch)
+    'empirica session-create',       # New session
+    'empirica project-bootstrap',    # Bootstrap new project context
+    'empirica project-init',         # Initialize new project
+)
 
-# Ask-before-investigate thresholds (from ask_before_investigate.yaml)
-# Hardcoded to avoid YAML dependency in hook (hooks must be fast + minimal deps)
-ASK_UNCERTAINTY_THRESHOLD = 0.65   # Uncertainty >= this triggers ask-first
-ASK_CONTEXT_THRESHOLD = 0.50       # Context >= this means we CAN formulate questions
-ASK_SIGNAL_THRESHOLD = 0.40        # Signal >= this means not completely lost
 
 PAUSE_FILE = Path.home() / '.empirica' / 'sentinel_paused'
 
@@ -214,6 +214,27 @@ def is_toggle_command(command: str) -> Optional[str]:
         return 'unpause'
 
     return None
+
+
+def is_transition_command(command: str) -> bool:
+    """Check if command is a transition command (allowed after POSTFLIGHT).
+
+    Transition commands enable starting a new epistemic cycle:
+    - cd to switch projects
+    - session-create to start new session
+    - project-bootstrap/init for new project context
+
+    These are allowed after POSTFLIGHT to prevent the chicken-and-egg
+    problem where you can't switch projects without a new PREFLIGHT,
+    but can't create a PREFLIGHT in the new project without switching.
+    """
+    cmd = command.lstrip()
+
+    for prefix in TRANSITION_COMMANDS:
+        if cmd.startswith(prefix):
+            return True
+
+    return False
 
 
 def respond(decision, reason=""):
@@ -399,69 +420,6 @@ def is_safe_pipe_chain(command: str) -> bool:
     return True
 
 
-def _get_preflight_context(cursor, session_id: str) -> float:
-    """Extract context vector from PREFLIGHT reflex_data.
-
-    Returns the context score (0.0-1.0) from the most recent PREFLIGHT.
-    Falls back to 0.0 if not available.
-    """
-    try:
-        cursor.execute("""
-            SELECT reflex_data FROM reflexes
-            WHERE session_id = ? AND phase = 'PREFLIGHT'
-            ORDER BY timestamp DESC LIMIT 1
-        """, (session_id,))
-        row = cursor.fetchone()
-        if row and row[0]:
-            data = json.loads(row[0])
-            vectors = data.get('vectors', {})
-            return float(vectors.get('context', 0.0))
-    except Exception:
-        pass
-    return 0.0
-
-
-def _get_check_context(reflex_data: Optional[str]) -> float:
-    """Extract context vector from CHECK reflex_data.
-
-    Returns the context score (0.0-1.0) from CHECK data.
-    Falls back to 0.0 if not available.
-    """
-    if not reflex_data:
-        return 0.0
-    try:
-        data = json.loads(reflex_data)
-        vectors = data.get('vectors', {})
-        return float(vectors.get('context', 0.0))
-    except Exception:
-        return 0.0
-
-
-def _check_ask_before_investigate(know: float, uncertainty: float, context: float) -> Optional[str]:
-    """Check if vectors match ask-before-investigate thresholds.
-
-    Returns an escalation message if the AI should ask the user first,
-    or None if normal flow should continue.
-
-    Triggers when:
-    - Uncertainty is high (>= 0.65) - significant doubt
-    - Context is sufficient (>= 0.50) - enough info to formulate questions
-    - Know is below gate (< 0.70) - not ready to proceed
-
-    This prevents wasteful investigation loops when the AI has enough
-    context to ask targeted questions instead.
-    """
-    if (uncertainty >= ASK_UNCERTAINTY_THRESHOLD
-            and context >= ASK_CONTEXT_THRESHOLD
-            and know < KNOW_THRESHOLD):
-        return (
-            f"ESCALATE: High uncertainty ({uncertainty:.2f}) with sufficient context ({context:.2f}). "
-            f"Ask the user before investigating. You have enough context to formulate specific questions. "
-            f"Use AskUserQuestion to clarify approach, then CHECK again."
-        )
-    return None
-
-
 def main():
     try:
         hook_input = json.loads(sys.stdin.read() or '{}')
@@ -561,6 +519,14 @@ def main():
     preflight_row = cursor.fetchone()
 
     if not preflight_row:
+        # No PREFLIGHT yet - but allow transition commands to enable project switch
+        # This handles the case where a new session was created but no PREFLIGHT submitted
+        if tool_name == 'Bash':
+            command = tool_input.get('command', '')
+            if is_transition_command(command):
+                db.close()
+                respond("allow", "Transition command (no PREFLIGHT yet - starting new cycle)")
+                sys.exit(0)
         db.close()
         respond("deny", f"No PREFLIGHT. Assess your knowledge state first.")
         sys.exit(0)
@@ -602,11 +568,14 @@ def main():
             postflight_ts = float(postflight_timestamp)
 
             if postflight_ts > preflight_ts:
-                # SELF-EXEMPTION: Allow toggle commands when loop is closed
-                # This is the only way to write/remove the pause file.
-                # Prevents prompt injection: toggle ONLY works when loop is genuinely closed.
+                # SELF-EXEMPTION: Allow toggle and transition commands when loop is closed
+                # This enables: 1) pause/unpause toggle, 2) project switch + new session
+                # Prevents prompt injection: only works when loop is genuinely closed.
                 if tool_name == 'Bash':
-                    toggle_action = is_toggle_command(tool_input.get('command', ''))
+                    command = tool_input.get('command', '')
+
+                    # Toggle commands (pause/unpause)
+                    toggle_action = is_toggle_command(command)
                     if toggle_action == 'pause':
                         db.close()
                         respond("allow", "Sentinel self-exemption: pause toggle (loop closed)")
@@ -614,6 +583,13 @@ def main():
                     elif toggle_action == 'unpause':
                         db.close()
                         respond("allow", "Sentinel self-exemption: unpause toggle")
+                        sys.exit(0)
+
+                    # Transition commands (cd, session-create, project-bootstrap)
+                    # These enable starting a new cycle in a different project
+                    if is_transition_command(command):
+                        db.close()
+                        respond("allow", "Transition command (starting new cycle)")
                         sys.exit(0)
 
                 db.close()
@@ -630,15 +606,6 @@ def main():
     if raw_know >= KNOW_THRESHOLD and raw_unc <= UNCERTAINTY_THRESHOLD:
         db.close()
         respond("allow", f"PREFLIGHT passed gate (know={raw_know:.2f}, unc={raw_unc:.2f}) - auto-proceed")
-        sys.exit(0)
-
-    # ESCALATION CHECK: High uncertainty but context exists → ask user first
-    # Uses ask_before_investigate.yaml thresholds (loaded from MCO config)
-    preflight_context = _get_preflight_context(cursor, session_id)
-    escalation = _check_ask_before_investigate(raw_know, raw_unc, preflight_context)
-    if escalation:
-        db.close()
-        respond("deny", escalation)
         sys.exit(0)
 
     # PREFLIGHT confidence too low - require explicit CHECK
@@ -666,15 +633,29 @@ def main():
             respond("deny", f"Assessment sequence invalid. Start fresh noetic phase.")
             sys.exit(0)
 
-        # Anti-gaming hook removed: the Sentinel gate's calibration-corrected
-        # vector thresholds (know >= 0.70, uncertainty <= 0.35) are sufficient.
-        # The previous 30s timer + artifact evidence check was:
-        # - Addressing a non-existent threat (LLMs don't strategically game vectors)
-        # - Trivially bypassable (any trivial finding satisfies it)
-        # - Creating false positives on legitimate fast CHECKs after bootstrap
-        # - Only enforced on Bash, not MCP (inconsistent)
-        # See finding 8e9941df for full audit.
+        # Anti-gaming: Minimum noetic duration with evidence check
+        # If CHECK is very fast (<30s) AND no evidence of investigation, reject
+        noetic_duration = check_ts - preflight_ts
+        MIN_NOETIC_DURATION = float(os.getenv('EMPIRICA_MIN_NOETIC_DURATION', '30'))
 
+        if noetic_duration < MIN_NOETIC_DURATION:
+            # Check for evidence of investigation (findings or unknowns logged)
+            # Reuse existing db connection (single connection per sentinel invocation)
+            cursor.execute("""
+                SELECT COUNT(*) FROM project_findings
+                WHERE session_id = ? AND timestamp > ? AND timestamp < ?
+            """, (session_id, preflight_ts, check_ts))
+            findings_count = cursor.fetchone()[0]
+
+            cursor.execute("""
+                SELECT COUNT(*) FROM project_unknowns
+                WHERE session_id = ? AND timestamp > ? AND timestamp < ?
+            """, (session_id, preflight_ts, check_ts))
+            unknowns_count = cursor.fetchone()[0]
+
+            if findings_count == 0 and unknowns_count == 0:
+                respond("deny", f"Rushed assessment ({noetic_duration:.0f}s). Investigate and log learnings first.")
+                sys.exit(0)
     except (TypeError, ValueError):
         pass  # Can't compare timestamps, skip this check
 
@@ -689,15 +670,7 @@ def main():
 
     # Check if decision was "investigate" (not authorized for praxic)
     if decision == 'investigate':
-        # ESCALATION: If ask-before-investigate thresholds match, suggest asking
-        check_know = know or 0
-        check_unc = uncertainty or 1
-        check_context = _get_check_context(reflex_data)
-        escalation = _check_ask_before_investigate(check_know, check_unc, check_context)
-        if escalation:
-            respond("deny", escalation)
-        else:
-            respond("deny", f"CHECK returned 'investigate'. Continue noetic phase first.")
+        respond("deny", f"CHECK returned 'investigate'. Continue noetic phase first.")
         sys.exit(0)
 
     # Optional: Check age expiry
