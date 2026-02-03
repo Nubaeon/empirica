@@ -66,6 +66,7 @@ from .trajectory_parsers import add_trajectory_parsers
 from .concept_graph_parsers import add_concept_graph_parsers
 from .mcp_parsers import add_mcp_parsers
 from .message_parsers import add_message_parsers
+from .memory_parsers import add_memory_parsers
 
 __all__ = [
     'format_help_text',
@@ -96,4 +97,5 @@ __all__ = [
     'add_concept_graph_parsers',
     'add_mcp_parsers',
     'add_message_parsers',
+    'add_memory_parsers',
 ]

@@ -63,6 +63,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find'],
                     'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats'],
                     'MCP Server': ['mcp-start', 'mcp-stop', 'mcp-status', 'mcp-test', 'mcp-list-tools', 'mcp-call'],
+                    'Memory': ['memory-prime', 'memory-scope', 'memory-value', 'pattern-check', 'session-rollup', 'memory-report'],
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -109,6 +110,7 @@ from .parsers import (
     add_concept_graph_parsers,
     add_mcp_parsers,
     add_message_parsers,
+    add_memory_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -166,6 +168,14 @@ from .command_handlers.message_commands import (
     handle_message_thread_command,
     handle_message_channels_command,
     handle_message_cleanup_command,
+)
+from .command_handlers.memory_commands import (
+    handle_memory_prime_command,
+    handle_memory_scope_command,
+    handle_memory_value_command,
+    handle_pattern_check_command,
+    handle_session_rollup_command,
+    handle_memory_report_command,
 )
 
 
@@ -230,6 +240,7 @@ def create_argument_parser():
     add_concept_graph_parsers(subparsers)
     add_mcp_parsers(subparsers)
     add_message_parsers(subparsers)
+    add_memory_parsers(subparsers)
 
     return parser
 
@@ -482,6 +493,14 @@ def main(args=None):
             'message-thread': handle_message_thread_command,
             'message-channels': handle_message_channels_command,
             'message-cleanup': handle_message_cleanup_command,
+
+            # Memory management commands
+            'memory-prime': handle_memory_prime_command,
+            'memory-scope': handle_memory_scope_command,
+            'memory-value': handle_memory_value_command,
+            'pattern-check': handle_pattern_check_command,
+            'session-rollup': handle_session_rollup_command,
+            'memory-report': handle_memory_report_command,
 
             # === ALIASES ===
             # Argparse registers aliases for --help, but handler lookup needs them too
