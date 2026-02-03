@@ -1,0 +1,16 @@
+{
+  "finding_id": "b1cba504-3b78-440b-9507-0a83f9666575",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "dcfc49ab-c67e-4fef-8119-de94649b6d88",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T23:12:56.301460+00:00",
+  "finding": "Collaboration evolution: Shifted from supervised operation (human pastes files, AI processes) to autonomous navigation (human asks question, AI finds what it needs). Enabled by: architectural coherence, consistent naming, the Explore agent, and externalized epistemic state. The system's legibility to AI readers compounds \u2014 good architecture makes future traversal easier.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": "collaboration-dynamics",
+  "finding_data": {
+    "finding": "Collaboration evolution: Shifted from supervised operation (human pastes files, AI processes) to autonomous navigation (human asks question, AI finds what it needs). Enabled by: architectural coherence, consistent naming, the Explore agent, and externalized epistemic state. The system's legibility to AI readers compounds \u2014 good architecture makes future traversal easier.",
+    "impact": 0.85
+  }
+}
