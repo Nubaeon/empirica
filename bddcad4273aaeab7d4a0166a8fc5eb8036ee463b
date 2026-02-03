@@ -1,0 +1,16 @@
+{
+  "finding_id": "9dbd4e26-e292-4883-bfc4-e2f529b9517a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T08:41:59.315127+00:00",
+  "finding": "Injection page now discovers correct counts: 1 CLAUDE.md (main), 11 hooks, 3 skills (local plugin only, not cache duplicates), 4 personas, workflow protocol. Previous issue (70 skills) was counting cache duplicates. All discoverable items now have click-to-edit with fullscreen modal editors. JSON validation for personas, YAML validation via YAMLEditorDialog for workflow protocol. All editors create .bak backup before writing.",
+  "impact": 0.8,
+  "goal_id": "b5c20027-8c85-4b4b-a4ee-dc91f4ab82a0",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Injection page now discovers correct counts: 1 CLAUDE.md (main), 11 hooks, 3 skills (local plugin only, not cache duplicates), 4 personas, workflow protocol. Previous issue (70 skills) was counting cache duplicates. All discoverable items now have click-to-edit with fullscreen modal editors. JSON validation for personas, YAML validation via YAMLEditorDialog for workflow protocol. All editors create .bak backup before writing.",
+    "impact": 0.8
+  }
+}
