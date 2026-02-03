@@ -1,0 +1,16 @@
+{
+  "finding_id": "83604724-c241-40a3-b62d-6e7bc275edbd",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:11:06.705299+00:00",
+  "finding": "Current retrieval architecture: (1) post-compact hook triggers project-bootstrap for eidetic/episodic retrieval, (2) PREFLIGHT retrieves patterns via retrieve_task_patterns(). Gap: PREFLIGHT doesn't retrieve eidetic/episodic for ongoing sessions (only bootstrap does). Consider adding eidetic/episodic to PREFLIGHT for non-post-compact scenarios.",
+  "impact": 0.7,
+  "goal_id": "9a502aa2-b4c5-4373-8932-40668f499e7c",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Current retrieval architecture: (1) post-compact hook triggers project-bootstrap for eidetic/episodic retrieval, (2) PREFLIGHT retrieves patterns via retrieve_task_patterns(). Gap: PREFLIGHT doesn't retrieve eidetic/episodic for ongoing sessions (only bootstrap does). Consider adding eidetic/episodic to PREFLIGHT for non-post-compact scenarios.",
+    "impact": 0.7
+  }
+}
