@@ -1,0 +1,31 @@
+{
+  "goal_id": "50c07e40-d2a1-4e15-85ac-e2393b2ad7a4",
+  "session_id": "e0a7af82-22db-499c-bc20-08cbe681f81d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T23:56:13.709764+00:00",
+  "goal_data": {
+    "objective": "Fix Workspace page - cross-project portfolio view",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Workspace page loads without 500 error",
+      "Discovers all project databases in workspace",
+      "Shows aggregate stats across projects",
+      "Project health indicators display correctly"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T23:56:13.709775+00:00",
+      "action": "created"
+    }
+  ]
+}
