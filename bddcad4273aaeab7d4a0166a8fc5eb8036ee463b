@@ -1,0 +1,13 @@
+{
+  "unknown_id": "c9218167-b6ce-47b0-9b65-a18f2b57ac56",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T09:01:25.672418+00:00",
+  "unknown": "Should PREFLIGHT retrieval depth be adaptive based on context gap? Large time gap since last session \u2192 deeper retrieval (more episodic context). Small gap \u2192 lighter retrieval (continuation). This would formalize the \"re-orientation\" behavior.",
+  "goal_id": "e1eabad2-d97e-4268-8ff4-8bd3e4ab82a9",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
