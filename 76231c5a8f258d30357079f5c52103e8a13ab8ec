@@ -1,0 +1,32 @@
+{
+  "goal_id": "069855c7-cd54-4c3b-bb05-71f0202d9ac4",
+  "session_id": "f37dd044-6669-459f-89ed-fd6ec385d16d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T23:43:58.787481+00:00",
+  "goal_data": {
+    "objective": "Wire pattern-check CLI/MCP: Real-time pattern sentinel that checks current approach against dead-ends and mistake patterns - not just at CHECK gates",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "CLI command: empirica pattern-check --session-id <ID> --approach '<description>'",
+      "MCP tool: pattern_check with same params",
+      "Returns: dead_end_matches, mistake_risk, calibration_warnings",
+      "Lightweight enough to call frequently during work (not just at gates)",
+      "Uses existing pattern_retrieval.py check_against_patterns"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T23:43:58.787490+00:00",
+      "action": "created"
+    }
+  ]
+}
