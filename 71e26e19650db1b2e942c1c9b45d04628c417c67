@@ -1,0 +1,13 @@
+{
+  "unknown_id": "6dbf182e-0432-4a4b-b00a-a179db3cbb50",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:10:18.524481+00:00",
+  "unknown": "AlignmentCheck (goal hijacking detector) in LlamaFirewall - is this distinct from PromptGuard 2? Can it detect when an agent's objectives are being redirected by another agent? Critical for inter-agent trust.",
+  "goal_id": "2125c0a9-10dc-4a9d-91d2-3c4c6aece556",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
