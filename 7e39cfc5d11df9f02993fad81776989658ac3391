@@ -1,0 +1,16 @@
+{
+  "finding_id": "48578dbf-5908-404c-96c2-2479bfe3d80a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "cf3e46c9-4c41-4fe4-b88d-58b211dce949",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T11:45:44.473001+00:00",
+  "finding": "Comms page now displays epistemic envelope information for messages: sender vectors (know/uncertainty with color coding - green=confident, orange=uncertain), content hash verification (verified/mismatch/no hash with icons), and firewall status (when available). This provides visual feedback on message integrity and sender epistemic state.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Comms page now displays epistemic envelope information for messages: sender vectors (know/uncertainty with color coding - green=confident, orange=uncertain), content hash verification (verified/mismatch/no hash with icons), and firewall status (when available). This provides visual feedback on message integrity and sender epistemic state.",
+    "impact": 0.7
+  }
+}
