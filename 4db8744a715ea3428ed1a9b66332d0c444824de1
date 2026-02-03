@@ -1,0 +1,31 @@
+{
+  "goal_id": "f0a56bcc-5459-4af8-b21d-45479f2633e1",
+  "session_id": "e0a7af82-22db-499c-bc20-08cbe681f81d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T23:56:19.465154+00:00",
+  "goal_data": {
+    "objective": "Fix Avatar page - refactor for NiceGUI 3.x compatibility",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Avatar page loads without 500 error",
+      "JavaScript moved to ui.add_body_html()",
+      "WebSocket connection works",
+      "Emoji avatar displays and updates"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T23:56:19.465164+00:00",
+      "action": "created"
+    }
+  ]
+}
