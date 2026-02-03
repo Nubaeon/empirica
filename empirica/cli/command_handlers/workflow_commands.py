@@ -811,12 +811,12 @@ def handle_check_submit_command(args):
 
         # AUTO-COMPUTE DECISION from vectors if not provided
         # Readiness gate (from CLAUDE.md): know >= 0.70 AND uncertainty <= 0.35
-        # Apply bias corrections from .breadcrumbs.yaml (dynamic calibration)
+        # Apply GROUNDED corrections from .breadcrumbs.yaml (objective evidence, not learning deltas)
         know = vectors.get('know', 0.5)
         uncertainty = vectors.get('uncertainty', 0.5)
         try:
-            from empirica.core.bayesian_beliefs import load_bias_corrections
-            _corrections = load_bias_corrections()
+            from empirica.core.bayesian_beliefs import load_grounded_corrections
+            _corrections = load_grounded_corrections()
         except Exception:
             _corrections = {}
         corrected_know = know + _corrections.get('know', 0.0)

@@ -344,11 +344,17 @@ class GroundedCalibrationManager:
         beliefs = self.get_grounded_beliefs(ai_id)
         adjustments = {}
 
+        from ..bayesian_beliefs import BayesianBeliefManager
+        max_correction = BayesianBeliefManager.MAX_CORRECTION_MAGNITUDE
+
         for vector, belief in beliefs.items():
             if belief.evidence_count >= 3:
                 adjustment = belief.mean - self.DEFAULT_PRIOR_MEAN
                 evidence_weight = min(belief.evidence_count / 10.0, 1.0)
-                adjustments[vector] = round(adjustment * evidence_weight, 4)
+                raw = round(adjustment * evidence_weight, 4)
+                # Cap correction magnitude (same limit as self-referential track)
+                capped = max(-max_correction, min(max_correction, raw))
+                adjustments[vector] = capped
 
         return adjustments
 

@@ -497,10 +497,10 @@ def default_epistemic_evaluator(checkpoint_data: Dict[str, Any]) -> SentinelDeci
     know = vectors.get('know', 0.5)
     engagement = vectors.get('engagement', 0.7)
 
-    # Apply bias corrections from .breadcrumbs.yaml (dynamic, not hardcoded)
+    # Apply GROUNDED corrections from .breadcrumbs.yaml (objective evidence, not learning deltas)
     try:
-        from empirica.core.bayesian_beliefs import load_bias_corrections
-        corrections = load_bias_corrections()
+        from empirica.core.bayesian_beliefs import load_grounded_corrections
+        corrections = load_grounded_corrections()
     except Exception:
         corrections = {}
 

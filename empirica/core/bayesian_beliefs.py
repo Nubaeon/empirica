@@ -55,6 +55,10 @@ class BayesianBeliefManager:
     # Observation variance (how much we trust single observations)
     OBSERVATION_VARIANCE = 0.1
 
+    # Maximum magnitude for bias corrections (prevents calibration drift)
+    # ±0.25 is generous: know=0.45 corrects to 0.70 (threshold), not beyond
+    MAX_CORRECTION_MAGNITUDE = 0.25
+
     # Vectors to track
     TRACKED_VECTORS = [
         'engagement', 'know', 'do', 'context',
@@ -142,7 +146,13 @@ class BayesianBeliefManager:
                 # Scale adjustment by evidence count (more evidence = trust adjustment more)
                 evidence_weight = min(belief.evidence_count / 10.0, 1.0)
 
-                adjustments[vector] = adjustment * evidence_weight
+                raw_adjustment = adjustment * evidence_weight
+
+                # Cap correction magnitude to prevent calibration drift
+                # Without this, corrections grow unbounded and override honest self-assessments
+                capped = max(-self.MAX_CORRECTION_MAGNITUDE,
+                             min(self.MAX_CORRECTION_MAGNITUDE, raw_adjustment))
+                adjustments[vector] = capped
 
         return adjustments
 
@@ -448,19 +458,18 @@ def export_calibration_to_breadcrumbs(ai_id: str, db, git_root: str = None) -> b
         with open(breadcrumbs_path, 'r') as f:
             existing_lines = f.readlines()
 
-        # Find existing calibration section (if any)
-        # Include the comment line "# Bayesian calibration..." in the replacement range
+        # Find existing section (matches old 'calibration:' or new 'learning_trajectory:')
         in_calibration = False
         for i, line in enumerate(existing_lines):
-            # Check for comment that precedes calibration section
-            if '# Bayesian calibration' in line and calibration_start == -1:
+            # Match comment from either era
+            if ('# Bayesian calibration' in line or '# Learning trajectory' in line) and calibration_start == -1:
                 calibration_start = i
-            elif line.strip().startswith('calibration:'):
+            elif line.strip().startswith('calibration:') or line.strip().startswith('learning_trajectory:'):
                 if calibration_start == -1:
                     calibration_start = i
                 in_calibration = True
             elif in_calibration and line.strip() and not line.startswith(' ') and not line.startswith('\t'):
-                # End of calibration section
+                # End of section
                 calibration_end = i
                 break
 
@@ -476,12 +485,13 @@ def export_calibration_to_breadcrumbs(ai_id: str, db, git_root: str = None) -> b
     sorted_adjustments = sorted(adjustments.items(), key=lambda x: abs(x[1]), reverse=True)
 
     calibration_yaml = f"""
-# Bayesian calibration (auto-updated by Empirica POSTFLIGHT)
-calibration:
+# Learning trajectory (PREFLIGHT→POSTFLIGHT deltas — measures learning, NOT calibration bias)
+# For actual bias corrections see grounded_calibration.grounded_bias_corrections
+learning_trajectory:
   last_updated: "{timestamp}"
   ai_id: {ai_id}
   observations: {total_evidence}
-  bias_corrections:
+  session_deltas:
 """
 
     for vector, adj in sorted_adjustments:
@@ -576,6 +586,7 @@ def load_bias_corrections(git_root: str = None) -> Dict[str, float]:
         # Simple YAML parsing for bias_corrections block (avoid yaml dependency)
         corrections = {}
         in_corrections = False
+        max_correction = BayesianBeliefManager.MAX_CORRECTION_MAGNITUDE
         for line in content.split('\n'):
             stripped = line.strip()
             if stripped == 'bias_corrections:':
@@ -588,11 +599,79 @@ def load_bias_corrections(git_root: str = None) -> Dict[str, float]:
                         key = key.strip()
                         val = val.strip()
                         try:
-                            corrections[key] = float(val)
+                            raw = float(val)
+                            # Defense-in-depth: cap corrections on load
+                            corrections[key] = max(-max_correction,
+                                                   min(max_correction, raw))
                         except ValueError:
                             continue
                     elif stripped.endswith(':'):
                         # New section started — stop parsing
+                        break
+
+        return corrections
+    except Exception:
+        return {}
+
+
+def load_grounded_corrections(git_root: str = None) -> Dict[str, float]:
+    """
+    Load GROUNDED bias corrections from .breadcrumbs.yaml.
+
+    These corrections are derived from objective evidence (test results, git metrics,
+    artifact counts) compared to self-assessment — measuring actual calibration accuracy.
+
+    This is the correct source for Sentinel/CHECK gate corrections.
+    Contrast with load_bias_corrections() which loads learning trajectory data
+    (PREFLIGHT→POSTFLIGHT deltas) — useful for tracking but NOT for bias correction.
+
+    Falls back to empty dict if grounded calibration unavailable (Sentinel uses raw vectors).
+    """
+    import os
+    import subprocess
+
+    if not git_root:
+        try:
+            result = subprocess.run(
+                ['git', 'rev-parse', '--show-toplevel'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                git_root = result.stdout.strip()
+            else:
+                return {}
+        except Exception:
+            return {}
+
+    breadcrumbs_path = os.path.join(git_root, '.breadcrumbs.yaml')
+    if not os.path.exists(breadcrumbs_path):
+        return {}
+
+    try:
+        with open(breadcrumbs_path, 'r') as f:
+            content = f.read()
+
+        corrections = {}
+        in_corrections = False
+        max_correction = BayesianBeliefManager.MAX_CORRECTION_MAGNITUDE
+        for line in content.split('\n'):
+            stripped = line.strip()
+            if stripped == 'grounded_bias_corrections:':
+                in_corrections = True
+                continue
+            if in_corrections:
+                if stripped and not stripped.startswith('#'):
+                    if ':' in stripped and not stripped.endswith(':'):
+                        key, val = stripped.split(':', 1)
+                        key = key.strip()
+                        val = val.strip()
+                        try:
+                            raw = float(val)
+                            corrections[key] = max(-max_correction,
+                                                   min(max_correction, raw))
+                        except ValueError:
+                            continue
+                    elif stripped.endswith(':'):
                         break
 
         return corrections

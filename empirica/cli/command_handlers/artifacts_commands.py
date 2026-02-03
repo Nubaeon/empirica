@@ -878,11 +878,11 @@ def _render_signatures(signatures):
 
 
 def _render_calibration(cal_data):
-    """Render calibration.md — bias corrections and drift state."""
+    """Render calibration.md — learning trajectory and grounded corrections."""
     lines = [
         "# Calibration",
         "",
-        "> Bias corrections from Bayesian calibration of epistemic self-assessments.",
+        "> Learning trajectory (PREFLIGHT→POSTFLIGHT) and grounded bias corrections.",
         "",
     ]
 
@@ -890,9 +890,10 @@ def _render_calibration(cal_data):
         lines.append("*No calibration data found in .breadcrumbs.yaml*")
         return "\n".join(lines)
 
-    cal = cal_data.get("calibration", {})
+    # Support both old 'calibration:' and new 'learning_trajectory:' section names
+    cal = cal_data.get("learning_trajectory", cal_data.get("calibration", {}))
     if not cal:
-        lines.append("*No calibration section in .breadcrumbs.yaml*")
+        lines.append("*No learning trajectory section in .breadcrumbs.yaml*")
         return "\n".join(lines)
 
     ai_id = cal.get("ai_id", "?")
@@ -904,10 +905,11 @@ def _render_calibration(cal_data):
         "",
     ])
 
-    corrections = cal.get("bias_corrections", {})
+    # Support both old 'bias_corrections' and new 'session_deltas' key names
+    corrections = cal.get("session_deltas", cal.get("bias_corrections", {}))
     if corrections:
         lines.extend([
-            "## Bias Corrections",
+            "## Learning Trajectory (Session Deltas)",
             "",
             "| Vector | Correction | Direction |",
             "|--------|------------|-----------|",
