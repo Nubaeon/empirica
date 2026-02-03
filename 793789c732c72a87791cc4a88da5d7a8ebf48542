@@ -1,0 +1,11 @@
+{
+  "dead_end_id": "ec679bd6-d239-478e-9525-e6db3d9c434c",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2acef5ed-a624-4e2e-a020-a3f6aa724ae0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T10:03:55.967563+00:00",
+  "approach": "Fork or adopt OpenClaw for comms layer",
+  "why_failed": "Security posture fundamentally broken: CVE-2026-25253 (1-click RCE), 84% extraction rate, 91% prompt injection success, 400+ malicious skills in days. Brand carries baggage. Architecture lacks epistemic integrity layer. Fork would inherit technical debt and reputation. Better to build native with Empirica's trust model from the start.",
+  "goal_id": "2125c0a9-10dc-4a9d-91d2-3c4c6aece556",
+  "subtask_id": null
+}
