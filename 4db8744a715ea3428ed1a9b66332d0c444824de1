@@ -1,0 +1,16 @@
+{
+  "finding_id": "a4ef36b6-5ded-4595-b520-e2af8282423d",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "18ffe36e-7bdc-4586-bd94-9fa731a08d81",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T23:54:06.598709+00:00",
+  "finding": "NiceGUI 3.x breaking changes: (1) ui.html() requires sanitize=False for custom HTML, (2) ui.html() cannot contain script tags - must use ui.add_body_html() instead for JavaScript. Avatar page/widget need refactoring to split HTML from JS.",
+  "impact": 0.8,
+  "goal_id": "7a5306cd-c7a4-42bc-9772-f36044ffa945",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "NiceGUI 3.x breaking changes: (1) ui.html() requires sanitize=False for custom HTML, (2) ui.html() cannot contain script tags - must use ui.add_body_html() instead for JavaScript. Avatar page/widget need refactoring to split HTML from JS.",
+    "impact": 0.8
+  }
+}
