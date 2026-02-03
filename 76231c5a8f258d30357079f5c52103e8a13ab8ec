@@ -1,0 +1,31 @@
+{
+  "goal_id": "c0735f0b-ca2b-464c-afa1-e5cf578b5ca7",
+  "session_id": "f37dd044-6669-459f-89ed-fd6ec385d16d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T23:43:55.311071+00:00",
+  "goal_data": {
+    "objective": "Wire memory-value CLI/MCP: Expose information_gain.py for prioritizing retrieval by novelty score and Shannon entropy - token-cost aware memory selection",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "CLI command: empirica memory-value --session-id <ID> --query '<text>' --budget <tokens>",
+      "MCP tool: memory_value with same params",
+      "Returns: memories ranked by information gain / token cost ratio",
+      "Uses existing information_gain.py (estimate_information_gain, novelty_score)"
+    ],
+    "estimated_complexity": 0.4,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T23:43:55.311081+00:00",
+      "action": "created"
+    }
+  ]
+}
