@@ -1,0 +1,13 @@
+{
+  "unknown_id": "f1e14778-9e6b-45f6-b571-14f039f6e7e0",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "567650e5-1bb6-46da-82bc-00f945eb51c7",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T13:17:29.231873+00:00",
+  "unknown": "How does NiceGUI handle custom WebSocket endpoints alongside its built-in socket.io? Can we add a FastAPI WebSocket route that the avatar iframe connects to, or do we need to use NiceGUI's native socket.io from JavaScript?",
+  "goal_id": "1cbf73f6-cbb4-4b29-b1c8-57a3b0a83abb",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
