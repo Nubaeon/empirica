@@ -1,0 +1,16 @@
+{
+  "finding_id": "8de88339-de7f-4aae-964d-85420a71aa2b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "567650e5-1bb6-46da-82bc-00f945eb51c7",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T16:10:50.545416+00:00",
+  "finding": "Time gap detection refactored from retrieval multipliers to metadata-only signal. Returns gap_seconds, gap_human_readable, gap_category (continuation/short_break/extended_away), and note. Claude can use this for natural time awareness without forced nagging.",
+  "impact": 0.7,
+  "goal_id": "4e7a3559-cec9-439b-b73b-b768680df91b",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Time gap detection refactored from retrieval multipliers to metadata-only signal. Returns gap_seconds, gap_human_readable, gap_category (continuation/short_break/extended_away), and note. Claude can use this for natural time awareness without forced nagging.",
+    "impact": 0.7
+  }
+}
