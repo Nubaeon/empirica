@@ -1,0 +1,31 @@
+{
+  "goal_id": "00b4fa06-92a1-4151-80d8-00012788c17b",
+  "session_id": "f37dd044-6669-459f-89ed-fd6ec385d16d",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-03T23:44:02.160075+00:00",
+  "goal_data": {
+    "objective": "Wire session-rollup CLI/MCP: Expose EpistemicRollupGate for aggregating epistemic state across parallel agents - dedupe findings, gate by budget",
+    "scope": {
+      "breadth": 0.5,
+      "duration": 0.3,
+      "coordination": 0.7
+    },
+    "success_criteria": [
+      "CLI command: empirica session-rollup --parent-session-id <ID>",
+      "MCP tool: session_rollup with same params",
+      "Returns: aggregated findings (deduped), combined epistemic vectors, agent contribution summary",
+      "Uses existing epistemic_rollup.py (EpistemicRollupGate, Jaccard + semantic dedup)"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-03T23:44:02.160086+00:00",
+      "action": "created"
+    }
+  ]
+}
