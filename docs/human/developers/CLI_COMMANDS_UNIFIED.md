@@ -194,11 +194,27 @@
 - **message-channels** - List channels with unread counts
 - **message-cleanup** - Remove expired messages
 
-### 27. Workspace Database (4 commands)
+---
+
+## Extension Commands (from separate packages)
+
+The following commands are provided by extension packages that depend on the Empirica foundation:
+
+### empirica-workspace (Portfolio Management)
+Install: `pip install empirica-workspace`
+
+- **workspace-init** - Initialize global workspace registry
 - **workspace-discover** - Discover and register projects under a directory
 - **workspace-sync** - Sync stats from all registered projects
 - **workspace-patterns** - Search cross-project patterns
 - **workspace-link** - Create knowledge transfer link between projects
+
+### empirica-crm (Client Relationships)
+Install: `pip install empirica-crm`
+
+- **crm-client-create** - Create a client record
+- **crm-engagement-create** - Create an engagement with a client
+- **crm-memory-log** - Log a client memory
 
 ---
 
@@ -1163,38 +1179,6 @@ Messages are stored in git notes at `refs/notes/empirica/messages/<channel>/<id>
 #### `message-cleanup`
 **Purpose:** Remove expired messages
 **Usage:** `empirica message-cleanup [--dry-run]`
-
----
-
-### Workspace Database Commands
-
-The workspace database (`~/.empirica/workspace/workspace.db`) provides a global registry of all projects with trajectory pointers for cross-project pattern matching.
-
-#### `workspace-discover`
-**Purpose:** Discover and register projects under a directory
-**Usage:** `empirica workspace-discover --path <directory>`
-**Notes:** Scans for directories with `.empirica/` subdirectories and registers them in the global workspace.
-
-#### `workspace-sync`
-**Purpose:** Sync statistics from all registered projects
-**Usage:** `empirica workspace-sync [--project-id <id>]`
-**Notes:** Pulls transaction counts, findings, unknowns, etc. from each project's local database into the workspace registry.
-
-#### `workspace-patterns`
-**Purpose:** Search cross-project patterns
-**Usage:** `empirica workspace-patterns [options]`
-**Options:**
-- `--type`: Pattern type (learning, mistake, dead_end, success)
-- `--domain`: Filter by domain (e.g., caching, auth)
-- `--min-confidence`: Minimum confidence threshold
-
-#### `workspace-link`
-**Purpose:** Create knowledge transfer link between projects
-**Usage:** `empirica workspace-link --source <project_id> --target <project_id> --type <link_type>`
-**Options:**
-- `--type`: Link type (shared_learning, dependency, related, derived)
-- `--artifact-id`: Specific artifact being linked
-- `--notes`: Link description
 
 ---
 

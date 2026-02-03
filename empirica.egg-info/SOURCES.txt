@@ -22,6 +22,7 @@ docs/architecture/SUPPORTING_COMPONENTS.md
 docs/architecture/SYNC_ARCHITECTURE.md
 docs/architecture/VERSION_UPDATE_DESIGN.md
 docs/architecture/epistemic_vs_git_diff.svg
+docs/architecture/noetic-rag-architecture.md
 docs/architecture/separation-of-concerns.md
 docs/architecture/storage_architecture_flow.svg
 empirica/__init__.py
@@ -37,6 +38,7 @@ empirica/api/routes/__init__.py
 empirica/api/routes/comparison.py
 empirica/api/routes/deltas.py
 empirica/api/routes/heatmaps.py
+empirica/api/routes/project.py
 empirica/api/routes/sessions.py
 empirica/api/routes/verification.py
 empirica/cli/__init__.py
@@ -51,6 +53,7 @@ empirica/cli/command_handlers/__init__.py
 empirica/cli/command_handlers/action_commands.py
 empirica/cli/command_handlers/agent_commands.py
 empirica/cli/command_handlers/architecture_commands.py
+empirica/cli/command_handlers/artifacts_commands.py
 empirica/cli/command_handlers/ask_handler.py
 empirica/cli/command_handlers/chat_handler.py
 empirica/cli/command_handlers/checkpoint_commands.py
@@ -74,6 +77,7 @@ empirica/cli/command_handlers/investigation_commands.py
 empirica/cli/command_handlers/issue_capture_commands.py
 empirica/cli/command_handlers/lesson_commands.py
 empirica/cli/command_handlers/mcp_commands.py
+empirica/cli/command_handlers/message_commands.py
 empirica/cli/command_handlers/mistake_commands.py
 empirica/cli/command_handlers/modality_commands.py
 empirica/cli/command_handlers/monitor_commands.py
@@ -113,6 +117,7 @@ empirica/cli/parsers/investigation_parsers.py
 empirica/cli/parsers/issue_capture_parsers.py
 empirica/cli/parsers/lesson_parsers.py
 empirica/cli/parsers/mcp_parsers.py
+empirica/cli/parsers/message_parsers.py
 empirica/cli/parsers/monitor_parsers.py
 empirica/cli/parsers/onboarding_parsers.py
 empirica/cli/parsers/performance_parsers.py
@@ -155,6 +160,7 @@ empirica/config/mco/ask_before_investigate.yaml
 empirica/config/mco/bootstrap_triggers.yaml
 empirica/config/mco/cascade_styles.yaml
 empirica/config/mco/confidence_weights.yaml
+empirica/config/mco/context_budget.yaml
 empirica/config/mco/drift_thresholds.yaml
 empirica/config/mco/epistemic_conduct.yaml
 empirica/config/mco/feedback_loops.yaml
@@ -163,15 +169,23 @@ empirica/config/mco/model_profiles.yaml
 empirica/config/mco/personas.yaml
 empirica/config/mco/protocols.yaml
 empirica/core/__init__.py
+empirica/core/attention_budget.py
 empirica/core/bayesian_beliefs.py
+empirica/core/bus_persistence.py
 empirica/core/checkpoint_signer.py
+empirica/core/context_budget.py
+empirica/core/ecosystem.py
 empirica/core/emerged_personas.py
 empirica/core/epistemic_bus.py
+empirica/core/epistemic_rollup.py
 empirica/core/epistemic_trajectory.py
 empirica/core/findings_deprecation.py
+empirica/core/information_gain.py
 empirica/core/issue_capture.py
 empirica/core/memory_gap_detector.py
+empirica/core/parallel_orchestrator.py
 empirica/core/signaling.py
+empirica/core/system_dashboard.py
 empirica/core/thresholds.py
 empirica/core/agents/__init__.py
 empirica/core/agents/epistemic_agent.py
@@ -191,6 +205,7 @@ empirica/core/canonical/empirica_git/checkpoint_manager.py
 empirica/core/canonical/empirica_git/dead_end_store.py
 empirica/core/canonical/empirica_git/finding_store.py
 empirica/core/canonical/empirica_git/goal_store.py
+empirica/core/canonical/empirica_git/message_store.py
 empirica/core/canonical/empirica_git/mistake_store.py
 empirica/core/canonical/empirica_git/sentinel_hooks.py
 empirica/core/canonical/empirica_git/session_sync.py
@@ -228,6 +243,11 @@ empirica/core/persona/signing_persona.py
 empirica/core/persona/validation.py
 empirica/core/persona/schemas/persona_schema.json
 empirica/core/persona/templates/__init__.py
+empirica/core/post_test/__init__.py
+empirica/core/post_test/collector.py
+empirica/core/post_test/grounded_calibration.py
+empirica/core/post_test/mapper.py
+empirica/core/post_test/trajectory_tracker.py
 empirica/core/qdrant/__init__.py
 empirica/core/qdrant/embeddings.py
 empirica/core/qdrant/pattern_retrieval.py
@@ -258,6 +278,7 @@ empirica/dashboard/cascade_monitor.py
 empirica/dashboard/snapshot_monitor.py
 empirica/data/__init__.py
 empirica/data/connection_pool.py
+empirica/data/crm_schema.py
 empirica/data/db_adapter.py
 empirica/data/epistemic_snapshot.py
 empirica/data/flow_state_calculator.py
@@ -283,13 +304,19 @@ empirica/data/repositories/utilities.py
 empirica/data/repositories/vectors.py
 empirica/data/schema/__init__.py
 empirica/data/schema/concept_graph_schema.py
+empirica/data/schema/dialect.py
 empirica/data/schema/epistemic_schema.py
+empirica/data/schema/extended_schema.py
 empirica/data/schema/goals_schema.py
 empirica/data/schema/projects_schema.py
 empirica/data/schema/sessions_schema.py
 empirica/data/schema/tracking_schema.py
 empirica/data/schema/trajectory_schema.py
+empirica/data/schema/verification_schema.py
 empirica/experimental/__init__.py
+empirica/firewall/__init__.py
+empirica/firewall/api.py
+empirica/firewall/schema.py
 empirica/integration/__init__.py
 empirica/integration/empirica_action_hooks.py
 empirica/integrations/branch_mapping.py
@@ -309,7 +336,6 @@ empirica/reasoning/service.py
 empirica/reasoning/types.py
 empirica/schemas/check_config.json
 empirica/schemas/preflight_config.json
-empirica/tests/epistemic_checking/corpus/grounding_paper_check_result.json
 empirica/tools/epistemic_checker.py
 empirica/tools/epistemic_checker_v2.py
 empirica/tui/__init__.py
