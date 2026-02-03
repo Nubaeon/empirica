@@ -1,0 +1,16 @@
+{
+  "finding_id": "e7d5889f-76aa-4390-bc69-c117c463873b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8569166-3094-47a8-b1c1-01783176c92e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-03T09:01:04.958595+00:00",
+  "finding": "Base LLMs assume learning is impossible (stateless execution capability only). Empirica inverts this: learning is the default because epistemic state is tracked. This means capability belief (can I do X?) and learning belief (did I learn Y?) are orthogonal dimensions that must be tracked separately.",
+  "impact": 0.85,
+  "goal_id": "e1eabad2-d97e-4268-8ff4-8bd3e4ab82a9",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Base LLMs assume learning is impossible (stateless execution capability only). Empirica inverts this: learning is the default because epistemic state is tracked. This means capability belief (can I do X?) and learning belief (did I learn Y?) are orthogonal dimensions that must be tracked separately.",
+    "impact": 0.85
+  }
+}
