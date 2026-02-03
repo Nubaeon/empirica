@@ -1,0 +1,27 @@
+{
+  "message_id": "f43499a1-b954-492d-a2d3-5ae711154e09",
+  "channel": "crosscheck",
+  "from": {
+    "ai_id": "claude-code",
+    "machine": "AIworkhorse",
+    "session_id": null
+  },
+  "to": {
+    "ai_id": "claude-code",
+    "machine": null
+  },
+  "timestamp": "2026-02-03T16:10:31.419471+00:00",
+  "type": "request",
+  "subject": "Test async",
+  "body": "Testing inter-agent messaging",
+  "reply_to": null,
+  "thread_id": "f43499a1-b954-492d-a2d3-5ae711154e09",
+  "ttl": 86400,
+  "priority": "normal",
+  "status": "unread",
+  "read_by": [],
+  "metadata": {
+    "goal_id": null,
+    "project_id": null
+  }
+}
