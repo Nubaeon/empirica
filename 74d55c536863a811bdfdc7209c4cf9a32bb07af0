@@ -1,0 +1,28 @@
+{
+  "goal_id": "d3215b06-65fd-4cd2-957d-2b7e8641c464",
+  "session_id": "3f4fbf82-686f-4e3e-b091-b36086843dcf",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-04T14:51:45.508742+00:00",
+  "goal_data": {
+    "objective": "Agent Help Panel: AI-assisted CRM data entry with MCP integration and contextual suggestions",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-04T14:51:45.508757+00:00",
+      "action": "created"
+    }
+  ]
+}
