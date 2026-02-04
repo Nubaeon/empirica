@@ -1,0 +1,16 @@
+{
+  "finding_id": "a58c2eea-c454-4acf-8214-74e3179ec19a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c337f0d2-b12c-4334-8fa2-c47a044dea0e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T00:26:22.553539+00:00",
+  "finding": "Sentinel page now shows live session vectors when project is selected. Displays current vectors with bias corrections applied, readiness gate status (PROCEED/INVESTIGATE), and all 13 vectors with color-coded thresholds.",
+  "impact": 0.8,
+  "goal_id": "ed73a17a-b8aa-49a5-8f15-6b22db3a2285",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sentinel page now shows live session vectors when project is selected. Displays current vectors with bias corrections applied, readiness gate status (PROCEED/INVESTIGATE), and all 13 vectors with color-coded thresholds.",
+    "impact": 0.8
+  }
+}
