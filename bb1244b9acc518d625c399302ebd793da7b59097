@@ -1,0 +1,16 @@
+{
+  "finding_id": "88e05a74-5abd-4b8c-916a-282fd256589c",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "d48f2d56-53b6-4546-9f98-f504473ef5ae",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T00:31:06.684664+00:00",
+  "finding": "Comms page auto-refresh now enabled by default: (1) State initialization changed to auto_refresh: True, (2) Switch UI default changed to value=True, (3) Timer initialization added on page load when state[\"auto_refresh\"] is True. Users now see 30s auto-sync active immediately on page load.",
+  "impact": 0.5,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Comms page auto-refresh now enabled by default: (1) State initialization changed to auto_refresh: True, (2) Switch UI default changed to value=True, (3) Timer initialization added on page load when state[\"auto_refresh\"] is True. Users now see 30s auto-sync active immediately on page load.",
+    "impact": 0.5
+  }
+}
