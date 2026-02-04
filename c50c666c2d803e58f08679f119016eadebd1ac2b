@@ -1,0 +1,16 @@
+{
+  "finding_id": "dbf88081-0ba9-473c-872b-12e12b649845",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "d5a64e48-9d04-4550-9df7-5a9de0b0d717",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T00:04:49.183640+00:00",
+  "finding": "Fixed 3 bugs in memory CLI: (1) Double output - handlers now return None after printing, (2) session-rollup used wrong column name start_timestamp\u2192start_time, (3) session-rollup queried wrong table findings\u2192session_findings",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Fixed 3 bugs in memory CLI: (1) Double output - handlers now return None after printing, (2) session-rollup used wrong column name start_timestamp\u2192start_time, (3) session-rollup queried wrong table findings\u2192session_findings",
+    "impact": 0.7
+  }
+}
