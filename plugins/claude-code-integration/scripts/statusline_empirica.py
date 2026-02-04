@@ -961,11 +961,46 @@ def build_statusline_data(
     }
 
 
+def format_tmux_statusline(confidence: float, phase: str, drift_detected: bool = False) -> str:
+    """
+    Format a super-compact statusline for tmux status-right.
+
+    Target: ~20 characters max for tmux status bar
+    Format: "E:💡63% PRE" or "E:⚠️drift"
+    """
+    pct = int(confidence * 100) if confidence else 0
+
+    # Confidence emoji (no ANSI colors for tmux)
+    if confidence >= 0.75:
+        emoji = "⚡"
+    elif confidence >= 0.50:
+        emoji = "💡"
+    elif confidence >= 0.35:
+        emoji = "💫"
+    else:
+        emoji = "🌑"
+
+    # Drift warning takes priority
+    if drift_detected:
+        return f"E:⚠️drift"
+
+    # Phase abbreviation
+    phase_abbrev = {
+        'PREFLIGHT': 'PRE',
+        'CHECK': 'CHK',
+        'POSTFLIGHT': 'POST',
+        'INVESTIGATE': 'INV',
+    }.get(phase, phase[:3] if phase else '---')
+
+    return f"E:{emoji}{pct}% {phase_abbrev}"
+
+
 def main():
     """Main statusline generation."""
     try:
         mode = os.getenv('EMPIRICA_STATUS_MODE', 'default').lower()
         output_json = '--json' in sys.argv or os.getenv('EMPIRICA_STATUS_JSON', '').lower() == 'true'
+        output_tmux = '--tmux' in sys.argv or os.getenv('EMPIRICA_STATUS_TMUX', '').lower() == 'true'
         ai_id = get_ai_id()
 
         # OFF-RECORD CHECK: If Empirica is paused, show collapsed statusline
@@ -1175,6 +1210,12 @@ def main():
                 extensions=extensions, ai_id=ai_id,
             )
             print(json.dumps(data, indent=2))
+            return
+
+        # Compact tmux output (for tmux status-right)
+        if output_tmux:
+            confidence = calculate_confidence(vectors) if vectors else 0.0
+            print(format_tmux_statusline(confidence, phase, drift_detected))
             return
 
         # Format and output
