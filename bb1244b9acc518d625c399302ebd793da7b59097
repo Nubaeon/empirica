@@ -1,0 +1,31 @@
+{
+  "goal_id": "e1bec4ee-e24c-42b3-ae2d-8f0fd5553372",
+  "session_id": "c337f0d2-b12c-4334-8fa2-c47a044dea0e",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-04T00:19:05.396016+00:00",
+  "goal_data": {
+    "objective": "Wire Comms page to GitMessageStore - Fix inter-agent message display with proper inbox filtering",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.4,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Messages load from GitMessageStore not raw git",
+      "Inbox filtering by AI ID works",
+      "Auto-refresh or WebSocket for real-time updates",
+      "Reply and mark-read functionality"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-04T00:19:05.396026+00:00",
+      "action": "created"
+    }
+  ]
+}
