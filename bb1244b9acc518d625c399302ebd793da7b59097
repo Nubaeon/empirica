@@ -1,0 +1,31 @@
+{
+  "goal_id": "80d1fd7a-8440-416f-83ff-a331dea300f4",
+  "session_id": "c337f0d2-b12c-4334-8fa2-c47a044dea0e",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-04T00:19:10.599035+00:00",
+  "goal_data": {
+    "objective": "Wire Sentinel page to live session vectors - Real-time readiness gate and drift detection",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Current session vectors displayed",
+      "Readiness gate evaluated in real-time",
+      "Drift tier indicator (crystalline to void)",
+      "Active CHECK decisions shown"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-04T00:19:10.599047+00:00",
+      "action": "created"
+    }
+  ]
+}
