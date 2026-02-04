@@ -1,0 +1,30 @@
+{
+  "goal_id": "70e02bb4-9c33-46a1-80fa-fe190d323d7f",
+  "session_id": "c337f0d2-b12c-4334-8fa2-c47a044dea0e",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-04T00:19:02.538587+00:00",
+  "goal_data": {
+    "objective": "Restructure Projects/Workspace IA - Make Projects a sub-view within Workspace, unified portfolio experience",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Workspace becomes main portfolio entry point",
+      "Projects page shows within workspace context",
+      "Clear navigation hierarchy: Workspace > Project > Tabs"
+    ],
+    "estimated_complexity": 0.5,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-04T00:19:02.538598+00:00",
+      "action": "created"
+    }
+  ]
+}
