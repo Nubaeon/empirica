@@ -1,0 +1,16 @@
+{
+  "finding_id": "36255f77-3f12-4ab4-b56f-b5e3e57b20cf",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "04fed1dc-ebe7-41c3-9a34-3ec422424ba6",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T11:13:51.459918+00:00",
+  "finding": "Database audit complete: Current DB has 718 sessions, 1817 findings, 312 unknowns, 365 goals. Jan27 backup has 489 more sessions but these are 99.8% test sessions (test_agent, test-ai, etc.) - only 1 real claude-code session missing. NULL project_ids: 163 sessions (subagents), 111 goals. Orphaned project_id 3be592bd not mapped to any project.yaml.",
+  "impact": 0.7,
+  "goal_id": "aed47ef8-0c18-4285-beee-9fd9df7d7f6e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Database audit complete: Current DB has 718 sessions, 1817 findings, 312 unknowns, 365 goals. Jan27 backup has 489 more sessions but these are 99.8% test sessions (test_agent, test-ai, etc.) - only 1 real claude-code session missing. NULL project_ids: 163 sessions (subagents), 111 goals. Orphaned project_id 3be592bd not mapped to any project.yaml.",
+    "impact": 0.7
+  }
+}
