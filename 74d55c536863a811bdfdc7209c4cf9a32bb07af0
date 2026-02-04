@@ -1,0 +1,16 @@
+{
+  "finding_id": "7578670b-4473-42dc-9b98-02a95738f716",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "04fed1dc-ebe7-41c3-9a34-3ec422424ba6",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T11:23:11.162309+00:00",
+  "finding": "Comms page improvements: (1) Added expansion state persistence - expanded messages now tracked in state dict and preserved across auto-refresh cycles. (2) Added Reply button with ReplyDialog class - pre-fills recipient, channel, and subject from original message with 'Re:' prefix. Thread reference (reply_to_id) stored for future threading support. These changes fix the 'auto-contract on refresh' issue user reported.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Comms page improvements: (1) Added expansion state persistence - expanded messages now tracked in state dict and preserved across auto-refresh cycles. (2) Added Reply button with ReplyDialog class - pre-fills recipient, channel, and subject from original message with 'Re:' prefix. Thread reference (reply_to_id) stored for future threading support. These changes fix the 'auto-contract on refresh' issue user reported.",
+    "impact": 0.7
+  }
+}
