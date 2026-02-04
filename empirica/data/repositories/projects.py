@@ -96,24 +96,28 @@ class ProjectRepository(BaseRepository):
     def resolve_project_id(self, project_id_or_name: str) -> Optional[str]:
         """
         Resolve project identifier to UUID.
-        Accepts either UUID or project name.
-        
+        Accepts either project name (folder_name) or UUID.
+
+        Primary lookup is by name (folder_name), with UUID as fallback for
+        backwards compatibility. This makes folder_name the natural identifier
+        while preserving existing UUID-based workflows.
+
         Args:
-            project_id_or_name: UUID or project name
-            
+            project_id_or_name: Project name (folder_name) or UUID
+
         Returns:
             Project UUID if found, None otherwise
         """
-        # Try as UUID first
-        project = self.get_project(project_id_or_name)
-        if project:
-            return project['id']
-        
-        # Try as name
+        # Try as name first (primary identifier)
         project = self.get_project_by_name(project_id_or_name)
         if project:
             return project['id']
-        
+
+        # Fallback to UUID (backwards compatibility)
+        project = self.get_project(project_id_or_name)
+        if project:
+            return project['id']
+
         return None
 
     def link_session_to_project(self, session_id: str, project_id: str):
