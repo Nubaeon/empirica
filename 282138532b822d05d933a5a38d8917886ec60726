@@ -1,0 +1,16 @@
+{
+  "finding_id": "6a505273-d858-44c0-96c7-c9b06a0229e4",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "d48f2d56-53b6-4546-9f98-f504473ef5ae",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T00:51:19.449957+00:00",
+  "finding": "Dashboard fixes applied: (1) Removed stale Docker container, now running Python directly on 8088. (2) Fixed Qdrant URL default from host.docker.internal to localhost. (3) Fixed comms message display - message_list() wasn't being called. (4) Enhanced Clients page with contacts, tags, knowledge links sections. All 6 main pages returning 200.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Dashboard fixes applied: (1) Removed stale Docker container, now running Python directly on 8088. (2) Fixed Qdrant URL default from host.docker.internal to localhost. (3) Fixed comms message display - message_list() wasn't being called. (4) Enhanced Clients page with contacts, tags, knowledge links sections. All 6 main pages returning 200.",
+    "impact": 0.8
+  }
+}
