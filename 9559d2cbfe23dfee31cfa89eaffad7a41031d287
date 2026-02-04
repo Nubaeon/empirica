@@ -1,0 +1,28 @@
+{
+  "goal_id": "b6bdbba6-3fa4-4edd-a447-d502ab408f6a",
+  "session_id": "fb03bcbe-fb4b-410d-a3f8-6efcb4779b94",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-04T19:51:27.643253+00:00",
+  "goal_data": {
+    "objective": "Sentinel should not block project management commands (project-switch, project-list, project-bootstrap) outside epistemic loops - these are administrative operations",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-04T19:51:27.643270+00:00",
+      "action": "created"
+    }
+  ]
+}
