@@ -1,0 +1,16 @@
+{
+  "finding_id": "1adeb8fe-da0f-4015-9567-a32abbb917b5",
+  "project_id": "c011772c-e45a-4062-883a-ec4b89b62bdb",
+  "session_id": "e50635fd-cb62-4645-bfc3-b045b642577f",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T23:15:54.140747+00:00",
+  "finding": "Test finding with folder name",
+  "impact": 0.1,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Test finding with folder name",
+    "impact": 0.1
+  }
+}
