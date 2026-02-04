@@ -1,0 +1,16 @@
+{
+  "finding_id": "e78abcfd-1b35-4b81-a55b-077993e09961",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c337f0d2-b12c-4334-8fa2-c47a044dea0e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T00:03:39.832517+00:00",
+  "finding": "NiceGUI 3.x requires sanitize=False for ui.html() and ui.add_body_html() for script tags - cannot use inline scripts in ui.html()",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "NiceGUI 3.x requires sanitize=False for ui.html() and ui.add_body_html() for script tags - cannot use inline scripts in ui.html()",
+    "impact": 0.8
+  }
+}
