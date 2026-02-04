@@ -1,0 +1,16 @@
+{
+  "finding_id": "30fe442c-a0ba-4931-9cb2-8710fdc3f1b3",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "d48f2d56-53b6-4546-9f98-f504473ef5ae",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T00:48:58.267933+00:00",
+  "finding": "Fixed comms message display bug: message_list() function was assigned but never called. Changed `message_container = message_list` to `message_list(); message_container = message_list`. The @ui.refreshable decorator requires the function to be called initially to render content.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Fixed comms message display bug: message_list() function was assigned but never called. Changed `message_container = message_list` to `message_list(); message_container = message_list`. The @ui.refreshable decorator requires the function to be called initially to render content.",
+    "impact": 0.8
+  }
+}
