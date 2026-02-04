@@ -4,11 +4,114 @@ Project Commands - Multi-repo/multi-session project tracking
 
 import json
 import logging
-from typing import Optional
+import sqlite3
+from pathlib import Path
+from typing import Optional, Dict, List, Any
 from ..cli_utils import handle_cli_error
 from empirica.core.memory_gap_detector import MemoryGapDetector
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# WORKSPACE DATABASE ACCESS
+# ============================================================================
+# The workspace database (~/.empirica/workspace/workspace.db) contains the
+# global_projects table with all projects across the ecosystem.
+# This is separate from SessionDatabase which operates on local project data.
+# ============================================================================
+
+def get_workspace_db_path() -> Path:
+    """Get path to workspace database"""
+    return Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+
+
+def get_workspace_projects() -> List[Dict[str, Any]]:
+    """
+    Get all projects from workspace database.
+
+    Returns list of project dicts with keys:
+    - id, name, description, trajectory_path, status, project_type
+    - total_transactions, total_findings, total_unknowns, etc.
+    - folder_name (derived from trajectory_path)
+    """
+    workspace_db = get_workspace_db_path()
+    if not workspace_db.exists():
+        return []
+
+    try:
+        conn = sqlite3.connect(str(workspace_db))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                id, name, description, trajectory_path, git_remote_url,
+                git_branch, total_transactions, total_findings,
+                total_unknowns, total_dead_ends, total_goals,
+                last_transaction_id, last_transaction_timestamp,
+                last_sync_timestamp, status, project_type, project_tags,
+                created_timestamp, updated_timestamp
+            FROM global_projects
+            WHERE status = 'active'
+            ORDER BY updated_timestamp DESC
+        """)
+
+        projects = []
+        for row in cursor.fetchall():
+            project = dict(row)
+            # Derive folder name from trajectory_path
+            # e.g., /home/user/empirical-ai/empirica-platform/.empirica -> empirica-platform
+            traj_path = project.get('trajectory_path', '')
+            if traj_path:
+                folder_name = Path(traj_path).parent.name
+                project['folder_name'] = folder_name
+            else:
+                project['folder_name'] = project.get('name', '')
+            projects.append(project)
+
+        conn.close()
+        return projects
+    except Exception as e:
+        logger.warning(f"Failed to read workspace database: {e}")
+        return []
+
+
+def resolve_workspace_project(identifier: str) -> Optional[Dict[str, Any]]:
+    """
+    Resolve a project by name, folder name, or UUID from workspace database.
+
+    Args:
+        identifier: Project name, folder name (repo directory name), or UUID
+
+    Returns:
+        Project dict or None if not found
+    """
+    projects = get_workspace_projects()
+
+    # Try exact UUID match first
+    for p in projects:
+        if p.get('id') == identifier:
+            return p
+
+    # Try folder name match (most intuitive for users)
+    identifier_lower = identifier.lower()
+    for p in projects:
+        if p.get('folder_name', '').lower() == identifier_lower:
+            return p
+
+    # Try project name match
+    for p in projects:
+        if p.get('name', '').lower() == identifier_lower:
+            return p
+
+    # Try partial folder name match
+    for p in projects:
+        folder = p.get('folder_name', '').lower()
+        if folder and identifier_lower in folder:
+            return p
+
+    return None
 
 
 def handle_project_create_command(args):
@@ -151,43 +254,60 @@ def handle_project_handoff_command(args):
 
 
 def handle_project_list_command(args):
-    """Handle project-list command"""
+    """Handle project-list command - lists all projects from workspace database"""
     try:
-        from empirica.data.session_database import SessionDatabase
-        
-        db = SessionDatabase()
-        cursor = db.conn.cursor()
-        
-        # Get all projects
-        cursor.execute("""
-            SELECT id, name, description, status, total_sessions, 
-                   last_activity_timestamp
-            FROM projects
-            ORDER BY last_activity_timestamp DESC
-        """)
-        projects = [dict(row) for row in cursor.fetchall()]
-        
-        db.close()
+        # Query workspace database for global projects
+        projects = get_workspace_projects()
 
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
             result = {
                 "ok": True,
                 "projects_count": len(projects),
-                "projects": projects
+                "projects": [
+                    {
+                        "id": p.get('id'),
+                        "name": p.get('name'),
+                        "folder_name": p.get('folder_name'),
+                        "description": p.get('description'),
+                        "status": p.get('status'),
+                        "project_type": p.get('project_type'),
+                        "total_findings": p.get('total_findings', 0),
+                        "total_unknowns": p.get('total_unknowns', 0),
+                        "total_goals": p.get('total_goals', 0),
+                        "last_activity": p.get('updated_timestamp'),
+                        "trajectory_path": p.get('trajectory_path')
+                    }
+                    for p in projects
+                ]
             }
             print(json.dumps(result, indent=2))
         else:
-            print(f"📁 Found {len(projects)} project(s):\n")
+            if not projects:
+                print("📁 No projects found in workspace.")
+                print("\nTip: Run 'empirica workspace-init' to scan and register projects.")
+                return None
+
+            print(f"📁 Found {len(projects)} project(s) in workspace:\n")
             for i, p in enumerate(projects, 1):
-                print(f"{i}. {p['name']} ({p['status']})")
-                print(f"   ID: {p['id']}")
-                if p['description']:
-                    print(f"   Description: {p['description']}")
-                print(f"   Sessions: {p['total_sessions']}")
+                name = p.get('name', 'Unknown')
+                folder = p.get('folder_name', '')
+                status = p.get('status', 'active')
+                findings = p.get('total_findings', 0)
+                unknowns = p.get('total_unknowns', 0)
+
+                # Show folder name prominently (this is how users will switch)
+                print(f"{i}. {folder} ({status})")
+                if name != folder:
+                    print(f"   Name: {name}")
+                if p.get('description'):
+                    desc = p['description'][:60] + '...' if len(p.get('description', '')) > 60 else p.get('description', '')
+                    print(f"   {desc}")
+                print(f"   📝 {findings} findings  ❓ {unknowns} unknowns")
                 print()
 
-        # Return None to avoid exit code issues and duplicate output
+            print("💡 Switch projects with: empirica project-switch <folder-name>")
+
         return None
 
     except Exception as e:
@@ -2666,30 +2786,31 @@ logger = logging.getLogger(__name__)
 def handle_project_switch_command(args):
     """
     Handle project-switch command - Switch to a different project with context loading
-    
+
+    Resolves projects from workspace database by:
+    1. Folder name (most intuitive - e.g., 'empirica-platform')
+    2. Project name
+    3. UUID
+
     Provides clear UX for AI agents:
-    1. Resolves project by name or ID
-    2. Shows "you are here" banner
+    1. Resolves project from workspace database
+    2. Shows "you are here" banner with project path
     3. Automatically runs project-bootstrap
     4. Shows next steps
-    
+
     Does NOT create a session (explicit action for user)
     """
     try:
-        from empirica.data.session_database import SessionDatabase
-        
         project_identifier = args.project_identifier
         output_format = getattr(args, 'output', 'human')
-        
-        db = SessionDatabase()
-        
-        # 1. Resolve project (by name or ID)
-        project_id = db.projects.resolve_project_id(project_identifier)
-        
-        if not project_id:
+
+        # 1. Resolve project from workspace database
+        project = resolve_workspace_project(project_identifier)
+
+        if not project:
             error_msg = f"Project not found: {project_identifier}"
-            hint = "Run 'empirica project-list' to see available projects, or 'empirica project-init' to create one"
-            
+            hint = "Run 'empirica project-list' to see available projects"
+
             if output_format == 'json':
                 print(json.dumps({
                     'ok': False,
@@ -2699,70 +2820,20 @@ def handle_project_switch_command(args):
             else:
                 print(f"❌ {error_msg}")
                 print(f"\nTip: {hint}")
-            
-            db.close()
+
             return None
-        
-        # 2. Get project details
-        project = db.projects.get_project(project_id)
-        if not project:
-            error_msg = f"Project ID {project_id} not found in database"
-            
-            if output_format == 'json':
-                print(json.dumps({'ok': False, 'error': error_msg}))
-            else:
-                print(f"❌ {error_msg}")
-            
-            db.close()
-            return None
-        
-        project_name = project['name']
-        repos_raw = project.get('repos')
-        repos = []
-        if repos_raw and repos_raw.strip():
-            try:
-                repos = json.loads(repos_raw)
-            except json.JSONDecodeError:
-                repos = []
-        
-        # 3. Try to find project git root
+
+        # 2. Extract project details
+        project_id = project.get('id')
+        project_name = project.get('name')
+        folder_name = project.get('folder_name')
+        trajectory_path = project.get('trajectory_path', '')
+
+        # Derive project root from trajectory path
+        # trajectory_path = /home/user/project/.empirica -> project_path = /home/user/project
         project_path = None
-        cwd = Path.cwd()
-        
-        # Check if we're already in a project directory
-        try:
-            result = subprocess.run(
-                ['git', 'rev-parse', '--show-toplevel'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode == 0:
-                git_root = Path(result.stdout.strip())
-                
-                # Check if this git root matches the project
-                try:
-                    result = subprocess.run(
-                        ['git', 'remote', 'get-url', 'origin'],
-                        cwd=git_root,
-                        capture_output=True,
-                        text=True,
-                        timeout=5
-                    )
-                    if result.returncode == 0:
-                        current_remote = result.stdout.strip()
-                        # Check if current remote matches any project repo
-                        if any(repo in current_remote or current_remote in repo for repo in repos):
-                            project_path = git_root
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        
-        # If not in project dir, we can't change directory (shell limitation)
-        # Just show the context banner and bootstrap data
-        
-        db.close()
+        if trajectory_path:
+            project_path = Path(trajectory_path).parent
         
         # 4. Show context banner
         if output_format == 'human':
@@ -2771,42 +2842,46 @@ def handle_project_switch_command(args):
             print("🎯 PROJECT CONTEXT SWITCH")
             print("━" * 70)
             print()
-            print(f"📁 Project: {project_name}")
+            print(f"📁 Project: {folder_name}")
+            if project_name != folder_name:
+                print(f"   Name: {project_name}")
             print(f"🆔 Project ID: {project_id[:8]}...")
             if project_path:
                 print(f"📍 Location: {project_path}")
-            else:
-                print(f"📍 Repositories: {', '.join(repos) if repos else 'None configured'}")
-            print(f"📊 Database: .empirica/sessions/sessions.db (project-local)")
+            print(f"📊 Findings: {project.get('total_findings', 0)}  "
+                  f"Unknowns: {project.get('total_unknowns', 0)}  "
+                  f"Goals: {project.get('total_goals', 0)}")
             print()
         
-        # 5. Run project-bootstrap automatically
+        # 5. Show project context summary from workspace data
+        bootstrap_result = None
         if output_format == 'human':
-            print("📋 Loading project context...")
-            print()
-        
-        # Import and call bootstrap handler
-        from empirica.cli.command_handlers.project_commands import handle_project_bootstrap_command
-        
-        # Create bootstrap args
-        class BootstrapArgs:
-            """Mock arguments for calling project bootstrap handler."""
+            findings = project.get('total_findings', 0)
+            unknowns = project.get('total_unknowns', 0)
+            dead_ends = project.get('total_dead_ends', 0)
+            goals = project.get('total_goals', 0)
 
-            def __init__(self) -> None:
-                """Initialize bootstrap args with project context."""
-                self.project_id = project_id
-                self.output = output_format
-                self.session_id = None
-                self.context_to_inject = False
-                self.task_description = None
-                self.epistemic_state = None
-                self.subject = None
-                self.include_live_state = False
-                self.trigger = None
-                self.depth = 'moderate'  # Balanced depth for switching
-                self.ai_id = None
-        
-        bootstrap_result = handle_project_bootstrap_command(BootstrapArgs())
+            if findings or unknowns or goals:
+                print("📋 Project Context Summary:")
+                print()
+                if findings:
+                    print(f"   📝 {findings} findings logged")
+                if unknowns:
+                    print(f"   ❓ {unknowns} unknowns tracked")
+                if dead_ends:
+                    print(f"   🚫 {dead_ends} dead-ends recorded")
+                if goals:
+                    print(f"   🎯 {goals} goals defined")
+                print()
+            else:
+                print("📋 No epistemic artifacts yet in this project.")
+                print()
+
+            # Suggest running bootstrap in project directory for full context
+            if project_path and project_path.exists():
+                print(f"💡 For full context, run in project directory:")
+                print(f"   cd {project_path} && empirica project-bootstrap")
+                print()
         
         # 6. Show next steps
         if output_format == 'human':
@@ -2833,8 +2908,13 @@ def handle_project_switch_command(args):
                 'ok': True,
                 'project_id': project_id,
                 'project_name': project_name,
-                'repos': repos,
+                'folder_name': folder_name,
                 'project_path': str(project_path) if project_path else None,
+                'stats': {
+                    'findings': project.get('total_findings', 0),
+                    'unknowns': project.get('total_unknowns', 0),
+                    'goals': project.get('total_goals', 0)
+                },
                 'next_steps': [
                     'empirica session-create --ai-id <your-id>',
                     'empirica goals-ready'
