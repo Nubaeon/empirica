@@ -63,6 +63,95 @@ def get_ai_id() -> str:
     return os.getenv('EMPIRICA_AI_ID', 'claude-code').strip()
 
 
+def detect_extensions() -> dict:
+    """
+    Detect active Empirica extensions (CRM, WORKSPACE).
+
+    Detection is based on database existence, not Python module imports.
+    This allows extensions to work even if not installed as packages.
+
+    Returns:
+        {
+            'crm': {'active': bool, 'db_path': str, 'active_client': str|None},
+            'workspace': {'active': bool, 'db_path': str, 'project_count': int},
+        }
+    """
+    import sqlite3
+
+    result = {
+        'crm': {'active': False, 'db_path': None, 'active_client': None},
+        'workspace': {'active': False, 'db_path': None, 'project_count': 0},
+    }
+
+    # Check CRM
+    crm_db = Path.home() / '.empirica' / 'crm' / 'crm.db'
+    if crm_db.exists():
+        result['crm']['active'] = True
+        result['crm']['db_path'] = str(crm_db)
+        try:
+            conn = sqlite3.connect(str(crm_db))
+            cursor = conn.cursor()
+            # Try to get active client from recent engagement
+            cursor.execute("""
+                SELECT c.name FROM clients c
+                JOIN engagements e ON e.client_id = c.id
+                WHERE e.status = 'active'
+                ORDER BY e.updated_at DESC LIMIT 1
+            """)
+            row = cursor.fetchone()
+            if row:
+                result['crm']['active_client'] = row[0]
+            conn.close()
+        except Exception:
+            pass
+
+    # Check WORKSPACE
+    workspace_db = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+    if workspace_db.exists():
+        result['workspace']['active'] = True
+        result['workspace']['db_path'] = str(workspace_db)
+        try:
+            conn = sqlite3.connect(str(workspace_db))
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM global_projects WHERE status = 'active'")
+            row = cursor.fetchone()
+            result['workspace']['project_count'] = row[0] if row else 0
+            conn.close()
+        except Exception:
+            pass
+
+    return result
+
+
+def format_extension_indicators(extensions: dict) -> str:
+    """
+    Format extension indicators for statusline.
+
+    Returns:
+        String like "CRM:Acme WS:27" or "" if no extensions active
+    """
+    parts = []
+
+    if extensions.get('crm', {}).get('active'):
+        client = extensions['crm'].get('active_client')
+        if client:
+            # Truncate client name
+            if len(client) > 8:
+                client = client[:7] + '…'
+            parts.append(f"{Colors.CYAN}CRM:{client}{Colors.RESET}")
+        else:
+            parts.append(f"{Colors.GRAY}CRM{Colors.RESET}")
+
+    if extensions.get('workspace', {}).get('active'):
+        count = extensions['workspace'].get('project_count', 0)
+        if count > 0:
+            parts.append(f"{Colors.CYAN}WS:{count}{Colors.RESET}")
+        else:
+            parts.append(f"{Colors.GRAY}WS{Colors.RESET}")
+
+    return ' '.join(parts)
+
+
 def get_open_counts(db: SessionDatabase, session_id: str, project_id: str = None) -> dict:
     """
     Get counts of open goals and unknowns for a specific project.
@@ -675,7 +764,8 @@ def format_statusline(
     gate_decision: str = None,
     goal: dict = None,
     open_counts: dict = None,
-    project_name: str = None
+    project_name: str = None,
+    extensions: dict = None
 ) -> str:
     """Format the statusline based on mode."""
 
@@ -690,6 +780,12 @@ def format_statusline(
         label = label[:18] + '..'
 
     parts = [f"{Colors.GREEN}[{label}]{Colors.RESET} {conf_str}"]
+
+    # Add extension indicators (CRM, WORKSPACE) if present
+    if extensions:
+        ext_str = format_extension_indicators(extensions)
+        if ext_str:
+            parts.append(ext_str)
 
     if mode == 'basic':
         # Just confidence + drift
@@ -792,10 +888,84 @@ def format_statusline(
         return ' │ '.join(parts)
 
 
+def build_statusline_data(
+    session: dict,
+    phase: str,
+    vectors: dict,
+    deltas: dict = None,
+    drift_detected: bool = False,
+    drift_severity: str = None,
+    gate_decision: str = None,
+    goal: dict = None,
+    open_counts: dict = None,
+    project_name: str = None,
+    project_path: str = None,
+    extensions: dict = None,
+    ai_id: str = None,
+) -> dict:
+    """
+    Build structured statusline data for JSON output.
+
+    This enables TUI/GUI dashboards to consume statusline state.
+
+    Returns:
+        {
+            'project': {'name': str, 'path': str},
+            'session': {'id': str, 'ai_id': str},
+            'epistemic': {'phase': str, 'vectors': dict, 'deltas': dict, 'confidence': float},
+            'drift': {'detected': bool, 'severity': str},
+            'goals': {'open': int, 'completion': float},
+            'unknowns': {'open': int, 'blockers': int},
+            'gate': {'decision': str},
+            'extensions': {'crm': {...}, 'workspace': {...}},
+            'timestamp': float,
+        }
+    """
+    import time
+
+    confidence = calculate_confidence(vectors) if vectors else 0.0
+
+    return {
+        'project': {
+            'name': project_name,
+            'path': project_path,
+        },
+        'session': {
+            'id': session.get('session_id') if session else None,
+            'ai_id': ai_id or (session.get('ai_id') if session else None),
+        },
+        'epistemic': {
+            'phase': phase,
+            'vectors': vectors or {},
+            'deltas': deltas or {},
+            'confidence': confidence,
+        },
+        'drift': {
+            'detected': drift_detected,
+            'severity': drift_severity,
+        },
+        'goals': {
+            'open': open_counts.get('open_goals', 0) if open_counts else 0,
+            'active': goal.get('objective') if goal else None,
+            'completion': open_counts.get('completion', 0.0) if open_counts else 0.0,
+        },
+        'unknowns': {
+            'open': open_counts.get('open_unknowns', 0) if open_counts else 0,
+            'blockers': open_counts.get('goal_linked_unknowns', 0) if open_counts else 0,
+        },
+        'gate': {
+            'decision': gate_decision,
+        },
+        'extensions': extensions or {},
+        'timestamp': time.time(),
+    }
+
+
 def main():
     """Main statusline generation."""
     try:
         mode = os.getenv('EMPIRICA_STATUS_MODE', 'default').lower()
+        output_json = '--json' in sys.argv or os.getenv('EMPIRICA_STATUS_JSON', '').lower() == 'true'
         ai_id = get_ai_id()
 
         # OFF-RECORD CHECK: If Empirica is paused, show collapsed statusline
@@ -914,12 +1084,28 @@ def main():
 
             db.close()
 
+            # Detect extensions (CRM, WORKSPACE)
+            extensions = detect_extensions()
+
+            # JSON output for dashboards
+            if output_json:
+                import json
+                data = build_statusline_data(
+                    session, phase, vectors, deltas,
+                    drift_detected=drift_detected, drift_severity=drift_severity,
+                    gate_decision=gate_decision, goal=goal, open_counts=open_counts,
+                    project_name=project_name, project_path=project_path,
+                    extensions=extensions, ai_id=ai_id,
+                )
+                print(json.dumps(data, indent=2))
+                return
+
             # Format and output from cache
             output = format_statusline(
                 session, phase, vectors, drift_state, deltas, mode,
                 drift_detected=drift_detected, drift_severity=drift_severity,
                 gate_decision=gate_decision, goal=goal, open_counts=open_counts,
-                project_name=project_name
+                project_name=project_name, extensions=extensions
             )
             print(output)
             return
@@ -975,12 +1161,28 @@ def main():
         except Exception:
             pass  # Cache update failure shouldn't break statusline
 
+        # Detect extensions (CRM, WORKSPACE)
+        extensions = detect_extensions()
+
+        # JSON output for dashboards
+        if output_json:
+            import json
+            data = build_statusline_data(
+                session, phase, vectors, deltas,
+                drift_detected=drift_detected, drift_severity=drift_severity,
+                gate_decision=gate_decision, goal=goal, open_counts=open_counts,
+                project_name=project_name, project_path=project_path,
+                extensions=extensions, ai_id=ai_id,
+            )
+            print(json.dumps(data, indent=2))
+            return
+
         # Format and output
         output = format_statusline(
             session, phase, vectors, drift_state, deltas, mode,
             drift_detected=drift_detected, drift_severity=drift_severity,
             gate_decision=gate_decision, goal=goal, open_counts=open_counts,
-            project_name=project_name
+            project_name=project_name, extensions=extensions
         )
         print(output)
 
