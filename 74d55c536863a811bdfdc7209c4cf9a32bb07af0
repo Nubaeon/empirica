@@ -1,0 +1,16 @@
+{
+  "finding_id": "b92d15c1-baed-4750-86e0-5e4b28523d66",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "04fed1dc-ebe7-41c3-9a34-3ec422424ba6",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T11:19:06.405394+00:00",
+  "finding": "Database integrity remediation complete: Root cause was CWD mismatch - Claude Code's Task tool spawns subagents that create Empirica sessions using CWD, but when working on empirica-platform while in empirica directory, all data went to wrong project. Fix: migrated 235 findings, 29 unknowns, 33 goals, 99 subtasks to empirica-platform DB. Fixed 163 sessions and 111 goals with null project_ids. Future prevention: need config control for explicit project_id independent of CWD.",
+  "impact": 0.9,
+  "goal_id": "aed47ef8-0c18-4285-beee-9fd9df7d7f6e",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Database integrity remediation complete: Root cause was CWD mismatch - Claude Code's Task tool spawns subagents that create Empirica sessions using CWD, but when working on empirica-platform while in empirica directory, all data went to wrong project. Fix: migrated 235 findings, 29 unknowns, 33 goals, 99 subtasks to empirica-platform DB. Fixed 163 sessions and 111 goals with null project_ids. Future prevention: need config control for explicit project_id independent of CWD.",
+    "impact": 0.9
+  }
+}
