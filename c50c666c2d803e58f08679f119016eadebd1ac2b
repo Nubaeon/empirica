@@ -1,0 +1,13 @@
+{
+  "unknown_id": "e140ef3b-2525-4311-b910-5d67038b9ced",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "d5a64e48-9d04-4550-9df7-5a9de0b0d717",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T00:01:20.931773+00:00",
+  "unknown": "Memory CLI commands produce double output in JSON mode - handler prints JSON, then cli_core.py main() also prints the returned dict. Need to either return None or suppress main() printing.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
