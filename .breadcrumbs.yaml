@@ -178,53 +178,58 @@ task:
 
 
 
+
+
+
+
+
 # Learning trajectory (PREFLIGHT→POSTFLIGHT deltas — measures learning, NOT calibration bias)
 # For actual bias corrections see grounded_calibration.grounded_bias_corrections
 learning_trajectory:
-  last_updated: "2026-02-03T13:37:25.799878"
+  last_updated: "2026-02-04T01:31:17.365762"
   ai_id: claude-code
-  observations: 3519
+  observations: 3584
   session_deltas:
+    impact: +0.25
     completion: +0.25
-    change: +0.25
-    context: +0.23
-    know: +0.22
-    density: +0.22
-    uncertainty: -0.16
-    coherence: +0.15
+    do: +0.17
     state: +0.13
-    do: +0.12
+    engagement: +0.12
+    know: +0.12
+    density: +0.12
+    uncertainty: -0.11
     signal: +0.11
     clarity: +0.10
-    engagement: +0.02
-    impact: -0.01
+    change: +0.10
+    context: +0.08
+    coherence: +0.05
   readiness:
     min_know: 0.70
     max_uncertainty: 0.35
   summary:
     overestimates: [uncertainty]
-    underestimates: [completion, change, state, density, signal, coherence, clarity, context, do, know]
-    well_calibrated: [impact, engagement]
+    underestimates: [impact, completion, state, density, signal, do, know, engagement]
+    well_calibrated: [change, coherence, clarity, context]
 
 # Grounded calibration (auto-updated by Empirica post-test verification)
 grounded_calibration:
-  last_updated: "2026-02-03T13:37:25.850265"
+  last_updated: "2026-02-04T01:31:17.419535"
   ai_id: claude-code
-  observations: 157
+  observations: 190
   grounded_coverage: 0.70
   divergence:
-    impact: +0.68
+    impact: +0.73
     signal: -0.15
-    completion: +0.11
-    do: +0.11
-    uncertainty: +0.10
-    context: -0.05
-    know: -0.00
+    uncertainty: +0.12
+    completion: +0.10
+    do: +0.10
+    context: -0.06
+    know: +0.00
   ungrounded: [coherence, density, engagement]
   grounded_bias_corrections:
-    context: +0.25
     uncertainty: -0.25
     know: +0.25
     signal: +0.25
-    do: +0.21
-    completion: +0.21
+    context: +0.25
+    do: +0.22
+    completion: +0.22
