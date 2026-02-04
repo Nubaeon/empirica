@@ -1,0 +1,16 @@
+{
+  "finding_id": "1d1c557f-a0f2-402f-bf0f-bf867526c332",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "c337f0d2-b12c-4334-8fa2-c47a044dea0e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T00:26:24.497169+00:00",
+  "finding": "context_budget_state table exists in SQLite but requires active session writes to be useful. Memory page live wiring deferred - needs core empirica to write context state during sessions.",
+  "impact": 0.5,
+  "goal_id": "ed73a17a-b8aa-49a5-8f15-6b22db3a2285",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "context_budget_state table exists in SQLite but requires active session writes to be useful. Memory page live wiring deferred - needs core empirica to write context state during sessions.",
+    "impact": 0.5
+  }
+}
