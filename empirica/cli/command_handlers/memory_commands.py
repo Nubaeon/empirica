@@ -75,7 +75,7 @@ def handle_memory_prime_command(args):
             if getattr(args, 'persist', False):
                 print("✓ Persisted to database")
 
-        return result
+        return None  # Avoid cli_core.py double-printing
 
     except Exception as e:
         handle_cli_error(e, "Memory prime", getattr(args, 'verbose', False))
@@ -162,7 +162,7 @@ def handle_memory_scope_command(args):
                     print(f"  ... and {len(items) - 10} more")
             print("=" * 70)
 
-        return result
+        return None  # Avoid cli_core.py double-printing
 
     except Exception as e:
         handle_cli_error(e, "Memory scope", getattr(args, 'verbose', False))
@@ -287,7 +287,7 @@ def handle_memory_value_command(args):
                 print(f"  ... and {len(selected) - 10} more")
             print("=" * 70)
 
-        return result
+        return None  # Avoid cli_core.py double-printing
 
     except Exception as e:
         handle_cli_error(e, "Memory value", getattr(args, 'verbose', False))
@@ -384,7 +384,7 @@ def handle_pattern_check_command(args):
 
             print("=" * 60)
 
-        return result
+        return None  # Avoid cli_core.py double-printing
 
     except Exception as e:
         handle_cli_error(e, "Pattern check", getattr(args, 'verbose', False))
@@ -416,7 +416,7 @@ def handle_session_rollup_command(args):
         cursor.execute("""
             SELECT session_id, ai_id FROM sessions
             WHERE parent_session_id = ?
-            ORDER BY start_timestamp
+            ORDER BY start_time
         """, (args.parent_session_id,))
         children = [dict(row) for row in cursor.fetchall()]
 
@@ -432,12 +432,12 @@ def handle_session_rollup_command(args):
             if parent:
                 project_id = parent.get('project_id')
 
-        # Collect findings from all children by querying findings table directly
+        # Collect findings from all children by querying session_findings table
         all_findings = []
         for child in children:
             cursor.execute("""
                 SELECT finding, impact, subject
-                FROM findings
+                FROM session_findings
                 WHERE session_id = ?
                 ORDER BY created_timestamp DESC
             """, (child['session_id'],))
@@ -526,7 +526,7 @@ def handle_session_rollup_command(args):
                 print(f"❌ Rejected: {len(result.rejected)} findings")
             print("=" * 70)
 
-        return output
+        return None  # Avoid cli_core.py double-printing
 
     except Exception as e:
         handle_cli_error(e, "Session rollup", getattr(args, 'verbose', False))
@@ -584,7 +584,7 @@ def handle_memory_report_command(args):
 
             print("=" * 60)
 
-        return result
+        return None  # Avoid cli_core.py double-printing
 
     except Exception as e:
         handle_cli_error(e, "Memory report", getattr(args, 'verbose', False))
