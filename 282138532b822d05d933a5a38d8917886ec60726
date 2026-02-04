@@ -1,0 +1,31 @@
+{
+  "goal_id": "aed47ef8-0c18-4285-beee-9fd9df7d7f6e",
+  "session_id": "04fed1dc-ebe7-41c3-9a34-3ec422424ba6",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-04T11:12:32.606254+00:00",
+  "goal_data": {
+    "objective": "Database integrity remediation: Fix cross-project data scoping, migrate misplaced findings/unknowns, audit for data loss against backups",
+    "scope": {
+      "breadth": 0.7,
+      "duration": 0.4,
+      "coordination": 0.3
+    },
+    "success_criteria": [
+      "All dashboard-related items migrated to empirica-platform DB",
+      "No orphaned/null project_ids remain",
+      "Comparison with backups confirms no data loss",
+      "Each project has clean, correctly-scoped data"
+    ],
+    "estimated_complexity": 0.7,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-04T11:12:32.606265+00:00",
+      "action": "created"
+    }
+  ]
+}
