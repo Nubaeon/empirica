@@ -1,0 +1,13 @@
+{
+  "unknown_id": "aa802988-35b6-41c6-a266-160718c6ba6b",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "d48f2d56-53b6-4546-9f98-f504473ef5ae",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-04T00:49:58.528877+00:00",
+  "unknown": "CRM schema gaps: Current schema has contacts (JSON with name/email/role), but missing: address, company_size, revenue_tier, deal_value, pipeline_stage, primary_contact_email, primary_contact_phone. These need to be added to empirica-crm before the dashboard can display them.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
