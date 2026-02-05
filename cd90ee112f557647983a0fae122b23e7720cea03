@@ -1,0 +1,28 @@
+{
+  "goal_id": "36279e45-7fda-4e27-8d07-285bb661d57e",
+  "session_id": "7e4669f6-9dd9-4d0c-92f7-bd99dec0a343",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-05T21:45:56.405692+00:00",
+  "goal_data": {
+    "objective": "Update documentation for recent statusline, transaction, and project-switch changes",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-05T21:45:56.405705+00:00",
+      "action": "created"
+    }
+  ]
+}
