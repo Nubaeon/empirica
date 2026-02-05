@@ -1,0 +1,16 @@
+{
+  "finding_id": "516fe13f-495a-4d7c-97c6-50e4235220b2",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0cb9c4f0-7618-4a97-a1fa-df2ae83ee3fe",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T21:00:26.876215+00:00",
+  "finding": "Statusline fix: Added transaction awareness to read vectors from transaction's session_id instead of current session. This allows statusline to correctly display PREFLIGHT/POSTFLIGHT vectors after context compaction.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Statusline fix: Added transaction awareness to read vectors from transaction's session_id instead of current session. This allows statusline to correctly display PREFLIGHT/POSTFLIGHT vectors after context compaction.",
+    "impact": 0.7
+  }
+}
