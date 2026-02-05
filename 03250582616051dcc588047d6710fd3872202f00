@@ -1,0 +1,16 @@
+{
+  "finding_id": "477fa8b5-ac7b-43cf-8946-f046da2e8754",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "50833f13-6349-4b28-9318-94dd649f435e",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T20:34:40.778205+00:00",
+  "finding": "BREAKAGE: project-switch auto-creates new session via _update_active_work() which triggers Sentinel blocking because the new session has no PREFLIGHT. User workflow: project-switch \u2192 new session created \u2192 Sentinel blocks all actions \u2192 user confused. Fix options: (1) project-switch should NOT auto-create sessions, (2) or Sentinel should have grace period for new sessions.",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "BREAKAGE: project-switch auto-creates new session via _update_active_work() which triggers Sentinel blocking because the new session has no PREFLIGHT. User workflow: project-switch \u2192 new session created \u2192 Sentinel blocks all actions \u2192 user confused. Fix options: (1) project-switch should NOT auto-create sessions, (2) or Sentinel should have grace period for new sessions.",
+    "impact": 0.8
+  }
+}
