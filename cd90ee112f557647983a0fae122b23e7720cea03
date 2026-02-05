@@ -1,0 +1,28 @@
+{
+  "goal_id": "ab2b4b36-67b1-4eb4-a3fb-2b2ba2a7ab90",
+  "session_id": "7e4669f6-9dd9-4d0c-92f7-bd99dec0a343",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-05T21:55:20.837657+00:00",
+  "goal_data": {
+    "objective": "Investigate epistemic agents session/transaction inheritance model",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-05T21:55:20.837675+00:00",
+      "action": "created"
+    }
+  ]
+}
