@@ -1,0 +1,13 @@
+{
+  "unknown_id": "fda274d0-c196-4931-8ca1-df896f7359a6",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9dc68bc5-49d9-4a41-a27f-d546b1f2e7dc",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T20:21:25.029024+00:00",
+  "unknown": "session-create returns wrong project_id ('empirica') after project-switch to empirica-platform. Expected project_id: 47e34466-47ba-4a30-80be-987ec17416d8",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
