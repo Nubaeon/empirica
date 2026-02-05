@@ -23,6 +23,47 @@ auto_enable_sentinel()
 logger = logging.getLogger(__name__)
 
 
+def _get_open_counts_for_cache(session_id: str) -> tuple:
+    """
+    Get open goals and unknowns counts for statusline cache.
+
+    Returns:
+        (open_goals, open_unknowns) tuple
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Get project_id from session
+        cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+        row = cursor.fetchone()
+        project_id = row[0] if row else None
+
+        if not project_id:
+            db.close()
+            return (0, 0)
+
+        # Count open goals for this project
+        cursor.execute("""
+            SELECT COUNT(*) FROM goals
+            WHERE is_completed = 0 AND project_id = ?
+        """, (project_id,))
+        open_goals = cursor.fetchone()[0] or 0
+
+        # Count unresolved unknowns for this project
+        cursor.execute("""
+            SELECT COUNT(*) FROM project_unknowns
+            WHERE is_resolved = 0 AND project_id = ?
+        """, (project_id,))
+        open_unknowns = cursor.fetchone()[0] or 0
+
+        db.close()
+        return (open_goals, open_unknowns)
+    except Exception:
+        return (0, 0)
+
+
 def _check_bootstrap_status(session_id: str) -> dict:
     """
     Check if project-bootstrap has been run for this session.
@@ -206,10 +247,17 @@ def handle_preflight_submit_command(args):
                 }
             )
 
-            # Persist active transaction for breadcrumb handlers and CHECK/POSTFLIGHT
+            # Persist active transaction for breadcrumb handlers, CHECK/POSTFLIGHT, and Sentinel
+            # Include session_id so Sentinel can look up PREFLIGHT vectors after compaction
             try:
+                import time
                 from empirica.utils.session_resolver import write_active_transaction
-                write_active_transaction(transaction_id)
+                write_active_transaction(
+                    transaction_id=transaction_id,
+                    session_id=session_id,
+                    preflight_timestamp=time.time(),
+                    status="open"
+                )
             except Exception as e:
                 logger.debug(f"Active transaction file write failed (non-fatal): {e}")
 
@@ -348,6 +396,23 @@ def handle_preflight_submit_command(args):
                 } if SentinelHooks.is_enabled() else None,
                 "patterns": patterns if patterns and any(patterns.values()) else None
             }
+
+            # Update statusline cache so it immediately reflects new phase
+            try:
+                from empirica.core.statusline_cache import write_statusline_cache
+                import os as _os
+                open_goals, open_unknowns = _get_open_counts_for_cache(session_id)
+                write_statusline_cache(
+                    session_id=session_id,
+                    ai_id='claude-code',
+                    phase='PREFLIGHT',
+                    vectors=vectors,
+                    project_path=_os.getcwd(),
+                    open_goals=open_goals,
+                    open_unknowns=open_unknowns,
+                )
+            except Exception:
+                pass  # Cache update is best-effort
         except Exception as e:
             logger.error(f"Failed to save preflight assessment: {e}")
             result = {
@@ -1263,6 +1328,24 @@ def handle_check_submit_command(args):
                 else:
                     result["auto_postflight"] = {"triggered": False}
 
+            # Update statusline cache so it immediately reflects CHECK phase
+            try:
+                from empirica.core.statusline_cache import write_statusline_cache
+                import os as _os
+                open_goals, open_unknowns = _get_open_counts_for_cache(session_id)
+                write_statusline_cache(
+                    session_id=session_id,
+                    ai_id='claude-code',
+                    phase='CHECK',
+                    vectors=vectors,
+                    gate_decision=decision,
+                    project_path=_os.getcwd(),
+                    open_goals=open_goals,
+                    open_unknowns=open_unknowns,
+                )
+            except Exception:
+                pass  # Cache update is best-effort
+
         except Exception as e:
             logger.error(f"Failed to save check assessment: {e}")
             result = {
@@ -1655,14 +1738,35 @@ def handle_postflight_submit_command(args):
                 logger.debug(f"Delta calculation failed: {e}")
                 # Delta calculation is optional
 
-            # Read and clear active transaction_id (POSTFLIGHT closes the transaction)
+            # Read and close active transaction (POSTFLIGHT closes the transaction)
+            # Update status to "closed" instead of deleting - Sentinel reads this
             postflight_transaction_id = None
             try:
-                from empirica.utils.session_resolver import read_active_transaction, clear_active_transaction
-                postflight_transaction_id = read_active_transaction()
-                clear_active_transaction()
+                import time
+                from empirica.utils.session_resolver import write_active_transaction
+                from pathlib import Path
+                import json as _json
+
+                # Read current transaction to get the transaction_id
+                local_empirica = Path.cwd() / '.empirica'
+                if local_empirica.exists():
+                    tx_file = local_empirica / 'active_transaction.json'
+                else:
+                    tx_file = Path.home() / '.empirica' / 'active_transaction.json'
+
+                if tx_file.exists():
+                    with open(tx_file, 'r') as f:
+                        tx_data = _json.load(f)
+                    postflight_transaction_id = tx_data.get('transaction_id')
+                    # Update to closed status
+                    write_active_transaction(
+                        transaction_id=postflight_transaction_id,
+                        session_id=tx_data.get('session_id'),
+                        preflight_timestamp=tx_data.get('preflight_timestamp'),
+                        status="closed"
+                    )
             except Exception as e:
-                logger.debug(f"Transaction cleanup failed (non-fatal): {e}")
+                logger.debug(f"Transaction close failed (non-fatal): {e}")
 
             # Add checkpoint - this writes to ALL 3 storage layers atomically (round auto-increments)
             checkpoint_id = logger_instance.add_checkpoint(
@@ -2067,6 +2171,23 @@ def handle_postflight_submit_command(args):
                     "note": "Session complete. Sentinel can recommend handoff or flag issues."
                 } if SentinelHooks.is_enabled() else None
             }
+
+            # Update statusline cache so it immediately reflects POSTFLIGHT phase
+            try:
+                from empirica.core.statusline_cache import write_statusline_cache
+                import os as _os
+                open_goals, open_unknowns = _get_open_counts_for_cache(session_id)
+                write_statusline_cache(
+                    session_id=session_id,
+                    ai_id='claude-code',
+                    phase='POSTFLIGHT',
+                    vectors=vectors,
+                    project_path=_os.getcwd(),
+                    open_goals=open_goals,
+                    open_unknowns=open_unknowns,
+                )
+            except Exception:
+                pass  # Cache update is best-effort
         except Exception as e:
             logger.error(f"Failed to save postflight assessment: {e}")
             result = {

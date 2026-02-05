@@ -7,6 +7,11 @@ Supports magic aliases for easy session resumption:
 - "latest:<ai_id>" - Most recent session for specific AI
 - "latest:active:<ai_id>" - Most recent active session for specific AI
 
+Also provides TTY-based session isolation for multi-instance support:
+- get_tty_key() - Get TTY-based key for current terminal
+- get_tty_session() - Read Claude session mapping from TTY-keyed file
+- write_tty_session() - Write Claude session mapping (called by hooks)
+
 Examples:
     resolve_session_id("latest")
     resolve_session_id("latest:active")
@@ -15,11 +20,299 @@ Examples:
     resolve_session_id("88dbf132")  # Partial UUID still works
 """
 
+import json
 import logging
-from typing import Optional
+import os
+import subprocess
+from typing import Optional, Dict, Any
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# TTY-based Session Isolation (Multi-Instance Support)
+# =============================================================================
+
+def get_tty_key() -> str:
+    """Get a TTY-based key for session isolation.
+
+    Uses parent process TTY since tool execution may not have direct TTY access.
+    Returns sanitized string like 'pts-2' or 'ppid-{ppid}'.
+
+    This allows CLI commands to identify which Claude Code instance called them,
+    bridging the gap between hooks (which receive session_id) and CLI commands.
+    """
+    try:
+        result = subprocess.run(
+            ['ps', '-p', str(os.getppid()), '-o', 'tty='],
+            capture_output=True, text=True, timeout=2
+        )
+        tty = result.stdout.strip()
+        if tty and tty != '?':
+            return tty.replace('/', '-')
+    except Exception:
+        pass
+    # Fallback to PPID if no TTY
+    return f"ppid-{os.getppid()}"
+
+
+def get_tty_session(warn_if_stale: bool = True) -> Optional[Dict[str, Any]]:
+    """Read session mapping from TTY-keyed file.
+
+    Returns dict with:
+        - claude_session_id: Claude Code conversation UUID
+        - empirica_session_id: Empirica session UUID
+        - project_path: Project directory path
+        - tty_key: The TTY key used
+        - timestamp: When the mapping was written
+
+    Args:
+        warn_if_stale: If True, logs warnings for potentially stale sessions
+
+    Returns None if no TTY session file exists or on read error.
+    """
+    tty_key = get_tty_key()
+    tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
+    session_file = tty_sessions_dir / f'{tty_key}.json'
+
+    if not session_file.exists():
+        return None
+
+    try:
+        with open(session_file, 'r') as f:
+            session = json.load(f)
+
+        # Validate and warn if stale
+        if warn_if_stale:
+            validation = validate_tty_session(session)
+            for warning in validation.get('warnings', []):
+                logger.warning(f"TTY session warning: {warning}")
+
+            # If TTY device is gone, return None (session is invalid)
+            if not validation.get('valid', True):
+                logger.warning("TTY session is invalid, ignoring")
+                return None
+
+        return session
+    except Exception as e:
+        logger.debug(f"Failed to read TTY session file: {e}")
+        return None
+
+
+def write_tty_session(
+    claude_session_id: str = None,
+    empirica_session_id: str = None,
+    project_path: str = None
+) -> bool:
+    """Write session mapping to TTY-keyed file for CLI commands to read.
+
+    This bridges the gap between hooks (which receive claude_session_id) and
+    CLI commands (which don't). Both run in the same TTY context.
+
+    Can be called from:
+    - Claude Code hooks (have claude_session_id, may have empirica_session_id)
+    - CLI session-create (no claude_session_id, has empirica_session_id)
+
+    Args:
+        claude_session_id: Claude Code conversation UUID (optional for CLI)
+        empirica_session_id: Empirica session UUID (optional)
+        project_path: Project directory path (optional)
+
+    Returns:
+        True if successfully written, False on error.
+    """
+    from datetime import datetime
+
+    tty_key = get_tty_key()
+    tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
+    tty_sessions_dir.mkdir(parents=True, exist_ok=True)
+
+    session_file = tty_sessions_dir / f'{tty_key}.json'
+
+    data = {
+        'claude_session_id': claude_session_id,
+        'empirica_session_id': empirica_session_id,
+        'project_path': project_path,
+        'tty_key': tty_key,
+        'timestamp': datetime.now().isoformat(),
+        'pid': os.getpid(),
+        'ppid': os.getppid()
+    }
+
+    try:
+        with open(session_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception as e:
+        logger.debug(f"Failed to write TTY session file: {e}")
+        return False
+
+
+def get_claude_session_id() -> Optional[str]:
+    """Get the Claude Code session ID for the current terminal.
+
+    Convenience function that reads the TTY session file and returns
+    just the claude_session_id.
+
+    Returns:
+        Claude Code conversation UUID or None if not available.
+    """
+    session = get_tty_session()
+    return session.get('claude_session_id') if session else None
+
+
+def validate_tty_session(session: Dict[str, Any] = None) -> Dict[str, Any]:
+    """Validate a TTY session for staleness and warn if issues detected.
+
+    Checks:
+    1. Process still exists (PID that wrote the session)
+    2. TTY device still exists (if real TTY, not ppid-based)
+    3. Timestamp not too old (default: 4 hours)
+
+    Args:
+        session: TTY session dict (if None, reads current TTY session)
+
+    Returns:
+        Dict with:
+            - valid: bool - True if session appears valid
+            - warnings: list[str] - Warning messages if any
+            - session: dict - The session data (if valid)
+    """
+    from datetime import datetime, timedelta
+
+    result = {
+        'valid': True,
+        'warnings': [],
+        'session': None
+    }
+
+    if session is None:
+        session = get_tty_session()
+
+    if not session:
+        result['valid'] = False
+        result['warnings'].append("No TTY session file found")
+        return result
+
+    result['session'] = session
+
+    # Check 1: Process still exists
+    pid = session.get('pid')
+    if pid:
+        try:
+            os.kill(pid, 0)  # Signal 0 = check if process exists
+        except OSError:
+            result['warnings'].append(f"Original process (PID {pid}) no longer exists - session may be stale")
+
+    # Check 2: TTY device exists (for real TTYs)
+    tty_key = session.get('tty_key', '')
+    if tty_key.startswith('pts-'):
+        tty_device = f"/dev/{tty_key.replace('-', '/')}"
+        if not Path(tty_device).exists():
+            result['valid'] = False
+            result['warnings'].append(f"TTY device {tty_device} no longer exists - terminal closed?")
+
+    # Check 3: Timestamp staleness (4 hour threshold)
+    timestamp_str = session.get('timestamp')
+    if timestamp_str:
+        try:
+            # Handle ISO format with or without timezone
+            if '+' in timestamp_str or 'Z' in timestamp_str:
+                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                # Make comparison timezone-aware
+                now = datetime.now(timestamp.tzinfo)
+            else:
+                timestamp = datetime.fromisoformat(timestamp_str)
+                now = datetime.now()
+
+            age = now - timestamp
+            if age > timedelta(hours=4):
+                hours = age.total_seconds() / 3600
+                result['warnings'].append(f"TTY session is {hours:.1f} hours old - may be stale")
+        except (ValueError, TypeError):
+            pass  # Can't parse timestamp, skip check
+
+    # If we have critical warnings, mark as invalid
+    if any("no longer exists" in w for w in result['warnings']):
+        result['valid'] = False
+
+    return result
+
+
+def cleanup_stale_tty_sessions(max_age_hours: float = 24) -> int:
+    """Remove stale TTY session files.
+
+    Removes files where:
+    - The TTY device no longer exists
+    - The original process is dead AND file is older than max_age_hours
+
+    Args:
+        max_age_hours: Maximum age in hours before a session with dead process is removed
+
+    Returns:
+        Number of files removed
+    """
+    from datetime import datetime, timedelta
+
+    tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
+    if not tty_sessions_dir.exists():
+        return 0
+
+    removed = 0
+    for session_file in tty_sessions_dir.glob('*.json'):
+        try:
+            with open(session_file, 'r') as f:
+                session = json.load(f)
+
+            should_remove = False
+            reason = ""
+
+            # Check TTY device
+            tty_key = session.get('tty_key', '')
+            if tty_key.startswith('pts-'):
+                tty_device = f"/dev/{tty_key.replace('-', '/')}"
+                if not Path(tty_device).exists():
+                    should_remove = True
+                    reason = "TTY device gone"
+
+            # Check process + age
+            if not should_remove:
+                pid = session.get('pid')
+                process_alive = False
+                if pid:
+                    try:
+                        os.kill(pid, 0)
+                        process_alive = True
+                    except OSError:
+                        pass
+
+                if not process_alive:
+                    timestamp_str = session.get('timestamp')
+                    if timestamp_str:
+                        try:
+                            timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00').split('+')[0])
+                            age = datetime.now() - timestamp
+                            if age > timedelta(hours=max_age_hours):
+                                should_remove = True
+                                reason = f"Process dead, file {age.total_seconds()/3600:.1f}h old"
+                        except (ValueError, TypeError):
+                            pass
+
+            if should_remove:
+                session_file.unlink()
+                removed += 1
+                logger.debug(f"Removed stale TTY session {session_file.name}: {reason}")
+
+        except Exception as e:
+            logger.debug(f"Error checking TTY session {session_file}: {e}")
+
+    return removed
+
+
+# =============================================================================
+# Session ID Resolution
+# =============================================================================
 
 
 def resolve_session_id(session_id_or_alias: str, ai_id: Optional[str] = None) -> str:
@@ -343,16 +636,50 @@ def _get_tracking_file(name: str) -> 'Path':
     return Path.home() / '.empirica' / f'{name}{suffix}'
 
 
-def write_active_transaction(transaction_id: str) -> None:
-    """Atomically write the active transaction ID to a tracking file."""
+def write_active_transaction(
+    transaction_id: str,
+    session_id: str = None,
+    preflight_timestamp: float = None,
+    status: str = "open"
+) -> None:
+    """Atomically write the active transaction state to JSON file.
+
+    This file is read by Sentinel to track transaction state across sessions.
+    Transactions survive compaction - the session_id here is the one that
+    opened the transaction, which may differ from the current session.
+
+    Args:
+        transaction_id: UUID of the epistemic transaction
+        session_id: Session that opened this transaction (for PREFLIGHT lookup)
+        preflight_timestamp: When PREFLIGHT was submitted
+        status: "open" or "closed"
+    """
     import os
+    import time
     import tempfile
-    path = _get_tracking_file('active_transaction')
+
+    # Write to .empirica/active_transaction.json (JSON format for Sentinel)
+    from pathlib import Path
+    local_empirica = Path.cwd() / '.empirica'
+    if local_empirica.exists():
+        path = local_empirica / 'active_transaction.json'
+    else:
+        path = Path.home() / '.empirica' / 'active_transaction.json'
+
     path.parent.mkdir(parents=True, exist_ok=True)
+
+    tx_data = {
+        "transaction_id": transaction_id,
+        "session_id": session_id,
+        "preflight_timestamp": preflight_timestamp or time.time(),
+        "status": status,
+        "updated_at": time.time()
+    }
+
     tmp_fd, tmp_path = tempfile.mkstemp(dir=str(path.parent))
     try:
         with os.fdopen(tmp_fd, 'w') as tmp_f:
-            tmp_f.write(transaction_id)
+            json.dump(tx_data, tmp_f, indent=2)
         os.rename(tmp_path, str(path))
     except BaseException:
         try:

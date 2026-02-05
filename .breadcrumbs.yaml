@@ -183,53 +183,60 @@ task:
 
 
 
+
+
+
+
+
+
+
 # Learning trajectory (PREFLIGHT→POSTFLIGHT deltas — measures learning, NOT calibration bias)
 # For actual bias corrections see grounded_calibration.grounded_bias_corrections
 learning_trajectory:
-  last_updated: "2026-02-04T01:31:17.365762"
+  last_updated: "2026-02-05T22:23:46.616493"
   ai_id: claude-code
-  observations: 3584
+  observations: 3703
   session_deltas:
-    impact: +0.25
     completion: +0.25
-    do: +0.17
-    state: +0.13
-    engagement: +0.12
-    know: +0.12
-    density: +0.12
-    uncertainty: -0.11
-    signal: +0.11
-    clarity: +0.10
-    change: +0.10
-    context: +0.08
-    coherence: +0.05
+    impact: +0.25
+    state: +0.23
+    density: +0.22
+    signal: +0.21
+    change: +0.20
+    clarity: +0.15
+    coherence: +0.15
+    do: +0.12
+    uncertainty: +0.11
+    context: -0.10
+    know: -0.10
+    engagement: +0.07
   readiness:
     min_know: 0.70
     max_uncertainty: 0.35
   summary:
-    overestimates: [uncertainty]
-    underestimates: [impact, completion, state, density, signal, do, know, engagement]
-    well_calibrated: [change, coherence, clarity, context]
+    overestimates: [context]
+    underestimates: [uncertainty, completion, impact, change, state, density, signal, coherence, clarity, do]
+    well_calibrated: [know, engagement]
 
 # Grounded calibration (auto-updated by Empirica post-test verification)
 grounded_calibration:
-  last_updated: "2026-02-04T01:31:17.419535"
+  last_updated: "2026-02-05T22:23:46.666504"
   ai_id: claude-code
-  observations: 190
+  observations: 242
   grounded_coverage: 0.70
   divergence:
     impact: +0.73
-    signal: -0.15
+    signal: -0.16
     uncertainty: +0.12
-    completion: +0.10
-    do: +0.10
-    context: -0.06
-    know: +0.00
+    context: -0.09
+    do: +0.08
+    completion: +0.08
+    know: -0.03
   ungrounded: [coherence, density, engagement]
   grounded_bias_corrections:
+    context: +0.25
     uncertainty: -0.25
     know: +0.25
     signal: +0.25
-    context: +0.25
-    do: +0.22
-    completion: +0.22
+    do: +0.24
+    completion: +0.24

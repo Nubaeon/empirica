@@ -77,6 +77,69 @@ def get_workspace_projects() -> List[Dict[str, Any]]:
         return []
 
 
+def _update_active_work(project_path: str, folder_name: str) -> bool:
+    """
+    Update active_work markers for cross-project continuity.
+
+    This is called by project-switch to record which project is currently active.
+    Writes to BOTH:
+    1. Session-specific file (if TTY session exists) - for multi-instance isolation
+    2. Canonical file - as fallback for first-time compaction
+
+    The TTY session file is written by hooks (session-init, pre-compact) which
+    receive the Claude Code session_id. CLI commands like project-switch can
+    read it because they run in the same terminal (TTY).
+
+    Args:
+        project_path: Full path to the project directory
+        folder_name: The project's folder name (ground truth identifier)
+
+    Returns:
+        True if successfully written, False otherwise
+    """
+    import time
+    from empirica.utils.session_resolver import get_tty_session
+
+    try:
+        marker_dir = Path.home() / '.empirica'
+        marker_dir.mkdir(parents=True, exist_ok=True)
+
+        # Try to get Claude session ID from TTY session (written by hooks)
+        tty_session = get_tty_session()
+        claude_session_id = tty_session.get('claude_session_id') if tty_session else None
+
+        active_work = {
+            'project_path': project_path,
+            'folder_name': folder_name,
+            'claude_session_id': claude_session_id,
+            'source': 'project-switch',
+            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%S%z'),
+            'timestamp_epoch': time.time()
+        }
+
+        # Priority 1: Write to session-specific file (if we know the session)
+        # This prevents race conditions with other Claude instances
+        if claude_session_id:
+            session_marker_path = marker_dir / f'active_work_{claude_session_id}.json'
+            with open(session_marker_path, 'w') as f:
+                json.dump(active_work, f, indent=2)
+            logger.debug(f"Updated session-specific active_work: {folder_name}")
+
+        # Priority 2: Also write canonical file as fallback
+        # Pre-compact hook reads this when session-specific doesn't exist
+        marker_path = marker_dir / 'active_work.json'
+
+        with open(marker_path, 'w') as f:
+            json.dump(active_work, f, indent=2)
+
+        logger.debug(f"Updated active_work.json: {folder_name} -> {project_path}")
+        return True
+
+    except Exception as e:
+        logger.warning(f"Failed to update active_work.json: {e}")
+        return False
+
+
 def resolve_workspace_project(identifier: str) -> Optional[Dict[str, Any]]:
     """
     Resolve a project by name, folder name, or UUID from workspace database.
@@ -2834,7 +2897,62 @@ def handle_project_switch_command(args):
         project_path = None
         if trajectory_path:
             project_path = Path(trajectory_path).parent
-        
+
+        # 3. FORCED POSTFLIGHT: Close any open transaction from current project
+        # Transactions are project-scoped, so switching projects should close the current one
+        postflight_result = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction
+            from empirica.config.path_resolver import get_empirica_root
+
+            # Get current project's transaction state
+            current_empirica_root = get_empirica_root()
+            if current_empirica_root:
+                tx_path = current_empirica_root / 'active_transaction.json'
+                if tx_path.exists():
+                    import json as _json
+                    with open(tx_path, 'r') as f:
+                        tx_data = _json.load(f)
+
+                    if tx_data.get('status') == 'open':
+                        # Auto-close with POSTFLIGHT
+                        import subprocess
+                        tx_session_id = tx_data.get('session_id')
+                        if tx_session_id:
+                            postflight_cmd = ['empirica', 'postflight-submit', '-']
+                            postflight_input = _json.dumps({
+                                "session_id": tx_session_id,
+                                "vectors": {
+                                    "know": 0.7,
+                                    "uncertainty": 0.3,
+                                    "context": 0.7,
+                                    "completion": 0.5
+                                },
+                                "reasoning": f"Auto-POSTFLIGHT: Project switch to {folder_name}. Transaction auto-closed to maintain epistemic measurement integrity."
+                            })
+                            result = subprocess.run(
+                                postflight_cmd,
+                                input=postflight_input,
+                                capture_output=True,
+                                text=True,
+                                timeout=30
+                            )
+                            if result.returncode == 0:
+                                postflight_result = {"ok": True, "reason": "project_switch"}
+                                if output_format == 'human':
+                                    print("📊 Auto-closed previous transaction (POSTFLIGHT)")
+                            else:
+                                postflight_result = {"ok": False, "error": result.stderr[:200]}
+        except Exception as e:
+            # Non-fatal - continue with switch even if POSTFLIGHT fails
+            postflight_result = {"ok": False, "error": str(e)}
+            logger.debug(f"Auto-POSTFLIGHT on project-switch failed (non-fatal): {e}")
+
+        # 4. Update active_work.json for cross-project continuity
+        # This ensures pre-compact hook preserves project context even when Claude Code resets CWD
+        if project_path:
+            _update_active_work(str(project_path), folder_name)
+
         # 4. Show context banner
         if output_format == 'human':
             print()
@@ -2853,8 +2971,71 @@ def handle_project_switch_command(args):
                   f"Goals: {project.get('total_goals', 0)}")
             print()
         
-        # 5. Show project context summary from workspace data
+        # 5. SESSION ATTACHMENT: Check for existing open session in target project
+        attached_session = None
+        try:
+            from empirica.data.session_database import SessionDatabase
+            if project_path:
+                target_db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                if target_db_path.exists():
+                    target_db = SessionDatabase(db_path=str(target_db_path))
+                    cursor = target_db.conn.cursor()
+                    # Find most recent open session for this project
+                    cursor.execute("""
+                        SELECT session_id, ai_id, start_time
+                        FROM sessions
+                        WHERE project_id = ? AND end_time IS NULL
+                        ORDER BY start_time DESC
+                        LIMIT 1
+                    """, (project_id,))
+                    row = cursor.fetchone()
+                    if row:
+                        attached_session = {
+                            'session_id': row[0],
+                            'ai_id': row[1],
+                            'start_time': row[2]
+                        }
+                        if output_format == 'human':
+                            print(f"🔗 Attached to existing session: {row[0][:8]}... (AI: {row[1]})")
+                    target_db.close()
+        except Exception as e:
+            logger.debug(f"Session attachment check failed (non-fatal): {e}")
+
+        # 6. AUTO-BOOTSTRAP: Load context for the new project
         bootstrap_result = None
+        try:
+            import subprocess
+            # Run project-bootstrap for the new project
+            # Use --output json to capture result, but don't print it in human mode
+            # If we found an attached session, pass it to bootstrap
+            bootstrap_cmd = ['empirica', 'project-bootstrap', '--output', 'json']
+            if attached_session:
+                bootstrap_cmd.extend(['--session-id', attached_session['session_id']])
+            if project_path:
+                # Run in project directory to ensure correct context
+                result = subprocess.run(
+                    bootstrap_cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd=str(project_path)
+                )
+                if result.returncode == 0:
+                    try:
+                        import json as _json
+                        bootstrap_result = _json.loads(result.stdout)
+                        if output_format == 'human':
+                            print("✅ Project context loaded (auto-bootstrap)")
+                    except:
+                        bootstrap_result = {"ok": True, "note": "bootstrap ran but non-JSON output"}
+                else:
+                    bootstrap_result = {"ok": False, "error": result.stderr[:200]}
+        except Exception as e:
+            # Non-fatal - continue even if bootstrap fails
+            bootstrap_result = {"ok": False, "error": str(e)}
+            logger.debug(f"Auto-bootstrap on project-switch failed (non-fatal): {e}")
+
+        # 6. Show project context summary from workspace data
         if output_format == 'human':
             findings = project.get('total_findings', 0)
             unknowns = project.get('total_unknowns', 0)
@@ -2916,9 +3097,11 @@ def handle_project_switch_command(args):
                     'goals': project.get('total_goals', 0)
                 },
                 'next_steps': [
-                    'empirica session-create --ai-id <your-id>',
+                    'empirica session-create --ai-id <your-id>' if not attached_session else f'Session attached: {attached_session["session_id"][:8]}...',
                     'empirica goals-ready'
                 ],
+                'postflight_result': postflight_result,
+                'attached_session': attached_session,
                 'bootstrap_result': bootstrap_result
             }
             print(json.dumps(result, indent=2))

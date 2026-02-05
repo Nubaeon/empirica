@@ -915,17 +915,21 @@ def handle_goals_progress_command(args):
 def handle_goals_list_command(args):
     """Handle goals-list command - list goals with optional filters
 
-    Scoping (most specific wins):
-    - No filters: show all active goals
-    - --session-id: filter by session
-    - --ai-id: filter by AI
+    Scoping:
+    - Goals are PROJECT-SCOPED (structural), not session-scoped (temporal)
+    - --project-id: filter by project (primary filter)
+    - --session-id: derives project_id from session (convenience)
+    - --ai-id: filter by AI that created the goal
     - --completed: show completed goals instead of active
+
+    Session_id on goals is metadata about creation context, not a filter boundary.
     """
     try:
         from empirica.data.session_database import SessionDatabase
 
         # Parse arguments
         session_id = getattr(args, 'session_id', None)
+        project_id = getattr(args, 'project_id', None)
         ai_id = getattr(args, 'ai_id', None)
         show_completed = getattr(args, 'completed', False)
         output_format = getattr(args, 'output', 'human')
@@ -933,6 +937,13 @@ def handle_goals_list_command(args):
 
         db = SessionDatabase()
         cursor = db.conn.cursor()
+
+        # GOALS ARE PROJECT-SCOPED: Derive project_id from session_id if needed
+        if session_id and not project_id:
+            cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+            row = cursor.fetchone()
+            if row and row[0]:
+                project_id = row[0]
 
         # Build query based on filters
         base_query = """
@@ -946,10 +957,10 @@ def handle_goals_list_command(args):
         """
         params = []
 
-        # Apply filters
-        if session_id:
-            base_query += " AND g.session_id = ?"
-            params.append(session_id)
+        # Apply filters - PROJECT is the primary scope for goals
+        if project_id:
+            base_query += " AND g.project_id = ?"
+            params.append(project_id)
 
         if ai_id:
             base_query += " AND s.ai_id = ?"
@@ -991,8 +1002,8 @@ def handle_goals_list_command(args):
 
         # Build filter description for output
         filters_applied = []
-        if session_id:
-            filters_applied.append(f"session={session_id[:8]}...")
+        if project_id:
+            filters_applied.append(f"project={project_id[:8]}...")
         if ai_id:
             filters_applied.append(f"ai={ai_id}")
         filter_desc = ", ".join(filters_applied) if filters_applied else "all"
@@ -1003,7 +1014,8 @@ def handle_goals_list_command(args):
             "goals_count": len(goals),
             "goals": goals,
             "filters": {
-                "session_id": session_id,
+                "project_id": project_id,
+                "session_id": session_id,  # Keep for reference (used to derive project)
                 "ai_id": ai_id,
                 "status": status_desc
             },

@@ -3,11 +3,11 @@
 Empirica Statusline v2 - Unified Signaling with Moon Phases
 
 Uses the shared signaling module for consistent emoji display.
-Reads vectors from DB (real-time) and drift from cache (hook-updated).
+Reads vectors from DB (real-time).
 
 Display modes:
-  - basic: Just drift status
-  - default: Phase + key vectors + drift
+  - basic: Just confidence
+  - default: Phase + key vectors + open counts
   - learning: Focus on vector changes
   - full: Everything with values
 
@@ -31,12 +31,7 @@ sys.path.insert(0, str(EMPIRICA_ROOT))
 
 from empirica.config.path_resolver import get_empirica_root
 from empirica.data.session_database import SessionDatabase
-from empirica.core.signaling import (
-    SignalingState,
-    format_vectors_compact,
-    format_drift_status,
-    read_drift_cache,
-)
+from empirica.core.signaling import format_vectors_compact
 from empirica.core.statusline_cache import (
     StatuslineCache,
     read_statusline_cache,
@@ -459,6 +454,7 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     Get the active session with strict pane isolation.
 
     Priority:
+    0. TTY session → active_work file → empirica_session_id (BEST - Claude Code aware)
     1. Instance-specific active_session file (active_session_tmux_N)
     2. Exact ai_id + exact instance_id match in DB (NO NULL fallback)
     3. Generic active_session file (only if no instance_id available)
@@ -468,7 +464,40 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     """
     cursor = db.conn.cursor()
 
-    # Get current instance_id for multi-instance isolation
+    # Priority 0: TTY session lookup (Claude Code instance isolation)
+    # This is the most accurate method - uses Claude Code's session_id
+    try:
+        from empirica.utils.session_resolver import get_tty_session
+        import json as _json
+
+        tty_session = get_tty_session(warn_if_stale=False)  # Don't spam warnings
+        if tty_session:
+            # Get empirica_session_id from TTY session
+            empirica_session_id = tty_session.get('empirica_session_id')
+
+            # If not in TTY session, try active_work file
+            if not empirica_session_id:
+                claude_session_id = tty_session.get('claude_session_id')
+                if claude_session_id:
+                    active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+                    if active_work_path.exists():
+                        with open(active_work_path, 'r') as f:
+                            active_work = _json.load(f)
+                            empirica_session_id = active_work.get('empirica_session_id')
+
+            if empirica_session_id:
+                cursor.execute("""
+                    SELECT session_id, ai_id, start_time
+                    FROM sessions
+                    WHERE session_id = ? AND end_time IS NULL
+                """, (empirica_session_id,))
+                row = cursor.fetchone()
+                if row:
+                    return dict(row)
+    except Exception:
+        pass  # Fall through to legacy methods
+
+    # Get current instance_id for multi-instance isolation (legacy)
     try:
         from empirica.utils.session_resolver import get_instance_id
         current_instance_id = get_instance_id()
@@ -491,7 +520,14 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
             candidate = parent / '.empirica' / f'active_session{instance_suffix}'
             if candidate.exists():
                 try:
-                    session_id = candidate.read_text().strip()
+                    content = candidate.read_text().strip()
+                    # Handle JSON format (new) or plain session_id (legacy)
+                    if content.startswith('{'):
+                        import json as _json
+                        data = _json.loads(content)
+                        session_id = data.get('session_id', '')
+                    else:
+                        session_id = content
                     if session_id:
                         cursor.execute("""
                             SELECT session_id, ai_id, start_time
@@ -511,7 +547,14 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
         global_instance_file = Path.home() / '.empirica' / f'active_session{instance_suffix}'
         if global_instance_file.exists():
             try:
-                session_id = global_instance_file.read_text().strip()
+                content = global_instance_file.read_text().strip()
+                # Handle JSON format (new) or plain session_id (legacy)
+                if content.startswith('{'):
+                    import json as _json
+                    data = _json.loads(content)
+                    session_id = data.get('session_id', '')
+                else:
+                    session_id = content
                 if session_id:
                     cursor.execute("""
                         SELECT session_id, ai_id, start_time
@@ -530,7 +573,14 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
             candidate = parent / '.empirica' / 'active_session'
             if candidate.exists():
                 try:
-                    session_id = candidate.read_text().strip()
+                    content = candidate.read_text().strip()
+                    # Handle JSON format (new) or plain session_id (legacy)
+                    if content.startswith('{'):
+                        import json as _json
+                        data = _json.loads(content)
+                        session_id = data.get('session_id', '')
+                    else:
+                        session_id = content
                     if session_id:
                         cursor.execute("""
                             SELECT session_id, ai_id, start_time
@@ -575,9 +625,21 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     return None
 
 
-def get_latest_vectors(db: SessionDatabase, session_id: str) -> tuple:
-    """Get latest vectors, phase, and gate decision from reflexes table."""
+def get_latest_vectors(db: SessionDatabase, session_id: str, transaction_session_id: str = None) -> tuple:
+    """
+    Get latest vectors, phase, and gate decision from reflexes table.
+
+    Args:
+        db: Database connection
+        session_id: Current session ID (for cache compatibility)
+        transaction_session_id: The session ID where PREFLIGHT was submitted (survives compaction)
+                               If provided, queries this session for vectors instead
+
+    This enables cross-session vector lookup when transactions span compaction boundaries.
+    """
     cursor = db.conn.cursor()
+    # Use transaction's session_id if available (survives compaction)
+    lookup_session_id = transaction_session_id or session_id
     cursor.execute("""
         SELECT phase, engagement, know, do, context,
                clarity, coherence, signal, density,
@@ -587,7 +649,7 @@ def get_latest_vectors(db: SessionDatabase, session_id: str) -> tuple:
         WHERE session_id = ?
         ORDER BY timestamp DESC
         LIMIT 1
-    """, (session_id,))
+    """, (lookup_session_id,))
     row = cursor.fetchone()
 
     if not row:
@@ -714,53 +776,12 @@ def format_deltas(deltas: dict) -> str:
     return ' '.join(parts[:3])  # Max 3 deltas to keep it compact
 
 
-def get_drift_from_db(db: SessionDatabase, session_id: str) -> tuple:
-    """Check drift status from recent reflexes."""
-    cursor = db.conn.cursor()
-    cursor.execute("""
-        SELECT know, uncertainty, context, completion
-        FROM reflexes
-        WHERE session_id = ?
-        ORDER BY timestamp DESC
-        LIMIT 6
-    """, (session_id,))
-    rows = cursor.fetchall()
-
-    if len(rows) < 2:
-        return False, None
-
-    # Compare latest to average of previous
-    latest = rows[0]
-    previous = rows[1:]
-
-    # Calculate average of previous
-    avg_know = sum(r[0] or 0.5 for r in previous) / len(previous)
-    avg_unc = sum(r[1] or 0.5 for r in previous) / len(previous)
-
-    # Check for significant drops
-    know_drop = avg_know - (latest[0] or 0.5)
-    unc_increase = (latest[1] or 0.5) - avg_unc
-
-    # Drift detection thresholds
-    if know_drop > 0.3 or unc_increase > 0.3:
-        return True, 'high'
-    elif know_drop > 0.2 or unc_increase > 0.2:
-        return True, 'medium'
-    elif know_drop > 0.1 or unc_increase > 0.1:
-        return True, 'low'
-
-    return False, None
-
-
 def format_statusline(
     session: dict,
     phase: str,
     vectors: dict,
-    drift_state: SignalingState,
     deltas: dict = None,
     mode: str = 'default',
-    drift_detected: bool = False,
-    drift_severity: str = None,
     gate_decision: str = None,
     goal: dict = None,
     open_counts: dict = None,
@@ -788,13 +809,11 @@ def format_statusline(
             parts.append(ext_str)
 
     if mode == 'basic':
-        # Just confidence + drift
-        drift_str = format_drift_status(drift_detected, drift_severity)
-        parts.append(drift_str)
+        # Just confidence
         return ' '.join(parts)
 
     elif mode == 'default':
-        # Open counts (goals/unknowns to close) + CASCADE gate + key vectors (%) + deltas + drift
+        # Open counts (goals/unknowns to close) + CASCADE gate + key vectors (%) + deltas
         # Shows actionable items: what needs to be resolved
         counts_str = format_open_counts(open_counts)
         parts.append(counts_str)
@@ -821,10 +840,6 @@ def format_statusline(
             if delta_str:
                 parts.append(f"Δ {delta_str}")
 
-        # Drift status
-        drift_str = format_drift_status(drift_detected, drift_severity)
-        parts.append(drift_str)
-
         return ' │ '.join(parts)
 
     elif mode == 'learning':
@@ -846,9 +861,6 @@ def format_statusline(
             delta_str = format_deltas(deltas)
             if delta_str:
                 parts.append(f"Δ {delta_str}")
-
-        drift_str = format_drift_status(drift_detected, drift_severity)
-        parts.append(drift_str)
 
         return ' │ '.join(parts)
 
@@ -882,9 +894,6 @@ def format_statusline(
             if delta_str:
                 parts.append(f"Δ {delta_str}")
 
-        drift_str = format_drift_status(drift_detected, drift_severity)
-        parts.append(drift_str)
-
         return ' │ '.join(parts)
 
 
@@ -893,8 +902,6 @@ def build_statusline_data(
     phase: str,
     vectors: dict,
     deltas: dict = None,
-    drift_detected: bool = False,
-    drift_severity: str = None,
     gate_decision: str = None,
     goal: dict = None,
     open_counts: dict = None,
@@ -913,7 +920,6 @@ def build_statusline_data(
             'project': {'name': str, 'path': str},
             'session': {'id': str, 'ai_id': str},
             'epistemic': {'phase': str, 'vectors': dict, 'deltas': dict, 'confidence': float},
-            'drift': {'detected': bool, 'severity': str},
             'goals': {'open': int, 'completion': float},
             'unknowns': {'open': int, 'blockers': int},
             'gate': {'decision': str},
@@ -940,10 +946,6 @@ def build_statusline_data(
             'deltas': deltas or {},
             'confidence': confidence,
         },
-        'drift': {
-            'detected': drift_detected,
-            'severity': drift_severity,
-        },
         'goals': {
             'open': open_counts.get('open_goals', 0) if open_counts else 0,
             'active': goal.get('objective') if goal else None,
@@ -961,12 +963,12 @@ def build_statusline_data(
     }
 
 
-def format_tmux_statusline(confidence: float, phase: str, drift_detected: bool = False) -> str:
+def format_tmux_statusline(confidence: float, phase: str) -> str:
     """
     Format a super-compact statusline for tmux status-right.
 
     Target: ~20 characters max for tmux status bar
-    Format: "E:💡63% PRE" or "E:⚠️drift"
+    Format: "E:💡63% PRE"
     """
     pct = int(confidence * 100) if confidence else 0
 
@@ -979,10 +981,6 @@ def format_tmux_statusline(confidence: float, phase: str, drift_detected: bool =
         emoji = "💫"
     else:
         emoji = "🌑"
-
-    # Drift warning takes priority
-    if drift_detected:
-        return f"E:⚠️drift"
 
     # Phase abbreviation
     phase_abbrev = {
@@ -1018,14 +1016,39 @@ def main():
                 print(f"{Colors.GRAY}[empirica]{Colors.RESET} {Colors.YELLOW}OFF-RECORD{Colors.RESET}")
             return
 
-        # Auto-detect project from current directory
-        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) path_resolver, 3) manual upward search
+        # Auto-detect project from active context
+        # Priority: 1) EMPIRICA_PROJECT_PATH env var, 2) active_work files (project-switch),
+        #           3) path_resolver, 4) manual upward search
         # NOTE: We do NOT fall back to global ~/.empirica/ to prevent cross-project data leakage
         project_path = os.getenv('EMPIRICA_PROJECT_PATH')
         is_local_project = False
 
+        # Priority 2: Check active_work files for project-switch context
+        # This allows statusline to follow the active project, not just cwd
         if not project_path:
-            # Try canonical path_resolver (same logic as sentinel-gate.py)
+            try:
+                from empirica.utils.session_resolver import get_tty_session
+                import json as _json
+
+                tty_session = get_tty_session(warn_if_stale=False)
+                if tty_session:
+                    claude_session_id = tty_session.get('claude_session_id')
+                    if claude_session_id:
+                        active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+                        if active_work_path.exists():
+                            with open(active_work_path, 'r') as f:
+                                active_work = _json.load(f)
+                            aw_project_path = active_work.get('project_path')
+                            if aw_project_path:
+                                aw_db = Path(aw_project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                                if aw_db.exists():
+                                    project_path = aw_project_path
+                                    is_local_project = True
+            except Exception:
+                pass  # Fall through to other methods
+
+        # Priority 3: Try canonical path_resolver (same logic as sentinel-gate.py)
+        if not project_path:
             try:
                 from empirica.config.path_resolver import get_empirica_root
                 empirica_root = get_empirica_root()
@@ -1105,8 +1128,6 @@ def main():
             phase = cached.phase
             vectors = cached.vectors
             gate_decision = cached.gate_decision
-            drift_detected = cached.drift_detected
-            drift_severity = cached.drift_severity
             open_counts = {
                 'open_goals': cached.open_goals,
                 'open_unknowns': cached.open_unknowns,
@@ -1115,7 +1136,6 @@ def main():
             }
             deltas = {}  # Deltas require DB - skip in fast path
             goal = None  # Goal details require DB - skip in fast path
-            drift_state = None
 
             db.close()
 
@@ -1127,7 +1147,6 @@ def main():
                 import json
                 data = build_statusline_data(
                     session, phase, vectors, deltas,
-                    drift_detected=drift_detected, drift_severity=drift_severity,
                     gate_decision=gate_decision, goal=goal, open_counts=open_counts,
                     project_name=project_name, project_path=project_path,
                     extensions=extensions, ai_id=ai_id,
@@ -1137,8 +1156,7 @@ def main():
 
             # Format and output from cache
             output = format_statusline(
-                session, phase, vectors, drift_state, deltas, mode,
-                drift_detected=drift_detected, drift_severity=drift_severity,
+                session, phase, vectors, deltas, mode,
                 gate_decision=gate_decision, goal=goal, open_counts=open_counts,
                 project_name=project_name, extensions=extensions
             )
@@ -1146,14 +1164,28 @@ def main():
             return
 
         # SLOW PATH: Query DB for fresh data
-        # Get vectors from DB (real-time)
-        phase, vectors, gate_decision = get_latest_vectors(db, session_id)
 
-        # Get deltas (learning measurement)
-        deltas = get_vector_deltas(db, session_id)
+        # TRANSACTION AWARENESS: Read active_transaction.json to get the session_id
+        # where vectors were submitted (survives context compaction)
+        # Use transaction_session_id regardless of status - we want to show the latest
+        # vectors from that transaction whether it's open (PREFLIGHT/CHECK) or closed (POSTFLIGHT)
+        transaction_session_id = None
+        try:
+            tx_path = Path(project_path) / '.empirica' / 'active_transaction.json' if project_path else None
+            if tx_path and tx_path.exists():
+                import json as _json
+                with open(tx_path, 'r') as f:
+                    tx_data = _json.load(f)
+                # Use session_id regardless of status - vectors are stored there
+                transaction_session_id = tx_data.get('session_id')
+        except Exception:
+            pass  # Fall back to current session_id
 
-        # Check drift from DB (compare recent reflexes)
-        drift_detected, drift_severity = get_drift_from_db(db, session_id)
+        # Get vectors from DB (real-time) - use transaction's session_id if available
+        phase, vectors, gate_decision = get_latest_vectors(db, session_id, transaction_session_id)
+
+        # Get deltas (learning measurement) - use transaction's session for continuity
+        deltas = get_vector_deltas(db, transaction_session_id or session_id)
 
         # Get active goal for this session (used in 'full' mode)
         goal = get_active_goal(db, session_id)
@@ -1161,18 +1193,6 @@ def main():
         # Get open counts (goals/unknowns to close) - used in default/learning modes
         # Pass project_id to filter by THIS project only
         open_counts = get_open_counts(db, session_id, project_id=project_id)
-
-        # Get drift from cache (updated by hooks) - fallback
-        drift_state = read_drift_cache(str(Path.cwd()))
-
-        # If no cached drift, create minimal state from vectors
-        if not drift_state and vectors:
-            drift_state = SignalingState(
-                phase=phase,
-                vectors=vectors,
-                session_id=session_id,
-                ai_id=ai_id
-            )
 
         db.close()
 
@@ -1187,8 +1207,6 @@ def main():
                 gate_decision=gate_decision,
                 project_path=project_path,
                 project_name=project_name,
-                drift_detected=drift_detected,
-                drift_severity=drift_severity,
                 open_goals=open_counts.get('open_goals', 0) if open_counts else 0,
                 open_unknowns=open_counts.get('open_unknowns', 0) if open_counts else 0,
                 confidence=calculate_confidence(vectors) if vectors else None,
@@ -1204,7 +1222,6 @@ def main():
             import json
             data = build_statusline_data(
                 session, phase, vectors, deltas,
-                drift_detected=drift_detected, drift_severity=drift_severity,
                 gate_decision=gate_decision, goal=goal, open_counts=open_counts,
                 project_name=project_name, project_path=project_path,
                 extensions=extensions, ai_id=ai_id,
@@ -1215,13 +1232,12 @@ def main():
         # Compact tmux output (for tmux status-right)
         if output_tmux:
             confidence = calculate_confidence(vectors) if vectors else 0.0
-            print(format_tmux_statusline(confidence, phase, drift_detected))
+            print(format_tmux_statusline(confidence, phase))
             return
 
         # Format and output
         output = format_statusline(
-            session, phase, vectors, drift_state, deltas, mode,
-            drift_detected=drift_detected, drift_severity=drift_severity,
+            session, phase, vectors, deltas, mode,
             gate_decision=gate_decision, goal=goal, open_counts=open_counts,
             project_name=project_name, extensions=extensions
         )

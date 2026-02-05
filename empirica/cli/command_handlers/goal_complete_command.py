@@ -28,19 +28,45 @@ def handle_goals_complete_command(args):
         close_reason = getattr(args, 'reason', 'completed')
         output_format = getattr(args, 'output', 'json')
         
-        # Validate goal exists
+        # Validate goal exists - support prefix matching like git
         db = SessionDatabase()
         cursor = db.conn.cursor()
+
+        # First try exact match
         cursor.execute("SELECT * FROM goals WHERE id = ?", (goal_id,))
         goal = cursor.fetchone()
-        
+
+        # If no exact match, try prefix match
         if not goal:
-            result = {
-                "ok": False,
-                "error": f"Goal not found: {goal_id}"
-            }
-            print(json.dumps(result) if output_format == 'json' else f"❌ {result['error']}")
-            sys.exit(1)
+            cursor.execute("SELECT * FROM goals WHERE id LIKE ?", (f"{goal_id}%",))
+            matches = cursor.fetchall()
+
+            if len(matches) == 0:
+                result = {
+                    "ok": False,
+                    "error": f"Goal not found: {goal_id}"
+                }
+                print(json.dumps(result) if output_format == 'json' else f"❌ {result['error']}")
+                sys.exit(1)
+            elif len(matches) > 1:
+                # Ambiguous prefix - show matching IDs
+                match_ids = [m['id'][:12] for m in matches]
+                result = {
+                    "ok": False,
+                    "error": f"Ambiguous goal prefix '{goal_id}' matches {len(matches)} goals",
+                    "matches": match_ids,
+                    "hint": "Provide more characters to disambiguate"
+                }
+                if output_format == 'json':
+                    print(json.dumps(result))
+                else:
+                    print(f"❌ Ambiguous prefix '{goal_id}' matches {len(matches)} goals:")
+                    for mid in match_ids:
+                        print(f"   - {mid}...")
+                sys.exit(1)
+            else:
+                goal = matches[0]
+                goal_id = goal['id']  # Use full ID for subsequent operations
         
         # Get BEADS issue ID and session info  
         cursor = db.conn.execute(

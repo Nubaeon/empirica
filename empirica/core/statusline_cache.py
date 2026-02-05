@@ -47,11 +47,6 @@ class StatuslineCacheEntry:
     vectors: Optional[Dict[str, float]] = None
     gate_decision: Optional[str] = None  # proceed, investigate
 
-    # Drift status
-    drift_detected: bool = False
-    drift_severity: Optional[str] = None  # none, low, medium, high, critical
-    drift_score: Optional[float] = None
-
     # Counts
     open_goals: int = 0
     open_unknowns: int = 0
@@ -81,9 +76,6 @@ class StatuslineCacheEntry:
             phase=data.get('phase'),
             vectors=data.get('vectors'),
             gate_decision=data.get('gate_decision'),
-            drift_detected=data.get('drift_detected', False),
-            drift_severity=data.get('drift_severity'),
-            drift_score=data.get('drift_score'),
             open_goals=data.get('open_goals', 0),
             open_unknowns=data.get('open_unknowns', 0),
             goal_linked_unknowns=data.get('goal_linked_unknowns', 0),
@@ -328,8 +320,6 @@ def write_statusline_cache(
     gate_decision: Optional[str] = None,
     project_path: Optional[str] = None,
     project_name: Optional[str] = None,
-    drift_detected: bool = False,
-    drift_severity: Optional[str] = None,
     open_goals: int = 0,
     open_unknowns: int = 0,
     confidence: Optional[float] = None,
@@ -349,8 +339,6 @@ def write_statusline_cache(
         phase=phase,
         vectors=vectors,
         gate_decision=gate_decision,
-        drift_detected=drift_detected,
-        drift_severity=drift_severity,
         open_goals=open_goals,
         open_unknowns=open_unknowns,
         confidence=confidence,

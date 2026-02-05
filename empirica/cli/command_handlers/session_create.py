@@ -8,8 +8,17 @@ Session lifecycle:
 """
 
 import json
+import re
 import sys
 from ..cli_utils import handle_cli_error
+
+
+def _is_uuid_format(value: str) -> bool:
+    """Check if a string looks like a UUID (8-4-4-4-12 hex format)."""
+    if not value or not isinstance(value, str):
+        return False
+    uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    return bool(re.match(uuid_pattern, value.lower()))
 
 
 def auto_close_previous_sessions(db, ai_id, current_project_id, current_instance_id=None, output_format='json'):
@@ -303,17 +312,95 @@ def handle_session_create_command(args):
         # EARLY PROJECT DETECTION: Needed for auto-close of previous sessions
         early_project_id = project_id  # From config if provided
         if not early_project_id:
-            # Method 1: Read from local .empirica/project.yaml
+            # Method 0: Check active_work files from project-switch (highest priority)
+            # project-switch writes active_work.json with the target project
+            # This ensures CLI sessions respect explicit project context
             try:
-                import yaml
-                project_yaml = os.path.join(os.getcwd(), '.empirica', 'project.yaml')
-                if os.path.exists(project_yaml):
-                    with open(project_yaml, 'r') as f:
-                        project_config = yaml.safe_load(f)
-                        if project_config and project_config.get('project_id'):
-                            early_project_id = project_config['project_id']
+                from empirica.utils.session_resolver import get_tty_session
+                import json as _json
+                import sqlite3 as _sqlite3
+
+                def _resolve_folder_to_uuid(folder_name):
+                    """Resolve folder_name to project UUID via workspace.db."""
+                    if not folder_name:
+                        return None
+                    workspace_db = os.path.join(os.path.expanduser('~'), '.empirica', 'workspace', 'workspace.db')
+                    if os.path.exists(workspace_db):
+                        conn = _sqlite3.connect(workspace_db)
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT id FROM global_projects WHERE name = ?", (folder_name,))
+                        row = cursor.fetchone()
+                        conn.close()
+                        if row:
+                            return row[0]
+                    return None
+
+                def _get_project_id_from_active_work(active_work):
+                    """Extract project_id from active_work, resolving folder_name if needed."""
+                    if active_work.get('project_id'):
+                        pid = active_work['project_id']
+                        # If it's already a UUID, use it; otherwise resolve
+                        if _is_uuid_format(pid):
+                            return pid
+                        return _resolve_folder_to_uuid(pid)
+                    elif active_work.get('folder_name'):
+                        return _resolve_folder_to_uuid(active_work['folder_name'])
+                    return None
+
+                # Try TTY-specific active_work first (multi-instance isolation)
+                tty_session = get_tty_session(warn_if_stale=False)
+                if tty_session:
+                    claude_session_id = tty_session.get('claude_session_id')
+                    if claude_session_id:
+                        active_work_path = os.path.join(
+                            os.path.expanduser('~'), '.empirica',
+                            f'active_work_{claude_session_id}.json'
+                        )
+                        if os.path.exists(active_work_path):
+                            with open(active_work_path, 'r') as f:
+                                active_work = _json.load(f)
+                                early_project_id = _get_project_id_from_active_work(active_work)
+
+                # Fallback: canonical active_work.json
+                if not early_project_id:
+                    canonical_path = os.path.join(os.path.expanduser('~'), '.empirica', 'active_work.json')
+                    if os.path.exists(canonical_path):
+                        with open(canonical_path, 'r') as f:
+                            active_work = _json.load(f)
+                            early_project_id = _get_project_id_from_active_work(active_work)
             except Exception:
-                pass
+                pass  # Fall through to other methods
+
+            # Method 1: Read from local .empirica/project.yaml (only if Method 0 didn't find)
+            if not early_project_id:
+                try:
+                    import yaml
+                    project_yaml = os.path.join(os.getcwd(), '.empirica', 'project.yaml')
+                    if os.path.exists(project_yaml):
+                        with open(project_yaml, 'r') as f:
+                            project_config = yaml.safe_load(f)
+                            if project_config and project_config.get('project_id'):
+                                early_project_id = project_config['project_id']
+                except Exception:
+                    pass
+
+            # Method 1b: Resolve folder_name to UUID via workspace.db
+            # project.yaml may contain folder_name (e.g., 'empirica') instead of UUID
+            # We need the UUID for consistent cross-table references (goals, sessions)
+            if early_project_id and not _is_uuid_format(early_project_id):
+                try:
+                    import sqlite3
+                    workspace_db = os.path.join(os.path.expanduser('~'), '.empirica', 'workspace', 'workspace.db')
+                    if os.path.exists(workspace_db):
+                        conn = sqlite3.connect(workspace_db)
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT id FROM global_projects WHERE name = ?", (early_project_id,))
+                        row = cursor.fetchone()
+                        if row:
+                            early_project_id = row[0]  # Use UUID
+                        conn.close()
+                except Exception:
+                    pass  # Keep folder_name if resolution fails
 
             # Method 2: Match git remote URL
             if not early_project_id:
@@ -404,6 +491,17 @@ def handle_session_create_command(args):
             except OSError:
                 pass
             raise
+
+        # Write TTY session file for multi-instance isolation
+        # This enables CLI commands to find the active session via TTY context
+        try:
+            from empirica.utils.session_resolver import write_tty_session
+            write_tty_session(
+                empirica_session_id=session_id,
+                project_path=str(Path.cwd())
+            )
+        except Exception:
+            pass  # Non-critical - isolation is best-effort
 
         # NOTE: PREFLIGHT must be user-submitted with genuine vectors
         # Do NOT auto-generate - breaks continuity and learning metrics
