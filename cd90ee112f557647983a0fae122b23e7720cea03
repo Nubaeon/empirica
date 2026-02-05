@@ -1,0 +1,16 @@
+{
+  "finding_id": "bf906911-cb72-486f-9cb7-a44e044909db",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7e4669f6-9dd9-4d0c-92f7-bd99dec0a343",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T21:52:50.168694+00:00",
+  "finding": "Statusline cache now includes deltas field. POSTFLIGHT handler writes deltas to cache, fast path reads them. Fixes inconsistent delta display between cache hit and DB query paths.",
+  "impact": 0.7,
+  "goal_id": "fa49ff36-01a2-421e-8286-fd082a73b0ff",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Statusline cache now includes deltas field. POSTFLIGHT handler writes deltas to cache, fast path reads them. Fixes inconsistent delta display between cache hit and DB query paths.",
+    "impact": 0.7
+  }
+}
