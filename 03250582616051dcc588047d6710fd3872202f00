@@ -1,0 +1,16 @@
+{
+  "finding_id": "272883e2-fb91-4771-b26b-72677b5ba5ac",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "7e4669f6-9dd9-4d0c-92f7-bd99dec0a343",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T21:45:26.796771+00:00",
+  "finding": "Learning delta (\u0394) not being captured/displayed in statusline. The deltas dict is populated but format_deltas() may not be rendering or the data path is broken. Need to investigate get_vector_deltas() and ensure PREFLIGHT\u2192POSTFLIGHT delta is computed and displayed.",
+  "impact": 0.6,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Learning delta (\u0394) not being captured/displayed in statusline. The deltas dict is populated but format_deltas() may not be rendering or the data path is broken. Need to investigate get_vector_deltas() and ensure PREFLIGHT\u2192POSTFLIGHT delta is computed and displayed.",
+    "impact": 0.6
+  }
+}
