@@ -834,8 +834,8 @@ def format_statusline(
             vec_str = format_vectors_compact(vectors, keys=['know', 'uncertainty', 'context'], use_percentage=True)
             parts.append(vec_str)
 
-        # Add deltas if present
-        if deltas:
+        # Add deltas only on POSTFLIGHT (deltas measure PREFLIGHT→POSTFLIGHT change)
+        if phase == 'POSTFLIGHT' and deltas:
             delta_str = format_deltas(deltas)
             if delta_str:
                 parts.append(f"Δ {delta_str}")
@@ -856,8 +856,8 @@ def format_statusline(
             vec_str = format_vectors_compact(vectors, keys=all_keys, use_percentage=True)
             parts.append(vec_str)
 
-        # Always show deltas in learning mode
-        if deltas:
+        # Show deltas only on POSTFLIGHT (deltas measure PREFLIGHT→POSTFLIGHT change)
+        if phase == 'POSTFLIGHT' and deltas:
             delta_str = format_deltas(deltas)
             if delta_str:
                 parts.append(f"Δ {delta_str}")
@@ -888,8 +888,8 @@ def format_statusline(
             vec_str = format_vectors_compact(vectors, keys=all_keys, use_percentage=True)
             parts.append(vec_str)
 
-        # Show deltas in full mode
-        if deltas:
+        # Show deltas only on POSTFLIGHT (deltas measure PREFLIGHT→POSTFLIGHT change)
+        if phase == 'POSTFLIGHT' and deltas:
             delta_str = format_deltas(deltas)
             if delta_str:
                 parts.append(f"Δ {delta_str}")
@@ -1134,7 +1134,7 @@ def main():
                 'goal_linked_unknowns': cached.goal_linked_unknowns,
                 'completion': cached.vectors.get('completion', 0.0) if cached.vectors else 0.0,
             }
-            deltas = {}  # Deltas require DB - skip in fast path
+            deltas = cached.deltas or {}  # Use cached deltas if available
             goal = None  # Goal details require DB - skip in fast path
 
             db.close()
@@ -1209,7 +1209,9 @@ def main():
                 project_name=project_name,
                 open_goals=open_counts.get('open_goals', 0) if open_counts else 0,
                 open_unknowns=open_counts.get('open_unknowns', 0) if open_counts else 0,
+                goal_linked_unknowns=open_counts.get('goal_linked_unknowns', 0) if open_counts else 0,
                 confidence=calculate_confidence(vectors) if vectors else None,
+                deltas=deltas,  # Include deltas for consistent display
             )
         except Exception:
             pass  # Cache update failure shouldn't break statusline

@@ -28,7 +28,7 @@ def _get_open_counts_for_cache(session_id: str) -> tuple:
     Get open goals and unknowns counts for statusline cache.
 
     Returns:
-        (open_goals, open_unknowns) tuple
+        (open_goals, open_unknowns, goal_linked_unknowns) tuple
     """
     try:
         from empirica.data.session_database import SessionDatabase
@@ -42,7 +42,7 @@ def _get_open_counts_for_cache(session_id: str) -> tuple:
 
         if not project_id:
             db.close()
-            return (0, 0)
+            return (0, 0, 0)
 
         # Count open goals for this project
         cursor.execute("""
@@ -58,10 +58,17 @@ def _get_open_counts_for_cache(session_id: str) -> tuple:
         """, (project_id,))
         open_unknowns = cursor.fetchone()[0] or 0
 
+        # Count goal-linked unknowns (blockers)
+        cursor.execute("""
+            SELECT COUNT(*) FROM project_unknowns
+            WHERE is_resolved = 0 AND goal_id IS NOT NULL AND project_id = ?
+        """, (project_id,))
+        goal_linked_unknowns = cursor.fetchone()[0] or 0
+
         db.close()
-        return (open_goals, open_unknowns)
+        return (open_goals, open_unknowns, goal_linked_unknowns)
     except Exception:
-        return (0, 0)
+        return (0, 0, 0)
 
 
 def _check_bootstrap_status(session_id: str) -> dict:
@@ -401,7 +408,7 @@ def handle_preflight_submit_command(args):
             try:
                 from empirica.core.statusline_cache import write_statusline_cache
                 import os as _os
-                open_goals, open_unknowns = _get_open_counts_for_cache(session_id)
+                open_goals, open_unknowns, goal_linked_unknowns = _get_open_counts_for_cache(session_id)
                 write_statusline_cache(
                     session_id=session_id,
                     ai_id='claude-code',
@@ -410,6 +417,7 @@ def handle_preflight_submit_command(args):
                     project_path=_os.getcwd(),
                     open_goals=open_goals,
                     open_unknowns=open_unknowns,
+                    goal_linked_unknowns=goal_linked_unknowns,
                 )
             except Exception:
                 pass  # Cache update is best-effort
@@ -1332,7 +1340,7 @@ def handle_check_submit_command(args):
             try:
                 from empirica.core.statusline_cache import write_statusline_cache
                 import os as _os
-                open_goals, open_unknowns = _get_open_counts_for_cache(session_id)
+                open_goals, open_unknowns, goal_linked_unknowns = _get_open_counts_for_cache(session_id)
                 write_statusline_cache(
                     session_id=session_id,
                     ai_id='claude-code',
@@ -1342,6 +1350,7 @@ def handle_check_submit_command(args):
                     project_path=_os.getcwd(),
                     open_goals=open_goals,
                     open_unknowns=open_unknowns,
+                    goal_linked_unknowns=goal_linked_unknowns,
                 )
             except Exception:
                 pass  # Cache update is best-effort
@@ -2176,7 +2185,7 @@ def handle_postflight_submit_command(args):
             try:
                 from empirica.core.statusline_cache import write_statusline_cache
                 import os as _os
-                open_goals, open_unknowns = _get_open_counts_for_cache(session_id)
+                open_goals, open_unknowns, goal_linked_unknowns = _get_open_counts_for_cache(session_id)
                 write_statusline_cache(
                     session_id=session_id,
                     ai_id='claude-code',
@@ -2185,6 +2194,8 @@ def handle_postflight_submit_command(args):
                     project_path=_os.getcwd(),
                     open_goals=open_goals,
                     open_unknowns=open_unknowns,
+                    goal_linked_unknowns=goal_linked_unknowns,
+                    deltas=deltas,  # Include learning deltas for statusline display
                 )
             except Exception:
                 pass  # Cache update is best-effort
