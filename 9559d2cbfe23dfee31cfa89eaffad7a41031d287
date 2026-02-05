@@ -1,0 +1,16 @@
+{
+  "finding_id": "7e903155-90d3-4a1b-ae34-b1675b34c58e",
+  "project_id": "c4a291ad-368b-4365-b697-0e4fb747814b",
+  "session_id": "4b07c2af-229f-4227-ae6e-12705968f808",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T12:08:43.731989+00:00",
+  "finding": "Test finding to verify project context after project-switch",
+  "impact": 0.3,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Test finding to verify project context after project-switch",
+    "impact": 0.3
+  }
+}
