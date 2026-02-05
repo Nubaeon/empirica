@@ -1,0 +1,16 @@
+{
+  "finding_id": "25cac284-5d2c-4b91-b241-0fc629f37cde",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9ca63661-77f1-4b64-a96b-0e37bbaec7f0",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T20:28:13.297776+00:00",
+  "finding": "BREAKAGE: Statusline shows wrong active goals (\ud83c\udfaf1) and unknowns (\u27530) counts. Actual values: 20 goals, 303 unknowns. The statusline script is not querying the correct project database or using wrong SQL. Location: plugins/claude-code-integration/scripts/statusline_empirica.py",
+  "impact": 0.7,
+  "goal_id": "054f9adc-cb7b-40f9-8b92-f2096449d685",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "BREAKAGE: Statusline shows wrong active goals (\ud83c\udfaf1) and unknowns (\u27530) counts. Actual values: 20 goals, 303 unknowns. The statusline script is not querying the correct project database or using wrong SQL. Location: plugins/claude-code-integration/scripts/statusline_empirica.py",
+    "impact": 0.7
+  }
+}
