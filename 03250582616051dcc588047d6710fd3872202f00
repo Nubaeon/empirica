@@ -1,0 +1,16 @@
+{
+  "finding_id": "80b03221-bd74-4057-be3f-6dbd213f327e",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0cb9c4f0-7618-4a97-a1fa-df2ae83ee3fe",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T20:37:46.659646+00:00",
+  "finding": "FIX: session_create.py now reads active_work files (Method 0) before project.yaml (Method 1). Resolves folder_name to UUID via workspace.db. This ensures project-switch context is respected. Also added TTY session file creation for CLI sessions enabling multi-instance isolation.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "FIX: session_create.py now reads active_work files (Method 0) before project.yaml (Method 1). Resolves folder_name to UUID via workspace.db. This ensures project-switch context is respected. Also added TTY session file creation for CLI sessions enabling multi-instance isolation.",
+    "impact": 0.9
+  }
+}
