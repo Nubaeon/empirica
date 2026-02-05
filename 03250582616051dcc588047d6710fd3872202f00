@@ -1,0 +1,16 @@
+{
+  "finding_id": "f048b555-f4fb-496f-b328-696697cc1513",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "d6c40ef8-0dee-4147-b824-3be28ec4fe73",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T19:21:57.622167+00:00",
+  "finding": "Claude Code provides unique session_id (conversation UUID) to all hooks via JSON stdin - ideal isolation key for multi-instance scenarios. CRITICAL: Claude Code may reset CWD on tool execution, so active_work files must preserve project_path from project-switch. Hook input: session_id, transcript_path, cwd, permission_mode, hook_event_name. Feature request for CLAUDE_SESSION_ID env var open (GitHub #13733, #17188).",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Claude Code provides unique session_id (conversation UUID) to all hooks via JSON stdin - ideal isolation key for multi-instance scenarios. CRITICAL: Claude Code may reset CWD on tool execution, so active_work files must preserve project_path from project-switch. Hook input: session_id, transcript_path, cwd, permission_mode, hook_event_name. Feature request for CLAUDE_SESSION_ID env var open (GitHub #13733, #17188).",
+    "impact": 0.9
+  }
+}
