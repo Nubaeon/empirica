@@ -1,0 +1,16 @@
+{
+  "finding_id": "ff6d7a9f-f253-4b0a-93ad-93d1fb7c1ece",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "30ed3d21-97c7-4977-acc3-421d5b225776",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T20:30:52.628545+00:00",
+  "finding": "FIX: session_create.py now resolves folder_name to UUID via workspace.db. Added _is_uuid_format() helper and Method 1b after reading project.yaml. This fixes: (1) statusline showing wrong goals/unknowns counts, (2) session project_id mismatch with goals table. Root cause: project.yaml stored folder_name 'empirica' but DB needs UUID '748a81a2...'.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "FIX: session_create.py now resolves folder_name to UUID via workspace.db. Added _is_uuid_format() helper and Method 1b after reading project.yaml. This fixes: (1) statusline showing wrong goals/unknowns counts, (2) session project_id mismatch with goals table. Root cause: project.yaml stored folder_name 'empirica' but DB needs UUID '748a81a2...'.",
+    "impact": 0.9
+  }
+}
