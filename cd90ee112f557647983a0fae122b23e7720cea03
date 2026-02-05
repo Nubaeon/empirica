@@ -1,0 +1,28 @@
+{
+  "goal_id": "fa49ff36-01a2-421e-8286-fd082a73b0ff",
+  "session_id": "7e4669f6-9dd9-4d0c-92f7-bd99dec0a343",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-05T21:46:23.000605+00:00",
+  "goal_data": {
+    "objective": "Investigate epistemic agents session/transaction model - determine if they should inherit from parent or create own sessions",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-05T21:46:23.000617+00:00",
+      "action": "created"
+    }
+  ]
+}
