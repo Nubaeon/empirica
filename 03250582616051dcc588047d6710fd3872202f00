@@ -1,0 +1,16 @@
+{
+  "finding_id": "5b0affbc-857c-49ce-a426-91454ab7bfde",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "19838490-9340-4353-b902-7dc27290a181",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T20:23:08.026445+00:00",
+  "finding": "BREAKAGE: session-create ignores active_work files. Uses CWD's .empirica/project.yaml (line 309) instead of reading active_work written by project-switch. Fix: session_create.py needs to check active_work files before falling back to CWD-based resolution. Priority: session-specific active_work_{claude_session_id}.json > canonical active_work.json > CWD > git remote.",
+  "impact": 0.95,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "BREAKAGE: session-create ignores active_work files. Uses CWD's .empirica/project.yaml (line 309) instead of reading active_work written by project-switch. Fix: session_create.py needs to check active_work files before falling back to CWD-based resolution. Priority: session-specific active_work_{claude_session_id}.json > canonical active_work.json > CWD > git remote.",
+    "impact": 0.95
+  }
+}
