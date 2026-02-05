@@ -1,0 +1,16 @@
+{
+  "finding_id": "3b738ea7-926b-41dd-a1f8-a5ed1ee53559",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0cb9c4f0-7618-4a97-a1fa-df2ae83ee3fe",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T21:09:54.013360+00:00",
+  "finding": "DESIGN PRINCIPLE: Transactions are the measurement boundary (PREFLIGHT\u2192POSTFLIGHT), sessions are only temporal boundaries for compaction. All statusline/sentinel logic should read transactions, only compact should read sessions. Goals are project-scoped (structural), sessions track creation context only.",
+  "impact": 0.9,
+  "goal_id": "0622751c-6f34-4421-a497-3059e7dd05a2",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "DESIGN PRINCIPLE: Transactions are the measurement boundary (PREFLIGHT\u2192POSTFLIGHT), sessions are only temporal boundaries for compaction. All statusline/sentinel logic should read transactions, only compact should read sessions. Goals are project-scoped (structural), sessions track creation context only.",
+    "impact": 0.9
+  }
+}
