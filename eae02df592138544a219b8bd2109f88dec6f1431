@@ -1,0 +1,16 @@
+{
+  "finding_id": "31a591cb-d595-48d4-91b4-d60230cb6584",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0cb9c4f0-7618-4a97-a1fa-df2ae83ee3fe",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T22:03:26.890851+00:00",
+  "finding": "Agent architecture discovery: (1) spawn_epistemic_agent() creates branch in investigation_branches table with persona.priors as preflight_vectors; (2) agent-report checkpoints postflight_vectors and calculates merge_score; (3) agent-aggregate runs merge_branches() selecting winner by (learning_delta \u00d7 quality \u00d7 confidence) / cost_penalty; (4) Winner's findings get embedded to Qdrant. Design is lightweight but epistemically isolated from parent transaction.",
+  "impact": 0.75,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Agent architecture discovery: (1) spawn_epistemic_agent() creates branch in investigation_branches table with persona.priors as preflight_vectors; (2) agent-report checkpoints postflight_vectors and calculates merge_score; (3) agent-aggregate runs merge_branches() selecting winner by (learning_delta \u00d7 quality \u00d7 confidence) / cost_penalty; (4) Winner's findings get embedded to Qdrant. Design is lightweight but epistemically isolated from parent transaction.",
+    "impact": 0.75
+  }
+}
