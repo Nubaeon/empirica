@@ -1,0 +1,16 @@
+{
+  "finding_id": "ee8aeaab-3034-4249-94fb-0f4d8a8fd9ab",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "9dc68bc5-49d9-4a41-a27f-d546b1f2e7dc",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T20:21:41.311945+00:00",
+  "finding": "CRITICAL BUG: session-create ignores project-switch context. After 'project-switch empirica-platform', session-create still creates session with project_id='empirica'. This cascades to project-bootstrap loading wrong project context. Root cause: session_create not reading active_work file or project binding correctly.",
+  "impact": 0.95,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CRITICAL BUG: session-create ignores project-switch context. After 'project-switch empirica-platform', session-create still creates session with project_id='empirica'. This cascades to project-bootstrap loading wrong project context. Root cause: session_create not reading active_work file or project binding correctly.",
+    "impact": 0.95
+  }
+}
