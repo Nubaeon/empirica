@@ -1,0 +1,16 @@
+{
+  "finding_id": "29400dff-eae8-40f7-9d44-5d57fb798ebc",
+  "project_id": "c011772c-e45a-4062-883a-ec4b89b62bdb",
+  "session_id": "865a5699-053a-4f76-b21c-1431d883d077",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T12:00:42.291118+00:00",
+  "finding": "Test finding with folder name resolution via workspace.db",
+  "impact": 0.3,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Test finding with folder name resolution via workspace.db",
+    "impact": 0.3
+  }
+}
