@@ -1,0 +1,13 @@
+{
+  "unknown_id": "5109aa22-a368-44b3-94fe-c998fe97d389",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0cb9c4f0-7618-4a97-a1fa-df2ae83ee3fe",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T22:03:01.712052+00:00",
+  "unknown": "Transaction model for sub-agents: Should branches (a) inherit parent's transaction_id and contribute to parent's POSTFLIGHT, (b) create child transactions with explicit rollup, or (c) keep current implicit branch-level measurement? This affects epistemic continuity, calibration accuracy, and aggregate learning tracking.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
