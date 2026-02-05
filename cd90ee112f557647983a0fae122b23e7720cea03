@@ -1,0 +1,28 @@
+{
+  "goal_id": "0b35b9e5-bc85-4f54-972c-1f97b5421f29",
+  "session_id": "7e4669f6-9dd9-4d0c-92f7-bd99dec0a343",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-05T21:55:19.662470+00:00",
+  "goal_data": {
+    "objective": "Fix statusline view jumping and delta display logic - deltas should only show after POSTFLIGHT",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-05T21:55:19.662488+00:00",
+      "action": "created"
+    }
+  ]
+}
