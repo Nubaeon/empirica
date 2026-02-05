@@ -1,0 +1,16 @@
+{
+  "finding_id": "6d10013c-1e8d-467d-86ce-8e44a64bdeba",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0cb9c4f0-7618-4a97-a1fa-df2ae83ee3fe",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-05T20:49:19.059008+00:00",
+  "finding": "FIX: Sentinel now tracks transactions not sessions. PREFLIGHT/CHECK/POSTFLIGHT queries use preflight_session_id from active_transaction.json when transaction is open. This allows work to continue after compaction - new session inherits open transaction's PREFLIGHT authorization. Key change: read active_transaction BEFORE PREFLIGHT query, use transaction's session_id for lookups.",
+  "impact": 0.95,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "FIX: Sentinel now tracks transactions not sessions. PREFLIGHT/CHECK/POSTFLIGHT queries use preflight_session_id from active_transaction.json when transaction is open. This allows work to continue after compaction - new session inherits open transaction's PREFLIGHT authorization. Key change: read active_transaction BEFORE PREFLIGHT query, use transaction's session_id for lookups.",
+    "impact": 0.95
+  }
+}
