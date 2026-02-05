@@ -467,31 +467,60 @@ def handle_workspace_init_command(args):
                 # Skip if no commits in 180 days
                 if repo_info['commit_count_180d'] == 0:
                     continue
-            
-            # Create project
+
+            repo_path = Path(repo_info['path'])
+
+            # CRITICAL: Check for existing project UUID in per-project sessions.db
+            # The per-project DB is the source of truth - workspace.db is just a registry
+            existing_project_id = _get_existing_project_id_from_local_db(repo_path)
+
+            # Determine project name
             project_name = _infer_project_name(
                 repo_info,
                 user_preferences.get('naming_strategy', 'infer-from-readme')
             )
-            
-            project_id = db.create_project(
-                name=project_name,
-                description=repo_info.get('description') or f"Project: {repo_info['name']}",
-                repos=[repo_info['path']]
-            )
-            
+
+            if existing_project_id:
+                # Use existing project ID - just register in workspace
+                project_id = existing_project_id
+                _register_in_workspace_db(
+                    project_id=project_id,
+                    name=project_name,
+                    trajectory_path=str(repo_path / '.empirica'),
+                    description=repo_info.get('description'),
+                    git_remote_url=repo_info.get('git_remote_url')
+                )
+                action = "registered"
+            else:
+                # No existing project - create new one
+                project_id = db.create_project(
+                    name=project_name,
+                    description=repo_info.get('description') or f"Project: {repo_info['name']}",
+                    repos=[repo_info['path']]
+                )
+                # Also register in workspace DB
+                _register_in_workspace_db(
+                    project_id=project_id,
+                    name=project_name,
+                    trajectory_path=str(repo_path / '.empirica'),
+                    description=repo_info.get('description'),
+                    git_remote_url=repo_info.get('git_remote_url')
+                )
+                action = "created"
+
             # Generate PROJECT_CONFIG.yaml
-            _generate_project_config(Path(repo_info['path']), project_id, repo_info)
-            
+            _generate_project_config(repo_path, project_id, repo_info)
+
             created_projects.append({
                 'name': project_name,
                 'project_id': project_id,
-                'path': repo_info['path']
+                'path': repo_info['path'],
+                'action': action
             })
-            
+
             if output_format != 'json':
                 desc = repo_info.get('description', 'No description')[:60]
-                print(f"  ✓ {project_name} ({desc}...)")
+                print(f"  ✓ {project_name} ({desc}...) [{action}]")
         
         if output_format != 'json':
             print(f"\n  ✓ {len(created_projects)} projects created\n")
@@ -614,6 +643,148 @@ def _infer_project_name(repo_info: Dict, strategy: str) -> str:
     
     # Fallback to directory name
     return Path(repo_info['path']).name
+
+
+def _register_in_workspace_db(
+    project_id: str,
+    name: str,
+    trajectory_path: str,
+    description: Optional[str] = None,
+    git_remote_url: Optional[str] = None
+) -> bool:
+    """
+    Register a project in workspace.db's global_projects table.
+
+    This uses the EXISTING project UUID from per-project sessions.db,
+    ensuring proper linkage between workspace registry and project data.
+
+    Args:
+        project_id: UUID from per-project sessions.db (source of truth)
+        name: Project name (usually folder name)
+        trajectory_path: Path to project's .empirica directory
+        description: Optional project description
+        git_remote_url: Optional git remote URL
+
+    Returns:
+        True if registered/updated, False on error
+    """
+    import sqlite3
+    import time
+
+    workspace_db = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+    if not workspace_db.parent.exists():
+        workspace_db.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        conn = sqlite3.connect(str(workspace_db))
+        cursor = conn.cursor()
+
+        # Check if project already exists by trajectory_path (folder linkage)
+        cursor.execute(
+            "SELECT id FROM global_projects WHERE trajectory_path = ?",
+            (trajectory_path,)
+        )
+        existing = cursor.fetchone()
+
+        now = time.time()
+
+        if existing:
+            # Update existing entry with correct UUID if different
+            if existing[0] != project_id:
+                logger.warning(
+                    f"Correcting UUID mismatch for {name}: "
+                    f"workspace had {existing[0][:8]}..., using {project_id[:8]}..."
+                )
+            cursor.execute("""
+                UPDATE global_projects
+                SET id = ?, name = ?, description = ?, git_remote_url = ?,
+                    updated_timestamp = ?
+                WHERE trajectory_path = ?
+            """, (project_id, name, description, git_remote_url, now, trajectory_path))
+        else:
+            # Insert new entry
+            cursor.execute("""
+                INSERT INTO global_projects (
+                    id, name, description, trajectory_path, git_remote_url,
+                    status, project_type, created_timestamp, updated_timestamp
+                ) VALUES (?, ?, ?, ?, ?, 'active', 'product', ?, ?)
+            """, (project_id, name, description, trajectory_path, git_remote_url, now, now))
+
+        conn.commit()
+        conn.close()
+        logger.info(f"Registered {name} in workspace.db with ID {project_id[:8]}...")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to register {name} in workspace.db: {e}")
+        return False
+
+
+def _get_existing_project_id_from_local_db(repo_path: Path) -> Optional[str]:
+    """
+    Check if repo has existing project ID in its local .empirica/sessions/sessions.db.
+
+    The local sessions.db is the source of truth for project identity.
+    workspace.db should use the SAME UUID to maintain linkage.
+
+    Args:
+        repo_path: Path to the repository
+
+    Returns:
+        Existing project UUID if found, None otherwise
+    """
+    import sqlite3
+
+    local_db_path = repo_path / '.empirica' / 'sessions' / 'sessions.db'
+    if not local_db_path.exists():
+        return None
+
+    try:
+        conn = sqlite3.connect(str(local_db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # First, try to find a project matching the folder name (exact match)
+        folder_name = repo_path.name
+        cursor.execute(
+            "SELECT id FROM projects WHERE LOWER(name) = LOWER(?) LIMIT 1",
+            (folder_name,)
+        )
+        row = cursor.fetchone()
+        if row:
+            conn.close()
+            logger.info(f"Found existing project ID by folder name: {row['id'][:8]}...")
+            return row['id']
+
+        # Fallback: get the most recently active project in this DB
+        # (The one with the most recent session activity)
+        cursor.execute("""
+            SELECT p.id FROM projects p
+            LEFT JOIN sessions s ON p.id = s.project_id
+            GROUP BY p.id
+            ORDER BY MAX(s.start_time) DESC NULLS LAST, p.created_timestamp DESC
+            LIMIT 1
+        """)
+        row = cursor.fetchone()
+        if row:
+            conn.close()
+            logger.info(f"Found existing project ID by activity: {row['id'][:8]}...")
+            return row['id']
+
+        # Last resort: just get any project in this DB
+        cursor.execute("SELECT id FROM projects LIMIT 1")
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            logger.info(f"Found existing project ID (first in DB): {row['id'][:8]}...")
+            return row['id']
+
+        return None
+
+    except Exception as e:
+        logger.debug(f"Error reading local sessions.db: {e}")
+        return None
 
 
 def _generate_project_config(repo_path: Path, project_id: str, repo_info: Dict):
