@@ -191,36 +191,20 @@ def get_session_db_path() -> Path:
     Get full path to sessions database.
 
     Priority:
-    1. EMPIRICA_SESSION_DB environment variable
-    2. .empirica/config.yaml -> paths.sessions
-    2.5. instance_projects mapping (TMUX_PANE-based, for multi-instance isolation)
-    3. <empirica_root>/sessions/sessions.db (default via CWD)
+    1. Instance projects mapping (TMUX_PANE-based, for multi-instance isolation)
+    2. Workspace.db lookup (git root → project via global registry)
+    3. CWD-based fallback (for unregistered projects)
+    4. EMPIRICA_SESSION_DB env var (CI/Docker override - intentionally last)
 
     Returns:
         Path to sessions.db
     """
     import json
+    import sqlite3
 
-    # 1. Check environment variable
-    if env_db := os.getenv('EMPIRICA_SESSION_DB'):
-        try:
-            db_path = _validate_user_path(env_db, 'EMPIRICA_SESSION_DB')
-            logger.debug(f"📍 Using EMPIRICA_SESSION_DB: {db_path}")
-            return db_path
-        except ValueError as e:
-            logger.warning(f"⚠️  Invalid EMPIRICA_SESSION_DB: {e}")
-            # Fall through to next option
-
-    # 2. Check config
-    config = load_empirica_config()
-    if config and 'paths' in config and 'sessions' in config['paths']:
-        root = get_empirica_root()
-        db_path = root / config['paths']['sessions']
-        logger.debug(f"📍 Using config.yaml sessions path: {db_path}")
-        return db_path
-
-    # 2.5. Check instance_projects mapping (for multi-instance isolation)
+    # 1. Check instance_projects mapping (for multi-instance isolation)
     # This uses TMUX_PANE which IS available in subprocesses, unlike `tty` command
+    # This is Priority 1 because it tells us which project THIS instance is working on
     try:
         from empirica.core.statusline_cache import get_instance_id as get_inst_id
         inst_id = get_inst_id()
@@ -238,11 +222,49 @@ def get_session_db_path() -> Path:
     except Exception as e:
         logger.debug(f"📍 instance_projects check failed: {e}")
 
-    # 3. Default path (CWD-based)
+    # 2. Check workspace.db for git root → project mapping (global registry)
+    try:
+        git_root = get_git_root()
+        if git_root:
+            workspace_db = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+            if workspace_db.exists():
+                conn = sqlite3.connect(str(workspace_db))
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT trajectory_path FROM global_projects WHERE trajectory_path = ? AND status = 'active'",
+                    (str(git_root),)
+                )
+                row = cursor.fetchone()
+                conn.close()
+                if row:
+                    project_path = Path(row[0])
+                    db_path = project_path / '.empirica' / 'sessions' / 'sessions.db'
+                    if db_path.exists():
+                        logger.debug(f"📍 Using workspace.db lookup: {db_path}")
+                        return db_path
+    except Exception as e:
+        logger.debug(f"📍 workspace.db lookup failed: {e}")
+
+    # 3. CWD-based fallback (for projects not yet registered in workspace)
     root = get_empirica_root()
     db_path = root / 'sessions' / 'sessions.db'
-    logger.debug(f"📍 Using default sessions path: {db_path}")
-    return db_path
+    if db_path.exists():
+        logger.debug(f"📍 Using CWD-based path: {db_path}")
+        return db_path
+
+    # 4. EMPIRICA_SESSION_DB env var (CI/Docker hard override - intentionally last)
+    # This is last because it's not instance-aware and breaks multi-instance isolation
+    if env_db := os.getenv('EMPIRICA_SESSION_DB'):
+        try:
+            db_path = _validate_user_path(env_db, 'EMPIRICA_SESSION_DB')
+            logger.debug(f"📍 Using EMPIRICA_SESSION_DB (CI/Docker override): {db_path}")
+            return db_path
+        except ValueError as e:
+            logger.warning(f"⚠️  Invalid EMPIRICA_SESSION_DB: {e}")
+
+    # Final fallback - return CWD-based even if it doesn't exist
+    logger.debug(f"📍 Fallback to default path (may not exist): {db_path}")
+    return root / 'sessions' / 'sessions.db'
 
 
 def resolve_session_db_path(session_id: str) -> Optional[Path]:
