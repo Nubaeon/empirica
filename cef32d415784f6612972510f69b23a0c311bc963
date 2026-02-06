@@ -1,0 +1,16 @@
+{
+  "finding_id": "db6ec2d5-609d-46eb-bba7-e790d2c312c9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "ca43ff38-f649-4657-a83e-0c5e589b3d31",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-06T13:08:34.698869+00:00",
+  "finding": "CLI commands must resolve session_id to project database path, not use CWD. Added resolve_session_db_path() to path_resolver.py and _get_db_for_session() helper to all CASCADE handlers. This fixes cross-project session continuity after project-switch.",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CLI commands must resolve session_id to project database path, not use CWD. Added resolve_session_db_path() to path_resolver.py and _get_db_for_session() helper to all CASCADE handlers. This fixes cross-project session continuity after project-switch.",
+    "impact": 0.9
+  }
+}
