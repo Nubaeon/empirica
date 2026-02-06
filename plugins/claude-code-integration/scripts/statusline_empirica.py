@@ -1165,19 +1165,27 @@ def main():
 
         # SLOW PATH: Query DB for fresh data
 
-        # TRANSACTION AWARENESS: Read active_transaction.json to get the session_id
-        # where vectors were submitted (survives context compaction)
-        # Use transaction_session_id regardless of status - we want to show the latest
-        # vectors from that transaction whether it's open (PREFLIGHT/CHECK) or closed (POSTFLIGHT)
+        # TRANSACTION AWARENESS: Read instance-specific active_transaction file
+        # IMPORTANT: Uses instance suffix for multi-instance isolation (tmux panes)
+        # The file is named active_transaction_{instance_id}.json, not active_transaction.json
         transaction_session_id = None
         try:
-            tx_path = Path(project_path) / '.empirica' / 'active_transaction.json' if project_path else None
+            from empirica.core.statusline_cache import get_instance_id as _get_instance_id
+            instance_id = _get_instance_id()
+            # Build instance-aware filename
+            suffix = f"_{instance_id}" if instance_id else ""
+            if project_path:
+                tx_path = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
+            else:
+                tx_path = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
             if tx_path and tx_path.exists():
                 import json as _json
                 with open(tx_path, 'r') as f:
                     tx_data = _json.load(f)
-                # Use session_id regardless of status - vectors are stored there
-                transaction_session_id = tx_data.get('session_id')
+                # Only use transaction's session_id if status is "open" (active transaction)
+                # If closed, fall back to current session_id
+                if tx_data.get('status') == 'open':
+                    transaction_session_id = tx_data.get('session_id')
         except Exception:
             pass  # Fall back to current session_id
 

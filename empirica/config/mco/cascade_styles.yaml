@@ -79,10 +79,13 @@ profiles:
     
     # CASCADE Control (Descriptive - System Observes These Patterns)
     cascade:
-      # Readiness thresholds (when system considers AI "ready")
-      ready_confidence_threshold: 0.70         # If confidence >= 0.70, system shows "ready for execution"
-      ready_uncertainty_threshold: 0.35        # If uncertainty <= 0.35, system shows "uncertainty resolved"
+      # Readiness gate thresholds (Sentinel uses these for gate decisions)
+      # Note: Uses RAW vectors, not bias-corrected. Biases are informational for AI to internalize.
+      ready_know_threshold: 0.70               # If know >= 0.70, gate passes (raw vector)
+      ready_uncertainty_threshold: 0.35        # If uncertainty <= 0.35, gate passes (raw vector)
       ready_context_threshold: 0.65            # If context >= 0.65, system shows "good contextual understanding"
+      # Legacy alias (deprecated, use ready_know_threshold)
+      ready_confidence_threshold: 0.70         # If confidence >= 0.70, system shows "ready for execution"
 
       # Typical patterns AI with this profile exhibits (observational)
       typical_check_frequency: "2-3 per session"  # Usually uses CHECK 2-3 times per session

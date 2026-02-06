@@ -77,7 +77,7 @@ def get_workspace_projects() -> List[Dict[str, Any]]:
         return []
 
 
-def _update_active_work(project_path: str, folder_name: str) -> bool:
+def _update_active_work(project_path: str, folder_name: str, empirica_session_id: str = None) -> bool:
     """
     Update active_work markers AND TTY session for cross-project continuity.
 
@@ -94,6 +94,7 @@ def _update_active_work(project_path: str, folder_name: str) -> bool:
     Args:
         project_path: Full path to the project directory
         folder_name: The project's folder name (ground truth identifier)
+        empirica_session_id: Optional session ID to attach to (for Sentinel/MCP tools)
 
     Returns:
         True if successfully written, False otherwise
@@ -139,6 +140,7 @@ def _update_active_work(project_path: str, folder_name: str) -> bool:
             'project_path': project_path,
             'folder_name': folder_name,
             'claude_session_id': claude_session_id,
+            'empirica_session_id': empirica_session_id,  # For Sentinel/MCP session attachment
             'source': 'project-switch',
             'timestamp': time.strftime('%Y-%m-%dT%H:%M:%S%z'),
             'timestamp_epoch': time.time()
@@ -2931,11 +2933,15 @@ def handle_project_switch_command(args):
         try:
             from empirica.utils.session_resolver import read_active_transaction
             from empirica.config.path_resolver import get_empirica_root
+            from empirica.core.statusline_cache import get_instance_id
 
             # Get current project's transaction state
+            # IMPORTANT: Use instance-specific file for multi-instance isolation
             current_empirica_root = get_empirica_root()
             if current_empirica_root:
-                tx_path = current_empirica_root / 'active_transaction.json'
+                instance_id = get_instance_id()
+                suffix = f"_{instance_id}" if instance_id else ""
+                tx_path = current_empirica_root / f'active_transaction{suffix}.json'
                 if tx_path.exists():
                     import json as _json
                     with open(tx_path, 'r') as f:
@@ -2957,12 +2963,14 @@ def handle_project_switch_command(args):
                                 },
                                 "reasoning": f"Auto-POSTFLIGHT: Project switch to {folder_name}. Transaction auto-closed to maintain epistemic measurement integrity."
                             })
+                            # Run in current project directory (before switch)
                             result = subprocess.run(
                                 postflight_cmd,
                                 input=postflight_input,
                                 capture_output=True,
                                 text=True,
-                                timeout=30
+                                timeout=30,
+                                cwd=str(current_empirica_root.parent)  # Project root
                             )
                             if result.returncode == 0:
                                 postflight_result = {"ok": True, "reason": "project_switch"}
@@ -2975,30 +2983,8 @@ def handle_project_switch_command(args):
             postflight_result = {"ok": False, "error": str(e)}
             logger.debug(f"Auto-POSTFLIGHT on project-switch failed (non-fatal): {e}")
 
-        # 4. Update active_work.json for cross-project continuity
-        # This ensures pre-compact hook preserves project context even when Claude Code resets CWD
-        if project_path:
-            _update_active_work(str(project_path), folder_name)
-
-        # 4. Show context banner
-        if output_format == 'human':
-            print()
-            print("━" * 70)
-            print("🎯 PROJECT CONTEXT SWITCH")
-            print("━" * 70)
-            print()
-            print(f"📁 Project: {folder_name}")
-            if project_name != folder_name:
-                print(f"   Name: {project_name}")
-            print(f"🆔 Project ID: {project_id[:8]}...")
-            if project_path:
-                print(f"📍 Location: {project_path}")
-            print(f"📊 Findings: {project.get('total_findings', 0)}  "
-                  f"Unknowns: {project.get('total_unknowns', 0)}  "
-                  f"Goals: {project.get('total_goals', 0)}")
-            print()
-        
-        # 5. SESSION ATTACHMENT: Check for existing open session in target project
+        # 4. SESSION ATTACHMENT: Check for existing open session in target project
+        # MUST happen BEFORE _update_active_work so we can pass the session_id
         attached_session = None
         try:
             from empirica.data.session_database import SessionDatabase
@@ -3022,13 +3008,38 @@ def handle_project_switch_command(args):
                             'ai_id': row[1],
                             'start_time': row[2]
                         }
-                        if output_format == 'human':
-                            print(f"🔗 Attached to existing session: {row[0][:8]}... (AI: {row[1]})")
                     target_db.close()
         except Exception as e:
             logger.debug(f"Session attachment check failed (non-fatal): {e}")
 
-        # 6. AUTO-BOOTSTRAP: Load context for the new project
+        # 5. Update active_work.json for cross-project continuity
+        # This ensures pre-compact hook preserves project context even when Claude Code resets CWD
+        # Include empirica_session_id so Sentinel and MCP tools can attach to the correct session
+        if project_path:
+            attached_session_id = attached_session['session_id'] if attached_session else None
+            _update_active_work(str(project_path), folder_name, empirica_session_id=attached_session_id)
+
+        # 6. Show context banner
+        if output_format == 'human':
+            print()
+            print("━" * 70)
+            print("🎯 PROJECT CONTEXT SWITCH")
+            print("━" * 70)
+            print()
+            print(f"📁 Project: {folder_name}")
+            if project_name != folder_name:
+                print(f"   Name: {project_name}")
+            print(f"🆔 Project ID: {project_id[:8]}...")
+            if project_path:
+                print(f"📍 Location: {project_path}")
+            print(f"📊 Findings: {project.get('total_findings', 0)}  "
+                  f"Unknowns: {project.get('total_unknowns', 0)}  "
+                  f"Goals: {project.get('total_goals', 0)}")
+            if attached_session:
+                print(f"🔗 Attached to session: {attached_session['session_id'][:8]}... (AI: {attached_session['ai_id']})")
+            print()
+
+        # 7. AUTO-BOOTSTRAP: Load context for the new project
         bootstrap_result = None
         try:
             import subprocess

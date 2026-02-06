@@ -479,48 +479,107 @@ class SentinelHooks:
         )
 
 
+def _load_readiness_thresholds() -> Dict[str, float]:
+    """
+    Load readiness gate thresholds from MCO config.
+
+    Priority:
+    1. Environment variables (EMPIRICA_KNOW_THRESHOLD, EMPIRICA_UNCERTAINTY_THRESHOLD)
+    2. MCO cascade_styles.yaml via ThresholdLoader
+    3. Defaults (know=0.70, uncertainty=0.35)
+
+    Returns:
+        {'min_know': float, 'max_uncertainty': float}
+    """
+    import os
+
+    # Defaults
+    thresholds = {
+        'min_know': 0.70,
+        'max_uncertainty': 0.35,
+    }
+
+    # Priority 2: Load from MCO config via ThresholdLoader
+    try:
+        from empirica.config.threshold_loader import get_threshold_config
+        config = get_threshold_config()
+
+        # Get from cascade section of current profile
+        know_threshold = config.get('cascade.ready_know_threshold')
+        if know_threshold is not None:
+            thresholds['min_know'] = float(know_threshold)
+
+        unc_threshold = config.get('cascade.ready_uncertainty_threshold')
+        if unc_threshold is not None:
+            thresholds['max_uncertainty'] = float(unc_threshold)
+
+    except Exception:
+        pass  # Fall back to defaults
+
+    # Priority 1: Environment variables override
+    env_know = os.getenv('EMPIRICA_KNOW_THRESHOLD')
+    if env_know:
+        try:
+            thresholds['min_know'] = float(env_know)
+        except ValueError:
+            pass
+    env_unc = os.getenv('EMPIRICA_UNCERTAINTY_THRESHOLD')
+    if env_unc:
+        try:
+            thresholds['max_uncertainty'] = float(env_unc)
+        except ValueError:
+            pass
+
+    return thresholds
+
+
 # Default evaluator for routing decisions
 def default_epistemic_evaluator(checkpoint_data: Dict[str, Any]) -> SentinelDecision:
     """
-    Default Sentinel evaluator - routes based on epistemic vectors.
+    Default Sentinel evaluator - routes based on RAW epistemic vectors.
+
+    IMPORTANT: Uses RAW vectors only. Bias corrections are INFORMATIONAL for the AI
+    to internalize and self-correct, NOT for the system to pre-apply. What the AI
+    reports is what the Sentinel evaluates.
+
+    Thresholds are configurable via:
+    - .breadcrumbs.yaml: learning_trajectory.readiness.{min_know, max_uncertainty}
+    - Environment: EMPIRICA_KNOW_THRESHOLD, EMPIRICA_UNCERTAINTY_THRESHOLD
 
     Logic:
     - UNCERTAINTY > 0.7 → INVESTIGATE (too uncertain to proceed)
     - KNOW < 0.5 and UNCERTAINTY > 0.5 → INVESTIGATE (low knowledge + doubt)
     - ENGAGEMENT < 0.5 → ESCALATE (human needed)
-    - KNOW >= 0.7 and UNCERTAINTY <= 0.35 → PROCEED (readiness gate passed)
-    - Otherwise → PROCEED with caution
+    - KNOW >= min_know and UNCERTAINTY <= max_uncertainty → PROCEED (readiness gate passed)
+    - Otherwise → INVESTIGATE (gate not passed)
     """
     vectors = checkpoint_data.get('vectors', {})
 
+    # Use RAW vectors - no bias corrections applied by system
+    # Calibration data in .breadcrumbs.yaml is feedback for AI to internalize
     uncertainty = vectors.get('uncertainty', 0.5)
     know = vectors.get('know', 0.5)
     engagement = vectors.get('engagement', 0.7)
 
-    # Apply GROUNDED corrections from .breadcrumbs.yaml (objective evidence, not learning deltas)
-    try:
-        from empirica.core.bayesian_beliefs import load_grounded_corrections
-        corrections = load_grounded_corrections()
-    except Exception:
-        corrections = {}
-
-    corrected_know = know + corrections.get('know', 0.0)
-    corrected_uncertainty = uncertainty + corrections.get('uncertainty', 0.0)
+    # Load configurable thresholds
+    thresholds = _load_readiness_thresholds()
+    min_know = thresholds['min_know']
+    max_uncertainty = thresholds['max_uncertainty']
 
     # Escalate if engagement too low
     if engagement < 0.5:
         return SentinelDecision.ESCALATE
 
     # Investigate if too uncertain
-    if corrected_uncertainty > 0.7:
+    if uncertainty > 0.7:
         return SentinelDecision.INVESTIGATE
 
     # Investigate if low knowledge with doubt
-    if corrected_know < 0.5 and corrected_uncertainty > 0.5:
+    if know < 0.5 and uncertainty > 0.5:
         return SentinelDecision.INVESTIGATE
 
-    # Check readiness gate
-    if corrected_know >= 0.70 and corrected_uncertainty <= 0.35:
+    # Check readiness gate (RAW vectors, configurable thresholds)
+    if know >= min_know and uncertainty <= max_uncertainty:
         return SentinelDecision.PROCEED
 
     # Readiness gate failed — investigate to improve vectors
