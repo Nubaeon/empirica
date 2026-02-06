@@ -1019,27 +1019,21 @@ def main():
         project_path = os.getenv('EMPIRICA_PROJECT_PATH')
         is_local_project = False
 
-        # Priority 2: Check active_work files for project-switch context
-        # This allows statusline to follow the active project, not just cwd
+        # Priority 2: Check TTY session for project-switch context
+        # TTY session has project_path directly from session_create/project_switch
         if not project_path:
             try:
                 from empirica.utils.session_resolver import get_tty_session
-                import json as _json
 
                 tty_session = get_tty_session(warn_if_stale=False)
                 if tty_session:
-                    claude_session_id = tty_session.get('claude_session_id')
-                    if claude_session_id:
-                        active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-                        if active_work_path.exists():
-                            with open(active_work_path, 'r') as f:
-                                active_work = _json.load(f)
-                            aw_project_path = active_work.get('project_path')
-                            if aw_project_path:
-                                aw_db = Path(aw_project_path) / '.empirica' / 'sessions' / 'sessions.db'
-                                if aw_db.exists():
-                                    project_path = aw_project_path
-                                    is_local_project = True
+                    # Use project_path directly from TTY session (most reliable)
+                    tty_project_path = tty_session.get('project_path')
+                    if tty_project_path:
+                        tty_db = Path(tty_project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                        if tty_db.exists():
+                            project_path = tty_project_path
+                            is_local_project = True
             except Exception:
                 pass  # Fall through to other methods
 
