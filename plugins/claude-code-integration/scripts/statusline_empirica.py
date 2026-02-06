@@ -85,9 +85,9 @@ def detect_extensions() -> dict:
             # Try to get active client from recent engagement
             cursor.execute("""
                 SELECT c.name FROM clients c
-                JOIN engagements e ON e.client_id = c.id
+                JOIN engagements e ON e.client_id = c.client_id
                 WHERE e.status = 'active'
-                ORDER BY e.updated_at DESC LIMIT 1
+                ORDER BY e.started_at DESC LIMIT 1
             """)
             row = cursor.fetchone()
             if row:
