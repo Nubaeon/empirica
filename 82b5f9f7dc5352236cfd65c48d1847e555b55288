@@ -1,0 +1,28 @@
+{
+  "goal_id": "5df8d3a8-a3dc-4e75-a6a7-b621576c8bfd",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-06T15:42:42.679342+00:00",
+  "goal_data": {
+    "objective": "Workflow Integration Test: Verify single-project and multi-project epistemic loops work correctly after Sentinel fix",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-06T15:42:42.679358+00:00",
+      "action": "created"
+    }
+  ]
+}
