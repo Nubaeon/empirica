@@ -2,31 +2,55 @@
 import json
 import time
 import subprocess
+import hashlib
+from pathlib import Path
 from typing import Dict, List, Optional
 from .base import BaseRepository
 
 
 def _get_project_id_from_cwd() -> Optional[str]:
-    """Auto-detect project_id from current working directory's git repo."""
+    """Auto-detect project_id using instance-aware priority chain.
+
+    Priority:
+    1. active_work file (set by project-switch, instance-aware)
+    2. Git remote origin URL hash
+    3. Git toplevel path hash
+
+    Must match sentinel-gate.py's _get_current_project_id() logic.
+    """
+    # Priority 1: Check active_work file (instance-aware, set by project-switch)
     try:
-        # Get git remote origin URL as project identifier
+        from empirica.utils.session_resolver import get_tty_session
+        tty_session = get_tty_session(warn_if_stale=False)
+        if tty_session:
+            claude_session_id = tty_session.get('claude_session_id')
+            if claude_session_id:
+                active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+                if active_work_path.exists():
+                    with open(active_work_path, 'r') as f:
+                        active_work = json.load(f)
+                        project_path = active_work.get('project_path')
+                        if project_path:
+                            return hashlib.sha256(project_path.encode()).hexdigest()[:16]
+    except Exception:
+        pass
+
+    # Priority 2: Git remote origin URL hash
+    try:
         result = subprocess.run(
             ['git', 'config', '--get', 'remote.origin.url'],
             capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0 and result.stdout.strip():
-            # Hash the URL to get a stable project ID
-            import hashlib
             url = result.stdout.strip()
             return hashlib.sha256(url.encode()).hexdigest()[:16]
 
-        # Fallback: use git root directory name
+        # Priority 3: Git toplevel path hash
         result = subprocess.run(
             ['git', 'rev-parse', '--show-toplevel'],
             capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
-            import hashlib
             path = result.stdout.strip()
             return hashlib.sha256(path.encode()).hexdigest()[:16]
     except Exception:

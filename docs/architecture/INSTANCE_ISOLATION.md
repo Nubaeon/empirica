@@ -328,6 +328,7 @@ is a safe empirica command and other segments are safe (cd, etc.), allow it.
 - [x] Wire post-compact.py to use Claude session_id for project resolution
 - [x] Wire `get_session_db_path()` to check instance_projects mapping before CWD fallback
 - [x] Wire to workspace.db for git repo → project mapping (Priority 2 in resolution chain)
+- [x] Wire `_get_project_id_from_cwd()` in vectors.py to match sentinel's project_id computation
 
 ---
 
@@ -423,3 +424,18 @@ of the switched project. Sentinel then sees "Project context changed" error.
 **Root cause:** project-switch wasn't in TRANSITION_COMMANDS or TIER1_PREFIXES whitelist.
 **Fix:** Added `empirica project-switch` and `empirica project-list` to both lists.
 **File:** `plugins/claude-code-integration/hooks/sentinel-gate.py`
+
+### 11.9 Sentinel "Project Context Changed" After PREFLIGHT
+
+**Symptom:** After project-switch and PREFLIGHT, Sentinel blocks commands with "Project context
+changed. Run PREFLIGHT for new project" even though PREFLIGHT was just submitted.
+**Status:** FIXED (2026-02-06)
+**Root cause:** project_id format mismatch:
+- PREFLIGHT stores project_id in reflexes table using `_get_project_id_from_cwd()` in vectors.py
+- Sentinel's `_get_current_project_id()` was updated to check active_work file first
+- These computed different hashes: vectors.py used git remote URL, sentinel used active_work project_path
+**Fix:** Updated `_get_project_id_from_cwd()` in vectors.py to use same priority chain as sentinel:
+1. active_work file (hash of project_path) - instance-aware, set by project-switch
+2. Git remote origin URL hash (fallback)
+3. Git toplevel path hash (fallback)
+**File:** `empirica/data/repositories/vectors.py`
