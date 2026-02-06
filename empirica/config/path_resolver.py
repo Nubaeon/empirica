@@ -193,11 +193,14 @@ def get_session_db_path() -> Path:
     Priority:
     1. EMPIRICA_SESSION_DB environment variable
     2. .empirica/config.yaml -> paths.sessions
-    3. <empirica_root>/sessions/sessions.db (default)
+    2.5. instance_projects mapping (TMUX_PANE-based, for multi-instance isolation)
+    3. <empirica_root>/sessions/sessions.db (default via CWD)
 
     Returns:
         Path to sessions.db
     """
+    import json
+
     # 1. Check environment variable
     if env_db := os.getenv('EMPIRICA_SESSION_DB'):
         try:
@@ -216,7 +219,26 @@ def get_session_db_path() -> Path:
         logger.debug(f"📍 Using config.yaml sessions path: {db_path}")
         return db_path
 
-    # 3. Default path
+    # 2.5. Check instance_projects mapping (for multi-instance isolation)
+    # This uses TMUX_PANE which IS available in subprocesses, unlike `tty` command
+    try:
+        from empirica.core.statusline_cache import get_instance_id as get_inst_id
+        inst_id = get_inst_id()
+        if inst_id:
+            instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{inst_id}.json'
+            if instance_file.exists():
+                with open(instance_file, 'r') as f:
+                    instance_data = json.load(f)
+                instance_project_path = instance_data.get('project_path')
+                if instance_project_path:
+                    db_path = Path(instance_project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                    if db_path.exists():
+                        logger.debug(f"📍 Using instance_projects mapping ({inst_id}): {db_path}")
+                        return db_path
+    except Exception as e:
+        logger.debug(f"📍 instance_projects check failed: {e}")
+
+    # 3. Default path (CWD-based)
     root = get_empirica_root()
     db_path = root / 'sessions' / 'sessions.db'
     logger.debug(f"📍 Using default sessions path: {db_path}")
@@ -256,6 +278,24 @@ def resolve_session_db_path(session_id: str) -> Optional[Path]:
                 tx_project_path = tx_data.get('project_path')
                 if tx_project_path:
                     db_path = Path(tx_project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                    if db_path.exists():
+                        return db_path
+    except Exception:
+        pass
+
+    # Priority 1.5: Check instance_projects mapping (for subprocess context where tty fails)
+    # This uses TMUX_PANE which IS available in subprocesses, unlike `tty` command
+    try:
+        from empirica.core.statusline_cache import get_instance_id as get_inst_id
+        inst_id = get_inst_id()
+        if inst_id:
+            instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{inst_id}.json'
+            if instance_file.exists():
+                with open(instance_file, 'r') as f:
+                    instance_data = json.load(f)
+                instance_project_path = instance_data.get('project_path')
+                if instance_project_path:
+                    db_path = Path(instance_project_path) / '.empirica' / 'sessions' / 'sessions.db'
                     if db_path.exists():
                         return db_path
     except Exception:
