@@ -114,6 +114,8 @@ TRANSITION_COMMANDS = (
     'empirica session-create',       # New session
     'empirica project-bootstrap',    # Bootstrap new project context
     'empirica project-init',         # Initialize new project
+    'empirica project-switch',       # Switch active project context
+    'empirica project-list',         # List available projects
 )
 
 
@@ -131,10 +133,12 @@ def is_empirica_paused() -> bool:
 
 # Tiered Empirica CLI whitelist (replaces blanket 'empirica ' whitelist)
 # Tier 1: Read-only commands - always safe, no state changes
+# Also includes administrative commands (project-switch, project-list) that should always be allowed
 EMPIRICA_TIER1_PREFIXES = (
     'empirica epistemics-list', 'empirica epistemics-show',
     'empirica goals-list', 'empirica get-goal-progress', 'empirica get-goal-subtasks',
     'empirica project-bootstrap', 'empirica project-search',
+    'empirica project-switch', 'empirica project-list',  # Administrative - always allowed
     'empirica session-snapshot', 'empirica get-session-summary',
     'empirica get-epistemic-state', 'empirica get-calibration-report',
     'empirica monitor', 'empirica check-drift',
@@ -252,20 +256,41 @@ def respond(decision, reason=""):
     print(json.dumps(output))
 
 
-def resolve_project_root() -> Optional[Path]:
+def resolve_project_root(claude_session_id: str = None) -> Optional[Path]:
     """Resolve the correct project root using the priority chain.
 
     Priority:
+    0. Active work file by Claude session_id (most reliable - works for ALL users)
     1. Active transaction file's project_path (respects current work context)
-    2. TTY session's project_path (respects project-switch)
-    3. Fall back to CWD-based git root detection
+    2. Instance mapping by TMUX_PANE (for tmux users in hook context)
+    3. TTY session's project_path (for CLI context)
+    4. Fall back to CWD-based git root detection
 
     This is critical for multi-project scenarios where CWD may be reset
     by Claude Code to a different project than the one being worked on.
 
+    Args:
+        claude_session_id: Claude Code conversation UUID from hook input
+
     Returns:
         Path to project root (parent of .empirica), or None if not found.
     """
+    # Priority 0: Check active_work file by Claude session_id
+    # This is the MOST RELIABLE method - works for ALL users (tmux and non-tmux)
+    if claude_session_id:
+        try:
+            active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+            if active_work_file.exists():
+                with open(active_work_file, 'r') as f:
+                    work_data = json.load(f)
+                project_path = work_data.get('project_path')
+                if project_path:
+                    project_root = Path(project_path)
+                    if (project_root / '.empirica').exists():
+                        return project_root
+        except Exception:
+            pass
+
     # Get instance suffix for transaction file lookup
     instance_id = None
     try:
@@ -595,9 +620,12 @@ def main():
     if package_path:
         sys.path.insert(0, str(package_path))
 
-    # Resolve project root using priority chain (transaction → TTY → CWD)
+    # Get Claude session_id from hook input (available for ALL users)
+    claude_session_id = hook_input.get('session_id')
+
+    # Resolve project root using priority chain (claude_session → transaction → instance → TTY → CWD)
     # This is critical for multi-project scenarios where CWD may be reset
-    project_root = resolve_project_root()
+    project_root = resolve_project_root(claude_session_id=claude_session_id)
     if project_root:
         empirica_root = project_root / '.empirica'
         os.chdir(project_root)  # Set CWD to the correct project
@@ -612,26 +640,21 @@ def main():
             respond("allow", f"Cannot import path_resolver: {e}")
             sys.exit(0)
 
-    # Get active session
+    # Get active session from active_work file (project-aware, instance-isolated)
+    # This is the ONLY source - no fallback chain to avoid confusion
     session_id = None
-    try:
-        from empirica.utils.session_resolver import get_latest_session_id
-        session_id = get_latest_session_id(ai_id='claude-code', active_only=True)
-    except ValueError as e:
-        # No session found - this is expected when no active session exists
-        if "No session found" in str(e):
-            respond("allow", "WARNING: No active Empirica session. Run 'empirica session-create --ai-id claude-code' for epistemic tracking.")
-            sys.exit(0)
-        # Other ValueError - treat as resolver issue
-        respond("allow", f"Session resolver error: {e}")
-        sys.exit(0)
-    except Exception as e:
-        respond("allow", f"No session resolver: {e}")
-        sys.exit(0)
+    if claude_session_id:
+        try:
+            active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+            if active_work_file.exists():
+                with open(active_work_file, 'r') as f:
+                    work_data = json.load(f)
+                session_id = work_data.get('empirica_session_id')
+        except Exception:
+            pass
 
     if not session_id:
-        # Shouldn't reach here, but handle gracefully
-        respond("allow", "WARNING: No active Empirica session. Run 'empirica session-create --ai-id claude-code' for epistemic tracking.")
+        respond("allow", "WARNING: No active_work file or empirica_session_id. Run 'empirica project-switch <project>' first.")
         sys.exit(0)
 
     # SessionDatabase uses path_resolver internally for DB location

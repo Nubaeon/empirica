@@ -191,16 +191,37 @@ def get_session_db_path() -> Path:
     Get full path to sessions database.
 
     Priority:
-    1. Instance projects mapping (TMUX_PANE-based, for multi-instance isolation)
-    2. Workspace.db lookup (git root → project via global registry)
-    3. CWD-based fallback (for unregistered projects)
-    4. EMPIRICA_SESSION_DB env var (CI/Docker override - intentionally last)
+    0. active_work file (project-switch sets this, survives CWD changes)
+    1. Workspace.db lookup (git root → project via global registry)
+    2. CWD-based fallback (for unregistered projects)
+    3. EMPIRICA_SESSION_DB env var (CI/Docker override - intentionally last)
 
     Returns:
         Path to sessions.db
     """
     import json
     import sqlite3
+
+    # 0. Check active_work file (set by project-switch, instance-aware)
+    # Uses TTY session to find claude_session_id → active_work file → project_path
+    try:
+        from empirica.utils.session_resolver import get_tty_session
+        tty_session = get_tty_session(warn_if_stale=False)
+        if tty_session:
+            claude_session_id = tty_session.get('claude_session_id')
+            if claude_session_id:
+                active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+                if active_work_path.exists():
+                    with open(active_work_path, 'r') as f:
+                        active_work = json.load(f)
+                        project_path = active_work.get('project_path')
+                        if project_path:
+                            db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                            if db_path.exists():
+                                logger.debug(f"📍 Using active_work file: {db_path}")
+                                return db_path
+    except Exception as e:
+        logger.debug(f"📍 active_work lookup failed: {e}")
 
     # 1. Check workspace.db for git root → project mapping (global registry)
     # Git root is stable even when CWD changes within the project
