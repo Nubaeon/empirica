@@ -467,6 +467,23 @@ def is_safe_bash_command(tool_input: dict) -> bool:
     if is_safe_empirica_command(command):
         return True
 
+    # Special case: cd && empirica command chains are safe
+    # This allows: cd /path && empirica check-submit - << 'EOF'
+    if '&&' in command:
+        segments = [s.strip() for s in command.split('&&')]
+        # Check if any segment is a safe empirica command
+        for segment in segments:
+            # Strip heredoc suffix for matching
+            segment_clean = segment.split('<<')[0].strip() if '<<' in segment else segment
+            if is_safe_empirica_command(segment_clean):
+                # Verify other segments are safe (cd, etc.)
+                other_segments_safe = all(
+                    s.strip().startswith('cd ') or is_safe_empirica_command(s.strip().split('<<')[0].strip())
+                    for s in segments
+                )
+                if other_segments_safe:
+                    return True
+
     # Check for dangerous shell operators (command injection prevention)
     # This blocks: ls; rm -rf, echo > file, etc.
     for operator in DANGEROUS_SHELL_OPERATORS:

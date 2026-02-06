@@ -47,7 +47,20 @@ Hook access (TMUX_PANE key):
 
 Both are written by `write_tty_session()` when the context has both keys available.
 
-### 2.3 TTY Session Files
+### 2.4 Active Work Files (Claude Session ID Key)
+
+For non-tmux users, there's a third key type using Claude's conversation UUID:
+
+```
+~/.empirica/active_work_{claude_session_id}.json
+```
+
+**Written by:** `project-switch` command
+**Contains:** `project_path`, `folder_name`, `empirica_session_id`
+
+This works for ALL users because Claude Code always provides `session_id` in hook input.
+
+### 2.5 TTY Session Files
 
 ```
 Terminal 1 (pts-6) → ~/.empirica/tty_sessions/pts-6.json
@@ -279,6 +292,17 @@ Then reads: `{empirica_root}/active_transaction_{instance_id}.json`
 **Symptom:** Statusline shows empirica-outreach but working on empirica
 **Fix:** Statusline reads TTY session's project_path, not CWD
 
+### 8.5 Sentinel Blocks `cd && empirica check-submit`
+
+**Symptom:** Sentinel blocks `cd /path && empirica check-submit` even though
+`check-submit` is in the Tier 2 whitelist.
+
+**Root cause:** The `&&` operator was caught as a dangerous shell operator BEFORE
+checking if any segment is a safe empirica command.
+
+**Fix (2026-02-06):** Added special handling for `&&` chains - if one segment
+is a safe empirica command and other segments are safe (cd, etc.), allow it.
+
 ---
 
 ## 9. Implementation Checklist
@@ -290,7 +314,11 @@ Then reads: `{empirica_root}/active_transaction_{instance_id}.json`
 - [x] Statusline uses TTY session's project_path
 - [x] `get_session_empirica_root()` for Sentinel cross-project detection
 - [x] Removed statusline file caching
-- [x] Sentinel uses project resolution priority chain (transaction → TTY → CWD)
+- [x] Sentinel uses project resolution priority chain (transaction → instance → TTY → CWD)
+- [x] Instance mapping files (`~/.empirica/instance_projects/{tmux_id}.json`) for hook context
+- [x] Active work files (`~/.empirica/active_work_{claude_session_id}.json`) for non-tmux users
+- [x] Sentinel allows `cd && empirica` command chains
+- [ ] Wire Sentinel to use Claude session_id from hook input for active_work lookup
 - [ ] Wire to workspace.db for git repo → project mapping (future)
 
 ---
