@@ -1798,7 +1798,7 @@ def handle_postflight_submit_command(args):
             postflight_transaction_id = None
             try:
                 import time
-                from empirica.utils.session_resolver import write_active_transaction
+                from empirica.utils.session_resolver import write_active_transaction, get_tty_session
                 from empirica.core.statusline_cache import get_instance_id
                 from pathlib import Path
                 import json as _json
@@ -1806,7 +1806,28 @@ def handle_postflight_submit_command(args):
                 # Read current transaction with instance suffix (multi-instance isolation)
                 instance_id = get_instance_id()
                 suffix = f"_{instance_id}" if instance_id else ""
-                local_empirica = Path.cwd() / '.empirica'
+
+                # Priority 0: Get project_path from active_work file (set by project-switch)
+                resolved_project_path = None
+                try:
+                    tty_session = get_tty_session(warn_if_stale=False)
+                    if tty_session:
+                        claude_session_id = tty_session.get('claude_session_id')
+                        if claude_session_id:
+                            active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+                            if active_work_path.exists():
+                                with open(active_work_path, 'r') as f:
+                                    active_work = _json.load(f)
+                                    resolved_project_path = active_work.get('project_path')
+                except Exception:
+                    pass
+
+                # Fallback: CWD-based
+                if resolved_project_path:
+                    local_empirica = Path(resolved_project_path) / '.empirica'
+                else:
+                    local_empirica = Path.cwd() / '.empirica'
+
                 if local_empirica.exists():
                     tx_file = local_empirica / f'active_transaction{suffix}.json'
                 else:
@@ -1816,12 +1837,13 @@ def handle_postflight_submit_command(args):
                     with open(tx_file, 'r') as f:
                         tx_data = _json.load(f)
                     postflight_transaction_id = tx_data.get('transaction_id')
-                    # Update to closed status
+                    # Update to closed status - preserve project_path from transaction
                     write_active_transaction(
                         transaction_id=postflight_transaction_id,
                         session_id=tx_data.get('session_id'),
                         preflight_timestamp=tx_data.get('preflight_timestamp'),
-                        status="closed"
+                        status="closed",
+                        project_path=tx_data.get('project_path') or resolved_project_path
                     )
             except Exception as e:
                 logger.debug(f"Transaction close failed (non-fatal): {e}")

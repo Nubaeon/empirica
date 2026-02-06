@@ -264,25 +264,46 @@ def print_project_context(quiet: bool = False, verbose: bool = False) -> Optiona
         verbose: If True, show additional details (git remote, etc.)
     
     Returns:
-        dict with project info (name, project_id, git_root, db_path), 
+        dict with project info (name, project_id, git_root, db_path),
         or None if not in a project
     """
     try:
         from pathlib import Path
         import logging
         import subprocess
-        
+        import json
+
         logger = logging.getLogger(__name__)
-        
-        # Import here to avoid circular dependency
-        from empirica.config.path_resolver import get_git_root
-        
-        git_root = get_git_root()
+
+        # Priority 0: Check active_work file (set by project-switch, instance-aware)
+        # This ensures we show the correct project after project-switch even if CWD differs
+        git_root = None
+        try:
+            from empirica.utils.session_resolver import get_tty_session
+            tty_session = get_tty_session(warn_if_stale=False)
+            if tty_session:
+                claude_session_id = tty_session.get('claude_session_id')
+                if claude_session_id:
+                    active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+                    if active_work_path.exists():
+                        with open(active_work_path, 'r') as f:
+                            active_work = json.load(f)
+                            project_path = active_work.get('project_path')
+                            if project_path:
+                                git_root = Path(project_path)
+        except Exception:
+            pass
+
+        # Fallback: CWD-based git root detection
+        if not git_root:
+            from empirica.config.path_resolver import get_git_root
+            git_root = get_git_root()
+
         if not git_root:
             if not quiet:
                 print("⚠️  Not in a git repository")
             return None
-        
+
         project_yaml = git_root / '.empirica' / 'project.yaml'
         if not project_yaml.exists():
             if not quiet:
