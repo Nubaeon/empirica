@@ -1,0 +1,16 @@
+{
+  "finding_id": "40f10b08-8e47-4761-93fb-8add2b20ee11",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-06T15:51:02.699560+00:00",
+  "finding": "FIXED: Sentinel TTY session lookup failed in hook context because 'tty' command returns 'not a tty'. Added fallback to scan all TTY session files and use most recently modified one.",
+  "impact": 0.8,
+  "goal_id": "5df8d3a8-a3dc-4e75-a6a7-b621576c8bfd",
+  "subtask_id": null,
+  "subject": "sentinel-tty-fallback",
+  "finding_data": {
+    "finding": "FIXED: Sentinel TTY session lookup failed in hook context because 'tty' command returns 'not a tty'. Added fallback to scan all TTY session files and use most recently modified one.",
+    "impact": 0.8
+  }
+}
