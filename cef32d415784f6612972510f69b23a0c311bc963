@@ -1,0 +1,16 @@
+{
+  "finding_id": "56ba7a9d-3c79-49ac-9e46-dd5491a2e20c",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "ca43ff38-f649-4657-a83e-0c5e589b3d31",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-06T13:08:39.974293+00:00",
+  "finding": "Goals should be project-scoped (project_id), not session-scoped. Sessions are temporal (compact-bound), goals are structural (persist across sessions). The session_id on goals is creation metadata, not primary scope. Found 4 goals with NULL project_id due to missing session - fixed by assigning correct project_id.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Goals should be project-scoped (project_id), not session-scoped. Sessions are temporal (compact-bound), goals are structural (persist across sessions). The session_id on goals is creation metadata, not primary scope. Found 4 goals with NULL project_id due to missing session - fixed by assigning correct project_id.",
+    "impact": 0.7
+  }
+}
