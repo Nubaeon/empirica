@@ -268,8 +268,10 @@ def validate_tty_session(session: Dict[str, Any] = None) -> Dict[str, Any]:
         except (ValueError, TypeError):
             pass  # Can't parse timestamp, skip check
 
-    # If we have critical warnings, mark as invalid
-    if any("no longer exists" in w for w in result['warnings']):
+    # Only mark invalid if TTY device is gone (terminal closed)
+    # PID being gone is just a warning - project_path can still be valid
+    # (e.g., project-switch updates the file after original process exits)
+    if any("TTY device" in w and "no longer exists" in w for w in result['warnings']):
         result['valid'] = False
 
     return result
