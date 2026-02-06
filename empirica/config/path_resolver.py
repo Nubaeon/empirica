@@ -202,27 +202,8 @@ def get_session_db_path() -> Path:
     import json
     import sqlite3
 
-    # 1. Check instance_projects mapping (for multi-instance isolation)
-    # This uses TMUX_PANE which IS available in subprocesses, unlike `tty` command
-    # This is Priority 1 because it tells us which project THIS instance is working on
-    try:
-        from empirica.core.statusline_cache import get_instance_id as get_inst_id
-        inst_id = get_inst_id()
-        if inst_id:
-            instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{inst_id}.json'
-            if instance_file.exists():
-                with open(instance_file, 'r') as f:
-                    instance_data = json.load(f)
-                instance_project_path = instance_data.get('project_path')
-                if instance_project_path:
-                    db_path = Path(instance_project_path) / '.empirica' / 'sessions' / 'sessions.db'
-                    if db_path.exists():
-                        logger.debug(f"📍 Using instance_projects mapping ({inst_id}): {db_path}")
-                        return db_path
-    except Exception as e:
-        logger.debug(f"📍 instance_projects check failed: {e}")
-
-    # 2. Check workspace.db for git root → project mapping (global registry)
+    # 1. Check workspace.db for git root → project mapping (global registry)
+    # Git root is stable even when CWD changes within the project
     try:
         git_root = get_git_root()
         if git_root:
