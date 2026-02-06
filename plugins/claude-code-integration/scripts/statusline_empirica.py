@@ -461,25 +461,28 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     cursor = db.conn.cursor()
 
     # Priority 0: TTY session lookup (Claude Code instance isolation)
-    # This is the most accurate method - uses Claude Code's session_id
+    # active_work file is authoritative (updated by project-switch)
+    # TTY session's empirica_session_id can be stale after project-switch
     try:
         from empirica.utils.session_resolver import get_tty_session
         import json as _json
 
         tty_session = get_tty_session(warn_if_stale=False)  # Don't spam warnings
         if tty_session:
-            # Get empirica_session_id from TTY session
-            empirica_session_id = tty_session.get('empirica_session_id')
+            empirica_session_id = None
+            claude_session_id = tty_session.get('claude_session_id')
 
-            # If not in TTY session, try active_work file
+            # Priority 0a: active_work file (authoritative, updated by project-switch)
+            if claude_session_id:
+                active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+                if active_work_path.exists():
+                    with open(active_work_path, 'r') as f:
+                        active_work = _json.load(f)
+                        empirica_session_id = active_work.get('empirica_session_id')
+
+            # Priority 0b: TTY session (fallback if active_work not available)
             if not empirica_session_id:
-                claude_session_id = tty_session.get('claude_session_id')
-                if claude_session_id:
-                    active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-                    if active_work_path.exists():
-                        with open(active_work_path, 'r') as f:
-                            active_work = _json.load(f)
-                            empirica_session_id = active_work.get('empirica_session_id')
+                empirica_session_id = tty_session.get('empirica_session_id')
 
             if empirica_session_id:
                 cursor.execute("""
