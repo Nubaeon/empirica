@@ -243,7 +243,7 @@ Then reads: `{empirica_root}/active_transaction_{instance_id}.json`
 | Function | Purpose |
 |----------|---------|
 | `get_empirica_root()` | Find .empirica/ from CWD or config |
-| `get_session_db_path()` | Get sessions.db (env → config → instance_projects → CWD) |
+| `get_session_db_path()` | Get sessions.db (instance_projects → workspace.db → CWD → env) |
 | `resolve_session_db_path()` | Find DB for session (transaction → instance → TTY → CWD) |
 
 ### 6.3 statusline_cache.py
@@ -322,7 +322,7 @@ is a safe empirica command and other segments are safe (cd, etc.), allow it.
 - [x] Wire pre-compact.py to use Claude session_id for project resolution
 - [x] Wire post-compact.py to use Claude session_id for project resolution
 - [x] Wire `get_session_db_path()` to check instance_projects mapping before CWD fallback
-- [ ] Wire to workspace.db for git repo → project mapping (future)
+- [x] Wire to workspace.db for git repo → project mapping (Priority 2 in resolution chain)
 
 ---
 
@@ -383,6 +383,9 @@ after project-switch when CWD is in a different project directory.
 **Status:** FIXED (2026-02-06)
 **Root cause:** `SessionDatabase()` uses `get_session_db_path()` which only had CWD-based
 resolution. The fix to `resolve_session_db_path()` wasn't being used by most CLI commands.
-**Fix:** Added Priority 2.5 check in `get_session_db_path()` to read instance_projects mapping
-(TMUX_PANE-based) before falling back to CWD. This ensures CLI commands respect project-switch.
+**Fix:** Refactored `get_session_db_path()` priority chain:
+1. Instance projects mapping (TMUX_PANE-based) - which project this instance is on
+2. Workspace.db lookup (git root → trajectory_path) - global registry
+3. CWD-based fallback (for unregistered projects)
+4. EMPIRICA_SESSION_DB env var (demoted - CI/Docker only, breaks multi-instance)
 **File:** `empirica/config/path_resolver.py`
