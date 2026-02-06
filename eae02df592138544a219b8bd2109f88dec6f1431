@@ -1,0 +1,16 @@
+{
+  "finding_id": "0d536401-aaca-4203-bc65-f5fb845b4088",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "0cb9c4f0-7618-4a97-a1fa-df2ae83ee3fe",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-06T12:08:49.201064+00:00",
+  "finding": "Fixed multi-instance transaction isolation: (1) active_transaction.json now uses instance suffix (e.g., _tmux_0) matching session_resolver.get_instance_id(), (2) Sentinel _get_instance_suffix() updated to use TMUX_PANE priority, (3) Added transaction_id column to investigation_branches for sub-agent epistemic continuity via migration 028.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Fixed multi-instance transaction isolation: (1) active_transaction.json now uses instance suffix (e.g., _tmux_0) matching session_resolver.get_instance_id(), (2) Sentinel _get_instance_suffix() updated to use TMUX_PANE priority, (3) Added transaction_id column to investigation_branches for sub-agent epistemic continuity via migration 028.",
+    "impact": 0.85
+  }
+}
