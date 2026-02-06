@@ -83,13 +83,14 @@ class GoalRepository:
             logger.error(f"Error creating goal tables: {e}")
             raise
     
-    def save_goal(self, goal: Goal, session_id: Optional[str] = None) -> bool:
+    def save_goal(self, goal: Goal, session_id: Optional[str] = None, transaction_id: Optional[str] = None) -> bool:
         """
         Save goal to database
 
         Args:
             goal: Goal object to save
             session_id: Optional session ID to associate with goal
+            transaction_id: Optional transaction ID for epistemic linkage
 
         Returns:
             True if successful
@@ -112,8 +113,8 @@ class GoalRepository:
             self.db.conn.execute("""
                 INSERT OR REPLACE INTO goals
                 (id, session_id, objective, scope, estimated_complexity,
-                 created_timestamp, completed_timestamp, is_completed, goal_data, project_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 created_timestamp, completed_timestamp, is_completed, goal_data, project_id, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 goal.id,
                 session_id,
@@ -124,7 +125,8 @@ class GoalRepository:
                 goal.completed_timestamp,
                 goal.is_completed,
                 goal_data,
-                project_id
+                project_id,
+                transaction_id
             ))
             
             # Insert success criteria (delete old ones first)

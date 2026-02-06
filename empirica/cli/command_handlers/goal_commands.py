@@ -295,9 +295,17 @@ def handle_goals_create_command(args):
             constraints=constraints,
             metadata=metadata
         )
-        
-        # Save to database
-        success = goal_repo.save_goal(goal, session_id)
+
+        # Auto-derive active transaction_id for epistemic linkage
+        transaction_id = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction
+            transaction_id = read_active_transaction()
+        except Exception:
+            pass
+
+        # Save to database with transaction linkage
+        success = goal_repo.save_goal(goal, session_id, transaction_id=transaction_id)
         
         if success:
             # BEADS Integration (Optional): Create linked issue tracker item
