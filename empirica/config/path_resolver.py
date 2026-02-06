@@ -223,6 +223,27 @@ def get_session_db_path() -> Path:
     return db_path
 
 
+def resolve_session_db_path(session_id: str) -> Optional[Path]:
+    """
+    Resolve which database contains a given session.
+
+    For now, returns the current project's DB path.
+    Future enhancement: Look up session in workspace.db to find correct project.
+
+    Args:
+        session_id: UUID of the session to find
+
+    Returns:
+        Path to the sessions.db containing this session, or None if not found
+    """
+    # Use current project's DB (CWD-based detection)
+    # TODO: Look up session_id in workspace.db to find which project it belongs to
+    db_path = get_session_db_path()
+    if db_path.exists():
+        return db_path
+    return None
+
+
 def get_identity_dir() -> Path:
     """Get identity keys directory."""
     config = load_empirica_config()
