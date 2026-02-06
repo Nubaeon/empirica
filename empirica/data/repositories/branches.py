@@ -17,7 +17,8 @@ class BranchRepository(BaseRepository):
     """Repository for investigation branch management (Phase 2 branching)"""
 
     def create_branch(self, session_id: str, branch_name: str, investigation_path: str,
-                     git_branch_name: str, preflight_vectors: Dict) -> str:
+                     git_branch_name: str, preflight_vectors: Dict,
+                     transaction_id: str = None) -> str:
         """Create a new investigation branch
 
         Args:
@@ -26,6 +27,7 @@ class BranchRepository(BaseRepository):
             investigation_path: What is being investigated (e.g., 'oauth2')
             git_branch_name: Git branch name
             preflight_vectors: Epistemic vectors at branch start
+            transaction_id: Parent's transaction ID for epistemic continuity
 
         Returns:
             Branch ID
@@ -36,10 +38,10 @@ class BranchRepository(BaseRepository):
         self._execute("""
             INSERT INTO investigation_branches
             (id, session_id, branch_name, investigation_path, git_branch_name,
-             preflight_vectors, created_timestamp, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+             preflight_vectors, transaction_id, created_timestamp, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
         """, (branch_id, session_id, branch_name, investigation_path, git_branch_name,
-              json.dumps(preflight_vectors), now))
+              json.dumps(preflight_vectors), transaction_id, now))
 
         self.commit()
         return branch_id
@@ -80,7 +82,8 @@ class BranchRepository(BaseRepository):
         """
         cursor = self._execute("""
             SELECT id, session_id, branch_name, investigation_path,
-                   preflight_vectors, postflight_vectors, merge_score, status
+                   preflight_vectors, postflight_vectors, merge_score, status,
+                   transaction_id
             FROM investigation_branches WHERE id = ?
         """, (branch_id,))
 
@@ -96,7 +99,8 @@ class BranchRepository(BaseRepository):
             "preflight_vectors": json.loads(row[4]) if row[4] else {},
             "postflight_vectors": json.loads(row[5]) if row[5] else {},
             "merge_score": row[6],
-            "status": row[7]
+            "status": row[7],
+            "transaction_id": row[8]
         }
 
     def calculate_branch_merge_score(self, branch_id: str) -> Dict:

@@ -34,27 +34,52 @@ logger = logging.getLogger(__name__)
 # TTY-based Session Isolation (Multi-Instance Support)
 # =============================================================================
 
-def get_tty_key() -> str:
-    """Get a TTY-based key for session isolation.
+def get_tty_key() -> Optional[str]:
+    """Get a TTY-based key for session isolation. Returns None if no TTY.
 
-    Uses parent process TTY since tool execution may not have direct TTY access.
-    Returns sanitized string like 'pts-2' or 'ppid-{ppid}'.
+    Walks up the process tree to find the controlling TTY. This handles
+    cases where CLI commands run via bash (which may not have a TTY) but
+    the grandparent Claude process does.
 
-    This allows CLI commands to identify which Claude Code instance called them,
-    bridging the gap between hooks (which receive session_id) and CLI commands.
+    Returns sanitized string like 'pts-2' or None if no TTY found.
+
+    CRITICAL: No PPID fallback. If TTY detection fails, return None to signal
+    that instance isolation cannot be guaranteed. Callers must handle None
+    by failing safely rather than risking cross-instance bleed.
     """
     try:
-        result = subprocess.run(
-            ['ps', '-p', str(os.getppid()), '-o', 'tty='],
-            capture_output=True, text=True, timeout=2
-        )
-        tty = result.stdout.strip()
-        if tty and tty != '?':
-            return tty.replace('/', '-')
+        # Walk up process tree looking for a TTY
+        pid = os.getppid()
+        for _ in range(5):  # Max 5 levels up
+            if pid <= 1:
+                break
+
+            result = subprocess.run(
+                ['ps', '-p', str(pid), '-o', 'tty=,ppid='],
+                capture_output=True, text=True, timeout=2
+            )
+            if result.returncode != 0:
+                break
+
+            parts = result.stdout.strip().split()
+            if not parts:
+                break
+
+            tty = parts[0]
+            if tty and tty != '?':
+                return tty.replace('/', '-')
+
+            # Move to parent
+            if len(parts) > 1:
+                try:
+                    pid = int(parts[1])
+                except ValueError:
+                    break
+            else:
+                break
     except Exception:
         pass
-    # Fallback to PPID if no TTY
-    return f"ppid-{os.getppid()}"
+    return None  # No fallback - fail safely
 
 
 def get_tty_session(warn_if_stale: bool = True) -> Optional[Dict[str, Any]]:
@@ -70,9 +95,12 @@ def get_tty_session(warn_if_stale: bool = True) -> Optional[Dict[str, Any]]:
     Args:
         warn_if_stale: If True, logs warnings for potentially stale sessions
 
-    Returns None if no TTY session file exists or on read error.
+    Returns None if no TTY key available, no session file exists, or on read error.
     """
     tty_key = get_tty_key()
+    if not tty_key:
+        return None  # No TTY - cannot determine instance
+
     tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
     session_file = tty_sessions_dir / f'{tty_key}.json'
 
@@ -114,17 +142,24 @@ def write_tty_session(
     - Claude Code hooks (have claude_session_id, may have empirica_session_id)
     - CLI session-create (no claude_session_id, has empirica_session_id)
 
+    CRITICAL: Returns False if no TTY available - does not use PPID fallback
+    to avoid cross-instance bleed risk.
+
     Args:
         claude_session_id: Claude Code conversation UUID (optional for CLI)
         empirica_session_id: Empirica session UUID (optional)
         project_path: Project directory path (optional)
 
     Returns:
-        True if successfully written, False on error.
+        True if successfully written, False if no TTY or on error.
     """
     from datetime import datetime
 
     tty_key = get_tty_key()
+    if not tty_key:
+        logger.debug("No TTY key available - cannot write TTY session file")
+        return False  # No TTY - skip writing to avoid bleed
+
     tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
     tty_sessions_dir.mkdir(parents=True, exist_ok=True)
 
@@ -648,6 +683,9 @@ def write_active_transaction(
     Transactions survive compaction - the session_id here is the one that
     opened the transaction, which may differ from the current session.
 
+    IMPORTANT: Uses instance suffix for multi-instance isolation. Each Claude
+    instance writes to its own transaction file (e.g., active_transaction_pts-6.json).
+
     Args:
         transaction_id: UUID of the epistemic transaction
         session_id: Session that opened this transaction (for PREFLIGHT lookup)
@@ -658,13 +696,14 @@ def write_active_transaction(
     import time
     import tempfile
 
-    # Write to .empirica/active_transaction.json (JSON format for Sentinel)
+    # Use instance-aware filename for multi-instance isolation
+    suffix = _get_instance_suffix()
     from pathlib import Path
     local_empirica = Path.cwd() / '.empirica'
     if local_empirica.exists():
-        path = local_empirica / 'active_transaction.json'
+        path = local_empirica / f'active_transaction{suffix}.json'
     else:
-        path = Path.home() / '.empirica' / 'active_transaction.json'
+        path = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
 
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -693,14 +732,14 @@ def read_active_transaction() -> Optional[str]:
     """Read the active transaction ID from the tracking file. Returns None if no active transaction."""
     from pathlib import Path
     suffix = _get_instance_suffix()
-    # Search local then global
+    # Search local then global - use .json extension to match write_active_transaction
     for base in [Path.cwd() / '.empirica', Path.home() / '.empirica']:
-        candidate = base / f'active_transaction{suffix}'
+        candidate = base / f'active_transaction{suffix}.json'
         if candidate.exists():
             try:
-                tid = candidate.read_text().strip()
-                if tid:
-                    return tid
+                with open(candidate, 'r') as f:
+                    data = json.load(f)
+                    return data.get('transaction_id')
             except Exception:
                 pass
     return None
@@ -711,7 +750,7 @@ def clear_active_transaction() -> None:
     from pathlib import Path
     suffix = _get_instance_suffix()
     for base in [Path.cwd() / '.empirica', Path.home() / '.empirica']:
-        candidate = base / f'active_transaction{suffix}'
+        candidate = base / f'active_transaction{suffix}.json'
         if candidate.exists():
             try:
                 candidate.unlink()

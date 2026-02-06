@@ -77,11 +77,20 @@ def handle_agent_spawn_command(args) -> dict:
         except Exception:
             pass  # Fall back to default persona
 
+    # Read active transaction for epistemic continuity
+    transaction_id = None
+    try:
+        from empirica.utils.session_resolver import read_active_transaction
+        transaction_id = read_active_transaction()
+    except Exception:
+        pass  # Transaction linkage is optional
+
     config = EpistemicAgentConfig(
         session_id=session_id,
         task=task,
         persona_id=persona_id,
-        parent_context=parent_context
+        parent_context=parent_context,
+        transaction_id=transaction_id
     )
 
     result = spawn_epistemic_agent(config, execute_fn=None)
@@ -95,6 +104,7 @@ def handle_agent_spawn_command(args) -> dict:
         "usage": f"Execute prompt with your agent, then: empirica agent-report --branch-id {result.branch_id} -",
         "turtle_mode": use_turtle,
         "turtle_match": turtle_match.name if turtle_match else None,
+        "transaction_id": transaction_id,  # Parent's transaction for epistemic continuity
     }
 
     if output_format == 'json':

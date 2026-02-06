@@ -79,16 +79,17 @@ def get_workspace_projects() -> List[Dict[str, Any]]:
 
 def _update_active_work(project_path: str, folder_name: str) -> bool:
     """
-    Update active_work markers for cross-project continuity.
+    Update active_work markers AND TTY session for cross-project continuity.
 
     This is called by project-switch to record which project is currently active.
-    Writes to BOTH:
-    1. Session-specific file (if TTY session exists) - for multi-instance isolation
-    2. Canonical file - as fallback for first-time compaction
+    Updates:
+    1. TTY session file's project_path - PRIMARY source for hooks/statusline
+    2. Session-specific active_work file (if TTY session exists) - backup
+    3. Canonical active_work file - fallback for first-time compaction
 
-    The TTY session file is written by hooks (session-init, pre-compact) which
-    receive the Claude Code session_id. CLI commands like project-switch can
-    read it because they run in the same terminal (TTY).
+    The TTY session file is the source of truth for "what project is this
+    Claude instance working on". Hooks and statusline read it to determine
+    the correct project context.
 
     Args:
         project_path: Full path to the project directory
@@ -98,7 +99,7 @@ def _update_active_work(project_path: str, folder_name: str) -> bool:
         True if successfully written, False otherwise
     """
     import time
-    from empirica.utils.session_resolver import get_tty_session
+    from empirica.utils.session_resolver import get_tty_session, get_tty_key
 
     try:
         marker_dir = Path.home() / '.empirica'
@@ -107,6 +108,32 @@ def _update_active_work(project_path: str, folder_name: str) -> bool:
         # Try to get Claude session ID from TTY session (written by hooks)
         tty_session = get_tty_session()
         claude_session_id = tty_session.get('claude_session_id') if tty_session else None
+
+        # CRITICAL: Update TTY session file with new project_path
+        # This is what hooks and statusline read to determine the project
+        tty_key = get_tty_key()
+        if tty_key:
+            tty_sessions_dir = marker_dir / 'tty_sessions'
+            tty_sessions_dir.mkdir(parents=True, exist_ok=True)
+            tty_session_file = tty_sessions_dir / f'{tty_key}.json'
+
+            # Read existing TTY session, update project_path, write back
+            tty_data = {}
+            if tty_session_file.exists():
+                try:
+                    with open(tty_session_file, 'r') as f:
+                        tty_data = json.load(f)
+                except Exception:
+                    pass
+
+            # Update with new project path
+            tty_data['project_path'] = project_path
+            tty_data['tty_key'] = tty_key
+            tty_data['timestamp'] = time.strftime('%Y-%m-%dT%H:%M:%S%z')
+
+            with open(tty_session_file, 'w') as f:
+                json.dump(tty_data, f, indent=2)
+            logger.debug(f"Updated TTY session project_path: {folder_name}")
 
         active_work = {
             'project_path': project_path,
@@ -117,7 +144,7 @@ def _update_active_work(project_path: str, folder_name: str) -> bool:
             'timestamp_epoch': time.time()
         }
 
-        # Priority 1: Write to session-specific file (if we know the session)
+        # Also write to session-specific file (if we know the session)
         # This prevents race conditions with other Claude instances
         if claude_session_id:
             session_marker_path = marker_dir / f'active_work_{claude_session_id}.json'
@@ -125,7 +152,7 @@ def _update_active_work(project_path: str, folder_name: str) -> bool:
                 json.dump(active_work, f, indent=2)
             logger.debug(f"Updated session-specific active_work: {folder_name}")
 
-        # Priority 2: Also write canonical file as fallback
+        # Also write canonical file as fallback
         # Pre-compact hook reads this when session-specific doesn't exist
         marker_path = marker_dir / 'active_work.json'
 

@@ -48,6 +48,9 @@ SCHEMAS = [
                     preflight_vectors TEXT NOT NULL,
                     postflight_vectors TEXT,
 
+                    -- Transaction linkage (for epistemic continuity with parent)
+                    transaction_id TEXT,
+
                     -- Cost tracking
                     tokens_spent INTEGER DEFAULT 0,
                     time_spent_minutes INTEGER DEFAULT 0,

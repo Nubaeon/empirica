@@ -47,6 +47,9 @@ class EpistemicAgentConfig:
     # Branch tracking
     investigation_path: Optional[str] = None  # Auto-generated if not provided
 
+    # Transaction linkage (for epistemic continuity)
+    transaction_id: Optional[str] = None  # Parent's transaction ID
+
     # Behavior
     max_tokens: int = 50000
     timeout_minutes: int = 30
@@ -151,7 +154,8 @@ def create_investigation_branch(
         branch_name=f"agent-{config.persona_id or 'general'}",
         investigation_path=config.investigation_path,
         git_branch_name="",  # Sub-agents don't create git branches
-        preflight_vectors=preflight_vectors
+        preflight_vectors=preflight_vectors,
+        transaction_id=config.transaction_id  # Link to parent's transaction
     )
 
     return branch_id
