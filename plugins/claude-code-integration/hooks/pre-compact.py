@@ -97,11 +97,12 @@ This enables drift detection between pre and post compact states.
         return False
 
 
-def find_project_root() -> Path:
+def find_project_root(claude_session_id: str = None) -> Path:
     """
-    Find the Empirica project root by searching for .empirica/ directory with valid database.
+    Find the Empirica project root using priority chain.
 
-    Search order:
+    Priority order:
+    0. Active work file by Claude session_id (most reliable - works for ALL users)
     1. EMPIRICA_WORKSPACE_ROOT environment variable
     2. Known development paths (prioritized to avoid polluted temp dirs)
     3. Search upward from current directory
@@ -111,6 +112,21 @@ def find_project_root() -> Path:
         """Check if path has valid Empirica database"""
         db_path = path / '.empirica' / 'sessions' / 'sessions.db'
         return db_path.exists() and db_path.stat().st_size > 0
+
+    # Priority 0: Check active_work file by Claude session_id
+    if claude_session_id:
+        try:
+            active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+            if active_work_file.exists():
+                with open(active_work_file, 'r') as f:
+                    work_data = json.load(f)
+                project_path = work_data.get('project_path')
+                if project_path:
+                    project_root = Path(project_path)
+                    if has_valid_db(project_root):
+                        return project_root
+        except Exception:
+            pass
 
     # 1. Check environment variable
     if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
@@ -147,9 +163,12 @@ def main():
 
     trigger = hook_input.get('trigger', 'auto')  # 'auto' or 'manual'
 
+    # Get Claude session_id from hook input (available for ALL users)
+    claude_session_id = hook_input.get('session_id')
+
     # CRITICAL: Find and change to project root BEFORE importing empirica
-    # This ensures SessionDatabase uses the correct database path
-    project_root = find_project_root()
+    # Uses priority chain: claude_session_id → env var → known paths → CWD
+    project_root = find_project_root(claude_session_id=claude_session_id)
     os.chdir(project_root)
 
     # Auto-detect latest Empirica session (no env var needed)
@@ -256,6 +275,37 @@ def main():
         pass  # Budget triage failure is non-fatal
 
     # =========================================================================
+    # STEP 0.8: Capture active transaction state (for continuity across compact)
+    # =========================================================================
+    # Transaction files are instance-aware: active_transaction_{instance_id}.json
+    # Instance ID comes from TMUX_PANE (e.g., "%4" → "tmux_4")
+    active_transaction = None
+    try:
+        # Get instance_id from TMUX_PANE
+        tmux_pane = os.environ.get('TMUX_PANE', '')
+        if tmux_pane:
+            instance_id = f"tmux_{tmux_pane.lstrip('%')}"
+        else:
+            # Fallback: try to find any transaction file in the project
+            instance_id = None
+
+        if instance_id:
+            tx_path = project_root / '.empirica' / f'active_transaction_{instance_id}.json'
+            if tx_path.exists():
+                with open(tx_path, 'r') as f:
+                    active_transaction = json.load(f)
+        else:
+            # Fallback: scan for any active transaction file
+            tx_files = list((project_root / '.empirica').glob('active_transaction_*.json'))
+            if tx_files:
+                # Use most recently modified
+                tx_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+                with open(tx_files[0], 'r') as f:
+                    active_transaction = json.load(f)
+    except Exception:
+        pass  # Transaction capture is non-fatal
+
+    # =========================================================================
     # STEP 1: Capture FRESH epistemic vectors (canonical via assess-state)
     # =========================================================================
     # This is the AI's self-assessed state BEFORE compaction.
@@ -339,6 +389,7 @@ def main():
                     "dead_ends_count": len(breadcrumbs.get('dead_ends', []))
                 },
                 "context_budget": budget_report,  # Token budget state at compaction
+                "active_transaction": active_transaction,  # Transaction state for continuity
             }
 
             with open(snapshot_path, 'w') as f:

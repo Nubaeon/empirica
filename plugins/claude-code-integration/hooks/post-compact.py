@@ -27,11 +27,12 @@ except ImportError:
     EPISTEMIC_SUMMARIZER_AVAILABLE = False
 
 
-def find_project_root() -> Path:
+def find_project_root(claude_session_id: str = None) -> Path:
     """
-    Find the Empirica project root by searching for .empirica/ directory with valid database.
+    Find the Empirica project root using priority chain.
 
-    Search order:
+    Priority order:
+    0. Active work file by Claude session_id (most reliable - works for ALL users)
     1. EMPIRICA_WORKSPACE_ROOT environment variable
     2. Known development paths (prioritized to avoid polluted temp dirs)
     3. Search upward from current directory
@@ -41,6 +42,21 @@ def find_project_root() -> Path:
         """Check if path has valid Empirica database"""
         db_path = path / '.empirica' / 'sessions' / 'sessions.db'
         return db_path.exists() and db_path.stat().st_size > 0
+
+    # Priority 0: Check active_work file by Claude session_id
+    if claude_session_id:
+        try:
+            active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+            if active_work_file.exists():
+                with open(active_work_file, 'r') as f:
+                    work_data = json.load(f)
+                project_path = work_data.get('project_path')
+                if project_path:
+                    project_root = Path(project_path)
+                    if has_valid_db(project_root):
+                        return project_root
+        except Exception:
+            pass
 
     # 1. Check environment variable
     if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
@@ -73,18 +89,18 @@ def find_project_root() -> Path:
 
 def main():
     hook_input = json.loads(sys.stdin.read())
-    session_id = hook_input.get('session_id')
+    claude_session_id = hook_input.get('session_id')
 
     # CRITICAL: Find and change to project root BEFORE importing empirica
-    # This ensures SessionDatabase uses the correct database path
-    project_root = find_project_root()
+    # Uses priority chain: claude_session_id → env var → known paths → CWD
+    project_root = find_project_root(claude_session_id=claude_session_id)
     os.chdir(project_root)
 
     # Now safe to import empirica (after cwd is set correctly)
     sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
 
-    # Find active Empirica session
-    empirica_session = _get_empirica_session()
+    # Find active Empirica session (using active_work file first, then DB fallback)
+    empirica_session = _get_empirica_session(claude_session_id=claude_session_id)
     if not empirica_session:
         print(json.dumps({"ok": True, "skipped": True, "reason": "No active Empirica session"}))
         sys.exit(0)
@@ -104,8 +120,17 @@ def main():
                       (pre_snapshot.get('live_state') or {}).get('vectors', {})
         pre_reasoning = (pre_snapshot.get('live_state') or {}).get('reasoning')
 
+    # Extract active transaction from pre-compact snapshot (for continuity)
+    active_transaction = None
+    if pre_snapshot:
+        active_transaction = pre_snapshot.get('active_transaction')
+
     # Load DYNAMIC context - only what's relevant for re-grounding
     dynamic_context = _load_dynamic_context(empirica_session, ai_id, pre_snapshot)
+
+    # Inject transaction context into dynamic_context
+    if active_transaction:
+        dynamic_context['active_transaction'] = active_transaction
 
     # Route based on phase state:
     # - Session COMPLETE (has POSTFLIGHT) → Create new session + bootstrap + PREFLIGHT
@@ -166,8 +191,28 @@ def main():
     sys.exit(0)
 
 
-def _get_empirica_session():
-    """Find the active Empirica session"""
+def _get_empirica_session(claude_session_id: str = None):
+    """
+    Find the active Empirica session using priority chain.
+
+    Priority:
+    0. active_work file's empirica_session_id (set by project-switch, instance-aware)
+    1. Database query for latest active session (fallback)
+    """
+    # Priority 0: Check active_work file (authoritative for this Claude instance)
+    if claude_session_id:
+        try:
+            active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+            if active_work_file.exists():
+                with open(active_work_file, 'r') as f:
+                    work_data = json.load(f)
+                empirica_session_id = work_data.get('empirica_session_id')
+                if empirica_session_id:
+                    return empirica_session_id
+        except Exception:
+            pass
+
+    # Priority 1: Database query (fallback)
     try:
         from empirica.utils.session_resolver import get_latest_session_id
         for ai_pattern in ['claude-code', None]:
@@ -738,6 +783,28 @@ def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_contex
     pre_unc = pre_vectors.get('uncertainty', 'N/A')
     session_id = dynamic_context.get('session_context', {}).get('session_id', 'unknown')
 
+    # Format active transaction context (if exists)
+    tx_context = ""
+    project_folder = "unknown"  # Default for bootstrap command
+    active_tx = dynamic_context.get('active_transaction')
+    if active_tx:
+        tx_id = active_tx.get('transaction_id', 'unknown')[:8]
+        tx_status = active_tx.get('status', 'unknown')
+        tx_project = active_tx.get('project_path', 'unknown')
+        if isinstance(tx_project, str) and '/' in tx_project:
+            project_folder = tx_project.split('/')[-1]  # Just folder name for commands
+            tx_project = project_folder
+        tx_context = f"""
+**⚡ ACTIVE TRANSACTION (preserved across compact):**
+   Transaction: {tx_id}... | Status: {tx_status} | Project: {tx_project}
+   → This transaction is still open. Continue work within it or close with POSTFLIGHT.
+"""
+    else:
+        # Try to get project folder from session_context
+        project_id = dynamic_context.get('session_context', {}).get('project_id', '')
+        if project_id:
+            project_folder = project_id  # May be UUID or folder name
+
     # Use epistemic summarizer for confidence-weighted ranking (no chronological fallback)
     if EPISTEMIC_SUMMARIZER_AVAILABLE:
         epistemic_focus = format_epistemic_focus(
@@ -774,7 +841,7 @@ Your context was just compacted. Your previous vectors (know={pre_know}, uncerta
 are NO LONGER VALID - they reflected knowledge you had in full context.
 
 **You now have only a summary. Run CHECK to validate readiness before proceeding.**
-
+{tx_context}
 {epistemic_focus}
 
 ### Step 1: Load Context (Recommended)
@@ -783,10 +850,10 @@ Before CHECK, recover context via bootstrap and/or semantic search:
 
 ```bash
 # Load project context (depth scales with uncertainty)
-empirica project-bootstrap --session-id {session_id} --output json
+empirica project-bootstrap --session-id {session_id} --project-id {project_folder} --output json
 
 # Semantic search for specific topics (if Qdrant running)
-empirica project-search --project-id <PROJECT_ID> --task "<your current task>" --output json
+empirica project-search --project-id {project_folder} --task "<your current task>" --output json
 ```
 
 ### Step 2: Run CHECK Gate
