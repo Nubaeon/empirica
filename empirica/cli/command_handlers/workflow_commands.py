@@ -416,11 +416,11 @@ def handle_preflight_submit_command(args):
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True
                 },
-                "calibration": {
+                "learning_prior": {
                     "adjustments": calibration_adjustments if calibration_adjustments else None,
                     "total_evidence": calibration_report.get('total_evidence', 0) if calibration_report else 0,
                     "summary": calibration_report.get('calibration_summary') if calibration_report else None,
-                    "note": "Adjustments show historical bias (+ = underestimate, - = overestimate)"
+                    "note": "Learning trajectory from previous sessions (NOT calibration - see grounded_calibration after POSTFLIGHT)"
                 } if calibration_adjustments or calibration_report else None,
                 "sentinel": {
                     "enabled": SentinelHooks.is_enabled(),
@@ -1244,7 +1244,7 @@ def handle_check_submit_command(args):
                 "snapshot": {
                     "created": snapshot_created,
                     "snapshot_id": snapshot_id,
-                    "note": "CHECK vectors captured for calibration analysis"
+                    "note": "CHECK vectors captured for trajectory analysis"
                 } if snapshot_created else None,
                 "bootstrap": {
                     "had_context": bootstrap_status.get('has_bootstrap', False),
@@ -1720,19 +1720,20 @@ def handle_postflight_submit_command(args):
             uncertainty = vectors.get('uncertainty', 0.5)
             postflight_confidence = 1.0 - uncertainty
 
-            # Determine calibration accuracy
+            # Determine internal consistency (completion vs confidence alignment)
+            # Note: This is NOT calibration - calibration requires grounded evidence comparison
             completion = vectors.get('completion', 0.5)
             if abs(completion - postflight_confidence) < 0.2:
-                calibration_accuracy = "good"
+                internal_consistency = "good"
             elif abs(completion - postflight_confidence) < 0.4:
-                calibration_accuracy = "moderate"
+                internal_consistency = "moderate"
             else:
-                calibration_accuracy = "poor"
+                internal_consistency = "poor"
 
             # PURE POSTFLIGHT: Calculate deltas from previous checkpoint (system-driven)
             # AI assesses CURRENT state only, system calculates growth independently
             deltas = {}
-            calibration_issues = []
+            trajectory_issues = []  # Learning trajectory pattern issues (NOT calibration)
             
             try:
                 # Get preflight checkpoint from git notes or SQLite for delta calculation
@@ -1781,21 +1782,21 @@ def handle_postflight_submit_command(args):
                             # This requires forced session restart before context fills and using
                             # handoff-query/project-bootstrap to measure retention
                             
-                            # CALIBRATION ISSUE DETECTION: Identify mismatches
-                            # If KNOW increased but DO decreased, might indicate learning without practice
+                            # TRAJECTORY ISSUE DETECTION: Identify learning patterns in PREFLIGHT→POSTFLIGHT deltas
+                            # Note: These are trajectory issues, NOT calibration (which requires grounded evidence)
                             if key == "know" and delta > 0.2:
                                 do_delta = deltas.get("do", 0)
                                 if do_delta < -0.1:
-                                    calibration_issues.append({
+                                    trajectory_issues.append({
                                         "pattern": "know_up_do_down",
                                         "description": "Knowledge increased but capability decreased - possible theoretical learning without application"
                                     })
-                            
+
                             # If completion high but uncertainty also high, misalignment
                             if key == "completion" and post_val > 0.8:
                                 uncertainty_post = vectors.get("uncertainty", 0.5)
                                 if uncertainty_post > 0.5:
-                                    calibration_issues.append({
+                                    trajectory_issues.append({
                                         "pattern": "completion_high_uncertainty_high",
                                         "description": "High completion with high uncertainty - possible overconfidence or incomplete self-assessment"
                                     })
@@ -1847,15 +1848,15 @@ def handle_postflight_submit_command(args):
                     "reasoning": reasoning,
                     "task_summary": reasoning or "Task completed",
                     "postflight_confidence": postflight_confidence,
-                    "calibration_accuracy": calibration_accuracy,
+                    "internal_consistency": internal_consistency,
                     "deltas": deltas,
-                    "calibration_issues": calibration_issues,
+                    "trajectory_issues": trajectory_issues,
                     "transaction_id": postflight_transaction_id
                 }
             )
 
             # SENTINEL HOOK: Evaluate checkpoint for routing decisions
-            # POSTFLIGHT is final assessment - Sentinel can flag calibration issues or recommend handoff
+            # POSTFLIGHT is final assessment - Sentinel can flag trajectory issues or recommend handoff
             sentinel_decision = None
             if SentinelHooks.is_enabled():
                 sentinel_decision = SentinelHooks.post_checkpoint_hook(
@@ -1866,9 +1867,9 @@ def handle_postflight_submit_command(args):
                         "vectors": vectors,
                         "reasoning": reasoning,
                         "postflight_confidence": postflight_confidence,
-                        "calibration_accuracy": calibration_accuracy,
+                        "internal_consistency": internal_consistency,
                         "deltas": deltas,
-                        "calibration_issues": calibration_issues,
+                        "trajectory_issues": trajectory_issues,
                         "checkpoint_id": checkpoint_id
                     }
                 )
@@ -2206,12 +2207,12 @@ def handle_postflight_submit_command(args):
                 "vectors_submitted": len(vectors),
                 "reasoning": reasoning,
                 "postflight_confidence": postflight_confidence,
-                "calibration_accuracy": calibration_accuracy,
+                "internal_consistency": internal_consistency,
                 "deltas": deltas,
-                "calibration_issues_detected": len(calibration_issues),
-                "calibration_issues": calibration_issues if calibration_issues else None,
+                "trajectory_issues_detected": len(trajectory_issues),
+                "trajectory_issues": trajectory_issues if trajectory_issues else None,
                 "bayesian_beliefs_updated": len(belief_updates) if belief_updates else 0,
-                "grounded_verification": grounded_verification,
+                "calibration": grounded_verification,  # Grounded calibration is the real calibration
                 "auto_checkpoint_created": True,
                 "persisted": True,
                 "storage_layers": {
@@ -2219,16 +2220,16 @@ def handle_postflight_submit_command(args):
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
                     "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False,
-                    "breadcrumbs_calibration": calibration_exported,
+                    "breadcrumbs_learning_trajectory": calibration_exported,
                     "episodic_memory": episodic_stored,
                     "epistemic_snapshots": snapshot_created,
                     "qdrant_memory": memory_synced > 0,
-                    "grounded_verification": grounded_verification is not None,
+                    "grounded_calibration": grounded_verification is not None,
                     "grounded_calibration_embedded": grounded_embedded
                 },
                 "breadcrumbs": {
-                    "calibration_exported": calibration_exported,
-                    "note": "Calibration written to .breadcrumbs.yaml for instant session-start availability"
+                    "learning_trajectory_exported": calibration_exported,
+                    "note": "Learning trajectory written to .breadcrumbs.yaml (NOT calibration - see grounded_calibration)"
                 } if calibration_exported else None,
                 "memory_synced": memory_synced,
                 "snapshot": {
@@ -2281,16 +2282,19 @@ def handle_postflight_submit_command(args):
                 print(f"   Session: {session_id[:8]}...")
                 print(f"   Vectors: {len(vectors)} submitted")
                 print(f"   Storage: Database + Git Notes")
-                print(f"   Calibration: {calibration_accuracy}")
+                print(f"   Internal consistency: {internal_consistency}")
+                if grounded_verification:
+                    cal_score = grounded_verification.get('calibration_score', 0)
+                    print(f"   Grounded calibration: {cal_score:.2f}")
                 if reasoning:
                     print(f"   Reasoning: {reasoning[:80]}...")
                 if deltas:
                     print(f"   Learning deltas: {len(deltas)} vectors changed")
 
-                # CALIBRATION ISSUE WARNINGS
-                if calibration_issues:
-                    print(f"\n⚠️  Calibration issues detected: {len(calibration_issues)}")
-                    for issue in calibration_issues:
+                # TRAJECTORY ISSUE WARNINGS (not calibration - these are learning pattern issues)
+                if trajectory_issues:
+                    print(f"\n⚠️  Trajectory issues detected: {len(trajectory_issues)}")
+                    for issue in trajectory_issues:
                         print(f"   • {issue['pattern']}: {issue['description']}")
             else:
                 print(f"❌ {result.get('message', 'Failed to submit POSTFLIGHT assessment')}")

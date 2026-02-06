@@ -252,6 +252,107 @@ def respond(decision, reason=""):
     print(json.dumps(output))
 
 
+def resolve_project_root() -> Optional[Path]:
+    """Resolve the correct project root using the priority chain.
+
+    Priority:
+    1. Active transaction file's project_path (respects current work context)
+    2. TTY session's project_path (respects project-switch)
+    3. Fall back to CWD-based git root detection
+
+    This is critical for multi-project scenarios where CWD may be reset
+    by Claude Code to a different project than the one being worked on.
+
+    Returns:
+        Path to project root (parent of .empirica), or None if not found.
+    """
+    # Get instance suffix for transaction file lookup
+    instance_id = None
+    try:
+        tmux_pane = os.environ.get('TMUX_PANE')
+        if tmux_pane:
+            instance_id = f"tmux_{tmux_pane.lstrip('%')}"
+        else:
+            # Try TTY
+            import subprocess
+            result = subprocess.run(['tty'], capture_output=True, text=True, timeout=2)
+            if result.returncode == 0:
+                tty = result.stdout.strip()
+                if tty and tty != 'not a tty':
+                    instance_id = tty.replace('/dev/', '').replace('/', '-')
+    except Exception:
+        pass
+
+    suffix = f"_{instance_id}" if instance_id else ""
+
+    # Priority 1: Check active transaction file for project_path
+    # Look in CWD first, then common locations
+    search_bases = [Path.cwd() / '.empirica']
+
+    # Also check home directory for cross-project transactions
+    home_empirica = Path.home() / '.empirica'
+    if home_empirica.exists():
+        search_bases.append(home_empirica)
+
+    for base in search_bases:
+        tx_file = base / f'active_transaction{suffix}.json'
+        if tx_file.exists():
+            try:
+                with open(tx_file, 'r') as f:
+                    tx_data = json.load(f)
+                project_path = tx_data.get('project_path')
+                if project_path:
+                    project_root = Path(project_path)
+                    if (project_root / '.empirica').exists():
+                        return project_root
+            except Exception:
+                pass
+
+    # Priority 2: Check TTY session's project_path
+    try:
+        tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
+        if tty_sessions_dir.exists():
+            # Get TTY key directly (independent of instance_id which may be tmux-based)
+            import subprocess
+            result = subprocess.run(['tty'], capture_output=True, text=True, timeout=2)
+            if result.returncode == 0:
+                tty = result.stdout.strip()
+                if tty and tty != 'not a tty':
+                    tty_key = tty.replace('/dev/', '').replace('/', '-')
+                    tty_file = tty_sessions_dir / f'{tty_key}.json'
+                    if tty_file.exists():
+                        with open(tty_file, 'r') as f:
+                            tty_data = json.load(f)
+                        project_path = tty_data.get('project_path')
+                        if project_path:
+                            project_root = Path(project_path)
+                            if (project_root / '.empirica').exists():
+                                return project_root
+    except Exception:
+        pass
+
+    # Priority 3: Fall back to CWD-based git root detection
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            capture_output=True, text=True, timeout=2
+        )
+        if result.returncode == 0:
+            git_root = Path(result.stdout.strip())
+            if (git_root / '.empirica').exists():
+                return git_root
+    except Exception:
+        pass
+
+    # Final fallback: CWD itself
+    cwd = Path.cwd()
+    if (cwd / '.empirica').exists():
+        return cwd
+
+    return None
+
+
 def find_empirica_package() -> Optional[Path]:
     """Find where empirica package can be imported from.
 
@@ -461,17 +562,22 @@ def main():
     if package_path:
         sys.path.insert(0, str(package_path))
 
-    # Import path_resolver for canonical path resolution
-    try:
-        from empirica.config.path_resolver import get_empirica_root
-    except ImportError as e:
-        respond("allow", f"Cannot import path_resolver: {e}")
-        sys.exit(0)
-
-    # Change to the resolved empirica root (for relative paths in DB)
-    empirica_root = get_empirica_root()
-    if empirica_root.exists():
-        os.chdir(empirica_root.parent)  # .empirica's parent is project root
+    # Resolve project root using priority chain (transaction → TTY → CWD)
+    # This is critical for multi-project scenarios where CWD may be reset
+    project_root = resolve_project_root()
+    if project_root:
+        empirica_root = project_root / '.empirica'
+        os.chdir(project_root)  # Set CWD to the correct project
+    else:
+        # Fallback to path_resolver if priority chain fails
+        try:
+            from empirica.config.path_resolver import get_empirica_root
+            empirica_root = get_empirica_root()
+            if empirica_root.exists():
+                os.chdir(empirica_root.parent)
+        except ImportError as e:
+            respond("allow", f"Cannot import path_resolver: {e}")
+            sys.exit(0)
 
     # Get active session
     session_id = None

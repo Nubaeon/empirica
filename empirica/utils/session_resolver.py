@@ -232,15 +232,11 @@ def validate_tty_session(session: Dict[str, Any] = None) -> Dict[str, Any]:
 
     result['session'] = session
 
-    # Check 1: Process still exists
-    pid = session.get('pid')
-    if pid:
-        try:
-            os.kill(pid, 0)  # Signal 0 = check if process exists
-        except OSError:
-            result['warnings'].append(f"Original process (PID {pid}) no longer exists - session may be stale")
+    # Note: We don't check if the original PID exists because the hook that writes
+    # the TTY session file always exits immediately after writing. The PID check
+    # would always warn for valid sessions. TTY device check is the meaningful validation.
 
-    # Check 2: TTY device exists (for real TTYs)
+    # Check 1: TTY device exists (for real TTYs)
     tty_key = session.get('tty_key', '')
     if tty_key.startswith('pts-'):
         tty_device = f"/dev/{tty_key.replace('-', '/')}"
@@ -248,7 +244,7 @@ def validate_tty_session(session: Dict[str, Any] = None) -> Dict[str, Any]:
             result['valid'] = False
             result['warnings'].append(f"TTY device {tty_device} no longer exists - terminal closed?")
 
-    # Check 3: Timestamp staleness (4 hour threshold)
+    # Check 2: Timestamp staleness (4 hour threshold)
     timestamp_str = session.get('timestamp')
     if timestamp_str:
         try:
