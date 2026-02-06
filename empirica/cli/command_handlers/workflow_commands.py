@@ -282,13 +282,32 @@ def handle_preflight_submit_command(args):
             try:
                 import time
                 import os
-                from empirica.utils.session_resolver import write_active_transaction
+                import json as _json
+                from pathlib import Path
+                from empirica.utils.session_resolver import write_active_transaction, get_tty_session
+
+                # Get project_path from active_work file (set by project-switch)
+                # This ensures transaction goes to the switched project, not CWD
+                resolved_project_path = os.getcwd()  # Fallback
+                try:
+                    tty_session = get_tty_session(warn_if_stale=False)
+                    if tty_session:
+                        claude_session_id = tty_session.get('claude_session_id')
+                        if claude_session_id:
+                            active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+                            if active_work_path.exists():
+                                with open(active_work_path, 'r') as f:
+                                    active_work = _json.load(f)
+                                    resolved_project_path = active_work.get('project_path', resolved_project_path)
+                except Exception:
+                    pass  # Fall back to CWD
+
                 write_active_transaction(
                     transaction_id=transaction_id,
                     session_id=session_id,
                     preflight_timestamp=time.time(),
                     status="open",
-                    project_path=os.getcwd()  # Capture project at PREFLIGHT time
+                    project_path=resolved_project_path
                 )
             except Exception as e:
                 logger.debug(f"Active transaction file write failed (non-fatal): {e}")
@@ -429,23 +448,7 @@ def handle_preflight_submit_command(args):
                 "patterns": patterns if patterns and any(patterns.values()) else None
             }
 
-            # Update statusline cache so it immediately reflects new phase
-            try:
-                from empirica.core.statusline_cache import write_statusline_cache
-                import os as _os
-                open_goals, open_unknowns, goal_linked_unknowns = _get_open_counts_for_cache(session_id)
-                write_statusline_cache(
-                    session_id=session_id,
-                    ai_id='claude-code',
-                    phase='PREFLIGHT',
-                    vectors=vectors,
-                    project_path=_os.getcwd(),
-                    open_goals=open_goals,
-                    open_unknowns=open_unknowns,
-                    goal_linked_unknowns=goal_linked_unknowns,
-                )
-            except Exception:
-                pass  # Cache update is best-effort
+            # NOTE: Statusline cache was removed (2026-02-06). Statusline reads directly from DB.
         except Exception as e:
             logger.error(f"Failed to save preflight assessment: {e}")
             result = {
@@ -1362,24 +1365,7 @@ def handle_check_submit_command(args):
                 else:
                     result["auto_postflight"] = {"triggered": False}
 
-            # Update statusline cache so it immediately reflects CHECK phase
-            try:
-                from empirica.core.statusline_cache import write_statusline_cache
-                import os as _os
-                open_goals, open_unknowns, goal_linked_unknowns = _get_open_counts_for_cache(session_id)
-                write_statusline_cache(
-                    session_id=session_id,
-                    ai_id='claude-code',
-                    phase='CHECK',
-                    vectors=vectors,
-                    gate_decision=decision,
-                    project_path=_os.getcwd(),
-                    open_goals=open_goals,
-                    open_unknowns=open_unknowns,
-                    goal_linked_unknowns=goal_linked_unknowns,
-                )
-            except Exception:
-                pass  # Cache update is best-effort
+            # NOTE: Statusline cache was removed (2026-02-06). Statusline reads directly from DB.
 
         except Exception as e:
             logger.error(f"Failed to save check assessment: {e}")
@@ -2244,24 +2230,7 @@ def handle_postflight_submit_command(args):
                 } if SentinelHooks.is_enabled() else None
             }
 
-            # Update statusline cache so it immediately reflects POSTFLIGHT phase
-            try:
-                from empirica.core.statusline_cache import write_statusline_cache
-                import os as _os
-                open_goals, open_unknowns, goal_linked_unknowns = _get_open_counts_for_cache(session_id)
-                write_statusline_cache(
-                    session_id=session_id,
-                    ai_id='claude-code',
-                    phase='POSTFLIGHT',
-                    vectors=vectors,
-                    project_path=_os.getcwd(),
-                    open_goals=open_goals,
-                    open_unknowns=open_unknowns,
-                    goal_linked_unknowns=goal_linked_unknowns,
-                    deltas=deltas,  # Include learning deltas for statusline display
-                )
-            except Exception:
-                pass  # Cache update is best-effort
+            # NOTE: Statusline cache was removed (2026-02-06). Statusline reads directly from DB.
         except Exception as e:
             logger.error(f"Failed to save postflight assessment: {e}")
             result = {

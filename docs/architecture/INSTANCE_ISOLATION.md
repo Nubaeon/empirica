@@ -139,6 +139,8 @@ The suffix is determined by `get_instance_id()`:
 When Sentinel needs to find the correct project (works in hook context):
 
 ```
+Priority 0: active_work file (~/.empirica/active_work_{claude_session_id}.json)
+    ↓ (if not found)
 Priority 1: Transaction file's project_path (check CWD/.empirica, ~/.empirica)
     ↓ (if not found)
 Priority 2: Instance mapping by TMUX_PANE (~/.empirica/instance_projects/tmux_4.json)
@@ -148,8 +150,9 @@ Priority 3: TTY session by tty command (~/.empirica/tty_sessions/pts-6.json)
 Priority 4: CWD-based git root detection
 ```
 
-**Critical:** Priority 2 (instance mapping) is the KEY for multi-instance isolation in hooks.
-The `tty` command fails in hook context, but TMUX_PANE is available.
+**Critical:** Priority 0 (active_work file) is the KEY for multi-instance isolation.
+Claude Code provides `session_id` in hook input, which maps to the active_work file.
+This works for ALL users, not just tmux users.
 
 ### 4.2 Finding the Project DB (`resolve_session_db_path`)
 
@@ -166,14 +169,16 @@ Priority 3: CWD-based detection (get_session_db_path)
 ### 4.2 Statusline Project Detection
 
 ```
-Priority 1: EMPIRICA_PROJECT_PATH env var
-    ↓
-Priority 2: TTY session's project_path (get_tty_session)
-    ↓
-Priority 3: path_resolver (get_empirica_root)
-    ↓
-Priority 4: Upward search for .empirica/ from CWD
+Priority 0a: active_work file (authoritative after project-switch)
+    ↓ (if not found)
+Priority 0b: TTY session's empirica_session_id (fallback)
+    ↓ (if not found)
+Priority 1: path_resolver (get_empirica_root)
+    ↓ (if not found)
+Priority 2: Upward search for .empirica/ from CWD
 ```
+
+**Note:** active_work file takes precedence because TTY session can be stale after project-switch.
 
 ### 4.3 Sentinel Transaction Detection
 
@@ -384,8 +389,37 @@ after project-switch when CWD is in a different project directory.
 **Root cause:** `SessionDatabase()` uses `get_session_db_path()` which only had CWD-based
 resolution. The fix to `resolve_session_db_path()` wasn't being used by most CLI commands.
 **Fix:** Refactored `get_session_db_path()` priority chain:
-1. Instance projects mapping (TMUX_PANE-based) - which project this instance is on
-2. Workspace.db lookup (git root → trajectory_path) - global registry
-3. CWD-based fallback (for unregistered projects)
-4. EMPIRICA_SESSION_DB env var (demoted - CI/Docker only, breaks multi-instance)
+0. active_work file (set by project-switch, instance-aware via claude_session_id)
+1. Workspace.db lookup (git root → trajectory_path) - global registry
+2. CWD-based fallback (for unregistered projects)
+3. EMPIRICA_SESSION_DB env var (demoted - CI/Docker only, breaks multi-instance)
 **File:** `empirica/config/path_resolver.py`
+
+### 11.6 Statusline Shows Stale Session Data
+
+**Symptom:** Statusline shows 0 goals when database has 23 active goals. Wrong phase shown.
+**Status:** FIXED (2026-02-06)
+**Root cause:** `get_active_session()` prioritized TTY session's `empirica_session_id` over
+the active_work file. TTY session can be stale after project-switch.
+**Fix:** Reordered priority in `get_active_session()`:
+- Priority 0a: active_work file (authoritative, updated by project-switch)
+- Priority 0b: TTY session (fallback if active_work not available)
+**File:** `plugins/claude-code-integration/scripts/statusline_empirica.py`
+
+### 11.7 PREFLIGHT Writes Transaction to Wrong Project
+
+**Symptom:** After project-switch, PREFLIGHT writes transaction file to CWD project instead
+of the switched project. Sentinel then sees "Project context changed" error.
+**Status:** FIXED (2026-02-06)
+**Root cause:** `preflight-submit` used `project_path=os.getcwd()` when calling
+`write_active_transaction()`. CWD doesn't change with project-switch.
+**Fix:** Changed to resolve project_path from active_work file first, then fall back to CWD.
+**File:** `empirica/cli/command_handlers/workflow_commands.py`
+
+### 11.8 Sentinel Blocks project-switch Without PREFLIGHT
+
+**Symptom:** Can't run `empirica project-switch` when no PREFLIGHT exists.
+**Status:** FIXED (2026-02-06)
+**Root cause:** project-switch wasn't in TRANSITION_COMMANDS or TIER1_PREFIXES whitelist.
+**Fix:** Added `empirica project-switch` and `empirica project-list` to both lists.
+**File:** `plugins/claude-code-integration/hooks/sentinel-gate.py`
