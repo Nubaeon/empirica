@@ -565,6 +565,61 @@ def get_latest_session_id(ai_id: Optional[str] = None, active_only: bool = False
     return resolve_session_id(alias)
 
 
+def get_session_empirica_root(session_id: str) -> Optional[Path]:
+    """
+    Get the .empirica root directory for a session's project.
+
+    Looks up the session in the database to find its project,
+    then returns the path to that project's .empirica directory.
+
+    Args:
+        session_id: UUID of the session
+
+    Returns:
+        Path to the project's .empirica directory, or None if not found
+
+    Examples:
+        >>> get_session_empirica_root("88dbf132-cc7c-4a4b-9b59-77df3b13dbd2")
+        PosixPath('/home/user/project/.empirica')
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Get project_id from session
+        cursor.execute("""
+            SELECT project_id FROM sessions WHERE session_id = ?
+        """, (session_id,))
+        row = cursor.fetchone()
+
+        if not row or not row[0]:
+            logger.debug(f"No project_id found for session {session_id}")
+            return None
+
+        project_id = row[0]
+
+        # Get project path from projects table
+        cursor.execute("""
+            SELECT project_path FROM projects WHERE project_id = ?
+        """, (project_id,))
+        project_row = cursor.fetchone()
+
+        if project_row and project_row[0]:
+            project_path = Path(project_row[0])
+            empirica_root = project_path / '.empirica'
+            if empirica_root.exists():
+                return empirica_root
+
+        logger.debug(f"No project path found for project {project_id}")
+        return None
+
+    except Exception as e:
+        logger.debug(f"Failed to get empirica root for session: {e}")
+        return None
+
+
 def is_session_alias(session_id_or_alias: str) -> bool:
     """
     Check if string is a session alias (not a UUID).
