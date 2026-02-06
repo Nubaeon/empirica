@@ -1,0 +1,16 @@
+{
+  "finding_id": "28383fe9-8a34-43bd-9429-5b8c9c89fb74",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2bc1da78",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-06T17:08:27.200299+00:00",
+  "finding": "CLI database path resolution fixed: get_session_db_path() now checks instance_projects mapping (Priority 2.5) before CWD fallback. This ensures CLI commands respect project-switch even when run from different directory. Key insight: SessionDatabase() uses get_session_db_path(), not resolve_session_db_path().",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": "instance-isolation",
+  "finding_data": {
+    "finding": "CLI database path resolution fixed: get_session_db_path() now checks instance_projects mapping (Priority 2.5) before CWD fallback. This ensures CLI commands respect project-switch even when run from different directory. Key insight: SessionDatabase() uses get_session_db_path(), not resolve_session_db_path().",
+    "impact": 0.9
+  }
+}
