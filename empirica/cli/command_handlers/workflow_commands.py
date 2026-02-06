@@ -16,11 +16,36 @@ from ..cli_utils import handle_cli_error, parse_json_safely
 from ..validation import PreflightInput, CheckInput, PostflightInput, safe_validate
 from empirica.core.canonical.empirica_git.sentinel_hooks import SentinelHooks, SentinelDecision, auto_enable_sentinel
 from empirica.utils.session_resolver import resolve_session_id
+from empirica.config.path_resolver import resolve_session_db_path
 
 # Auto-enable Sentinel with default evaluator on module load
 auto_enable_sentinel()
 
 logger = logging.getLogger(__name__)
+
+
+def _get_db_for_session(session_id: str):
+    """
+    Get SessionDatabase for a specific session_id.
+
+    Resolves the session to its correct project database, allowing
+    CLI commands to work correctly even when CWD is different from
+    the session's project.
+
+    Args:
+        session_id: The session UUID
+
+    Returns:
+        SessionDatabase instance connected to the correct project's DB
+    """
+    from empirica.data.session_database import SessionDatabase
+
+    db_path = resolve_session_db_path(session_id)
+    if db_path:
+        return SessionDatabase(db_path=str(db_path))
+    else:
+        # Fallback to CWD-based detection (legacy behavior)
+        return SessionDatabase()
 
 
 def _get_open_counts_for_cache(session_id: str) -> tuple:
@@ -31,8 +56,7 @@ def _get_open_counts_for_cache(session_id: str) -> tuple:
         (open_goals, open_unknowns, goal_linked_unknowns) tuple
     """
     try:
-        from empirica.data.session_database import SessionDatabase
-        db = SessionDatabase()
+        db = _get_db_for_session(session_id)
         cursor = db.conn.cursor()
 
         # Get project_id from session
@@ -83,8 +107,7 @@ def _check_bootstrap_status(session_id: str) -> dict:
         }
     """
     try:
-        from empirica.data.session_database import SessionDatabase
-        db = SessionDatabase()
+        db = _get_db_for_session(session_id)
         cursor = db.conn.cursor()
 
         # Check if session exists and has project_id
@@ -283,7 +306,7 @@ def handle_preflight_submit_command(args):
                 )
 
             # JUST create CASCADE record for historical tracking (this remains)
-            db = SessionDatabase()
+            db = _get_db_for_session(session_id)
             cascade_id = str(uuid.uuid4())
             now = time.time()
 
@@ -511,7 +534,7 @@ def handle_check_command(args):
             }))
             sys.exit(1)
 
-        db = SessionDatabase()
+        db = _get_db_for_session(session_id)
         git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
 
         # 1. Load PREFLIGHT baseline
@@ -849,8 +872,7 @@ def handle_check_submit_command(args):
         # Also retrieve previous CHECK vectors for diminishing returns detection
         previous_check_vectors = []
         try:
-            from empirica.data.session_database import SessionDatabase
-            db = SessionDatabase()
+            db = _get_db_for_session(session_id)
             cursor = db.conn.cursor()
             cursor.execute("""
                 SELECT COUNT(*) FROM reflexes
@@ -984,8 +1006,11 @@ def handle_check_submit_command(args):
                         diminishing_returns["reason"] += " - baseline insufficient for proceed override"
 
         # Compute decision with diminishing returns factored in
+        # NOTE: Use RAW vectors, not bias-corrected. Biases are INFORMATIONAL for the AI
+        # to self-correct, not for the system to pre-correct. True calibration happens
+        # at POST-TEST when we compare claimed outcomes vs objective evidence.
         computed_decision = None
-        if corrected_know >= 0.70 and corrected_uncertainty <= 0.35:
+        if know >= 0.70 and uncertainty <= 0.35:
             computed_decision = "proceed"
         elif diminishing_returns["recommend_proceed"]:
             # Override: investigation plateaued with adequate baseline
@@ -1005,7 +1030,7 @@ def handle_check_submit_command(args):
             if autopilot_mode and decision and decision != computed_decision:
                 logger.info(f"AUTOPILOT override: {decision} → {computed_decision} (autopilot enforcement)")
             decision = computed_decision
-            logger.info(f"CHECK auto-computed decision: {decision} (know={know:.2f}→{corrected_know:.2f}, uncertainty={uncertainty:.2f}→{corrected_uncertainty:.2f})")
+            logger.info(f"CHECK auto-computed decision: {decision} (know={know:.2f}, uncertainty={uncertainty:.2f}, biases shown but not applied to gate)")
 
         # Use GitEnhancedReflexLogger for proper 3-layer storage (SQLite + Git Notes + JSON)
         try:
@@ -1161,9 +1186,8 @@ def handle_check_submit_command(args):
             try:
                 from empirica.data.snapshot_provider import EpistemicSnapshotProvider
                 from empirica.data.epistemic_snapshot import ContextSummary
-                from empirica.data.session_database import SessionDatabase
 
-                db = SessionDatabase()
+                db = _get_db_for_session(session_id)
                 snapshot_provider = EpistemicSnapshotProvider()
 
                 # Build context summary from CHECK state
@@ -1229,8 +1253,8 @@ def handle_check_submit_command(args):
                 "metacog": {
                     "computed_decision": computed_decision,
                     "raw_vectors": {"know": know, "uncertainty": uncertainty},
-                    "corrected_vectors": {"know": corrected_know, "uncertainty": corrected_uncertainty},
-                    "readiness_gate": "know>=0.70 AND uncertainty<=0.35 (after bias correction)",
+                    "bias_corrections": {"know": corrected_know - know, "uncertainty": corrected_uncertainty - uncertainty},
+                    "readiness_gate": "know>=0.70 AND uncertainty<=0.35 (uses RAW vectors, biases are informational)",
                     "gate_passed": computed_decision == "proceed",
                     "diminishing_returns": diminishing_returns,
                     "autopilot": {
@@ -1651,6 +1675,38 @@ def handle_postflight_submit_command(args):
         extracted_vectors = _extract_all_vectors(vectors)
         vectors = extracted_vectors
 
+        # TRANSACTION CONTINUITY: Get the original session_id where PREFLIGHT was run
+        # This handles the case where context compacted and session_id changed mid-transaction
+        preflight_session_id = session_id  # Default to current session
+        try:
+            from pathlib import Path
+            import json as _json
+            global_home = Path.home() / '.empirica'
+
+            # Check instance-specific active_work files for transaction context
+            for active_file in global_home.glob('active_work_*.json'):
+                try:
+                    data = _json.loads(active_file.read_text())
+                    # If this file has our transaction, use its empirica_session_id
+                    if data.get('empirica_session_id'):
+                        # Check if this is the right project by matching project_path
+                        db_path = resolve_session_db_path(data['empirica_session_id'])
+                        if db_path:
+                            import sqlite3
+                            conn = sqlite3.connect(str(db_path))
+                            cursor = conn.cursor()
+                            cursor.execute("SELECT 1 FROM reflexes WHERE session_id = ? AND phase = 'PREFLIGHT'",
+                                          (data['empirica_session_id'],))
+                            if cursor.fetchone():
+                                preflight_session_id = data['empirica_session_id']
+                                logger.debug(f"Using PREFLIGHT session from transaction: {preflight_session_id[:8]}...")
+                            conn.close()
+                            break
+                except Exception:
+                    continue
+        except Exception as e:
+            logger.debug(f"Transaction context lookup failed (using current session): {e}")
+
         # Use GitEnhancedReflexLogger for proper 3-layer storage (SQLite + Git Notes + JSON)
         try:
             logger_instance = GitEnhancedReflexLogger(
@@ -1681,8 +1737,9 @@ def handle_postflight_submit_command(args):
                 preflight_checkpoint = logger_instance.get_last_checkpoint(phase="PREFLIGHT")
                 
                 # Fallback: Query SQLite reflexes table directly if git notes unavailable
+                # Use preflight_session_id to handle cross-session transactions (compaction)
                 if not preflight_checkpoint:
-                    db = SessionDatabase()
+                    db = _get_db_for_session(preflight_session_id)
                     cursor = db.conn.cursor()
                     cursor.execute("""
                         SELECT engagement, know, do, context, clarity, coherence, signal, density,
@@ -1690,7 +1747,7 @@ def handle_postflight_submit_command(args):
                         FROM reflexes
                         WHERE session_id = ? AND phase = 'PREFLIGHT'
                         ORDER BY timestamp DESC LIMIT 1
-                    """, (session_id,))
+                    """, (preflight_session_id,))
                     preflight_row = cursor.fetchone()
                     db.close()
                     
@@ -1753,15 +1810,18 @@ def handle_postflight_submit_command(args):
             try:
                 import time
                 from empirica.utils.session_resolver import write_active_transaction
+                from empirica.core.statusline_cache import get_instance_id
                 from pathlib import Path
                 import json as _json
 
-                # Read current transaction to get the transaction_id
+                # Read current transaction with instance suffix (multi-instance isolation)
+                instance_id = get_instance_id()
+                suffix = f"_{instance_id}" if instance_id else ""
                 local_empirica = Path.cwd() / '.empirica'
                 if local_empirica.exists():
-                    tx_file = local_empirica / 'active_transaction.json'
+                    tx_file = local_empirica / f'active_transaction{suffix}.json'
                 else:
-                    tx_file = Path.home() / '.empirica' / 'active_transaction.json'
+                    tx_file = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
 
                 if tx_file.exists():
                     with open(tx_file, 'r') as f:
@@ -1825,7 +1885,7 @@ def handle_postflight_submit_command(args):
                 if preflight_vectors:
                     from empirica.core.bayesian_beliefs import BayesianBeliefManager
 
-                    db = SessionDatabase()
+                    db = _get_db_for_session(session_id)
                     belief_manager = BayesianBeliefManager(db)
 
                     # Get cascade_id and ai_id for this session
@@ -1874,7 +1934,7 @@ def handle_postflight_submit_command(args):
             try:
                 from empirica.core.post_test.grounded_calibration import run_grounded_verification
 
-                db = SessionDatabase()
+                db = _get_db_for_session(session_id)
                 session = db.get_session(session_id)
                 project_id = session.get('project_id') if session else None
 
@@ -1906,7 +1966,7 @@ def handle_postflight_submit_command(args):
                     )
 
                     if _check_qdrant_available():
-                        db = SessionDatabase()
+                        db = _get_db_for_session(session_id)
                         session = db.get_session(session_id)
                         project_id = session.get('project_id') if session else None
 
@@ -1957,7 +2017,7 @@ def handle_postflight_submit_command(args):
             # EPISTEMIC TRAJECTORY STORAGE: Store learning deltas to Qdrant (if available)
             trajectory_stored = False
             try:
-                db = SessionDatabase()
+                db = _get_db_for_session(session_id)
                 session = db.get_session(session_id)
                 if session and session.get('project_id'):
                     from empirica.core.epistemic_trajectory import store_trajectory
@@ -1971,7 +2031,7 @@ def handle_postflight_submit_command(args):
             # EPISODIC MEMORY: Create session narrative from POSTFLIGHT data (Qdrant)
             episodic_stored = False
             try:
-                db = SessionDatabase()
+                db = _get_db_for_session(session_id)
                 session = db.get_session(session_id)
                 if session and session.get('project_id'):
                     from empirica.core.qdrant.vector_store import embed_episodic
@@ -2039,7 +2099,7 @@ def handle_postflight_submit_command(args):
             try:
                 from empirica.core.qdrant.vector_store import upsert_memory, init_collections, _check_qdrant_available
 
-                db = SessionDatabase()
+                db = _get_db_for_session(session_id)
                 session = db.get_session(session_id)
                 if _check_qdrant_available() and session and session.get('project_id'):
                     project_id = session['project_id']
@@ -2098,7 +2158,7 @@ def handle_postflight_submit_command(args):
                 from empirica.data.epistemic_snapshot import ContextSummary
 
                 # Get session for ai_id
-                db = SessionDatabase()
+                db = _get_db_for_session(session_id)
                 session = db.get_session(session_id)
 
                 if session:
@@ -2235,7 +2295,7 @@ def handle_postflight_submit_command(args):
 
             # Show project context for next session
             try:
-                db = SessionDatabase()
+                db = _get_db_for_session(session_id)
                 # Get session and project info
                 cursor = db.conn.cursor()
                 cursor.execute("""
