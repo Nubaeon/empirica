@@ -435,10 +435,27 @@ def find_empirica_package() -> Optional[Path]:
     return None
 
 
-def _get_current_project_id() -> Optional[str]:
-    """Get project_id from current working directory's git repo."""
+def _get_current_project_id(claude_session_id: str = None) -> Optional[str]:
+    """Get project_id from active_work file (if available) or CWD's git repo."""
     import subprocess
     import hashlib
+
+    # Priority 0: Check active_work file (set by project-switch)
+    # This is the authoritative source after project-switch
+    if claude_session_id:
+        try:
+            active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+            if active_work_path.exists():
+                with open(active_work_path, 'r') as f:
+                    active_work = json.load(f)
+                    project_path = active_work.get('project_path')
+                    if project_path:
+                        # Hash the project path for consistent project_id format
+                        return hashlib.sha256(project_path.encode()).hexdigest()[:16]
+        except Exception:
+            pass
+
+    # Fallback: CWD-based detection
     try:
         # Get git remote origin URL as project identifier
         result = subprocess.run(
@@ -532,6 +549,11 @@ def is_safe_bash_command(tool_input: dict) -> bool:
     # Strip leading whitespace and check against safe prefixes
     command_stripped = command.lstrip()
 
+    # Special case: sqlite3 read-only queries (noetic DB access)
+    if command_stripped.startswith('sqlite3 '):
+        if is_safe_sqlite_command(command_stripped):
+            return True
+
     # Check if command starts with any safe prefix
     for prefix in SAFE_BASH_PREFIXES:
         if command_stripped.startswith(prefix):
@@ -540,6 +562,47 @@ def is_safe_bash_command(tool_input: dict) -> bool:
         if prefix.endswith(' ') and command_stripped == prefix.rstrip():
             return True
 
+    return False
+
+
+def is_safe_sqlite_command(command: str) -> bool:
+    """
+    Check if a sqlite3 command is read-only (noetic).
+
+    Allows:
+    - sqlite3 db ".schema", ".tables", ".dump" (meta commands)
+    - sqlite3 db "SELECT ..." (read queries)
+    - sqlite3 db "PRAGMA ..." (read pragmas)
+
+    Blocks:
+    - sqlite3 db "INSERT/UPDATE/DELETE/DROP/CREATE/ALTER ..."
+    """
+    import re
+
+    # Extract the SQL/command part (everything after db path in quotes)
+    # Pattern: sqlite3 <db_path> "<query>" or sqlite3 <db_path> '<query>'
+    # Also handles: sqlite3 <db_path> ".tables" (dot commands)
+    match = re.search(r'sqlite3\s+\S+\s+["\'](.+?)["\']', command)
+    if not match:
+        # No quoted query found - could be interactive mode, block it
+        return False
+
+    query = match.group(1).strip().upper()
+
+    # Safe meta commands (dot commands)
+    safe_meta = ('.SCHEMA', '.TABLES', '.DUMP', '.INDICES', '.INDEXES',
+                 '.MODE', '.HEADERS', '.WIDTH', '.HELP', '.DATABASES')
+    for meta in safe_meta:
+        if query.startswith(meta):
+            return True
+
+    # Safe SQL operations (read-only)
+    safe_sql = ('SELECT', 'PRAGMA', 'EXPLAIN', 'ANALYZE')
+    for sql in safe_sql:
+        if query.startswith(sql):
+            return True
+
+    # Everything else is potentially write (INSERT, UPDATE, DELETE, etc.)
     return False
 
 
@@ -558,10 +621,17 @@ def is_safe_pipe_chain(command: str) -> bool:
     # First segment must be a safe command
     first_cmd = segments[0]
     first_is_safe = False
-    for prefix in SAFE_BASH_PREFIXES:
-        if first_cmd.startswith(prefix) or (prefix.endswith(' ') and first_cmd == prefix.rstrip()):
-            first_is_safe = True
-            break
+
+    # Check sqlite3 commands first
+    if first_cmd.startswith('sqlite3 ') and is_safe_sqlite_command(first_cmd):
+        first_is_safe = True
+
+    # Check standard safe prefixes
+    if not first_is_safe:
+        for prefix in SAFE_BASH_PREFIXES:
+            if first_cmd.startswith(prefix) or (prefix.endswith(' ') and first_cmd == prefix.rstrip()):
+                first_is_safe = True
+                break
 
     if not first_is_safe:
         return False
@@ -697,7 +767,7 @@ def main():
 
     # PROJECT CONTEXT CHECK: Require new PREFLIGHT if project changed
     # This implicitly closes the previous project's epistemic loop
-    current_project_id = _get_current_project_id()
+    current_project_id = _get_current_project_id(claude_session_id)
     if current_project_id and preflight_project_id and current_project_id != preflight_project_id:
         # Check if previous project loop was properly closed with POSTFLIGHT
         cursor.execute("""
