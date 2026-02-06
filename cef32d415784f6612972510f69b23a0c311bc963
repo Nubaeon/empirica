@@ -1,0 +1,16 @@
+{
+  "finding_id": "377913d1-87de-4ea6-aa13-7090c699629f",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "ca43ff38-f649-4657-a83e-0c5e589b3d31",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-06T13:15:48.981900+00:00",
+  "finding": "CHECK gate must use RAW vectors, not bias-corrected. Calibration biases are INFORMATIONAL for the AI to self-correct, not for the system to pre-correct decisions. True calibration happens at POST-TEST when comparing POSTFLIGHT self-assessment vs objective evidence (git metrics, test results, artifact ratios). Fixed gate logic to use raw know/uncertainty values.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CHECK gate must use RAW vectors, not bias-corrected. Calibration biases are INFORMATIONAL for the AI to self-correct, not for the system to pre-correct decisions. True calibration happens at POST-TEST when comparing POSTFLIGHT self-assessment vs objective evidence (git metrics, test results, artifact ratios). Fixed gate logic to use raw know/uncertainty values.",
+    "impact": 0.85
+  }
+}
