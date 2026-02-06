@@ -1,0 +1,16 @@
+{
+  "finding_id": "4543e1f3-66b2-406a-b11d-c2e86c2e3976",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "ca43ff38-f649-4657-a83e-0c5e589b3d31",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-06T13:08:47.271066+00:00",
+  "finding": "POSTFLIGHT must look up PREFLIGHT from the original transaction session, not current session. When context compacts mid-transaction, session_id changes but transaction continues. Added preflight_session_id detection from active_work files to maintain measurement continuity.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "POSTFLIGHT must look up PREFLIGHT from the original transaction session, not current session. When context compacts mid-transaction, session_id changes but transaction continues. Added preflight_session_id detection from active_work files to maintain measurement continuity.",
+    "impact": 0.85
+  }
+}
