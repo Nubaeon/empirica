@@ -243,8 +243,8 @@ Then reads: `{empirica_root}/active_transaction_{instance_id}.json`
 | Function | Purpose |
 |----------|---------|
 | `get_empirica_root()` | Find .empirica/ from CWD or config |
-| `get_session_db_path()` | Get path to sessions.db (CWD-based) |
-| `resolve_session_db_path()` | Find DB for session (transaction → TTY → CWD) |
+| `get_session_db_path()` | Get sessions.db (env → config → instance_projects → CWD) |
+| `resolve_session_db_path()` | Find DB for session (transaction → instance → TTY → CWD) |
 
 ### 6.3 statusline_cache.py
 
@@ -318,7 +318,10 @@ is a safe empirica command and other segments are safe (cd, etc.), allow it.
 - [x] Instance mapping files (`~/.empirica/instance_projects/{tmux_id}.json`) for hook context
 - [x] Active work files (`~/.empirica/active_work_{claude_session_id}.json`) for non-tmux users
 - [x] Sentinel allows `cd && empirica` command chains
-- [ ] Wire Sentinel to use Claude session_id from hook input for active_work lookup
+- [x] Wire Sentinel to use Claude session_id from hook input for active_work lookup
+- [x] Wire pre-compact.py to use Claude session_id for project resolution
+- [x] Wire post-compact.py to use Claude session_id for project resolution
+- [x] Wire `get_session_db_path()` to check instance_projects mapping before CWD fallback
 - [ ] Wire to workspace.db for git repo → project mapping (future)
 
 ---
@@ -355,3 +358,31 @@ project when Claude Code reset CWD. This caused it to read wrong database/loop s
 **Behavior:** `empirica project-switch` auto-triggers POSTFLIGHT on source project
 **Status:** By design, but may need refinement
 **Impact:** Loops close when switching projects
+
+### 11.3 Compact Hooks Project Mismatch
+
+**Symptom:** After compaction, empirica commands fail with "Project not found" or wrong project
+**Status:** FIXED (2026-02-06)
+**Root cause:** `pre-compact.py` and `post-compact.py` used `find_project_root()` which didn't
+check Claude session_id. They fell back to hardcoded paths or CWD, picking wrong project.
+**Fix:** Added Priority 0 check for `~/.empirica/active_work_{session_id}.json` in both hooks.
+Extract `claude_session_id = hook_input.get('session_id')` and pass to find_project_root().
+
+### 11.4 Goal Transaction Linkage
+
+**Symptom:** Goals have NULL transaction_id - no epistemic linkage to transactions
+**Status:** FIXED (2026-02-06)
+**Root cause:** `save_goal()` didn't accept/insert transaction_id, `goals-create` didn't derive it.
+**Fix:** Added transaction_id to save_goal() signature and INSERT, goals-create auto-derives
+from active transaction using `read_active_transaction()`.
+
+### 11.5 CLI Commands Using Wrong Database
+
+**Symptom:** CLI commands (check-submit, epistemics-list, etc.) use wrong project database
+after project-switch when CWD is in a different project directory.
+**Status:** FIXED (2026-02-06)
+**Root cause:** `SessionDatabase()` uses `get_session_db_path()` which only had CWD-based
+resolution. The fix to `resolve_session_db_path()` wasn't being used by most CLI commands.
+**Fix:** Added Priority 2.5 check in `get_session_db_path()` to read instance_projects mapping
+(TMUX_PANE-based) before falling back to CWD. This ensures CLI commands respect project-switch.
+**File:** `empirica/config/path_resolver.py`
