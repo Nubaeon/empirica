@@ -32,11 +32,7 @@ sys.path.insert(0, str(EMPIRICA_ROOT))
 from empirica.config.path_resolver import get_empirica_root
 from empirica.data.session_database import SessionDatabase
 from empirica.core.signaling import format_vectors_compact
-from empirica.core.statusline_cache import (
-    StatuslineCache,
-    read_statusline_cache,
-    get_instance_id,
-)
+from empirica.core.statusline_cache import get_instance_id
 
 
 # ANSI color codes
@@ -1121,50 +1117,6 @@ def main():
 
         session_id = session['session_id']
 
-        # FAST PATH: Try central cache first (avoids DB query if fresh)
-        cached = read_statusline_cache(project_path=project_path, max_age=60.0)
-        if cached and cached.session_id == session_id and cached.vectors:
-            # Cache hit - use cached data directly
-            phase = cached.phase
-            vectors = cached.vectors
-            gate_decision = cached.gate_decision
-            open_counts = {
-                'open_goals': cached.open_goals,
-                'open_unknowns': cached.open_unknowns,
-                'goal_linked_unknowns': cached.goal_linked_unknowns,
-                'completion': cached.vectors.get('completion', 0.0) if cached.vectors else 0.0,
-            }
-            deltas = cached.deltas or {}  # Use cached deltas if available
-            goal = None  # Goal details require DB - skip in fast path
-
-            db.close()
-
-            # Detect extensions (CRM, WORKSPACE)
-            extensions = detect_extensions()
-
-            # JSON output for dashboards
-            if output_json:
-                import json
-                data = build_statusline_data(
-                    session, phase, vectors, deltas,
-                    gate_decision=gate_decision, goal=goal, open_counts=open_counts,
-                    project_name=project_name, project_path=project_path,
-                    extensions=extensions, ai_id=ai_id,
-                )
-                print(json.dumps(data, indent=2))
-                return
-
-            # Format and output from cache
-            output = format_statusline(
-                session, phase, vectors, deltas, mode,
-                gate_decision=gate_decision, goal=goal, open_counts=open_counts,
-                project_name=project_name, extensions=extensions
-            )
-            print(output)
-            return
-
-        # SLOW PATH: Query DB for fresh data
-
         # TRANSACTION AWARENESS: Read instance-specific active_transaction file
         # IMPORTANT: Uses instance suffix for multi-instance isolation (tmux panes)
         # The file is named active_transaction_{instance_id}.json, not active_transaction.json
@@ -1203,26 +1155,6 @@ def main():
         open_counts = get_open_counts(db, session_id, project_id=project_id)
 
         db.close()
-
-        # Update central cache for future fast-path hits
-        try:
-            from empirica.core.statusline_cache import write_statusline_cache
-            write_statusline_cache(
-                session_id=session_id,
-                ai_id=ai_id,
-                phase=phase,
-                vectors=vectors,
-                gate_decision=gate_decision,
-                project_path=project_path,
-                project_name=project_name,
-                open_goals=open_counts.get('open_goals', 0) if open_counts else 0,
-                open_unknowns=open_counts.get('open_unknowns', 0) if open_counts else 0,
-                goal_linked_unknowns=open_counts.get('goal_linked_unknowns', 0) if open_counts else 0,
-                confidence=calculate_confidence(vectors) if vectors else None,
-                deltas=deltas,  # Include deltas for consistent display
-            )
-        except Exception:
-            pass  # Cache update failure shouldn't break statusline
 
         # Detect extensions (CRM, WORKSPACE)
         extensions = detect_extensions()
