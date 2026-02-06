@@ -308,11 +308,27 @@ def resolve_project_root() -> Optional[Path]:
             except Exception:
                 pass
 
-    # Priority 2: Check TTY session's project_path
+    # Priority 2: Check instance mapping (keyed by TMUX_PANE - works in hook context)
+    # This is the PRIMARY lookup method for multi-instance scenarios
+    if instance_id:
+        try:
+            instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
+            if instance_file.exists():
+                with open(instance_file, 'r') as f:
+                    instance_data = json.load(f)
+                project_path = instance_data.get('project_path')
+                if project_path:
+                    project_root = Path(project_path)
+                    if (project_root / '.empirica').exists():
+                        return project_root
+        except Exception:
+            pass
+
+    # Priority 3: Check TTY session's project_path (works when tty command succeeds)
     try:
         tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
         if tty_sessions_dir.exists():
-            # Get TTY key directly (independent of instance_id which may be tmux-based)
+            # Try to get TTY key directly
             import subprocess
             result = subprocess.run(['tty'], capture_output=True, text=True, timeout=2)
             if result.returncode == 0:

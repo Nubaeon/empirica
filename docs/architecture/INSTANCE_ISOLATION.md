@@ -21,11 +21,33 @@ Multiple Claude Code instances can run simultaneously:
 
 ---
 
-## 2. Isolation Mechanism: TTY Session Files
+## 2. Isolation Mechanism: Dual Key System
 
-### 2.1 The TTY Key
+### 2.1 The Problem with TTY Keys in Hook Context
 
-Each terminal has a unique TTY device (e.g., `pts-6`, `pts-2`). This is the isolation key.
+Each terminal has a unique TTY device (e.g., `pts-6`, `pts-2`). However:
+- The `tty` command **fails in hook context** (returns "not a tty")
+- `TMUX_PANE` environment variable **IS available** in hooks
+
+This creates a key mismatch:
+- **CLI context**: TTY key available via `tty` command → use `pts-6`
+- **Hook context**: Only TMUX_PANE available → use `tmux_4`
+
+### 2.2 Dual Key Storage
+
+We store project mappings by BOTH keys:
+
+```
+CLI access (TTY key):
+  ~/.empirica/tty_sessions/pts-6.json
+
+Hook access (TMUX_PANE key):
+  ~/.empirica/instance_projects/tmux_4.json
+```
+
+Both are written by `write_tty_session()` when the context has both keys available.
+
+### 2.3 TTY Session Files
 
 ```
 Terminal 1 (pts-6) → ~/.empirica/tty_sessions/pts-6.json
@@ -99,7 +121,24 @@ The suffix is determined by `get_instance_id()`:
 
 ## 4. Resolution Priority Chains
 
-### 4.1 Finding the Project DB (`resolve_session_db_path`)
+### 4.1 Sentinel Project Resolution (`resolve_project_root`)
+
+When Sentinel needs to find the correct project (works in hook context):
+
+```
+Priority 1: Transaction file's project_path (check CWD/.empirica, ~/.empirica)
+    ↓ (if not found)
+Priority 2: Instance mapping by TMUX_PANE (~/.empirica/instance_projects/tmux_4.json)
+    ↓ (if not found)
+Priority 3: TTY session by tty command (~/.empirica/tty_sessions/pts-6.json)
+    ↓ (if not found)
+Priority 4: CWD-based git root detection
+```
+
+**Critical:** Priority 2 (instance mapping) is the KEY for multi-instance isolation in hooks.
+The `tty` command fails in hook context, but TMUX_PANE is available.
+
+### 4.2 Finding the Project DB (`resolve_session_db_path`)
 
 When a command needs to find the database for a session:
 

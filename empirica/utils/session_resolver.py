@@ -145,6 +145,10 @@ def write_tty_session(
     CRITICAL: Returns False if no TTY available - does not use PPID fallback
     to avoid cross-instance bleed risk.
 
+    Also writes an instance mapping file keyed by TMUX_PANE (if available).
+    This enables hook context lookups where `tty` command fails but TMUX_PANE
+    is available.
+
     Args:
         claude_session_id: Claude Code conversation UUID (optional for CLI)
         empirica_session_id: Empirica session UUID (optional)
@@ -165,11 +169,16 @@ def write_tty_session(
 
     session_file = tty_sessions_dir / f'{tty_key}.json'
 
+    # Get TMUX_PANE for instance mapping (hook context lookup)
+    tmux_pane = os.environ.get('TMUX_PANE')
+    instance_id = f"tmux_{tmux_pane.lstrip('%')}" if tmux_pane else None
+
     data = {
         'claude_session_id': claude_session_id,
         'empirica_session_id': empirica_session_id,
         'project_path': project_path,
         'tty_key': tty_key,
+        'instance_id': instance_id,  # Store for cross-reference
         'timestamp': datetime.now().isoformat(),
         'pid': os.getpid(),
         'ppid': os.getppid()
@@ -178,6 +187,23 @@ def write_tty_session(
     try:
         with open(session_file, 'w') as f:
             json.dump(data, f, indent=2)
+
+        # ALSO write instance mapping for hook context lookups
+        # In hooks, `tty` returns "not a tty" but TMUX_PANE is available
+        if instance_id and project_path:
+            instance_dir = Path.home() / '.empirica' / 'instance_projects'
+            instance_dir.mkdir(parents=True, exist_ok=True)
+            instance_file = instance_dir / f'{instance_id}.json'
+            instance_data = {
+                'project_path': project_path,
+                'tty_key': tty_key,
+                'empirica_session_id': empirica_session_id,
+                'timestamp': datetime.now().isoformat()
+            }
+            with open(instance_file, 'w') as f:
+                json.dump(instance_data, f, indent=2)
+            logger.debug(f"Wrote instance mapping: {instance_file}")
+
         return True
     except Exception as e:
         logger.debug(f"Failed to write TTY session file: {e}")
