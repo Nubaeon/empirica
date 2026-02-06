@@ -278,15 +278,17 @@ def handle_preflight_submit_command(args):
             )
 
             # Persist active transaction for breadcrumb handlers, CHECK/POSTFLIGHT, and Sentinel
-            # Include session_id so Sentinel can look up PREFLIGHT vectors after compaction
+            # Include session_id and project_path so operations work regardless of CWD
             try:
                 import time
+                import os
                 from empirica.utils.session_resolver import write_active_transaction
                 write_active_transaction(
                     transaction_id=transaction_id,
                     session_id=session_id,
                     preflight_timestamp=time.time(),
-                    status="open"
+                    status="open",
+                    project_path=os.getcwd()  # Capture project at PREFLIGHT time
                 )
             except Exception as e:
                 logger.debug(f"Active transaction file write failed (non-fatal): {e}")

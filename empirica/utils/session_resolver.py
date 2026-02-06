@@ -732,7 +732,8 @@ def write_active_transaction(
     transaction_id: str,
     session_id: str = None,
     preflight_timestamp: float = None,
-    status: str = "open"
+    status: str = "open",
+    project_path: str = None
 ) -> None:
     """Atomically write the active transaction state to JSON file.
 
@@ -748,6 +749,7 @@ def write_active_transaction(
         session_id: Session that opened this transaction (for PREFLIGHT lookup)
         preflight_timestamp: When PREFLIGHT was submitted
         status: "open" or "closed"
+        project_path: Absolute path to the project (git root) this transaction belongs to
     """
     import os
     import time
@@ -756,9 +758,16 @@ def write_active_transaction(
     # Use instance-aware filename for multi-instance isolation
     suffix = _get_instance_suffix()
     from pathlib import Path
-    local_empirica = Path.cwd() / '.empirica'
-    if local_empirica.exists():
-        path = local_empirica / f'active_transaction{suffix}.json'
+
+    # Determine project_path if not provided (use CWD's git root or CWD itself)
+    if not project_path:
+        local_empirica = Path.cwd() / '.empirica'
+        if local_empirica.exists():
+            project_path = str(Path.cwd())
+
+    # Write transaction file to the project's .empirica directory
+    if project_path:
+        path = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
     else:
         path = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
 
@@ -769,6 +778,7 @@ def write_active_transaction(
         "session_id": session_id,
         "preflight_timestamp": preflight_timestamp or time.time(),
         "status": status,
+        "project_path": project_path,  # Essential for cross-CWD operations
         "updated_at": time.time()
     }
 

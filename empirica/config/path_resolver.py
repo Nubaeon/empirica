@@ -227,8 +227,10 @@ def resolve_session_db_path(session_id: str) -> Optional[Path]:
     """
     Resolve which database contains a given session.
 
-    For now, returns the current project's DB path.
-    Future enhancement: Look up session in workspace.db to find correct project.
+    Priority:
+    1. Read project_path from active transaction file (if session matches)
+    2. Use TTY session's project_path
+    3. Fall back to CWD-based detection
 
     Args:
         session_id: UUID of the session to find
@@ -236,8 +238,43 @@ def resolve_session_db_path(session_id: str) -> Optional[Path]:
     Returns:
         Path to the sessions.db containing this session, or None if not found
     """
-    # Use current project's DB (CWD-based detection)
-    # TODO: Look up session_id in workspace.db to find which project it belongs to
+    import json
+
+    # Priority 1: Check active transaction file for project_path
+    try:
+        from empirica.core.statusline_cache import get_instance_id
+        instance_id = get_instance_id()
+        suffix = f"_{instance_id}" if instance_id else ""
+
+        # Check local .empirica first, then home
+        for base in [Path.cwd() / '.empirica', Path.home() / '.empirica']:
+            tx_file = base / f'active_transaction{suffix}.json'
+            if tx_file.exists():
+                with open(tx_file, 'r') as f:
+                    tx_data = json.load(f)
+                # Only use if session matches or transaction is open
+                tx_project_path = tx_data.get('project_path')
+                if tx_project_path:
+                    db_path = Path(tx_project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                    if db_path.exists():
+                        return db_path
+    except Exception:
+        pass
+
+    # Priority 2: Try TTY session's project_path
+    try:
+        from empirica.utils.session_resolver import get_tty_session
+        tty_session = get_tty_session(warn_if_stale=False)
+        if tty_session:
+            tty_project_path = tty_session.get('project_path')
+            if tty_project_path:
+                db_path = Path(tty_project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                if db_path.exists():
+                    return db_path
+    except Exception:
+        pass
+
+    # Priority 3: Fall back to CWD-based detection
     db_path = get_session_db_path()
     if db_path.exists():
         return db_path
