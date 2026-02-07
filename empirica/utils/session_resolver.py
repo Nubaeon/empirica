@@ -155,58 +155,63 @@ def write_tty_session(
         project_path: Project directory path (optional)
 
     Returns:
-        True if successfully written, False if no TTY or on error.
+        True if successfully written, False if neither TTY nor TMUX_PANE available.
     """
     from datetime import datetime
 
     tty_key = get_tty_key()
-    if not tty_key:
-        logger.debug("No TTY key available - cannot write TTY session file")
-        return False  # No TTY - skip writing to avoid bleed
-
-    tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
-    tty_sessions_dir.mkdir(parents=True, exist_ok=True)
-
-    session_file = tty_sessions_dir / f'{tty_key}.json'
-
-    # Get TMUX_PANE for instance mapping (hook context lookup)
     tmux_pane = os.environ.get('TMUX_PANE')
     instance_id = f"tmux_{tmux_pane.lstrip('%')}" if tmux_pane else None
 
-    data = {
-        'claude_session_id': claude_session_id,
-        'empirica_session_id': empirica_session_id,
-        'project_path': project_path,
-        'tty_key': tty_key,
-        'instance_id': instance_id,  # Store for cross-reference
-        'timestamp': datetime.now().isoformat(),
-        'pid': os.getpid(),
-        'ppid': os.getppid()
-    }
+    wrote_something = False
 
     try:
-        with open(session_file, 'w') as f:
-            json.dump(data, f, indent=2)
-
-        # ALSO write instance mapping for hook context lookups
-        # In hooks, `tty` returns "not a tty" but TMUX_PANE is available
+        # Write instance_projects FIRST - works via Bash tool where tty fails
+        # This is the PRIMARY mechanism for multi-instance isolation
         if instance_id and project_path:
             instance_dir = Path.home() / '.empirica' / 'instance_projects'
             instance_dir.mkdir(parents=True, exist_ok=True)
             instance_file = instance_dir / f'{instance_id}.json'
             instance_data = {
                 'project_path': project_path,
-                'tty_key': tty_key,
+                'tty_key': tty_key,  # May be None if via Bash tool
+                'claude_session_id': claude_session_id,  # Key for active_work lookup
                 'empirica_session_id': empirica_session_id,
                 'timestamp': datetime.now().isoformat()
             }
             with open(instance_file, 'w') as f:
                 json.dump(instance_data, f, indent=2)
             logger.debug(f"Wrote instance mapping: {instance_file}")
+            wrote_something = True
+
+        # Write TTY session file if TTY is available (direct terminal context)
+        if tty_key:
+            tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
+            tty_sessions_dir.mkdir(parents=True, exist_ok=True)
+            session_file = tty_sessions_dir / f'{tty_key}.json'
+
+            data = {
+                'claude_session_id': claude_session_id,
+                'empirica_session_id': empirica_session_id,
+                'project_path': project_path,
+                'tty_key': tty_key,
+                'instance_id': instance_id,  # Store for cross-reference
+                'timestamp': datetime.now().isoformat(),
+                'pid': os.getpid(),
+                'ppid': os.getppid()
+            }
+
+            with open(session_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            wrote_something = True
+
+        if not wrote_something:
+            logger.debug("No TTY or TMUX_PANE available - cannot write session files")
+            return False
 
         return True
     except Exception as e:
-        logger.debug(f"Failed to write TTY session file: {e}")
+        logger.debug(f"Failed to write session file: {e}")
         return False
 
 
