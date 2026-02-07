@@ -110,9 +110,30 @@ def _update_active_work(project_path: str, folder_name: str, empirica_session_id
         tty_session = get_tty_session()
         claude_session_id = tty_session.get('claude_session_id') if tty_session else None
 
-        # CRITICAL: Update TTY session file with new project_path
-        # This is what hooks and statusline read to determine the project
+        # CRITICAL: Update instance_projects and TTY session with new project_path
+        # instance_projects is used by Sentinel and statusline when running via Bash tool
+        # TTY session is used for direct terminal context
         tty_key = get_tty_key()
+        tmux_pane = os.environ.get('TMUX_PANE')
+        instance_id = f"tmux_{tmux_pane.lstrip('%')}" if tmux_pane else None
+
+        # Write instance_projects FIRST - works via Bash tool where tty fails
+        if instance_id:
+            instance_dir = marker_dir / 'instance_projects'
+            instance_dir.mkdir(parents=True, exist_ok=True)
+            instance_file = instance_dir / f'{instance_id}.json'
+            instance_data = {
+                'project_path': project_path,
+                'tty_key': tty_key,  # May be None if via Bash tool
+                'claude_session_id': claude_session_id,
+                'empirica_session_id': empirica_session_id,
+                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%S%z')
+            }
+            with open(instance_file, 'w') as f:
+                json.dump(instance_data, f, indent=2)
+            logger.debug(f"Updated instance_projects: {instance_id} -> {folder_name}")
+
+        # Write TTY session if available (direct terminal context)
         if tty_key:
             tty_sessions_dir = marker_dir / 'tty_sessions'
             tty_sessions_dir.mkdir(parents=True, exist_ok=True)
@@ -130,6 +151,7 @@ def _update_active_work(project_path: str, folder_name: str, empirica_session_id
             # Update with new project path
             tty_data['project_path'] = project_path
             tty_data['tty_key'] = tty_key
+            tty_data['instance_id'] = instance_id
             tty_data['timestamp'] = time.strftime('%Y-%m-%dT%H:%M:%S%z')
 
             with open(tty_session_file, 'w') as f:
