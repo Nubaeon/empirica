@@ -1,0 +1,28 @@
+{
+  "goal_id": "94a3380d-da4a-49b6-838e-7e644bfa2171",
+  "session_id": "37c3e959-0331-4100-8c08-63075c8abeb3",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T19:00:31.817121+00:00",
+  "goal_data": {
+    "objective": "Test goal for v1.5.0 release validation",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T19:00:31.817139+00:00",
+      "action": "created"
+    }
+  ]
+}
