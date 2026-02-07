@@ -163,11 +163,23 @@ def handle_goals_create_command(args):
             session_id = config_data.get('session_id')
             objective = config_data.get('objective')
 
+            # TRANSACTION-FIRST: Auto-derive session_id from active transaction if not provided
+            if not session_id:
+                try:
+                    from empirica.utils.session_resolver import read_active_transaction_full
+                    tx_data = read_active_transaction_full()
+                    if tx_data and tx_data.get('status') == 'open':
+                        session_id = tx_data.get('session_id')
+                        logger.info(f"Auto-derived session_id from active transaction: {session_id[:8]}...")
+                except Exception:
+                    pass
+
             # Validate required fields in config
             if not session_id or not objective:
                 print(json.dumps({
                     "ok": False,
-                    "error": "Config file must include 'session_id' and 'objective' fields",
+                    "error": "No active transaction and 'session_id' not in config",
+                    "hint": "Either run PREFLIGHT first, or provide 'session_id' in config",
                     "received": {"session_id": bool(session_id), "objective": bool(objective)}
                 }))
                 sys.exit(1)
@@ -194,12 +206,23 @@ def handle_goals_create_command(args):
             session_id = args.session_id
             objective = args.objective
 
+            # TRANSACTION-FIRST: Auto-derive session_id from active transaction if not provided
+            if not session_id:
+                try:
+                    from empirica.utils.session_resolver import read_active_transaction_full
+                    tx_data = read_active_transaction_full()
+                    if tx_data and tx_data.get('status') == 'open':
+                        session_id = tx_data.get('session_id')
+                        logger.info(f"Auto-derived session_id from active transaction: {session_id[:8]}...")
+                except Exception:
+                    pass
+
             # Validate required fields for legacy mode
             if not session_id or not objective:
                 print(json.dumps({
                     "ok": False,
-                    "error": "Legacy mode requires --session-id and --objective flags",
-                    "hint": "For AI-first mode, use: empirica goals-create config.json"
+                    "error": "No active transaction and --session-id not provided",
+                    "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
                 }))
                 sys.exit(1)
             scope_breadth = float(args.scope_breadth) if hasattr(args, 'scope_breadth') and args.scope_breadth else 0.3
@@ -938,6 +961,7 @@ def handle_goals_list_command(args):
         # Parse arguments
         session_id = getattr(args, 'session_id', None)
         project_id = getattr(args, 'project_id', None)
+        transaction_id = getattr(args, 'transaction_id', None)
         ai_id = getattr(args, 'ai_id', None)
         show_completed = getattr(args, 'completed', False)
         output_format = getattr(args, 'output', 'human')
@@ -946,12 +970,28 @@ def handle_goals_list_command(args):
         db = SessionDatabase()
         cursor = db.conn.cursor()
 
-        # GOALS ARE PROJECT-SCOPED: Derive project_id from session_id if needed
-        if session_id and not project_id:
-            cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
-            row = cursor.fetchone()
-            if row and row[0]:
-                project_id = row[0]
+        # GOALS ARE PROJECT-SCOPED: Auto-derive project_id from context if not provided
+        if not project_id:
+            # Priority 1: From session_id if provided
+            if session_id:
+                cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    project_id = row[0]
+
+            # Priority 2: From unified context resolver (transaction → active_work)
+            if not project_id:
+                try:
+                    from empirica.utils.session_resolver import get_active_context
+                    context = get_active_context()
+                    ctx_session = context.get('empirica_session_id')
+                    if ctx_session:
+                        cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (ctx_session,))
+                        row = cursor.fetchone()
+                        if row and row[0]:
+                            project_id = row[0]
+                except Exception:
+                    pass
 
         # Build query based on filters
         base_query = """
@@ -965,10 +1005,14 @@ def handle_goals_list_command(args):
         """
         params = []
 
-        # Apply filters - PROJECT is the primary scope for goals
+        # Apply filters - PROJECT is the primary structural scope, TRANSACTION is measurement scope
         if project_id:
             base_query += " AND g.project_id = ?"
             params.append(project_id)
+
+        if transaction_id:
+            base_query += " AND g.transaction_id = ?"
+            params.append(transaction_id)
 
         if ai_id:
             base_query += " AND s.ai_id = ?"
