@@ -194,53 +194,57 @@ task:
 
 
 
+
+
+
+
 # Learning trajectory (PREFLIGHT→POSTFLIGHT deltas — measures learning, NOT calibration bias)
 # For actual bias corrections see grounded_calibration.grounded_bias_corrections
 learning_trajectory:
-  last_updated: "2026-02-06T16:56:38.464414"
+  last_updated: "2026-02-07T11:29:49.960725"
   ai_id: claude-code
-  observations: 3768
+  observations: 3811
   session_deltas:
     completion: +0.25
-    do: +0.22
-    state: +0.18
-    signal: +0.16
-    change: +0.15
+    change: +0.25
+    do: +0.25
+    impact: +0.19
+    know: +0.17
+    uncertainty: -0.16
     clarity: +0.15
+    context: +0.13
+    state: +0.13
     density: +0.12
+    signal: +0.11
     coherence: +0.10
     engagement: +0.07
-    know: +0.02
-    context: -0.02
-    uncertainty: -0.01
-    impact: -0.01
   readiness:
     min_know: 0.70
     max_uncertainty: 0.35
   summary:
-    overestimates: []
-    underestimates: [completion, change, state, density, signal, clarity, do]
-    well_calibrated: [uncertainty, context, know, engagement, impact]
+    overestimates: [uncertainty]
+    underestimates: [impact, completion, change, state, density, signal, clarity, context, do, know]
+    well_calibrated: [coherence, engagement]
 
 # Grounded calibration (auto-updated by Empirica post-test verification)
 grounded_calibration:
-  last_updated: "2026-02-06T16:56:38.513386"
+  last_updated: "2026-02-07T11:29:50.011342"
   ai_id: claude-code
-  observations: 301
+  observations: 355
   grounded_coverage: 0.70
   divergence:
     impact: +0.73
-    signal: -0.16
-    uncertainty: +0.11
-    do: +0.08
+    signal: -0.17
+    uncertainty: +0.09
+    do: +0.09
     completion: +0.08
-    context: -0.04
-    know: -0.03
+    context: -0.05
+    know: -0.00
   ungrounded: [coherence, density, engagement]
   grounded_bias_corrections:
+    context: +0.25
     uncertainty: -0.25
     signal: +0.25
     know: +0.25
-    context: +0.25
-    do: +0.24
-    completion: +0.24
+    do: +0.23
+    completion: +0.23
