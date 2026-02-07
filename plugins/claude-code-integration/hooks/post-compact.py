@@ -18,6 +18,7 @@ import subprocess
 import os
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 # Import epistemic summarizer for confidence-weighted context
 try:
@@ -27,7 +28,7 @@ except ImportError:
     EPISTEMIC_SUMMARIZER_AVAILABLE = False
 
 
-def find_project_root(claude_session_id: str = None) -> Path:
+def find_project_root(claude_session_id: str = None) -> Optional[Path]:
     """
     Find the Empirica project root using priority chain.
 
@@ -35,8 +36,7 @@ def find_project_root(claude_session_id: str = None) -> Path:
     0. Active work file by Claude session_id (most reliable - works for ALL users)
     1. Instance projects file by TMUX_PANE (works in hook context without TTY)
     2. EMPIRICA_WORKSPACE_ROOT environment variable
-    3. Search upward from current directory
-    4. Fallback to current directory
+    NO CWD FALLBACK - fails explicitly to prevent wrong context pollution
     """
     def has_valid_db(path: Path) -> bool:
         """Check if path has valid Empirica database"""
@@ -75,23 +75,14 @@ def find_project_root(claude_session_id: str = None) -> Path:
         except Exception:
             pass
 
-    # 2. Check environment variable
+    # Priority 2: Check environment variable
     if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
         workspace_path = Path(workspace_root).expanduser().resolve()
         if has_valid_db(workspace_path):
             return workspace_path
 
-    # 3. Search upward from current directory (only if has valid DB)
-    current = Path.cwd()
-    for parent in [current] + list(current.parents):
-        if has_valid_db(parent):
-            return parent
-        # Stop at filesystem root
-        if parent == parent.parent:
-            break
-
-    # 4. Fallback to current directory
-    return Path.cwd()
+    # NO CWD FALLBACK - fail explicitly to prevent wrong context pollution
+    return None
 
 
 def main():
@@ -99,8 +90,16 @@ def main():
     claude_session_id = hook_input.get('session_id')
 
     # CRITICAL: Find and change to project root BEFORE importing empirica
-    # Uses priority chain: claude_session_id → env var → known paths → CWD
+    # Uses priority chain: claude_session_id → instance_projects → env var
+    # NO CWD FALLBACK - fails explicitly to prevent wrong context pollution
     project_root = find_project_root(claude_session_id=claude_session_id)
+    if project_root is None:
+        print(json.dumps({
+            "error": "Could not resolve project root. No active_work file, instance_projects, or EMPIRICA_WORKSPACE_ROOT found.",
+            "claude_session_id": claude_session_id,
+            "tmux_pane": os.environ.get('TMUX_PANE')
+        }))
+        sys.exit(1)
     os.chdir(project_root)
 
     # Now safe to import empirica (after cwd is set correctly)

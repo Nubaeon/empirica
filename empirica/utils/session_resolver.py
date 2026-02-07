@@ -690,7 +690,7 @@ def get_instance_id() -> Optional[str]:
     Examples:
         # In tmux pane %0
         >>> get_instance_id()
-        'tmux:%0'
+        'tmux_0'
 
         # With explicit env var
         >>> os.environ['EMPIRICA_INSTANCE_ID'] = 'my-instance'
@@ -710,9 +710,11 @@ def get_instance_id() -> Optional[str]:
         return explicit_id
 
     # Priority 2: tmux pane (most common for multi-instance work)
+    # IMPORTANT: Use tmux_{N} format (not tmux:%N) to match file naming convention
+    # Files are named: instance_projects/tmux_4.json, active_transaction_tmux_4.json
     tmux_pane = os.environ.get('TMUX_PANE')
     if tmux_pane:
-        instance_id = f"tmux:{tmux_pane}"
+        instance_id = f"tmux_{tmux_pane.lstrip('%')}"
         logger.debug(f"Using tmux pane as instance_id: {instance_id}")
         return instance_id
 

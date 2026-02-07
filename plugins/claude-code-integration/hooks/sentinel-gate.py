@@ -283,10 +283,9 @@ def resolve_project_root(claude_session_id: str = None) -> Optional[Path]:
 
     Priority:
     0. Active work file by Claude session_id (most reliable - works for ALL users)
-    1. Active transaction file's project_path (respects current work context)
-    2. Instance mapping by TMUX_PANE (for tmux users in hook context)
-    3. TTY session's project_path (for CLI context)
-    4. Fall back to CWD-based git root detection
+    1. Instance mapping by TMUX_PANE (for tmux users in hook context)
+    2. TTY session's project_path (for CLI context)
+    NO CWD FALLBACK - fails explicitly if none of the above work
 
     This is critical for multi-project scenarios where CWD may be reset
     by Claude Code to a different project than the one being worked on.
@@ -313,7 +312,7 @@ def resolve_project_root(claude_session_id: str = None) -> Optional[Path]:
         except Exception:
             pass
 
-    # Get instance suffix for transaction file lookup
+    # Get instance ID for instance_projects lookup
     instance_id = None
     try:
         tmux_pane = os.environ.get('TMUX_PANE')
@@ -330,33 +329,9 @@ def resolve_project_root(claude_session_id: str = None) -> Optional[Path]:
     except Exception:
         pass
 
-    suffix = f"_{instance_id}" if instance_id else ""
-
-    # Priority 1: Check active transaction file for project_path
-    # Look in CWD first, then common locations
-    search_bases = [Path.cwd() / '.empirica']
-
-    # Also check home directory for cross-project transactions
-    home_empirica = Path.home() / '.empirica'
-    if home_empirica.exists():
-        search_bases.append(home_empirica)
-
-    for base in search_bases:
-        tx_file = base / f'active_transaction{suffix}.json'
-        if tx_file.exists():
-            try:
-                with open(tx_file, 'r') as f:
-                    tx_data = json.load(f)
-                project_path = tx_data.get('project_path')
-                if project_path:
-                    project_root = Path(project_path)
-                    if (project_root / '.empirica').exists():
-                        return project_root
-            except Exception:
-                pass
-
-    # Priority 2: Check instance mapping (keyed by TMUX_PANE - works in hook context)
+    # Priority 1: Check instance mapping (keyed by TMUX_PANE - works in hook context)
     # This is the PRIMARY lookup method for multi-instance scenarios
+    # MUST come before any CWD-based checks to prevent mismatches
     if instance_id:
         try:
             instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
@@ -371,7 +346,7 @@ def resolve_project_root(claude_session_id: str = None) -> Optional[Path]:
         except Exception:
             pass
 
-    # Priority 3: Check TTY session's project_path (works when tty command succeeds)
+    # Priority 2: Check TTY session's project_path (works when tty command succeeds)
     try:
         tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
         if tty_sessions_dir.exists():
@@ -394,25 +369,8 @@ def resolve_project_root(claude_session_id: str = None) -> Optional[Path]:
     except Exception:
         pass
 
-    # Priority 3: Fall back to CWD-based git root detection
-    try:
-        import subprocess
-        result = subprocess.run(
-            ['git', 'rev-parse', '--show-toplevel'],
-            capture_output=True, text=True, timeout=2
-        )
-        if result.returncode == 0:
-            git_root = Path(result.stdout.strip())
-            if (git_root / '.empirica').exists():
-                return git_root
-    except Exception:
-        pass
-
-    # Final fallback: CWD itself
-    cwd = Path.cwd()
-    if (cwd / '.empirica').exists():
-        return cwd
-
+    # NO CWD FALLBACK - fail explicitly if instance-aware mechanisms don't work
+    # This prevents silent project mismatches when Claude Code resets CWD
     return None
 
 
@@ -458,8 +416,11 @@ def find_empirica_package() -> Optional[Path]:
 
 
 def _get_current_project_id(claude_session_id: str = None) -> Optional[str]:
-    """Get project_id from active_work file (if available) or CWD's git repo."""
-    import subprocess
+    """Get project_id from active_work file or instance_projects.
+
+    NO CWD FALLBACK - if instance-aware mechanisms fail, we fail explicitly.
+    This prevents silent mismatches when Claude Code resets CWD.
+    """
     import hashlib
 
     # Priority 0: Check active_work file (set by project-switch)
@@ -477,27 +438,21 @@ def _get_current_project_id(claude_session_id: str = None) -> Optional[str]:
         except Exception:
             pass
 
-    # Fallback: CWD-based detection
-    try:
-        # Get git remote origin URL as project identifier
-        result = subprocess.run(
-            ['git', 'config', '--get', 'remote.origin.url'],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            url = result.stdout.strip()
-            return hashlib.sha256(url.encode()).hexdigest()[:16]
+    # Priority 1: Check instance_projects (uses TMUX_PANE, doesn't need claude_session_id)
+    instance_id = get_instance_id()
+    if instance_id:
+        try:
+            instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
+            if instance_file.exists():
+                with open(instance_file, 'r') as f:
+                    inst_data = json.load(f)
+                    project_path = inst_data.get('project_path')
+                    if project_path:
+                        return hashlib.sha256(project_path.encode()).hexdigest()[:16]
+        except Exception:
+            pass
 
-        # Fallback: use git root directory name
-        result = subprocess.run(
-            ['git', 'rev-parse', '--show-toplevel'],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
-            path = result.stdout.strip()
-            return hashlib.sha256(path.encode()).hexdigest()[:16]
-    except Exception:
-        pass
+    # NO CWD FALLBACK - fail explicitly if instance-aware mechanisms don't work
     return None
 
 
