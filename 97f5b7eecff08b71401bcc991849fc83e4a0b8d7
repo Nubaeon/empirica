@@ -1,0 +1,30 @@
+{
+  "goal_id": "4d226d4e-14ce-4502-823e-ed1cf9e69b78",
+  "session_id": "f8e28dea-0fec-4f09-98a4-1e4708ee4143",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T18:25:02.290312+00:00",
+  "goal_data": {
+    "objective": "Test CLI commands with unified session_id pattern - verify finding-log, unknown-log, deadend-log, goals-create, mistake-log, handoff-create work without explicit session_id",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Each command tested with active transaction (no --session-id)",
+      "Each command tested without transaction (should error helpfully)",
+      "Results documented"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T18:25:02.290326+00:00",
+      "action": "created"
+    }
+  ]
+}
