@@ -1,0 +1,28 @@
+{
+  "goal_id": "e7ccb80f-6040-44ba-802c-013f483f35cf",
+  "session_id": "a8de3d60-8903-4961-a84c-003eab949260",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T18:48:35.707399+00:00",
+  "goal_data": {
+    "objective": "Update MULTI_SESSION_LEARNING.md, BEADS_INTEGRATION_DESIGN.md, AI_SELF_MANAGEMENT.md to use transaction-first auto-derived session_id pattern instead of explicit --session-id <ID>",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T18:48:35.707420+00:00",
+      "action": "created"
+    }
+  ]
+}
