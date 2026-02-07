@@ -1,0 +1,16 @@
+{
+  "finding_id": "0466ffe6-047c-418b-8a27-b5be75daf80f",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T10:37:36.883179+00:00",
+  "finding": "Post-test evidence collector is SESSION-scoped, not TRANSACTION-scoped. All queries use session_id. Goals/unknowns/findings from entire session count. There IS goal-based weighting: artifacts linked to session goals = full weight, unscoped = 0.3 weight (UNSCOPED_ARTIFACT_WEIGHT). Git metrics use session start time. Implication: if goals created for future work in tx1, they persist and affect calibration in tx2. Transaction-scoping would require adding transaction_id filters to collector queries.",
+  "impact": 0.85,
+  "goal_id": "2a89c259-c106-4a40-80e2-9abe39333165",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Post-test evidence collector is SESSION-scoped, not TRANSACTION-scoped. All queries use session_id. Goals/unknowns/findings from entire session count. There IS goal-based weighting: artifacts linked to session goals = full weight, unscoped = 0.3 weight (UNSCOPED_ARTIFACT_WEIGHT). Git metrics use session start time. Implication: if goals created for future work in tx1, they persist and affect calibration in tx2. Transaction-scoping would require adding transaction_id filters to collector queries.",
+    "impact": 0.85
+  }
+}
