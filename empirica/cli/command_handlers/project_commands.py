@@ -77,7 +77,7 @@ def get_workspace_projects() -> List[Dict[str, Any]]:
         return []
 
 
-def _update_active_work(project_path: str, folder_name: str, empirica_session_id: str = None) -> bool:
+def _update_active_work(project_path: str, folder_name: str, empirica_session_id: str = None, claude_session_id: str = None) -> bool:
     """
     Update active_work markers AND TTY session for cross-project continuity.
 
@@ -95,6 +95,7 @@ def _update_active_work(project_path: str, folder_name: str, empirica_session_id
         project_path: Full path to the project directory
         folder_name: The project's folder name (ground truth identifier)
         empirica_session_id: Optional session ID to attach to (for Sentinel/MCP tools)
+        claude_session_id: Claude Code conversation UUID (for instance isolation when called via Bash tool)
 
     Returns:
         True if successfully written, False otherwise
@@ -106,9 +107,11 @@ def _update_active_work(project_path: str, folder_name: str, empirica_session_id
         marker_dir = Path.home() / '.empirica'
         marker_dir.mkdir(parents=True, exist_ok=True)
 
-        # Try to get Claude session ID from TTY session (written by hooks)
+        # Try to get Claude session ID - prefer explicit parameter over TTY session
+        # claude_session_id parameter is set when called from project-switch with --claude-session-id
         tty_session = get_tty_session()
-        claude_session_id = tty_session.get('claude_session_id') if tty_session else None
+        if not claude_session_id:
+            claude_session_id = tty_session.get('claude_session_id') if tty_session else None
 
         # CRITICAL: Update instance_projects and TTY session with new project_path
         # instance_projects is used by Sentinel and statusline when running via Bash tool
@@ -2931,6 +2934,8 @@ def handle_project_switch_command(args):
     try:
         project_identifier = args.project_identifier
         output_format = getattr(args, 'output', 'human')
+        # Get claude_session_id from CLI arg (enables instance isolation via Bash tool)
+        cli_claude_session_id = getattr(args, 'claude_session_id', None)
 
         # 1. Resolve project from workspace database
         project = resolve_workspace_project(project_identifier)
@@ -3047,14 +3052,28 @@ def handle_project_switch_command(args):
                 if target_db_path.exists():
                     target_db = SessionDatabase(db_path=str(target_db_path))
                     cursor = target_db.conn.cursor()
-                    # Find most recent open session for this project
-                    cursor.execute("""
-                        SELECT session_id, ai_id, start_time
-                        FROM sessions
-                        WHERE project_id = ? AND end_time IS NULL
-                        ORDER BY start_time DESC
-                        LIMIT 1
-                    """, (project_id,))
+                    # Find most recent open session for this project AND this instance
+                    # CRITICAL: Filter by instance_id to prevent cross-instance session bleeding
+                    from empirica.core.statusline_cache import get_instance_id
+                    current_instance_id = get_instance_id()
+
+                    if current_instance_id:
+                        cursor.execute("""
+                            SELECT session_id, ai_id, start_time
+                            FROM sessions
+                            WHERE project_id = ? AND end_time IS NULL AND instance_id = ?
+                            ORDER BY start_time DESC
+                            LIMIT 1
+                        """, (project_id, current_instance_id))
+                    else:
+                        # Fallback: If no instance_id, use legacy behavior (risky but backwards compatible)
+                        cursor.execute("""
+                            SELECT session_id, ai_id, start_time
+                            FROM sessions
+                            WHERE project_id = ? AND end_time IS NULL
+                            ORDER BY start_time DESC
+                            LIMIT 1
+                        """, (project_id,))
                     row = cursor.fetchone()
                     if row:
                         attached_session = {
@@ -3071,7 +3090,7 @@ def handle_project_switch_command(args):
         # Include empirica_session_id so Sentinel and MCP tools can attach to the correct session
         if project_path:
             attached_session_id = attached_session['session_id'] if attached_session else None
-            _update_active_work(str(project_path), folder_name, empirica_session_id=attached_session_id)
+            _update_active_work(str(project_path), folder_name, empirica_session_id=attached_session_id, claude_session_id=cli_claude_session_id)
 
         # 6. Show context banner
         if output_format == 'human':

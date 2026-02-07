@@ -247,6 +247,7 @@ def add_checkpoint_parsers(subparsers):
     )
     project_switch_parser.add_argument('project_identifier', help='Project name or UUID')
     project_switch_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    project_switch_parser.add_argument('--claude-session-id', help='Claude Code conversation UUID (for instance isolation)')
 
     # Project bootstrap command
     project_bootstrap_parser = subparsers.add_parser(
@@ -528,7 +529,9 @@ def add_checkpoint_parsers(subparsers):
         help='List goals'
     )
     goals_list_parser.add_argument('--ai-id', help='Filter by AI identifier')
-    goals_list_parser.add_argument('--session-id', help='Filter by session ID')
+    goals_list_parser.add_argument('--session-id', help='Derive project_id from session (convenience)')
+    goals_list_parser.add_argument('--transaction-id', help='Filter by transaction ID (measurement scope)')
+    goals_list_parser.add_argument('--project-id', help='Filter by project ID (structural scope)')
     goals_list_parser.add_argument('--scope-breadth-min', type=float, help='Filter by minimum breadth (0.0-1.0)')
     goals_list_parser.add_argument('--scope-breadth-max', type=float, help='Filter by maximum breadth (0.0-1.0)')
     goals_list_parser.add_argument('--scope-duration-min', type=float, help='Filter by minimum duration (0.0-1.0)')
