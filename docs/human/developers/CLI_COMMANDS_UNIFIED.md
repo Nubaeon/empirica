@@ -1,8 +1,8 @@
 # Empirica CLI Commands - Unified Reference
 
-**Total Commands:** 126
+**Total Commands:** 134
 **Framework Version:** 1.5.0
-**Generated:** 2026-01-21
+**Generated:** 2026-02-07
 **Status:** Production Ready
 
 > **API Reference:** For Python API details, see [API Reference](../../reference/api/README.md). Each API doc includes relevant CLI commands.
@@ -108,11 +108,12 @@
 - **investigate-checkpoint-branch** - Checkpoint investigation branch
 - **investigate-merge-branches** - Merge investigation branches
 
-### 12. Monitoring (4 commands)
+### 12. Monitoring (5 commands)
 - **monitor** - Start monitoring session
 - **check-drift** - Check for behavioral drift
 - **efficiency-report** - Generate efficiency metrics
 - **calibration-report** - Analyze AI self-assessment calibration
+- **system-status** - Show system health, adapter status, and configuration
 
 ### 13. Skills (3 commands)
 - **skill-suggest** - Suggest skills based on current work
@@ -193,6 +194,15 @@
 - **message-thread** - View conversation thread
 - **message-channels** - List channels with unread counts
 - **message-cleanup** - Remove expired messages
+
+### 27. Memory Management (7 commands)
+- **memory-prime** - Allocate attention budget across investigation domains
+- **memory-scope** - Retrieve memories by zone tier (anchor/working/cache)
+- **memory-value** - Prioritize memories by information gain / token cost
+- **memory-report** - Show context budget report (like /proc/meminfo)
+- **pattern-check** - Check approach against known dead-ends before acting
+- **session-rollup** - Aggregate findings from parallel sub-agents
+- **artifacts-generate** - Generate artifacts from session data
 
 ---
 
@@ -1182,6 +1192,106 @@ Messages are stored in git notes at `refs/notes/empirica/messages/<channel>/<id>
 
 ---
 
+### Memory Management Commands
+
+Memory management commands expose the attention budget infrastructure for epistemic memory optimization. These are primarily AI-facing commands.
+
+#### `memory-prime`
+**Purpose:** Allocate attention budget across investigation domains using Shannon information gain
+**Usage:** `empirica memory-prime --session-id <id> --domains <json> --budget <n> [options]`
+**Options:**
+- `--session-id`: Session identifier (required)
+- `--domains`: JSON array of domain strings to investigate (required)
+- `--budget`: Total attention budget to allocate (default: 20)
+- `--prior-findings`: JSON object of prior findings per domain
+- `--dead-ends`: JSON object of dead-ends per domain
+- `--know`: Current know vector (0.0-1.0)
+- `--uncertainty`: Current uncertainty vector (0.0-1.0)
+- `--persist`: Persist budget to database
+- `--output`: Output format (human, json)
+
+**Returns:** Attention allocation per domain with expected information gain scores.
+
+#### `memory-scope`
+**Purpose:** Retrieve memories by zone tier (anchor/working/cache)
+**Usage:** `empirica memory-scope --session-id <id> --zone <zone> [options]`
+**Options:**
+- `--session-id`: Session identifier (required)
+- `--zone`: Memory zone (anchor, working, cache) (required)
+- `--limit`: Maximum items to return (default: 10)
+- `--content-type`: Filter by content type
+- `--output`: Output format (human, json)
+
+**Returns:** Memory items from the specified zone tier.
+
+#### `memory-value`
+**Purpose:** Prioritize memories by information gain / token cost
+**Usage:** `empirica memory-value --session-id <id> --query <text> [options]`
+**Options:**
+- `--session-id`: Session identifier (required)
+- `--query`: Query to score memories against (required)
+- `--limit`: Maximum items to return (default: 10)
+- `--output`: Output format (human, json)
+
+**Returns:** Memories ranked by value (information gain per token).
+
+#### `memory-report`
+**Purpose:** Show context budget report (like /proc/meminfo for cognitive state)
+**Usage:** `empirica memory-report --session-id <id> [options]`
+**Options:**
+- `--session-id`: Session identifier (required)
+- `--output`: Output format (human, json)
+
+**Returns:** Current memory zone occupancy, eviction stats, and budget utilization.
+
+#### `pattern-check`
+**Purpose:** Check approach against known dead-ends before acting
+**Usage:** `empirica pattern-check --session-id <id> --approach <text> [options]`
+**Options:**
+- `--session-id`: Session identifier (required)
+- `--approach`: Proposed approach to check (required)
+- `--threshold`: Similarity threshold (default: 0.7)
+- `--output`: Output format (human, json)
+
+**Returns:** Matching dead-ends with similarity scores. Use before implementing to avoid repeating known failures.
+
+#### `session-rollup`
+**Purpose:** Aggregate findings from parallel sub-agents into parent session
+**Usage:** `empirica session-rollup --parent-session-id <id> [options]`
+**Options:**
+- `--parent-session-id`: Parent session to aggregate into (required)
+- `--child-sessions`: JSON array of child session IDs (auto-detected if not provided)
+- `--output`: Output format (human, json)
+
+**Returns:** Aggregated findings, unknowns, and dead-ends from child sessions.
+
+#### `artifacts-generate`
+**Purpose:** Generate artifacts (reports, summaries) from session data
+**Usage:** `empirica artifacts-generate --session-id <id> --type <type> [options]`
+**Options:**
+- `--session-id`: Session identifier (required)
+- `--type`: Artifact type (summary, report, handoff)
+- `--output-path`: Path to write artifact
+- `--format`: Output format (markdown, json)
+
+**Returns:** Generated artifact content.
+
+---
+
+### Monitoring Commands (Extended)
+
+#### `system-status`
+**Purpose:** Show system health, adapter status, and configuration
+**Usage:** `empirica system-status [options]`
+**Options:**
+- `--verbose`: Show detailed configuration
+- `--check-adapters`: Test adapter connectivity
+- `--output`: Output format (human, json)
+
+**Returns:** System health summary including database status, Qdrant connectivity, and configuration validation.
+
+---
+
 ## Global Options
 
 All commands support these global options:
@@ -1215,6 +1325,6 @@ empirica --verbose check --session-id xyz # CHECK with debugging
 
 ---
 
-**Generated from:** empirica --help output (2026-01-21)
-**Total Commands:** 126
+**Generated from:** empirica --help output (2026-02-07)
+**Total Commands:** 134
 **Framework Version:** 1.5.0
