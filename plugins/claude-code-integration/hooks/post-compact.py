@@ -33,8 +33,8 @@ def find_project_root(claude_session_id: str = None) -> Path:
 
     Priority order:
     0. Active work file by Claude session_id (most reliable - works for ALL users)
-    1. EMPIRICA_WORKSPACE_ROOT environment variable
-    2. Known development paths (prioritized to avoid polluted temp dirs)
+    1. Instance projects file by TMUX_PANE (works in hook context without TTY)
+    2. EMPIRICA_WORKSPACE_ROOT environment variable
     3. Search upward from current directory
     4. Fallback to current directory
     """
@@ -58,21 +58,28 @@ def find_project_root(claude_session_id: str = None) -> Path:
         except Exception:
             pass
 
-    # 1. Check environment variable
+    # Priority 1: Check instance_projects by TMUX_PANE (works in hook context)
+    tmux_pane = os.environ.get('TMUX_PANE')
+    if tmux_pane:
+        try:
+            instance_id = f"tmux_{tmux_pane.lstrip('%')}"
+            instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
+            if instance_file.exists():
+                with open(instance_file, 'r') as f:
+                    instance_data = json.load(f)
+                project_path = instance_data.get('project_path')
+                if project_path:
+                    project_root = Path(project_path)
+                    if has_valid_db(project_root):
+                        return project_root
+        except Exception:
+            pass
+
+    # 2. Check environment variable
     if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
         workspace_path = Path(workspace_root).expanduser().resolve()
         if has_valid_db(workspace_path):
             return workspace_path
-
-    # 2. Try known development paths FIRST (to avoid polluted temp dirs like /tmp/.empirica)
-    known_paths = [
-        Path.home() / 'empirical-ai' / 'empirica',
-        Path.home() / 'empirica',
-        Path('/workspace'),
-    ]
-    for path in known_paths:
-        if has_valid_db(path):
-            return path
 
     # 3. Search upward from current directory (only if has valid DB)
     current = Path.cwd()
