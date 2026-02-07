@@ -1,0 +1,16 @@
+{
+  "finding_id": "ec8e673f-7191-4ba2-8df1-6f62bdff37f4",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "37c3e959-0331-4100-8c08-63075c8abeb3",
+  "ai_id": "test-release-1.5.0",
+  "created_at": "2026-02-07T19:14:02.086898+00:00",
+  "finding": "Cosmetic warning 'can't find session: empirica' in CHECK/POSTFLIGHT stderr output. Extensive search didn't find source. Doesn't affect functionality - all storage layers work, snapshots save correctly. Likely from a legacy lookup using project name instead of session ID. Low priority for post-release fix.",
+  "impact": 0.3,
+  "goal_id": "b0e4a3b2-aa57-4449-9176-29613b8f5a0b",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Cosmetic warning 'can't find session: empirica' in CHECK/POSTFLIGHT stderr output. Extensive search didn't find source. Doesn't affect functionality - all storage layers work, snapshots save correctly. Likely from a legacy lookup using project name instead of session ID. Low priority for post-release fix.",
+    "impact": 0.3
+  }
+}
