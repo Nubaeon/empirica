@@ -1,0 +1,16 @@
+{
+  "finding_id": "475e6ac2-5fd7-47bc-b574-2d3debf682e3",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T12:19:04.504867+00:00",
+  "finding": "FIX: Compact hooks (pre-compact.py, post-compact.py) now use instance_projects/{tmux_id}.json as Priority 1 fallback in find_project_root(). This ensures correct project detection in multi-instance scenarios where active_work file may not exist but TMUX_PANE is available. Removed hardcoded known_paths that caused cross-project bleed.",
+  "impact": 0.85,
+  "goal_id": "2a89c259-c106-4a40-80e2-9abe39333165",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "FIX: Compact hooks (pre-compact.py, post-compact.py) now use instance_projects/{tmux_id}.json as Priority 1 fallback in find_project_root(). This ensures correct project detection in multi-instance scenarios where active_work file may not exist but TMUX_PANE is available. Removed hardcoded known_paths that caused cross-project bleed.",
+    "impact": 0.85
+  }
+}
