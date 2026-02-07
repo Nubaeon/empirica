@@ -1,0 +1,28 @@
+{
+  "goal_id": "2a89c259-c106-4a40-80e2-9abe39333165",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T10:37:07.141431+00:00",
+  "goal_data": {
+    "objective": "Investigate transaction-scoped calibration: Check if post-test evidence collection is properly scoped by transaction_id. Current concern: goals/unknowns for future work may inflate/deflate calibration for current transaction. Decide if calibration feedback should be visible to AI or feed silently into priors.",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T10:37:07.141447+00:00",
+      "action": "created"
+    }
+  ]
+}
