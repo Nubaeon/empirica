@@ -30,6 +30,13 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
+# Add lib folder to path for shared modules
+_lib_path = Path(__file__).parent.parent / 'lib'
+if str(_lib_path) not in sys.path:
+    sys.path.insert(0, str(_lib_path))
+
+from project_resolver import get_active_project_path, get_instance_id, get_active_session_id
+
 # Noetic tools - read/investigate/search - always allowed (whitelist)
 NOETIC_TOOLS = {
     'Read', 'Glob', 'Grep', 'LSP',           # File inspection
@@ -98,6 +105,7 @@ SAFE_PIPE_TARGETS = (
     'head', 'tail', 'wc', 'sort', 'uniq', 'grep', 'rg', 'awk', 'sed -n',
     'cut', 'tr', 'less', 'more', 'cat', 'xargs echo', 'tee /dev/stderr',
     'python3 -c', 'python -c',  # For simple JSON parsing
+    'jq', 'jq ',  # JSON processing (read-only)
 )
 
 # Thresholds for CHECK validation
@@ -170,6 +178,8 @@ EMPIRICA_TIER1_PREFIXES = (
     'empirica query-mistakes', 'empirica query-handoff',
     'empirica discover-goals', 'empirica list-identities',
     'empirica issue-list',
+    'empirica docs-assess',  # Documentation assessment - read-only investigation tool
+    'empirica calibration-report',  # Calibration analysis - read-only
     'empirica --help', 'empirica -h',
     'empirica version',
 )
@@ -279,16 +289,10 @@ def respond(decision, reason=""):
 
 
 def resolve_project_root(claude_session_id: str = None) -> Optional[Path]:
-    """Resolve the correct project root using the priority chain.
+    """Resolve the correct project root using the shared project_resolver.
 
-    Priority:
-    0. Active work file by Claude session_id (most reliable - works for ALL users)
-    1. Instance mapping by TMUX_PANE (for tmux users in hook context)
-    2. TTY session's project_path (for CLI context)
-    NO CWD FALLBACK - fails explicitly if none of the above work
-
-    This is critical for multi-project scenarios where CWD may be reset
-    by Claude Code to a different project than the one being worked on.
+    Uses canonical get_active_project_path() from lib/project_resolver.py.
+    NO CWD FALLBACK - fails explicitly if instance-aware mechanisms don't work.
 
     Args:
         claude_session_id: Claude Code conversation UUID from hook input
@@ -296,81 +300,11 @@ def resolve_project_root(claude_session_id: str = None) -> Optional[Path]:
     Returns:
         Path to project root (parent of .empirica), or None if not found.
     """
-    # Priority 0: Check active_work file by Claude session_id
-    # This is the MOST RELIABLE method - works for ALL users (tmux and non-tmux)
-    if claude_session_id:
-        try:
-            active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-            if active_work_file.exists():
-                with open(active_work_file, 'r') as f:
-                    work_data = json.load(f)
-                project_path = work_data.get('project_path')
-                if project_path:
-                    project_root = Path(project_path)
-                    if (project_root / '.empirica').exists():
-                        return project_root
-        except Exception:
-            pass
-
-    # Get instance ID for instance_projects lookup
-    instance_id = None
-    try:
-        tmux_pane = os.environ.get('TMUX_PANE')
-        if tmux_pane:
-            instance_id = f"tmux_{tmux_pane.lstrip('%')}"
-        else:
-            # Try TTY
-            import subprocess
-            result = subprocess.run(['tty'], capture_output=True, text=True, timeout=2)
-            if result.returncode == 0:
-                tty = result.stdout.strip()
-                if tty and tty != 'not a tty':
-                    instance_id = tty.replace('/dev/', '').replace('/', '-')
-    except Exception:
-        pass
-
-    # Priority 1: Check instance mapping (keyed by TMUX_PANE - works in hook context)
-    # This is the PRIMARY lookup method for multi-instance scenarios
-    # MUST come before any CWD-based checks to prevent mismatches
-    if instance_id:
-        try:
-            instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
-            if instance_file.exists():
-                with open(instance_file, 'r') as f:
-                    instance_data = json.load(f)
-                project_path = instance_data.get('project_path')
-                if project_path:
-                    project_root = Path(project_path)
-                    if (project_root / '.empirica').exists():
-                        return project_root
-        except Exception:
-            pass
-
-    # Priority 2: Check TTY session's project_path (works when tty command succeeds)
-    try:
-        tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
-        if tty_sessions_dir.exists():
-            # Try to get TTY key directly
-            import subprocess
-            result = subprocess.run(['tty'], capture_output=True, text=True, timeout=2)
-            if result.returncode == 0:
-                tty = result.stdout.strip()
-                if tty and tty != 'not a tty':
-                    tty_key = tty.replace('/dev/', '').replace('/', '-')
-                    tty_file = tty_sessions_dir / f'{tty_key}.json'
-                    if tty_file.exists():
-                        with open(tty_file, 'r') as f:
-                            tty_data = json.load(f)
-                        project_path = tty_data.get('project_path')
-                        if project_path:
-                            project_root = Path(project_path)
-                            if (project_root / '.empirica').exists():
-                                return project_root
-    except Exception:
-        pass
-
-    # NO CWD FALLBACK - fail explicitly if instance-aware mechanisms don't work
-    # This prevents silent project mismatches when Claude Code resets CWD
+    project_path = get_active_project_path(claude_session_id)
+    if project_path:
+        project_root = Path(project_path)
+        if (project_root / '.empirica').exists():
+            return project_root
     return None
 
 
@@ -415,44 +349,30 @@ def find_empirica_package() -> Optional[Path]:
     return None
 
 
-def _get_current_project_id(claude_session_id: str = None) -> Optional[str]:
-    """Get project_id from active_work file or instance_projects.
+def _get_current_project_id(db_conn, session_id: str) -> Optional[str]:
+    """Get project_id from session table (authoritative source).
 
-    NO CWD FALLBACK - if instance-aware mechanisms fail, we fail explicitly.
-    This prevents silent mismatches when Claude Code resets CWD.
+    The session table stores the project_id that was resolved at session
+    creation time. This is the SAME project_id that gets stored in reflexes
+    table via store_vectors().
+
+    Args:
+        db_conn: Database connection
+        session_id: Session UUID to look up
+
+    Returns:
+        project_id (UUID) from the session, or None
     """
-    import hashlib
-
-    # Priority 0: Check active_work file (set by project-switch)
-    # This is the authoritative source after project-switch
-    if claude_session_id:
-        try:
-            active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-            if active_work_path.exists():
-                with open(active_work_path, 'r') as f:
-                    active_work = json.load(f)
-                    project_path = active_work.get('project_path')
-                    if project_path:
-                        # Hash the project path for consistent project_id format
-                        return hashlib.sha256(project_path.encode()).hexdigest()[:16]
-        except Exception:
-            pass
-
-    # Priority 1: Check instance_projects (uses TMUX_PANE, doesn't need claude_session_id)
-    instance_id = get_instance_id()
-    if instance_id:
-        try:
-            instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
-            if instance_file.exists():
-                with open(instance_file, 'r') as f:
-                    inst_data = json.load(f)
-                    project_path = inst_data.get('project_path')
-                    if project_path:
-                        return hashlib.sha256(project_path.encode()).hexdigest()[:16]
-        except Exception:
-            pass
-
-    # NO CWD FALLBACK - fail explicitly if instance-aware mechanisms don't work
+    try:
+        cursor = db_conn.execute(
+            "SELECT project_id FROM sessions WHERE session_id = ?",
+            (session_id,)
+        )
+        row = cursor.fetchone()
+        if row and row[0]:
+            return row[0]
+    except Exception:
+        pass
     return None
 
 
@@ -698,10 +618,33 @@ def main():
             respond("allow", f"Cannot import path_resolver: {e}")
             sys.exit(0)
 
-    # Get active session from active_work file (project-aware, instance-isolated)
-    # This is the ONLY source - no fallback chain to avoid confusion
-    session_id = None
-    if claude_session_id:
+    # Read active transaction first (transactions can span compaction boundaries)
+    # The transaction file's session_id is authoritative when a transaction is open
+    current_transaction_id = None
+    tx_session_id = None
+    if empirica_root:
+        instance_id = get_instance_id()
+        suffix = f'_{instance_id}' if instance_id else ''
+        tx_file = empirica_root / f'active_transaction{suffix}.json'
+        # DEBUG: Log what we're looking for
+        import sys as _sys
+        _sys.stderr.write(f"SENTINEL_DEBUG: instance_id={instance_id}, tx_file={tx_file}, exists={tx_file.exists()}\n")
+        if tx_file.exists():
+            try:
+                with open(tx_file, 'r') as f:
+                    tx_data = json.load(f)
+                current_transaction_id = tx_data.get('transaction_id')
+                tx_session_id = tx_data.get('session_id')  # Session that started this transaction
+                _sys.stderr.write(f"SENTINEL_DEBUG: current_transaction_id={current_transaction_id}, tx_session_id={tx_session_id}\n")
+            except Exception as e:
+                _sys.stderr.write(f"SENTINEL_DEBUG: tx file read error: {e}\n")
+
+    # Get session_id - transaction file takes priority (survives compaction)
+    # Fallback to active_work file for when no transaction is open
+    session_id = tx_session_id  # Priority 0: transaction file (authoritative during transaction)
+
+    if not session_id and claude_session_id:
+        # Priority 1: active_work file (updated by PREFLIGHT, project-switch)
         try:
             active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
             if active_work_file.exists():
@@ -712,22 +655,8 @@ def main():
             pass
 
     if not session_id:
-        respond("allow", "WARNING: No active_work file or empirica_session_id. Run 'empirica project-switch <project>' first.")
+        respond("allow", "WARNING: No active transaction or empirica_session_id. Run PREFLIGHT first.")
         sys.exit(0)
-
-    # Read active transaction_id from transaction file (for scoping queries to current transaction)
-    current_transaction_id = None
-    if empirica_root:
-        instance_id = get_instance_id()
-        suffix = f'_{instance_id}' if instance_id else ''
-        tx_file = empirica_root / f'active_transaction{suffix}.json'
-        if tx_file.exists():
-            try:
-                with open(tx_file, 'r') as f:
-                    tx_data = json.load(f)
-                current_transaction_id = tx_data.get('transaction_id')
-            except Exception:
-                pass
 
     # SessionDatabase uses path_resolver internally for DB location
     from empirica.data.session_database import SessionDatabase
@@ -777,7 +706,8 @@ def main():
 
     # PROJECT CONTEXT CHECK: Require new PREFLIGHT if project changed
     # This implicitly closes the previous project's epistemic loop
-    current_project_id = _get_current_project_id(claude_session_id)
+    # Uses session's project_id (same source as reflexes storage)
+    current_project_id = _get_current_project_id(db, session_id)
     if current_project_id and preflight_project_id and current_project_id != preflight_project_id:
         # Check if previous project loop was properly closed with POSTFLIGHT
         cursor.execute("""
@@ -855,7 +785,7 @@ def main():
     # AUTO-PROCEED: If PREFLIGHT passes readiness gate, skip CHECK requirement
     if raw_know >= KNOW_THRESHOLD and raw_unc <= UNCERTAINTY_THRESHOLD:
         db.close()
-        respond("allow", f"PREFLIGHT passed gate (know={raw_know:.2f}, unc={raw_unc:.2f}) - auto-proceed")
+        respond("allow", "PREFLIGHT confidence sufficient - proceeding")
         sys.exit(0)
 
     # PREFLIGHT confidence too low - require explicit CHECK
@@ -878,7 +808,7 @@ def main():
     # NOTE: db kept open - reused for anti-gaming check below (single connection per invocation)
 
     if not check_row:
-        respond("deny", f"Insufficient understanding (know={raw_know:.2f}, unc={raw_unc:.2f}). Investigate before acting.")
+        respond("deny", "Confidence below threshold. Run CHECK after investigation to proceed.")
         sys.exit(0)
 
     know, uncertainty, reflex_data, check_timestamp = check_row
@@ -960,10 +890,10 @@ def main():
     raw_check_unc = uncertainty or 1
 
     if raw_check_know >= KNOW_THRESHOLD and raw_check_unc <= UNCERTAINTY_THRESHOLD:
-        respond("allow", f"CHECK passed (know={raw_check_know:.2f}, unc={raw_check_unc:.2f})")
+        respond("allow", "CHECK passed - proceeding")
         sys.exit(0)
     else:
-        respond("deny", f"Insufficient confidence: know={raw_check_know:.2f}, uncertainty={raw_check_unc:.2f}. Investigate more.")
+        respond("deny", "CHECK confidence insufficient. Continue investigation, then re-submit CHECK.")
         sys.exit(0)
 
 

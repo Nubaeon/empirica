@@ -1,7 +1,7 @@
 # Empirica System Prompt - CLAUDE v2.4.0
 
 **Model:** CLAUDE | **Generated:** 2026-02-07
-**Syncs with:** Empirica v1.6.0
+**Syncs with:** Empirica v1.5.0
 **Change:** Project management, memory commands, workspace/CRM indicators, statusline JSON
 **Status:** AUTHORITATIVE
 
