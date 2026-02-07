@@ -841,11 +841,19 @@ def main():
 
     # POSTFLIGHT LOOP CHECK: If POSTFLIGHT exists after PREFLIGHT, loop is closed
     # This enforces the epistemic cycle: PREFLIGHT → work → POSTFLIGHT → (new PREFLIGHT required)
-    cursor.execute("""
-        SELECT timestamp FROM reflexes
-        WHERE session_id = ? AND phase = 'POSTFLIGHT'
-        ORDER BY timestamp DESC LIMIT 1
-    """, (session_id,))
+    # Scope by transaction_id to prevent cross-instance bleed (multiple Claudes sharing session)
+    if current_transaction_id:
+        cursor.execute("""
+            SELECT timestamp FROM reflexes
+            WHERE session_id = ? AND phase = 'POSTFLIGHT' AND transaction_id = ?
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id, current_transaction_id))
+    else:
+        cursor.execute("""
+            SELECT timestamp FROM reflexes
+            WHERE session_id = ? AND phase = 'POSTFLIGHT'
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
     postflight_row = cursor.fetchone()
 
     if postflight_row:
