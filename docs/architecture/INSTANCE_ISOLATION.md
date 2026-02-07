@@ -130,6 +130,35 @@ The suffix is determined by `get_instance_id()`:
 
 **Critical:** The `project_path` field enables cross-CWD operations.
 
+### 3.2a Pre-Compact Snapshot Files
+
+Pre-compact hooks capture epistemic state before memory compaction, enabling continuity:
+
+**Location:** `{project}/.empirica/ref-docs/pre_summary_{timestamp}.json`
+
+```json
+{
+  "session_id": "2f479fcb-3bb4-480f-be97-58368aa1949f",
+  "pre_compact_vectors": { "know": 0.75, "uncertainty": 0.25 },
+  "active_transaction": {
+    "transaction_id": "a023bc81...",
+    "status": "open",
+    "project_path": "/home/user/empirical-ai/empirica"
+  },
+  "breadcrumbs": { "findings": 10, "unknowns": 1, "goals": 10 }
+}
+```
+
+**Written by:** `pre-compact.py` hook (captures state before summary)
+**Read by:** `post-compact.py` hook (injects into CHECK gate prompt)
+
+**Key Fields:**
+- `active_transaction`: Captured from instance-specific transaction file, survives compaction
+- `pre_compact_vectors`: AI's epistemic state BEFORE compaction (compare with post-compact self-assessment)
+- `breadcrumbs`: Counts of noetic artifacts available for retrieval
+
+This enables transaction continuity across memory barriers. See TRANSACTION_CONTINUITY_SPEC.md.
+
 ---
 
 ## 4. Resolution Priority Chains
@@ -153,6 +182,28 @@ Priority 4: CWD-based git root detection
 **Critical:** Priority 0 (active_work file) is the KEY for multi-instance isolation.
 Claude Code provides `session_id` in hook input, which maps to the active_work file.
 This works for ALL users, not just tmux users.
+
+#### active_work as Dual-Key Hub
+
+The active_work file serves as the central linkage point, storing BOTH structural and temporal keys:
+
+```json
+{
+  "project_path": "/home/user/empirical-ai/empirica",
+  "folder_name": "empirica",
+  "empirica_session_id": "2f479fcb-3bb4-480f-be97-58368aa1949f"
+}
+```
+
+| Field | Purpose | Written By |
+|-------|---------|------------|
+| `project_path` | Structural key → project database location | `project-switch` |
+| `folder_name` | Human-readable project identifier | `project-switch` |
+| `empirica_session_id` | Temporal key → active session in that project | `project-switch` |
+
+**Key Insight:** This file is the PRIMARY source of truth after project-switch.
+TTY session files and transaction files are secondary. Post-compact hooks read this
+file FIRST to recover both project context AND active session.
 
 ### 4.2 Finding the Project DB (`resolve_session_db_path`)
 
@@ -227,6 +278,44 @@ Then reads: `{empirica_root}/active_transaction_{instance_id}.json`
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+### 5.1 Post-Compact Recovery Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     Memory Compaction Boundary                       │
+│                                                                      │
+│  PRE-COMPACT                              POST-COMPACT               │
+│  ───────────                              ────────────               │
+│  ┌─────────────────┐                     ┌─────────────────┐        │
+│  │ pre-compact.py  │                     │ post-compact.py │        │
+│  └────────┬────────┘                     └────────┬────────┘        │
+│           │                                       │                  │
+│           │ 1. Read active_transaction            │ 1. Extract      │
+│           │    from instance file                 │    claude_id    │
+│           │                                       │    from stdin   │
+│           │ 2. Read vectors from DB               │                 │
+│           │                                       │ 2. Read         │
+│           │ 3. Snapshot breadcrumbs               │    active_work  │
+│           │                                       │    _{id}.json   │
+│           ▼                                       │                 │
+│  ┌─────────────────┐                     │ 3. Load pre_   │        │
+│  │ pre_summary_    │─────────────────────┤    summary     │        │
+│  │ {timestamp}.json│   (survives)        │    snapshot    │        │
+│  └─────────────────┘                     │                 │        │
+│                                                  │ 4. Inject       │
+│                                                  │    CHECK gate   │
+│                                                  │    with tx      │
+│                                                  ▼                  │
+│                                          ┌─────────────────┐        │
+│                                          │ Dynamic context │        │
+│                                          │ with transaction│        │
+│                                          │ continuity      │        │
+│                                          └─────────────────┘        │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Critical Path:** `claude_session_id` → `active_work` file → `project_path` + `empirica_session_id`
 
 ---
 
@@ -329,12 +418,16 @@ is a safe empirica command and other segments are safe (cd, etc.), allow it.
 - [x] Wire `get_session_db_path()` to check instance_projects mapping before CWD fallback
 - [x] Wire to workspace.db for git repo → project mapping (Priority 2 in resolution chain)
 - [x] Wire `_get_project_id_from_cwd()` in vectors.py to match sentinel's project_id computation
+- [x] Pre-compact hooks capture active_transaction in snapshot (Section 3.2a)
+- [x] Post-compact hooks inject transaction context from snapshot (Section 5.1)
+- [x] active_work file stores both project_path AND empirica_session_id (dual-key hub)
 
 ---
 
 ## 10. Relationship to TRANSACTION_CONTINUITY_SPEC
 
-This document complements TRANSACTION_CONTINUITY_SPEC.md:
+**Critical:** Read [TRANSACTION_CONTINUITY_SPEC.md](./TRANSACTION_CONTINUITY_SPEC.md) alongside this document.
+They solve related but distinct problems:
 
 | Aspect | TRANSACTION_CONTINUITY_SPEC | This Document |
 |--------|----------------------------|---------------|
@@ -343,9 +436,17 @@ This document complements TRANSACTION_CONTINUITY_SPEC.md:
 | Problem | Compaction breaks continuity | Multiple panes bleed |
 | Solution | File-based transactions | TTY-keyed files + instance suffix |
 
+**The intersection:** Pre-compact snapshots (Section 3.2a) capture transaction state, and
+post-compact recovery (Section 5.1) injects it back. This bridges both concerns:
+- Instance isolation ensures the RIGHT transaction is captured (not another pane's)
+- Transaction continuity ensures work SURVIVES the compaction boundary
+
 Both are needed for a complete picture:
 - **Transaction continuity** = how work survives compaction
 - **Instance isolation** = how parallel work stays separate
+
+**Handoff reports** (see TRANSACTION_CONTINUITY_SPEC Section 6) provide additional context
+for cross-session continuity, capturing key findings and next steps in structured format.
 
 ---
 
@@ -373,6 +474,31 @@ project when Claude Code reset CWD. This caused it to read wrong database/loop s
 check Claude session_id. They fell back to hardcoded paths or CWD, picking wrong project.
 **Fix:** Added Priority 0 check for `~/.empirica/active_work_{session_id}.json` in both hooks.
 Extract `claude_session_id = hook_input.get('session_id')` and pass to find_project_root().
+
+**Implementation detail (code-level flow):**
+
+```python
+# In pre-compact.py / post-compact.py main():
+
+# 1. Extract claude_session_id from hook input
+hook_input = json.loads(sys.stdin.read())
+claude_session_id = hook_input.get('session_id')  # Claude Code provides this
+
+# 2. Check active_work file FIRST (Priority 0)
+active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+if active_work_path.exists():
+    work_data = json.load(active_work_path.open())
+    project_path = work_data.get('project_path')  # Authoritative
+    empirica_session_id = work_data.get('empirica_session_id')
+
+# 3. Fall back to other resolution methods only if Priority 0 fails
+```
+
+**Files modified:**
+- `plugins/claude-code-integration/hooks/pre-compact.py`
+- `plugins/claude-code-integration/hooks/post-compact.py`
+
+**Related:** Section 3.2a (Pre-Compact Snapshot Files), Section 5.1 (Post-Compact Recovery Flow)
 
 ### 11.4 Goal Transaction Linkage
 
