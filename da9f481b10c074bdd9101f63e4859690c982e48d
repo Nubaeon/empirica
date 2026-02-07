@@ -1,0 +1,16 @@
+{
+  "finding_id": "de75f0ea-414f-4236-bef2-8d82943d5e65",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8de3d60-8903-4961-a84c-003eab949260",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T17:27:22.442261+00:00",
+  "finding": "Synced CLAUDE.md from ~/.claude/ (v2.3.0) to docs/human/developers/system-prompts/. Fixed 12 orphaned sessions with string project_id 'empirica' by updating to UUID. Instance isolation now working with --claude-session-id flag.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Synced CLAUDE.md from ~/.claude/ (v2.3.0) to docs/human/developers/system-prompts/. Fixed 12 orphaned sessions with string project_id 'empirica' by updating to UUID. Instance isolation now working with --claude-session-id flag.",
+    "impact": 0.7
+  }
+}
