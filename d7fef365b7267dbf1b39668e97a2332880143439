@@ -1,0 +1,16 @@
+{
+  "finding_id": "a8ed96c9-b494-44fd-8c25-1d248e4bba82",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "ecdaa1d7-2206-4890-a318-abe020397383",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T17:01:18.572371+00:00",
+  "finding": "BUG: session-create --project-id stores folder_name string instead of resolving to project UUID. This breaks goals-list filtering since goals have UUID project_id but session has string project_id.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "BUG: session-create --project-id stores folder_name string instead of resolving to project UUID. This breaks goals-list filtering since goals have UUID project_id but session has string project_id.",
+    "impact": 0.7
+  }
+}
