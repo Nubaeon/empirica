@@ -1,0 +1,28 @@
+{
+  "goal_id": "8ef3c718-2371-4b09-8f23-07d0ca89da33",
+  "session_id": "a8de3d60-8903-4961-a84c-003eab949260",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T18:47:44.615128+00:00",
+  "goal_data": {
+    "objective": "Update CLI_COMMANDS_UNIFIED.md: Document goals-create 3D scope (breadth, duration, coordination), add project-switch command details, document calibration-report --trajectory flags",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T18:47:44.615146+00:00",
+      "action": "created"
+    }
+  ]
+}
