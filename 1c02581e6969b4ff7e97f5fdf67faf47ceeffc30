@@ -1,0 +1,28 @@
+{
+  "goal_id": "b0e4a3b2-aa57-4449-9176-29613b8f5a0b",
+  "session_id": "37c3e959-0331-4100-8c08-63075c8abeb3",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T19:05:37.183757+00:00",
+  "goal_data": {
+    "objective": "Fix 'can't find session: empirica' cosmetic warning in CHECK/POSTFLIGHT output",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T19:05:37.183772+00:00",
+      "action": "created"
+    }
+  ]
+}
