@@ -1,0 +1,14 @@
+{
+  "mistake_id": "63f6cde3-64eb-4648-9ef7-a9bb3f44a9f2",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "f8e28dea-0fec-4f09-98a4-1e4708ee4143",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T18:26:11.603395+00:00",
+  "mistake": "Test: Previously required explicit session_id for every command",
+  "why_wrong": "Unnecessarily verbose, transaction already tracks session_id",
+  "prevention": null,
+  "cost_estimate": null,
+  "root_cause_vector": null,
+  "goal_id": null,
+  "subtask_id": null
+}
