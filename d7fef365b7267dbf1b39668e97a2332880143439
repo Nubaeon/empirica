@@ -1,0 +1,13 @@
+{
+  "unknown_id": "c540f170-7200-4aef-993d-b6d261cfcd1c",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "94f54119-f4d6-41f4-8d1b-2814fb3dd434",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T14:47:32.972789+00:00",
+  "unknown": "Goals should be transaction-scoped not session-scoped. Transactions span multiple sessions (compaction boundaries) and are the natural measurement boundary. Goals should carry transaction_id as primary linkage.",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
