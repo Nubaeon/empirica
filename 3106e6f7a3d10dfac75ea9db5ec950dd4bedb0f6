@@ -1,0 +1,16 @@
+{
+  "finding_id": "02299433-8b1c-4be4-aa1a-71ccc121baca",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T10:37:57.965502+00:00",
+  "finding": "Calibration feedback visibility analysis: Current flow has TWO paths: (1) PREFLIGHT retrieves prior adjustments from .breadcrumbs.yaml - AI sees these as 'learning_prior.adjustments'. (2) POSTFLIGHT shows detailed gaps in response JSON. For AI: prior adjustments ARE actionable (applied before work). Post-hoc gaps are informational (work already done). For human: both useful for trust calibration and research. Recommendation: prior adjustments = silent AI internalization, post-hoc gaps = human oversight dashboard, severe miscalibration (>0.3 gap) = surface to AI.",
+  "impact": 0.75,
+  "goal_id": "2a89c259-c106-4a40-80e2-9abe39333165",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Calibration feedback visibility analysis: Current flow has TWO paths: (1) PREFLIGHT retrieves prior adjustments from .breadcrumbs.yaml - AI sees these as 'learning_prior.adjustments'. (2) POSTFLIGHT shows detailed gaps in response JSON. For AI: prior adjustments ARE actionable (applied before work). Post-hoc gaps are informational (work already done). For human: both useful for trust calibration and research. Recommendation: prior adjustments = silent AI internalization, post-hoc gaps = human oversight dashboard, severe miscalibration (>0.3 gap) = surface to AI.",
+    "impact": 0.75
+  }
+}
