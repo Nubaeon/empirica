@@ -1,0 +1,16 @@
+{
+  "finding_id": "ead17974-1795-4cdf-8bfd-8c220578337a",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T10:29:38.391743+00:00",
+  "finding": "CLI docs coverage improved from ~75% to 98% (189/193). Added 8 commands to CLI_COMMANDS_UNIFIED.md: memory-prime, memory-scope, memory-value, memory-report, pattern-check, session-rollup, artifacts-generate, system-status. Remaining 4 'missing' (msg-*) are aliases for documented message-* commands - false positive in docs-assess.",
+  "impact": 0.85,
+  "goal_id": "9b5d15ee-42e6-4757-a80d-29dc48427a0f",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "CLI docs coverage improved from ~75% to 98% (189/193). Added 8 commands to CLI_COMMANDS_UNIFIED.md: memory-prime, memory-scope, memory-value, memory-report, pattern-check, session-rollup, artifacts-generate, system-status. Remaining 4 'missing' (msg-*) are aliases for documented message-* commands - false positive in docs-assess.",
+    "impact": 0.85
+  }
+}
