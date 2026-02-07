@@ -1,0 +1,28 @@
+{
+  "goal_id": "0e8cb7bf-1960-4ef3-8041-0c104b9d725f",
+  "session_id": "a8de3d60-8903-4961-a84c-003eab949260",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T18:51:53.174796+00:00",
+  "goal_data": {
+    "objective": "Create ENVIRONMENT_VARIABLES.md reference documenting 30+ env vars: EMPIRICA_DB_*, EMPIRICA_SENTINEL_*, EMPIRICA_QDRANT_*, EMPIRICA_EMBEDDINGS_*, etc.",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T18:51:53.174811+00:00",
+      "action": "created"
+    }
+  ]
+}
