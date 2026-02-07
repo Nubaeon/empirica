@@ -754,8 +754,11 @@ def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
     instead of implementing their own priority chain.
 
     Priority chain (NO CWD FALLBACK):
-    1. active_work_{claude_session_id}.json (if claude_session_id provided)
-    2. instance_projects/{instance_id}.json (uses TMUX_PANE)
+    1. instance_projects/{instance_id}.json - AUTHORITATIVE (updated by project-switch)
+    2. active_work_{claude_session_id}.json - fallback (may be stale after project-switch)
+
+    Self-healing: If both exist but disagree, instance_projects wins and active_work
+    is updated to match (fixes stale active_work files after project-switch).
 
     Args:
         claude_session_id: Optional Claude Code conversation UUID (from hook input)
@@ -773,21 +776,21 @@ def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
     """
     from pathlib import Path
 
-    # Priority 0: Check active_work file by Claude session_id
+    active_work_path = None
+    instance_path = None
+
+    # Read active_work file (if claude_session_id provided)
     if claude_session_id:
         active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
         if active_work_file.exists():
             try:
                 with open(active_work_file, 'r') as f:
                     data = json.load(f)
-                    project_path = data.get('project_path')
-                    if project_path:
-                        logger.debug(f"get_active_project_path: from active_work file: {project_path}")
-                        return project_path
+                    active_work_path = data.get('project_path')
             except Exception:
                 pass
 
-    # Priority 1: Check instance_projects by instance_id (TMUX_PANE, etc.)
+    # Read instance_projects (TMUX_PANE-based) - AUTHORITATIVE source
     instance_id = get_instance_id()
     if instance_id:
         instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
@@ -795,12 +798,28 @@ def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
             try:
                 with open(instance_file, 'r') as f:
                     data = json.load(f)
-                    project_path = data.get('project_path')
-                    if project_path:
-                        logger.debug(f"get_active_project_path: from instance_projects: {project_path}")
-                        return project_path
+                    instance_path = data.get('project_path')
             except Exception:
                 pass
+
+    # PRIORITY: instance_projects wins (updated by project-switch)
+    if instance_path:
+        # Self-heal: If active_work exists but disagrees, update it
+        if claude_session_id and active_work_path and active_work_path != instance_path:
+            logger.info(f"get_active_project_path: self-healing stale active_work "
+                       f"({Path(active_work_path).name} → {Path(instance_path).name})")
+            try:
+                update_active_context(claude_session_id, project_path=instance_path)
+            except Exception as e:
+                logger.debug(f"Failed to self-heal active_work: {e}")
+
+        logger.debug(f"get_active_project_path: from instance_projects: {instance_path}")
+        return instance_path
+
+    # Fallback: active_work (only if instance_projects doesn't exist)
+    if active_work_path:
+        logger.debug(f"get_active_project_path: from active_work file: {active_work_path}")
+        return active_work_path
 
     # NO CWD FALLBACK - fail explicitly
     logger.debug("get_active_project_path: could not resolve (no active_work or instance_projects)")
@@ -959,3 +978,379 @@ def clear_active_transaction(claude_session_id: str = None) -> None:
             global_candidate.unlink()
         except Exception:
             pass
+
+
+# ============================================================================
+# Unified Context Resolver
+# ============================================================================
+
+def get_active_context(claude_session_id: str = None) -> dict:
+    """Get the complete active epistemic context.
+
+    CANONICAL function for getting the full context. All components should
+    use this instead of reading individual files.
+
+    Returns a dict with:
+        - claude_session_id: Claude Code conversation UUID (if available)
+        - empirica_session_id: Empirica session UUID
+        - transaction_id: Active transaction UUID (if in a transaction)
+        - project_path: Project directory path
+        - instance_id: Instance identifier (TMUX_PANE, etc.)
+
+    Priority chain for resolution:
+    1. active_work_{claude_session_id}.json (if claude_session_id provided)
+    2. TTY session file (if TTY available)
+    3. instance_projects (if TMUX_PANE available)
+
+    Args:
+        claude_session_id: Optional Claude Code conversation UUID (from hook input)
+
+    Returns:
+        Dict with context fields. Missing fields are None, not absent.
+    """
+    from pathlib import Path
+
+    context = {
+        'claude_session_id': claude_session_id,
+        'empirica_session_id': None,
+        'transaction_id': None,
+        'project_path': None,
+        'instance_id': get_instance_id(),
+    }
+
+    # Priority 0: Check active_work file by Claude session_id (most authoritative)
+    if claude_session_id:
+        active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+        if active_work_file.exists():
+            try:
+                with open(active_work_file, 'r') as f:
+                    data = json.load(f)
+                    context['empirica_session_id'] = data.get('empirica_session_id')
+                    context['project_path'] = data.get('project_path')
+                    logger.debug(f"get_active_context: loaded from active_work file")
+            except Exception:
+                pass
+
+    # Priority 1: TTY session (if no claude_session_id or active_work missing data)
+    if not context['empirica_session_id'] or not context['project_path']:
+        tty_session = get_tty_session(warn_if_stale=False)
+        if tty_session:
+            if not context['claude_session_id']:
+                context['claude_session_id'] = tty_session.get('claude_session_id')
+            if not context['empirica_session_id']:
+                context['empirica_session_id'] = tty_session.get('empirica_session_id')
+            if not context['project_path']:
+                context['project_path'] = tty_session.get('project_path')
+
+    # Priority 2: Instance projects (if still missing project_path)
+    if not context['project_path'] and context['instance_id']:
+        instance_file = Path.home() / '.empirica' / 'instance_projects' / f"{context['instance_id']}.json"
+        if instance_file.exists():
+            try:
+                with open(instance_file, 'r') as f:
+                    data = json.load(f)
+                    context['project_path'] = data.get('project_path')
+            except Exception:
+                pass
+
+    # Load transaction from transaction file
+    if context['project_path']:
+        tx_data = read_active_transaction_full(claude_session_id)
+        if tx_data:
+            context['transaction_id'] = tx_data.get('transaction_id')
+            # Transaction file may have more recent session_id (from PREFLIGHT)
+            tx_session = tx_data.get('session_id')
+            if tx_session:
+                context['empirica_session_id'] = tx_session
+
+    return context
+
+
+def update_active_context(
+    claude_session_id: str,
+    empirica_session_id: str = None,
+    project_path: str = None,
+    **extra_fields
+) -> bool:
+    """Update the active_work file with new context values.
+
+    CANONICAL function for updating context. PREFLIGHT, project-switch,
+    and other state-changing operations should use this.
+
+    Only updates fields that are provided (non-None). Existing values
+    are preserved for fields not specified.
+
+    Args:
+        claude_session_id: Claude Code conversation UUID (required)
+        empirica_session_id: New Empirica session UUID
+        project_path: New project directory path
+        **extra_fields: Additional fields to store
+
+    Returns:
+        True if successfully updated, False otherwise.
+    """
+    from pathlib import Path
+    import time
+
+    if not claude_session_id:
+        logger.warning("update_active_context: claude_session_id required")
+        return False
+
+    active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+    active_work_file.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # Load existing data
+        data = {}
+        if active_work_file.exists():
+            try:
+                with open(active_work_file, 'r') as f:
+                    data = json.load(f)
+            except Exception:
+                pass
+
+        # Update with new values (only if provided)
+        if empirica_session_id is not None:
+            data['empirica_session_id'] = empirica_session_id
+        if project_path is not None:
+            data['project_path'] = project_path
+
+        # Add extra fields
+        for key, value in extra_fields.items():
+            if value is not None:
+                data[key] = value
+
+        # Always update timestamp
+        data['updated_at'] = time.time()
+
+        # Atomic write
+        with open(active_work_file, 'w') as f:
+            json.dump(data, f, indent=2)
+
+        logger.debug(f"update_active_context: updated {active_work_file.name}")
+        return True
+
+    except Exception as e:
+        logger.warning(f"update_active_context failed: {e}")
+        return False
+
+
+# ============================================================================
+# Project Identifier Resolution
+# ============================================================================
+
+def _is_uuid_format(value: str) -> bool:
+    """Check if a string looks like a UUID (8-4-4-4-12 hex format)."""
+    import re
+    if not value or not isinstance(value, str):
+        return False
+    uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    return bool(re.match(uuid_pattern, value.lower()))
+
+
+def resolve_project_identifier(identifier: str) -> Optional[dict]:
+    """Resolve project identifier to canonical project info.
+
+    CANONICAL function for project resolution. All CLI commands that accept
+    --project-id should use this to normalize the input.
+
+    Accepts:
+        - UUID: e.g., "748a81a2-ac14-45b8-a185-994997b76828"
+        - Folder name: e.g., "empirica", "my-project"
+        - Path: e.g., "/home/user/projects/empirica"
+
+    Resolution priority:
+        1. If UUID format: validate in workspace.db or local sessions.db
+        2. If path: extract folder_name and resolve
+        3. If folder_name: lookup in workspace.db
+
+    Args:
+        identifier: Project UUID, folder name, or path
+
+    Returns:
+        Dict with:
+            - project_id: Canonical UUID
+            - folder_name: Project folder name (ground truth)
+            - project_path: Absolute path to project directory
+            - source: Where the resolution came from ('workspace', 'local', 'path')
+        Or None if project cannot be resolved.
+
+    Example:
+        >>> resolve_project_identifier("empirica")
+        {'project_id': '748a81a2-...', 'folder_name': 'empirica',
+         'project_path': '/home/user/empirica', 'source': 'workspace'}
+
+        >>> resolve_project_identifier("748a81a2-ac14-45b8-a185-994997b76828")
+        {'project_id': '748a81a2-...', 'folder_name': 'empirica',
+         'project_path': '/home/user/empirica', 'source': 'workspace'}
+    """
+    from pathlib import Path as P
+    import sqlite3
+
+    if not identifier:
+        return None
+
+    identifier = identifier.strip()
+
+    # Normalize path input to folder_name
+    if identifier.startswith('/') or identifier.startswith('~') or '/' in identifier:
+        # It's a path - extract folder name and resolve
+        path = P(identifier).expanduser().resolve()
+        if path.exists() and path.is_dir():
+            folder_name = path.name
+            # Check if it has .empirica (valid project)
+            if (path / '.empirica').exists():
+                # Try to get UUID from local sessions.db
+                project_id = _get_project_id_from_local_db(path)
+                return {
+                    'project_id': project_id,
+                    'folder_name': folder_name,
+                    'project_path': str(path),
+                    'source': 'path'
+                }
+        # Path doesn't exist or isn't a valid project
+        identifier = path.name  # Fall through to folder_name resolution
+
+    # Try workspace.db lookup first (enhanced resolution)
+    workspace_result = _resolve_via_workspace_db(identifier)
+    if workspace_result:
+        return workspace_result
+
+    # Fallback: local .empirica lookup (basic resolution)
+    # This handles projects not yet registered in workspace
+    local_result = _resolve_via_local_empirica(identifier)
+    if local_result:
+        return local_result
+
+    return None
+
+
+def _get_project_id_from_local_db(project_path: 'Path') -> Optional[str]:
+    """Extract project_id from a project's local sessions.db."""
+    import sqlite3
+    from pathlib import Path as P
+
+    db_path = P(project_path) / '.empirica' / 'sessions' / 'sessions.db'
+    if not db_path.exists():
+        return None
+
+    try:
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+        # Get project_id from the most recent session
+        cursor.execute("""
+            SELECT DISTINCT project_id FROM sessions
+            WHERE project_id IS NOT NULL AND project_id != ''
+            ORDER BY created_at DESC LIMIT 1
+        """)
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return row[0]
+    except Exception:
+        pass
+    return None
+
+
+def _resolve_via_workspace_db(identifier: str) -> Optional[dict]:
+    """Resolve project via workspace.db (global registry).
+
+    Workspace.db stores all registered projects with:
+    - id: UUID
+    - name: Project name (may differ from folder)
+    - trajectory_path: Absolute path to project folder
+
+    Args:
+        identifier: UUID, folder_name, or project name
+
+    Returns:
+        Project info dict or None
+    """
+    import sqlite3
+    from pathlib import Path as P
+
+    workspace_db = P.home() / '.empirica' / 'workspace' / 'workspace.db'
+    if not workspace_db.exists():
+        return None
+
+    try:
+        conn = sqlite3.connect(str(workspace_db))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Strategy 1: Check if it's a UUID - look up by id
+        if _is_uuid_format(identifier):
+            cursor.execute("""
+                SELECT id, name, trajectory_path FROM global_projects
+                WHERE id = ? AND status = 'active'
+            """, (identifier,))
+        else:
+            # Strategy 2: Look up by folder name (from trajectory_path)
+            # or by project name
+            cursor.execute("""
+                SELECT id, name, trajectory_path FROM global_projects
+                WHERE (
+                    trajectory_path LIKE ? OR
+                    name = ?
+                ) AND status = 'active'
+            """, (f'%/{identifier}', identifier))
+
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            trajectory_path = row['trajectory_path']
+            # Normalize: strip /.empirica suffix if present (legacy data format)
+            if trajectory_path and trajectory_path.endswith('/.empirica'):
+                trajectory_path = trajectory_path[:-10]  # Remove /.empirica
+            folder_name = P(trajectory_path).name if trajectory_path else None
+            return {
+                'project_id': row['id'],
+                'folder_name': folder_name,
+                'project_path': trajectory_path,
+                'source': 'workspace'
+            }
+    except Exception as e:
+        logger.debug(f"workspace.db lookup failed: {e}")
+
+    return None
+
+
+def _resolve_via_local_empirica(identifier: str) -> Optional[dict]:
+    """Resolve project via local .empirica discovery.
+
+    Fallback when workspace.db is not available or doesn't have the project.
+    Searches common project locations.
+
+    Args:
+        identifier: folder_name (UUID lookup not supported in fallback)
+
+    Returns:
+        Project info dict or None
+    """
+    from pathlib import Path as P
+
+    # If it's a UUID, we can't resolve without workspace.db
+    if _is_uuid_format(identifier):
+        return None
+
+    # Search common locations for the folder
+    search_paths = [
+        P.home() / identifier,
+        P.home() / 'projects' / identifier,
+        P.home() / 'code' / identifier,
+        P.home() / 'empirical-ai' / identifier,
+        P.cwd().parent / identifier,  # Sibling directory
+    ]
+
+    for path in search_paths:
+        if path.exists() and path.is_dir() and (path / '.empirica').exists():
+            project_id = _get_project_id_from_local_db(path)
+            return {
+                'project_id': project_id,  # May be None if no sessions yet
+                'folder_name': path.name,
+                'project_path': str(path),
+                'source': 'local'
+            }
+
+    return None
