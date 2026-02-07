@@ -1388,21 +1388,12 @@ def handle_finding_log_command(args):
         if config_data:
             # AI-FIRST MODE
             project_id = config_data.get('project_id')
-            session_id = config_data.get('session_id')
+            session_id = config_data.get('session_id')  # Optional - auto-derives from transaction
             finding = config_data.get('finding')
             goal_id = config_data.get('goal_id')
             subtask_id = config_data.get('subtask_id')
             impact = config_data.get('impact')  # Optional - auto-derives if None
             output_format = 'json'
-
-            # Validate required fields
-            if not project_id or not session_id or not finding:
-                print(json.dumps({
-                    "ok": False,
-                    "error": "Config file must include 'project_id', 'session_id', and 'finding' fields",
-                    "hint": "See /tmp/finding_config_example.json for schema"
-                }))
-                sys.exit(1)
         else:
             # LEGACY MODE
             session_id = args.session_id
@@ -1413,15 +1404,19 @@ def handle_finding_log_command(args):
             impact = getattr(args, 'impact', None)  # Optional - auto-derives if None
             output_format = getattr(args, 'output', 'json')
 
-            # Validate required fields for legacy mode
-            # Allow project_id to be None initially, will auto-resolve below
-            if not session_id or not finding:
-                print(json.dumps({
-                    "ok": False,
-                    "error": "Legacy mode requires --session-id and --finding flags",
-                    "hint": "Project ID will be auto-resolved if not provided. For AI-first mode, use: empirica finding-log config.json"
-                }))
-                sys.exit(1)
+        # UNIFIED: Auto-derive session_id if not provided (works for both modes)
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        # Validate required fields
+        if not session_id or not finding:
+            print(json.dumps({
+                "ok": False,
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
+            }))
+            sys.exit(1)
 
         # Auto-detect subject from current directory
         from empirica.config.project_config_loader import get_current_subject
@@ -1687,13 +1682,6 @@ def handle_unknown_log_command(args):
             subtask_id = config_data.get('subtask_id')
             impact = config_data.get('impact')  # Optional - auto-derives if None
             output_format = 'json'
-
-            if not project_id or not session_id or not unknown:
-                print(json.dumps({
-                    "ok": False,
-                    "error": "Config file must include 'project_id', 'session_id', and 'unknown' fields"
-                }))
-                sys.exit(1)
         else:
             session_id = args.session_id
             unknown = args.unknown
@@ -1702,6 +1690,20 @@ def handle_unknown_log_command(args):
             subtask_id = getattr(args, 'subtask_id', None)
             impact = getattr(args, 'impact', None)  # Optional - auto-derives if None
             output_format = getattr(args, 'output', 'json')
+
+        # UNIFIED: Auto-derive session_id if not provided (works for both modes)
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        # Validate required fields
+        if not session_id or not unknown:
+            print(json.dumps({
+                "ok": False,
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
+            }))
+            sys.exit(1)
 
         # Auto-detect subject from current directory
         from empirica.config.project_config_loader import get_current_subject
@@ -1936,20 +1938,13 @@ def handle_deadend_log_command(args):
         # Extract parameters from config or fall back to legacy flags
         if config_data:
             project_id = config_data.get('project_id')
-            session_id = config_data.get('session_id')
+            session_id = config_data.get('session_id')  # Optional - auto-derives from transaction
             approach = config_data.get('approach')
             why_failed = config_data.get('why_failed')
             goal_id = config_data.get('goal_id')
             subtask_id = config_data.get('subtask_id')
             impact = config_data.get('impact')  # Optional - auto-derives if None
             output_format = 'json'
-
-            if not project_id or not session_id or not approach or not why_failed:
-                print(json.dumps({
-                    "ok": False,
-                    "error": "Config file must include 'project_id', 'session_id', 'approach', and 'why_failed' fields"
-                }))
-                sys.exit(1)
         else:
             session_id = args.session_id
             approach = args.approach
@@ -1960,12 +1955,26 @@ def handle_deadend_log_command(args):
             impact = getattr(args, 'impact', None)  # Optional - auto-derives if None
             output_format = getattr(args, 'output', 'json')
 
+        # UNIFIED: Auto-derive session_id if not provided (works for both modes)
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        # Validate required fields
+        if not session_id or not approach or not why_failed:
+            print(json.dumps({
+                "ok": False,
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
+            }))
+            sys.exit(1)
+
         # Auto-detect subject from current directory
         from empirica.config.project_config_loader import get_current_subject
         subject = config_data.get('subject') if config_data else getattr(args, 'subject', None)
         if subject is None:
             subject = get_current_subject()  # Auto-detect from directory
-        
+
         db = SessionDatabase()
 
         # Auto-resolve project_id if not provided

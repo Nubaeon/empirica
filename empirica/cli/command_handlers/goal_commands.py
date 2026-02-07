@@ -160,29 +160,8 @@ def handle_goals_create_command(args):
         # Extract parameters from config or fall back to legacy flags
         if config_data:
             # AI-FIRST MODE: Use config file
-            session_id = config_data.get('session_id')
+            session_id = config_data.get('session_id')  # Optional - auto-derives from transaction
             objective = config_data.get('objective')
-
-            # TRANSACTION-FIRST: Auto-derive session_id from active transaction if not provided
-            if not session_id:
-                try:
-                    from empirica.utils.session_resolver import read_active_transaction_full
-                    tx_data = read_active_transaction_full()
-                    if tx_data and tx_data.get('status') == 'open':
-                        session_id = tx_data.get('session_id')
-                        logger.info(f"Auto-derived session_id from active transaction: {session_id[:8]}...")
-                except Exception:
-                    pass
-
-            # Validate required fields in config
-            if not session_id or not objective:
-                print(json.dumps({
-                    "ok": False,
-                    "error": "No active transaction and 'session_id' not in config",
-                    "hint": "Either run PREFLIGHT first, or provide 'session_id' in config",
-                    "received": {"session_id": bool(session_id), "objective": bool(objective)}
-                }))
-                sys.exit(1)
 
             # Parse scope from config (nested or flat)
             scope_config = config_data.get('scope', {})
@@ -205,26 +184,6 @@ def handle_goals_create_command(args):
             # LEGACY MODE: Use CLI flags
             session_id = args.session_id
             objective = args.objective
-
-            # TRANSACTION-FIRST: Auto-derive session_id from active transaction if not provided
-            if not session_id:
-                try:
-                    from empirica.utils.session_resolver import read_active_transaction_full
-                    tx_data = read_active_transaction_full()
-                    if tx_data and tx_data.get('status') == 'open':
-                        session_id = tx_data.get('session_id')
-                        logger.info(f"Auto-derived session_id from active transaction: {session_id[:8]}...")
-                except Exception:
-                    pass
-
-            # Validate required fields for legacy mode
-            if not session_id or not objective:
-                print(json.dumps({
-                    "ok": False,
-                    "error": "No active transaction and --session-id not provided",
-                    "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
-                }))
-                sys.exit(1)
             scope_breadth = float(args.scope_breadth) if hasattr(args, 'scope_breadth') and args.scope_breadth else 0.3
             scope_duration = float(args.scope_duration) if hasattr(args, 'scope_duration') and args.scope_duration else 0.2
             scope_coordination = float(args.scope_coordination) if hasattr(args, 'scope_coordination') and args.scope_coordination else 0.1
@@ -253,6 +212,20 @@ def handle_goals_create_command(args):
             # Safety check
             if isinstance(success_criteria_list, str):
                 success_criteria_list = [success_criteria_list]
+
+        # UNIFIED: Auto-derive session_id if not provided (works for both modes)
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        # Validate required fields
+        if not session_id or not objective:
+            print(json.dumps({
+                "ok": False,
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
+            }))
+            sys.exit(1)
 
         # Build scope vector (works for both modes)
         scope = ScopeVector(

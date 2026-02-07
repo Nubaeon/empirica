@@ -46,27 +46,13 @@ def handle_handoff_create_command(args):
         # Extract parameters from config or fall back to legacy flags
         if config_data:
             # AI-FIRST MODE
-            session_id = config_data.get('session_id')
+            session_id = config_data.get('session_id')  # Optional - auto-derives from transaction
             task_summary = config_data.get('task_summary')
             key_findings = config_data.get('key_findings', [])
             remaining_unknowns = config_data.get('remaining_unknowns', [])
             next_session_context = config_data.get('next_session_context')
             artifacts = config_data.get('artifacts', [])
             planning_only = config_data.get('planning_only', False)
-
-            # Validate required fields
-            if not session_id:
-                print(json.dumps({"ok": False, "error": "Config must include 'session_id' field"}))
-                sys.exit(1)
-            if not task_summary:
-                print(json.dumps({"ok": False, "error": "Config must include 'task_summary' field"}))
-                sys.exit(1)
-            if not key_findings:
-                print(json.dumps({"ok": False, "error": "Config must include 'key_findings' array"}))
-                sys.exit(1)
-            if not next_session_context:
-                print(json.dumps({"ok": False, "error": "Config must include 'next_session_context' field"}))
-                sys.exit(1)
         else:
             # LEGACY MODE
             session_id = args.session_id
@@ -83,6 +69,25 @@ def handle_handoff_create_command(args):
             if isinstance(remaining_unknowns, str):
                 remaining_unknowns = [remaining_unknowns]
             artifacts = json.loads(args.artifacts) if args.artifacts and isinstance(args.artifacts, str) else (args.artifacts or [])
+
+        # UNIFIED: Auto-derive session_id if not provided (works for both modes)
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        # Validate required fields
+        if not session_id:
+            print(json.dumps({"ok": False, "error": "No active transaction and 'session_id' not in config", "hint": "Either run PREFLIGHT first, or provide 'session_id' in config"}))
+            sys.exit(1)
+        if not task_summary:
+            print(json.dumps({"ok": False, "error": "Config must include 'task_summary' field"}))
+            sys.exit(1)
+        if not key_findings:
+            print(json.dumps({"ok": False, "error": "Config must include 'key_findings' array"}))
+            sys.exit(1)
+        if not next_session_context:
+            print(json.dumps({"ok": False, "error": "Config must include 'next_session_context' field"}))
+            sys.exit(1)
 
             next_session_context = args.next_session_context
 

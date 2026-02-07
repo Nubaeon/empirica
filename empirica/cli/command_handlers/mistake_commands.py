@@ -17,7 +17,7 @@ def handle_mistake_log_command(args):
 
         # Parse arguments
         project_id = getattr(args, 'project_id', None)
-        session_id = args.session_id
+        session_id = getattr(args, 'session_id', None)
         mistake = args.mistake
         why_wrong = args.why_wrong
         cost_estimate = getattr(args, 'cost_estimate', None)
@@ -25,6 +25,20 @@ def handle_mistake_log_command(args):
         prevention = getattr(args, 'prevention', None)
         goal_id = getattr(args, 'goal_id', None)
         output_format = getattr(args, 'output', 'json')
+
+        # UNIFIED: Auto-derive session_id if not provided
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        # Validate required fields
+        if not session_id:
+            print(json.dumps({
+                "ok": False,
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
+            }))
+            return
 
         # Auto-resolve project_id if not provided
         db = SessionDatabase()

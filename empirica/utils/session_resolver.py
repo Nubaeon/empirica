@@ -952,6 +952,72 @@ def read_active_transaction(claude_session_id: str = None) -> Optional[str]:
     return None
 
 
+def get_active_empirica_session_id(claude_session_id: str = None) -> Optional[str]:
+    """Get the active Empirica session ID for CLI commands.
+
+    CANONICAL function for session_id resolution. CLI commands should use this
+    instead of implementing their own transaction-first logic.
+
+    Priority chain:
+    1. Active transaction (TRANSACTION-FIRST - transaction survives compaction)
+    2. active_work file (from project-switch/PREFLIGHT)
+    3. instance_projects file (TMUX-based fallback)
+
+    Args:
+        claude_session_id: Optional Claude Code conversation UUID (from hook input)
+
+    Returns:
+        Empirica session UUID, or None if no active session found.
+
+    Usage:
+        session_id = get_active_empirica_session_id()
+        if not session_id:
+            print("No active transaction - run PREFLIGHT first")
+            return
+    """
+    # Priority 1: Active transaction (AUTHORITATIVE during transaction)
+    tx_data = read_active_transaction_full(claude_session_id)
+    if tx_data and tx_data.get('status') == 'open':
+        session_id = tx_data.get('session_id')
+        if session_id:
+            logger.debug(f"get_active_empirica_session_id: from transaction: {session_id[:8]}...")
+            return session_id
+
+    # Priority 2: active_work file
+    if claude_session_id:
+        from pathlib import Path
+        active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+        if active_work_file.exists():
+            try:
+                with open(active_work_file, 'r') as f:
+                    data = json.load(f)
+                    session_id = data.get('empirica_session_id')
+                    if session_id:
+                        logger.debug(f"get_active_empirica_session_id: from active_work: {session_id[:8]}...")
+                        return session_id
+            except Exception:
+                pass
+
+    # Priority 3: instance_projects (TMUX-based)
+    instance_id = get_instance_id()
+    if instance_id:
+        from pathlib import Path
+        instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
+        if instance_file.exists():
+            try:
+                with open(instance_file, 'r') as f:
+                    data = json.load(f)
+                    session_id = data.get('empirica_session_id')
+                    if session_id:
+                        logger.debug(f"get_active_empirica_session_id: from instance_projects: {session_id[:8]}...")
+                        return session_id
+            except Exception:
+                pass
+
+    logger.debug("get_active_empirica_session_id: no active session found")
+    return None
+
+
 def clear_active_transaction(claude_session_id: str = None) -> None:
     """Remove the active transaction tracking file (called on POSTFLIGHT).
 
