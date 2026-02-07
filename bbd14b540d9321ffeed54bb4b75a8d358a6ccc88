@@ -1,0 +1,28 @@
+{
+  "goal_id": "518c0899-689f-4ad8-aa53-6353b174b0e8",
+  "session_id": "a8de3d60-8903-4961-a84c-003eab949260",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T18:48:37.721860+00:00",
+  "goal_data": {
+    "objective": "Update all system prompts (COPILOT, GEMINI, CANONICAL_CORE, QWEN, ROVODEV) to use transaction-first auto-derived session_id pattern matching CLAUDE.md",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T18:48:37.721875+00:00",
+      "action": "created"
+    }
+  ]
+}
