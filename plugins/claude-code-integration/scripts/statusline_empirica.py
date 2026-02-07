@@ -624,7 +624,7 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     return None
 
 
-def get_latest_vectors(db: SessionDatabase, session_id: str, transaction_session_id: str = None) -> tuple:
+def get_latest_vectors(db: SessionDatabase, session_id: str, transaction_session_id: str = None, transaction_id: str = None) -> tuple:
     """
     Get latest vectors, phase, and gate decision from reflexes table.
 
@@ -633,22 +633,39 @@ def get_latest_vectors(db: SessionDatabase, session_id: str, transaction_session
         session_id: Current session ID (for cache compatibility)
         transaction_session_id: The session ID where PREFLIGHT was submitted (survives compaction)
                                If provided, queries this session for vectors instead
+        transaction_id: The specific transaction ID to filter by (for multi-instance isolation)
+                       CRITICAL: Without this, shared sessions show wrong phase across instances
 
     This enables cross-session vector lookup when transactions span compaction boundaries.
     """
     cursor = db.conn.cursor()
     # Use transaction's session_id if available (survives compaction)
     lookup_session_id = transaction_session_id or session_id
-    cursor.execute("""
-        SELECT phase, engagement, know, do, context,
-               clarity, coherence, signal, density,
-               state, change, completion, impact, uncertainty,
-               reflex_data
-        FROM reflexes
-        WHERE session_id = ?
-        ORDER BY timestamp DESC
-        LIMIT 1
-    """, (lookup_session_id,))
+
+    # CRITICAL: Filter by transaction_id to prevent cross-instance bleed
+    # Without this, two Claudes sharing a session see each other's phases
+    if transaction_id:
+        cursor.execute("""
+            SELECT phase, engagement, know, do, context,
+                   clarity, coherence, signal, density,
+                   state, change, completion, impact, uncertainty,
+                   reflex_data
+            FROM reflexes
+            WHERE session_id = ? AND transaction_id = ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+        """, (lookup_session_id, transaction_id))
+    else:
+        cursor.execute("""
+            SELECT phase, engagement, know, do, context,
+                   clarity, coherence, signal, density,
+                   state, change, completion, impact, uncertainty,
+                   reflex_data
+            FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+        """, (lookup_session_id,))
     row = cursor.fetchone()
 
     if not row:
@@ -1118,6 +1135,7 @@ def main():
         # IMPORTANT: Uses instance suffix for multi-instance isolation (tmux panes)
         # The file is named active_transaction_{instance_id}.json, not active_transaction.json
         transaction_session_id = None
+        transaction_id = None
         try:
             from empirica.core.statusline_cache import get_instance_id as _get_instance_id
             instance_id = _get_instance_id()
@@ -1131,15 +1149,17 @@ def main():
                 import json as _json
                 with open(tx_path, 'r') as f:
                     tx_data = _json.load(f)
-                # Only use transaction's session_id if status is "open" (active transaction)
+                # Only use transaction data if status is "open" (active transaction)
                 # If closed, fall back to current session_id
                 if tx_data.get('status') == 'open':
                     transaction_session_id = tx_data.get('session_id')
+                    transaction_id = tx_data.get('transaction_id')  # CRITICAL for instance isolation
         except Exception:
             pass  # Fall back to current session_id
 
-        # Get vectors from DB (real-time) - use transaction's session_id if available
-        phase, vectors, gate_decision = get_latest_vectors(db, session_id, transaction_session_id)
+        # Get vectors from DB (real-time) - use transaction's session_id and transaction_id
+        # transaction_id is CRITICAL to prevent cross-instance phase bleed
+        phase, vectors, gate_decision = get_latest_vectors(db, session_id, transaction_session_id, transaction_id)
 
         # Get deltas (learning measurement) - use transaction's session for continuity
         deltas = get_vector_deltas(db, transaction_session_id or session_id)
