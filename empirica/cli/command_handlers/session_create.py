@@ -311,6 +311,24 @@ def handle_session_create_command(args):
 
         # EARLY PROJECT DETECTION: Needed for auto-close of previous sessions
         early_project_id = project_id  # From config if provided
+
+        # Resolve folder_name to UUID if explicit --project-id was passed
+        # Without this, passing --project-id empirica stores 'empirica' instead of UUID
+        if early_project_id and not _is_uuid_format(early_project_id):
+            try:
+                import sqlite3 as _sqlite3
+                workspace_db = os.path.join(os.path.expanduser('~'), '.empirica', 'workspace', 'workspace.db')
+                if os.path.exists(workspace_db):
+                    conn = _sqlite3.connect(workspace_db)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT id FROM global_projects WHERE name = ?", (early_project_id,))
+                    row = cursor.fetchone()
+                    conn.close()
+                    if row:
+                        early_project_id = row[0]  # Use UUID instead of folder_name
+            except Exception:
+                pass  # Keep original value if resolution fails
+
         if not early_project_id:
             # Method 0: Check active_work files from project-switch (highest priority)
             # project-switch writes active_work.json with the target project
@@ -522,8 +540,8 @@ def handle_session_create_command(args):
         db = SessionDatabase()
 
         # Use early-detected project_id (already computed above for auto-close)
-        if not project_id:
-            project_id = early_project_id
+        # ALWAYS use early_project_id since it may have been resolved from folder_name to UUID
+        project_id = early_project_id
 
         # Link session to project if found
         if project_id:
