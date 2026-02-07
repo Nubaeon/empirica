@@ -1,0 +1,16 @@
+{
+  "finding_id": "79bafb00-a62b-4a27-804d-f7318ea56821",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T10:23:48.829952+00:00",
+  "finding": "Undocumented CLI commands identified with handlers: (1) MEMORY MANAGEMENT - memory-prime (attention budget allocation using Shannon information gain), memory-scope (retrieve memories by zone tiers), memory-value (prioritize by information gain/token cost), memory-report (context budget like /proc/meminfo), pattern-check (check against known dead-ends), session-rollup (aggregate parallel sub-agent findings). (2) UTILITIES - system-status. (3) ARTIFACTS - artifacts-generate. These are AI-focused commands. Should go in: CLI_COMMANDS_UNIFIED.md + CLAUDE.md (already has brief refs) + reference/api/.",
+  "impact": 0.75,
+  "goal_id": "9b5d15ee-42e6-4757-a80d-29dc48427a0f",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Undocumented CLI commands identified with handlers: (1) MEMORY MANAGEMENT - memory-prime (attention budget allocation using Shannon information gain), memory-scope (retrieve memories by zone tiers), memory-value (prioritize by information gain/token cost), memory-report (context budget like /proc/meminfo), pattern-check (check against known dead-ends), session-rollup (aggregate parallel sub-agent findings). (2) UTILITIES - system-status. (3) ARTIFACTS - artifacts-generate. These are AI-focused commands. Should go in: CLI_COMMANDS_UNIFIED.md + CLAUDE.md (already has brief refs) + reference/api/.",
+    "impact": 0.75
+  }
+}
