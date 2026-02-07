@@ -1,0 +1,28 @@
+{
+  "goal_id": "97f0ae7e-57a8-47ac-a6dc-56cb774a593d",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T17:28:31.305081+00:00",
+  "goal_data": {
+    "objective": "Implement centralized resolve_project_identifier() function",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All CLI commands use this resolver for --project-id arguments"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T17:28:31.305104+00:00",
+      "action": "created"
+    }
+  ]
+}
