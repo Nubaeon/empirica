@@ -122,6 +122,28 @@ TRANSITION_COMMANDS = (
 PAUSE_FILE = Path.home() / '.empirica' / 'sentinel_paused'
 
 
+def get_instance_id() -> Optional[str]:
+    """Get instance identifier for multi-Claude isolation.
+
+    Priority: TMUX_PANE (works in hooks) > TTY (works in CLI).
+    Returns None if neither available.
+    """
+    try:
+        tmux_pane = os.environ.get('TMUX_PANE')
+        if tmux_pane:
+            return f"tmux_{tmux_pane.lstrip('%')}"
+        # Fallback to TTY for non-tmux users
+        import subprocess
+        result = subprocess.run(['tty'], capture_output=True, text=True, timeout=2)
+        if result.returncode == 0:
+            tty = result.stdout.strip()
+            if tty and tty != 'not a tty':
+                return tty.replace('/dev/', '').replace('/', '-')
+    except Exception:
+        pass
+    return None
+
+
 def is_empirica_paused() -> bool:
     """Check if Empirica tracking is paused (off-the-record mode).
 

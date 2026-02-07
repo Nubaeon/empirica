@@ -11,6 +11,7 @@ docs/architecture/EPISTEMIC_AGENT_ARCHITECTURE.md
 docs/architecture/EPISTEMIC_BUS.md
 docs/architecture/EPISTEMIC_STATE_COMPLETE_CAPTURE.md
 docs/architecture/HANDOFF_SYSTEM.md
+docs/architecture/INSTANCE_ISOLATION.md
 docs/architecture/MULTI_PROJECT_STORAGE.md
 docs/architecture/NOETIC_PRAXIC_FRAMEWORK.md
 docs/architecture/QDRANT_EPISTEMIC_INTEGRATION.md
@@ -25,6 +26,7 @@ docs/architecture/epistemic_vs_git_diff.svg
 docs/architecture/noetic-rag-architecture.md
 docs/architecture/separation-of-concerns.md
 docs/architecture/storage_architecture_flow.svg
+docs/architecture/specs/TRANSACTION_CONTINUITY_SPEC.md
 empirica/__init__.py
 empirica.egg-info/PKG-INFO
 empirica.egg-info/SOURCES.txt
@@ -77,6 +79,7 @@ empirica/cli/command_handlers/investigation_commands.py
 empirica/cli/command_handlers/issue_capture_commands.py
 empirica/cli/command_handlers/lesson_commands.py
 empirica/cli/command_handlers/mcp_commands.py
+empirica/cli/command_handlers/memory_commands.py
 empirica/cli/command_handlers/message_commands.py
 empirica/cli/command_handlers/mistake_commands.py
 empirica/cli/command_handlers/modality_commands.py
@@ -117,6 +120,7 @@ empirica/cli/parsers/investigation_parsers.py
 empirica/cli/parsers/issue_capture_parsers.py
 empirica/cli/parsers/lesson_parsers.py
 empirica/cli/parsers/mcp_parsers.py
+empirica/cli/parsers/memory_parsers.py
 empirica/cli/parsers/message_parsers.py
 empirica/cli/parsers/monitor_parsers.py
 empirica/cli/parsers/onboarding_parsers.py
@@ -185,6 +189,7 @@ empirica/core/issue_capture.py
 empirica/core/memory_gap_detector.py
 empirica/core/parallel_orchestrator.py
 empirica/core/signaling.py
+empirica/core/statusline_cache.py
 empirica/core/system_dashboard.py
 empirica/core/thresholds.py
 empirica/core/agents/__init__.py
