@@ -1,0 +1,16 @@
+{
+  "finding_id": "bdd3106b-6991-4386-8d39-4ed9c4e69be1",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "94f54119-f4d6-41f4-8d1b-2814fb3dd434",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T14:24:28.153936+00:00",
+  "finding": "Project ID consistency fix: store_vectors() and sentinel now both use session's project_id (UUID) as authoritative source, fixing 'Project context changed' false positives",
+  "impact": 0.8,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Project ID consistency fix: store_vectors() and sentinel now both use session's project_id (UUID) as authoritative source, fixing 'Project context changed' false positives",
+    "impact": 0.8
+  }
+}
