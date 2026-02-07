@@ -339,12 +339,19 @@ Then reads: `{empirica_root}/active_transaction_{instance_id}.json`
 
 | Function | Purpose |
 |----------|---------|
+| **`get_active_project_path()`** | **CANONICAL** - Get project path (active_work → instance_projects → NO CWD) |
 | `get_tty_key()` | Get current terminal's TTY device name |
 | `get_tty_session()` | Read TTY session file for current terminal |
 | `write_tty_session()` | Write TTY session file (session-create, project-switch) |
 | `get_instance_id()` | Get instance suffix: `tmux_{N}` format (e.g., `tmux_4`) |
+| `read_active_transaction()` | Read transaction_id (uses `get_active_project_path()`) |
+| `clear_active_transaction()` | Clear transaction file (uses `get_active_project_path()`) |
 | `write_active_transaction()` | Write transaction file with project_path |
 | `get_session_empirica_root()` | Look up session's project from DB |
+
+**CANONICAL FUNCTION (2026-02-07):** `get_active_project_path(claude_session_id=None)` is the
+single source of truth for project resolution. All components should use this instead of
+implementing their own priority chain. Returns project_path or None (NO CWD fallback).
 
 **Critical (2026-02-07):** `get_instance_id()` returns `tmux_N` format (not `tmux:%N`).
 This matches file naming convention: `instance_projects/tmux_4.json`, `active_transaction_tmux_4.json`.

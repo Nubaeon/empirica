@@ -747,6 +747,66 @@ def _get_instance_suffix() -> str:
     return ""
 
 
+def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
+    """Get the active project path for the current instance.
+
+    CANONICAL function for project resolution. All components should use this
+    instead of implementing their own priority chain.
+
+    Priority chain (NO CWD FALLBACK):
+    1. active_work_{claude_session_id}.json (if claude_session_id provided)
+    2. instance_projects/{instance_id}.json (uses TMUX_PANE)
+
+    Args:
+        claude_session_id: Optional Claude Code conversation UUID (from hook input)
+
+    Returns:
+        Absolute path to the project, or None if cannot be resolved.
+        Returns None rather than falling back to CWD to fail explicitly.
+
+    Usage:
+        # In hooks (have claude_session_id from stdin):
+        project_path = get_active_project_path(claude_session_id=hook_input.get('session_id'))
+
+        # In CLI commands (no claude_session_id):
+        project_path = get_active_project_path()
+    """
+    from pathlib import Path
+
+    # Priority 0: Check active_work file by Claude session_id
+    if claude_session_id:
+        active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+        if active_work_file.exists():
+            try:
+                with open(active_work_file, 'r') as f:
+                    data = json.load(f)
+                    project_path = data.get('project_path')
+                    if project_path:
+                        logger.debug(f"get_active_project_path: from active_work file: {project_path}")
+                        return project_path
+            except Exception:
+                pass
+
+    # Priority 1: Check instance_projects by instance_id (TMUX_PANE, etc.)
+    instance_id = get_instance_id()
+    if instance_id:
+        instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
+        if instance_file.exists():
+            try:
+                with open(instance_file, 'r') as f:
+                    data = json.load(f)
+                    project_path = data.get('project_path')
+                    if project_path:
+                        logger.debug(f"get_active_project_path: from instance_projects: {project_path}")
+                        return project_path
+            except Exception:
+                pass
+
+    # NO CWD FALLBACK - fail explicitly
+    logger.debug("get_active_project_path: could not resolve (no active_work or instance_projects)")
+    return None
+
+
 def _get_tracking_file(name: str) -> 'Path':
     """Get the path for a tracking file (active_session, active_transaction, etc.)."""
     from pathlib import Path
@@ -824,37 +884,27 @@ def write_active_transaction(
         raise
 
 
-def read_active_transaction() -> Optional[str]:
+def read_active_transaction(claude_session_id: str = None) -> Optional[str]:
     """Read the active transaction ID from the tracking file. Returns None if no active transaction.
 
-    Priority chain (instance-aware, NOT CWD-based):
-    1. instance_projects file → get project_path → read transaction from there
-    2. Global ~/.empirica/ fallback
-
-    This avoids CWD-based lookup which breaks when Claude Code resets CWD.
+    Uses get_active_project_path() to find the correct project, then reads transaction from there.
     """
     from pathlib import Path
     suffix = _get_instance_suffix()
-    instance_id = get_instance_id()
 
-    # Priority 1: Get project_path from instance_projects (set by project-switch)
-    if instance_id:
-        instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
-        if instance_file.exists():
+    # Use canonical project resolution
+    project_path = get_active_project_path(claude_session_id)
+    if project_path:
+        candidate = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
+        if candidate.exists():
             try:
-                with open(instance_file, 'r') as f:
-                    instance_data = json.load(f)
-                    project_path = instance_data.get('project_path')
-                    if project_path:
-                        candidate = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
-                        if candidate.exists():
-                            with open(candidate, 'r') as f2:
-                                data = json.load(f2)
-                                return data.get('transaction_id')
+                with open(candidate, 'r') as f:
+                    data = json.load(f)
+                    return data.get('transaction_id')
             except Exception:
                 pass
 
-    # Priority 2: Global fallback
+    # Fallback: Global ~/.empirica/
     global_candidate = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
     if global_candidate.exists():
         try:
@@ -867,28 +917,22 @@ def read_active_transaction() -> Optional[str]:
     return None
 
 
-def clear_active_transaction() -> None:
+def clear_active_transaction(claude_session_id: str = None) -> None:
     """Remove the active transaction tracking file (called on POSTFLIGHT).
 
-    Uses instance_projects to find correct project, NOT CWD.
+    Uses get_active_project_path() to find correct project, NOT CWD.
     """
     from pathlib import Path
     suffix = _get_instance_suffix()
-    instance_id = get_instance_id()
 
-    # Priority 1: Get project_path from instance_projects
-    if instance_id:
-        instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
-        if instance_file.exists():
+    # Use canonical project resolution
+    project_path = get_active_project_path(claude_session_id)
+    if project_path:
+        candidate = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
+        if candidate.exists():
             try:
-                with open(instance_file, 'r') as f:
-                    instance_data = json.load(f)
-                    project_path = instance_data.get('project_path')
-                    if project_path:
-                        candidate = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
-                        if candidate.exists():
-                            candidate.unlink()
-                            return  # Found and cleared
+                candidate.unlink()
+                return  # Found and cleared
             except Exception:
                 pass
 
