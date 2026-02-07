@@ -1,0 +1,28 @@
+{
+  "goal_id": "89457ce5-1f18-4887-b531-ebc9326bacf4",
+  "session_id": "a8de3d60-8903-4961-a84c-003eab949260",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T18:51:49.624174+00:00",
+  "goal_data": {
+    "objective": "Document workspace database schema (global_projects table with 20 columns) in new file docs/reference/WORKSPACE_DATABASE_SCHEMA.md - currently no documentation exists for this critical infrastructure",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T18:51:49.624190+00:00",
+      "action": "created"
+    }
+  ]
+}
