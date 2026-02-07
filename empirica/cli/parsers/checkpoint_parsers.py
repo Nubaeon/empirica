@@ -135,7 +135,7 @@ def add_checkpoint_parsers(subparsers):
         help='JSON config file path or "-" for stdin (AI-first mode)')
 
     # LEGACY: Flag-based arguments (backward compatible)
-    handoff_create_parser.add_argument('--session-id', help=format_help_text('Session UUID', required=True))
+    handoff_create_parser.add_argument('--session-id', help='Session UUID (auto-derived from active transaction)')
     handoff_create_parser.add_argument('--task-summary', help=format_help_text('What was accomplished (2-3 sentences)', required=True))
     handoff_create_parser.add_argument('--summary', dest='task_summary', help='Alias for --task-summary')
     handoff_create_parser.add_argument('--key-findings', help=format_help_text('JSON array of findings', required=True))
@@ -167,7 +167,7 @@ def add_checkpoint_parsers(subparsers):
         help='Log a mistake for learning and future prevention'
     )
     mistake_log_parser.add_argument('--project-id', help='Project UUID')
-    mistake_log_parser.add_argument('--session-id', required=True, help='Session UUID')
+    mistake_log_parser.add_argument('--session-id', required=False, help='Session UUID (auto-derived from active transaction)')
     mistake_log_parser.add_argument('--mistake', required=True, help='What was done wrong')
     mistake_log_parser.add_argument('--why-wrong', required=True, help='Explanation of why it was wrong')
     mistake_log_parser.add_argument('--cost-estimate', help='Estimated time/effort wasted (e.g., "2 hours")')
@@ -455,7 +455,7 @@ def add_checkpoint_parsers(subparsers):
         help='JSON config file path or "-" for stdin (AI-first mode)')
 
     # LEGACY: Flag-based arguments (backward compatible)
-    goals_create_parser.add_argument('--session-id', help='Session ID (legacy)')
+    goals_create_parser.add_argument('--session-id', help='Session ID (auto-derived from active transaction)')
     goals_create_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier (legacy)')
     goals_create_parser.add_argument('--objective', help='Goal objective text (legacy)')
     goals_create_parser.add_argument('--scope-breadth', type=float, default=0.3, help='Goal breadth (0.0-1.0, how wide the goal spans)')
