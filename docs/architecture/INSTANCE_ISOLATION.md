@@ -170,18 +170,19 @@ When Sentinel needs to find the correct project (works in hook context):
 ```
 Priority 0: active_work file (~/.empirica/active_work_{claude_session_id}.json)
     ↓ (if not found)
-Priority 1: Transaction file's project_path (check CWD/.empirica, ~/.empirica)
+Priority 1: Instance mapping by TMUX_PANE (~/.empirica/instance_projects/tmux_4.json)
     ↓ (if not found)
-Priority 2: Instance mapping by TMUX_PANE (~/.empirica/instance_projects/tmux_4.json)
+Priority 2: TTY session by tty command (~/.empirica/tty_sessions/pts-6.json)
     ↓ (if not found)
-Priority 3: TTY session by tty command (~/.empirica/tty_sessions/pts-6.json)
-    ↓ (if not found)
-Priority 4: CWD-based git root detection
+❌ NO CWD FALLBACK - fails explicitly
 ```
 
-**Critical:** Priority 0 (active_work file) is the KEY for multi-instance isolation.
-Claude Code provides `session_id` in hook input, which maps to the active_work file.
-This works for ALL users, not just tmux users.
+**Critical Changes (2026-02-07):**
+- **CWD fallback REMOVED** - Prevents silent wrong-project mismatches when Claude Code resets CWD
+- If all instance-aware mechanisms fail, returns None and Sentinel blocks with explicit error
+- Priority 0 (active_work file) is the KEY for multi-instance isolation
+- Claude Code provides `session_id` in hook input, which maps to the active_work file
+- This works for ALL users, not just tmux users
 
 #### active_work as Dual-Key Hub
 
@@ -230,6 +231,19 @@ Priority 2: Upward search for .empirica/ from CWD
 ```
 
 **Note:** active_work file takes precedence because TTY session can be stale after project-switch.
+
+### 4.2a Statusline Phase/Vectors Query
+
+**Critical (2026-02-07):** `get_latest_vectors()` now filters by `transaction_id`:
+
+```
+1. Read active_transaction_{instance_id}.json
+2. Extract both session_id AND transaction_id
+3. Query reflexes table with: WHERE session_id = ? AND transaction_id = ?
+```
+
+Without transaction_id filtering, two Claude instances sharing the same session
+would see each other's phases (cross-instance phase bleed).
 
 ### 4.3 Sentinel Transaction Detection
 
@@ -328,9 +342,13 @@ Then reads: `{empirica_root}/active_transaction_{instance_id}.json`
 | `get_tty_key()` | Get current terminal's TTY device name |
 | `get_tty_session()` | Read TTY session file for current terminal |
 | `write_tty_session()` | Write TTY session file (session-create, project-switch) |
-| `get_instance_id()` | Get instance suffix (tmux pane or TTY) |
+| `get_instance_id()` | Get instance suffix: `tmux_{N}` format (e.g., `tmux_4`) |
 | `write_active_transaction()` | Write transaction file with project_path |
 | `get_session_empirica_root()` | Look up session's project from DB |
+
+**Critical (2026-02-07):** `get_instance_id()` returns `tmux_N` format (not `tmux:%N`).
+This matches file naming convention: `instance_projects/tmux_4.json`, `active_transaction_tmux_4.json`.
+Both `session_resolver.get_instance_id()` and `statusline_cache.get_instance_id()` use the same format.
 
 ### 6.2 path_resolver.py
 
@@ -565,3 +583,53 @@ changed. Run PREFLIGHT for new project" even though PREFLIGHT was just submitted
 2. Git remote origin URL hash (fallback)
 3. Git toplevel path hash (fallback)
 **File:** `empirica/data/repositories/vectors.py`
+
+### 11.10 instance_id Format Mismatch (2026-02-07)
+
+**Symptom:** Statusline shows wrong pane's data (cross-pane bleed).
+**Status:** FIXED
+**Root cause:** Two `get_instance_id()` functions returned different formats:
+- `statusline_cache.get_instance_id()` → `tmux_4`
+- `session_resolver.get_instance_id()` → `tmux:%4`
+Files are named `tmux_4.json`, so the session_resolver version couldn't find them.
+**Fix:** Changed `session_resolver.get_instance_id()` to return `tmux_{pane.lstrip('%')}` format.
+**Commit:** `dfb5261e`
+**Files:** `empirica/utils/session_resolver.py`
+
+### 11.11 CWD Fallback Causes Silent Wrong-Project (2026-02-07)
+
+**Symptom:** Commands/hooks silently use wrong project when instance-aware mechanisms fail.
+**Status:** FIXED
+**Root cause:** All resolution functions (`resolve_project_root`, `_get_current_project_id`,
+`find_project_root` in hooks) fell back to CWD-based git detection when instance-aware
+mechanisms failed. CWD can be reset by Claude Code to a different project.
+**Fix:** Removed CWD fallback entirely from:
+- `sentinel-gate.py`: `resolve_project_root()`, `_get_current_project_id()`
+- `pre-compact.py`: `find_project_root()`
+- `post-compact.py`: `find_project_root()`
+Now returns None/exits with error if instance-aware mechanisms fail.
+**Commit:** `dfb5261e`
+**Files:** All sentinel and compact hooks
+
+### 11.12 Statusline Cross-Instance Phase Bleed (2026-02-07)
+
+**Symptom:** Statusline shows other Claude instance's phase (e.g., CHECK instead of PREFLIGHT).
+**Status:** FIXED
+**Root cause:** `get_latest_vectors()` queried reflexes by `session_id` only. When two Claude
+instances share the same session, the latest phase from ANY transaction was returned.
+**Fix:** Added `transaction_id` parameter to `get_latest_vectors()`. Caller extracts
+`transaction_id` from instance-specific `active_transaction_{instance_id}.json` and passes it.
+Query now: `WHERE session_id = ? AND transaction_id = ?`
+**Commit:** `abb5c430`
+**Files:** `plugins/claude-code-integration/scripts/statusline_empirica.py`
+
+---
+
+## 12. Summary: Instance Isolation Key Insights
+
+1. **File-based isolation** trumps database queries for multi-instance support
+2. **Transaction files** are the real unit of work (sessions became containers)
+3. **CWD is unreliable** - Claude Code resets it unpredictably
+4. **Fail explicitly** - Better to error than silently use wrong project
+5. **Instance ID format matters** - Consistent `tmux_N` across all components
+6. **Transaction-scoped queries** - Always filter by `transaction_id` when available
