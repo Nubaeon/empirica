@@ -1,0 +1,11 @@
+{
+  "dead_end_id": "0e5d165d-b6d1-4b6f-a309-ad930cd4b0a2",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "37c3e959-0331-4100-8c08-63075c8abeb3",
+  "ai_id": "test-release-1.5.0",
+  "created_at": "2026-02-07T19:00:19.495887+00:00",
+  "approach": "Test approach that failed",
+  "why_failed": "Testing deadend logging for v1.5.0",
+  "goal_id": null,
+  "subtask_id": null
+}
