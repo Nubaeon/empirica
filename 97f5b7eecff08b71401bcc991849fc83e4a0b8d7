@@ -1,0 +1,13 @@
+{
+  "unknown_id": "8b758776-d152-4a86-acaa-cb1ab6331db8",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "f8e28dea-0fec-4f09-98a4-1e4708ee4143",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T18:25:14.044735+00:00",
+  "unknown": "Test: Are there CLI commands we missed that need the unified pattern?",
+  "goal_id": "4d226d4e-14ce-4502-823e-ed1cf9e69b78",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
