@@ -509,26 +509,37 @@ def is_safe_bash_command(tool_input: dict) -> bool:
     if is_safe_empirica_command(command):
         return True
 
-    # Special case: cd && empirica command chains are safe
-    # This allows: cd /path && empirica check-submit - << 'EOF'
+    # Special case: && chains where ALL segments are safe (noetic)
+    # This allows: cd /path && grep ..., cd /path && empirica check-submit
     if '&&' in command:
         segments = [s.strip() for s in command.split('&&')]
-        # Check if any segment is a safe empirica command
+        all_segments_safe = True
         for segment in segments:
             # Strip heredoc suffix for matching
             segment_clean = segment.split('<<')[0].strip() if '<<' in segment else segment
+            # Check if segment is: cd, safe empirica, or starts with safe prefix
+            if segment_clean.startswith('cd '):
+                continue  # cd is always safe
             if is_safe_empirica_command(segment_clean):
-                # Verify other segments are safe (cd, etc.)
-                other_segments_safe = all(
-                    s.strip().startswith('cd ') or is_safe_empirica_command(s.strip().split('<<')[0].strip())
-                    for s in segments
-                )
-                if other_segments_safe:
-                    return True
+                continue  # empirica tier1/tier2 commands are safe
+            # Check against SAFE_BASH_PREFIXES (grep, cat, ls, git status, etc.)
+            segment_is_safe = False
+            for prefix in SAFE_BASH_PREFIXES:
+                if segment_clean.startswith(prefix) or (prefix.endswith(' ') and segment_clean == prefix.rstrip()):
+                    segment_is_safe = True
+                    break
+            if not segment_is_safe:
+                all_segments_safe = False
+                break
+        if all_segments_safe:
+            return True
 
     # Check for dangerous shell operators (command injection prevention)
     # This blocks: ls; rm -rf, echo > file, etc.
+    # NOTE: && is handled above for safe chains, so we skip it here
     for operator in DANGEROUS_SHELL_OPERATORS:
+        if operator == '&&':
+            continue  # Already handled above - only block if chain wasn't all-safe
         if operator in command:
             return False
 
@@ -727,6 +738,20 @@ def main():
         respond("allow", "WARNING: No active_work file or empirica_session_id. Run 'empirica project-switch <project>' first.")
         sys.exit(0)
 
+    # Read active transaction_id from transaction file (for scoping queries to current transaction)
+    current_transaction_id = None
+    if empirica_root:
+        instance_id = get_instance_id()
+        suffix = f'_{instance_id}' if instance_id else ''
+        tx_file = empirica_root / f'active_transaction{suffix}.json'
+        if tx_file.exists():
+            try:
+                with open(tx_file, 'r') as f:
+                    tx_data = json.load(f)
+                current_transaction_id = tx_data.get('transaction_id')
+            except Exception:
+                pass
+
     # SessionDatabase uses path_resolver internally for DB location
     from empirica.data.session_database import SessionDatabase
     db = SessionDatabase()
@@ -743,11 +768,19 @@ def main():
 
     # Check for PREFLIGHT (authentication) - with vectors for auto-proceed
     # Include project_id to check for project context switches
-    cursor.execute("""
-        SELECT know, uncertainty, timestamp, project_id FROM reflexes
-        WHERE session_id = ? AND phase = 'PREFLIGHT'
-        ORDER BY timestamp DESC LIMIT 1
-    """, (session_id,))
+    # Scope by transaction_id if available (current transaction only)
+    if current_transaction_id:
+        cursor.execute("""
+            SELECT know, uncertainty, timestamp, project_id FROM reflexes
+            WHERE session_id = ? AND phase = 'PREFLIGHT' AND transaction_id = ?
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id, current_transaction_id))
+    else:
+        cursor.execute("""
+            SELECT know, uncertainty, timestamp, project_id FROM reflexes
+            WHERE session_id = ? AND phase = 'PREFLIGHT'
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
     preflight_row = cursor.fetchone()
 
     if not preflight_row:
@@ -841,12 +874,21 @@ def main():
         sys.exit(0)
 
     # PREFLIGHT confidence too low - require explicit CHECK
-    cursor.execute("""
-        SELECT know, uncertainty, reflex_data, timestamp
-        FROM reflexes
-        WHERE session_id = ? AND phase = 'CHECK'
-        ORDER BY timestamp DESC LIMIT 1
-    """, (session_id,))
+    # Scope by transaction_id to only find CHECK within current transaction
+    if current_transaction_id:
+        cursor.execute("""
+            SELECT know, uncertainty, reflex_data, timestamp
+            FROM reflexes
+            WHERE session_id = ? AND phase = 'CHECK' AND transaction_id = ?
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id, current_transaction_id))
+    else:
+        cursor.execute("""
+            SELECT know, uncertainty, reflex_data, timestamp
+            FROM reflexes
+            WHERE session_id = ? AND phase = 'CHECK'
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
     check_row = cursor.fetchone()
     # NOTE: db kept open - reused for anti-gaming check below (single connection per invocation)
 
@@ -862,7 +904,7 @@ def main():
         check_ts = float(check_timestamp)
 
         if check_ts < preflight_ts:
-            respond("deny", f"Assessment sequence invalid. Start fresh noetic phase.")
+            respond("deny", f"CHECK is from previous transaction (before current PREFLIGHT). Run CHECK to validate readiness.")
             sys.exit(0)
 
         # Anti-gaming: Minimum noetic duration with evidence check
