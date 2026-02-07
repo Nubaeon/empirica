@@ -2957,11 +2957,29 @@ def handle_project_switch_command(args):
             from empirica.config.path_resolver import get_empirica_root
             from empirica.core.statusline_cache import get_instance_id
 
-            # Get current project's transaction state
+            # Get current project from instance_projects (not CWD - may be wrong via Bash tool)
             # IMPORTANT: Use instance-specific file for multi-instance isolation
-            current_empirica_root = get_empirica_root()
+            current_empirica_root = None
+            instance_id = get_instance_id()
+
+            # Priority 1: Read from instance_projects (set by previous project-switch)
+            if instance_id:
+                instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
+                if instance_file.exists():
+                    try:
+                        import json as _json
+                        with open(instance_file, 'r') as f:
+                            inst_data = _json.load(f)
+                        inst_project_path = inst_data.get('project_path')
+                        if inst_project_path:
+                            current_empirica_root = Path(inst_project_path) / '.empirica'
+                    except Exception:
+                        pass
+
+            # Priority 2: Fallback to CWD-based detection
+            if not current_empirica_root:
+                current_empirica_root = get_empirica_root()
             if current_empirica_root:
-                instance_id = get_instance_id()
                 suffix = f"_{instance_id}" if instance_id else ""
                 tx_path = current_empirica_root / f'active_transaction{suffix}.json'
                 if tx_path.exists():
