@@ -117,6 +117,20 @@ def _update_active_work(project_path: str, folder_name: str, empirica_session_id
         tmux_pane = os.environ.get('TMUX_PANE')
         instance_id = f"tmux_{tmux_pane.lstrip('%')}" if tmux_pane else None
 
+        # PRESERVE existing claude_session_id if TTY session doesn't have it
+        # This handles the case where session-init hook ran and wrote claude_session_id
+        # to instance_projects, but TTY session wasn't updated (e.g., Bash tool context)
+        if not claude_session_id and instance_id:
+            existing_instance_file = marker_dir / 'instance_projects' / f'{instance_id}.json'
+            if existing_instance_file.exists():
+                try:
+                    with open(existing_instance_file, 'r') as f:
+                        existing_data = json.load(f)
+                        claude_session_id = existing_data.get('claude_session_id')
+                        logger.debug(f"Preserved claude_session_id from existing instance_projects: {claude_session_id}")
+                except Exception:
+                    pass
+
         # Write instance_projects FIRST - works via Bash tool where tty fails
         if instance_id:
             instance_dir = marker_dir / 'instance_projects'

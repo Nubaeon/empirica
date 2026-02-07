@@ -825,30 +825,77 @@ def write_active_transaction(
 
 
 def read_active_transaction() -> Optional[str]:
-    """Read the active transaction ID from the tracking file. Returns None if no active transaction."""
+    """Read the active transaction ID from the tracking file. Returns None if no active transaction.
+
+    Priority chain (instance-aware, NOT CWD-based):
+    1. instance_projects file → get project_path → read transaction from there
+    2. Global ~/.empirica/ fallback
+
+    This avoids CWD-based lookup which breaks when Claude Code resets CWD.
+    """
     from pathlib import Path
     suffix = _get_instance_suffix()
-    # Search local then global - use .json extension to match write_active_transaction
-    for base in [Path.cwd() / '.empirica', Path.home() / '.empirica']:
-        candidate = base / f'active_transaction{suffix}.json'
-        if candidate.exists():
+    instance_id = get_instance_id()
+
+    # Priority 1: Get project_path from instance_projects (set by project-switch)
+    if instance_id:
+        instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
+        if instance_file.exists():
             try:
-                with open(candidate, 'r') as f:
-                    data = json.load(f)
-                    return data.get('transaction_id')
+                with open(instance_file, 'r') as f:
+                    instance_data = json.load(f)
+                    project_path = instance_data.get('project_path')
+                    if project_path:
+                        candidate = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
+                        if candidate.exists():
+                            with open(candidate, 'r') as f2:
+                                data = json.load(f2)
+                                return data.get('transaction_id')
             except Exception:
                 pass
+
+    # Priority 2: Global fallback
+    global_candidate = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
+    if global_candidate.exists():
+        try:
+            with open(global_candidate, 'r') as f:
+                data = json.load(f)
+                return data.get('transaction_id')
+        except Exception:
+            pass
+
     return None
 
 
 def clear_active_transaction() -> None:
-    """Remove the active transaction tracking file (called on POSTFLIGHT)."""
+    """Remove the active transaction tracking file (called on POSTFLIGHT).
+
+    Uses instance_projects to find correct project, NOT CWD.
+    """
     from pathlib import Path
     suffix = _get_instance_suffix()
-    for base in [Path.cwd() / '.empirica', Path.home() / '.empirica']:
-        candidate = base / f'active_transaction{suffix}.json'
-        if candidate.exists():
+    instance_id = get_instance_id()
+
+    # Priority 1: Get project_path from instance_projects
+    if instance_id:
+        instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
+        if instance_file.exists():
             try:
-                candidate.unlink()
+                with open(instance_file, 'r') as f:
+                    instance_data = json.load(f)
+                    project_path = instance_data.get('project_path')
+                    if project_path:
+                        candidate = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
+                        if candidate.exists():
+                            candidate.unlink()
+                            return  # Found and cleared
             except Exception:
                 pass
+
+    # Priority 2: Global fallback
+    global_candidate = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
+    if global_candidate.exists():
+        try:
+            global_candidate.unlink()
+        except Exception:
+            pass
