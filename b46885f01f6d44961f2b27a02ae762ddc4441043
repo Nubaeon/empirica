@@ -1,0 +1,28 @@
+{
+  "goal_id": "d3ea31b3-351e-4008-9961-7c09b6118d7a",
+  "session_id": "f8e28dea-0fec-4f09-98a4-1e4708ee4143",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T17:55:46.043165+00:00",
+  "goal_data": {
+    "objective": "Make CLI artifact commands transaction-aware: auto-derive session_id from active transaction when not provided",
+    "scope": {
+      "breadth": 0.3,
+      "duration": 0.2,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "Goal completion achieved"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T17:55:46.043182+00:00",
+      "action": "created"
+    }
+  ]
+}
