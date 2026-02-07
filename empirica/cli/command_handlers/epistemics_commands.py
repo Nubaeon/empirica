@@ -96,14 +96,20 @@ def handle_epistemics_stats_command(args):
         empirica epistemics-show --session-id <UUID> --phase PREFLIGHT
     """
     try:
-        session_id = args.session_id
+        session_id = getattr(args, 'session_id', None)
         phase_filter = getattr(args, 'phase', None)
         output_format = getattr(args, 'output', 'json')
-        
+
+        # UNIFIED: Auto-derive session_id if not provided
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
         if not session_id:
             print(json.dumps({
                 "ok": False,
-                "error": "session_id is required"
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
             }))
             sys.exit(1)
         
@@ -218,14 +224,20 @@ def handle_epistemics_list_command(args):
     try:
         from empirica.data.session_database import SessionDatabase
         from empirica.cli.cli_utils import handle_cli_error
-        
-        session_id = args.session_id
+
+        session_id = getattr(args, 'session_id', None)
         output_format = getattr(args, 'output', 'json')
-        
+
+        # UNIFIED: Auto-derive session_id if not provided
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
         if not session_id:
             print(json.dumps({
                 "ok": False,
-                "error": "session_id is required"
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
             }))
             sys.exit(1)
         

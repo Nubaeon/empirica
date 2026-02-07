@@ -23,8 +23,22 @@ def handle_investigate_log_command(args):
     """
     try:
         from empirica.data.session_database import SessionDatabase
-        
-        session_id = args.session_id
+
+        session_id = getattr(args, 'session_id', None)
+
+        # UNIFIED: Auto-derive session_id if not provided
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        if not session_id:
+            print(json.dumps({
+                "ok": False,
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
+            }))
+            return
+
         findings = parse_json_safely(args.findings) if isinstance(args.findings, str) else args.findings
         evidence = parse_json_safely(args.evidence) if hasattr(args, 'evidence') and args.evidence else {}
         output_format = getattr(args, 'output', 'text')
@@ -118,8 +132,22 @@ def handle_act_log_command(args):
     """
     try:
         from empirica.data.session_database import SessionDatabase
-        
-        session_id = args.session_id
+
+        session_id = getattr(args, 'session_id', None)
+
+        # UNIFIED: Auto-derive session_id if not provided
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        if not session_id:
+            print(json.dumps({
+                "ok": False,
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
+            }))
+            return
+
         actions = parse_json_safely(args.actions) if isinstance(args.actions, str) else args.actions
         artifacts = parse_json_safely(args.artifacts) if hasattr(args, 'artifacts') and args.artifacts else []
         goal_id = getattr(args, 'goal_id', None)
