@@ -1,0 +1,16 @@
+{
+  "finding_id": "8b8074a9-8e46-47bd-931f-4b9296bd435f",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "a8de3d60-8903-4961-a84c-003eab949260",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T18:40:13.565921+00:00",
+  "finding": "Parallel agent verification confirmed docs match v1.5.0 reality. CLAUDE.md fixed from v1.6.0\u2192v1.5.0. CLI docs 95% accurate - minor gaps: goals-create scope simplification, project-switch undocumented, calibration-report --trajectory flags missing. Session resolver implementation verified correct.",
+  "impact": 0.7,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Parallel agent verification confirmed docs match v1.5.0 reality. CLAUDE.md fixed from v1.6.0\u2192v1.5.0. CLI docs 95% accurate - minor gaps: goals-create scope simplification, project-switch undocumented, calibration-report --trajectory flags missing. Session resolver implementation verified correct.",
+    "impact": 0.7
+  }
+}
