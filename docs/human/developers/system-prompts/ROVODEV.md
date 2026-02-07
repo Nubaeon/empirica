@@ -69,24 +69,28 @@ Context can be lost on compaction. Don't accumulate changes.
 
 ## CORE COMMANDS
 
+**Transaction-first resolution:** Commands auto-derive session_id from the active transaction.
+`--session-id` is optional when inside a transaction (after PREFLIGHT). The CLI uses
+`get_active_empirica_session_id()` with priority: transaction → active_work → instance_projects.
+
 ```bash
 # Session lifecycle
 empirica session-create --ai-id <ai-id> --output json
 empirica project-bootstrap --session-id <ID> --output json
 
-# Goals (structural units within epistemic transactions)
-empirica goals-create --session-id <ID> --objective "..."
+# Praxic artifacts (auto-derived session_id in transaction)
+empirica goals-create --objective "..."              # session_id auto-derived
 empirica goals-complete --goal-id <ID> --reason "..."
-empirica goals-list --session-id <ID>
+empirica goals-list                                  # session_id auto-derived
 
-# CASCADE phases (JSON via stdin)
-empirica preflight-submit -     # Baseline
-empirica check-submit -         # Gate
-empirica postflight-submit -    # Learning delta
+# Epistemic state (measurement boundaries)
+empirica preflight-submit -     # Opens transaction (JSON stdin)
+empirica check-submit -         # Gate within transaction (JSON stdin)
+empirica postflight-submit -    # Closes transaction + grounded verification (JSON stdin)
 
-# Breadcrumbs
-empirica finding-log --session-id <ID> --finding "..." --impact 0.7
-empirica unknown-log --session-id <ID> --unknown "..."
+# Noetic artifacts (auto-derived session_id in transaction)
+empirica finding-log --finding "..." --impact 0.7   # session_id auto-derived
+empirica unknown-log --unknown "..."                 # session_id auto-derived
 empirica deadend-log --session-id <ID> --approach "..." --why-failed "..."
 ```
 

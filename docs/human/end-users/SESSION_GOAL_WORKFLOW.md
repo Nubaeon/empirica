@@ -1,15 +1,26 @@
 # Empirica Session and Goal Workflow Guide
 
-This guide explains Empirica's session-based goal management system and provides practical workflow examples.
+This guide explains Empirica's goal management system with transaction-aware tracking.
 
 ## Understanding the Architecture
 
 ### Key Concepts
 
-1. **Sessions**: Work containers that track AI activity, goals, and progress
-2. **Goals**: Objectives with success criteria and completion tracking
-3. **Subtasks**: Smaller tasks that contribute to goal completion
-4. **Scope Vectors**: Define goal characteristics (breadth, duration, coordination)
+1. **Sessions**: Temporal work containers that track AI activity (bounded by context windows)
+2. **Transactions**: Measurement windows (PREFLIGHT → work → POSTFLIGHT) that track epistemic state
+3. **Goals**: Objectives with success criteria that can span multiple transactions and sessions
+4. **Subtasks**: Smaller tasks that contribute to goal completion
+5. **Scope Vectors**: Define goal characteristics (breadth, duration, coordination)
+
+### Sessions vs Transactions
+
+| Concept | Purpose | Bounded By | Persists |
+|---------|---------|------------|----------|
+| **Session** | Temporal container | Context window (compaction) | No |
+| **Transaction** | Measurement cycle | PREFLIGHT → POSTFLIGHT | Yes |
+| **Goal** | Structural objective | Completion criteria | Yes |
+
+**Key insight:** Goals can span multiple transactions and sessions. A single goal might start in Session 1, continue through Session 2, and complete in Session 3. Each PREFLIGHT→POSTFLIGHT cycle measures your epistemic progress toward the goal.
 
 ### Why Sessions Matter
 
@@ -102,15 +113,51 @@ empirica goals-complete --goal-id $goal_id
 
 ## Advanced Workflow Patterns
 
+### Transaction-Aware Goal Work
+
+Goals are measured through PREFLIGHT→POSTFLIGHT transaction cycles:
+
+```bash
+# 1. Start a transaction (establishes baseline)
+empirica preflight-submit - << 'EOF'
+{
+  "session_id": "auto",
+  "task_description": "Implement user authentication",
+  "vectors": {"know": 0.6, "uncertainty": 0.4, "do": 0.2}
+}
+EOF
+
+# 2. Create goal (session_id auto-derived from transaction)
+empirica goals-create --objective "Implement JWT authentication"
+
+# 3. Do the work, log findings as you go
+empirica finding-log --finding "JWT RS256 is more secure" --impact 0.7
+
+# 4. Complete subtasks
+empirica goals-complete-subtask --task-id subtask-123
+
+# 5. Close transaction (measures learning delta)
+empirica postflight-submit - << 'EOF'
+{
+  "session_id": "auto",
+  "vectors": {"know": 0.85, "uncertainty": 0.15, "do": 0.7},
+  "summary": "Implemented JWT auth with RS256 signing"
+}
+EOF
+```
+
+**Key point:** When inside a transaction (after PREFLIGHT), you don't need `--session-id` — it's auto-derived.
+
 ### Multi-Session Collaboration
 
 ```bash
 # AI 1 creates session and initial goals
 ai1_session="81a9dfd3"
-empirica goals-create --session-id $ai1_session --objective "Research topic"
+empirica session-create --ai-id ai-1 --session-id $ai1_session
+empirica goals-create --objective "Research topic"  # session_id auto-derived
 
 # AI 2 continues the work in same session
-ai2_session="81a9dfd3"  # Same session ID
+empirica sessions-resume --session-id $ai1_session
 empirica goals-add-subtask --goal-id goal-id --description "Write report"
 
 # Check combined progress

@@ -9,6 +9,27 @@
 
 ---
 
+## Transaction-First Pattern
+
+**Most commands auto-derive `--session-id` from the active transaction.** When you're inside a CASCADE workflow (after PREFLIGHT), you don't need to specify `--session-id` explicitly.
+
+The CLI uses `get_active_empirica_session_id()` with this priority chain:
+1. **Active transaction** (`active_transaction_*.json`) — highest priority
+2. **Active work context** (`active_work_*.json`) — from project-switch
+3. **Instance projects** (`instance_projects/*.json`) — tmux/terminal aware
+
+**Commands that auto-derive session_id:**
+- All logging commands: `finding-log`, `unknown-log`, `deadend-log`, `investigate-log`, `act-log`
+- Goal commands: `goals-create`, `goals-list`, `goals-complete`
+- Epistemic commands: `epistemics-list`, `epistemics-show`
+
+**Commands that still require explicit `--session-id`:**
+- `project-bootstrap` — needs session for context loading
+- `sessions-show`, `sessions-export` — querying specific sessions
+- Commands run outside a transaction
+
+---
+
 ## Command Categories
 
 ### 1. Session Management (7 commands)

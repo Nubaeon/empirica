@@ -9,45 +9,53 @@
 Most systems treat each session as independent. Empirica treats each session as a **continuation**.
 
 ```
-Session 1 (Start)
+Session 1, Transaction 1 (Start)
   PREFLIGHT: know=0.4, uncertainty=0.9
   ↓ (investigate, log findings)
   POSTFLIGHT: know=0.65, uncertainty=0.6
-  → Findings stored in git notes (~450 tokens)
+  → Findings stored with transaction_id linkage (~450 tokens)
 
-Session 2 (Bootstrap)
-  Load findings from Session 1
+Session 2, Transaction 2 (Bootstrap)
+  Load findings from Transaction 1
   PREFLIGHT: know=0.7, uncertainty=0.4  ← Higher starting point!
   ↓ (investigate, fewer gaps to fill)
   POSTFLIGHT: know=0.85, uncertainty=0.2  ← Faster convergence
 
-Session 3 (Accelerated)
-  Load findings from Sessions 1 + 2
+Session 3, Transaction 3 (Accelerated)
+  Load findings from Transactions 1 + 2
   PREFLIGHT: know=0.8, uncertainty=0.25  ← Even higher!
   ↓ (investigate, targeted deep-dives)
   POSTFLIGHT: know=0.92, uncertainty=0.1
 ```
 
-**The pattern:** Learning compounds exponentially. Session N builds on Sessions 1...N-1.
+**The pattern:** Learning compounds exponentially. Transaction N builds on Transactions 1...N-1.
+
+**Triple linkage:** Every noetic artifact (finding, unknown, dead-end) carries:
+- `session_id` — temporal context (which context window)
+- `goal_id` — structural context (which objective)
+- `transaction_id` — measurement context (which PREFLIGHT→POSTFLIGHT cycle)
 
 ---
 
 ## How It Works
 
-### 1. Session 1: Initial Investigation
+### 1. Transaction 1: Initial Investigation
 
 ```bash
 # Start session
 empirica session-create --ai-id claude-rovo
 
-# PREFLIGHT: Assess baseline
-empirica preflight-submit \
-  --session-id <ID> \
-  --vectors '{"know": 0.4, "uncertainty": 0.9, ...}'
+# PREFLIGHT: Opens transaction, establishes baseline
+empirica preflight-submit - << 'EOF'
+{
+  "session_id": "auto",
+  "task_description": "Investigate auth system",
+  "vectors": {"know": 0.4, "uncertainty": 0.9, "do": 0.1}
+}
+EOF
 
-# NOETIC: Investigate and log findings
-empirica finding-log --session-id <ID> \
-  --finding "Auth system uses OAuth2 + JWT"
+# NOETIC: Investigate and log findings (session_id auto-derived)
+empirica finding-log --finding "Auth system uses OAuth2 + JWT" --impact 0.7
 
 empirica unknown-log --session-id <ID> \
   --unknown "How are refresh tokens managed?"
