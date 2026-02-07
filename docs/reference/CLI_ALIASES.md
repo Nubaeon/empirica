@@ -45,6 +45,14 @@ Aliases reduce typing for frequently used commands. They're especially useful fo
 | `unknown-log` | `ul` | Log an unknown |
 | `deadend-log` | `de` | Log a dead-end |
 
+### Messaging
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `message-send` | `msg-send` | Send message to AI |
+| `message-inbox` | `msg-inbox` | Check inbox |
+| `message-read` | `msg-read` | Read specific message |
+| `message-reply` | `msg-reply` | Reply to message |
+
 ### Project
 | Command | Aliases | Description |
 |---------|---------|-------------|
