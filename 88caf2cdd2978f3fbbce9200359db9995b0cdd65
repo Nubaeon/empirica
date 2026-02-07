@@ -1,0 +1,16 @@
+{
+  "finding_id": "84f24595-a980-4f26-bcdc-1f870cee9cb9",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T10:22:58.396868+00:00",
+  "finding": "Sentinel bug fixed: CHECK queries now scoped by transaction_id. Previously used session_id only, causing stale CHECK from previous transaction to be used. Also fixed && chains to allow all safe noetic commands (cd && grep, cd && cat, etc), not just cd && empirica. Error message improved.",
+  "impact": 0.85,
+  "goal_id": "9b5d15ee-42e6-4757-a80d-29dc48427a0f",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Sentinel bug fixed: CHECK queries now scoped by transaction_id. Previously used session_id only, causing stale CHECK from previous transaction to be used. Also fixed && chains to allow all safe noetic commands (cd && grep, cd && cat, etc), not just cd && empirica. Error message improved.",
+    "impact": 0.85
+  }
+}
