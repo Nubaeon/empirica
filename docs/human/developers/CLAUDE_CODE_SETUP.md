@@ -473,16 +473,18 @@ Note: `empirica-mcp` runs as stdio server, not CLI with --help.
 
 ## Quick Reference Card
 
+**Transaction-first:** After PREFLIGHT, most commands auto-derive `--session-id` from the active transaction.
+
 ```
 SESSION:    empirica session-create --ai-id claude-code --output json
 BOOTSTRAP:  empirica project-bootstrap --session-id <ID> --output json
-GOAL:       empirica goals-create --session-id <ID> --objective "..."
+GOAL:       empirica goals-create --objective "..."        # session auto-derived after PREFLIGHT
 PREFLIGHT:  empirica preflight-submit -
 CHECK:      empirica check-submit -
 COMPLETE:   empirica goals-complete --goal-id <ID> --reason "..."
 POSTFLIGHT: empirica postflight-submit -
-FINDING:    empirica finding-log --finding "..." --impact 0.7
-UNKNOWN:    empirica unknown-log --unknown "..."
+FINDING:    empirica finding-log --finding "..." --impact 0.7  # session auto-derived
+UNKNOWN:    empirica unknown-log --unknown "..."               # session auto-derived
 HELP:       empirica --help
 ```
 
