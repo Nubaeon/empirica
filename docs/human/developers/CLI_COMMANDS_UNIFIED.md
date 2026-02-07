@@ -324,7 +324,7 @@ Install: `pip install empirica-crm`
 **Purpose:** Create new goal with objective and scope
 **Usage:** `empirica goals-create --objective <text> --scope <text> [options]`
 **Options:**
-- `--session-id`: Associated session ID
+- `--session-id`: Session ID (auto-derived from active transaction)
 - `--estimated-complexity`: Estimated complexity score (0.0-1.0)
 
 #### `goals-list`
@@ -568,7 +568,9 @@ Install: `pip install empirica-crm`
 
 #### `handoff-create`
 **Purpose:** Create AI-to-AI handoff
-**Usage:** `empirica handoff-create --session-id <session_id>`
+**Usage:** `empirica handoff-create [options]`
+**Options:**
+- `--session-id`: Session ID (auto-derived from active transaction)
 
 #### `handoff-query`
 **Purpose:** Query for available handoffs
@@ -578,11 +580,13 @@ Install: `pip install empirica-crm`
 
 ### Logging Commands
 
+> **Transaction-First Pattern:** These commands auto-derive `--session-id` from the active transaction when running inside a CASCADE workflow (after PREFLIGHT). You only need to specify `--session-id` explicitly when logging outside a transaction.
+
 #### `finding-log`
 **Purpose:** Log new finding discovered during work
 **Usage:** `empirica finding-log --finding <text> [options]`
 **Options:**
-- `--session-id`: Associated session ID
+- `--session-id`: Session ID (auto-derived from active transaction)
 - `--project-id`: Associated project ID
 - `--goal-id`: Associated goal ID
 
@@ -590,7 +594,7 @@ Install: `pip install empirica-crm`
 **Purpose:** Log unknown or unresolved question
 **Usage:** `empirica unknown-log --unknown <text> [options]`
 **Options:**
-- `--session-id`: Associated session ID
+- `--session-id`: Session ID (auto-derived from active transaction)
 - `--project-id`: Associated project ID
 - `--goal-id`: Associated goal ID
 
@@ -633,7 +637,7 @@ empirica unknown-resolve \
 **Purpose:** Log dead end or failed approach
 **Usage:** `empirica deadend-log --approach <text> --why-failed <text> [options]`
 **Options:**
-- `--session-id`: Associated session ID
+- `--session-id`: Session ID (auto-derived from active transaction)
 - `--project-id`: Associated project ID
 - `--goal-id`: Associated goal ID
 
@@ -644,6 +648,8 @@ empirica unknown-resolve \
 #### `mistake-log`
 **Purpose:** Log mistake made during work
 **Usage:** `empirica mistake-log --mistake <text> --why-wrong <text> [options]`
+**Options:**
+- `--session-id`: Session ID (auto-derived from active transaction)
 
 #### `mistake-query`
 **Purpose:** Query for logged mistakes
