@@ -145,6 +145,15 @@ All events will be logged with format: `[EpistemicBus] {event_type}: agent={agen
 | `CONFIDENCE_DROPPED` | Unexpected confidence decrease |
 | `ENGAGEMENT_GATE_FAILED` | Engagement below threshold |
 
+### Context Budget Manager Events
+
+| Event | When Published |
+|-------|----------------|
+| `MEMORY_PRESSURE` | Context budget approaching limits |
+| `CONTEXT_EVICTED` | Items evicted from context budget |
+| `CONTEXT_INJECTED` | Items injected into context |
+| `PAGE_FAULT` | Context item requested but not in hot memory |
+
 ---
 
 ## Integration Pattern
@@ -174,6 +183,19 @@ bus.subscribe(DriftMonitor())
 
 ---
 
+## Current Usage
+
+**Active Publishers:**
+- `ContextBudgetManager` - Publishes MEMORY_PRESSURE, CONTEXT_EVICTED, CONTEXT_INJECTED, PAGE_FAULT
+
+**Active Subscribers:**
+- `SystemDashboard` - Observes all events for monitoring
+- `ContextBudgetManager` - Reacts to memory events
+
+**Gap:** CASCADE commands (preflight-submit, check-submit, postflight-submit) do NOT publish events despite having EventTypes defined. This is a future integration opportunity.
+
+---
+
 ## Causal Role
 
 The EpistemicBus enables the feedback loops that distinguish Empirica from simple prompting:
@@ -191,3 +213,5 @@ Events are the signals. The bus is how those signals reach the components that n
 ## Source
 
 - `empirica/core/epistemic_bus.py`
+- `empirica/core/bus_persistence.py` - SQLite + Qdrant persistence layer
+- `empirica/core/context_budget.py` - Active publisher
