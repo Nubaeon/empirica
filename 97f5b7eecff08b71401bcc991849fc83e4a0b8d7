@@ -1,0 +1,16 @@
+{
+  "finding_id": "dd507378-b7f3-4c77-8c8c-9b2d2e1b5fa0",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "f8e28dea-0fec-4f09-98a4-1e4708ee4143",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T18:26:18.774049+00:00",
+  "finding": "All 6 CLI commands now work without --session-id when in active transaction: finding-log, unknown-log, deadend-log, goals-create, mistake-log, handoff-create. Argparse definitions updated for mistake-log, handoff-create, goals-create.",
+  "impact": 0.7,
+  "goal_id": "4d226d4e-14ce-4502-823e-ed1cf9e69b78",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "All 6 CLI commands now work without --session-id when in active transaction: finding-log, unknown-log, deadend-log, goals-create, mistake-log, handoff-create. Argparse definitions updated for mistake-log, handoff-create, goals-create.",
+    "impact": 0.7
+  }
+}
