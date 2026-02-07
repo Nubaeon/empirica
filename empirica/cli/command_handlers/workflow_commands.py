@@ -1644,6 +1644,20 @@ def handle_postflight_submit_command(args):
                 }))
                 sys.exit(1)
 
+        # TRANSACTION CONTINUITY FIX: Override session_id from active transaction
+        # The transaction file stores the session_id from PREFLIGHT time, which is the
+        # correct session even if the conversation summary has a stale session_id
+        try:
+            from empirica.utils.session_resolver import read_active_transaction_full
+            tx_data = read_active_transaction_full()
+            if tx_data and tx_data.get('session_id'):
+                tx_session_id = tx_data['session_id']
+                if tx_session_id != session_id:
+                    logger.debug(f"POSTFLIGHT: Overriding session_id from transaction file: {session_id[:8]}... -> {tx_session_id[:8]}...")
+                    session_id = tx_session_id
+        except Exception as e:
+            logger.debug(f"Transaction session lookup failed (using provided session_id): {e}")
+
         # Validate vectors
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")

@@ -884,8 +884,15 @@ def write_active_transaction(
         raise
 
 
-def read_active_transaction(claude_session_id: str = None) -> Optional[str]:
-    """Read the active transaction ID from the tracking file. Returns None if no active transaction.
+def read_active_transaction_full(claude_session_id: str = None) -> Optional[dict]:
+    """Read the full active transaction data from the tracking file.
+
+    Returns the complete transaction dict including:
+    - transaction_id: The transaction UUID
+    - session_id: The session where PREFLIGHT was run (CRITICAL for cross-compact continuity)
+    - preflight_timestamp: When PREFLIGHT was submitted
+    - status: "open" or "closed"
+    - project_path: Project this transaction belongs to
 
     Uses get_active_project_path() to find the correct project, then reads transaction from there.
     """
@@ -899,8 +906,7 @@ def read_active_transaction(claude_session_id: str = None) -> Optional[str]:
         if candidate.exists():
             try:
                 with open(candidate, 'r') as f:
-                    data = json.load(f)
-                    return data.get('transaction_id')
+                    return json.load(f)
             except Exception:
                 pass
 
@@ -909,11 +915,21 @@ def read_active_transaction(claude_session_id: str = None) -> Optional[str]:
     if global_candidate.exists():
         try:
             with open(global_candidate, 'r') as f:
-                data = json.load(f)
-                return data.get('transaction_id')
+                return json.load(f)
         except Exception:
             pass
 
+    return None
+
+
+def read_active_transaction(claude_session_id: str = None) -> Optional[str]:
+    """Read the active transaction ID from the tracking file. Returns None if no active transaction.
+
+    For full transaction data including session_id, use read_active_transaction_full().
+    """
+    data = read_active_transaction_full(claude_session_id)
+    if data:
+        return data.get('transaction_id')
     return None
 
 
