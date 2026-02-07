@@ -1,0 +1,13 @@
+{
+  "unknown_id": "c4aeccbb-f178-4d5a-92d2-c2c53452e822",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T17:43:00.144528+00:00",
+  "unknown": "Statusline may be showing previous session's transaction after compact - needs to follow compact hooks logic (active_work file priority, claude_session_id lookup). Similar pattern to path_resolver.py fix.",
+  "goal_id": "97f0ae7e-57a8-47ac-a6dc-56cb774a593d",
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
