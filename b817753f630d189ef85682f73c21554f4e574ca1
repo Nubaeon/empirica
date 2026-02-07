@@ -1,0 +1,13 @@
+{
+  "unknown_id": "82b446f3-96a6-4a88-87f5-bec122ad37b5",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "37c3e959-0331-4100-8c08-63075c8abeb3",
+  "ai_id": "test-release-1.5.0",
+  "created_at": "2026-02-07T19:00:18.553702+00:00",
+  "unknown": "Test unknown for v1.5.0 validation - will resolve",
+  "goal_id": null,
+  "subtask_id": null,
+  "resolved": false,
+  "resolved_by": null,
+  "resolved_at": null
+}
