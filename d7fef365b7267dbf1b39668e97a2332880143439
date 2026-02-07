@@ -1,0 +1,16 @@
+{
+  "finding_id": "ef5b9438-75f8-4d81-b688-85e9850600e1",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "94f54119-f4d6-41f4-8d1b-2814fb3dd434",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T14:35:49.339364+00:00",
+  "finding": "PREFLIGHT now updates active_work file with session_id after successful write. This ensures sentinel reads the same session_id that PREFLIGHT wrote to, fixing 'loop closed' false positive when PREFLIGHT creates a new session.",
+  "impact": 0.75,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "PREFLIGHT now updates active_work file with session_id after successful write. This ensures sentinel reads the same session_id that PREFLIGHT wrote to, fixing 'loop closed' false positive when PREFLIGHT creates a new session.",
+    "impact": 0.75
+  }
+}
