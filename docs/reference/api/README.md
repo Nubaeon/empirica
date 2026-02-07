@@ -58,6 +58,26 @@
 - **DocCodeIntegrity** - Documentation-code integrity checking
 - **Migration tools** - Schema evolution utilities
 
+### [CASCADE Workflow](cascade_workflow.md)
+- **PREFLIGHT/CHECK/POSTFLIGHT** - Epistemic measurement phases
+- **Transaction lifecycle** - File-based transaction tracking
+- **Grounded calibration** - POST-TEST verification with objective evidence
+
+### [Workspace Management](workspace_management.md)
+- **workspace-init/list/overview/map** - Cross-project portfolio management
+- **Global registry** - Project tracking in workspace.db
+- **Instance bindings** - AI instance → project mappings
+
+### [Agents Orchestration](agents_orchestration.md)
+- **agent-spawn/parallel** - Parallel investigation agents
+- **Budget allocation** - Shannon information gain distribution
+- **agent-aggregate/rollup** - Finding consolidation
+
+### [Messaging System](messaging_system.md)
+- **message-send/inbox/read** - Asynchronous AI-to-AI communication
+- **Channels** - Direct, broadcast, crosscheck messaging
+- **Threads** - Conversation threading and handoffs
+
 ---
 
 ## API Philosophy
@@ -81,5 +101,5 @@ For new users, start with:
 
 ---
 
-**Total Modules:** 10 categories
+**Total Modules:** 14 categories
 **API Stability:** Production ready
