@@ -1,0 +1,30 @@
+{
+  "goal_id": "c9a464f7-20f2-4818-bbb5-17528e7b7e3e",
+  "session_id": "f8e28dea-0fec-4f09-98a4-1e4708ee4143",
+  "ai_id": "empirica_cli",
+  "created_at": "2026-02-07T18:24:54.254401+00:00",
+  "goal_data": {
+    "objective": "Audit remaining CLI commands for unified session_id pattern - check all commands that use session_id to ensure they can auto-derive from transaction",
+    "scope": {
+      "breadth": 0.4,
+      "duration": 0.3,
+      "coordination": 0.1
+    },
+    "success_criteria": [
+      "All CLI commands using session_id checked",
+      "Commands that can benefit from unified pattern identified",
+      "Priority list created based on usage frequency"
+    ],
+    "estimated_complexity": null,
+    "constraints": null,
+    "metadata": null
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_cli",
+      "timestamp": "2026-02-07T18:24:54.254416+00:00",
+      "action": "created"
+    }
+  ]
+}
