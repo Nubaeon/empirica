@@ -41,7 +41,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from empirica.data.session_database import SessionDatabase
 from empirica.config.path_resolver import get_session_db_path
-from empirica.utils.session_resolver import resolve_session_id
+from empirica.utils.session_resolver import resolve_session_id, read_active_transaction
 
 # Auto-capture for error tracking
 try:
@@ -1965,8 +1965,19 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     cli_command = tool_map.get(tool_name, [tool_name])[0]
     if cli_command in json_supported:
         cmd.extend(["--output", "json"])
-    
+
     # preflight and postflight already have --prompt-only which returns JSON
+
+    # CASCADE commands need transaction_id for instance isolation
+    # Without this, Sentinel can't find CHECK when scoped by transaction_id
+    cascade_commands = {"preflight-submit", "check-submit", "postflight-submit"}
+    if cli_command in cascade_commands and "--transaction-id" not in cmd:
+        try:
+            transaction_id = read_active_transaction()
+            if transaction_id:
+                cmd.extend(["--transaction-id", transaction_id])
+        except Exception:
+            pass  # Fall through without transaction_id if lookup fails
 
     return cmd
 
