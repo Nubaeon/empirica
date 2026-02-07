@@ -185,17 +185,17 @@ PREFLIGHT (BEGIN)          POSTFLIGHT (COMMIT)         POST-TEST (VERIFY)
 
 ## CORE COMMANDS
 
-**Scoping note:** CLI uses `--session-id` for lookup, but artifacts are **transaction-scoped**.
-Sessions are temporal (compaction boundaries). Transactions are the epistemic trajectory unit
-containing coherent noetic→praxic work. The CLI resolves session_id to the active transaction.
+**Transaction-first resolution:** Commands auto-derive session_id from the active transaction.
+`--session-id` is optional when inside a transaction (after PREFLIGHT). The CLI uses
+`get_active_empirica_session_id()` with priority: transaction → active_work → instance_projects.
 
 ```bash
 # Session lifecycle
 empirica session-create --ai-id claude-code --output json
 empirica project-bootstrap --session-id <ID> --output json
 
-# Praxic artifacts (transaction-scoped, structural)
-empirica goals-create --session-id <ID> --objective "..."
+# Praxic artifacts (auto-derived session_id in transaction)
+empirica goals-create --objective "..."              # session_id auto-derived
 empirica goals-complete --goal-id <ID> --reason "..."
 
 # Epistemic state (measurement boundaries)
@@ -203,10 +203,10 @@ empirica preflight-submit -     # Opens transaction (JSON stdin)
 empirica check-submit -         # Gate within transaction (JSON stdin)
 empirica postflight-submit -    # Closes transaction + grounded verification (JSON stdin)
 
-# Noetic artifacts (transaction-scoped breadcrumbs)
-empirica finding-log --session-id <ID> --finding "..." --impact 0.7
-empirica unknown-log --session-id <ID> --unknown "..."
-empirica deadend-log --session-id <ID> --approach "..." --why-failed "..."
+# Noetic artifacts (auto-derived session_id in transaction)
+empirica finding-log --finding "..." --impact 0.7   # session_id auto-derived
+empirica unknown-log --unknown "..."                 # session_id auto-derived
+empirica deadend-log --approach "..." --why-failed "..."
 
 # Calibration inspection
 empirica calibration-report --grounded     # Compare Track 1 vs Track 2
