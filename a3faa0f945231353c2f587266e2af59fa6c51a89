@@ -1,0 +1,16 @@
+{
+  "finding_id": "a6414770-15eb-4d20-a37d-9f5cbad92c83",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-07T12:04:41.699522+00:00",
+  "finding": "VERIFIED: Multi-instance isolation fix working. project-switch now writes to instance_projects/{tmux_id}.json even when tty_key unavailable (via Bash tool). _update_active_work() writes TMUX_PANE-keyed file FIRST, then optionally TTY session. Tested: empirica\u2192outreach\u2192empirica with correct instance_projects updates.",
+  "impact": 0.85,
+  "goal_id": "2a89c259-c106-4a40-80e2-9abe39333165",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "VERIFIED: Multi-instance isolation fix working. project-switch now writes to instance_projects/{tmux_id}.json even when tty_key unavailable (via Bash tool). _update_active_work() writes TMUX_PANE-keyed file FIRST, then optionally TTY session. Tested: empirica\u2192outreach\u2192empirica with correct instance_projects updates.",
+    "impact": 0.85
+  }
+}
