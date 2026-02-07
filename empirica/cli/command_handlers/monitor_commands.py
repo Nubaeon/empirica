@@ -1808,13 +1808,132 @@ def handle_trajectory_project_command(args):
         handle_cli_error(e, "Trajectory Project", getattr(args, 'verbose', False))
 
 
+def _show_grounded_calibration(args, ai_id: str, weeks: int, output_format: str, show_trajectory: bool):
+    """Show grounded calibration (POSTFLIGHT → POST-TEST evidence comparison).
+
+    This is the default output for calibration-report - real calibration
+    measuring accuracy of self-assessment against objective evidence.
+    """
+    import json
+    from empirica.data.session_database import SessionDatabase
+
+    try:
+        db = SessionDatabase()
+        from empirica.core.post_test.grounded_calibration import GroundedCalibrationManager
+        gcm = GroundedCalibrationManager(db)
+        grounded_beliefs = gcm.get_grounded_beliefs(ai_id)
+        grounded_adjustments = gcm.get_grounded_adjustments(ai_id)
+        divergence = gcm.get_calibration_divergence(ai_id)
+
+        total_grounded_evidence = sum(
+            b.evidence_count for b in grounded_beliefs.values()
+        )
+
+        if output_format == 'json':
+            result = {
+                "ok": True,
+                "calibration_type": "grounded",
+                "note": "Grounded calibration: POSTFLIGHT self-assessment vs objective evidence",
+                "observations": total_grounded_evidence,
+                "adjustments": grounded_adjustments,
+                "divergence": divergence,
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            print("=" * 70)
+            print("🔬 CALIBRATION REPORT (grounded evidence)")
+            print("=" * 70)
+            print()
+            print("Compares POSTFLIGHT self-assessment against objective evidence")
+            print("(test results, git metrics, artifact counts, goal completion)")
+            print()
+            print(f"Total evidence observations: {total_grounded_evidence}")
+            print()
+
+            if divergence:
+                print("📊 CALIBRATION (self-assessment vs evidence):")
+                print("-" * 70)
+                print(f"{'Vector':<15} {'Self-Assessed':>12} {'Grounded':>10} {'Gap':>8} {'Evidence':>10}")
+                print("-" * 70)
+
+                sorted_div = sorted(
+                    divergence.items(),
+                    key=lambda x: abs(x[1]['gap']),
+                    reverse=True,
+                )
+                for vector, data in sorted_div:
+                    gap = data['gap']
+                    sign = "+" if gap >= 0 else ""
+                    prefix = "⚠️ " if abs(gap) >= 0.15 else "   "
+                    print(
+                        f"{prefix}{vector:<12} "
+                        f"{data['self_referential_mean']:>12.2f} "
+                        f"{data['grounded_mean']:>10.2f} "
+                        f"{sign}{gap:>7.2f} "
+                        f"{data['grounded_evidence']:>10}"
+                    )
+                print("-" * 70)
+            else:
+                print("   No grounded data yet. Run POSTFLIGHT sessions to collect evidence.")
+
+            if grounded_adjustments:
+                print()
+                print("📋 BIAS CORRECTIONS (apply to self-assessment):")
+                for vector, adj in sorted(
+                    grounded_adjustments.items(),
+                    key=lambda x: abs(x[1]),
+                    reverse=True,
+                ):
+                    sign = "+" if adj >= 0 else ""
+                    print(f"   {vector}: {sign}{adj:.2f}")
+            print()
+
+        # Optional trajectory trend
+        if show_trajectory:
+            from empirica.core.post_test.trajectory_tracker import TrajectoryTracker
+            tracker = TrajectoryTracker(db)
+            summary = tracker.get_trajectory_summary(ai_id)
+
+            if output_format == 'json':
+                print(json.dumps({"trajectory": summary}, indent=2))
+            else:
+                print("=" * 70)
+                print("📈 CALIBRATION TRAJECTORY (is gap closing/widening/stable?)")
+                print("=" * 70)
+
+                if summary['status'] == 'insufficient_data':
+                    print(f"   {summary['message']}")
+                else:
+                    print(f"Overall direction: {summary['overall_direction']}")
+                    print(f"Sessions analyzed: {summary['sessions_analyzed']}")
+                    print()
+
+                    trend_summary = summary.get('summary', {})
+                    if trend_summary.get('closing'):
+                        print(f"   ✅ Closing (improving): {', '.join(trend_summary['closing'])}")
+                    if trend_summary.get('widening'):
+                        print(f"   ⚠️  Widening (degrading): {', '.join(trend_summary['widening'])}")
+                    if trend_summary.get('stable'):
+                        print(f"   ➡️  Stable: {', '.join(trend_summary['stable'])}")
+                print()
+
+        db.close()
+
+    except Exception as e:
+        if output_format == 'json':
+            print(json.dumps({"ok": False, "error": str(e)}, indent=2))
+        else:
+            print(f"❌ Grounded calibration unavailable: {e}")
+            print("   Hint: Run POSTFLIGHT sessions to collect evidence")
+
+
 def handle_calibration_report_command(args):
     """Handle calibration-report command.
 
-    Analyzes AI self-assessment calibration using vector_trajectories table.
-    Measures gap from expected (1.0 for most vectors, 0.0 for uncertainty) at session END.
+    Default: Shows grounded calibration (POSTFLIGHT → POST-TEST evidence comparison).
+    This is real calibration - measuring accuracy of self-assessment against reality.
 
-    Output: Per-vector corrections, sample sizes, trends, and system prompt recommendations.
+    Use --learning-trajectory to see PREFLIGHT→POSTFLIGHT deltas (learning, not calibration).
     """
     try:
         import json
@@ -1830,6 +1949,17 @@ def handle_calibration_report_command(args):
         output_format = getattr(args, 'output', 'human')
         update_prompt = getattr(args, 'update_prompt', False)
         verbose = getattr(args, 'verbose', False)
+
+        # Check mode: grounded (default) vs learning-trajectory
+        show_learning_trajectory = getattr(args, 'learning_trajectory', False)
+        show_trajectory_trend = getattr(args, 'trajectory', False)
+
+        # DEFAULT: Show grounded calibration (the real calibration)
+        if not show_learning_trajectory:
+            return _show_grounded_calibration(args, ai_id, weeks, output_format, show_trajectory_trend)
+
+        # LEGACY: Show learning trajectory (PREFLIGHT→POSTFLIGHT deltas)
+        # This is NOT calibration - it's learning data
 
         # Find the sessions database
         import os
@@ -1967,8 +2097,8 @@ def handle_calibration_report_command(args):
                 print(f"❌ No valid calibration data (filtered {filtered_trajectories} placeholder sessions)")
             return
 
-        # Calculate calibration metrics
-        calibration = {}
+        # Calculate learning trajectory metrics (PREFLIGHT→POSTFLIGHT deltas)
+        trajectory = {}
         for vector_name, expected in vector_expected.items():
             values = vector_data.get(vector_name, [])
             if not values:
@@ -2024,7 +2154,7 @@ def handle_calibration_report_command(args):
             else:
                 confidence = "low"
 
-            calibration[vector_name] = {
+            trajectory[vector_name] = {
                 "correction": round(correction, 2),
                 "end_mean": round(mean, 2),
                 "expected": expected,
@@ -2036,7 +2166,7 @@ def handle_calibration_report_command(args):
 
         # Sort by absolute correction (biggest issues first)
         sorted_vectors = sorted(
-            calibration.items(),
+            trajectory.items(),
             key=lambda x: abs(x[1]['correction']),
             reverse=True
         )
@@ -2044,13 +2174,15 @@ def handle_calibration_report_command(args):
         # Build result
         result = {
             "ok": True,
+            "type": "learning_trajectory",
+            "note": "PREFLIGHT→POSTFLIGHT deltas (NOT calibration - use grounded evidence for that)",
             "data_source": "vector_trajectories",
             "total_trajectories": valid_trajectories,
             "filtered_trajectories": filtered_trajectories,
             "weeks_analyzed": weeks,
             "date_range": f"{cutoff_str} to {datetime.now().strftime('%Y-%m-%d')}",
             "ai_id_filter": ai_id if ai_id else "all",
-            "calibration": {v: d for v, d in sorted_vectors}
+            "learning_trajectory": {v: d for v, d in sorted_vectors}
         }
 
         # Identify key issues
@@ -2072,8 +2204,8 @@ def handle_calibration_report_command(args):
         result["key_issues"] = key_issues
 
         # Readiness gate info
-        know_data = calibration.get('know', {})
-        uncertainty_data = calibration.get('uncertainty', {})
+        know_data = trajectory.get('know', {})
+        uncertainty_data = trajectory.get('uncertainty', {})
         result["readiness_gate"] = {
             "threshold": "know >= 0.70 AND uncertainty <= 0.35",
             "know_correction": know_data.get('correction', 0),
@@ -2086,9 +2218,9 @@ def handle_calibration_report_command(args):
             print(json.dumps(result, indent=2))
         elif output_format == 'markdown' or update_prompt:
             # Generate markdown table for system prompt
-            print(f"## Calibration ({valid_trajectories} trajectories over {weeks} weeks)")
+            print(f"## Learning Trajectory ({valid_trajectories} trajectories over {weeks} weeks)")
             print()
-            print("*Method: Gap from expected at session END (1.0 for most, 0.0 for uncertainty).*")
+            print("*PREFLIGHT→POSTFLIGHT deltas. NOT calibration (use grounded evidence for that).*")
             print()
             print("| Vector | Correction | End Mean | Trend | Meaning |")
             print("|--------|------------|----------|-------|---------|")
@@ -2123,8 +2255,11 @@ def handle_calibration_report_command(args):
         else:
             # Human-readable output
             print("=" * 70)
-            print("📊 CALIBRATION REPORT")
+            print("📊 LEARNING TRAJECTORY (PREFLIGHT→POSTFLIGHT)")
             print("=" * 70)
+            print("NOTE: This is learning data, NOT calibration. For grounded calibration,")
+            print("      run: empirica calibration-report (without --learning-trajectory)")
+            print()
             print(f"Data source: vector_trajectories ({valid_trajectories} trajectories)")
             print(f"Period: {result['date_range']} ({weeks} weeks)")
             if filtered_trajectories:
@@ -2132,13 +2267,13 @@ def handle_calibration_report_command(args):
             print()
 
             if key_issues:
-                print("🎯 KEY ISSUES (|correction| >= 0.15):")
+                print("🎯 KEY PATTERNS (|delta| >= 0.15):")
                 for issue in key_issues:
                     sign = "+" if issue['correction'] >= 0 else ""
                     print(f"   {issue['vector']}: {sign}{issue['correction']:.2f} - {issue['meaning']}")
                 print()
 
-            print("📈 PER-VECTOR CALIBRATION:")
+            print("📈 PER-VECTOR LEARNING DELTAS:")
             print("-" * 70)
             print(f"{'Vector':<15} {'Correction':>10} {'End Mean':>10} {'Samples':>8} {'Trend':>15}")
             print("-" * 70)
@@ -2206,133 +2341,9 @@ def handle_calibration_report_command(args):
 
             print()
             print("=" * 70)
-
-        # GROUNDED CALIBRATION (--grounded flag)
-        show_grounded = getattr(args, 'grounded', False)
-        show_trajectory = getattr(args, 'trajectory', False)
-
-        if show_grounded or show_trajectory:
-            try:
-                from empirica.data.session_database import SessionDatabase
-                db = SessionDatabase()
-
-                if show_grounded:
-                    from empirica.core.post_test.grounded_calibration import GroundedCalibrationManager
-                    gcm = GroundedCalibrationManager(db)
-                    grounded_beliefs = gcm.get_grounded_beliefs(ai_id)
-                    grounded_adjustments = gcm.get_grounded_adjustments(ai_id)
-                    divergence = gcm.get_calibration_divergence(ai_id)
-
-                    total_grounded_evidence = sum(
-                        b.evidence_count for b in grounded_beliefs.values()
-                    )
-
-                    if output_format == 'json':
-                        grounded_result = {
-                            "grounded_calibration": {
-                                "observations": total_grounded_evidence,
-                                "adjustments": grounded_adjustments,
-                                "divergence": divergence,
-                            }
-                        }
-                        print(json.dumps(grounded_result, indent=2))
-                    else:
-                        print()
-                        print("=" * 70)
-                        print("🔬 GROUNDED CALIBRATION (evidence-based)")
-                        print("=" * 70)
-                        print(f"Total evidence observations: {total_grounded_evidence}")
-                        print()
-
-                        if divergence:
-                            print("📊 SELF-REF vs GROUNDED DIVERGENCE:")
-                            print("-" * 70)
-                            print(f"{'Vector':<15} {'Self-Ref':>10} {'Grounded':>10} {'Gap':>8} {'Evidence':>10}")
-                            print("-" * 70)
-
-                            sorted_div = sorted(
-                                divergence.items(),
-                                key=lambda x: abs(x[1]['gap']),
-                                reverse=True,
-                            )
-                            for vector, data in sorted_div:
-                                gap = data['gap']
-                                sign = "+" if gap >= 0 else ""
-                                prefix = "⚠️ " if abs(gap) >= 0.15 else "   "
-                                print(
-                                    f"{prefix}{vector:<12} "
-                                    f"{data['self_referential_mean']:>10.2f} "
-                                    f"{data['grounded_mean']:>10.2f} "
-                                    f"{sign}{gap:>7.2f} "
-                                    f"{data['grounded_evidence']:>10}"
-                                )
-                            print("-" * 70)
-                        else:
-                            print("   No grounded data yet. Run POSTFLIGHT sessions to collect evidence.")
-
-                        if grounded_adjustments:
-                            print()
-                            print("📋 GROUNDED BIAS CORRECTIONS:")
-                            for vector, adj in sorted(
-                                grounded_adjustments.items(),
-                                key=lambda x: abs(x[1]),
-                                reverse=True,
-                            ):
-                                sign = "+" if adj >= 0 else ""
-                                print(f"   {vector}: {sign}{adj:.2f}")
-                        print()
-
-                if show_trajectory:
-                    from empirica.core.post_test.trajectory_tracker import TrajectoryTracker
-                    tracker = TrajectoryTracker(db)
-                    summary = tracker.get_trajectory_summary(ai_id)
-
-                    if output_format == 'json':
-                        print(json.dumps({"trajectory": summary}, indent=2))
-                    else:
-                        print()
-                        print("=" * 70)
-                        print("📈 CALIBRATION TRAJECTORY")
-                        print("=" * 70)
-
-                        if summary['status'] == 'insufficient_data':
-                            print(f"   {summary['message']}")
-                        else:
-                            print(f"Overall direction: {summary['overall_direction']}")
-                            print(f"Sessions analyzed: {summary['sessions_analyzed']}")
-                            print()
-
-                            trend_summary = summary.get('summary', {})
-                            if trend_summary.get('closing'):
-                                print(f"   ✅ Closing (improving): {', '.join(trend_summary['closing'])}")
-                            if trend_summary.get('widening'):
-                                print(f"   ⚠️  Widening (degrading): {', '.join(trend_summary['widening'])}")
-                            if trend_summary.get('stable'):
-                                print(f"   ➡️  Stable: {', '.join(trend_summary['stable'])}")
-
-                            if verbose:
-                                print()
-                                print("-" * 70)
-                                print(f"{'Vector':<15} {'Direction':>10} {'Slope':>8} {'Recent Gap':>12} {'Mean Gap':>10} {'Points':>8}")
-                                print("-" * 70)
-                                for vector, data in sorted(summary['vectors'].items()):
-                                    print(
-                                        f"   {vector:<12} "
-                                        f"{data['direction']:>10} "
-                                        f"{data['slope']:>8.4f} "
-                                        f"{data['recent_gap']:>12.3f} "
-                                        f"{data['mean_gap']:>10.3f} "
-                                        f"{data['points']:>8}"
-                                    )
-                                print("-" * 70)
-                        print()
-
-                db.close()
-            except Exception as e:
-                if output_format == 'json':
-                    print(json.dumps({"grounded_error": str(e)}, indent=2))
-                else:
-                    print(f"\n   Grounded calibration unavailable: {e}")
+            print()
+            print("Note: This shows learning trajectory (PREFLIGHT→POSTFLIGHT deltas).")
+            print("      For actual calibration (grounded evidence), run without --learning-trajectory.")
 
     except Exception as e:
         handle_cli_error(e, "Calibration Report", getattr(args, 'verbose', False))

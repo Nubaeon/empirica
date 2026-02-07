@@ -101,24 +101,22 @@ Data Quality Filtering (default):
     compact_parser.add_argument('--output', choices=['human', 'json'], default='human',
         help='Output format (default: human)')
 
-    # Calibration report command - analyze calibration from vector_trajectories
+    # Calibration report command - grounded calibration from post-test evidence
     calibration_parser = subparsers.add_parser('calibration-report',
-        help='Generate calibration report from vector trajectories',
+        help='Generate calibration report from grounded evidence',
         description="""
-Analyze AI self-assessment calibration using vector_trajectories table.
-Measures gap from expected (1.0 for most vectors, 0.0 for uncertainty) at session END.
+Analyze AI calibration by comparing POSTFLIGHT self-assessment against objective evidence.
 
-Key outputs:
-- Per-vector bias corrections (ADD to self-assessment)
-- Sample sizes and confidence intervals
-- Trend analysis over time (weekly)
-- Recommendations for system prompt updates
+Default: Shows grounded calibration (POSTFLIGHT → POST-TEST evidence comparison).
+This is real calibration - measuring accuracy of self-assessment against reality.
 
-Data Quality Filtering (default):
-- Uses vector_trajectories as primary source (not polluted bayesian_beliefs)
-- Filters test sessions (ai_id: test*, *-test, storage-*)
-- Requires meaningful sessions (pattern != 'unknown')
-- Excludes 0.5 default values (signs of placeholder data)
+Evidence sources:
+- Test results (pytest JSON reports)
+- Git metrics (commits, lines changed)
+- Artifact counts (findings, unknowns, dead-ends)
+- Goal/subtask completion ratios
+
+Use --learning-trajectory to see PREFLIGHT→POSTFLIGHT deltas (learning, not calibration).
         """)
     calibration_parser.add_argument('--ai-id', help='Filter by AI identifier (default: claude-code)')
     calibration_parser.add_argument('--weeks', type=int, default=8,
@@ -133,7 +131,7 @@ Data Quality Filtering (default):
         help='Generate copy-paste ready calibration table for system prompts')
     calibration_parser.add_argument('--verbose', action='store_true',
         help='Show detailed per-vector analysis')
-    calibration_parser.add_argument('--grounded', action='store_true',
-        help='Include grounded (evidence-based) calibration alongside self-referential')
+    calibration_parser.add_argument('--learning-trajectory', action='store_true',
+        help='Show learning trajectory (PREFLIGHT→POSTFLIGHT deltas) - NOT calibration')
     calibration_parser.add_argument('--trajectory', action='store_true',
-        help='Show POSTFLIGHT-to-POSTFLIGHT calibration trend (closing/widening/stable)')
+        help='Show calibration trend over time (closing/widening/stable)')
