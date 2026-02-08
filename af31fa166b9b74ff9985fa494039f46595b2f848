@@ -1,0 +1,16 @@
+{
+  "finding_id": "08f853e6-8923-4db4-bc7c-67446810ff2d",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "ff775da8-d2a2-4b52-a9ad-59e7ae4459ab",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-08T01:59:30.894157+00:00",
+  "finding": "Security audit - Dependencies: 7 packages need CVE fixes. HIGH: cryptography>=44.0.1 (CVE-2024-6119), gitpython>=3.1.41 (CVE-2024-22190), flask-cors>=4.0.2 (CVE-2024-6221). MEDIUM: pydantic>=2.4.0, fastapi>=0.115.0, pillow>=11.3.0, opencv-contrib-python>=4.12.0",
+  "impact": 0.9,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Security audit - Dependencies: 7 packages need CVE fixes. HIGH: cryptography>=44.0.1 (CVE-2024-6119), gitpython>=3.1.41 (CVE-2024-22190), flask-cors>=4.0.2 (CVE-2024-6221). MEDIUM: pydantic>=2.4.0, fastapi>=0.115.0, pillow>=11.3.0, opencv-contrib-python>=4.12.0",
+    "impact": 0.9
+  }
+}
