@@ -1,0 +1,16 @@
+{
+  "finding_id": "37e11879-7fbc-43d8-91e7-ad55f2ee8cc8",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "1dfb26ff-e28d-422a-998a-0213b92f6694",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-08T11:12:01.367287+00:00",
+  "finding": "TTS/STT models for epistemic avatar: STT - NVIDIA Canary (5.63% WER, tops leaderboard), Whisper Large V3 (1.55B params, 99+ languages), Moonshine (smaller than Whisper, better performance). TTS - XTTS-v2 (17 languages, zero-shot voice cloning), Coqui TTS (1100+ languages), Bark (2x faster on GPU). Coqui STT deprecated, focus shifted to TTS.",
+  "impact": 0.8,
+  "goal_id": "75f3fef2-f6cc-4c06-943b-7aa357fab591",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "TTS/STT models for epistemic avatar: STT - NVIDIA Canary (5.63% WER, tops leaderboard), Whisper Large V3 (1.55B params, 99+ languages), Moonshine (smaller than Whisper, better performance). TTS - XTTS-v2 (17 languages, zero-shot voice cloning), Coqui TTS (1100+ languages), Bark (2x faster on GPU). Coqui STT deprecated, focus shifted to TTS.",
+    "impact": 0.8
+  }
+}
