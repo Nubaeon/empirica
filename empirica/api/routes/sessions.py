@@ -6,10 +6,19 @@ All queries use ? placeholders (PostgreSQLAdapter auto-converts to %s).
 """
 
 import logging
+import os
 from flask import Blueprint, request, jsonify
 
 bp = Blueprint("sessions", __name__)
 logger = logging.getLogger(__name__)
+
+# Security: Only expose detailed errors in debug mode
+_DEBUG_MODE = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+
+
+def _safe_error_message(error: Exception) -> str:
+    """Return error message safe for client response."""
+    return str(error) if _DEBUG_MODE else "An internal error occurred"
 
 
 def _get_db():
@@ -86,11 +95,11 @@ def list_sessions():
         })
 
     except Exception as e:
-        logger.error(f"Error listing sessions: {e}")
+        logger.error(f"Error listing sessions: {e}", exc_info=True)
         return jsonify({
             "ok": False,
             "error": "database_error",
-            "message": str(e),
+            "message": _safe_error_message(e),
             "status_code": 500
         }), 500
 
@@ -172,11 +181,11 @@ def get_session(session_id: str):
         })
 
     except Exception as e:
-        logger.error(f"Error getting session {session_id}: {e}")
+        logger.error(f"Error getting session {session_id}: {e}", exc_info=True)
         return jsonify({
             "ok": False,
             "error": "database_error",
-            "message": str(e),
+            "message": _safe_error_message(e),
             "status_code": 500
         }), 500
 
@@ -223,9 +232,9 @@ def get_session_checks(session_id: str):
         })
 
     except Exception as e:
-        logger.error(f"Error getting checks for session {session_id}: {e}")
+        logger.error(f"Error getting checks for session {session_id}: {e}", exc_info=True)
         return jsonify({
             "ok": False,
             "error": "database_error",
-            "message": str(e)
+            "message": _safe_error_message(e)
         }), 500

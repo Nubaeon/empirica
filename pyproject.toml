@@ -29,22 +29,22 @@ classifiers = [
 
 dependencies = [
     # Core data validation and settings
-    "pydantic>=2.0",
+    "pydantic>=2.4.0",          # Security: CVE-2024-3772 ReDoS fix
     "pydantic-settings>=2.0",
     "sqlalchemy>=2.0",
-    
+
     # Configuration and file handling
     "pyyaml>=6.0",              # Required for config/profile loading
     "aiofiles>=23.0",
     "jsonschema>=4.0",          # Required for config validation
-    
+
     # HTTP and networking
     "httpx>=0.24",
     "requests>=2.31.0",         # Required for API adapters
-    
+
     # Security and cryptography
-    "cryptography>=41.0",       # Required for AI identity and checkpoint signing
-    "gitpython>=3.1.0",         # Required for git notes integration and BEADS
+    "cryptography>=44.0.1",     # Security: CVE-2024-6119, CVE-2024-12797 fixes
+    "gitpython>=3.1.41",        # Security: CVE-2024-22190 RCE fix
 
     # Optional but commonly used
     "anthropic>=0.39.0",        # Anthropic SDK for adapters
@@ -58,9 +58,9 @@ dependencies = [
 # API and Dashboard features
 api = [
     "flask>=3.0",
-    "flask-cors>=4.0",
-    "werkzeug>=3.1.5",          # Security fix for CVE-2025-66221, CVE-2026-21860
-    "fastapi>=0.104",
+    "flask-cors>=4.0.2",        # Security: CVE-2024-6221, CVE-2024-6844 fixes
+    "werkzeug>=3.1.5",          # Security: CVE-2025-66221, CVE-2026-21860 fixes
+    "fastapi>=0.115.0",         # Security: CVE-2024-24762, CVE-2024-47874 fixes
     "uvicorn>=0.24",
 ]
 
@@ -72,8 +72,8 @@ vector = [
 # Vision/OCR features (experimental)
 vision = [
     "pytesseract>=0.3",
-    "pillow>=10.0",
-    "opencv-contrib-python>=4.8",
+    "pillow>=11.3.0",           # Security: CVE-2025-48379 heap buffer overflow fix
+    "opencv-contrib-python>=4.12.0",  # Security: Uninitialized pointer fix
 ]
 
 # MCP server support

@@ -37,8 +37,13 @@ def create_app() -> Flask:
         static_folder="./static"
     )
 
-    # CORS: restrict to same-origin in production, allow all in development
+    # CORS configuration
+    # Security: In production, set CORS_ORIGIN to your specific frontend domain(s)
+    # Example: CORS_ORIGIN=https://your-dashboard.example.com
+    # The default "*" is for development only and allows requests from any origin
     allowed_origin = os.environ.get("CORS_ORIGIN", "*")
+    if allowed_origin == "*":
+        logger.warning("CORS_ORIGIN not set - allowing all origins (development mode)")
 
     @app.after_request
     def add_cors_headers(response):
@@ -83,12 +88,21 @@ def create_app() -> Flask:
     # Global error handler
     @app.errorhandler(Exception)
     def handle_error(error):
-        """Handle uncaught exceptions with JSON error response."""
-        logger.error(f"API error: {error}")
+        """Handle uncaught exceptions with JSON error response.
+
+        Security: Only expose detailed error messages in debug mode.
+        In production, return generic message to prevent information disclosure.
+        """
+        logger.error(f"API error: {error}", exc_info=True)
+
+        # Only expose error details in debug/development mode
+        is_debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+        error_message = str(error) if is_debug else "An internal error occurred"
+
         return jsonify({
             "ok": False,
             "error": "internal_server_error",
-            "message": str(error),
+            "message": error_message,
             "status_code": 500
         }), 500
 
@@ -98,4 +112,6 @@ def create_app() -> Flask:
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    # Security: Use environment variable for debug mode, default to False
+    debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=8000, debug=debug_mode)
