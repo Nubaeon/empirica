@@ -202,7 +202,7 @@ def resolve_session_id(session_id_or_alias: str, ai_id: Optional[str] = None) ->
 **Supported aliases:**
 | Alias | Description |
 |-------|-------------|
-| `latest` or `last` | Most recent session |
+| `latest`, `last`, or `auto` | Most recent session |
 | `latest:active` | Most recent active (not ended) session |
 | `latest:<ai_id>` | Most recent session for specific AI |
 | `latest:active:<ai_id>` | Most recent active session for specific AI |
