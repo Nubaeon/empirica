@@ -198,6 +198,9 @@ def handle_preflight_submit_command(args):
         # Extract parameters from config or fall back to legacy flags
         if config_data:
             # AI-FIRST MODE: Use config file with Pydantic validation
+            # Merge CLI flags with JSON config (CLI flags as fallback)
+            if not config_data.get('session_id') and getattr(args, 'session_id', None):
+                config_data['session_id'] = args.session_id
             validated, error = safe_validate(config_data, PreflightInput)
             if error:
                 print(json.dumps({
@@ -806,7 +809,8 @@ def handle_check_submit_command(args):
         
         # Parse arguments from config or CLI
         if config_data:
-            session_id = config_data.get('session_id')
+            # Merge CLI flags with JSON config (CLI flags as fallback)
+            session_id = config_data.get('session_id') or getattr(args, 'session_id', None)
             vectors = config_data.get('vectors')
             decision = config_data.get('decision')
             reasoning = config_data.get('reasoning', '')
@@ -1616,7 +1620,8 @@ def handle_postflight_submit_command(args):
         # Extract parameters from config or fall back to legacy flags
         if config_data:
             # AI-FIRST MODE
-            session_id = config_data.get('session_id')
+            # Merge CLI flags with JSON config (CLI flags as fallback)
+            session_id = config_data.get('session_id') or getattr(args, 'session_id', None)
             vectors = config_data.get('vectors')
             reasoning = config_data.get('reasoning', '')
             output_format = 'json'

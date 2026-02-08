@@ -1,6 +1,6 @@
 # CLI Command Aliases
 
-**Generated:** 2026-01-19
+**Generated:** 2026-02-08
 **Purpose:** Quick shortcuts for common Empirica commands
 
 ---
@@ -57,6 +57,10 @@ Aliases reduce typing for frequently used commands. They're especially useful fo
 | Command | Aliases | Description |
 |---------|---------|-------------|
 | `project-bootstrap` | `pb`, `bootstrap` | Bootstrap project context |
+| `project-list` | `pl` | List all projects |
+| `project-switch` | `ps` | Switch active project |
+| `project-search` | — | Semantic search in project context |
+| `project-embed` | — | Embed project artifacts to Qdrant |
 
 ---
 
