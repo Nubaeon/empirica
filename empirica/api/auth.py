@@ -37,20 +37,15 @@ def _is_auth_enabled() -> bool:
     """Check if API authentication is enabled."""
     global _AUTH_ENABLED
     if _AUTH_ENABLED is None:
-        # Default: enabled unless explicitly disabled or in debug mode
+        # Default: disabled for local-first usage
+        # Enable explicitly for cloud/remote deployments
         env_value = os.environ.get("EMPIRICA_API_AUTH_ENABLED", "").lower()
-        debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
 
-        if env_value == "false":
-            _AUTH_ENABLED = False
-        elif env_value == "true":
+        if env_value == "true":
             _AUTH_ENABLED = True
+            logger.info("API authentication ENABLED via EMPIRICA_API_AUTH_ENABLED")
         else:
-            # Auto: disabled in debug mode, enabled in production
-            _AUTH_ENABLED = not debug_mode
-
-        if not _AUTH_ENABLED:
-            logger.warning("API authentication is DISABLED")
+            _AUTH_ENABLED = False
 
     return _AUTH_ENABLED
 
