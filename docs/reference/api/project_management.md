@@ -1,8 +1,8 @@
 # Project Management API
 
-**Module:** `empirica.core.projects.repository` and related modules
+**Module:** `empirica.data.repositories.projects` and related modules
 **Category:** Project & Workspace Management
-**Stability:** Production Ready
+**Stability:** Beta (some documented features are planned)
 
 ---
 
@@ -35,7 +35,7 @@ Initialize the project repository.
 
 **Example:**
 ```python
-from empirica.core.projects.repository import ProjectRepository
+from empirica.data.repositories.projects import ProjectRepository
 
 project_repo = ProjectRepository()
 ```
@@ -647,6 +647,6 @@ Methods typically raise:
 
 ---
 
-**Module Location:** `empirica/core/projects/repository.py`
-**API Stability:** Stable
-**Last Updated:** 2025-12-27
+**Module Location:** `empirica/data/repositories/projects.py`
+**API Stability:** Beta (analytics methods planned)
+**Last Updated:** 2026-02-08

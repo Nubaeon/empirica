@@ -1,8 +1,8 @@
 # Knowledge Management API
 
-**Module:** `empirica.core.knowledge.*` and related modules
+**Module:** `empirica.data.repositories.breadcrumbs` (core implementation)
 **Category:** Knowledge & Learning Management
-**Stability:** Production Ready
+**Stability:** Beta (BreadcrumbRepository stable; ReferenceDocumentManager and EpistemicSourceTracker are planned)
 
 ---
 
@@ -33,7 +33,7 @@ Initialize the breadcrumb repository.
 
 **Example:**
 ```python
-from empirica.core.knowledge.breadcrumbs import BreadcrumbRepository
+from empirica.data.repositories.breadcrumbs import BreadcrumbRepository
 
 breadcrumb_repo = BreadcrumbRepository()
 ```
@@ -216,9 +216,12 @@ for dead_end in security_dead_ends:
 
 ## Reference Document Management
 
-### `class ReferenceDocumentManager`
+> **Note:** The `ReferenceDocumentManager` class is planned but not yet implemented as a separate class.
+> Reference document functionality is currently available via `BreadcrumbRepository.add_reference_doc()`.
 
-Manages reference documents for projects.
+### `class ReferenceDocumentManager` (Planned)
+
+Will manage reference documents for projects.
 
 #### `__init__(self, db_path: Optional[str] = None)`
 
@@ -227,11 +230,12 @@ Initialize the reference document manager.
 **Parameters:**
 - `db_path: Optional[str]` - Database path, defaults to standard location
 
-**Example:**
+**Current Alternative:**
 ```python
-from empirica.core.knowledge.reference_docs import ReferenceDocumentManager
+from empirica.data.repositories.breadcrumbs import BreadcrumbRepository
 
-ref_doc_manager = ReferenceDocumentManager()
+repo = BreadcrumbRepository()
+repo.add_reference_doc(session_id, title, path, doc_type, content_hash)
 ```
 
 ### `add_reference_document(self, project_id: str, doc_path: str, doc_type: str, description: str, title: Optional[str] = None, tags: Optional[List[str]] = None, confidence: float = 0.5, related_findings: Optional[List[str]] = None, discovered_by_ai: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> str`
@@ -317,9 +321,12 @@ for doc in oauth_docs:
 
 ## Epistemic Source Tracking
 
-### `class EpistemicSourceTracker`
+> **Note:** The `EpistemicSourceTracker` class is planned but not yet implemented as a separate class.
+> Source tracking functionality is available via the `epistemic_sources` table in the session database.
 
-Tracks sources of epistemic knowledge and their reliability.
+### `class EpistemicSourceTracker` (Planned)
+
+Will track sources of epistemic knowledge and their reliability.
 
 #### `__init__(self, db_path: Optional[str] = None)`
 
@@ -328,11 +335,13 @@ Initialize the epistemic source tracker.
 **Parameters:**
 - `db_path: Optional[str]` - Database path, defaults to standard location
 
-**Example:**
+**Current Alternative:**
 ```python
-from empirica.core.knowledge.epistemic_sources import EpistemicSourceTracker
+# Source tracking is done via project_management API
+from empirica.data.repositories.projects import ProjectRepository
 
-source_tracker = EpistemicSourceTracker()
+repo = ProjectRepository()
+repo.add_epistemic_source(project_id, source_type, title, ...)
 ```
 
 ### `add_source(self, project_id: str, source_type: str, title: str, session_id: Optional[str] = None, source_url: Optional[str] = None, description: Optional[str] = None, confidence: float = 0.5, epistemic_layer: Optional[str] = None, supports_vectors: Optional[Dict[str, float]] = None, related_findings: Optional[List[str]] = None, discovered_by_ai: Optional[str] = None, source_metadata: Optional[Dict] = None) -> str`
@@ -417,11 +426,13 @@ success = source_tracker.update_source_confidence(
 
 ---
 
-## Knowledge Analytics
+## Knowledge Analytics (Planned)
 
-### `get_knowledge_graph(self, project_id: str, include_unknowns: bool = True, include_dead_ends: bool = True, include_sources: bool = True) -> Dict[str, Any]`
+> **Note:** These analytics functions are planned but not yet implemented.
 
-Generate knowledge graph for a project showing relationships between findings, unknowns, dead ends, and sources.
+### `get_knowledge_graph(self, project_id: str, include_unknowns: bool = True, include_dead_ends: bool = True, include_sources: bool = True) -> Dict[str, Any]` (Planned)
+
+Will generate knowledge graph for a project showing relationships between findings, unknowns, dead ends, and sources.
 
 **Parameters:**
 - `project_id: str` - Project identifier
@@ -596,6 +607,6 @@ Methods typically raise:
 
 ---
 
-**Module Location:** `empirica/core/knowledge/`
-**API Stability:** Stable
-**Last Updated:** 2025-12-27
+**Module Location:** `empirica/data/repositories/breadcrumbs.py`
+**API Stability:** Beta (BreadcrumbRepository stable; other classes planned)
+**Last Updated:** 2026-02-08

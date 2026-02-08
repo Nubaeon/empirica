@@ -36,7 +36,7 @@ ModuleNotFoundError: No module named 'empirica'
 
 **Solution:**
 ```bash
-# Check Python version (3.8+ required)
+# Check Python version (3.10+ required)
 python --version
 
 # Verify installation
