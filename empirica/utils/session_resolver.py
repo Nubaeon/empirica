@@ -1097,7 +1097,24 @@ def get_active_context(claude_session_id: str = None) -> dict:
             except Exception:
                 pass
 
-    # Priority 1: TTY session (if no claude_session_id or active_work missing data)
+    # Priority 1: Instance projects (HIGHER priority - updated by project-switch)
+    # This is the most reliable source when user switches projects
+    if context['instance_id'] and (not context['empirica_session_id'] or not context['project_path']):
+        instance_file = Path.home() / '.empirica' / 'instance_projects' / f"{context['instance_id']}.json"
+        if instance_file.exists():
+            try:
+                with open(instance_file, 'r') as f:
+                    data = json.load(f)
+                    if not context['project_path']:
+                        context['project_path'] = data.get('project_path')
+                    if not context['empirica_session_id']:
+                        context['empirica_session_id'] = data.get('empirica_session_id')
+                    if not context['claude_session_id']:
+                        context['claude_session_id'] = data.get('claude_session_id')
+            except Exception:
+                pass
+
+    # Priority 2: TTY session (fallback - may be stale after project-switch)
     if not context['empirica_session_id'] or not context['project_path']:
         tty_session = get_tty_session(warn_if_stale=False)
         if tty_session:
@@ -1107,17 +1124,6 @@ def get_active_context(claude_session_id: str = None) -> dict:
                 context['empirica_session_id'] = tty_session.get('empirica_session_id')
             if not context['project_path']:
                 context['project_path'] = tty_session.get('project_path')
-
-    # Priority 2: Instance projects (if still missing project_path)
-    if not context['project_path'] and context['instance_id']:
-        instance_file = Path.home() / '.empirica' / 'instance_projects' / f"{context['instance_id']}.json"
-        if instance_file.exists():
-            try:
-                with open(instance_file, 'r') as f:
-                    data = json.load(f)
-                    context['project_path'] = data.get('project_path')
-            except Exception:
-                pass
 
     # Load transaction from transaction file
     if context['project_path']:
