@@ -118,3 +118,4 @@ SECURITY_RESOLUTION_PLAN.md
 # Outreach materials (separate repo)
 empirica-outreach/
 .empirica/active_session
+.breadcrumbs.yaml
