@@ -1,0 +1,16 @@
+{
+  "finding_id": "6c7041b5-a452-4a8c-9480-f027b865eec0",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "ff775da8-d2a2-4b52-a9ad-59e7ae4459ab",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-08T01:59:32.389514+00:00",
+  "finding": "Security audit - Codebase: HIGH: Missing API authentication on /api/v1/ endpoints, error messages expose internal details. MEDIUM: CORS defaults to *, credentials stored unencrypted. POSITIVE: No SQL injection, safe subprocess usage, proper YAML loading, good path validation",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Security audit - Codebase: HIGH: Missing API authentication on /api/v1/ endpoints, error messages expose internal details. MEDIUM: CORS defaults to *, credentials stored unencrypted. POSITIVE: No SQL injection, safe subprocess usage, proper YAML loading, good path validation",
+    "impact": 0.85
+  }
+}
