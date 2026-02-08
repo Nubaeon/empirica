@@ -11,6 +11,7 @@ This is the largest single command handler (~900 lines) as it handles:
 
 import json
 import logging
+import os
 from ..cli_utils import handle_cli_error
 from empirica.core.memory_gap_detector import MemoryGapDetector
 
@@ -42,38 +43,29 @@ def handle_project_bootstrap_command(args):
             return None
 
         # Auto-detect project if not provided
-        # Priority: 1) local .empirica/project.yaml, 2) git remote URL
-        # Track explicit db_path when project is detected from CWD
-        explicit_db_path = None
-
-        # Check if this is a post-compact trigger (SessionStart hook)
-        # In post-compact, CWD is unreliable (reset by Claude Code), so use unified context
-        trigger = getattr(args, 'trigger', None)
-        is_post_compact = trigger == 'post_compact'
+        # Priority: 1) unified context resolver, 2) local .empirica/project.yaml, 3) git remote URL
+        # CRITICAL: Never use CWD for database path - Claude Code resets CWD constantly
+        # Use SessionDatabase() default which uses get_session_db_path() with unified context
 
         if not project_id:
-            # Method 1: Read from local .empirica/project.yaml (highest priority)
-            # This is what project-init creates - no git remote required
+            # Method 1: Use unified context resolver (respects project-switch, active_work)
+            # This is the AUTHORITATIVE source - handles multi-instance isolation
             try:
-                import yaml
-                import os
-                project_yaml = os.path.join(os.getcwd(), '.empirica', 'project.yaml')
-                if os.path.exists(project_yaml):
-                    with open(project_yaml, 'r') as f:
-                        project_config = yaml.safe_load(f)
-                        if project_config and project_config.get('project_id'):
-                            project_id = project_config['project_id']
-                            # When project is detected from CWD, use CWD's database
-                            # BUT: Only if NOT post-compact (CWD is unreliable after compact)
-                            # Post-compact should use unified context resolver instead
-                            if not is_post_compact:
-                                cwd_db_path = os.path.join(os.getcwd(), '.empirica', 'sessions', 'sessions.db')
-                                if os.path.exists(cwd_db_path):
-                                    explicit_db_path = cwd_db_path
+                from empirica.utils.session_resolver import get_active_project_path
+                active_project = get_active_project_path()
+                if active_project:
+                    # Load project_id from the project's local config
+                    import yaml
+                    project_yaml = os.path.join(active_project, '.empirica', 'project.yaml')
+                    if os.path.exists(project_yaml):
+                        with open(project_yaml, 'r') as f:
+                            project_config = yaml.safe_load(f)
+                            if project_config and project_config.get('project_id'):
+                                project_id = project_config['project_id']
             except Exception:
-                pass  # Fall through to git remote method
+                pass
 
-            # Method 2: Match git remote URL (fallback for repos without project-init)
+            # Method 2: Git remote URL (fallback for repos without project-init or no active context)
             if not project_id:
                 try:
                     from empirica.cli.utils.project_resolver import (
@@ -82,14 +74,8 @@ def handle_project_bootstrap_command(args):
 
                     git_repo = get_current_git_repo()
                     if git_repo:
-                        # Use CWD-based db_path for git repo detection too
-                        # BUT: Only if NOT post-compact (CWD is unreliable after compact)
-                        if not is_post_compact:
-                            import os
-                            cwd_db_path = os.path.join(os.getcwd(), '.empirica', 'sessions', 'sessions.db')
-                            if os.path.exists(cwd_db_path):
-                                explicit_db_path = cwd_db_path
-                        db = SessionDatabase(db_path=explicit_db_path)
+                        # Use SessionDatabase() default - it uses unified context resolver
+                        db = SessionDatabase()
                         project_id = resolve_project_by_git_repo(git_repo, db)
 
                         if not project_id:
@@ -151,8 +137,8 @@ def handle_project_bootstrap_command(args):
         if subject is None:
             subject = get_current_subject()  # Auto-detect from directory
 
-        # Use explicit db_path when project was detected from CWD
-        db = SessionDatabase(db_path=explicit_db_path)
+        # Use SessionDatabase() default - it uses unified context resolver (NO CWD fallback)
+        db = SessionDatabase()
 
         # Get new parameters
         session_id = getattr(args, 'session_id', None)
