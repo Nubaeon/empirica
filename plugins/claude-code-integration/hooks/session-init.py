@@ -197,6 +197,62 @@ def format_context(ctx: dict) -> str:
     return "\n".join(parts) if parts else "  (No context loaded)"
 
 
+def _write_instance_projects(project_path: str, claude_session_id: str, empirica_session_id: str) -> bool:
+    """
+    Write to instance_projects file with claude_session_id.
+
+    This establishes the linkage between Claude's conversation ID and the Empirica session,
+    which is critical for project-switch to work correctly.
+    """
+    tmux_pane = os.environ.get('TMUX_PANE')
+    if not tmux_pane:
+        return False
+
+    try:
+        instance_id = f"tmux_{tmux_pane.lstrip('%')}"
+        instance_dir = Path.home() / '.empirica' / 'instance_projects'
+        instance_dir.mkdir(parents=True, exist_ok=True)
+        instance_file = instance_dir / f'{instance_id}.json'
+
+        # Get TTY key if available
+        tty_key = None
+        try:
+            tty_path = os.ttyname(sys.stdin.fileno())
+            tty_key = tty_path.replace('/', '-').lstrip('-')
+        except:
+            pass
+
+        instance_data = {
+            'project_path': project_path,
+            'tty_key': tty_key,
+            'claude_session_id': claude_session_id,
+            'empirica_session_id': empirica_session_id,
+            'timestamp': datetime.now().isoformat()
+        }
+        with open(instance_file, 'w') as f:
+            json.dump(instance_data, f, indent=2)
+
+        # Also write session-specific active_work file
+        if claude_session_id:
+            active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+            folder_name = Path(project_path).name
+            active_work_data = {
+                'project_path': project_path,
+                'folder_name': folder_name,
+                'claude_session_id': claude_session_id,
+                'empirica_session_id': empirica_session_id,
+                'source': 'session-init',
+                'timestamp': datetime.now().isoformat()
+            }
+            with open(active_work_file, 'w') as f:
+                json.dump(active_work_data, f, indent=2)
+
+        return True
+    except Exception as e:
+        print(f"Warning: Failed to write instance_projects: {e}", file=sys.stderr)
+        return False
+
+
 def main():
     """Main session init logic."""
     hook_input = {}
@@ -204,6 +260,9 @@ def main():
         hook_input = json.loads(sys.stdin.read())
     except:
         pass
+
+    # Extract claude_session_id from hook input (critical for instance isolation)
+    claude_session_id = hook_input.get('session_id')
 
     # Find project root
     project_root = find_project_root()
@@ -216,6 +275,11 @@ def main():
 
     # Create session and bootstrap
     result = create_session_and_bootstrap(ai_id)
+
+    # CRITICAL: Write instance_projects with claude_session_id IMMEDIATELY after session creation
+    # This establishes the linkage that project-switch needs to update the correct active_work file
+    if result.get("session_id") and claude_session_id:
+        _write_instance_projects(str(project_root), claude_session_id, result["session_id"])
 
     if result.get("error"):
         # Error creating session - provide fallback guidance

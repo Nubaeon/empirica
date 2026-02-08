@@ -294,25 +294,31 @@ def handle_preflight_submit_command(args):
                 # Get context from unified resolver (respects project-switch, instance isolation)
                 context = get_active_context()
                 claude_session_id = context.get('claude_session_id')
-                resolved_project_path = context.get('project_path') or os.getcwd()
+                # NO CWD FALLBACK - CWD is unreliable with Claude Code
+                # Use get_active_project_path() which checks instance_projects properly
+                from empirica.utils.session_resolver import get_active_project_path
+                resolved_project_path = context.get('project_path') or get_active_project_path(claude_session_id)
+                if not resolved_project_path:
+                    logger.warning("Cannot determine project_path for transaction file - no context found")
 
-                # Write transaction file
-                write_active_transaction(
-                    transaction_id=transaction_id,
-                    session_id=session_id,
-                    preflight_timestamp=time.time(),
-                    status="open",
-                    project_path=resolved_project_path
-                )
-
-                # CRITICAL: Update active context with the session_id used by PREFLIGHT
-                # This ensures sentinel reads the SAME session_id that PREFLIGHT wrote to
-                if claude_session_id:
-                    update_active_context(
-                        claude_session_id=claude_session_id,
-                        empirica_session_id=session_id,
+                # Write transaction file (only if we have a valid project path)
+                if resolved_project_path:
+                    write_active_transaction(
+                        transaction_id=transaction_id,
+                        session_id=session_id,
+                        preflight_timestamp=time.time(),
+                        status="open",
                         project_path=resolved_project_path
                     )
+
+                    # CRITICAL: Update active context with the session_id used by PREFLIGHT
+                    # This ensures sentinel reads the SAME session_id that PREFLIGHT wrote to
+                    if claude_session_id:
+                        update_active_context(
+                            claude_session_id=claude_session_id,
+                            empirica_session_id=session_id,
+                            project_path=resolved_project_path
+                        )
             except Exception as e:
                 logger.debug(f"Active transaction file write failed (non-fatal): {e}")
 
