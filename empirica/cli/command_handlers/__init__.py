@@ -78,11 +78,11 @@ from .mistake_commands import (
     handle_mistake_log_command,
     handle_mistake_query_command
 )
+from .project_bootstrap import handle_project_bootstrap_command
 from .project_commands import (
     handle_project_create_command,
     handle_project_handoff_command,
     handle_project_list_command,
-    handle_project_bootstrap_command,
     handle_project_switch_command,
     handle_workspace_overview_command,
     handle_workspace_map_command,

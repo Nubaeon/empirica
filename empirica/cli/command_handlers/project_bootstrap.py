@@ -43,6 +43,14 @@ def handle_project_bootstrap_command(args):
 
         # Auto-detect project if not provided
         # Priority: 1) local .empirica/project.yaml, 2) git remote URL
+        # Track explicit db_path when project is detected from CWD
+        explicit_db_path = None
+
+        # Check if this is a post-compact trigger (SessionStart hook)
+        # In post-compact, CWD is unreliable (reset by Claude Code), so use unified context
+        trigger = getattr(args, 'trigger', None)
+        is_post_compact = trigger == 'post_compact'
+
         if not project_id:
             # Method 1: Read from local .empirica/project.yaml (highest priority)
             # This is what project-init creates - no git remote required
@@ -55,6 +63,13 @@ def handle_project_bootstrap_command(args):
                         project_config = yaml.safe_load(f)
                         if project_config and project_config.get('project_id'):
                             project_id = project_config['project_id']
+                            # When project is detected from CWD, use CWD's database
+                            # BUT: Only if NOT post-compact (CWD is unreliable after compact)
+                            # Post-compact should use unified context resolver instead
+                            if not is_post_compact:
+                                cwd_db_path = os.path.join(os.getcwd(), '.empirica', 'sessions', 'sessions.db')
+                                if os.path.exists(cwd_db_path):
+                                    explicit_db_path = cwd_db_path
             except Exception:
                 pass  # Fall through to git remote method
 
@@ -67,7 +82,14 @@ def handle_project_bootstrap_command(args):
 
                     git_repo = get_current_git_repo()
                     if git_repo:
-                        db = SessionDatabase()
+                        # Use CWD-based db_path for git repo detection too
+                        # BUT: Only if NOT post-compact (CWD is unreliable after compact)
+                        if not is_post_compact:
+                            import os
+                            cwd_db_path = os.path.join(os.getcwd(), '.empirica', 'sessions', 'sessions.db')
+                            if os.path.exists(cwd_db_path):
+                                explicit_db_path = cwd_db_path
+                        db = SessionDatabase(db_path=explicit_db_path)
                         project_id = resolve_project_by_git_repo(git_repo, db)
 
                         if not project_id:
@@ -128,8 +150,9 @@ def handle_project_bootstrap_command(args):
         subject = getattr(args, 'subject', None)
         if subject is None:
             subject = get_current_subject()  # Auto-detect from directory
-        
-        db = SessionDatabase()
+
+        # Use explicit db_path when project was detected from CWD
+        db = SessionDatabase(db_path=explicit_db_path)
 
         # Get new parameters
         session_id = getattr(args, 'session_id', None)
