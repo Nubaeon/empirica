@@ -8,34 +8,41 @@ from typing import Dict, List, Optional
 from .base import BaseRepository
 
 
-def _get_project_id_from_cwd() -> Optional[str]:
-    """Auto-detect project_id using instance-aware priority chain.
+def _get_project_id_from_session(conn, session_id: str) -> Optional[str]:
+    """Get project_id from the session's already-resolved project_id.
 
-    Priority:
-    1. active_work file (set by project-switch, instance-aware)
-    2. Git remote origin URL hash
-    3. Git toplevel path hash
+    This is the AUTHORITATIVE source - the session table stores project_id
+    that was resolved at session creation time (via project-switch, etc).
 
-    Must match sentinel-gate.py's _get_current_project_id() logic.
+    Args:
+        conn: Database connection
+        session_id: Session UUID to look up
+
+    Returns:
+        project_id from the session, or None if not found
     """
-    # Priority 1: Check active_work file (instance-aware, set by project-switch)
     try:
-        from empirica.utils.session_resolver import get_tty_session
-        tty_session = get_tty_session(warn_if_stale=False)
-        if tty_session:
-            claude_session_id = tty_session.get('claude_session_id')
-            if claude_session_id:
-                active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-                if active_work_path.exists():
-                    with open(active_work_path, 'r') as f:
-                        active_work = json.load(f)
-                        project_path = active_work.get('project_path')
-                        if project_path:
-                            return hashlib.sha256(project_path.encode()).hexdigest()[:16]
+        cursor = conn.execute(
+            "SELECT project_id FROM sessions WHERE session_id = ?",
+            (session_id,)
+        )
+        row = cursor.fetchone()
+        if row and row[0]:
+            return row[0]
     except Exception:
         pass
+    return None
 
-    # Priority 2: Git remote origin URL hash
+
+def _get_project_id_fallback() -> Optional[str]:
+    """Fallback project_id detection for CI/headless environments.
+
+    Only used when session lookup fails. Uses git remote URL hash
+    for reproducibility across instances.
+
+    WARNING: This is a fallback, not the primary mechanism.
+    Session's project_id should always be preferred.
+    """
     try:
         result = subprocess.run(
             ['git', 'config', '--get', 'remote.origin.url'],
@@ -45,7 +52,7 @@ def _get_project_id_from_cwd() -> Optional[str]:
             url = result.stdout.strip()
             return hashlib.sha256(url.encode()).hexdigest()[:16]
 
-        # Priority 3: Git toplevel path hash
+        # Git toplevel path hash as last resort
         result = subprocess.run(
             ['git', 'rev-parse', '--show-toplevel'],
             capture_output=True, text=True, timeout=5
@@ -89,8 +96,12 @@ class VectorRepository(BaseRepository):
             Row ID of the inserted record
         """
         # Auto-detect project_id if not provided
+        # Priority: 1) Session's project_id (authoritative)
+        #           2) Fallback for CI/headless (git-based hash)
         if project_id is None:
-            project_id = _get_project_id_from_cwd()
+            project_id = _get_project_id_from_session(self.conn, session_id)
+            if project_id is None:
+                project_id = _get_project_id_fallback()
 
         # Extract the 13 vectors, providing default values if not present
         vector_names = [

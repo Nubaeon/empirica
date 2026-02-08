@@ -180,10 +180,10 @@ def get_empirica_root() -> Path:
         logger.debug(f"📍 Using git root: {root}")
         return root
 
-    # 5. Fallback to CWD (legacy behavior)
-    root = Path.cwd() / '.empirica'
-    logger.debug(f"📍 Fallback to CWD: {root}")
-    return root
+    # 5. No fallback - CWD is unreliable (can be reset by Claude Code)
+    # Caller should handle None or use instance-aware resolution
+    logger.warning("📍 No .empirica root found via env, config, or git root")
+    raise ValueError("Cannot determine .empirica root - not in a git repo and no env vars set")
 
 
 def get_session_db_path() -> Path:
@@ -191,10 +191,12 @@ def get_session_db_path() -> Path:
     Get full path to sessions database.
 
     Priority:
-    0. active_work file (project-switch sets this, survives CWD changes)
+    0. Unified context resolver (transaction → active_work → TTY → instance_projects)
     1. Workspace.db lookup (git root → project via global registry)
-    2. CWD-based fallback (for unregistered projects)
+    2. Git root based (for unregistered projects in a git repo)
     3. EMPIRICA_SESSION_DB env var (CI/Docker override - intentionally last)
+
+    Note: CWD-based fallbacks removed - CWD is unreliable with Claude Code.
 
     Returns:
         Path to sessions.db
@@ -202,26 +204,19 @@ def get_session_db_path() -> Path:
     import json
     import sqlite3
 
-    # 0. Check active_work file (set by project-switch, instance-aware)
-    # Uses TTY session to find claude_session_id → active_work file → project_path
+    # 0. Use unified context resolver (canonical source of truth)
+    # This respects: transaction file (survives compaction) → active_work → TTY → instance_projects
     try:
-        from empirica.utils.session_resolver import get_tty_session
-        tty_session = get_tty_session(warn_if_stale=False)
-        if tty_session:
-            claude_session_id = tty_session.get('claude_session_id')
-            if claude_session_id:
-                active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-                if active_work_path.exists():
-                    with open(active_work_path, 'r') as f:
-                        active_work = json.load(f)
-                        project_path = active_work.get('project_path')
-                        if project_path:
-                            db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
-                            if db_path.exists():
-                                logger.debug(f"📍 Using active_work file: {db_path}")
-                                return db_path
+        from empirica.utils.session_resolver import get_active_context
+        context = get_active_context()
+        project_path = context.get('project_path')
+        if project_path:
+            db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
+            if db_path.exists():
+                logger.debug(f"📍 Using unified context resolver: {db_path}")
+                return db_path
     except Exception as e:
-        logger.debug(f"📍 active_work lookup failed: {e}")
+        logger.debug(f"📍 Unified context lookup failed: {e}")
 
     # 1. Check workspace.db for git root → project mapping (global registry)
     # Git root is stable even when CWD changes within the project
@@ -247,12 +242,16 @@ def get_session_db_path() -> Path:
     except Exception as e:
         logger.debug(f"📍 workspace.db lookup failed: {e}")
 
-    # 3. CWD-based fallback (for projects not yet registered in workspace)
-    root = get_empirica_root()
-    db_path = root / 'sessions' / 'sessions.db'
-    if db_path.exists():
-        logger.debug(f"📍 Using CWD-based path: {db_path}")
-        return db_path
+    # 3. Git root based (for projects not yet registered in workspace but in a git repo)
+    try:
+        root = get_empirica_root()
+        db_path = root / 'sessions' / 'sessions.db'
+        if db_path.exists():
+            logger.debug(f"📍 Using git-root based path: {db_path}")
+            return db_path
+    except ValueError:
+        # Not in a git repo and no env vars set - continue to next option
+        pass
 
     # 4. EMPIRICA_SESSION_DB env var (CI/Docker hard override - intentionally last)
     # This is last because it's not instance-aware and breaks multi-instance isolation
@@ -264,9 +263,8 @@ def get_session_db_path() -> Path:
         except ValueError as e:
             logger.warning(f"⚠️  Invalid EMPIRICA_SESSION_DB: {e}")
 
-    # Final fallback - return CWD-based even if it doesn't exist
-    logger.debug(f"📍 Fallback to default path (may not exist): {db_path}")
-    return root / 'sessions' / 'sessions.db'
+    # No valid path found - raise error instead of guessing
+    raise ValueError("Cannot determine sessions.db path - not in a git repo, no context found, and no env vars set")
 
 
 def resolve_session_db_path(session_id: str) -> Optional[Path]:
@@ -274,9 +272,9 @@ def resolve_session_db_path(session_id: str) -> Optional[Path]:
     Resolve which database contains a given session.
 
     Priority:
-    1. Read project_path from active transaction file (if session matches)
-    2. Use TTY session's project_path
-    3. Fall back to CWD-based detection
+    1. instance_projects mapping (TMUX_PANE-based, works in subprocesses)
+    2. TTY session's project_path
+    3. get_session_db_path() (unified context → workspace.db → git root)
 
     Args:
         session_id: UUID of the session to find
@@ -286,29 +284,7 @@ def resolve_session_db_path(session_id: str) -> Optional[Path]:
     """
     import json
 
-    # Priority 1: Check active transaction file for project_path
-    try:
-        from empirica.core.statusline_cache import get_instance_id
-        instance_id = get_instance_id()
-        suffix = f"_{instance_id}" if instance_id else ""
-
-        # Check local .empirica first, then home
-        for base in [Path.cwd() / '.empirica', Path.home() / '.empirica']:
-            tx_file = base / f'active_transaction{suffix}.json'
-            if tx_file.exists():
-                with open(tx_file, 'r') as f:
-                    tx_data = json.load(f)
-                # Only use if session matches or transaction is open
-                tx_project_path = tx_data.get('project_path')
-                if tx_project_path:
-                    db_path = Path(tx_project_path) / '.empirica' / 'sessions' / 'sessions.db'
-                    if db_path.exists():
-                        return db_path
-    except Exception:
-        pass
-
-    # Priority 1.5: Check instance_projects mapping (for subprocess context where tty fails)
-    # This uses TMUX_PANE which IS available in subprocesses, unlike `tty` command
+    # Priority 1: instance_projects mapping (uses TMUX_PANE, works in subprocesses)
     try:
         from empirica.core.statusline_cache import get_instance_id as get_inst_id
         inst_id = get_inst_id()
@@ -338,10 +314,13 @@ def resolve_session_db_path(session_id: str) -> Optional[Path]:
     except Exception:
         pass
 
-    # Priority 3: Fall back to CWD-based detection
-    db_path = get_session_db_path()
-    if db_path.exists():
-        return db_path
+    # Priority 3: Fall back to get_session_db_path() (uses unified context → workspace.db → git root)
+    try:
+        db_path = get_session_db_path()
+        if db_path.exists():
+            return db_path
+    except ValueError:
+        pass
     return None
 
 

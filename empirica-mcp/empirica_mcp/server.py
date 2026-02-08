@@ -79,6 +79,51 @@ if not EMPIRICA_CLI:
             "Please install: pip install empirica"
         )
 
+
+def get_project_path_from_session(session_id: str) -> str | None:
+    """Get project path from session's project_id.
+
+    The session table stores project_id (UUID), and the projects table
+    stores the actual path. This is the AUTHORITATIVE source for
+    where CLI commands should execute.
+
+    Args:
+        session_id: Session UUID to look up
+
+    Returns:
+        Project path string, or None if not found
+    """
+    try:
+        db = SessionDatabase(db_path=str(get_session_db_path()))
+        cursor = db.conn.cursor()
+
+        # Get project_id from session
+        cursor.execute(
+            "SELECT project_id FROM sessions WHERE session_id = ?",
+            (session_id,)
+        )
+        row = cursor.fetchone()
+        if not row or not row[0]:
+            db.close()
+            return None
+
+        project_id = row[0]
+
+        # Get path from projects table
+        cursor.execute(
+            "SELECT path FROM projects WHERE id = ?",
+            (project_id,)
+        )
+        row = cursor.fetchone()
+        db.close()
+
+        if row and row[0]:
+            return row[0]
+    except Exception as e:
+        logger.debug(f"get_project_path_from_session failed: {e}")
+    return None
+
+
 # Create MCP server instance
 app = Server("empirica-v2")
 
@@ -1624,9 +1669,14 @@ async def route_to_cli(tool_name: str, arguments: dict) -> List[types.TextConten
     cmd = build_cli_command(tool_name, arguments)
 
     # Determine working directory for CLI execution
-    # session_create with project_path runs from target project (enables project switch without cd)
+    # Priority: 1) session_id lookup (authoritative), 2) project_path arg, 3) CWD
     cwd = None
-    if tool_name == "session_create" and arguments.get("project_path"):
+    if arguments.get("session_id"):
+        # Session-aware: get project path from session's project_id
+        session_project_path = get_project_path_from_session(arguments["session_id"])
+        if session_project_path:
+            cwd = session_project_path
+    if not cwd and tool_name == "session_create" and arguments.get("project_path"):
         cwd = arguments["project_path"]
 
     # Execute in async executor (non-blocking)

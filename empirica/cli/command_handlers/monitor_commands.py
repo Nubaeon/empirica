@@ -1961,20 +1961,11 @@ def handle_calibration_report_command(args):
         # LEGACY: Show learning trajectory (PREFLIGHT→POSTFLIGHT deltas)
         # This is NOT calibration - it's learning data
 
-        # Find the sessions database
-        import os
-        db_paths = [
-            os.path.join(os.getcwd(), '.empirica', 'sessions', 'sessions.db'),
-            os.path.expanduser('~/.empirica/sessions/sessions.db')
-        ]
-
-        db_path = None
-        for path in db_paths:
-            if os.path.exists(path):
-                db_path = path
-                break
-
-        if not db_path:
+        # Find the sessions database via unified context resolver
+        from empirica.config.path_resolver import get_session_db_path
+        try:
+            db_path = str(get_session_db_path())
+        except FileNotFoundError:
             result = {"ok": False, "error": "No sessions database found"}
             print(json.dumps(result, indent=2))
             return

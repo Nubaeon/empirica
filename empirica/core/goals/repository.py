@@ -223,7 +223,85 @@ class GoalRepository:
         except Exception as e:
             logger.error(f"Error retrieving session goals: {e}")
             return []
-    
+
+    def get_transaction_goals(self, transaction_id: str) -> List[Goal]:
+        """
+        Retrieve all goals for an epistemic transaction.
+
+        Goals are structurally project-scoped but temporally transaction-scoped.
+        Transactions (PREFLIGHT→POSTFLIGHT measurement windows) span compaction
+        boundaries, making them the natural scope for epistemic measurement.
+
+        Args:
+            transaction_id: Transaction UUID
+
+        Returns:
+            List of Goal objects created within this transaction
+        """
+        try:
+            cursor = self.db.conn.execute(
+                "SELECT goal_data FROM goals WHERE transaction_id = ? ORDER BY created_timestamp",
+                (transaction_id,)
+            )
+
+            goals = []
+            for row in cursor.fetchall():
+                goal_dict = json.loads(row[0])
+                goals.append(Goal.from_dict(goal_dict))
+
+            return goals
+
+        except Exception as e:
+            logger.error(f"Error retrieving transaction goals: {e}")
+            return []
+
+    def query_goals_by_transaction(
+        self,
+        transaction_id: str,
+        is_completed: Optional[bool] = None,
+        project_id: Optional[str] = None
+    ) -> List[Goal]:
+        """
+        Query goals filtered by transaction with optional secondary filters.
+
+        Args:
+            transaction_id: Transaction UUID (required)
+            is_completed: Optional filter by completion status
+            project_id: Optional filter by project (usually redundant since
+                        transactions are project-scoped, but useful for validation)
+
+        Returns:
+            List of matching Goal objects
+        """
+        try:
+            conditions = ["transaction_id = ?"]
+            params: list = [transaction_id]
+
+            if is_completed is not None:
+                conditions.append("is_completed = ?")
+                params.append(1 if is_completed else 0)
+
+            if project_id:
+                conditions.append("project_id = ?")
+                params.append(project_id)
+
+            where_clause = " AND ".join(conditions)
+            cursor = self.db.conn.execute(
+                f"SELECT goal_data FROM goals WHERE {where_clause} ORDER BY created_timestamp",
+                tuple(params)
+            )
+
+            goals = []
+            for row in cursor.fetchall():
+                goal_dict = json.loads(row[0])
+                goals.append(Goal.from_dict(goal_dict))
+
+            return goals
+
+        except Exception as e:
+            logger.error(f"Error querying transaction goals: {e}")
+            return []
+
     def update_goal_completion(self, goal_id: str, is_completed: bool = True) -> bool:
         """
         Update goal completion status

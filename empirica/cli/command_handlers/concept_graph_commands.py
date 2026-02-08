@@ -24,40 +24,38 @@ def _get_concept_graph():
 
 
 def _get_project_id(args):
-    """Get project ID from args or auto-detect."""
+    """Get project ID from args or via unified context resolver."""
     if hasattr(args, 'project_id') and args.project_id:
         return args.project_id
 
-    # Try reading from .empirica/project.json
+    # Try unified context resolver first
+    try:
+        from empirica.utils.session_resolver import get_active_context
+        context = get_active_context()
+        project_path = context.get('project_path')
+        if project_path:
+            project_file = Path(project_path) / ".empirica" / "project.json"
+            if project_file.exists():
+                import json as json_mod
+                data = json_mod.loads(project_file.read_text())
+                return data.get("project_id")
+    except Exception:
+        pass
+
+    # Fallback: Try reading from CWD .empirica/project.json
     project_file = Path.cwd() / ".empirica" / "project.json"
     if project_file.exists():
         import json as json_mod
         data = json_mod.loads(project_file.read_text())
         return data.get("project_id")
 
-    # Try querying database for project matching this path
-    db_path = Path.cwd() / ".empirica" / "sessions" / "sessions.db"
-    if db_path.exists():
-        import sqlite3
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cwd_name = Path.cwd().name
-        cursor.execute("""
-            SELECT id FROM projects
-            WHERE name LIKE ? OR repos LIKE ?
-            ORDER BY last_activity_timestamp DESC LIMIT 1
-        """, (f"%{cwd_name}%", f"%{cwd_name}%"))
-        row = cursor.fetchone()
-        conn.close()
-        if row:
-            return row[0]
-
     return None
 
 
 def _get_db_path():
-    """Get the database path."""
-    return Path.cwd() / ".empirica" / "sessions" / "sessions.db"
+    """Get the database path via unified context resolver."""
+    from empirica.config.path_resolver import get_session_db_path
+    return get_session_db_path()
 
 
 def handle_concept_build(args):

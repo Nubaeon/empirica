@@ -26,8 +26,9 @@ def _get_historical_backfill():
 
 
 def get_db_path():
-    """Get the database path for trajectory data."""
-    return Path.cwd() / ".empirica" / "sessions" / "sessions.db"
+    """Get the database path via unified context resolver."""
+    from empirica.config.path_resolver import get_session_db_path
+    return get_session_db_path()
 
 
 def handle_trajectory_show(args):

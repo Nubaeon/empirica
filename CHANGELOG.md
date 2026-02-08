@@ -8,6 +8,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.5.0] - 2026-01-31
 
 ### Added
+- **Transaction-Session Continuity** - `read_active_transaction_full()` returns complete transaction data:
+  - Session ID from PREFLIGHT is preserved across compaction boundaries
+  - POSTFLIGHT auto-resolves session_id from transaction file, preventing stale summary errors
+
+- **Shared Project Resolver** - Canonical `lib/project_resolver.py` for hooks:
+  - All hooks now use single source of truth for project resolution
+  - Priority chain: `active_work_{claude_session_id}` → `instance_projects/{instance_id}` → NO CWD fallback
+  - Eliminates ~120 lines of duplicate resolution logic across sentinel, pre-compact, post-compact hooks
+
+- **Context Budget Manager Events** - Bus integration for memory pressure:
+  - `MEMORY_PRESSURE`, `CONTEXT_EVICTED`, `CONTEXT_INJECTED`, `PAGE_FAULT` events
+  - Published to EpistemicBus for observer notification
+
+### Changed
+- **Sentinel Messages** - Opaque confidence feedback:
+  - Blocking messages no longer reveal threshold values or current vectors
+  - Prevents AI from gaming the gate by targeting specific numbers
+
+- **Safe Pipe Targets** - Extended read-only whitelist:
+  - Added `jq` to SAFE_PIPE_TARGETS for JSON processing during investigation
+
+### Fixed
+- **Project ID Consistency** - Session-authoritative project linkage:
+  - Both `store_vectors()` and sentinel now use session's `project_id` (UUID) as source
+  - Eliminates mismatch when PREFLIGHT stored hash but sentinel computed different hash
+  - Fixes "Project context changed" false positive when Claude navigates directories
+
+- **MCP Server Project Resolution** - Session-aware CLI routing:
+  - `route_to_cli()` now resolves project path from `session_id` before falling back to CWD
+  - Fixes "Project not found" errors when MCP runs from different directory than Claude
+  - Noetic artifact logging (finding-log, unknown-log) now finds correct project DB
+
+- **Unified Context Resolver** - Centralized session/transaction/project resolution:
+  - Added `get_active_context()` and `update_active_context()` to session_resolver.py
+  - Single source of truth for claude_session_id, empirica_session_id, transaction_id, project_path
+  - PREFLIGHT now uses unified resolver to update context atomically
+  - Sentinel prioritizes transaction file's session_id (survives compaction boundaries)
+  - Fixes "loop closed" false positive when transactions span sessions
+
+### Added (continued)
 - **Epistemic Transactions** - First-class measurement windows with `transaction_id`:
   - PREFLIGHT→POSTFLIGHT cycles are now discrete measurement transactions
   - Multiple goals can exist within one transaction; one goal can span multiple transactions

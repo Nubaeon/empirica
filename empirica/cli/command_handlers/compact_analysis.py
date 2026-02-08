@@ -34,22 +34,25 @@ MIN_SESSION_DURATION = 300  # 5 minutes
 
 
 def get_db_path() -> Path:
-    """Get the sessions database path."""
-    # Check project-local first
-    local_db = Path.cwd() / '.empirica' / 'sessions' / 'sessions.db'
-    if local_db.exists():
-        return local_db
-
-    # Fallback to global
-    global_db = Path.home() / '.empirica' / 'sessions' / 'sessions.db'
-    if global_db.exists():
-        return global_db
-
-    raise FileNotFoundError("No Empirica database found")
+    """Get the sessions database path via unified context resolver."""
+    from empirica.config.path_resolver import get_session_db_path
+    return get_session_db_path()
 
 
 def get_ref_docs_path() -> Path:
-    """Get the ref-docs directory for pre-compact snapshots."""
+    """Get the ref-docs directory for pre-compact snapshots via unified context resolver."""
+    try:
+        from empirica.utils.session_resolver import get_active_context
+        context = get_active_context()
+        project_path = context.get('project_path')
+        if project_path:
+            ref_docs = Path(project_path) / '.empirica' / 'ref-docs'
+            if ref_docs.exists():
+                return ref_docs
+    except Exception:
+        pass
+
+    # Fallback to CWD-based
     local_path = Path.cwd() / '.empirica' / 'ref-docs'
     if local_path.exists():
         return local_path

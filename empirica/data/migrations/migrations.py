@@ -1012,6 +1012,29 @@ def migration_028_investigation_branches_transaction_id(cursor: sqlite3.Cursor):
     logger.info("✅ Migration 028 complete: Added transaction_id to investigation_branches")
 
 
+def migration_029_goals_transaction_index(cursor: sqlite3.Cursor):
+    """
+    Add index on goals.transaction_id for efficient transaction-scoped queries.
+
+    Goals are structurally project-scoped but temporally transaction-scoped.
+    Transactions (PREFLIGHT→POSTFLIGHT measurement windows) span compaction
+    boundaries, making them the natural scope for epistemic measurement.
+
+    This index enables:
+    - get_transaction_goals(transaction_id)
+    - query_goals_by_transaction()
+    - Transaction-scoped goal completion tracking
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_goals_transaction_id
+        ON goals(transaction_id)
+    """)
+    logger.info("✅ Migration 029 complete: Added index on goals.transaction_id")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -1041,4 +1064,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("026_grounded_verification", "Add post-test verification tables for grounded calibration", migration_026_grounded_verification),
     ("027_drop_session_noetic_tables", "Drop deprecated session-scoped noetic tables (sessions delineate compact windows only)", migration_027_drop_session_noetic_tables),
     ("028_investigation_branches_transaction_id", "Add transaction_id to investigation_branches for sub-agent epistemic continuity", migration_028_investigation_branches_transaction_id),
+    ("029_goals_transaction_index", "Add index on goals.transaction_id for transaction-scoped queries", migration_029_goals_transaction_index),
 ]
