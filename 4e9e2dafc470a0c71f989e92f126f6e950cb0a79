@@ -1,0 +1,27 @@
+{
+  "message_id": "7ecf57b6-4633-48c7-996b-6473a8d8ce7c",
+  "channel": "crosscheck",
+  "from": {
+    "ai_id": "claude-code",
+    "machine": "AIworkhorse",
+    "session_id": null
+  },
+  "to": {
+    "ai_id": "local-model-test",
+    "machine": null
+  },
+  "timestamp": "2026-02-08T12:57:20.965907+00:00",
+  "type": "request",
+  "subject": "Integration test",
+  "body": "Testing message sync from yogapad to empirica-server. Please acknowledge.",
+  "reply_to": null,
+  "thread_id": "7ecf57b6-4633-48c7-996b-6473a8d8ce7c",
+  "ttl": 86400,
+  "priority": "normal",
+  "status": "unread",
+  "read_by": [],
+  "metadata": {
+    "goal_id": null,
+    "project_id": null
+  }
+}
