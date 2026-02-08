@@ -1,0 +1,16 @@
+{
+  "finding_id": "9e4e1786-4860-45ce-961b-5d9ca613bd67",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "90fa2b22-6ea8-438f-a1fe-b25aba177e4d",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-08T10:54:45.808652+00:00",
+  "finding": "empirica-server has AMD Strix Halo GPU with 96GB unified VRAM (not just 32GB system RAM). ROCm installed and working. Can run very large models - upgrading from llama-guard3:1b to llama-guard3:8b and llama3.2-vision:11b. Could fit 90B models if needed.",
+  "impact": 0.9,
+  "goal_id": "2125c0a9-10dc-4a9d-91d2-3c4c6aece556",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "empirica-server has AMD Strix Halo GPU with 96GB unified VRAM (not just 32GB system RAM). ROCm installed and working. Can run very large models - upgrading from llama-guard3:1b to llama-guard3:8b and llama3.2-vision:11b. Could fit 90B models if needed.",
+    "impact": 0.9
+  }
+}
