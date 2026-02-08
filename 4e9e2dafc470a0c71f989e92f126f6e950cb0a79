@@ -1,0 +1,16 @@
+{
+  "finding_id": "1f88d0eb-9cee-47db-8910-331e6bfb4555",
+  "project_id": "cbebe0f4-867e-47a1-9c66-f74274f3d4aa",
+  "session_id": "auto",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-08T12:55:16.194877+00:00",
+  "finding": "Claude Code + Ollama local model + Empirica integration verified on empirica-server: Ollama 0.15.6 provides native Anthropic API at /v1/messages, qwen3-coder (18GB) works with Claude Code via ANTHROPIC_BASE_URL=http://localhost:11434, hooks fire correctly creating sessions and tracking epistemic state. --print mode may skip hooks but interactive sessions work fully.",
+  "impact": 0.85,
+  "goal_id": null,
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Claude Code + Ollama local model + Empirica integration verified on empirica-server: Ollama 0.15.6 provides native Anthropic API at /v1/messages, qwen3-coder (18GB) works with Claude Code via ANTHROPIC_BASE_URL=http://localhost:11434, hooks fire correctly creating sessions and tracking epistemic state. --print mode may skip hooks but interactive sessions work fully.",
+    "impact": 0.85
+  }
+}
