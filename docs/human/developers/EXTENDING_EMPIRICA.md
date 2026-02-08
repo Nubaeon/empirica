@@ -33,14 +33,14 @@ bus = EpistemicBus()
 │                                                                     │
 │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐            │
 │   │  carapace   │    │ empirica-   │    │ empirica-   │            │
-│   │  (ideas)    │    │    crm      │    │    mcp      │            │
+│   │  (ideas)    │    │  workspace  │    │    mcp      │            │
 │   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘            │
 │          │                  │                  │                    │
 │          ▼                  │                  │                    │
 │   ┌─────────────┐           │                  │                    │
-│   │ docpistemic │           │                  │                    │
-│   │  (docs)     │           │                  │                    │
-│   └──────┬──────┘           │                  │                    │
+│   │ docpistemic │           │ (includes CRM,   │                    │
+│   │  (docs)     │           │  dashboard,      │                    │
+│   └──────┬──────┘           │  prediction)     │                    │
 │          │                  │                  │                    │
 │          └──────────────────┼──────────────────┘                    │
 │                             │                                       │
@@ -61,7 +61,7 @@ bus = EpistemicBus()
 
 **Live extensions:**
 - `empirica-mcp` - MCP server for Claude Desktop / IDE integration
-- `empirica-crm` - CRM with epistemic client tracking
+- `empirica-workspace` - Portfolio management, CRM, dashboards (includes former empirica-crm)
 - `docpistemic` - Documentation coverage assessment
 - `carapace` - Codebase navigation and idea generation
 
@@ -388,7 +388,7 @@ def test_my_extension(db, bus):
 | Extension | Depends On | Key Pattern |
 |-----------|------------|-------------|
 | `empirica-mcp` | `empirica>=1.5.0` | Wraps CLI as MCP tools |
-| `empirica-crm` | `empirica>=1.5.0` | Custom repository + entry points |
+| `empirica-workspace` | `empirica>=1.5.0` | Portfolio + CRM + dashboards |
 | `docpistemic` | `empirica>=1.5.0` | Uses docs-assess agent |
 | `carapace` | `docpistemic` | Builds on another extension |
 

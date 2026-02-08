@@ -240,12 +240,12 @@ Install: `pip install empirica-workspace`
 - **workspace-patterns** - Search cross-project patterns
 - **workspace-link** - Create knowledge transfer link between projects
 
-### empirica-crm (Client Relationships)
-Install: `pip install empirica-crm`
+### CRM (Client Relationships)
+Part of: `pip install empirica-workspace`
 
-- **crm-client-create** - Create a client record
-- **crm-engagement-create** - Create an engagement with a client
-- **crm-memory-log** - Log a client memory
+- **clients create** - Create a client record
+- **clients link** - Link client to project via engagement
+- **clients list** - List clients with stats
 
 ---
 

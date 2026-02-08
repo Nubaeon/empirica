@@ -282,7 +282,7 @@ empirica workspace-list                     # List registered projects
 
 **CRM** (client relationship memory at `~/.empirica/crm/`):
 - Automatically detected and shown in statusline as `CRM:ClientName`
-- Extension in empirica-crm package
+- Part of empirica-workspace package (CRM module)
 
 **Statusline indicators:**
 - `WS:27` = 27 active projects in workspace
