@@ -2,7 +2,7 @@
 Session ID Resolver - Resolve session aliases to UUIDs
 
 Supports magic aliases for easy session resumption:
-- "latest" or "last" - Most recent session
+- "latest", "last", or "auto" - Most recent session
 - "latest:active" - Most recent active session (not ended)
 - "latest:<ai_id>" - Most recent session for specific AI
 - "latest:active:<ai_id>" - Most recent active session for specific AI
@@ -384,7 +384,7 @@ def resolve_session_id(session_id_or_alias: str, ai_id: Optional[str] = None) ->
     Resolve session ID from alias or return original UUID.
 
     Args:
-        session_id_or_alias: UUID (full or partial), "latest", "last", or compound alias
+        session_id_or_alias: UUID (full or partial), "latest", "last", "auto", or compound alias
         ai_id: Optional AI identifier for scoped resolution (used as fallback filter)
 
     Returns:
@@ -413,13 +413,13 @@ def resolve_session_id(session_id_or_alias: str, ai_id: Optional[str] = None) ->
         '88dbf132-...'  # Most recent active claude-code session
     """
     # Check if it's an alias
-    if not session_id_or_alias.startswith("latest") and session_id_or_alias != "last":
+    if not session_id_or_alias.startswith("latest") and session_id_or_alias not in ("last", "auto"):
         # Regular UUID (partial or full) - resolve via database
         return _resolve_partial_uuid(session_id_or_alias)
 
     # Parse alias
     alias = session_id_or_alias
-    if alias == "last":
+    if alias in ("last", "auto"):
         alias = "latest"  # Normalize to "latest"
 
     parts = alias.split(":")
@@ -667,7 +667,7 @@ def is_session_alias(session_id_or_alias: str) -> bool:
         >>> is_session_alias("88dbf132-cc7c-4a4b-9b59-77df3b13dbd2")
         False
     """
-    return session_id_or_alias.startswith("latest") or session_id_or_alias == "last"
+    return session_id_or_alias.startswith("latest") or session_id_or_alias in ("last", "auto")
 
 
 def get_instance_id() -> Optional[str]:
