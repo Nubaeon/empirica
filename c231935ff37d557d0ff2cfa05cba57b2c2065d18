@@ -1,0 +1,32 @@
+{
+  "goal_id": "75f3fef2-f6cc-4c06-943b-7aa357fab591",
+  "session_id": "1dfb26ff-e28d-422a-998a-0213b92f6694",
+  "ai_id": "empirica_mcp",
+  "created_at": "2026-02-08T11:10:59.911188+00:00",
+  "goal_data": {
+    "objective": "Research open source models for Empirica ecosystem: embedding models, security models, TTS/STT, and Claude Code alternatives. Evaluate Minimax M2, GLM 4.7, Kimi K2.5 as cloud alternatives. Research CLIs for empirica-platform testing.",
+    "scope": {
+      "breadth": 0.8,
+      "duration": 0.3,
+      "coordination": 0.2
+    },
+    "success_criteria": [
+      "Identify top 3 embedding models for local deployment",
+      "Document security models beyond llama-guard",
+      "List TTS/STT options for epistemic avatar",
+      "Research Claude Code alternative providers",
+      "Evaluate empirica-platform CLI testing options"
+    ],
+    "estimated_complexity": 0.6,
+    "constraints": null,
+    "metadata": {}
+  },
+  "epistemic_state": {},
+  "lineage": [
+    {
+      "ai_id": "empirica_mcp",
+      "timestamp": "2026-02-08T11:10:59.911208+00:00",
+      "action": "created"
+    }
+  ]
+}
