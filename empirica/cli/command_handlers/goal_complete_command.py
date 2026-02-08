@@ -143,13 +143,20 @@ def handle_goals_complete_command(args):
             result["beads_issue_closed"] = False
             result["beads_not_linked"] = True
         
-        # Get branch mapping
-        branch_mapping = get_branch_mapping()
-        branch_name = branch_mapping.get_branch_for_goal(goal_id)
-        
+        # Get branch mapping (gracefully degrade if not in git repo)
+        try:
+            branch_mapping = get_branch_mapping()
+            branch_name = branch_mapping.get_branch_for_goal(goal_id)
+        except Exception as e:
+            # Not in a git repo or git not available - that's fine, goal is already completed in DB
+            logger.debug(f"Git operations unavailable: {e}")
+            branch_mapping = None
+            branch_name = None
+            result["git_available"] = False
+
         if branch_name:
             result["branch_name"] = branch_name
-            
+
             # Merge branch if requested
             if merge_branch:
                 try:
@@ -161,7 +168,7 @@ def handle_goals_complete_command(args):
                         check=True
                     )
                     current_branch = current_branch_result.stdout.strip()
-                    
+
                     # If we're on the goal branch, switch to main first
                     if current_branch == branch_name:
                         subprocess.run(
@@ -169,14 +176,14 @@ def handle_goals_complete_command(args):
                             check=True,
                             capture_output=True
                         )
-                    
+
                     # Merge the branch
                     merge_result = subprocess.run(
-                        ["git", "merge", "--no-ff", branch_name, "-m", f"Merge goal: {goal.objective}"],
+                        ["git", "merge", "--no-ff", branch_name, "-m", f"Merge goal: {goal['objective']}"],
                         capture_output=True,
                         text=True
                     )
-                    
+
                     if merge_result.returncode == 0:
                         result["branch_merged"] = True
                         result["merge_commit"] = subprocess.run(
@@ -185,7 +192,7 @@ def handle_goals_complete_command(args):
                             text=True,
                             check=True
                         ).stdout.strip()
-                        
+
                         # Optionally delete the branch
                         if getattr(args, 'delete_branch', False):
                             subprocess.run(
@@ -197,18 +204,19 @@ def handle_goals_complete_command(args):
                     else:
                         result["branch_merged"] = False
                         result["merge_error"] = merge_result.stderr
-                        
+
                 except subprocess.CalledProcessError as e:
                     result["branch_merged"] = False
                     result["merge_error"] = str(e)
             else:
                 result["branch_merged"] = False
                 result["merge_skipped"] = True
-            
+
             # Remove branch mapping
             try:
-                branch_mapping.remove_mapping(branch_name, archive=True)
-                result["branch_mapping_removed"] = True
+                if branch_mapping:
+                    branch_mapping.remove_mapping(branch_name, archive=True)
+                    result["branch_mapping_removed"] = True
             except Exception as e:
                 logger.warning(f"Failed to remove branch mapping: {e}")
                 result["branch_mapping_removed"] = False
