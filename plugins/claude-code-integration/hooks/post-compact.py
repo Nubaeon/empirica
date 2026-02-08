@@ -138,11 +138,22 @@ def main():
     if active_transaction:
         dynamic_context['active_transaction'] = active_transaction
 
-    # Route based on phase state:
+    # Route based on phase state and transaction state:
+    # - OPEN TRANSACTION → Just continue (no new PREFLIGHT/CHECK needed)
     # - Session COMPLETE (has POSTFLIGHT) → Create new session + bootstrap + PREFLIGHT
-    # - Session INCOMPLETE (mid-work) → CHECK gate on old session
+    # - Session INCOMPLETE (mid-work, no open tx) → CHECK gate on old session
     session_bootstrap = None
-    if phase_state.get('is_complete'):
+
+    # TRANSACTION CONTINUITY: If there's an open transaction, just continue
+    # The transaction file persists on disk - no action needed from AI
+    if active_transaction and active_transaction.get('status') == 'open':
+        recovery_prompt = _generate_transaction_continue_prompt(
+            pre_vectors=pre_vectors,
+            dynamic_context=dynamic_context,
+            active_transaction=active_transaction
+        )
+        action_required = "CONTINUE_TRANSACTION"
+    elif phase_state.get('is_complete'):
         # NEW: Actually create session and run bootstrap here
         # This enforces the correct sequence before AI does PREFLIGHT
         project_id = dynamic_context.get('session_context', {}).get('project_id')
@@ -776,6 +787,54 @@ def _format_dead_ends(dynamic_context: dict) -> str:
             for d in dynamic_context["critical_dead_ends"]
         ])
     return "  (None recorded)"
+
+
+def _generate_transaction_continue_prompt(pre_vectors: dict, dynamic_context: dict, active_transaction: dict) -> str:
+    """
+    Generate a simple continuation prompt when there's an open transaction.
+
+    When a transaction is open, the AI should just continue - no new PREFLIGHT or CHECK needed.
+    The transaction file on disk is the source of truth.
+    """
+    pre_know = pre_vectors.get('know', 'N/A')
+    pre_unc = pre_vectors.get('uncertainty', 'N/A')
+    session_id = dynamic_context.get('session_context', {}).get('session_id', 'unknown')
+
+    tx_id = active_transaction.get('transaction_id', 'unknown')[:8]
+    tx_session = active_transaction.get('session_id', 'unknown')[:8]
+    tx_project = active_transaction.get('project_path', 'unknown')
+    if isinstance(tx_project, str) and '/' in tx_project:
+        tx_project = tx_project.split('/')[-1]
+
+    # Use epistemic summarizer for focus section if available
+    if EPISTEMIC_SUMMARIZER_AVAILABLE:
+        epistemic_focus = format_epistemic_focus(
+            findings=dynamic_context.get('recent_findings', []),
+            unknowns=dynamic_context.get('open_unknowns', []),
+            dead_ends=dynamic_context.get('critical_dead_ends', []),
+            goals=dynamic_context.get('active_goals', []),
+            subtasks=dynamic_context.get('pending_subtasks', []),
+            max_items=10,
+            session_id=session_id if session_id != 'unknown' else None
+        )
+    else:
+        epistemic_focus = "*No breadcrumbs loaded.*"
+
+    return f"""## TRANSACTION CONTINUES
+
+Your context was compacted but your **transaction is still open**.
+No new PREFLIGHT or CHECK needed - just continue where you left off.
+
+**⚡ ACTIVE TRANSACTION:**
+   Transaction: {tx_id}... | Session: {tx_session}... | Project: {tx_project}
+   Pre-compact vectors: know={pre_know}, uncertainty={pre_unc}
+
+## EPISTEMIC FOCUS
+
+{epistemic_focus}
+
+**Continue your work.** When done with the current task, close with POSTFLIGHT.
+"""
 
 
 def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_context: dict) -> str:
