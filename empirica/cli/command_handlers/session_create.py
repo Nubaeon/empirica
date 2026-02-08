@@ -330,9 +330,8 @@ def handle_session_create_command(args):
                 pass  # Keep original value if resolution fails
 
         if not early_project_id:
-            # Method 0: Check active_work files from project-switch (highest priority)
-            # project-switch writes active_work.json with the target project
-            # This ensures CLI sessions respect explicit project context
+            # Method 0: Check resolver context files (highest priority)
+            # Priority: instance_projects (TMUX) > active_work (Claude session) > canonical active_work
             try:
                 from empirica.utils.session_resolver import get_tty_session
                 import json as _json
@@ -353,39 +352,74 @@ def handle_session_create_command(args):
                             return row[0]
                     return None
 
-                def _get_project_id_from_active_work(active_work):
-                    """Extract project_id from active_work, resolving folder_name if needed."""
-                    if active_work.get('project_id'):
-                        pid = active_work['project_id']
+                def _get_project_id_from_context(context_data):
+                    """Extract project_id from context data, resolving folder_name or project_path."""
+                    # Priority 1: Direct project_id
+                    if context_data.get('project_id'):
+                        pid = context_data['project_id']
                         # If it's already a UUID, use it; otherwise resolve
                         if _is_uuid_format(pid):
                             return pid
                         return _resolve_folder_to_uuid(pid)
-                    elif active_work.get('folder_name'):
-                        return _resolve_folder_to_uuid(active_work['folder_name'])
+
+                    # Priority 2: folder_name (resolve via workspace.db)
+                    if context_data.get('folder_name'):
+                        resolved = _resolve_folder_to_uuid(context_data['folder_name'])
+                        if resolved:
+                            return resolved
+
+                    # Priority 3: project_path (read project.yaml at that path)
+                    if context_data.get('project_path'):
+                        project_path = context_data['project_path']
+                        import yaml
+                        project_yaml = os.path.join(project_path, '.empirica', 'project.yaml')
+                        if os.path.exists(project_yaml):
+                            try:
+                                with open(project_yaml, 'r') as f:
+                                    config = yaml.safe_load(f)
+                                    if config and config.get('project_id'):
+                                        return config['project_id']
+                            except Exception:
+                                pass
+
                     return None
 
-                # Try TTY-specific active_work first (multi-instance isolation)
-                tty_session = get_tty_session(warn_if_stale=False)
-                if tty_session:
-                    claude_session_id = tty_session.get('claude_session_id')
-                    if claude_session_id:
-                        active_work_path = os.path.join(
-                            os.path.expanduser('~'), '.empirica',
-                            f'active_work_{claude_session_id}.json'
-                        )
-                        if os.path.exists(active_work_path):
-                            with open(active_work_path, 'r') as f:
-                                active_work = _json.load(f)
-                                early_project_id = _get_project_id_from_active_work(active_work)
+                # Priority 0a: Check instance_projects (TMUX-keyed, works via Bash tool)
+                # This is written by project-init and project-switch
+                tmux_pane = os.environ.get('TMUX_PANE')
+                if tmux_pane and not early_project_id:
+                    instance_id = f"tmux_{tmux_pane.lstrip('%')}"
+                    instance_file = os.path.join(
+                        os.path.expanduser('~'), '.empirica',
+                        'instance_projects', f'{instance_id}.json'
+                    )
+                    if os.path.exists(instance_file):
+                        with open(instance_file, 'r') as f:
+                            instance_data = _json.load(f)
+                            early_project_id = _get_project_id_from_context(instance_data)
 
-                # Fallback: canonical active_work.json
+                # Priority 0b: Try TTY-specific active_work (multi-instance isolation)
+                if not early_project_id:
+                    tty_session = get_tty_session(warn_if_stale=False)
+                    if tty_session:
+                        claude_session_id = tty_session.get('claude_session_id')
+                        if claude_session_id:
+                            active_work_path = os.path.join(
+                                os.path.expanduser('~'), '.empirica',
+                                f'active_work_{claude_session_id}.json'
+                            )
+                            if os.path.exists(active_work_path):
+                                with open(active_work_path, 'r') as f:
+                                    active_work = _json.load(f)
+                                    early_project_id = _get_project_id_from_context(active_work)
+
+                # Priority 0c: Fallback to canonical active_work.json
                 if not early_project_id:
                     canonical_path = os.path.join(os.path.expanduser('~'), '.empirica', 'active_work.json')
                     if os.path.exists(canonical_path):
                         with open(canonical_path, 'r') as f:
                             active_work = _json.load(f)
-                            early_project_id = _get_project_id_from_active_work(active_work)
+                            early_project_id = _get_project_id_from_context(active_work)
             except Exception:
                 pass  # Fall through to other methods
 
