@@ -6,19 +6,27 @@ Provides keypair generation, secure storage, and identity verification.
 
 Design Principles:
 - Ed25519 for fast, secure signatures
+- Password-encrypted private key storage (PBKDF2-HMAC-SHA256)
 - File system permissions (0600) for private key security
 - JSON format for interoperability
 - Portable identity (can be exported/imported)
 
 Storage:
 - Location: .empirica/identity/<ai_id>.key
-- Format: JSON with hex-encoded keys
+- Format: JSON with encrypted private key (PEM format)
 - Permissions: 0600 (read/write owner only)
+- Encryption: PBKDF2-HMAC-SHA256 with 480000 iterations
+
+Security:
+- Private keys are encrypted at rest using password-based encryption
+- Password can be provided via EMPIRICA_IDENTITY_PASSWORD environment variable
+- If no password is provided, keys are stored unencrypted (development mode only)
 """
 
 import os
 import json
 import logging
+import base64
 from pathlib import Path
 from typing import Optional, Dict, Any
 from datetime import datetime, UTC
@@ -28,8 +36,22 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey
 )
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
 
 logger = logging.getLogger(__name__)
+
+# Password configuration
+_IDENTITY_PASSWORD: Optional[bytes] = None
+
+
+def _get_identity_password() -> Optional[bytes]:
+    """Get identity encryption password from environment."""
+    global _IDENTITY_PASSWORD
+    if _IDENTITY_PASSWORD is None:
+        password = os.environ.get("EMPIRICA_IDENTITY_PASSWORD")
+        if password:
+            _IDENTITY_PASSWORD = password.encode("utf-8")
+    return _IDENTITY_PASSWORD
 
 
 class AIIdentity:
@@ -93,56 +115,82 @@ class AIIdentity:
         
         logger.info(f"✓ Generated Ed25519 keypair for {self.ai_id}")
     
-    def save_keypair(self, overwrite: bool = False) -> None:
+    def save_keypair(self, overwrite: bool = False, password: Optional[bytes] = None) -> None:
         """
-        Save keypair to disk
-        
+        Save keypair to disk with optional encryption.
+
         Args:
             overwrite: Allow overwriting existing keypair
-            
+            password: Encryption password (uses env var EMPIRICA_IDENTITY_PASSWORD if not provided)
+
         Raises:
             RuntimeError: If no keypair or file exists without overwrite
         """
         if self.private_key is None:
             raise RuntimeError("No keypair to save. Call generate_keypair() first.")
-        
+
+        if self.public_key is None:
+            raise RuntimeError("No public key available.")
+
         if self.keypair_path.exists() and not overwrite:
             raise RuntimeError(
                 f"Keypair already exists at {self.keypair_path}. "
                 "Use overwrite=True to replace."
             )
-        
+
         # Ensure directory exists
         self.identity_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Serialize keys to bytes
-        private_bytes = self.private_key.private_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PrivateFormat.Raw,
-            encryption_algorithm=serialization.NoEncryption()
-        )
-        
+
+        # Get password from parameter or environment
+        effective_password = password or _get_identity_password()
+
+        # Serialize private key with encryption if password available
+        if effective_password:
+            # Use PEM format with PBKDF2 encryption
+            private_pem = self.private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.BestAvailableEncryption(effective_password)
+            )
+            private_key_data = base64.b64encode(private_pem).decode('ascii')
+            encrypted = True
+            logger.info("Private key will be encrypted at rest")
+        else:
+            # Unencrypted (development mode)
+            private_bytes = self.private_key.private_bytes(
+                encoding=serialization.Encoding.Raw,
+                format=serialization.PrivateFormat.Raw,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+            private_key_data = private_bytes.hex()
+            encrypted = False
+            logger.warning(
+                "Private key stored UNENCRYPTED. "
+                "Set EMPIRICA_IDENTITY_PASSWORD for production use."
+            )
+
         public_bytes = self.public_key.public_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw
         )
-        
+
         # Create keypair JSON
         keypair_data = {
             'ai_id': self.ai_id,
             'created_at': self.created_at,
-            'private_key': private_bytes.hex(),
+            'private_key': private_key_data,
             'public_key': public_bytes.hex(),
+            'encrypted': encrypted,
             'metadata': self.metadata
         }
-        
+
         # Write keypair file
         with open(self.keypair_path, 'w') as f:
             json.dump(keypair_data, f, indent=2)
-        
+
         # Set restrictive permissions (0600)
         os.chmod(self.keypair_path, 0o600)
-        
+
         # Write public key file (for distribution)
         public_data = {
             'ai_id': self.ai_id,
@@ -150,47 +198,87 @@ class AIIdentity:
             'public_key': public_bytes.hex(),
             'metadata': self.metadata
         }
-        
+
         with open(self.public_key_path, 'w') as f:
             json.dump(public_data, f, indent=2)
-        
-        logger.info(f"✓ Saved keypair to {self.keypair_path}")
+
+        encryption_status = "encrypted" if encrypted else "unencrypted"
+        logger.info(f"✓ Saved keypair ({encryption_status}) to {self.keypair_path}")
         logger.info(f"✓ Saved public key to {self.public_key_path}")
     
-    def load_keypair(self) -> None:
+    def load_keypair(self, password: Optional[bytes] = None) -> None:
         """
-        Load keypair from disk
-        
+        Load keypair from disk.
+
+        Args:
+            password: Decryption password (uses env var EMPIRICA_IDENTITY_PASSWORD if not provided)
+
         Raises:
             FileNotFoundError: If keypair file doesn't exist
+            ValueError: If decryption fails or AI ID mismatch
         """
         if not self.keypair_path.exists():
             raise FileNotFoundError(
                 f"Keypair not found at {self.keypair_path}. "
                 f"Create one with: empirica identity-create --ai-id {self.ai_id}"
             )
-        
+
         # Load keypair JSON
         with open(self.keypair_path, 'r') as f:
             keypair_data = json.load(f)
-        
+
         # Verify ai_id matches
         if keypair_data['ai_id'] != self.ai_id:
             raise ValueError(
                 f"AI ID mismatch: file has {keypair_data['ai_id']}, "
                 f"expected {self.ai_id}"
             )
-        
-        # Deserialize keys
-        private_bytes = bytes.fromhex(keypair_data['private_key'])
-        public_bytes = bytes.fromhex(keypair_data['public_key'])
-        
-        self.private_key = Ed25519PrivateKey.from_private_bytes(private_bytes)
-        self.public_key = Ed25519PublicKey.from_public_bytes(public_bytes)
+
+        # Check if encrypted
+        is_encrypted = keypair_data.get('encrypted', False)
+
+        if is_encrypted:
+            # Get password from parameter or environment
+            effective_password = password or _get_identity_password()
+            if not effective_password:
+                raise ValueError(
+                    "Encrypted keypair requires password. "
+                    "Set EMPIRICA_IDENTITY_PASSWORD environment variable."
+                )
+
+            # Decode and decrypt PEM
+            private_pem = base64.b64decode(keypair_data['private_key'])
+            try:
+                loaded_key = serialization.load_pem_private_key(
+                    private_pem,
+                    password=effective_password,
+                    backend=default_backend()
+                )
+            except Exception as e:
+                raise ValueError(f"Failed to decrypt private key: {e}") from e
+
+            # Verify it's an Ed25519 key
+            if not isinstance(loaded_key, Ed25519PrivateKey):
+                raise ValueError("Loaded key is not an Ed25519 private key")
+
+            self.private_key = loaded_key
+            self.public_key = loaded_key.public_key()
+            logger.info(f"✓ Loaded encrypted keypair for {self.ai_id}")
+        else:
+            # Unencrypted (legacy format)
+            private_bytes = bytes.fromhex(keypair_data['private_key'])
+            public_bytes = bytes.fromhex(keypair_data['public_key'])
+
+            self.private_key = Ed25519PrivateKey.from_private_bytes(private_bytes)
+            self.public_key = Ed25519PublicKey.from_public_bytes(public_bytes)
+            logger.info(f"✓ Loaded unencrypted keypair for {self.ai_id}")
+            logger.warning(
+                "Keypair is not encrypted. Run 'empirica identity-rotate' "
+                "with EMPIRICA_IDENTITY_PASSWORD set to encrypt."
+            )
+
         self.created_at = keypair_data['created_at']
         self.metadata = keypair_data.get('metadata', {})
-        
-        logger.info(f"✓ Loaded keypair for {self.ai_id}")
     
     def sign(self, message: bytes) -> bytes:
         """

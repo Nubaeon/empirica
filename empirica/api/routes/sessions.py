@@ -9,6 +9,14 @@ import logging
 import os
 from flask import Blueprint, request, jsonify
 
+from empirica.api.validation import (
+    validate_session_id,
+    validate_ai_id,
+    validate_limit,
+    validate_offset,
+    validate_timestamp,
+)
+
 bp = Blueprint("sessions", __name__)
 logger = logging.getLogger(__name__)
 
@@ -43,8 +51,22 @@ def list_sessions():
 
         ai_id = request.args.get("ai_id")
         since = request.args.get("since")
-        limit = min(int(request.args.get("limit", 20)), 1000)
-        offset = int(request.args.get("offset", 0))
+
+        # Validate inputs
+        if ai_id:
+            if error := validate_ai_id(ai_id):
+                return error
+
+        if error := validate_timestamp(since):
+            return error
+
+        limit, limit_error = validate_limit(request.args.get("limit"), default=20)
+        if limit_error:
+            return limit_error
+
+        offset, offset_error = validate_offset(request.args.get("offset"), default=0)
+        if offset_error:
+            return offset_error
 
         # Build WHERE clause
         conditions = ["1=1"]
@@ -107,6 +129,10 @@ def list_sessions():
 @bp.route("/sessions/<session_id>", methods=["GET"])
 def get_session(session_id: str):
     """Retrieve detailed session information including epistemic timeline."""
+    # Validate session_id
+    if error := validate_session_id(session_id):
+        return error
+
     try:
         db = _get_db()
 
@@ -193,6 +219,10 @@ def get_session(session_id: str):
 @bp.route("/sessions/<session_id>/checks", methods=["GET"])
 def get_session_checks(session_id: str):
     """Get all CHECK assessments for a session"""
+    # Validate session_id
+    if error := validate_session_id(session_id):
+        return error
+
     try:
         db = _get_db()
 

@@ -77,6 +77,10 @@ def create_app() -> Flask:
 
     # Register blueprints
     from .routes import sessions, deltas, verification, heatmaps, comparison, project
+    from .auth import APIKeyMiddleware
+
+    # Apply API key authentication middleware
+    app.wsgi_app = APIKeyMiddleware(app.wsgi_app, prefix="/api/v1")  # type: ignore[method-assign]
 
     app.register_blueprint(sessions.bp, url_prefix="/api/v1")
     app.register_blueprint(deltas.bp, url_prefix="/api/v1")
