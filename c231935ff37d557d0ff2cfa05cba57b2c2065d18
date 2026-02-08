@@ -1,0 +1,16 @@
+{
+  "finding_id": "63693d98-ee8f-477d-b348-50e5a3779710",
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "session_id": "1dfb26ff-e28d-422a-998a-0213b92f6694",
+  "ai_id": "claude-code",
+  "created_at": "2026-02-08T11:12:04.726372+00:00",
+  "finding": "Claude Code alternatives for testing: Aider (CLI-native, works with Ollama local models, command: aider --model ollama_chat/deepseek-r1:7b), Cline (VS Code, free, supports any model), Continue.dev (local models via Ollama), OpenDevin (project-scale orchestration). Aider closest to Claude Code philosophy.",
+  "impact": 0.85,
+  "goal_id": "75f3fef2-f6cc-4c06-943b-7aa357fab591",
+  "subtask_id": null,
+  "subject": null,
+  "finding_data": {
+    "finding": "Claude Code alternatives for testing: Aider (CLI-native, works with Ollama local models, command: aider --model ollama_chat/deepseek-r1:7b), Cline (VS Code, free, supports any model), Continue.dev (local models via Ollama), OpenDevin (project-scale orchestration). Aider closest to Claude Code philosophy.",
+    "impact": 0.85
+  }
+}
