@@ -373,6 +373,39 @@ Both `session_resolver.get_instance_id()` and `statusline_cache.get_instance_id(
 
 ---
 
+## 6.4 Claude Code Hook Input
+
+Claude Code provides structured JSON to hooks via stdin. This is the source of `session_id` for instance isolation.
+
+**Hook input structure:**
+```json
+{
+  "session_id": "fad66571-1bde-4ee1-aa0d-e9d3dfd8e833",
+  "transcript_path": "/home/user/.claude/projects/my-project/fad66571.jsonl",
+  "cwd": "/home/user/my-project",
+  "permission_mode": "default",
+  "hook_event_name": "PreToolUse"
+}
+```
+
+**Key Fields:**
+
+| Field | Purpose | Used By |
+|-------|---------|---------|
+| `session_id` | Claude conversation UUID | All hooks - maps to `active_work_{session_id}.json` |
+| `transcript_path` | Full transcript file path | Pre-compact (state capture) |
+| `cwd` | Working directory | **UNRELIABLE** - do not use for project resolution |
+| `permission_mode` | Claude permission level | Sentinel (gate decisions) |
+| `hook_event_name` | Hook event type | Conditional hook logic |
+
+**Critical:** The `session_id` field is what enables multi-instance isolation for non-tmux users.
+It maps to `~/.empirica/active_work_{session_id}.json` which stores the authoritative project path.
+
+**Note:** The `cwd` field is unreliable because Claude Code can reset it (e.g., after compaction).
+Hooks must use `session_id` → `active_work` file → `project_path` resolution chain.
+
+---
+
 ## 7. Caching Strategy
 
 **Decision (2026-02-06):** Removed file-based statusline caching.
@@ -400,6 +433,23 @@ Both `session_resolver.get_instance_id()` and `statusline_cache.get_instance_id(
 
 **Symptom:** Terminal closed, reopened, old session data used
 **Fix:** `write_tty_session()` on session-create overwrites stale data
+
+#### TTY Staleness Detection (`validate_tty_session()`)
+
+The `validate_tty_session()` function in `session_resolver.py` performs three checks:
+
+1. **PID Check:** `os.kill(pid, 0)` - warns if the original process that created the session is dead
+2. **TTY Device Check:** Verifies `/dev/{tty_key}` exists - invalid if TTY device is gone
+3. **Timestamp Check:** 4-hour threshold - warns if session is stale (but may still be valid)
+
+**Validation Results:**
+- `valid=True`: Session is usable (but may have warnings)
+- `valid=False`: Session should be ignored (TTY device doesn't exist)
+
+**Cleanup:**
+- **SessionEnd hook:** Cleans up TTY session file on normal exit
+- **Crash recovery:** Next session on same TTY overwrites stale file
+- **Periodic cleanup:** `cleanup_stale_tty_sessions()` removes files >24h old
 
 ### 8.3 Wrong Instance's Transaction
 
