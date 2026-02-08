@@ -3083,48 +3083,55 @@ def handle_project_switch_command(args):
             postflight_result = {"ok": False, "error": str(e)}
             logger.debug(f"Auto-POSTFLIGHT on project-switch failed (non-fatal): {e}")
 
-        # 4. SESSION ATTACHMENT: Check for existing open session in target project
-        # MUST happen BEFORE _update_active_work so we can pass the session_id
+        # 4. SESSION CONTINUITY: Update global session registry with new project
+        # Sessions are per-conversation (global), not per-project.
+        # Project-switch just updates which project the session is working on.
         attached_session = None
         try:
-            from empirica.data.session_database import SessionDatabase
-            if project_path:
-                target_db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
-                if target_db_path.exists():
-                    target_db = SessionDatabase(db_path=str(target_db_path))
-                    cursor = target_db.conn.cursor()
-                    # Find most recent open session for this project AND this instance
-                    # CRITICAL: Filter by instance_id to prevent cross-instance session bleeding
-                    from empirica.core.statusline_cache import get_instance_id
-                    current_instance_id = get_instance_id()
+            from empirica.data.repositories.sessions import update_session_project
+            from empirica.core.statusline_cache import get_instance_id
+            import sqlite3
 
-                    if current_instance_id:
-                        cursor.execute("""
-                            SELECT session_id, ai_id, start_time
-                            FROM sessions
-                            WHERE project_id = ? AND end_time IS NULL AND instance_id = ?
-                            ORDER BY start_time DESC
-                            LIMIT 1
-                        """, (project_id, current_instance_id))
-                    else:
-                        # Fallback: If no instance_id, use legacy behavior (risky but backwards compatible)
-                        cursor.execute("""
-                            SELECT session_id, ai_id, start_time
-                            FROM sessions
-                            WHERE project_id = ? AND end_time IS NULL
-                            ORDER BY start_time DESC
-                            LIMIT 1
-                        """, (project_id,))
-                    row = cursor.fetchone()
-                    if row:
-                        attached_session = {
-                            'session_id': row[0],
-                            'ai_id': row[1],
-                            'start_time': row[2]
-                        }
-                    target_db.close()
+            current_instance_id = get_instance_id()
+
+            # Get current session from global registry
+            workspace_db = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+            if workspace_db.exists():
+                conn = sqlite3.connect(str(workspace_db))
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                # Find active session for this instance
+                if current_instance_id:
+                    cursor.execute("""
+                        SELECT session_id, ai_id, created_at
+                        FROM global_sessions
+                        WHERE instance_id = ? AND status = 'active'
+                        ORDER BY last_activity DESC NULLS LAST, created_at DESC
+                        LIMIT 1
+                    """, (current_instance_id,))
+                else:
+                    # Fallback: most recent active session
+                    cursor.execute("""
+                        SELECT session_id, ai_id, created_at
+                        FROM global_sessions
+                        WHERE status = 'active'
+                        ORDER BY last_activity DESC NULLS LAST, created_at DESC
+                        LIMIT 1
+                    """)
+
+                row = cursor.fetchone()
+                if row:
+                    attached_session = {
+                        'session_id': row['session_id'],
+                        'ai_id': row['ai_id'],
+                        'start_time': row['created_at']
+                    }
+                    # Update the session's current project in global registry
+                    update_session_project(row['session_id'], project_id)
+                conn.close()
         except Exception as e:
-            logger.debug(f"Session attachment check failed (non-fatal): {e}")
+            logger.debug(f"Session continuity update failed (non-fatal): {e}")
 
         # 5. Update active_work.json for cross-project continuity
         # This ensures pre-compact hook preserves project context even when Claude Code resets CWD

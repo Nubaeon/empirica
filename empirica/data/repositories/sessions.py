@@ -2,9 +2,107 @@
 import sqlite3
 import uuid
 import json
+import time
+import logging
+from pathlib import Path
 from typing import Dict, List, Optional
 from datetime import datetime, timezone
 from .base import BaseRepository
+
+logger = logging.getLogger(__name__)
+
+
+def _register_session_globally(
+    session_id: str,
+    ai_id: str,
+    project_id: Optional[str],
+    instance_id: Optional[str],
+    parent_session_id: Optional[str] = None
+) -> bool:
+    """
+    Register session in global_sessions table (workspace.db).
+
+    This enables cross-project session tracking. Sessions are now global
+    (one per Claude conversation), not per-project.
+
+    Returns True if registered, False on error (non-fatal).
+    """
+    try:
+        workspace_db = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+        if not workspace_db.exists():
+            logger.debug("No workspace.db - skipping global session registration")
+            return False
+
+        conn = sqlite3.connect(str(workspace_db))
+        cursor = conn.cursor()
+
+        # Check if table exists (graceful degradation for older workspaces)
+        cursor.execute("""
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name='global_sessions'
+        """)
+        if not cursor.fetchone():
+            logger.debug("global_sessions table not found - skipping registration")
+            conn.close()
+            return False
+
+        # Insert or update (in case of re-registration)
+        cursor.execute("""
+            INSERT INTO global_sessions
+            (session_id, ai_id, origin_project_id, current_project_id,
+             instance_id, status, created_at, parent_session_id)
+            VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
+            ON CONFLICT(session_id) DO UPDATE SET
+                current_project_id = excluded.current_project_id,
+                last_activity = excluded.created_at
+        """, (
+            session_id, ai_id, project_id, project_id,
+            instance_id, time.time(), parent_session_id
+        ))
+
+        conn.commit()
+        conn.close()
+        logger.debug(f"Registered session {session_id[:8]}... in global registry")
+        return True
+
+    except Exception as e:
+        logger.warning(f"Failed to register session globally: {e}")
+        return False
+
+
+def update_session_project(session_id: str, project_id: str) -> bool:
+    """
+    Update current_project_id for a session in global registry.
+
+    Called by project-switch to track which project a session is currently working on.
+
+    Returns True if updated, False on error.
+    """
+    try:
+        workspace_db = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+        if not workspace_db.exists():
+            return False
+
+        conn = sqlite3.connect(str(workspace_db))
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE global_sessions
+            SET current_project_id = ?, last_activity = ?
+            WHERE session_id = ?
+        """, (project_id, time.time(), session_id))
+
+        conn.commit()
+        updated = cursor.rowcount > 0
+        conn.close()
+
+        if updated:
+            logger.debug(f"Updated session {session_id[:8]}... to project {project_id[:8]}...")
+        return updated
+
+    except Exception as e:
+        logger.warning(f"Failed to update session project: {e}")
+        return False
 
 
 class SessionRepository(BaseRepository):
@@ -18,7 +116,8 @@ class SessionRepository(BaseRepository):
         subject: Optional[str] = None,
         bootstrap_level: int = 1,
         instance_id: Optional[str] = None,
-        parent_session_id: Optional[str] = None
+        parent_session_id: Optional[str] = None,
+        project_id: Optional[str] = None
     ) -> str:
         """
         Create a new session
@@ -33,6 +132,7 @@ class SessionRepository(BaseRepository):
                          If None, auto-detected from environment (TMUX_PANE, etc.)
             parent_session_id: Optional parent session UUID for sub-agent lineage.
                                Links child sessions back to the spawning session.
+            project_id: Optional project UUID for global registry
 
         Returns:
             session_id: UUID string
@@ -52,6 +152,17 @@ class SessionRepository(BaseRepository):
             session_id, ai_id, user_id, datetime.now(timezone.utc).isoformat(),
             components_loaded, subject, bootstrap_level, instance_id, parent_session_id
         ))
+
+        # Register in global sessions registry (workspace.db)
+        # This enables cross-project session tracking
+        _register_session_globally(
+            session_id=session_id,
+            ai_id=ai_id,
+            project_id=project_id,
+            instance_id=instance_id,
+            parent_session_id=parent_session_id
+        )
+
         return session_id
 
     def get_session(self, session_id: str) -> Optional[Dict]:

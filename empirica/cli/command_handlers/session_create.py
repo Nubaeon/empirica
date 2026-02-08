@@ -497,11 +497,13 @@ def handle_session_create_command(args):
                     print(f"⚠️  {warning['message']}")
 
         # Now create the new session
+        # project_id passed for global session registry (workspace.db)
         session_id = db.create_session(
             ai_id=ai_id,
             components_loaded=6,  # Standard component count
             subject=subject,
-            parent_session_id=parent_session_id
+            parent_session_id=parent_session_id,
+            project_id=early_project_id  # For global registry
         )
         db.close()  # Close connection before auto-capture (prevents lock)
 

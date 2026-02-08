@@ -253,7 +253,8 @@ class SessionDatabase:
     def create_session(self, ai_id: str, components_loaded: int = 0,
                       user_id: Optional[str] = None, subject: Optional[str] = None,
                       bootstrap_level: int = 1,
-                      parent_session_id: Optional[str] = None) -> str:
+                      parent_session_id: Optional[str] = None,
+                      project_id: Optional[str] = None) -> str:
         """
         Create new session, return session_id (delegates to SessionRepository)
 
@@ -264,13 +265,15 @@ class SessionDatabase:
             subject: Optional subject/workstream identifier for filtering
             bootstrap_level: Bootstrap configuration level (1-3, default 1)
             parent_session_id: Optional parent session UUID for sub-agent lineage
+            project_id: Optional project UUID for global registry tracking
 
         Returns:
             session_id: UUID string
         """
         return self.sessions.create_session(
             ai_id, components_loaded, user_id, subject, bootstrap_level,
-            parent_session_id=parent_session_id
+            parent_session_id=parent_session_id,
+            project_id=project_id
         )
     
     def end_session(self, session_id: str, avg_confidence: Optional[float] = None,
