@@ -1443,14 +1443,22 @@ def handle_finding_log_command(args):
                 project_id = row['project_id']
                 logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
             else:
-                # Fallback: try to resolve from current directory
-                from empirica.config.project_config_loader import load_project_config
+                # Fallback: try to resolve from unified context (NOT CWD)
                 try:
-                    project_config = load_project_config()
-                    if project_config and hasattr(project_config, 'project_id'):
-                        project_id = project_config.project_id
-                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
-                except:
+                    from empirica.utils.session_resolver import get_active_context
+                    context = get_active_context()
+                    project_path = context.get('project_path')
+                    if project_path:
+                        import yaml
+                        from pathlib import Path
+                        project_yaml = Path(project_path) / '.empirica' / 'project.yaml'
+                        if project_yaml.exists():
+                            with open(project_yaml) as f:
+                                project_config = yaml.safe_load(f)
+                                project_id = project_config.get('project_id')
+                                if project_id:
+                                    logger.info(f"Auto-resolved project_id from context: {project_id[:8]}...")
+                except Exception:
                     pass
 
         # Resolve project name to UUID if still not resolved
@@ -1730,14 +1738,22 @@ def handle_unknown_log_command(args):
                 project_id = row['project_id']
                 logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
             else:
-                # Fallback: try to resolve from current directory
-                from empirica.config.project_config_loader import load_project_config
+                # Fallback: try to resolve from unified context (NOT CWD)
                 try:
-                    project_config = load_project_config()
-                    if project_config and hasattr(project_config, 'project_id'):
-                        project_id = project_config.project_id
-                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
-                except:
+                    from empirica.utils.session_resolver import get_active_context
+                    context = get_active_context()
+                    project_path = context.get('project_path')
+                    if project_path:
+                        import yaml
+                        from pathlib import Path
+                        project_yaml = Path(project_path) / '.empirica' / 'project.yaml'
+                        if project_yaml.exists():
+                            with open(project_yaml) as f:
+                                project_config = yaml.safe_load(f)
+                                project_id = project_config.get('project_id')
+                                if project_id:
+                                    logger.info(f"Auto-resolved project_id from context: {project_id[:8]}...")
+                except Exception:
                     pass
 
         # Resolve project name to UUID if still not resolved
@@ -1989,14 +2005,22 @@ def handle_deadend_log_command(args):
                 project_id = row['project_id']
                 logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
             else:
-                # Fallback: try to resolve from current directory
-                from empirica.config.project_config_loader import load_project_config
+                # Fallback: try to resolve from unified context (NOT CWD)
                 try:
-                    project_config = load_project_config()
-                    if project_config and hasattr(project_config, 'project_id'):
-                        project_id = project_config.project_id
-                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
-                except:
+                    from empirica.utils.session_resolver import get_active_context
+                    context = get_active_context()
+                    project_path = context.get('project_path')
+                    if project_path:
+                        import yaml
+                        from pathlib import Path
+                        project_yaml = Path(project_path) / '.empirica' / 'project.yaml'
+                        if project_yaml.exists():
+                            with open(project_yaml) as f:
+                                project_config = yaml.safe_load(f)
+                                project_id = project_config.get('project_id')
+                                if project_id:
+                                    logger.info(f"Auto-resolved project_id from context: {project_id[:8]}...")
+                except Exception:
                     pass
 
         # Resolve project name to UUID if still not resolved
@@ -2130,14 +2154,22 @@ def handle_refdoc_add_command(args):
                 project_id = row['project_id']
                 logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
             else:
-                # Fallback: try to resolve from current directory
-                from empirica.config.project_config_loader import load_project_config
+                # Fallback: try to resolve from unified context (NOT CWD)
                 try:
-                    project_config = load_project_config()
-                    if project_config and hasattr(project_config, 'project_id'):
-                        project_id = project_config.project_id
-                        logger.info(f"Auto-resolved project_id from config: {project_id[:8]}...")
-                except:
+                    from empirica.utils.session_resolver import get_active_context
+                    context = get_active_context()
+                    project_path = context.get('project_path')
+                    if project_path:
+                        import yaml
+                        from pathlib import Path
+                        project_yaml = Path(project_path) / '.empirica' / 'project.yaml'
+                        if project_yaml.exists():
+                            with open(project_yaml) as f:
+                                project_config = yaml.safe_load(f)
+                                project_id = project_config.get('project_id')
+                                if project_id:
+                                    logger.info(f"Auto-resolved project_id from context: {project_id[:8]}...")
+                except Exception:
                     pass
 
         # Resolve project name to UUID if still not resolved

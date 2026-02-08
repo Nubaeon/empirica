@@ -275,22 +275,15 @@ def print_project_context(quiet: bool = False, verbose: bool = False) -> Optiona
 
         logger = logging.getLogger(__name__)
 
-        # Priority 0: Check active_work file (set by project-switch, instance-aware)
+        # Priority 0: Use unified context resolver (respects instance_projects, active_work, etc.)
         # This ensures we show the correct project after project-switch even if CWD differs
         git_root = None
         try:
-            from empirica.utils.session_resolver import get_tty_session
-            tty_session = get_tty_session(warn_if_stale=False)
-            if tty_session:
-                claude_session_id = tty_session.get('claude_session_id')
-                if claude_session_id:
-                    active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-                    if active_work_path.exists():
-                        with open(active_work_path, 'r') as f:
-                            active_work = json.load(f)
-                            project_path = active_work.get('project_path')
-                            if project_path:
-                                git_root = Path(project_path)
+            from empirica.utils.session_resolver import get_active_context
+            context = get_active_context()
+            project_path = context.get('project_path')
+            if project_path:
+                git_root = Path(project_path)
         except Exception:
             pass
 
