@@ -214,23 +214,38 @@ else
     echo "   PreCompact hook already configured"
 fi
 
-# Add SessionStart hooks (post-compact bootstrap + session-init)
+# Add SessionStart hooks (post-compact bootstrap + session-init + EWM protocol loader)
 if ! jq -e '.hooks.SessionStart[] | select(.hooks[].command | contains("post-compact.py"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
     jq --arg postcompact_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/post-compact.py" \
        --arg sessioninit_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/session-init.py" \
+       --arg ewm_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/ewm-protocol-loader.py" \
        '.hooks.SessionStart = (.hooks.SessionStart // []) + [
          {
            "matcher": "compact",
-           "hooks": [{"type": "command", "command": $postcompact_cmd, "timeout": 30}]
+           "hooks": [
+             {"type": "command", "command": $postcompact_cmd, "timeout": 30},
+             {"type": "command", "command": $ewm_cmd, "timeout": 10, "allowFailure": true}
+           ]
          },
          {
            "matcher": "new|fresh",
-           "hooks": [{"type": "command", "command": $sessioninit_cmd, "timeout": 30}]
+           "hooks": [
+             {"type": "command", "command": $sessioninit_cmd, "timeout": 30},
+             {"type": "command", "command": $ewm_cmd, "timeout": 10, "allowFailure": true}
+           ]
          }
        ]' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
-    echo "   ✓ SessionStart hooks configured"
+    echo "   ✓ SessionStart hooks configured (with EWM protocol loader)"
 else
-    echo "   SessionStart hooks already configured"
+    # Check if EWM loader is missing from existing SessionStart hooks
+    if ! jq -e '.hooks.SessionStart[] | select(.hooks[].command | contains("ewm-protocol-loader"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
+        jq --arg ewm_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/ewm-protocol-loader.py" \
+           '(.hooks.SessionStart[] | .hooks) += [{"type": "command", "command": $ewm_cmd, "timeout": 10, "allowFailure": true}]' \
+           "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+        echo "   ✓ EWM protocol loader added to SessionStart"
+    else
+        echo "   SessionStart hooks already configured"
+    fi
 fi
 
 # Add SessionEnd hooks (postflight + snapshot curation)
@@ -249,6 +264,48 @@ if ! jq -e '.hooks.SessionEnd[] | select(.hooks[].command | contains("session-en
     echo "   ✓ SessionEnd hooks configured"
 else
     echo "   SessionEnd hooks already configured"
+fi
+
+# Add SubagentStart hook (agent tracking)
+if ! jq -e '.hooks.SubagentStart' "$SETTINGS_FILE" >/dev/null 2>&1 || ! jq -e '.hooks.SubagentStart[] | select(.hooks[].command | contains("subagent-start.py"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    jq --arg substart_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/subagent-start.py" \
+       '.hooks.SubagentStart = (.hooks.SubagentStart // []) + [
+         {
+           "matcher": ".*",
+           "hooks": [{"type": "command", "command": $substart_cmd, "timeout": 10, "allowFailure": true}]
+         }
+       ]' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+    echo "   ✓ SubagentStart hook configured"
+else
+    echo "   SubagentStart hook already configured"
+fi
+
+# Add SubagentStop hook (agent result tracking)
+if ! jq -e '.hooks.SubagentStop' "$SETTINGS_FILE" >/dev/null 2>&1 || ! jq -e '.hooks.SubagentStop[] | select(.hooks[].command | contains("subagent-stop.py"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    jq --arg substop_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/subagent-stop.py" \
+       '.hooks.SubagentStop = (.hooks.SubagentStop // []) + [
+         {
+           "matcher": ".*",
+           "hooks": [{"type": "command", "command": $substop_cmd, "timeout": 15, "allowFailure": true}]
+         }
+       ]' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+    echo "   ✓ SubagentStop hook configured"
+else
+    echo "   SubagentStop hook already configured"
+fi
+
+# Add UserPromptSubmit hook (epistemic tool router + AAP hedge detection)
+if ! jq -e '.hooks.UserPromptSubmit' "$SETTINGS_FILE" >/dev/null 2>&1 || ! jq -e '.hooks.UserPromptSubmit[] | select(.hooks[].command | contains("tool-router.py"))' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    jq --arg router_cmd "$PYTHON_CMD $PLUGIN_DIR/hooks/tool-router.py" \
+       '.hooks.UserPromptSubmit = (.hooks.UserPromptSubmit // []) + [
+         {
+           "matcher": ".*",
+           "hooks": [{"type": "command", "command": $router_cmd, "timeout": 3, "allowFailure": true}]
+         }
+       ]' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+    echo "   ✓ UserPromptSubmit hook configured (tool router + AAP)"
+else
+    echo "   UserPromptSubmit hook already configured"
 fi
 
 # ==================== MARKETPLACE REGISTRATION ====================
