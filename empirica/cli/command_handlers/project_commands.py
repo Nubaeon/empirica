@@ -3130,6 +3130,53 @@ def handle_project_switch_command(args):
                     # Update the session's current project in global registry
                     update_session_project(row['session_id'], project_id)
                 conn.close()
+
+            # 4b. ENSURE SESSION EXISTS IN TARGET PROJECT'S DB
+            # The session from global_sessions may not exist in the target project's
+            # per-project sessions.db (it was created in a different project).
+            # The statusline reads from per-project DB, so a missing session = "inactive".
+            if attached_session and project_path:
+                try:
+                    target_db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                    if target_db_path.exists():
+                        target_conn = sqlite3.connect(str(target_db_path))
+                        target_cursor = target_conn.cursor()
+
+                        # Check if session already exists in target DB
+                        target_cursor.execute(
+                            "SELECT session_id FROM sessions WHERE session_id = ?",
+                            (attached_session['session_id'],)
+                        )
+                        if not target_cursor.fetchone():
+                            # Session doesn't exist in target — mirror it
+                            from datetime import datetime, timezone
+                            target_cursor.execute("""
+                                INSERT INTO sessions (
+                                    session_id, ai_id, start_time, bootstrap_level,
+                                    components_loaded, project_id, instance_id
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                attached_session['session_id'],
+                                attached_session['ai_id'],
+                                attached_session.get('start_time') or datetime.now(timezone.utc).isoformat(),
+                                1,  # bootstrap_level
+                                0,  # components_loaded
+                                project_id,
+                                current_instance_id
+                            ))
+                            target_conn.commit()
+                            if output_format == 'human':
+                                print(f"📎 Session mirrored to target project database")
+                        else:
+                            # Session exists but may have wrong project_id — update it
+                            target_cursor.execute(
+                                "UPDATE sessions SET project_id = ? WHERE session_id = ?",
+                                (project_id, attached_session['session_id'])
+                            )
+                            target_conn.commit()
+                        target_conn.close()
+                except Exception as e2:
+                    logger.debug(f"Session mirroring to target DB failed (non-fatal): {e2}")
         except Exception as e:
             logger.debug(f"Session continuity update failed (non-fatal): {e}")
 
