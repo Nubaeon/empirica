@@ -98,14 +98,29 @@ This enables drift detection between pre and post compact states.
         return False
 
 
+def _get_instance_id() -> Optional[str]:
+    """Derive instance ID from environment. TMUX_PANE → TTY → 'default'."""
+    tmux_pane = os.environ.get('TMUX_PANE')
+    if tmux_pane:
+        return f"tmux_{tmux_pane.lstrip('%')}"
+    try:
+        tty_path = os.ttyname(sys.stdin.fileno())
+        safe = tty_path.replace('/', '_').lstrip('_').replace('dev_', '')
+        return f"term_{safe}"
+    except Exception:
+        pass
+    return "default"
+
+
 def find_project_root(claude_session_id: str = None) -> Optional[Path]:
     """
     Find the Empirica project root using priority chain.
 
     Priority order:
-    0. Active work file by Claude session_id (most reliable - works for ALL users)
-    1. Instance projects file by TMUX_PANE (works in hook context without TTY)
-    2. EMPIRICA_WORKSPACE_ROOT environment variable
+    -1. Open transaction file (AUTHORITATIVE - survives compaction, written at PREFLIGHT)
+     0. Active work file by Claude session_id (most reliable - works for ALL users)
+     1. Instance projects file by instance_id (works in hook context without TTY)
+     2. EMPIRICA_WORKSPACE_ROOT environment variable
     NO CWD FALLBACK - fails explicitly to prevent wrong context pollution
     """
     def has_valid_db(path: Path) -> bool:
@@ -113,7 +128,12 @@ def find_project_root(claude_session_id: str = None) -> Optional[Path]:
         db_path = path / '.empirica' / 'sessions' / 'sessions.db'
         return db_path.exists() and db_path.stat().st_size > 0
 
-    # Priority 0: Check active_work file by Claude session_id
+    instance_id = _get_instance_id()
+
+    # Collect ALL candidate paths first (don't return early for Priorities 0-1)
+    candidates = []
+
+    # Priority 0 candidate: active_work file by Claude session_id
     if claude_session_id:
         try:
             active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
@@ -121,29 +141,46 @@ def find_project_root(claude_session_id: str = None) -> Optional[Path]:
                 with open(active_work_file, 'r') as f:
                     work_data = json.load(f)
                 project_path = work_data.get('project_path')
-                if project_path:
-                    project_root = Path(project_path)
-                    if has_valid_db(project_root):
-                        return project_root
+                if project_path and has_valid_db(Path(project_path)):
+                    candidates.append(project_path)
         except Exception:
             pass
 
-    # Priority 1: Check instance_projects by TMUX_PANE (works in hook context)
-    tmux_pane = os.environ.get('TMUX_PANE')
-    if tmux_pane:
+    # Priority 1 candidate: instance_projects by instance_id
+    if instance_id:
         try:
-            instance_id = f"tmux_{tmux_pane.lstrip('%')}"
             instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
             if instance_file.exists():
                 with open(instance_file, 'r') as f:
                     instance_data = json.load(f)
                 project_path = instance_data.get('project_path')
-                if project_path:
-                    project_root = Path(project_path)
-                    if has_valid_db(project_root):
-                        return project_root
+                if project_path and has_valid_db(Path(project_path)):
+                    candidates.append(project_path)
         except Exception:
             pass
+
+    # Priority -1: Check candidates for open transaction (AUTHORITATIVE)
+    # The transaction file is written at PREFLIGHT with explicit project_path.
+    # If a candidate has an open transaction, that's definitively the right project.
+    if instance_id and candidates:
+        for path in candidates:
+            try:
+                tx_file = Path(path) / '.empirica' / f'active_transaction_{instance_id}.json'
+                if tx_file.exists():
+                    with open(tx_file, 'r') as f:
+                        tx_data = json.load(f)
+                    if tx_data.get('status') == 'open':
+                        # Open transaction wins - this IS the active project
+                        tx_project = tx_data.get('project_path')
+                        if tx_project and has_valid_db(Path(tx_project)):
+                            return Path(tx_project)
+                        return Path(path)
+            except Exception:
+                continue
+
+    # No open transaction found - return first valid candidate (original behavior)
+    if candidates:
+        return Path(candidates[0])
 
     # Priority 2: Check environment variable
     if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
@@ -176,6 +213,23 @@ def main():
         }))
         sys.exit(1)
     os.chdir(project_root)
+
+    # Write compact handoff file for post-compact to read (belt and suspenders)
+    # This ensures post-compact resolves to the same project even if
+    # active_work/instance_projects get stale between pre and post compact.
+    try:
+        instance_id = _get_instance_id()
+        handoff_file = Path.home() / '.empirica' / f'compact_handoff_{instance_id}.json'
+        handoff_data = {
+            'project_path': str(project_root),
+            'claude_session_id': claude_session_id,
+            'instance_id': instance_id,
+            'timestamp': datetime.now().isoformat()
+        }
+        with open(handoff_file, 'w') as f:
+            json.dump(handoff_data, f, indent=2)
+    except Exception:
+        pass  # Handoff write failure is non-fatal
 
     # Auto-detect latest Empirica session (no env var needed)
     empirica_session = None
