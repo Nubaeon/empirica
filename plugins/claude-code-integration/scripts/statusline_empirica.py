@@ -2,8 +2,9 @@
 """
 Empirica Statusline v2 - Unified Signaling with Moon Phases
 
-Uses the shared signaling module for consistent emoji display.
-Reads vectors from DB (real-time).
+Zero-dependency statusline (stdlib only). No empirica package imports.
+Previous version imported empirica.config.path_resolver which cascaded into
+git, jsonschema, cryptography — 1.2s of import time for a statusline.
 
 Display modes:
   - basic: Just confidence
@@ -14,25 +15,96 @@ Display modes:
 Environment:
   EMPIRICA_STATUS_MODE: basic|default|learning|full (default: default)
   EMPIRICA_AI_ID: AI identifier (default: claude-code)
-  EMPIRICA_SIGNALING_LEVEL: basic|default|full (default: default)
 
 Author: Claude Code
 Date: 2025-12-30
-Version: 2.1.0 (Unified Signaling)
+Version: 2.2.0 (Zero-dependency)
 """
 
 import os
 import sys
+import sqlite3
+import json as _json
+import subprocess
 from pathlib import Path
 
-# Add empirica to path
-EMPIRICA_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(EMPIRICA_ROOT))
 
-from empirica.config.path_resolver import get_empirica_root
-from empirica.data.session_database import SessionDatabase
-from empirica.core.signaling import format_vectors_compact
-from empirica.core.statusline_cache import get_instance_id
+# --- Inlined from empirica.core.statusline_cache.get_instance_id ---
+def get_instance_id() -> str:
+    tmux_pane = os.environ.get('TMUX_PANE')
+    if tmux_pane:
+        return f"tmux_{tmux_pane.replace('%', '')}"
+    instance_id = os.environ.get('CLAUDE_INSTANCE_ID')
+    if instance_id:
+        return instance_id
+    return f"pid_{os.getpid()}"
+
+
+# --- Inlined from empirica.core.signaling.format_vectors_compact ---
+_VECTOR_ABBREV = {
+    'know': 'K', 'uncertainty': 'U', 'context': 'C', 'clarity': 'L',
+    'completion': '✓', 'engagement': 'E', 'impact': 'I', 'coherence': 'H',
+    'signal': 'S', 'density': 'D', 'do': 'A', 'state': 'T', 'change': 'Δ'
+}
+
+def format_vectors_compact(vectors, keys=None, use_percentage=True, **_kw):
+    if keys is None:
+        keys = ['know', 'uncertainty', 'context', 'clarity']
+    parts = []
+    for key in keys:
+        if key in vectors and vectors[key] is not None:
+            abbr = _VECTOR_ABBREV.get(key, key[:1].upper())
+            pct = int(vectors[key] * 100)
+            parts.append(f"{abbr}:{pct}%")
+    return ' '.join(parts)
+
+
+# --- Inlined from empirica.config.path_resolver.get_empirica_root ---
+def get_empirica_root():
+    if wr := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
+        p = Path(wr).expanduser().resolve() / '.empirica'
+        if p.exists():
+            return p
+    if dd := os.getenv('EMPIRICA_DATA_DIR'):
+        return Path(dd).expanduser().resolve()
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            capture_output=True, text=True, timeout=2
+        )
+        if result.returncode == 0:
+            return Path(result.stdout.strip()) / '.empirica'
+    except Exception:
+        pass
+    return None
+
+
+# --- Lightweight SessionDatabase replacement ---
+class SessionDatabase:
+    """Minimal sqlite3 wrapper — no empirica imports needed."""
+    def __init__(self, db_path=None):
+        self.conn = sqlite3.connect(db_path or ':memory:')
+        self.conn.row_factory = sqlite3.Row
+    def close(self):
+        self.conn.close()
+
+
+# --- Inlined from empirica.utils.session_resolver.get_tty_session ---
+def _get_tty_session():
+    """Read TTY session file. Returns dict or None."""
+    tty_dir = Path.home() / '.empirica' / 'tty_sessions'
+    if not tty_dir.exists():
+        return None
+    # Try instance-based file first, then ?? fallback
+    inst = get_instance_id()
+    for name in [f'{inst}.json', '??.json']:
+        f = tty_dir / name
+        if f.exists():
+            try:
+                return _json.loads(f.read_text())
+            except Exception:
+                pass
+    return None
 
 
 # ANSI color codes
@@ -464,10 +536,7 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
     # active_work file is authoritative (updated by project-switch)
     # TTY session's empirica_session_id can be stale after project-switch
     try:
-        from empirica.utils.session_resolver import get_tty_session
-        import json as _json
-
-        tty_session = get_tty_session(warn_if_stale=False)  # Don't spam warnings
+        tty_session = _get_tty_session()  # inlined below
         if tty_session:
             empirica_session_id = None
             claude_session_id = tty_session.get('claude_session_id')
@@ -497,11 +566,7 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
         pass  # Fall through to legacy methods
 
     # Get current instance_id for multi-instance isolation (legacy)
-    try:
-        from empirica.utils.session_resolver import get_instance_id
-        current_instance_id = get_instance_id()
-    except ImportError:
-        current_instance_id = None
+    current_instance_id = get_instance_id()
 
     # Build instance-specific filename suffix
     instance_suffix = ""
@@ -1043,9 +1108,7 @@ def main():
         # TTY session has project_path directly from session_create/project_switch
         if not project_path:
             try:
-                from empirica.utils.session_resolver import get_tty_session
-
-                tty_session = get_tty_session(warn_if_stale=False)
+                tty_session = _get_tty_session()
                 if tty_session:
                     # Use project_path directly from TTY session (most reliable)
                     tty_project_path = tty_session.get('project_path')
@@ -1057,17 +1120,16 @@ def main():
             except Exception:
                 pass  # Fall through to other methods
 
-        # Priority 3: Try canonical path_resolver (same logic as sentinel-gate.py)
+        # Priority 3: Try canonical path_resolver (inlined, no heavy imports)
         if not project_path:
             try:
-                from empirica.config.path_resolver import get_empirica_root
                 empirica_root = get_empirica_root()
                 if empirica_root and empirica_root.exists():
                     db_candidate = empirica_root / 'sessions' / 'sessions.db'
                     if db_candidate.exists():
                         project_path = str(empirica_root.parent)
                         is_local_project = True
-            except (ImportError, Exception):
+            except Exception:
                 pass
 
         if not project_path:
@@ -1137,8 +1199,7 @@ def main():
         transaction_session_id = None
         transaction_id = None
         try:
-            from empirica.core.statusline_cache import get_instance_id as _get_instance_id
-            instance_id = _get_instance_id()
+            instance_id = get_instance_id()
             # Build instance-aware filename
             suffix = f"_{instance_id}" if instance_id else ""
             if project_path:
