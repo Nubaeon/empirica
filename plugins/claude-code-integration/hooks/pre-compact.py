@@ -178,6 +178,48 @@ def find_project_root(claude_session_id: str = None) -> Optional[Path]:
             except Exception:
                 continue
 
+    # Priority -0.5: Workspace scan — if candidates didn't have open transactions,
+    # scan ALL registered projects for open transactions with this instance_id.
+    # Handles case where active_work/instance_projects are stale/wrong.
+    # Picks the most recently modified transaction file if multiple are open.
+    if instance_id:
+        try:
+            import sqlite3
+            ws_db = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+            if ws_db.exists():
+                conn = sqlite3.connect(str(ws_db))
+                cursor = conn.cursor()
+                cursor.execute("SELECT trajectory_path FROM global_projects WHERE trajectory_path IS NOT NULL")
+                all_projects = [row[0] for row in cursor.fetchall()]
+                conn.close()
+
+                # Check each project for open transaction, track by mtime
+                best_match = None
+                best_mtime = 0
+                candidate_set = set(candidates)  # Skip already-checked candidates
+                for proj_path in all_projects:
+                    if proj_path in candidate_set:
+                        continue
+                    tx_file = Path(proj_path) / '.empirica' / f'active_transaction_{instance_id}.json'
+                    try:
+                        if tx_file.exists():
+                            with open(tx_file, 'r') as f:
+                                tx_data = json.load(f)
+                            if tx_data.get('status') == 'open':
+                                mtime = tx_file.stat().st_mtime
+                                if mtime > best_mtime:
+                                    tx_project = tx_data.get('project_path', proj_path)
+                                    if has_valid_db(Path(tx_project)):
+                                        best_match = Path(tx_project)
+                                        best_mtime = mtime
+                    except Exception:
+                        continue
+
+                if best_match:
+                    return best_match
+        except Exception:
+            pass
+
     # No open transaction found - return first valid candidate (original behavior)
     if candidates:
         return Path(candidates[0])
