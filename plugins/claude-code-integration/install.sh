@@ -109,8 +109,20 @@ mkdir -p "$HOME/.claude"
 # Clone or update
 if [ -d "$PLUGIN_DIR" ]; then
     echo "📦 Updating existing installation..."
-    cd "$PLUGIN_DIR"
-    git pull --ff-only origin main 2>/dev/null || (git fetch origin && git reset --hard origin/main) || true
+    # Determine source: running from local repo checkout or remote?
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -d "$SCRIPT_DIR/hooks" ] && [ -f "$SCRIPT_DIR/hooks/sentinel-gate.py" ]; then
+        # Running from local source checkout — rsync files to plugin dir
+        echo "   Syncing from local source: $SCRIPT_DIR"
+        rsync -a --exclude='__pycache__' --exclude='.git' "$SCRIPT_DIR/" "$PLUGIN_DIR/"
+    elif [ -d "$PLUGIN_DIR/.git" ]; then
+        # Plugin dir is a git repo — pull updates
+        cd "$PLUGIN_DIR"
+        git pull --ff-only origin main 2>/dev/null || (git fetch origin && git reset --hard origin/main) || true
+    else
+        echo "   ⚠️  Plugin dir exists but no git repo and not running from source."
+        echo "   Re-run install.sh from the empirica source checkout to sync files."
+    fi
 else
     echo "📦 Installing plugin..."
     # Create temp dir for sparse checkout
