@@ -124,6 +124,7 @@ TRANSITION_COMMANDS = (
     'empirica project-init',         # Initialize new project
     'empirica project-switch',       # Switch active project context
     'empirica project-list',         # List available projects
+    'empirica preflight-submit',     # Start new epistemic cycle (was missing = chicken-and-egg bug)
 )
 
 
