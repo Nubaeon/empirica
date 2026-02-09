@@ -18,24 +18,27 @@ Version: 1.5.0
 __version__ = "1.5.0"
 __author__ = "Empirica Project"
 
-# Core imports (ReflexLogger removed - use GitEnhancedReflexLogger instead)
-try:
-    from empirica.core.canonical import GitEnhancedReflexLogger
-except ImportError as e:
-    print(f"Warning: Core imports failed: {e}")
-    pass
+# Lazy imports — heavy modules (git, cryptography, jsonschema) are only
+# loaded when actually accessed, not when any empirica.* submodule is imported.
+# This drops import time from ~113ms to ~2ms for lightweight consumers
+# like the statusline script that only need path_resolver or signaling.
 
-# Data imports
-try:
-    from empirica.data.session_database import SessionDatabase
-    from empirica.data.session_json_handler import SessionJSONHandler
-except ImportError as e:
-    print(f"Warning: Data imports failed: {e}")
-    pass
+
+def __getattr__(name):
+    if name == "GitEnhancedReflexLogger":
+        from empirica.core.canonical import GitEnhancedReflexLogger
+        return GitEnhancedReflexLogger
+    if name == "SessionDatabase":
+        from empirica.data.session_database import SessionDatabase
+        return SessionDatabase
+    if name == "SessionJSONHandler":
+        from empirica.data.session_json_handler import SessionJSONHandler
+        return SessionJSONHandler
+    raise AttributeError(f"module 'empirica' has no attribute {name!r}")
+
 
 __all__ = [
-    # Core components
-    'ReflexLogger',
+    'GitEnhancedReflexLogger',
     'SessionDatabase',
     'SessionJSONHandler',
 ]
