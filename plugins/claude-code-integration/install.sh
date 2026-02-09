@@ -106,6 +106,25 @@ mkdir -p "$HOME/.claude/plugins/local"
 mkdir -p "$MARKETPLACE_DIR"
 mkdir -p "$HOME/.claude"
 
+# Create Empirica runtime directories (instance isolation + state)
+mkdir -p "$HOME/.empirica/instance_projects"
+mkdir -p "$HOME/.empirica/statusline_cache"
+
+# Bootstrap active_work.json if it doesn't exist
+if [ ! -f "$HOME/.empirica/active_work.json" ]; then
+    cat > "$HOME/.empirica/active_work.json" << AWEOF
+{
+  "project_path": null,
+  "folder_name": null,
+  "claude_session_id": null,
+  "empirica_session_id": null,
+  "source": "install",
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%S+0000)"
+}
+AWEOF
+    echo "   ✓ Created ~/.empirica/active_work.json"
+fi
+
 # Clone or update
 if [ -d "$PLUGIN_DIR" ]; then
     echo "📦 Updating existing installation..."

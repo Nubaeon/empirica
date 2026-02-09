@@ -197,19 +197,37 @@ def format_context(ctx: dict) -> str:
     return "\n".join(parts) if parts else "  (No context loaded)"
 
 
-def _write_instance_projects(project_path: str, claude_session_id: str, empirica_session_id: str) -> bool:
+def _get_instance_id() -> str:
     """
-    Write to instance_projects file with claude_session_id.
-
-    This establishes the linkage between Claude's conversation ID and the Empirica session,
-    which is critical for project-switch to work correctly.
+    Derive instance ID from environment. Fallback chain:
+    TMUX_PANE → TTY name → 'default'
     """
     tmux_pane = os.environ.get('TMUX_PANE')
-    if not tmux_pane:
-        return False
+    if tmux_pane:
+        return f"tmux_{tmux_pane.lstrip('%')}"
 
+    # Fallback: TTY-based instance ID
     try:
-        instance_id = f"tmux_{tmux_pane.lstrip('%')}"
+        tty_path = os.ttyname(sys.stdin.fileno())
+        # e.g. /dev/pts/3 → term_pts_3, /dev/ttys005 → term_ttys005
+        safe = tty_path.replace('/', '_').lstrip('_').replace('dev_', '')
+        return f"term_{safe}"
+    except:
+        pass
+
+    return "default"
+
+
+def _write_instance_projects(project_path: str, claude_session_id: str, empirica_session_id: str) -> bool:
+    """
+    Write instance isolation files. Establishes linkage between Claude's
+    conversation ID and the Empirica session — critical for project-switch,
+    statusline, and sentinel to work correctly.
+
+    Works with or without tmux. Falls back to TTY or 'default' instance.
+    """
+    try:
+        instance_id = _get_instance_id()
         instance_dir = Path.home() / '.empirica' / 'instance_projects'
         instance_dir.mkdir(parents=True, exist_ok=True)
         instance_file = instance_dir / f'{instance_id}.json'
@@ -227,25 +245,30 @@ def _write_instance_projects(project_path: str, claude_session_id: str, empirica
             'tty_key': tty_key,
             'claude_session_id': claude_session_id,
             'empirica_session_id': empirica_session_id,
+            'instance_id': instance_id,
             'timestamp': datetime.now().isoformat()
         }
         with open(instance_file, 'w') as f:
             json.dump(instance_data, f, indent=2)
 
-        # Also write session-specific active_work file
+        # Write session-specific active_work file (with claude_session_id suffix if available)
         if claude_session_id:
             active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-            folder_name = Path(project_path).name
-            active_work_data = {
-                'project_path': project_path,
-                'folder_name': folder_name,
-                'claude_session_id': claude_session_id,
-                'empirica_session_id': empirica_session_id,
-                'source': 'session-init',
-                'timestamp': datetime.now().isoformat()
-            }
-            with open(active_work_file, 'w') as f:
-                json.dump(active_work_data, f, indent=2)
+        else:
+            # Fallback: write to generic active_work.json so statusline can find it
+            active_work_file = Path.home() / '.empirica' / 'active_work.json'
+
+        folder_name = Path(project_path).name
+        active_work_data = {
+            'project_path': project_path,
+            'folder_name': folder_name,
+            'claude_session_id': claude_session_id,
+            'empirica_session_id': empirica_session_id,
+            'source': 'session-init',
+            'timestamp': datetime.now().isoformat()
+        }
+        with open(active_work_file, 'w') as f:
+            json.dump(active_work_data, f, indent=2)
 
         return True
     except Exception as e:
@@ -276,9 +299,10 @@ def main():
     # Create session and bootstrap
     result = create_session_and_bootstrap(ai_id)
 
-    # CRITICAL: Write instance_projects with claude_session_id IMMEDIATELY after session creation
-    # This establishes the linkage that project-switch needs to update the correct active_work file
-    if result.get("session_id") and claude_session_id:
+    # CRITICAL: Write instance_projects IMMEDIATELY after session creation
+    # This establishes the linkage that project-switch, statusline, and sentinel need.
+    # Works with or without claude_session_id — fallback writes generic active_work.json
+    if result.get("session_id"):
         _write_instance_projects(str(project_root), claude_session_id, result["session_id"])
 
     if result.get("error"):
