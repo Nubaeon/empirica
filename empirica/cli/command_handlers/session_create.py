@@ -424,10 +424,14 @@ def handle_session_create_command(args):
                 pass  # Fall through to other methods
 
             # Method 1: Read from local .empirica/project.yaml (only if Method 0 didn't find)
+            # Use active context project_path if available, fall back to CWD
             if not early_project_id:
                 try:
                     import yaml
-                    project_yaml = os.path.join(os.getcwd(), '.empirica', 'project.yaml')
+                    from empirica.utils.session_resolver import get_active_project_path
+                    context_project = get_active_project_path()
+                    base_path = context_project if context_project else os.getcwd()
+                    project_yaml = os.path.join(base_path, '.empirica', 'project.yaml')
                     if os.path.exists(project_yaml):
                         with open(project_yaml, 'r') as f:
                             project_config = yaml.safe_load(f)
@@ -529,9 +533,11 @@ def handle_session_create_command(args):
         # the correct DB even when cwd changes (prevents user confusion about data loss)
         import tempfile
         import json as _json
+        from empirica.utils.session_resolver import get_active_project_path
+        resolved_project_path = get_active_project_path() or str(Path.cwd())
         active_session_data = {
             "session_id": session_id,
-            "project_path": str(Path.cwd()),
+            "project_path": resolved_project_path,
             "ai_id": ai_id
         }
         tmp_fd, tmp_path = tempfile.mkstemp(dir=str(active_session_file.parent))
@@ -548,11 +554,15 @@ def handle_session_create_command(args):
 
         # Write TTY session file for multi-instance isolation
         # This enables CLI commands to find the active session via TTY context
+        # IMPORTANT: Preserve project-switch context - don't overwrite with CWD
         try:
-            from empirica.utils.session_resolver import write_tty_session
+            from empirica.utils.session_resolver import write_tty_session, get_active_project_path
+            # Check existing context first (may have been set by project-switch)
+            existing_project = get_active_project_path()
+            resolved_project = existing_project if existing_project else str(Path.cwd())
             write_tty_session(
                 empirica_session_id=session_id,
-                project_path=str(Path.cwd())
+                project_path=resolved_project
             )
         except Exception:
             pass  # Non-critical - isolation is best-effort

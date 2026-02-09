@@ -475,10 +475,14 @@ def handle_project_bootstrap_command(args):
         if not project_id:
             # Method 1: Read from local .empirica/project.yaml (highest priority)
             # This is what project-init creates - no git remote required
+            # Use active context first, fall back to CWD
             try:
                 import yaml
                 import os
-                project_yaml = os.path.join(os.getcwd(), '.empirica', 'project.yaml')
+                from empirica.utils.session_resolver import get_active_project_path
+                context_project = get_active_project_path()
+                base_path = context_project if context_project else os.getcwd()
+                project_yaml = os.path.join(base_path, '.empirica', 'project.yaml')
                 if os.path.exists(project_yaml):
                     with open(project_yaml, 'r') as f:
                         project_config = yaml.safe_load(f)
@@ -573,9 +577,12 @@ def handle_project_bootstrap_command(args):
         if trigger == 'post_compact':
             from empirica.config.mco_loader import get_mco_config
             from pathlib import Path
+            from empirica.utils.session_resolver import get_active_project_path
 
-            # Find latest pre_summary snapshot
-            ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+            # Find latest pre_summary snapshot - use active context, not CWD
+            context_project = get_active_project_path()
+            project_base = Path(context_project) if context_project else Path.cwd()
+            ref_docs_dir = project_base / ".empirica" / "ref-docs"
             if ref_docs_dir.exists():
                 snapshot_files = sorted(
                     ref_docs_dir.glob("pre_summary_*.json"),
@@ -740,7 +747,10 @@ def handle_project_bootstrap_command(args):
         try:
             import yaml
             import os
-            skills_dir = os.path.join(os.getcwd(), 'project_skills')
+            from empirica.utils.session_resolver import get_active_project_path
+            context_project = get_active_project_path()
+            base_path = context_project if context_project else os.getcwd()
+            skills_dir = os.path.join(base_path, 'project_skills')
             if os.path.exists(skills_dir):
                 skills_list = []
                 for filename in os.listdir(skills_dir):

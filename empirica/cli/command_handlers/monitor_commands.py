@@ -552,8 +552,11 @@ def handle_pre_summary_snapshot(session_id: str, output_format: str, cycle=None,
         "mco_config": mco_snapshot  # ← NEW: MCO configuration preserved
     }
 
-    # Save as ref-doc
-    ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+    # Save as ref-doc - use active context, not CWD
+    from empirica.utils.session_resolver import get_active_project_path
+    context_project = get_active_project_path()
+    project_base = Path(context_project) if context_project else Path.cwd()
+    ref_docs_dir = project_base / ".empirica" / "ref-docs"
     ref_docs_dir.mkdir(parents=True, exist_ok=True)
 
     ref_doc_path = ref_docs_dir / f"pre_summary_{timestamp}.json"
@@ -612,8 +615,11 @@ def handle_post_summary_drift_check(session_id: str, output_format: str, signali
 
     db = SessionDatabase()
 
-    # Find most recent pre-summary snapshot ref-doc
-    ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+    # Find most recent pre-summary snapshot ref-doc - use active context, not CWD
+    from empirica.utils.session_resolver import get_active_project_path
+    context_project = get_active_project_path()
+    project_base = Path(context_project) if context_project else Path.cwd()
+    ref_docs_dir = project_base / ".empirica" / "ref-docs"
 
     if not ref_docs_dir.exists():
         error_msg = "No ref-docs directory found. Run with --trigger pre_summary before memory compacting"

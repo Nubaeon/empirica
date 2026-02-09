@@ -26,7 +26,9 @@ def handle_skill_suggest_command(args):
     """Handle skill-suggest command to find relevant skills for a task."""
     try:
         import yaml  # type: ignore
-        root = os.getcwd()
+        from empirica.utils.session_resolver import get_active_project_path
+        context_project = get_active_project_path()
+        root = context_project if context_project else os.getcwd()
         task = getattr(args, 'task', '')
 
         # First: check local project_skills/*.yaml
@@ -75,16 +77,21 @@ def handle_skill_fetch_command(args):
         import yaml  # type: ignore
         import zipfile, io
         from empirica.core.skills.parser import parse_markdown_to_skill
+        from empirica.utils.session_resolver import get_active_project_path
 
         name = args.name
         url = getattr(args, 'url', None)
         file_path = getattr(args, 'file', None)
         tags = [t.strip() for t in (getattr(args, 'tags', '') or '').split(',') if t.strip()]
 
+        # Capture project context for nested function
+        context_project = get_active_project_path()
+        base_path = context_project if context_project else os.getcwd()
+
         def _save_skill(skill_obj: dict) -> dict:
             """Save skill object to project_skills directory as YAML."""
             slug = skill_obj['id']
-            out_dir = os.path.join(os.getcwd(), 'project_skills')
+            out_dir = os.path.join(base_path, 'project_skills')
             os.makedirs(out_dir, exist_ok=True)
             out_path = os.path.join(out_dir, f"{slug}.yaml")
             with open(out_path, 'w', encoding='utf-8') as f:

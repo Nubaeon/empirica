@@ -747,18 +747,67 @@ def _get_instance_suffix() -> str:
     return ""
 
 
+def _update_instance_project(instance_id: str, project_path: str, claude_session_id: str = None) -> bool:
+    """Update instance_projects file to match active_work (self-heal stale instance mapping).
+
+    Called when active_work (set by project-switch) disagrees with instance_projects
+    (set by session-init). active_work represents explicit user intent and wins.
+
+    Args:
+        instance_id: The instance ID (e.g., 'tmux_4')
+        project_path: The authoritative project path from active_work
+        claude_session_id: Optional Claude session ID to include
+
+    Returns:
+        True if successfully updated, False otherwise
+    """
+    import time
+    from pathlib import Path
+
+    try:
+        instance_dir = Path.home() / '.empirica' / 'instance_projects'
+        instance_dir.mkdir(parents=True, exist_ok=True)
+        instance_file = instance_dir / f'{instance_id}.json'
+
+        # Read existing data to preserve other fields
+        existing_data = {}
+        if instance_file.exists():
+            try:
+                with open(instance_file, 'r') as f:
+                    existing_data = json.load(f)
+            except Exception:
+                pass
+
+        # Update with new project_path (authoritative from active_work)
+        existing_data['project_path'] = project_path
+        existing_data['timestamp'] = time.strftime('%Y-%m-%dT%H:%M:%S%z')
+        existing_data['source'] = 'self-heal-from-active_work'
+        if claude_session_id:
+            existing_data['claude_session_id'] = claude_session_id
+
+        with open(instance_file, 'w') as f:
+            json.dump(existing_data, f, indent=2)
+
+        logger.debug(f"_update_instance_project: updated {instance_id} -> {project_path}")
+        return True
+
+    except Exception as e:
+        logger.warning(f"_update_instance_project failed: {e}")
+        return False
+
+
 def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
     """Get the active project path for the current instance.
 
     CANONICAL function for project resolution. All components should use this
     instead of implementing their own priority chain.
 
-    Priority chain (NO CWD FALLBACK):
-    1. instance_projects/{instance_id}.json - AUTHORITATIVE (updated by project-switch)
-    2. active_work_{claude_session_id}.json - fallback (may be stale after project-switch)
+    Priority chain (NO CWD FALLBACK) - per INSTANCE_ISOLATION.md Section 4.1:
+    0. active_work_{claude_session_id}.json - AUTHORITATIVE (set by project-switch, user intent)
+    1. instance_projects/{instance_id}.json - fallback (set by session-init, may be stale)
 
-    Self-healing: If both exist but disagree, instance_projects wins and active_work
-    is updated to match (fixes stale active_work files after project-switch).
+    Self-healing: If both exist but disagree, active_work wins (explicit user intent
+    via project-switch) and instance_projects is updated to match.
 
     Args:
         claude_session_id: Optional Claude Code conversation UUID (from hook input)
@@ -802,24 +851,27 @@ def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
             except Exception:
                 pass
 
-    # PRIORITY: instance_projects wins (updated by project-switch)
-    if instance_path:
-        # Self-heal: If active_work exists but disagrees, update it
-        if claude_session_id and active_work_path and active_work_path != instance_path:
-            logger.info(f"get_active_project_path: self-healing stale active_work "
-                       f"({Path(active_work_path).name} → {Path(instance_path).name})")
+    # PRIORITY 0: active_work wins (set by project-switch - explicit user intent)
+    # Per INSTANCE_ISOLATION.md Section 4.1:
+    #   Priority 0: active_work file (set by project-switch)
+    #   Priority 1: instance_projects (set by session-init, can be stale)
+    if active_work_path:
+        # Self-heal: If instance_projects disagrees, update it to match active_work
+        if instance_id and instance_path and instance_path != active_work_path:
+            logger.info(f"get_active_project_path: self-healing stale instance_projects "
+                       f"({Path(instance_path).name} → {Path(active_work_path).name})")
             try:
-                update_active_context(claude_session_id, project_path=instance_path)
+                _update_instance_project(instance_id, active_work_path, claude_session_id)
             except Exception as e:
-                logger.debug(f"Failed to self-heal active_work: {e}")
+                logger.debug(f"Failed to self-heal instance_projects: {e}")
 
+        logger.debug(f"get_active_project_path: from active_work: {active_work_path}")
+        return active_work_path
+
+    # Fallback: instance_projects (only if active_work doesn't exist)
+    if instance_path:
         logger.debug(f"get_active_project_path: from instance_projects: {instance_path}")
         return instance_path
-
-    # Fallback: active_work (only if instance_projects doesn't exist)
-    if active_work_path:
-        logger.debug(f"get_active_project_path: from active_work file: {active_work_path}")
-        return active_work_path
 
     # NO CWD FALLBACK - fail explicitly
     logger.debug("get_active_project_path: could not resolve (no active_work or instance_projects)")

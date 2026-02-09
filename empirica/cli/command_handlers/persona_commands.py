@@ -9,7 +9,6 @@ Commands:
 
 import json
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -137,8 +136,11 @@ def handle_persona_promote_command(args):
             print(json.dumps({"ok": False, "error": f"Persona not found: {persona_id}"}, indent=2))
             return 1
 
-        # Find MCO personas.yaml
-        mco_path = Path.cwd() / ".empirica" / "mco" / "personas.yaml"
+        # Find MCO personas.yaml - use active context, not CWD
+        from empirica.utils.session_resolver import get_active_project_path
+        context_project = get_active_project_path()
+        project_base = Path(context_project) if context_project else Path.cwd()
+        mco_path = project_base / ".empirica" / "mco" / "personas.yaml"
         if not mco_path.parent.exists():
             mco_path.parent.mkdir(parents=True, exist_ok=True)
 
