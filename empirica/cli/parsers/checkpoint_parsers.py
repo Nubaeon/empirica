@@ -432,13 +432,36 @@ def add_checkpoint_parsers(subparsers):
     # Reference doc add command
     refdoc_add_parser = subparsers.add_parser(
         'refdoc-add',
-        help='Add a reference document to project'
+        help='Add a reference document to project (legacy — use source-add instead)'
     )
     refdoc_add_parser.add_argument('--project-id', required=True, help='Project UUID')
     refdoc_add_parser.add_argument('--doc-path', required=True, help='Document path')
     refdoc_add_parser.add_argument('--doc-type', help='Document type (architecture, guide, api, design)')
     refdoc_add_parser.add_argument('--description', help='Document description')
     refdoc_add_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+
+    # Source add command — entity-agnostic source logging with direction
+    source_add_parser = subparsers.add_parser(
+        'source-add',
+        help='Add an epistemic source (noetic: evidence IN, praxic: output OUT)'
+    )
+    source_add_parser.add_argument('--title', required=True, help='Source title')
+    source_add_parser.add_argument('--description', help='Source description')
+    source_add_parser.add_argument('--source-type', default='document',
+        help='Source type (document, meeting, email, calendar, code, web, design, api)')
+    source_add_parser.add_argument('--path', help='File path (for local documents)')
+    source_add_parser.add_argument('--url', help='URL (for web sources)')
+    direction_group = source_add_parser.add_mutually_exclusive_group(required=True)
+    direction_group.add_argument('--noetic', action='store_true',
+        help='Source used — evidence that informed knowledge (source IN)')
+    direction_group.add_argument('--praxic', action='store_true',
+        help='Source created — output produced by action (source OUT)')
+    source_add_parser.add_argument('--confidence', type=float, default=0.7,
+        help='Confidence in source quality (0.0-1.0, default: 0.7)')
+    source_add_parser.add_argument('--session-id', help='Session ID (auto-derived from transaction)')
+    source_add_parser.add_argument('--project-id', help='Project ID (auto-derived from context)')
+    source_add_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    source_add_parser.add_argument('--verbose', action='store_true', help='Verbose output')
 
     # NEW: Goal Management Commands (MCP v2 Integration)
     # Aliases: goals-X → goal-X (singular), short aliases (gc, gl, etc.)

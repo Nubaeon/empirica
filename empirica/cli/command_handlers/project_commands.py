@@ -2221,6 +2221,141 @@ def handle_refdoc_add_command(args):
         return None
 
 
+def handle_source_add_command(args):
+    """Handle source-add command — entity-agnostic epistemic source logging.
+
+    Sources are bidirectional:
+      --noetic: evidence IN (source_used — informed knowledge)
+      --praxic: output OUT (source_created — produced by action)
+    """
+    try:
+        import time
+        import uuid
+        from empirica.data.session_database import SessionDatabase
+        from empirica.cli.utils.project_resolver import resolve_project_id
+
+        title = args.title
+        description = getattr(args, 'description', None)
+        source_type = getattr(args, 'source_type', 'document')
+        doc_path = getattr(args, 'path', None)
+        source_url = getattr(args, 'url', None)
+        confidence = getattr(args, 'confidence', 0.7)
+        direction = 'noetic' if getattr(args, 'noetic', False) else 'praxic'
+        session_id = getattr(args, 'session_id', None)
+        project_id = getattr(args, 'project_id', None)
+        output_format = getattr(args, 'output', 'human')
+
+        # Auto-derive session_id from active transaction
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        if not session_id:
+            print(json.dumps({
+                "ok": False,
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
+            }))
+            return 1
+
+        db = SessionDatabase()
+
+        # Auto-resolve project_id from session if not provided
+        if not project_id:
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+            row = cursor.fetchone()
+            if row:
+                project_id = row['project_id'] if isinstance(row, dict) else row[0]
+
+        if not project_id:
+            print(json.dumps({
+                "ok": False,
+                "error": "Could not resolve project_id",
+                "hint": "Provide --project-id or ensure active session has a project"
+            }))
+            db.close()
+            return 1
+
+        # Auto-derive transaction_id
+        transaction_id = None
+        try:
+            from empirica.cli.command_handlers.workflow_commands import read_active_transaction
+            tx = read_active_transaction()
+            if tx:
+                transaction_id = tx.get('transaction_id')
+        except Exception:
+            pass
+
+        source_id = str(uuid.uuid4())
+
+        # Build metadata
+        metadata = {
+            "direction": direction,
+            "doc_path": doc_path,
+            "source_url": source_url,
+            "transaction_id": transaction_id,
+        }
+
+        # Insert into epistemic_sources table
+        db.conn.execute("""
+            INSERT INTO epistemic_sources (
+                id, project_id, session_id, source_type, source_url,
+                title, description, confidence, epistemic_layer,
+                discovered_by_ai, discovered_at, source_metadata
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            source_id, project_id, session_id, source_type,
+            source_url or doc_path,
+            title, description, confidence, direction,
+            'claude-code', time.time(), json.dumps(metadata)
+        ))
+        db.conn.commit()
+
+        # Also add to project_reference_docs for backwards compatibility
+        if doc_path:
+            try:
+                db.add_reference_doc(
+                    project_id=project_id,
+                    doc_path=doc_path,
+                    doc_type=source_type,
+                    description=description
+                )
+            except Exception:
+                pass  # Not critical if legacy table fails
+
+        db.close()
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": True,
+                "source_id": source_id,
+                "project_id": project_id,
+                "session_id": session_id,
+                "transaction_id": transaction_id,
+                "direction": direction,
+                "title": title,
+                "message": f"Source added ({direction})"
+            }, indent=2))
+        else:
+            direction_emoji = "📥" if direction == 'noetic' else "📤"
+            print(f"{direction_emoji} Source added ({direction})")
+            print(f"   Source ID: {source_id[:12]}...")
+            print(f"   Title: {title}")
+            print(f"   Type: {source_type}")
+            print(f"   Direction: {direction} ({'evidence IN' if direction == 'noetic' else 'output OUT'})")
+            if doc_path:
+                print(f"   Path: {doc_path}")
+            if source_url:
+                print(f"   URL: {source_url}")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Source add", getattr(args, 'verbose', False))
+        return None
+
+
 def handle_workspace_overview_command(args):
     """Handle workspace-overview command - show epistemic health of all projects"""
     try:
@@ -3084,6 +3219,11 @@ def handle_project_switch_command(args):
                             )
                             if result.returncode == 0:
                                 postflight_result = {"ok": True, "reason": "project_switch"}
+                                # Clear the old transaction file so sentinel doesn't see stale state
+                                try:
+                                    tx_path.unlink()
+                                except Exception:
+                                    pass
                                 if output_format == 'human':
                                     print("📊 Auto-closed previous transaction (POSTFLIGHT)")
                             else:

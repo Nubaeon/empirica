@@ -92,7 +92,8 @@ from .project_commands import (
     handle_unknown_log_command,
     handle_unknown_resolve_command,
     handle_deadend_log_command,
-    handle_refdoc_add_command
+    handle_refdoc_add_command,
+    handle_source_add_command
 )
 from .project_init import handle_project_init_command
 from .workspace_init import handle_workspace_init_command
@@ -274,6 +275,7 @@ __all__ = [
     'handle_unknown_resolve_command',
     'handle_deadend_log_command',
     'handle_refdoc_add_command',
+    'handle_source_add_command',
     'handle_project_search_command',
     'handle_project_embed_command',
 
