@@ -81,7 +81,8 @@ def column_exists(cursor: sqlite3.Cursor, table: str, column: str) -> bool:
         'checkpoints', 'handoffs', 'schema_migrations', 'epistemic_snapshots',
         'bayesian_beliefs', 'projects', 'project_findings', 'project_unknowns',
         'project_dead_ends', 'mistakes_made', 'clients', 'engagements',
-        'client_interactions', 'client_projects', 'investigation_branches'
+        'client_interactions', 'client_projects', 'investigation_branches',
+        'epistemic_sources', 'assumptions', 'decisions',
     }
 
     if table not in VALID_TABLES:
@@ -102,7 +103,8 @@ def add_column_if_missing(cursor: sqlite3.Cursor, table: str, column: str, colum
         'checkpoints', 'handoffs', 'schema_migrations', 'epistemic_snapshots',
         'bayesian_beliefs', 'projects', 'project_findings', 'project_unknowns',
         'project_dead_ends', 'mistakes_made', 'clients', 'engagements',
-        'client_interactions', 'client_projects', 'investigation_branches'
+        'client_interactions', 'client_projects', 'investigation_branches',
+        'epistemic_sources', 'assumptions', 'decisions',
     }
     VALID_COLUMN_TYPES = {
         'TEXT', 'INTEGER', 'REAL', 'BLOB', 'NULL',

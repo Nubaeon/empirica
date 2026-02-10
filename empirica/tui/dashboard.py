@@ -505,22 +505,95 @@ class EpistemicArtifactsPanel(Static):
         self._refresh()
         self.set_interval(2.0, self._refresh)
 
+    def _get_current_vectors(self):
+        """Get current epistemic vectors for emoji state computation."""
+        if self.entity_type == 'project':
+            db = _get_project_db()
+            if not db:
+                return {}
+            try:
+                cursor = db.conn.cursor()
+                cursor.execute("""
+                    SELECT know, uncertainty, engagement, context
+                    FROM reflexes ORDER BY timestamp DESC LIMIT 1
+                """)
+                row = cursor.fetchone()
+                db.close()
+                if row:
+                    return {
+                        'know': row['know'] or 0.0,
+                        'uncertainty': row['uncertainty'] or 0.5,
+                        'completion': 0.0,  # from goals if available
+                        'do': 0.0,
+                        'context': row['context'] or 0.0,
+                    }
+            except Exception:
+                db.close()
+        elif self.entity_type == 'contact':
+            conn = _get_workspace_db()
+            if conn and self.entity_id:
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "SELECT relationship_health, knowledge_depth FROM contacts WHERE contact_id = ?",
+                        (self.entity_id,))
+                    row = cursor.fetchone()
+                    conn.close()
+                    if row:
+                        return {
+                            'relationship_health': row['relationship_health'] or 0.5,
+                            'knowledge_depth': row['knowledge_depth'] or 0.0,
+                            'sentiment_value': 0.5,
+                        }
+                except Exception:
+                    conn.close()
+        return {}
+
     def _refresh(self):
         try:
             artifacts = get_entity_artifacts(self.entity_type, self.entity_id)
+
+            # Compute emoji state
+            from empirica.tui.emoji_state import compute_emoji_state, get_emoji_char, get_pixel_face, get_emoji_color
+            vectors = self._get_current_vectors()
+            if vectors:
+                emoji_state, emoji_detail = compute_emoji_state(self.entity_type, vectors)
+            else:
+                emoji_state = 'idle'
+                emoji_detail = {'reason': 'No vectors available'}
+
+            emoji_char = get_emoji_char(emoji_state)
+            emoji_color = get_emoji_color(emoji_state)
+
             if not artifacts:
                 entity_label = self.entity_type.title()
+                # Show pixel face even with no artifacts
+                face_lines = get_pixel_face(emoji_state)
+                face_text = Text()
+                for line in face_lines:
+                    face_text.append(line + "\n", style=emoji_color)
+                face_text.append(f"\n {emoji_char} {emoji_state.title()}", style=f"bold {emoji_color}")
                 self.update(Panel(
-                    f"No artifacts for {entity_label}",
+                    face_text,
                     title=f"[bold]EPISTEMIC ARTIFACTS ({entity_label.upper()})[/bold]",
                     border_style="dim"))
                 return
 
-            # Summary row with counts
-            table = Table(show_header=True, box=None, padding=(0, 1))
-            table.add_column("Artifact", style="bold", width=12)
-            table.add_column("Count", justify="right", width=6)
-            table.add_column("Latest", width=55)
+            # Build pixel face column
+            face_lines = get_pixel_face(emoji_state)
+            face_text = Text()
+            for line in face_lines:
+                face_text.append(line + "\n", style=emoji_color)
+            face_text.append(f"\n {emoji_char} {emoji_state.title()}\n", style=f"bold {emoji_color}")
+            reason = emoji_detail.get('reason', '')
+            if reason:
+                face_text.append(f" {reason[:20]}", style="dim")
+
+            # Build artifact summary table
+            table = Table(show_header=False, box=None, padding=(0, 0, 0, 1))
+            table.add_column("type", style="bold", no_wrap=True)
+            table.add_column("cnt", justify="right", width=4, no_wrap=True)
+            table.add_column("latest", no_wrap=True, overflow="ellipsis")
 
             for artifact_type, (style, icon) in self.ARTIFACT_STYLES.items():
                 data = artifacts.get(artifact_type)
@@ -532,7 +605,7 @@ class EpistemicArtifactsPanel(Static):
                 if recent:
                     content = recent[0].get('content', '')
                     if content:
-                        latest_text = content[:52] + "..." if len(content) > 52 else content
+                        latest_text = content[:42] + "..." if len(content) > 42 else content
 
                 count_style = style if count > 0 else "dim"
                 table.add_row(
@@ -541,11 +614,17 @@ class EpistemicArtifactsPanel(Static):
                     Text(latest_text, style="white" if count > 0 else "dim"),
                 )
 
+            # Side-by-side layout: pixel face | artifact table
+            layout = Table(show_header=False, box=None, padding=(0, 1), expand=True)
+            layout.add_column("face", width=14, no_wrap=True)
+            layout.add_column("artifacts", ratio=1)
+            layout.add_row(face_text, table)
+
             entity_label = self.entity_type.upper()
             if self.entity_id:
                 entity_label += f" ({self.entity_id[:12]}...)" if len(str(self.entity_id)) > 12 else f" ({self.entity_id})"
 
-            self.update(Panel(table, title=f"[bold]EPISTEMIC ARTIFACTS ({entity_label})[/bold]", border_style="blue"))
+            self.update(Panel(layout, title=f"[bold]EPISTEMIC ARTIFACTS ({entity_label})[/bold]", border_style="blue"))
 
         except Exception as e:
             self.update(Panel(f"Error: {e}", title="[bold red]ARTIFACTS ERROR[/bold red]", border_style="red"))

@@ -1035,6 +1035,24 @@ def migration_029_goals_transaction_index(cursor: sqlite3.Cursor):
     logger.info("✅ Migration 029 complete: Added index on goals.transaction_id")
 
 
+# Migration 30: Entity-agnostic columns + assumptions/decisions tables (v0.6.0)
+def migration_030_entity_agnostic_intent_layer(cursor: sqlite3.Cursor):
+    """Add entity_type/entity_id to artifact tables, create assumptions and decisions tables."""
+    # Add entity_type/entity_id to existing artifact tables
+    for table in ['project_findings', 'project_unknowns', 'project_dead_ends',
+                  'mistakes_made', 'epistemic_sources', 'goals']:
+        add_column_if_missing(cursor, table, "entity_type", "TEXT", "'project'")
+        add_column_if_missing(cursor, table, "entity_id", "TEXT")
+
+    # Backfill entity_id from project_id
+    for table in ['project_findings', 'project_unknowns', 'project_dead_ends',
+                  'mistakes_made', 'epistemic_sources', 'goals']:
+        cursor.execute(f"UPDATE {table} SET entity_id = project_id WHERE entity_id IS NULL")
+
+    # assumptions and decisions tables created via SCHEMAS (CREATE IF NOT EXISTS)
+    logger.info("✅ Migration 030 complete: Entity-agnostic intent layer columns added")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -1065,4 +1083,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("027_drop_session_noetic_tables", "Drop deprecated session-scoped noetic tables (sessions delineate compact windows only)", migration_027_drop_session_noetic_tables),
     ("028_investigation_branches_transaction_id", "Add transaction_id to investigation_branches for sub-agent epistemic continuity", migration_028_investigation_branches_transaction_id),
     ("029_goals_transaction_index", "Add index on goals.transaction_id for transaction-scoped queries", migration_029_goals_transaction_index),
+    ("030_entity_agnostic_intent_layer", "Add entity_type/entity_id to artifact tables, assumptions and decisions tables (v0.6.0)", migration_030_entity_agnostic_intent_layer),
 ]
