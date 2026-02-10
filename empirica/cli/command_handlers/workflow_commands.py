@@ -259,6 +259,25 @@ def handle_preflight_submit_command(args):
         extracted_vectors = _extract_all_vectors(vectors)
         vectors = extracted_vectors
 
+        # CHECK FOR UNCLOSED TRANSACTION — warn but don't block
+        # Auto-closing would poison vector states (fabricated POSTFLIGHT vectors)
+        unclosed_transaction_warning = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction_full
+            existing_tx = read_active_transaction_full()
+            if existing_tx and existing_tx.get('status') == 'open':
+                existing_tx_id = existing_tx.get('transaction_id', 'unknown')
+                existing_tx_time = existing_tx.get('preflight_timestamp', 0)
+                age_minutes = int((time.time() - existing_tx_time) / 60) if existing_tx_time else 0
+                unclosed_transaction_warning = {
+                    "previous_transaction_id": existing_tx_id[:12] + "...",
+                    "age_minutes": age_minutes,
+                    "message": "Previous transaction was not closed with POSTFLIGHT. Learning delta from that work is lost. Run POSTFLIGHT before PREFLIGHT to measure learning.",
+                    "impact": "Unmeasured work = epistemic dark matter. Calibration cannot improve without POSTFLIGHT."
+                }
+        except Exception:
+            pass  # Non-fatal — proceed with new transaction
+
         # Use GitEnhancedReflexLogger for proper 3-layer storage (SQLite + Git Notes + JSON)
         try:
             # Generate transaction_id — this is the epistemic transaction boundary
@@ -455,7 +474,8 @@ def handle_preflight_submit_command(args):
                     "enabled": SentinelHooks.is_enabled(),
                     "decision": sentinel_decision.value if sentinel_decision else None
                 } if SentinelHooks.is_enabled() else None,
-                "patterns": patterns if patterns and any(patterns.values()) else None
+                "patterns": patterns if patterns and any(patterns.values()) else None,
+                "unclosed_transaction_warning": unclosed_transaction_warning
             }
 
             # NOTE: Statusline cache was removed (2026-02-06). Statusline reads directly from DB.
@@ -1291,7 +1311,8 @@ def handle_check_submit_command(args):
                     "decision": sentinel_decision.value if sentinel_decision else None,
                     "override_applied": sentinel_override,
                     "note": "Sentinel feeds back to override AI decision"
-                } if SentinelHooks.is_enabled() else None
+                } if SentinelHooks.is_enabled() else None,
+                "transaction_reminder": "POSTFLIGHT is required when work is complete to close this transaction and measure learning delta"
             }
 
             # BLINDSPOT SCAN: Run negative-space inference on knowledge topology

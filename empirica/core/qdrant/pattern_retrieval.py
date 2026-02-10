@@ -467,6 +467,26 @@ def retrieve_task_patterns(
             logger.debug(f"Episodic retrieval failed: {e}")
             result["episodic_narratives"] = []
 
+    # Cross-project patterns: global dead-ends (avoid repeating mistakes from other projects)
+    try:
+        from .vector_store import search_global_dead_ends
+        global_dead_ends_raw = search_global_dead_ends(
+            f"Approach for: {task_context}",
+            limit=2  # Small limit — these are cross-project, less relevant
+        )
+        if global_dead_ends_raw:
+            result["global_dead_ends"] = [
+                {
+                    "approach": g.get("approach", g.get("text", "")),
+                    "why_failed": g.get("why_failed", ""),
+                    "project": g.get("project_name", "other project"),
+                    "score": g.get("score", 0.0)
+                }
+                for g in global_dead_ends_raw
+            ]
+    except Exception as e:
+        logger.debug(f"Global dead-ends retrieval failed: {e}")
+
     # Optional: Include related reference docs (cross-reference with retrieved memory)
     if include_related_docs:
         try:
