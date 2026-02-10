@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "empirica": {
+      "command": "$HOME/.local/bin/empirica-mcp",
+      "args": [],
+      "type": "stdio",
+      "env": {
+        "EMPIRICA_EPISTEMIC_MODE": "true"
+      },
+      "tools": ["*"],
+      "description": "Empirica epistemic framework - CASCADE workflow, goals, findings"
+    }
+  }
+}

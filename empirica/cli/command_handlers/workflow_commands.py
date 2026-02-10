@@ -2279,6 +2279,14 @@ def handle_postflight_submit_command(args):
             }
 
             # NOTE: Statusline cache was removed (2026-02-06). Statusline reads directly from DB.
+
+            # Clear active transaction file — POSTFLIGHT closes the measurement window
+            try:
+                from empirica.utils.session_resolver import clear_active_transaction
+                clear_active_transaction()  # Resolves project path internally
+            except Exception as e_clear:
+                logger.debug(f"Failed to clear active transaction (non-fatal): {e_clear}")
+
         except Exception as e:
             logger.error(f"Failed to save postflight assessment: {e}")
             result = {
