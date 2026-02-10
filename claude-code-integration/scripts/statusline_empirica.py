@@ -472,7 +472,7 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
             empirica_session_id = None
             claude_session_id = tty_session.get('claude_session_id')
 
-            # Priority 0a: active_work file (authoritative, updated by project-switch)
+            # Priority 0a: active_work file by claude_session_id (authoritative)
             if claude_session_id:
                 active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
                 if active_work_path.exists():
@@ -480,7 +480,15 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
                         active_work = _json.load(f)
                         empirica_session_id = active_work.get('empirica_session_id')
 
-            # Priority 0b: TTY session (fallback if active_work not available)
+            # Priority 0b: generic active_work.json (healed by sentinel when session_id was null)
+            if not empirica_session_id:
+                generic_aw = Path.home() / '.empirica' / 'active_work.json'
+                if generic_aw.exists():
+                    with open(generic_aw, 'r') as f:
+                        active_work = _json.load(f)
+                        empirica_session_id = active_work.get('empirica_session_id')
+
+            # Priority 0c: TTY session (fallback if active_work not available)
             if not empirica_session_id:
                 empirica_session_id = tty_session.get('empirica_session_id')
 

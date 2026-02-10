@@ -315,9 +315,19 @@ def main():
     """Main session init logic."""
     hook_input = {}
     try:
-        hook_input = json.loads(sys.stdin.read())
-    except:
-        pass
+        raw_stdin = sys.stdin.read()
+        # DEBUG: dump raw stdin to diagnose session_id capture
+        debug_file = Path.home() / '.empirica' / 'debug_session_init_stdin.json'
+        debug_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(debug_file, 'w') as df:
+            df.write(raw_stdin if raw_stdin else '(empty)')
+        hook_input = json.loads(raw_stdin)
+    except Exception as e:
+        # DEBUG: capture parse errors
+        debug_file = Path.home() / '.empirica' / 'debug_session_init_stdin.json'
+        debug_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(debug_file, 'w') as df:
+            df.write(f'PARSE_ERROR: {e}\nraw: {raw_stdin if "raw_stdin" in dir() else "(read failed)"}')
 
     # Extract claude_session_id from hook input (critical for instance isolation)
     claude_session_id = hook_input.get('session_id')

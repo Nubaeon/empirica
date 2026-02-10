@@ -608,6 +608,58 @@ def main():
     if project_root:
         empirica_root = project_root / '.empirica'
         os.chdir(project_root)  # Set CWD to the correct project
+
+        # SELF-HEAL: If we have claude_session_id but the active_work file is missing
+        # or has null claude_session_id, persist it now. This fixes the gap where
+        # session-init.py may fail to capture session_id from hook input.
+        if claude_session_id:
+            try:
+                aw_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+                needs_update = False
+                existing_data = {}
+                if aw_file.exists():
+                    with open(aw_file, 'r') as f:
+                        existing_data = json.load(f)
+                    # Only heal if claude_session_id is null/missing in the file
+                    if not existing_data.get('claude_session_id'):
+                        needs_update = True
+                else:
+                    needs_update = True
+
+                if needs_update:
+                    import time as _time
+                    heal_data = existing_data or {}
+                    heal_data.update({
+                        'project_path': str(project_root),
+                        'folder_name': project_root.name,
+                        'claude_session_id': claude_session_id,
+                        'source': 'sentinel-self-heal',
+                        'timestamp': _time.strftime('%Y-%m-%dT%H:%M:%S%z'),
+                    })
+                    aw_file.parent.mkdir(parents=True, exist_ok=True)
+                    with open(aw_file, 'w') as f:
+                        json.dump(heal_data, f, indent=2)
+                    # Also heal generic active_work.json for statusline
+                    generic_aw = Path.home() / '.empirica' / 'active_work.json'
+                    with open(generic_aw, 'w') as f:
+                        json.dump(heal_data, f, indent=2)
+                    # Also heal instance_projects if it has null claude_session_id
+                    try:
+                        inst_id = get_instance_id()
+                        if inst_id:
+                            inst_file = Path.home() / '.empirica' / 'instance_projects' / f'{inst_id}.json'
+                            if inst_file.exists():
+                                with open(inst_file, 'r') as f:
+                                    inst_data = json.load(f)
+                                if not inst_data.get('claude_session_id'):
+                                    inst_data['claude_session_id'] = claude_session_id
+                                    inst_data['project_path'] = str(project_root)
+                                    with open(inst_file, 'w') as f:
+                                        json.dump(inst_data, f, indent=2)
+                    except Exception:
+                        pass
+            except Exception:
+                pass  # Self-heal is best-effort, never block tool calls
     else:
         # Fallback to path_resolver if priority chain fails
         try:
