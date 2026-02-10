@@ -1041,40 +1041,39 @@ def main():
             return
 
         # Auto-detect project from active context
-        # Priority: 1) EMPIRICA_PROJECT_PATH env, 2) active_work_{session}.json (instance-specific),
-        #           3) TTY session, 4) path_resolver, 5) generic active_work.json (LAST RESORT)
-        # NOTE: We do NOT fall back to global ~/.empirica/ to prevent cross-project data leakage
-        # NOTE: NO CWD upward search — CWD is unreliable in Claude Code hooks
-        project_path = os.getenv('EMPIRICA_PROJECT_PATH')
+        # Matches INSTANCE_ISOLATION.md Section 4.2:
+        #   Priority 0a: active_work_{session}.json (AUTHORITATIVE after project-switch)
+        #   Priority 0b: TTY session project_path (fallback)
+        #   Priority 1:  path_resolver (get_empirica_root)
+        #   Priority 2:  generic active_work.json (LAST RESORT — replaces CWD which fails in hooks)
+        # NOTE: NO CWD upward search — CWD is unreliable in Claude Code
+        # NOTE: NO EMPIRICA_PROJECT_PATH env — single env var breaks multi-instance
+        project_path = None
         is_local_project = False
 
-        # Priority 2: active_work files (AUTHORITATIVE — updated by project-switch + sentinel)
-        # Takes priority over TTY session because TTY is set at session-init
-        # and NOT updated on project-switch, making it stale after switches.
-        if not project_path:
-            try:
-                import json as _json
-                from empirica.utils.session_resolver import get_tty_session
+        # Priority 0a: active_work_{claude_session_id}.json (AUTHORITATIVE)
+        # Updated by project-switch + sentinel self-heal. Instance-specific.
+        try:
+            import json as _json
+            from empirica.utils.session_resolver import get_tty_session
 
-                # 2a: active_work_{claude_session_id}.json (instance-specific)
-                tty_session = get_tty_session(warn_if_stale=False)
-                claude_session_id = tty_session.get('claude_session_id') if tty_session else None
-                if claude_session_id:
-                    aw_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-                    if aw_path.exists():
-                        with open(aw_path, 'r') as f:
-                            aw_data = _json.load(f)
-                        aw_project = aw_data.get('project_path')
-                        if aw_project:
-                            aw_db = Path(aw_project) / '.empirica' / 'sessions' / 'sessions.db'
-                            if aw_db.exists():
-                                project_path = aw_project
-                                is_local_project = True
+            tty_session = get_tty_session(warn_if_stale=False)
+            claude_session_id = tty_session.get('claude_session_id') if tty_session else None
+            if claude_session_id:
+                aw_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+                if aw_path.exists():
+                    with open(aw_path, 'r') as f:
+                        aw_data = _json.load(f)
+                    aw_project = aw_data.get('project_path')
+                    if aw_project:
+                        aw_db = Path(aw_project) / '.empirica' / 'sessions' / 'sessions.db'
+                        if aw_db.exists():
+                            project_path = aw_project
+                            is_local_project = True
+        except Exception:
+            pass
 
-            except Exception:
-                pass
-
-        # Priority 3: TTY session project_path (may be stale after project-switch)
+        # Priority 0b: TTY session project_path (may be stale after project-switch)
         if not project_path:
             try:
                 from empirica.utils.session_resolver import get_tty_session
@@ -1088,9 +1087,9 @@ def main():
                             project_path = tty_project_path
                             is_local_project = True
             except Exception:
-                pass  # Fall through to other methods
+                pass
 
-        # Priority 4: Try canonical path_resolver (same logic as sentinel-gate.py)
+        # Priority 1: path_resolver (canonical — same logic as sentinel-gate.py)
         if not project_path:
             try:
                 from empirica.config.path_resolver import get_empirica_root
@@ -1103,14 +1102,14 @@ def main():
             except (ImportError, Exception):
                 pass
 
-        # Priority 5: generic active_work.json (LAST RESORT — shared across instances)
+        # Priority 2: generic active_work.json (LAST RESORT — shared across instances)
+        # Replaces CWD upward search which always fails in Claude Code hooks.
         if not project_path:
             try:
-                import json as _json2
                 generic_aw = Path.home() / '.empirica' / 'active_work.json'
                 if generic_aw.exists():
                     with open(generic_aw, 'r') as f:
-                        aw_data = _json2.load(f)
+                        aw_data = _json.load(f)
                     aw_project = aw_data.get('project_path')
                     if aw_project:
                         aw_db = Path(aw_project) / '.empirica' / 'sessions' / 'sessions.db'

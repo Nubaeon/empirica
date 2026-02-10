@@ -221,16 +221,21 @@ Priority 3: CWD-based detection (get_session_db_path)
 ### 4.2 Statusline Project Detection
 
 ```
-Priority 0a: active_work file (authoritative after project-switch)
+Priority 0a: active_work_{session_id}.json (authoritative after project-switch)
     ↓ (if not found)
-Priority 0b: TTY session's empirica_session_id (fallback)
+Priority 0b: TTY session's project_path (fallback)
     ↓ (if not found)
 Priority 1: path_resolver (get_empirica_root)
     ↓ (if not found)
-Priority 2: Upward search for .empirica/ from CWD
+Priority 2: generic active_work.json (LAST RESORT — shared across instances)
+    ↓ (if not found)
+❌ NO CWD FALLBACK - CWD is unreliable in Claude Code hooks
+❌ NO EMPIRICA_PROJECT_PATH env - single env var breaks multi-instance
 ```
 
-**Note:** active_work file takes precedence because TTY session can be stale after project-switch.
+**Note:** active_work_{session_id} file takes precedence because TTY session can be stale after project-switch.
+Generic active_work.json is LAST RESORT only — it's shared across all instances and will show
+the wrong project in multi-instance setups if higher-priority resolution succeeds elsewhere.
 
 ### 4.2a Statusline Phase/Vectors Query
 
