@@ -27,7 +27,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 PLUGIN_NAME = "empirica-integration"
-PLUGIN_VERSION = "1.5.0"
+PLUGIN_VERSION = "1.5.1"
 
 
 def _find_python() -> str:
@@ -80,16 +80,18 @@ def _find_python() -> str:
 
 def _get_plugin_source_dir() -> Optional[Path]:
     """Find the bundled plugin source directory"""
-    # Method 1: Relative to this module's location
+    # Method 1: Relative to this module's location (empirica package)
     module_dir = Path(__file__).parent.parent.parent  # empirica/cli/command_handlers -> empirica/
     bundled_path = module_dir / "plugins" / "claude-code-integration"
-    if bundled_path.exists() and (bundled_path / "plugin.json").exists():
+
+    # Check for plugin directory with hooks (the key component)
+    if bundled_path.exists() and (bundled_path / "hooks").exists():
         return bundled_path
 
     # Method 2: Check if running from dev environment (plugins at repo root)
     repo_root = module_dir.parent
     dev_path = repo_root / "plugins" / "claude-code-integration"
-    if dev_path.exists() and (dev_path / "plugin.json").exists():
+    if dev_path.exists() and (dev_path / "hooks").exists():
         return dev_path
 
     return None
@@ -543,7 +545,8 @@ def handle_setup_claude_code_command(args):
 
         # ==================== OUTPUT ====================
         if output_format == 'json':
-            result = {
+            # Return dict for cli_core.py to print
+            return {
                 "ok": True,
                 "plugin_dir": str(plugin_dir),
                 "claude_md": str(claude_dir / "CLAUDE.md") if not skip_claude_md else None,
@@ -561,7 +564,6 @@ def handle_setup_claude_code_command(args):
                 ],
                 "message": "Claude Code integration configured successfully"
             }
-            print(json.dumps(result, indent=2))
         else:
             print("\n" + "━" * 60)
             print(f"✅ {PLUGIN_NAME} v{PLUGIN_VERSION} configured successfully!")
@@ -610,11 +612,8 @@ def handle_setup_claude_code_command(args):
             print()
             print("🧠 Happy epistemic coding!")
 
-        return {
-            "ok": True,
-            "plugin_dir": str(plugin_dir),
-            "mcp_configured": mcp_installed
-        }
+        # For human output, we've already printed everything
+        return None
 
     except Exception as e:
         if getattr(args, 'output', 'human') == 'json':

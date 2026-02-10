@@ -39,7 +39,7 @@ class Empirica < Formula
 
       For Claude Code integration (status line, hooks, CLAUDE.md):
 
-        empirica setup-claude-code  # Coming soon
+        empirica setup-claude-code
 
       Quick start:
         empirica status              # System overview

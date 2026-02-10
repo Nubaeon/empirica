@@ -6,6 +6,7 @@ Organizes CLI command handlers by semantic function for maintainability.
 
 # Import all command handlers
 from .onboard import handle_onboard_command
+from .setup_claude_code import handle_setup_claude_code_command
 # noetic_praxic_commands removed - deprecated stubs
 from .modality_commands import handle_modality_route_command
 # handle_modality_decision_command removed - was using deprecated cascade
@@ -175,6 +176,7 @@ from .lesson_commands import (
 __all__ = [
     # Onboarding commands
     'handle_onboard_command',
+    'handle_setup_claude_code_command',
 
     # Modality commands (EXPERIMENTAL)
     'handle_modality_route_command',

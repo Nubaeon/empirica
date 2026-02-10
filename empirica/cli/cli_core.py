@@ -38,7 +38,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
         try:
             if isinstance(action, argparse._SubParsersAction):
                 categories = {
-                    'Getting Started': ['onboard'],
+                    'Getting Started': ['onboard', 'setup-claude-code'],
                     'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
                     'CASCADE Workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
                     'Goals & Tasks': ['goals-create', 'goals-list', 'goals-search', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-add-dependency', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume', 'goals-mark-stale', 'goals-get-stale', 'goals-refresh'],
@@ -464,8 +464,9 @@ def main(args=None):
             'lesson-stats': handle_lesson_stats_command,
             'lesson-embed': handle_lesson_embed_command,
 
-            # Onboarding command
+            # Onboarding commands
             'onboard': handle_onboard_command,
+            'setup-claude-code': handle_setup_claude_code_command,
 
             # Trajectory commands (experimental epistemic prediction)
             'trajectory-show': handle_trajectory_show_command,

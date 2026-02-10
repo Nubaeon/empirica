@@ -179,6 +179,61 @@ def find_project_root(claude_session_id: str = None) -> Optional[Path]:
     return None
 
 
+def _write_active_work_for_new_conversation(
+    claude_session_id: str,
+    project_path: str,
+    empirica_session_id: str,
+    instance_id: str = None
+) -> bool:
+    """
+    Write active_work file for the NEW conversation after compaction.
+
+    This is CRITICAL: without this file, all subsequent CLI commands in the
+    new conversation (project-bootstrap, finding-log, goals-create, etc.)
+    will fail to resolve the correct project and fall through to CWD-based
+    resolution, which poisons context with the wrong project.
+
+    The pre-compact hook writes compact_handoff for project resolution,
+    but this function writes active_work for CLI command resolution.
+    """
+    if not claude_session_id:
+        return False
+
+    try:
+        active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+        folder_name = Path(project_path).name if project_path else None
+
+        work_data = {
+            'project_path': project_path,
+            'folder_name': folder_name,
+            'claude_session_id': claude_session_id,
+            'empirica_session_id': empirica_session_id,
+            'source': 'post-compact',
+            'timestamp': datetime.now().isoformat(),
+            'timestamp_epoch': datetime.now().timestamp()
+        }
+
+        with open(active_work_file, 'w') as f:
+            json.dump(work_data, f, indent=2)
+
+        # Also update instance_projects for consistency
+        if instance_id:
+            instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
+            instance_file.parent.mkdir(parents=True, exist_ok=True)
+            instance_data = {
+                'project_path': project_path,
+                'claude_session_id': claude_session_id,
+                'empirica_session_id': empirica_session_id,
+                'timestamp': datetime.now().isoformat()
+            }
+            with open(instance_file, 'w') as f:
+                json.dump(instance_data, f, indent=2)
+
+        return True
+    except Exception:
+        return False
+
+
 def main():
     hook_input = json.loads(sys.stdin.read())
     claude_session_id = hook_input.get('session_id')
@@ -195,6 +250,9 @@ def main():
         }))
         sys.exit(1)
     os.chdir(project_root)
+
+    # Compute instance_id for active_work file writing
+    instance_id = _get_instance_id()
 
     # Now safe to import empirica (after cwd is set correctly)
     sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
@@ -247,6 +305,16 @@ def main():
             active_transaction=active_transaction
         )
         action_required = "CONTINUE_TRANSACTION"
+
+        # CRITICAL: Write active_work file for NEW conversation even when continuing transaction.
+        # The transaction file has the right session_id, but CLI commands need active_work
+        # keyed by the NEW claude_session_id to resolve the correct project.
+        _write_active_work_for_new_conversation(
+            claude_session_id=claude_session_id,
+            project_path=str(project_root),
+            empirica_session_id=empirica_session,
+            instance_id=instance_id
+        )
     elif phase_state.get('is_complete'):
         # NEW: Actually create session and run bootstrap here
         # This enforces the correct sequence before AI does PREFLIGHT
@@ -265,6 +333,16 @@ def main():
         # Update session_id if we created one
         if session_bootstrap.get('session_id'):
             empirica_session = session_bootstrap['session_id']
+
+        # CRITICAL: Write active_work file for NEW conversation so all subsequent
+        # CLI commands (project-bootstrap, finding-log, etc.) resolve correctly.
+        # Without this, CLI falls through to CWD-based git remote lookup = wrong project.
+        _write_active_work_for_new_conversation(
+            claude_session_id=claude_session_id,
+            project_path=str(project_root),
+            empirica_session_id=empirica_session,
+            instance_id=instance_id
+        )
     else:
         recovery_prompt = _generate_check_prompt(
             pre_vectors=pre_vectors,
@@ -272,6 +350,14 @@ def main():
             dynamic_context=dynamic_context
         )
         action_required = "CHECK_GATE"
+
+        # CRITICAL: Write active_work file for NEW conversation
+        _write_active_work_for_new_conversation(
+            claude_session_id=claude_session_id,
+            project_path=str(project_root),
+            empirica_session_id=empirica_session,
+            instance_id=instance_id
+        )
 
     # Calculate what drift WOULD be if vectors unchanged (to show the problem)
     potential_drift = _calculate_potential_drift(pre_vectors)

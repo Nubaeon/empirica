@@ -60,8 +60,48 @@ PREFLIGHT ──► CHECK ──► POSTFLIGHT ──► POST-TEST
 POSTFLIGHT automatically triggers post-test verification: objective evidence
 (tests, artifacts, git, goals) is compared to self-assessed vectors.
 
-**Per-Goal Loops:** Each goal gets its own PREFLIGHT → work → CHECK → POSTFLIGHT cycle.
-One goal = one epistemic loop. Complete before starting the next.
+**Transactions are measurement windows**, not goal boundaries. Multiple goals per
+transaction is fine. One goal spanning multiple transactions is fine.
+
+---
+
+## TRANSACTION DISCIPLINE
+
+A transaction = one **coherent chunk** of work. Scope it at PREFLIGHT time.
+
+### Scoping Rules
+
+| Scope | Example | Transactions |
+|-------|---------|-------------|
+| Small fix | Bug fix, config change | 1 transaction |
+| Feature | Schema + widgets + layout | 2-3 transactions |
+| Architecture | Cross-cutting redesign | 3-5 transactions |
+
+**PREFLIGHT declares scope.** Say what this transaction will cover. If scope
+creeps during work, that's a signal to POSTFLIGHT and start a new transaction.
+
+### Natural Commit Points
+
+POSTFLIGHT when any of these occur:
+- Completed a coherent chunk (tests pass, code committed)
+- Confidence inflection (know jumped or uncertainty spiked)
+- Context shift (switching files, domains, or approaches)
+- Scope grew beyond what PREFLIGHT declared
+- You've been working for 10+ turns without measurement
+
+**Smaller transactions = better focus, better measurement, better continuity
+across compaction.** Each POSTFLIGHT offloads work to persistent memory.
+
+### Enforcement
+
+The system enforces transaction discipline:
+- **Sentinel CHECK** gates noetic → praxic transition
+- **Stop hook** tracks turns since last POSTFLIGHT:
+  - Soft reminder at ~12 turns
+  - Hard block at ~20 turns (must POSTFLIGHT to continue)
+- **Session end** auto-captures POSTFLIGHT if one is missing
+
+Unmeasured work is epistemic dark matter — it happened but can't be calibrated.
 
 ---
 
