@@ -289,6 +289,33 @@ def handle_project_create_command(args):
         )
         db.close()
 
+        # Register in workspace.db for cross-project visibility (project-list, project-switch)
+        try:
+            from empirica.config.path_resolver import get_git_root
+            from .workspace_init import _register_in_workspace_db
+
+            # Determine trajectory_path: use git root if in repo, otherwise first repo path
+            git_root = get_git_root()
+            if git_root:
+                trajectory_path = str(git_root)
+            elif repos and len(repos) > 0:
+                trajectory_path = repos[0]
+            else:
+                trajectory_path = None
+
+            if trajectory_path:
+                _register_in_workspace_db(
+                    project_id=project_id,
+                    name=name,
+                    trajectory_path=trajectory_path,
+                    description=description,
+                    git_remote_url=None  # Could extract from git if needed
+                )
+                logger.debug(f"Registered project {name} in workspace.db")
+        except Exception as e:
+            logger.warning(f"Failed to register in workspace.db: {e}")
+            # Non-fatal - project still created in local DB
+
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
             result = {

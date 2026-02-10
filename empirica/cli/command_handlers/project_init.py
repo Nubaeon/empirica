@@ -39,8 +39,11 @@ def handle_project_init_command(args):
             print("\nRun 'git init' first, then try again")
             return None
         
-        interactive = not getattr(args, 'non_interactive', False)
+        # Auto-detect non-interactive: explicit flag OR no TTY OR JSON output
+        explicit_non_interactive = getattr(args, 'non_interactive', False)
+        has_tty = sys.stdin.isatty() if hasattr(sys.stdin, 'isatty') else False
         output_format = getattr(args, 'output', 'default')
+        interactive = not explicit_non_interactive and has_tty and output_format != 'json'
         
         # Check if already initialized
         config_path = git_root / '.empirica' / 'config.yaml'

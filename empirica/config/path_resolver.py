@@ -264,7 +264,13 @@ def get_session_db_path() -> Path:
             logger.warning(f"⚠️  Invalid EMPIRICA_SESSION_DB: {e}")
 
     # No valid path found - raise error instead of guessing
-    raise ValueError("Cannot determine sessions.db path - not in a git repo, no context found, and no env vars set")
+    raise ValueError(
+        "Cannot determine sessions.db path - not in a git repo, no context found, and no env vars set.\n"
+        "Options:\n"
+        "  1. Run 'empirica project-init' to initialize this repo\n"
+        "  2. Use 'empirica session-create --ai-id <name> --auto-init' for first-time setup\n"
+        "  3. Set EMPIRICA_SESSION_DB environment variable explicitly"
+    )
 
 
 def resolve_session_db_path(session_id: str) -> Optional[Path]:
