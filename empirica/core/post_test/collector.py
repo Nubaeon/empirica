@@ -210,16 +210,22 @@ class PostTestCollector:
         has_goals = len(goal_ids) > 0
 
         # --- Scope-weighted unknowns ---
+        # Unknowns linked to COMPLETED goals are intentionally deferred —
+        # they represent future work, not current knowledge gaps.
+        # Exclude them from the resolution ratio to avoid depressing know.
         if has_goals:
             placeholders = ",".join("?" for _ in goal_ids)
-            # Goal-scoped unknowns (full weight)
+            # Goal-scoped unknowns (full weight), excluding deferred
+            # (deferred = unresolved unknown linked to a completed goal)
             cursor.execute(f"""
                 SELECT
                     COUNT(*) as total,
-                    SUM(CASE WHEN is_resolved = 1 THEN 1 ELSE 0 END) as resolved
-                FROM project_unknowns
-                WHERE session_id = ?
-                  AND goal_id IN ({placeholders})
+                    SUM(CASE WHEN u.is_resolved = 1 THEN 1 ELSE 0 END) as resolved
+                FROM project_unknowns u
+                LEFT JOIN goals g ON u.goal_id = g.id
+                WHERE u.session_id = ?
+                  AND u.goal_id IN ({placeholders})
+                  AND NOT (u.is_resolved = 0 AND g.status = 'completed')
             """, (self.session_id, *goal_ids))
             row = cursor.fetchone()
             scoped_total = row[0] if row else 0
