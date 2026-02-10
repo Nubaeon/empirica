@@ -896,6 +896,13 @@ def main():
                         respond("allow", "Safe empirica command (loop closed)")
                         sys.exit(0)
 
+                    # Safe read-only commands (git status, ls, grep, etc.)
+                    # Uses SAFE_BASH_PREFIXES which only includes read-only operations
+                    if is_safe_bash_command(tool_input):
+                        db.close()
+                        respond("allow", "Safe read-only command (loop closed)")
+                        sys.exit(0)
+
                 db.close()
                 respond("deny", f"Epistemic loop closed (POSTFLIGHT completed). Run new PREFLIGHT to start next goal.")
                 sys.exit(0)
