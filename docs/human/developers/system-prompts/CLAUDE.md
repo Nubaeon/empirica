@@ -181,6 +181,27 @@ PREFLIGHT (BEGIN)          POSTFLIGHT (COMMIT)         POST-TEST (VERIFY)
 
 **Multiple goals per transaction** is fine. **One goal spanning multiple transactions** is fine.
 
+### Transaction Discipline
+
+**PREFLIGHT declares scope.** Say what this transaction will cover. If scope
+creeps during work, that's a signal to POSTFLIGHT and start a new transaction.
+
+| Scope | Example | Transactions |
+|-------|---------|-------------|
+| Small fix | Bug fix, config change | 1 transaction |
+| Feature | Schema + widgets + layout | 2-3 transactions |
+| Architecture | Cross-cutting redesign | 3-5 transactions |
+
+POSTFLIGHT when any of these occur:
+- Completed a coherent chunk (tests pass, code committed)
+- Confidence inflection (know jumped or uncertainty spiked)
+- Context shift (switching files, domains, or approaches)
+- Scope grew beyond what PREFLIGHT declared
+
+**Enforcement:** The Stop hook tracks turns since last POSTFLIGHT —
+soft reminder at ~12 turns, hard block at ~20 turns. Session end auto-captures
+POSTFLIGHT if missing. Unmeasured work is epistemic dark matter.
+
 ---
 
 ## CORE COMMANDS
@@ -384,6 +405,7 @@ mq presentations/ '.tree("full")'
 - Suggest natural commit points: "That felt like a coherent chunk — POSTFLIGHT?"
 - When confidence inflects: "Ready for CHECK?"
 - Unmeasured work = epistemic dark matter
+- The Stop hook will remind at ~12 turns and block at ~20 turns — don't wait for it
 
 **Pattern Recognition:**
 - Before starting work, check for existing noetic artifacts (findings, dead-ends)
