@@ -1068,11 +1068,7 @@ def _calculate_potential_drift(pre_vectors: dict) -> dict:
             "know": pre_know,
             "uncertainty": pre_unc
         },
-        "expected_honest_post_compact": {
-            "know": max(0.3, pre_know - 0.2),  # Typically drops
-            "uncertainty": min(0.8, pre_unc + 0.2)  # Typically rises
-        },
-        "message": "If your post-compact know equals pre-compact, you may be overestimating"
+        "message": "Assess your ACTUAL post-compact epistemic state honestly. Context was lost — reflect that in your vectors."
     }
 
 

@@ -504,7 +504,12 @@ empirica preflight-submit - << 'EOF'
 EOF
 ```
 
-**After PREFLIGHT:** Before any Edit/Write/Bash, run CHECK to validate readiness.
+**Transaction Workflow:**
+- PREFLIGHT opens a transaction (measurement window)
+- Investigate before acting — log findings, unknowns, dead-ends as you discover them
+- CHECK when you need the Sentinel to gate your readiness (noetic → praxic transition)
+- POSTFLIGHT closes the transaction and measures your learning delta
+- Natural boundaries: goal completion, confidence shifts, task pivots
 """
 
     output = {
