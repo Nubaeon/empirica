@@ -207,28 +207,47 @@ EMPIRICA_TIER2_PREFIXES = (
 )
 
 
+def _check_empirica_prefixes(cmd: str) -> bool:
+    """Check if a single command segment matches empirica tier 1 or tier 2 prefixes."""
+    cmd = cmd.lstrip()
+    if not cmd.startswith('empirica '):
+        return False
+    for prefix in EMPIRICA_TIER1_PREFIXES:
+        if cmd.startswith(prefix):
+            return True
+    for prefix in EMPIRICA_TIER2_PREFIXES:
+        if cmd.startswith(prefix):
+            return True
+    return False
+
+
 def is_safe_empirica_command(command: str) -> bool:
     """Tiered whitelist for empirica CLI commands.
 
     Tier 1: Read-only (always allowed)
     Tier 2: State-changing (allowed - these are the epistemic workflow itself)
 
+    Handles pipes (echo '...' | empirica preflight-submit -) and && chains.
     Toggle operations are NOT whitelisted here - they use self-exemption
     in the main gate logic to prevent prompt injection bypass.
     """
     cmd = command.lstrip()
-    if not cmd.startswith('empirica '):
-        return False
 
-    # Tier 1: Read-only - always safe
-    for prefix in EMPIRICA_TIER1_PREFIXES:
-        if cmd.startswith(prefix):
-            return True
+    # Direct match
+    if _check_empirica_prefixes(cmd):
+        return True
 
-    # Tier 2: State-changing - allowed (these enable the workflow)
-    for prefix in EMPIRICA_TIER2_PREFIXES:
-        if cmd.startswith(prefix):
-            return True
+    # Check pipe segments (echo '...' | empirica command)
+    if '|' in cmd:
+        for segment in cmd.split('|'):
+            if _check_empirica_prefixes(segment.strip()):
+                return True
+
+    # Check && chain segments
+    if '&&' in cmd:
+        for segment in cmd.split('&&'):
+            if _check_empirica_prefixes(segment.strip()):
+                return True
 
     return False
 
@@ -264,12 +283,31 @@ def is_transition_command(command: str) -> bool:
     These are allowed after POSTFLIGHT to prevent the chicken-and-egg
     problem where you can't switch projects without a new PREFLIGHT,
     but can't create a PREFLIGHT in the new project without switching.
+
+    Handles pipes (echo '...' | empirica preflight-submit) and && chains.
     """
     cmd = command.lstrip()
 
+    # Direct match
     for prefix in TRANSITION_COMMANDS:
         if cmd.startswith(prefix):
             return True
+
+    # Check pipe segments (echo '...' | empirica preflight-submit -)
+    if '|' in cmd:
+        for segment in cmd.split('|'):
+            segment = segment.strip()
+            for prefix in TRANSITION_COMMANDS:
+                if segment.startswith(prefix):
+                    return True
+
+    # Check && chain segments
+    if '&&' in cmd:
+        for segment in cmd.split('&&'):
+            segment = segment.strip()
+            for prefix in TRANSITION_COMMANDS:
+                if segment.startswith(prefix):
+                    return True
 
     return False
 
