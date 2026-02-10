@@ -147,7 +147,15 @@ def upsert_memory(project_id: str, items: List[Dict]) -> int:
                 "is_resolved": it.get("is_resolved"),
                 "resolved_by": it.get("resolved_by"),
             }
-            points.append(PointStruct(id=it["id"], vector=vector, payload=payload))
+            # Use consistent ID derivation: md5 hash for string IDs (UUIDs),
+            # raw integer for numeric IDs — matches embed_single_memory_item
+            raw_id = it["id"]
+            if isinstance(raw_id, str):
+                import hashlib
+                point_id = int(hashlib.md5(raw_id.encode()).hexdigest()[:15], 16)
+            else:
+                point_id = raw_id
+            points.append(PointStruct(id=point_id, vector=vector, payload=payload))
         if points:
             client.upsert(collection_name=coll, points=points)
         return len(points)

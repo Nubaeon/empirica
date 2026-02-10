@@ -545,7 +545,7 @@ def retrieve_task_patterns(
             if goals_raw:
                 result["related_goals"] = [
                     {
-                        "objective": g.get("objective", ""),
+                        "objective": g.get("objective") or g.get("description", ""),
                         "status": g.get("status", ""),
                         "type": g.get("type", "goal"),
                         "goal_id": g.get("goal_id", ""),
@@ -760,7 +760,7 @@ def check_against_patterns(
             if goals_raw:
                 warnings["active_goals"] = [
                     {
-                        "objective": g.get("objective", ""),
+                        "objective": g.get("objective") or g.get("description", ""),
                         "status": g.get("status", ""),
                         "type": g.get("type", "goal"),
                         "score": g.get("score", 0.0)

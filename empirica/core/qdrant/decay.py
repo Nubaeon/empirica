@@ -80,7 +80,7 @@ def decay_eidetic_by_finding(
     domain: str = None,
     decay_amount: float = 0.03,
     min_confidence: float = 0.3,
-    similarity_threshold: float = 0.6,
+    similarity_threshold: float = 0.85,
     limit: int = 5,
 ) -> int:
     """Decay eidetic facts semantically similar to a contradicting finding.
@@ -88,6 +88,10 @@ def decay_eidetic_by_finding(
     CENTRAL TOLERANCE: If domain provided, only decay facts in that domain.
     Lighter decay (0.03) than lessons (0.05) — eidetic facts have higher
     inertia from multiple confirmations.
+
+    Threshold is deliberately high (0.85) to prevent autoimmune decay —
+    semantic similarity alone doesn't imply contradiction. Only near-exact
+    matches with opposing content should trigger decay.
 
     Returns number of facts decayed.
     """

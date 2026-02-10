@@ -1674,17 +1674,18 @@ def handle_finding_log_command(args):
             logger.debug(f"Lesson decay check failed: {decay_err}")
 
         # Cross-layer: decay eidetic facts that contradict this finding
+        # Only when a domain/subject is provided — domainless findings spray too broadly
         eidetic_decayed = 0
         try:
             from empirica.core.qdrant.vector_store import decay_eidetic_by_finding
-            if project_id:
+            if project_id and subject:
                 eidetic_decayed = decay_eidetic_by_finding(
                     project_id,
                     finding,
-                    domain=subject or "",
+                    domain=subject,
                 )
                 if eidetic_decayed:
-                    logger.info(f"IMMUNE: Decayed {eidetic_decayed} eidetic facts contradicted by finding")
+                    logger.info(f"IMMUNE: Decayed {eidetic_decayed} eidetic facts by finding in domain '{subject}'")
         except Exception as eidetic_err:
             logger.debug(f"Eidetic decay skipped: {eidetic_err}")
 
