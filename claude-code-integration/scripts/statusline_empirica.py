@@ -1041,9 +1041,10 @@ def main():
             return
 
         # Auto-detect project from active context
-        # Priority: 1) EMPIRICA_PROJECT_PATH env, 2) active_work (project-switch/sentinel heal),
-        #           3) TTY session, 4) path_resolver, 5) CWD upward search
+        # Priority: 1) EMPIRICA_PROJECT_PATH env, 2) active_work_{session}.json (instance-specific),
+        #           3) TTY session, 4) path_resolver, 5) generic active_work.json (LAST RESORT)
         # NOTE: We do NOT fall back to global ~/.empirica/ to prevent cross-project data leakage
+        # NOTE: NO CWD upward search — CWD is unreliable in Claude Code hooks
         project_path = os.getenv('EMPIRICA_PROJECT_PATH')
         is_local_project = False
 
@@ -1070,18 +1071,6 @@ def main():
                                 project_path = aw_project
                                 is_local_project = True
 
-                # 2b: generic active_work.json (healed by sentinel, multi-instance safe)
-                if not project_path:
-                    generic_aw = Path.home() / '.empirica' / 'active_work.json'
-                    if generic_aw.exists():
-                        with open(generic_aw, 'r') as f:
-                            aw_data = _json.load(f)
-                        aw_project = aw_data.get('project_path')
-                        if aw_project:
-                            aw_db = Path(aw_project) / '.empirica' / 'sessions' / 'sessions.db'
-                            if aw_db.exists():
-                                project_path = aw_project
-                                is_local_project = True
             except Exception:
                 pass
 
@@ -1114,17 +1103,22 @@ def main():
             except (ImportError, Exception):
                 pass
 
+        # Priority 5: generic active_work.json (LAST RESORT — shared across instances)
         if not project_path:
-            # Fallback: Search UPWARD for .empirica/ like git does for .git/
-            current = Path.cwd()
-            for parent in [current] + list(current.parents):
-                candidate_db = parent / '.empirica' / 'sessions' / 'sessions.db'
-                if candidate_db.exists():
-                    project_path = str(parent)
-                    is_local_project = True
-                    break
-                if parent == Path.home() or parent == parent.parent:
-                    break
+            try:
+                import json as _json2
+                generic_aw = Path.home() / '.empirica' / 'active_work.json'
+                if generic_aw.exists():
+                    with open(generic_aw, 'r') as f:
+                        aw_data = _json2.load(f)
+                    aw_project = aw_data.get('project_path')
+                    if aw_project:
+                        aw_db = Path(aw_project) / '.empirica' / 'sessions' / 'sessions.db'
+                        if aw_db.exists():
+                            project_path = aw_project
+                            is_local_project = True
+            except Exception:
+                pass
 
         if project_path:
             db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
