@@ -13,6 +13,8 @@ from empirica.core.qdrant.collections import (
     _eidetic_collection, _memory_collection, _global_learnings_collection,
     _assumptions_collection,
 )
+from empirica.core.qdrant.eidetic import search_eidetic
+from empirica.core.qdrant.global_sync import embed_to_global
 
 def decay_eidetic_fact(
     project_id: str,
