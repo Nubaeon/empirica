@@ -2,12 +2,11 @@
 Core memory operations: embed, upsert, and search for memory items and docs.
 """
 from __future__ import annotations
-import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from empirica.core.qdrant.connection import (
     _check_qdrant_available, _get_qdrant_imports, _get_qdrant_client,
-    _get_embedding_safe, _get_vector_size, _service_url, _rest_search, logger,
+    _get_embedding_safe, _get_vector_size, _rest_search, logger,
 )
 from empirica.core.qdrant.collections import (
     _docs_collection, _memory_collection, _eidetic_collection, _episodic_collection,
@@ -162,30 +161,6 @@ def upsert_memory(project_id: str, items: List[Dict]) -> int:
     except Exception as e:
         logger.warning(f"Failed to upsert memory: {e}")
         return 0
-
-
-def _service_url() -> Optional[str]:
-    return os.getenv("EMPIRICA_QDRANT_URL")
-
-
-def _rest_search(collection: str, vector: List[float], limit: int) -> List[Dict]:
-    """REST-based search (requires EMPIRICA_QDRANT_URL)."""
-    try:
-        import requests
-        url = _service_url()
-        if not url:
-            return []
-        resp = requests.post(
-            f"{url}/collections/{collection}/points/search",
-            json={"vector": vector, "limit": limit, "with_payload": True},
-            timeout=10,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("result", [])
-    except Exception as e:
-        logger.debug(f"REST search failed: {e}")
-        return []
 
 
 def search(project_id: str, query_text: str, kind: str = "focused", limit: int = 5) -> Dict[str, List[Dict]]:

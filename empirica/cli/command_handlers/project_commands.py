@@ -3250,41 +3250,54 @@ def handle_project_switch_command(args):
                         tx_data = _json.load(f)
 
                     if tx_data.get('status') == 'open':
-                        # Auto-close with POSTFLIGHT
-                        import subprocess
-                        tx_session_id = tx_data.get('session_id')
-                        if tx_session_id:
-                            postflight_cmd = ['empirica', 'postflight-submit', '-']
-                            postflight_input = _json.dumps({
-                                "session_id": tx_session_id,
-                                "vectors": {
-                                    "know": 0.7,
-                                    "uncertainty": 0.3,
-                                    "context": 0.7,
-                                    "completion": 0.5
-                                },
-                                "reasoning": f"Auto-POSTFLIGHT: Project switch to {folder_name}. Transaction auto-closed to maintain epistemic measurement integrity."
-                            })
-                            # Run in current project directory (before switch)
-                            result = subprocess.run(
-                                postflight_cmd,
-                                input=postflight_input,
-                                capture_output=True,
-                                text=True,
-                                timeout=30,
-                                cwd=str(current_empirica_root.parent)  # Project root
-                            )
-                            if result.returncode == 0:
-                                postflight_result = {"ok": True, "reason": "project_switch"}
-                                # Clear the old transaction file so sentinel doesn't see stale state
-                                try:
-                                    tx_path.unlink()
-                                except Exception:
-                                    pass
-                                if output_format == 'human':
-                                    print("📊 Auto-closed previous transaction (POSTFLIGHT)")
-                            else:
-                                postflight_result = {"ok": False, "error": result.stderr[:200]}
+                        # Only auto-close if the transaction is from a DIFFERENT project
+                        # than the destination. Switching to the same project (or switching
+                        # right after opening a transaction) should NOT destroy the transaction.
+                        tx_project_path = tx_data.get('project_path', '')
+                        dest_project_str = str(project_path) if project_path else ''
+                        # Normalize for comparison (resolve symlinks, trailing slashes)
+                        tx_project_normalized = str(Path(tx_project_path).resolve()) if tx_project_path else ''
+                        dest_normalized = str(Path(dest_project_str).resolve()) if dest_project_str else ''
+
+                        if tx_project_normalized == dest_normalized:
+                            # Transaction is for the destination project — don't close it
+                            postflight_result = {"ok": True, "reason": "transaction_preserved", "note": "Transaction is for destination project, not closed"}
+                        else:
+                            # Transaction is for a different project — close it
+                            import subprocess
+                            tx_session_id = tx_data.get('session_id')
+                            if tx_session_id:
+                                postflight_cmd = ['empirica', 'postflight-submit', '-']
+                                postflight_input = _json.dumps({
+                                    "session_id": tx_session_id,
+                                    "vectors": {
+                                        "know": 0.7,
+                                        "uncertainty": 0.3,
+                                        "context": 0.7,
+                                        "completion": 0.5
+                                    },
+                                    "reasoning": f"Auto-POSTFLIGHT: Project switch to {folder_name}. Transaction auto-closed to maintain epistemic measurement integrity."
+                                })
+                                # Run in current project directory (before switch)
+                                result = subprocess.run(
+                                    postflight_cmd,
+                                    input=postflight_input,
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=30,
+                                    cwd=str(current_empirica_root.parent)  # Project root
+                                )
+                                if result.returncode == 0:
+                                    postflight_result = {"ok": True, "reason": "project_switch"}
+                                    # Clear the old transaction file so sentinel doesn't see stale state
+                                    try:
+                                        tx_path.unlink()
+                                    except Exception:
+                                        pass
+                                    if output_format == 'human':
+                                        print("📊 Auto-closed previous transaction (POSTFLIGHT)")
+                                else:
+                                    postflight_result = {"ok": False, "error": result.stderr[:200]}
         except Exception as e:
             # Non-fatal - continue with switch even if POSTFLIGHT fails
             postflight_result = {"ok": False, "error": str(e)}
