@@ -433,9 +433,13 @@ def handle_preflight_submit_command(args):
                         project_id,
                         search_context,
                         last_session_timestamp=last_session_ts,
-                        include_eidetic=True,  # Include eidetic facts in PREFLIGHT
-                        include_episodic=True,  # Include episodic narratives in PREFLIGHT
-                        include_related_docs=True,  # Include related reference docs
+                        include_eidetic=True,
+                        include_episodic=True,
+                        include_related_docs=True,
+                        include_goals=True,
+                        include_assumptions=True,
+                        include_decisions=True,
+                        vectors=vectors,
                     )
                     if patterns and any(v for k, v in patterns.items() if k != 'time_gap'):
                         time_gap = patterns.get('time_gap', {})
@@ -445,7 +449,10 @@ def handle_preflight_submit_command(args):
                                    f"{len(patterns.get('relevant_findings', []))} findings, "
                                    f"{len(patterns.get('eidetic_facts', []))} eidetic, "
                                    f"{len(patterns.get('episodic_narratives', []))} episodic, "
-                                   f"{len(patterns.get('related_docs', []))} docs")
+                                   f"{len(patterns.get('related_docs', []))} docs, "
+                                   f"{len(patterns.get('related_goals', []))} goals, "
+                                   f"{len(patterns.get('unverified_assumptions', []))} assumptions, "
+                                   f"{len(patterns.get('prior_decisions', []))} decisions")
                 except Exception as e:
                     logger.debug(f"Pattern retrieval failed (optional): {e}")
 
@@ -1368,6 +1375,25 @@ def handle_check_submit_command(args):
                 logger.debug(f"Blindspot scan skipped: {e}")
                 result["blindspots"] = {"count": 0, "error": str(e)}
 
+            # NOETIC RAG: CHECK pattern retrieval — enriched context for proceed/investigate decision
+            try:
+                check_project_id = (bootstrap_result or {}).get('project_id') or bootstrap_status.get('project_id')
+                if check_project_id:
+                    from empirica.core.qdrant.pattern_retrieval import check_against_patterns
+                    check_patterns = check_against_patterns(
+                        check_project_id,
+                        reasoning or "",
+                        vectors=vectors,
+                        include_findings=True,
+                        include_eidetic=True,
+                        include_goals=True,
+                        include_assumptions=True,
+                    )
+                    if check_patterns and check_patterns.get("has_warnings"):
+                        result["patterns"] = check_patterns
+            except Exception as e:
+                logger.debug(f"CHECK pattern retrieval failed (optional): {e}")
+
             # AUTO-POSTFLIGHT TRIGGER: Check if goal completion detected
             # Uses completion and impact vectors to determine if a goal was completed
             # This closes the epistemic loop automatically without user intervention
@@ -2214,6 +2240,46 @@ def handle_postflight_submit_command(args):
                 # Memory sync is optional (requires Qdrant)
                 logger.debug(f"Memory sync skipped: {e}")
 
+            # NOETIC RAG: POSTFLIGHT decay triggers + auto-global-sync
+            global_synced = False
+            stale_decayed = False
+            assumptions_urgency_updated = False
+            try:
+                if _check_qdrant_available() and session and session.get('project_id'):
+                    postflight_project_id = session['project_id']
+
+                    # 1. Auto-sync high-impact findings to global learnings
+                    try:
+                        from empirica.core.qdrant.vector_store import auto_sync_session_to_global
+                        synced = auto_sync_session_to_global(postflight_project_id, session_id)
+                        global_synced = synced > 0
+                        if synced:
+                            logger.debug(f"POSTFLIGHT: Auto-synced {synced} findings to global learnings")
+                    except Exception as e_sync:
+                        logger.debug(f"Global sync skipped: {e_sync}")
+
+                    # 2. Apply staleness signal to old memory items
+                    try:
+                        from empirica.core.qdrant.vector_store import apply_staleness_signal
+                        stale_count = apply_staleness_signal(postflight_project_id)
+                        stale_decayed = stale_count > 0
+                        if stale_count:
+                            logger.debug(f"POSTFLIGHT: Applied staleness signal to {stale_count} memory items")
+                    except Exception as e_stale:
+                        logger.debug(f"Staleness decay skipped: {e_stale}")
+
+                    # 3. Update assumption urgency (unverified = higher risk over time)
+                    try:
+                        from empirica.core.qdrant.vector_store import update_assumption_urgency
+                        urgency_count = update_assumption_urgency(postflight_project_id)
+                        assumptions_urgency_updated = urgency_count > 0
+                        if urgency_count:
+                            logger.debug(f"POSTFLIGHT: Updated urgency for {urgency_count} assumptions")
+                    except Exception as e_urgency:
+                        logger.debug(f"Assumption urgency update skipped: {e_urgency}")
+            except Exception as e_decay:
+                logger.debug(f"POSTFLIGHT decay triggers skipped: {e_decay}")
+
             # EPISTEMIC SNAPSHOT: Create replay-capable snapshot with delta chain
             # This enables session replay by storing explicit deltas + previous_snapshot_id links
             snapshot_created = False
@@ -2287,7 +2353,10 @@ def handle_postflight_submit_command(args):
                     "epistemic_snapshots": snapshot_created,
                     "qdrant_memory": memory_synced > 0,
                     "grounded_calibration": grounded_verification is not None,
-                    "grounded_calibration_embedded": grounded_embedded
+                    "grounded_calibration_embedded": grounded_embedded,
+                    "global_synced": global_synced,
+                    "stale_decayed": stale_decayed,
+                    "assumptions_urgency_updated": assumptions_urgency_updated,
                 }.items() if v},  # Only show layers that succeeded
                 "breadcrumbs": {
                     "learning_trajectory_exported": calibration_exported,

@@ -1629,9 +1629,37 @@ def handle_finding_log_command(args):
             )
             if decayed_lessons:
                 logger.info(f"IMMUNE: Decayed {len(decayed_lessons)} related lessons in domain '{subject}'")
+
+                # Cross-layer sync: propagate YAML lesson decay to Qdrant payloads
+                try:
+                    from empirica.core.qdrant.vector_store import propagate_lesson_confidence_to_qdrant
+                    if project_id:
+                        for dl in decayed_lessons:
+                            propagate_lesson_confidence_to_qdrant(
+                                project_id,
+                                dl.get('name', ''),
+                                dl.get('new_confidence', 0.3)
+                            )
+                except Exception as qdrant_sync_err:
+                    logger.debug(f"Lesson→Qdrant sync skipped: {qdrant_sync_err}")
         except Exception as decay_err:
             # Non-fatal - log but continue
             logger.debug(f"Lesson decay check failed: {decay_err}")
+
+        # Cross-layer: decay eidetic facts that contradict this finding
+        eidetic_decayed = 0
+        try:
+            from empirica.core.qdrant.vector_store import decay_eidetic_by_finding
+            if project_id:
+                eidetic_decayed = decay_eidetic_by_finding(
+                    project_id,
+                    finding,
+                    domain=subject or "",
+                )
+                if eidetic_decayed:
+                    logger.info(f"IMMUNE: Decayed {eidetic_decayed} eidetic facts contradicted by finding")
+        except Exception as eidetic_err:
+            logger.debug(f"Eidetic decay skipped: {eidetic_err}")
 
         result = {
             "ok": True,
@@ -1642,6 +1670,7 @@ def handle_finding_log_command(args):
             "embedded": embedded,
             "eidetic": eidetic_result,  # "created" | "confirmed" | None
             "immune_decay": decayed_lessons if decayed_lessons else None,  # Lessons affected by this finding
+            "eidetic_decayed": eidetic_decayed if eidetic_decayed else None,
             "message": "Finding logged to project scope"
         }
 
