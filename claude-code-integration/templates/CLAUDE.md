@@ -15,7 +15,7 @@
 **Calibration:** Dynamically injected at session start from `.breadcrumbs.yaml`.
 Internalize the bias corrections shown — adjust self-assessments accordingly.
 
-**Readiness gate:** know >= 0.70 AND uncertainty <= 0.35 (after bias correction)
+**Readiness gate:** Managed by Sentinel. Assess honestly — do not target specific thresholds.
 
 ---
 
@@ -190,9 +190,8 @@ PREFLIGHT (BEGIN)          POSTFLIGHT (COMMIT)         POST-TEST (VERIFY)
 `get_active_empirica_session_id()` with priority: transaction → active_work → instance_projects.
 
 ```bash
-# Session lifecycle
-empirica session-create --ai-id claude-code --output json
-empirica project-bootstrap --output json                    # Auto-detects from CWD
+# Project context (sessions are auto-created by hooks — no manual session-create needed)
+empirica project-bootstrap --output json                    # Auto-detects from active project
 empirica project-bootstrap --project-id <folder_name>       # When outside project dir
 
 # Praxic artifacts (auto-derived session_id in transaction)
@@ -228,7 +227,7 @@ When user asks to "switch projects", "change project", "list projects", or "star
 empirica project-list                       # Show all projects with session counts
 
 # Switch active project
-empirica project-switch --project-id <ID>   # Change working project
+empirica project-switch <name-or-uuid>       # Change working project (positional arg)
 
 # Create new project
 empirica project-create --name "my-project" --path /path/to/project

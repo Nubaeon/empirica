@@ -3427,16 +3427,12 @@ def handle_project_switch_command(args):
             print("💡 Next Steps")
             print("━" * 70)
             print()
-            print("  1. Create a session to start work:")
-            print(f"     empirica session-create --ai-id <your-id>")
+            print("  1. Start a transaction (PREFLIGHT) to begin measured work")
             print()
-            print("  2. Find work matching your capability:")
-            print(f"     empirica goals-ready")
+            print("  2. Investigate before acting — log findings, unknowns, dead-ends")
             print()
-            if project_path:
-                print(f"  3. Navigate to project directory:")
-                print(f"     cd {project_path}")
-                print()
+            print("  3. CHECK when ready to proceed, POSTFLIGHT when work is complete")
+            print()
             print("⚠️  All commands now write to this project's database.")
             print("    Findings, sessions, goals → stored in this project context.")
             print()
@@ -3453,8 +3449,9 @@ def handle_project_switch_command(args):
                     'goals': project.get('total_goals', 0)
                 },
                 'next_steps': [
-                    'empirica session-create --ai-id <your-id>' if not attached_session else f'Session attached: {attached_session["session_id"][:8]}...',
-                    'empirica goals-ready'
+                    'Run PREFLIGHT to start a measured transaction',
+                    'Investigate before acting — log findings and unknowns',
+                    'CHECK when ready, POSTFLIGHT when complete'
                 ],
                 'postflight_result': postflight_result,
                 'attached_session': attached_session,

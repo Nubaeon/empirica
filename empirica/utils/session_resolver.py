@@ -412,6 +412,10 @@ def resolve_session_id(session_id_or_alias: str, ai_id: Optional[str] = None) ->
         >>> resolve_session_id("latest:active:claude-code")
         '88dbf132-...'  # Most recent active claude-code session
     """
+    # Guard against None input
+    if not session_id_or_alias:
+        raise ValueError("session_id is required (got None or empty)")
+
     # Check if it's an alias
     if not session_id_or_alias.startswith("latest") and session_id_or_alias not in ("last", "auto"):
         # Regular UUID (partial or full) - resolve via database

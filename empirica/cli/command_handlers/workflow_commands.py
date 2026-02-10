@@ -831,6 +831,14 @@ def handle_check_submit_command(args):
             output_format = getattr(args, 'output', 'human')
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
 
+        # Auto-resolve session_id from active transaction if not provided
+        if not session_id:
+            try:
+                from empirica.utils.session_resolver import get_active_empirica_session_id
+                session_id = get_active_empirica_session_id()
+            except Exception:
+                pass
+
         # Resolve partial session IDs to full UUIDs
         try:
             session_id = resolve_session_id(session_id)
@@ -1268,15 +1276,14 @@ def handle_check_submit_command(args):
                 },
                 "metacog": {
                     "computed_decision": computed_decision,
-                    "raw_vectors": {"know": know, "uncertainty": uncertainty},
-                    "bias_corrections": {"know": corrected_know - know, "uncertainty": corrected_uncertainty - uncertainty},
-                    "readiness_gate": "know>=0.70 AND uncertainty<=0.35 (uses RAW vectors, biases are informational)",
                     "gate_passed": computed_decision == "proceed",
-                    "diminishing_returns": diminishing_returns,
+                    "diminishing_returns": {
+                        "detected": diminishing_returns.get("detected", False),
+                        "recommend_proceed": diminishing_returns.get("recommend_proceed", False)
+                    },
                     "autopilot": {
                         "enabled": autopilot_mode,
-                        "binding": decision_binding,
-                        "note": "When binding=true, decision is enforced (not suggestive). Set EMPIRICA_AUTOPILOT_MODE=true to enable."
+                        "binding": decision_binding
                     }
                 },
                 "sentinel": {
@@ -2249,7 +2256,7 @@ def handle_postflight_submit_command(args):
                 "calibration": grounded_verification,  # Grounded calibration is the real calibration
                 "auto_checkpoint_created": True,
                 "persisted": True,
-                "storage_layers": {
+                "storage_layers": {k: v for k, v in {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
@@ -2260,7 +2267,7 @@ def handle_postflight_submit_command(args):
                     "qdrant_memory": memory_synced > 0,
                     "grounded_calibration": grounded_verification is not None,
                     "grounded_calibration_embedded": grounded_embedded
-                },
+                }.items() if v},  # Only show layers that succeeded
                 "breadcrumbs": {
                     "learning_trajectory_exported": calibration_exported,
                     "note": "Learning trajectory written to .breadcrumbs.yaml (NOT calibration - see grounded_calibration)"
