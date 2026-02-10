@@ -264,12 +264,36 @@ def is_transition_command(command: str) -> bool:
     These are allowed after POSTFLIGHT to prevent the chicken-and-egg
     problem where you can't switch projects without a new PREFLIGHT,
     but can't create a PREFLIGHT in the new project without switching.
+
+    Also handles piped and chained commands:
+    - echo '...' | empirica preflight-submit -
+    - cat file | empirica preflight-submit -
+    - cd /path && empirica preflight-submit - << 'EOF'
     """
     cmd = command.lstrip()
 
+    # Direct match
     for prefix in TRANSITION_COMMANDS:
         if cmd.startswith(prefix):
             return True
+
+    # Check pipe segments: echo '...' | empirica preflight-submit -
+    if '|' in cmd:
+        for segment in cmd.split('|'):
+            segment = segment.strip()
+            for prefix in TRANSITION_COMMANDS:
+                if segment.startswith(prefix):
+                    return True
+
+    # Check && chain segments: cd /path && empirica preflight-submit -
+    if '&&' in cmd:
+        for segment in cmd.split('&&'):
+            segment = segment.strip()
+            # Strip heredoc suffix for matching
+            segment_clean = segment.split('<<')[0].strip() if '<<' in segment else segment
+            for prefix in TRANSITION_COMMANDS:
+                if segment_clean.startswith(prefix):
+                    return True
 
     return False
 
@@ -520,6 +544,7 @@ def is_safe_pipe_chain(command: str) -> bool:
     Check if a piped command chain is safe (all segments are read-only).
 
     Allows: grep pattern file | head -20 | wc -l
+    Allows: echo '...' | empirica preflight-submit -  (empirica CLI)
     Blocks: grep pattern | xargs rm, cat file | bash
     """
     segments = [s.strip() for s in command.split('|')]
@@ -545,13 +570,24 @@ def is_safe_pipe_chain(command: str) -> bool:
     if not first_is_safe:
         return False
 
-    # All subsequent segments must start with safe pipe targets
+    # All subsequent segments must start with safe pipe targets OR be safe empirica commands
     for segment in segments[1:]:
+        segment = segment.strip()
+        # Strip heredoc suffix for matching (e.g., "empirica preflight-submit - << 'EOF'")
+        segment_clean = segment.split('<<')[0].strip() if '<<' in segment else segment
         segment_safe = False
-        for target in SAFE_PIPE_TARGETS:
-            if segment.startswith(target):
-                segment_safe = True
-                break
+
+        # Check empirica CLI whitelist (tiered)
+        if is_safe_empirica_command(segment_clean):
+            segment_safe = True
+
+        # Check standard safe pipe targets
+        if not segment_safe:
+            for target in SAFE_PIPE_TARGETS:
+                if segment.startswith(target):
+                    segment_safe = True
+                    break
+
         if not segment_safe:
             return False
 
