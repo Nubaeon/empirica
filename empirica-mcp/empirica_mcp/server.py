@@ -1669,7 +1669,7 @@ async def route_to_cli(tool_name: str, arguments: dict) -> List[types.TextConten
     cmd = build_cli_command(tool_name, arguments)
 
     # Determine working directory for CLI execution
-    # Priority: 1) session_id lookup (authoritative), 2) project_path arg, 3) CWD
+    # Priority: 1) session_id lookup, 2) project_path arg, 3) active_work.json, 4) CWD
     cwd = None
     if arguments.get("session_id"):
         # Session-aware: get project path from session's project_id
@@ -1678,6 +1678,16 @@ async def route_to_cli(tool_name: str, arguments: dict) -> List[types.TextConten
             cwd = session_project_path
     if not cwd and tool_name == "session_create" and arguments.get("project_path"):
         cwd = arguments["project_path"]
+    if not cwd:
+        # Fallback: read active_work.json (healed by sentinel on first tool call)
+        # MCP server doesn't have claude_session_id, so use generic active_work
+        try:
+            from empirica.utils.session_resolver import get_active_project_path
+            active_path = get_active_project_path()
+            if active_path:
+                cwd = active_path
+        except Exception:
+            pass
 
     # Execute in async executor (non-blocking)
     loop = asyncio.get_event_loop()

@@ -261,12 +261,17 @@ def is_toggle_command(command: str) -> Optional[str]:
     """
     cmd = command.lstrip()
 
-    # Detect pause file write (python3 -c "..." writing sentinel_paused)
-    if 'sentinel_paused' in cmd and ('write_text' in cmd or 'open(' in cmd):
-        return 'pause'
+    # Detect pause file write (multiple patterns)
+    if 'sentinel_paused' in cmd:
+        # python3 -c "...write_text..." or python3 -c "...open(..."
+        if 'write_text' in cmd or 'open(' in cmd:
+            return 'pause'
+        # echo '...' > ~/.empirica/sentinel_paused
+        if '>' in cmd:
+            return 'pause'
 
     # Detect pause file removal
-    if cmd.startswith('rm ') and ('sentinel_paused' in cmd):
+    if ('sentinel_paused' in cmd) and (cmd.startswith('rm ') or cmd.startswith('rm -')):
         return 'unpause'
 
     return None
@@ -846,9 +851,24 @@ def main():
             postflight_ts = float(postflight_timestamp)
 
             if postflight_ts > preflight_ts:
-                # SELF-EXEMPTION: Allow toggle and transition commands when loop is closed
-                # This enables: 1) pause/unpause toggle, 2) project switch + new session
-                # Prevents prompt injection: only works when loop is genuinely closed.
+                # SELF-EXEMPTION: Allow certain tools/commands when loop is closed
+                # This prevents the chicken-and-egg problem where you can't do
+                # anything to prepare for the next PREFLIGHT.
+
+                # Read-only tools always allowed (no state changes)
+                READ_ONLY_TOOLS = ('Read', 'Glob', 'Grep', 'LSP', 'WebFetch', 'WebSearch')
+                if tool_name in READ_ONLY_TOOLS:
+                    db.close()
+                    respond("allow", f"Read-only tool {tool_name} allowed (loop closed)")
+                    sys.exit(0)
+
+                # Write tools allowed — needed to prepare code before next PREFLIGHT
+                WRITE_TOOLS = ('Edit', 'Write', 'NotebookEdit')
+                if tool_name in WRITE_TOOLS:
+                    db.close()
+                    respond("allow", f"Write tool {tool_name} allowed (loop closed, pre-PREFLIGHT)")
+                    sys.exit(0)
+
                 if tool_name == 'Bash':
                     command = tool_input.get('command', '')
 
@@ -863,11 +883,17 @@ def main():
                         respond("allow", "Sentinel self-exemption: unpause toggle")
                         sys.exit(0)
 
-                    # Transition commands (cd, session-create, project-bootstrap)
+                    # Transition commands (cd, session-create, project-bootstrap, preflight)
                     # These enable starting a new cycle in a different project
                     if is_transition_command(command):
                         db.close()
                         respond("allow", "Transition command (starting new cycle)")
+                        sys.exit(0)
+
+                    # Safe empirica commands (read-only tier 1 + workflow tier 2)
+                    if is_safe_empirica_command(command):
+                        db.close()
+                        respond("allow", "Safe empirica command (loop closed)")
                         sys.exit(0)
 
                 db.close()
