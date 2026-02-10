@@ -146,6 +146,23 @@ def _calibration_collection(project_id: str) -> str:
     return f"project_{project_id}_calibration"
 
 
+# --- Forward-compatible collections for Epistemic Intent Layer ---
+
+def _assumptions_collection(project_id: str) -> str:
+    """Collection for assumptions (unverified beliefs with urgency decay)."""
+    return f"project_{project_id}_assumptions"
+
+
+def _decisions_collection(project_id: str) -> str:
+    """Collection for decisions (recorded choice points with rationale)."""
+    return f"project_{project_id}_decisions"
+
+
+def _intents_collection(project_id: str) -> str:
+    """Collection for IntentEdges (provenance graph: noetic↔praxic transforms)."""
+    return f"project_{project_id}_intents"
+
+
 def init_collections(project_id: str) -> bool:
     """Initialize Qdrant collections. Returns False if Qdrant not available."""
     if not _check_qdrant_available():
@@ -163,6 +180,10 @@ def init_collections(project_id: str) -> bool:
             _episodic_collection(project_id),
             _goals_collection(project_id),
             _calibration_collection(project_id),
+            # Forward-compatible: Epistemic Intent Layer (populated when CLI commands exist)
+            _assumptions_collection(project_id),
+            _decisions_collection(project_id),
+            _intents_collection(project_id),
         ]
         for name in collections:
             if not client.collection_exists(name):
@@ -1245,6 +1266,7 @@ def search_eidetic(
                 "id": str(r.id),
                 "score": r.score,
                 "content": r.payload.get("content_full") or r.payload.get("content"),
+                "content_hash": r.payload.get("content_hash"),
                 "type": r.payload.get("type"),
                 "domain": r.payload.get("domain"),
                 "confidence": r.payload.get("confidence"),
@@ -2296,3 +2318,811 @@ def search_calibration_patterns(
     except Exception as e:
         logger.warning(f"Failed to search calibration patterns: {e}")
         return []
+
+
+# =============================================================================
+# NOETIC RAG: Forward-Compatible Intent Layer Collections
+# =============================================================================
+# These embed/search functions are ready for use when CLI commands
+# (assumption-log, decision-log, intent-forward/reverse) are implemented.
+# Until then, collections exist but are empty — zero overhead.
+
+def embed_assumption(
+    project_id: str,
+    assumption_id: str,
+    assumption: str,
+    confidence: float = 0.5,
+    status: str = "unverified",
+    resolution_finding_id: str = None,
+    entity_type: str = "project",
+    entity_id: str = None,
+    session_id: str = None,
+    transaction_id: str = None,
+    domain: str = None,
+    timestamp: float = None,
+) -> bool:
+    """Embed an assumption (unverified belief) for semantic search.
+
+    Assumptions have an urgency_signal that increases with age for unverified
+    items: older unverified = higher risk. Resolved assumptions: urgency=0.
+    """
+    if not _check_qdrant_available():
+        return False
+
+    try:
+        import hashlib
+        import time as _time
+        _, _, VectorParams, PointStruct = _get_qdrant_imports()
+        client = _get_qdrant_client()
+        coll = _assumptions_collection(project_id)
+
+        if not client.collection_exists(coll):
+            vector_size = _get_vector_size()
+            from qdrant_client.models import Distance
+            client.create_collection(coll, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
+
+        ts = timestamp or _time.time()
+        # Urgency: increases with age for unverified assumptions
+        urgency = 0.0
+        if status == "unverified":
+            age_days = (_time.time() - ts) / 86400
+            urgency = min(1.0, (age_days / 30.0) * (1.0 - confidence))
+
+        vector = _get_embedding_safe(assumption)
+        if vector is None:
+            return False
+
+        payload = {
+            "type": "assumption",
+            "assumption": assumption[:500],
+            "assumption_full": assumption if len(assumption) <= 500 else None,
+            "confidence": confidence,
+            "status": status,
+            "resolution_finding_id": resolution_finding_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id or project_id,
+            "session_id": session_id,
+            "transaction_id": transaction_id,
+            "domain": domain,
+            "timestamp": ts,
+            "urgency_signal": urgency,
+        }
+
+        point_id = int(hashlib.md5(assumption_id.encode()).hexdigest()[:15], 16)
+        point = PointStruct(id=point_id, vector=vector, payload=payload)
+        client.upsert(collection_name=coll, points=[point])
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to embed assumption: {e}")
+        return False
+
+
+def embed_decision(
+    project_id: str,
+    decision_id: str,
+    choice: str,
+    rationale: str,
+    alternatives: str = None,
+    confidence_at_decision: float = None,
+    reversibility: str = "committal",
+    entity_type: str = "project",
+    entity_id: str = None,
+    session_id: str = None,
+    transaction_id: str = None,
+    timestamp: float = None,
+) -> bool:
+    """Embed a decision (recorded choice point) for semantic search.
+
+    Decisions are permanent audit trail — no decay applied.
+    """
+    if not _check_qdrant_available():
+        return False
+
+    try:
+        import hashlib
+        import time as _time
+        _, _, VectorParams, PointStruct = _get_qdrant_imports()
+        client = _get_qdrant_client()
+        coll = _decisions_collection(project_id)
+
+        if not client.collection_exists(coll):
+            vector_size = _get_vector_size()
+            from qdrant_client.models import Distance
+            client.create_collection(coll, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
+
+        # Rich text for embedding: choice + rationale + alternatives
+        embed_text = f"{choice}. Rationale: {rationale}"
+        if alternatives:
+            embed_text += f". Alternatives: {alternatives}"
+
+        vector = _get_embedding_safe(embed_text)
+        if vector is None:
+            return False
+
+        payload = {
+            "type": "decision",
+            "choice": choice[:500],
+            "choice_full": choice if len(choice) <= 500 else None,
+            "rationale": rationale[:500] if rationale else None,
+            "alternatives": alternatives,
+            "confidence_at_decision": confidence_at_decision,
+            "reversibility": reversibility,
+            "entity_type": entity_type,
+            "entity_id": entity_id or project_id,
+            "session_id": session_id,
+            "transaction_id": transaction_id,
+            "timestamp": timestamp or _time.time(),
+        }
+
+        point_id = int(hashlib.md5(decision_id.encode()).hexdigest()[:15], 16)
+        point = PointStruct(id=point_id, vector=vector, payload=payload)
+        client.upsert(collection_name=coll, points=[point])
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to embed decision: {e}")
+        return False
+
+
+def embed_intent_edge(
+    project_id: str,
+    intent_id: str,
+    direction: str,
+    source_artifact_id: str,
+    source_artifact_type: str,
+    target_artifact_id: str,
+    target_artifact_type: str,
+    confidence_at_crossing: float,
+    reversibility: str = "exploratory",
+    cascade_phase: str = "check",
+    reasoning: str = None,
+    vectors_snapshot: dict = None,
+    entity_type: str = "project",
+    entity_id: str = None,
+    session_id: str = None,
+    transaction_id: str = None,
+    timestamp: float = None,
+) -> bool:
+    """Embed an IntentEdge (provenance graph: noetic↔praxic transform).
+
+    IntentEdges are permanent provenance — no decay. Retrieval ranks by recency.
+    """
+    if not _check_qdrant_available():
+        return False
+
+    try:
+        import hashlib
+        import time as _time
+        import json as _json
+        _, _, VectorParams, PointStruct = _get_qdrant_imports()
+        client = _get_qdrant_client()
+        coll = _intents_collection(project_id)
+
+        if not client.collection_exists(coll):
+            vector_size = _get_vector_size()
+            from qdrant_client.models import Distance
+            client.create_collection(coll, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
+
+        # Rich text for semantic search over intent reasoning
+        embed_text = (
+            f"{direction} intent: {reasoning or 'no reasoning provided'}. "
+            f"{source_artifact_type} → {target_artifact_type} at confidence {confidence_at_crossing:.2f}"
+        )
+
+        vector = _get_embedding_safe(embed_text)
+        if vector is None:
+            return False
+
+        payload = {
+            "type": "intent_edge",
+            "direction": direction,
+            "source_artifact_id": source_artifact_id,
+            "source_artifact_type": source_artifact_type,
+            "target_artifact_id": target_artifact_id,
+            "target_artifact_type": target_artifact_type,
+            "confidence_at_crossing": confidence_at_crossing,
+            "reversibility": reversibility,
+            "cascade_phase": cascade_phase,
+            "reasoning": reasoning[:500] if reasoning else None,
+            "vectors_snapshot": _json.dumps(vectors_snapshot) if vectors_snapshot else None,
+            "entity_type": entity_type,
+            "entity_id": entity_id or project_id,
+            "session_id": session_id,
+            "transaction_id": transaction_id,
+            "timestamp": timestamp or _time.time(),
+        }
+
+        point_id = int(hashlib.md5(intent_id.encode()).hexdigest()[:15], 16)
+        point = PointStruct(id=point_id, vector=vector, payload=payload)
+        client.upsert(collection_name=coll, points=[point])
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to embed intent edge: {e}")
+        return False
+
+
+# --- Search functions for Intent Layer artifacts ---
+
+def search_assumptions(
+    project_id: str,
+    query: str,
+    status: str = None,
+    entity_type: str = None,
+    min_urgency: float = 0.0,
+    limit: int = 5,
+) -> List[Dict]:
+    """Search assumptions by semantic similarity with optional filters.
+
+    Args:
+        status: Filter by 'unverified', 'verified', 'falsified'
+        entity_type: Filter by entity type
+        min_urgency: Minimum urgency_signal threshold (0.0-1.0)
+    """
+    if not _check_qdrant_available():
+        return []
+
+    try:
+        client = _get_qdrant_client()
+        coll = _assumptions_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return []
+
+        vector = _get_embedding_safe(query)
+        if vector is None:
+            return []
+
+        conditions = []
+        if status:
+            from qdrant_client.models import FieldCondition, MatchValue
+            conditions.append(FieldCondition(key="status", match=MatchValue(value=status)))
+        if entity_type:
+            from qdrant_client.models import FieldCondition, MatchValue
+            conditions.append(FieldCondition(key="entity_type", match=MatchValue(value=entity_type)))
+
+        query_filter = None
+        if conditions:
+            from qdrant_client.models import Filter
+            query_filter = Filter(must=conditions)
+
+        results = client.query_points(
+            collection_name=coll,
+            query=vector,
+            query_filter=query_filter,
+            limit=limit * 2 if min_urgency > 0 else limit,
+            with_payload=True,
+        )
+
+        items = [
+            {
+                "assumption": r.payload.get("assumption", ""),
+                "confidence": r.payload.get("confidence", 0.5),
+                "status": r.payload.get("status", "unverified"),
+                "urgency_signal": r.payload.get("urgency_signal", 0.0),
+                "domain": r.payload.get("domain"),
+                "entity_type": r.payload.get("entity_type"),
+                "entity_id": r.payload.get("entity_id"),
+                "score": r.score,
+            }
+            for r in results.points
+        ]
+
+        # Filter by urgency threshold
+        if min_urgency > 0:
+            items = [i for i in items if i["urgency_signal"] >= min_urgency]
+
+        return items[:limit]
+    except Exception as e:
+        logger.warning(f"Failed to search assumptions: {e}")
+        return []
+
+
+def search_decisions(
+    project_id: str,
+    query: str,
+    reversibility: str = None,
+    entity_type: str = None,
+    limit: int = 5,
+) -> List[Dict]:
+    """Search decisions by semantic similarity with optional filters."""
+    if not _check_qdrant_available():
+        return []
+
+    try:
+        client = _get_qdrant_client()
+        coll = _decisions_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return []
+
+        vector = _get_embedding_safe(query)
+        if vector is None:
+            return []
+
+        conditions = []
+        if reversibility:
+            from qdrant_client.models import FieldCondition, MatchValue
+            conditions.append(FieldCondition(key="reversibility", match=MatchValue(value=reversibility)))
+        if entity_type:
+            from qdrant_client.models import FieldCondition, MatchValue
+            conditions.append(FieldCondition(key="entity_type", match=MatchValue(value=entity_type)))
+
+        query_filter = None
+        if conditions:
+            from qdrant_client.models import Filter
+            query_filter = Filter(must=conditions)
+
+        results = client.query_points(
+            collection_name=coll,
+            query=vector,
+            query_filter=query_filter,
+            limit=limit,
+            with_payload=True,
+        )
+
+        return [
+            {
+                "choice": r.payload.get("choice", ""),
+                "rationale": r.payload.get("rationale", ""),
+                "alternatives": r.payload.get("alternatives"),
+                "confidence_at_decision": r.payload.get("confidence_at_decision"),
+                "reversibility": r.payload.get("reversibility"),
+                "entity_type": r.payload.get("entity_type"),
+                "score": r.score,
+            }
+            for r in results.points
+        ]
+    except Exception as e:
+        logger.warning(f"Failed to search decisions: {e}")
+        return []
+
+
+def search_intents(
+    project_id: str,
+    query: str,
+    direction: str = None,
+    cascade_phase: str = None,
+    limit: int = 5,
+) -> List[Dict]:
+    """Search IntentEdges by semantic similarity with optional filters."""
+    if not _check_qdrant_available():
+        return []
+
+    try:
+        client = _get_qdrant_client()
+        coll = _intents_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return []
+
+        vector = _get_embedding_safe(query)
+        if vector is None:
+            return []
+
+        conditions = []
+        if direction:
+            from qdrant_client.models import FieldCondition, MatchValue
+            conditions.append(FieldCondition(key="direction", match=MatchValue(value=direction)))
+        if cascade_phase:
+            from qdrant_client.models import FieldCondition, MatchValue
+            conditions.append(FieldCondition(key="cascade_phase", match=MatchValue(value=cascade_phase)))
+
+        query_filter = None
+        if conditions:
+            from qdrant_client.models import Filter
+            query_filter = Filter(must=conditions)
+
+        results = client.query_points(
+            collection_name=coll,
+            query=vector,
+            query_filter=query_filter,
+            limit=limit,
+            with_payload=True,
+        )
+
+        return [
+            {
+                "direction": r.payload.get("direction"),
+                "reasoning": r.payload.get("reasoning", ""),
+                "source_artifact_type": r.payload.get("source_artifact_type"),
+                "target_artifact_type": r.payload.get("target_artifact_type"),
+                "confidence_at_crossing": r.payload.get("confidence_at_crossing"),
+                "reversibility": r.payload.get("reversibility"),
+                "cascade_phase": r.payload.get("cascade_phase"),
+                "score": r.score,
+            }
+            for r in results.points
+        ]
+    except Exception as e:
+        logger.warning(f"Failed to search intents: {e}")
+        return []
+
+
+# =============================================================================
+# NOETIC RAG: Decay & Cross-Layer Sync Functions
+# =============================================================================
+
+def decay_eidetic_fact(
+    project_id: str,
+    content_hash: str,
+    decay_amount: float = 0.05,
+    min_confidence: float = 0.3,
+    reason: str = None,
+) -> bool:
+    """Decay an eidetic fact's confidence when contradicted by new findings.
+
+    Mirrors confirm_eidetic_fact() but decreases confidence.
+    Domain-scoped: caller must ensure domain matching (central tolerance).
+    """
+    if not _check_qdrant_available():
+        return False
+
+    try:
+        import time as _time
+        client = _get_qdrant_client()
+        coll = _eidetic_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return False
+
+        from qdrant_client.models import Filter, FieldCondition, MatchValue, PointStruct
+
+        results = client.scroll(
+            collection_name=coll,
+            scroll_filter=Filter(
+                must=[FieldCondition(key="content_hash", match=MatchValue(value=content_hash))]
+            ),
+            limit=1,
+            with_payload=True,
+            with_vectors=True,
+        )
+
+        points, _ = results
+        if not points:
+            return False
+
+        point = points[0]
+        payload = point.payload
+        old_confidence = payload.get("confidence", 0.5)
+        new_confidence = max(min_confidence, old_confidence - decay_amount)
+
+        payload["confidence"] = new_confidence
+        payload["last_decayed"] = _time.time()
+        payload["decay_reason"] = reason or "contradicted by finding"
+
+        updated_point = PointStruct(id=point.id, vector=point.vector, payload=payload)
+        client.upsert(collection_name=coll, points=[updated_point])
+
+        logger.info(f"Decayed eidetic fact: {old_confidence:.2f} → {new_confidence:.2f} ({reason or 'finding'})")
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to decay eidetic fact: {e}")
+        return False
+
+
+def decay_eidetic_by_finding(
+    project_id: str,
+    finding_text: str,
+    domain: str = None,
+    decay_amount: float = 0.03,
+    min_confidence: float = 0.3,
+    similarity_threshold: float = 0.6,
+    limit: int = 5,
+) -> int:
+    """Decay eidetic facts semantically similar to a contradicting finding.
+
+    CENTRAL TOLERANCE: If domain provided, only decay facts in that domain.
+    Lighter decay (0.03) than lessons (0.05) — eidetic facts have higher
+    inertia from multiple confirmations.
+
+    Returns number of facts decayed.
+    """
+    if not _check_qdrant_available():
+        return 0
+
+    try:
+        related_facts = search_eidetic(
+            project_id,
+            finding_text,
+            domain=domain,
+            min_confidence=0.0,  # Search all, even low-confidence
+            limit=limit,
+        )
+
+        decayed = 0
+        for fact in related_facts:
+            if fact.get("score", 0) >= similarity_threshold:
+                content_hash = fact.get("content_hash")
+                if content_hash and decay_eidetic_fact(
+                    project_id,
+                    content_hash,
+                    decay_amount=decay_amount,
+                    min_confidence=min_confidence,
+                    reason=f"contradicted: {finding_text[:100]}",
+                ):
+                    decayed += 1
+
+        if decayed:
+            logger.info(f"Decayed {decayed} eidetic facts by finding in domain '{domain}'")
+        return decayed
+    except Exception as e:
+        logger.warning(f"Failed to decay eidetic by finding: {e}")
+        return 0
+
+
+def propagate_lesson_confidence_to_qdrant(
+    project_id: str,
+    lesson_name: str,
+    new_confidence: float,
+) -> bool:
+    """Cross-layer sync: update lesson confidence in Qdrant memory collection.
+
+    Called after decay_related_lessons() updates YAML cold storage,
+    keeping Qdrant payloads consistent with the source of truth.
+    """
+    if not _check_qdrant_available():
+        return False
+
+    try:
+        client = _get_qdrant_client()
+        coll = _memory_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return False
+
+        from qdrant_client.models import Filter, FieldCondition, MatchValue, PointStruct
+
+        # Find lesson by type + text content match
+        results = client.scroll(
+            collection_name=coll,
+            scroll_filter=Filter(
+                must=[FieldCondition(key="type", match=MatchValue(value="lesson"))]
+            ),
+            limit=50,  # Scan lessons
+            with_payload=True,
+            with_vectors=True,
+        )
+
+        points, _ = results
+        for point in points:
+            text = point.payload.get("text", "")
+            # Match by lesson name appearing in embedded text
+            if lesson_name.lower() in text.lower():
+                payload = point.payload
+                payload["confidence"] = new_confidence
+                import time as _time
+                payload["confidence_synced_at"] = _time.time()
+
+                updated = PointStruct(id=point.id, vector=point.vector, payload=payload)
+                client.upsert(collection_name=coll, points=[updated])
+                logger.debug(f"Synced lesson '{lesson_name}' confidence to {new_confidence:.2f} in Qdrant")
+                return True
+
+        return False  # Lesson not found in Qdrant
+    except Exception as e:
+        logger.warning(f"Failed to propagate lesson confidence: {e}")
+        return False
+
+
+def auto_sync_session_to_global(
+    project_id: str,
+    session_id: str,
+    min_impact: float = 0.7,
+) -> int:
+    """Auto-sync high-impact findings from a single session to global.
+
+    Called at POSTFLIGHT for incremental global sync.
+    O(session_findings) not O(project_findings).
+    """
+    if not _check_qdrant_available():
+        return 0
+
+    try:
+        # Get session findings from SQLite
+        from empirica.data.session_database import SessionDatabase
+        from empirica.utils.session_resolver import get_active_project_path
+        from pathlib import Path
+
+        project_path = get_active_project_path()
+        if not project_path:
+            return 0
+
+        db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
+        if not db_path.exists():
+            return 0
+
+        db = SessionDatabase(str(db_path))
+        findings = db.get_project_findings(project_id, limit=50)
+        db.close()
+
+        if not findings:
+            return 0
+
+        synced = 0
+        for f in findings:
+            impact = f.get('impact', 0.0)
+            f_session = f.get('session_id', '')
+            if impact >= min_impact and f_session == session_id:
+                if embed_to_global(
+                    item_id=f.get('id', f.get('finding_id', '')),
+                    text=f.get('finding', f.get('text', '')),
+                    item_type='finding',
+                    project_id=project_id,
+                    session_id=session_id,
+                    impact=impact,
+                    timestamp=f.get('created_timestamp', ''),
+                    tags=[f.get('subject', '')],
+                ):
+                    synced += 1
+
+        if synced:
+            logger.info(f"Auto-synced {synced} high-impact findings to global from session {session_id[:8]}")
+        return synced
+    except Exception as e:
+        logger.warning(f"Failed to auto-sync session to global: {e}")
+        return 0
+
+
+def apply_staleness_signal(
+    project_id: str,
+    max_age_days: int = 180,
+    period_days: int = 30,
+) -> int:
+    """Apply staleness-based signal to memory items based on age.
+
+    Items are NOT deleted — staleness_factor is informational for retrieval
+    ranking. Formula: staleness = min(1.0, age_days / max_age_days).
+
+    Also updates assumption urgency via update_assumption_urgency().
+
+    Returns number of items updated.
+    """
+    if not _check_qdrant_available():
+        return 0
+
+    try:
+        import time as _time
+        client = _get_qdrant_client()
+        coll = _memory_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return 0
+
+        from qdrant_client.models import PointStruct
+
+        # Scroll all memory items
+        all_points = []
+        offset = None
+        while True:
+            results = client.scroll(
+                collection_name=coll,
+                limit=100,
+                offset=offset,
+                with_payload=True,
+                with_vectors=True,
+            )
+            points, next_offset = results
+            all_points.extend(points)
+            if next_offset is None or not points:
+                break
+            offset = next_offset
+
+        now = _time.time()
+        updated = 0
+        batch = []
+
+        for point in all_points:
+            ts = point.payload.get("timestamp")
+            if not ts:
+                continue
+
+            # Parse timestamp
+            if isinstance(ts, str):
+                try:
+                    from datetime import datetime
+                    ts_float = datetime.fromisoformat(ts.replace('Z', '+00:00')).timestamp()
+                except Exception:
+                    continue
+            else:
+                ts_float = float(ts)
+
+            age_days = (now - ts_float) / 86400
+            if age_days < period_days:
+                continue  # Too recent, skip
+
+            new_staleness = min(1.0, age_days / max_age_days)
+            old_staleness = point.payload.get("staleness_factor", 0.0)
+
+            # Only update if staleness changed significantly (>0.05)
+            if abs(new_staleness - old_staleness) > 0.05:
+                payload = point.payload
+                payload["staleness_factor"] = round(new_staleness, 3)
+                payload["staleness_updated_at"] = now
+                batch.append(PointStruct(id=point.id, vector=point.vector, payload=payload))
+                updated += 1
+
+        # Batch upsert
+        if batch:
+            # Upsert in chunks of 50
+            for i in range(0, len(batch), 50):
+                client.upsert(collection_name=coll, points=batch[i:i+50])
+
+        # Also update assumption urgency
+        assumption_updated = update_assumption_urgency(project_id)
+        updated += assumption_updated
+
+        if updated:
+            logger.info(f"Applied staleness to {updated} items ({assumption_updated} assumptions)")
+        return updated
+    except Exception as e:
+        logger.warning(f"Failed to apply staleness signal: {e}")
+        return 0
+
+
+def update_assumption_urgency(
+    project_id: str,
+    max_age_days: int = 30,
+) -> int:
+    """Update urgency_signal on unverified assumptions based on age.
+
+    Urgency = age_days / max_age_days × (1 - confidence).
+    Verified/falsified assumptions get urgency = 0.
+
+    Returns number of assumptions updated.
+    """
+    if not _check_qdrant_available():
+        return 0
+
+    try:
+        import time as _time
+        client = _get_qdrant_client()
+        coll = _assumptions_collection(project_id)
+
+        if not client.collection_exists(coll):
+            return 0
+
+        from qdrant_client.models import PointStruct
+
+        results = client.scroll(
+            collection_name=coll,
+            limit=200,
+            with_payload=True,
+            with_vectors=True,
+        )
+
+        points, _ = results
+        now = _time.time()
+        updated = 0
+        batch = []
+
+        for point in points:
+            status = point.payload.get("status", "unverified")
+            ts = point.payload.get("timestamp", now)
+            confidence = point.payload.get("confidence", 0.5)
+
+            if status != "unverified":
+                # Resolved: urgency should be 0
+                if point.payload.get("urgency_signal", 0) != 0:
+                    payload = point.payload
+                    payload["urgency_signal"] = 0.0
+                    batch.append(PointStruct(id=point.id, vector=point.vector, payload=payload))
+                    updated += 1
+                continue
+
+            age_days = (now - float(ts)) / 86400
+            new_urgency = min(1.0, (age_days / max_age_days) * (1.0 - confidence))
+            old_urgency = point.payload.get("urgency_signal", 0.0)
+
+            if abs(new_urgency - old_urgency) > 0.05:
+                payload = point.payload
+                payload["urgency_signal"] = round(new_urgency, 3)
+                batch.append(PointStruct(id=point.id, vector=point.vector, payload=payload))
+                updated += 1
+
+        if batch:
+            for i in range(0, len(batch), 50):
+                client.upsert(collection_name=coll, points=batch[i:i+50])
+
+        return updated
+    except Exception as e:
+        logger.warning(f"Failed to update assumption urgency: {e}")
+        return 0
