@@ -69,7 +69,9 @@ def add_monitor_parsers(subparsers):
         help='Show detailed reasoning for each path')
 
     # System status command - unified /proc-style kernel overview
+    # 'status' is an alias for user convenience (common first command to try)
     system_status_parser = subparsers.add_parser('system-status',
+        aliases=['status'],
         help='Unified Noetic OS system status (config, memory, bus, gate, integrity)')
     system_status_parser.add_argument('--session-id', help='Session UUID (auto-detects if omitted)')
     system_status_parser.add_argument('--output', choices=['human', 'json'], default='human',

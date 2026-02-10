@@ -26,6 +26,27 @@ class Empirica < Formula
     virtualenv_install_with_resources
   end
 
+  def caveats
+    <<~EOS
+      After installation, initialize Empirica in your project:
+
+        cd /path/to/your/git/repo
+        empirica project-init
+
+      Or use auto-init when creating your first session:
+
+        empirica session-create --ai-id your-ai-name --auto-init
+
+      For Claude Code integration (status line, hooks, CLAUDE.md):
+
+        empirica setup-claude-code  # Coming soon
+
+      Quick start:
+        empirica status              # System overview
+        empirica onboard --ai-id me  # Full onboarding guide
+    EOS
+  end
+
   test do
     # Test that the CLI works
     assert_match "1.5.0", shell_output("#{bin}/empirica --version")
