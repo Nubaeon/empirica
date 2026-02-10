@@ -1277,12 +1277,12 @@ def handle_check_submit_command(args):
                 "reasoning": reasoning,
                 "auto_checkpoint_created": auto_checkpoint_created,
                 "persisted": True,
-                "storage_layers": {
+                "storage_layers": {k: v for k, v in {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
                     "epistemic_snapshots": snapshot_created
-                },
+                }.items() if v},
                 "snapshot": {
                     "created": snapshot_created,
                     "snapshot_id": snapshot_id,
