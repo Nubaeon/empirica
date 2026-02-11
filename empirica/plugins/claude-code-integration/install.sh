@@ -199,8 +199,9 @@ jq --arg name "$PLUGIN_NAME@local" '.enabledPlugins[$name] = true' "$SETTINGS_FI
 echo "   ✓ Plugin enabled in settings.json"
 
 # Add StatusLine if not present
+# NOTE: < /dev/null prevents stdin hangs when Claude Code invokes the statusline
 if ! jq -e '.statusLine' "$SETTINGS_FILE" >/dev/null 2>&1; then
-    jq --arg cmd "$PYTHON_CMD $PLUGIN_DIR/scripts/statusline_empirica.py" \
+    jq --arg cmd "$PYTHON_CMD $PLUGIN_DIR/scripts/statusline_empirica.py < /dev/null" \
        '.statusLine = {"type": "command", "command": $cmd}' \
        "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
     echo "   ✓ StatusLine configured"
