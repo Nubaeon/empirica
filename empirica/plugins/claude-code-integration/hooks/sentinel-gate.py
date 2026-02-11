@@ -299,9 +299,9 @@ def is_transition_command(command: str) -> bool:
     return False
 
 
-def respond(decision, reason=""):
+def respond(decision: str, reason: str = "") -> None:
     """Output in Claude Code's expected format."""
-    output = {
+    output: dict = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": decision,
@@ -314,7 +314,7 @@ def respond(decision, reason=""):
     print(json.dumps(output))
 
 
-def resolve_project_root(claude_session_id: str = None) -> Optional[Path]:
+def resolve_project_root(claude_session_id: Optional[str] = None) -> Optional[Path]:
     """Resolve the correct project root using the shared project_resolver.
 
     Uses canonical get_active_project_path() from lib/project_resolver.py.
@@ -346,7 +346,7 @@ def find_empirica_package() -> Optional[Path]:
     """
     # Check if already importable (pip installed)
     try:
-        import empirica.config.path_resolver
+        import empirica.config.path_resolver  # type: ignore[import-not-found]
         return None  # Already available, no path needed
     except ImportError:
         pass
@@ -402,7 +402,7 @@ def _get_current_project_id(db_conn, session_id: str) -> Optional[str]:
     return None
 
 
-def get_last_compact_timestamp(project_root: Path) -> datetime:
+def get_last_compact_timestamp(project_root: Path) -> Optional[datetime]:
     """Get timestamp of most recent compact from pre_summary snapshot."""
     try:
         ref_docs_dir = project_root / ".empirica" / "ref-docs"
@@ -648,7 +648,7 @@ def main():
     else:
         # Fallback to path_resolver if priority chain fails
         try:
-            from empirica.config.path_resolver import get_empirica_root
+            from empirica.config.path_resolver import get_empirica_root  # type: ignore[import-not-found]
             empirica_root = get_empirica_root()
             if empirica_root.exists():
                 os.chdir(empirica_root.parent)
@@ -697,7 +697,7 @@ def main():
         sys.exit(0)
 
     # SessionDatabase uses path_resolver internally for DB location
-    from empirica.data.session_database import SessionDatabase
+    from empirica.data.session_database import SessionDatabase  # type: ignore[import-not-found]
     db = SessionDatabase()
     cursor = db.conn.cursor()
 
