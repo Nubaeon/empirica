@@ -313,6 +313,41 @@ async def list_tools() -> List[types.Tool]:
         ),
 
         types.Tool(
+            name="assumption_log",
+            description="Log an unverified assumption with confidence level. Track beliefs that need validation.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"},
+                    "assumption": {"type": "string", "description": "The assumption being made"},
+                    "confidence": {"type": "number", "description": "Confidence in this assumption (0.0-1.0)", "minimum": 0.0, "maximum": 1.0},
+                    "domain": {"type": "string", "description": "Domain scope (e.g., security, architecture)"},
+                    "goal_id": {"type": "string", "description": "Optional goal UUID to link assumption"}
+                },
+                "required": ["session_id", "assumption"]
+            }
+        ),
+
+        types.Tool(
+            name="decision_log",
+            description="Log a decision with alternatives considered and rationale. Track choice points for future reference.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"},
+                    "choice": {"type": "string", "description": "The choice made"},
+                    "alternatives": {"type": "string", "description": "Alternatives considered (comma-separated or JSON array)"},
+                    "rationale": {"type": "string", "description": "Why this choice was made"},
+                    "confidence": {"type": "number", "description": "Confidence in this decision (0.0-1.0)", "minimum": 0.0, "maximum": 1.0},
+                    "reversibility": {"type": "string", "enum": ["exploratory", "committal", "forced"], "description": "How reversible is this decision?"},
+                    "domain": {"type": "string", "description": "Domain scope (e.g., security, architecture)"},
+                    "goal_id": {"type": "string", "description": "Optional goal UUID to link decision"}
+                },
+                "required": ["session_id", "choice", "alternatives", "rationale"]
+            }
+        ),
+
+        types.Tool(
             name="create_goal",
             description="Create new structured goal",
             inputSchema={
@@ -1888,6 +1923,8 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "finding_log": ["finding-log"],
         "unknown_log": ["unknown-log"],
         "deadend_log": ["deadend-log"],
+        "assumption_log": ["assumption-log"],
+        "decision_log": ["decision-log"],
         "refdoc_add": ["refdoc-add"],
 
         # Epistemic Monitoring
