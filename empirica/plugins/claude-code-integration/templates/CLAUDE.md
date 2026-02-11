@@ -24,7 +24,7 @@ Canonical terms used throughout Empirica.
 
 | Layer | Term | Contains |
 |-------|------|----------|
-| Investigation outputs | **Noetic artifacts** | findings, unknowns, dead-ends, mistakes |
+| Investigation outputs | **Noetic artifacts** | findings, unknowns, dead-ends, mistakes, assumptions, decisions |
 | Action outputs | **Praxic artifacts** | goals, subtasks, commits |
 | State measurements | **Epistemic state** | vectors, calibration, drift, deltas |
 | Verification outputs | **Grounded evidence** | test results, git metrics, goal completion |
@@ -116,6 +116,8 @@ empirica postflight-submit -    # Learning delta + grounded verification
 empirica finding-log --finding "..." --impact 0.7
 empirica unknown-log --unknown "..."
 empirica deadend-log --approach "..." --why-failed "..."
+empirica assumption-log --assumption "..." --confidence 0.7
+empirica decision-log --choice "..." --alternatives "..." --rationale "..."
 ```
 
 **For full command reference:** Use the `/empirica-framework` skill.
@@ -133,7 +135,7 @@ empirica project-init                       # Initialize .empirica/ in current d
 
 ---
 
-## CALIBRATION (Dual-Track)
+## CALIBRATION (Dual-Track, Phase-Aware)
 
 Empirica runs two parallel calibration tracks in `.breadcrumbs.yaml`:
 
@@ -144,6 +146,25 @@ POST-TEST collects evidence automatically: pytest results, git metrics, goal com
 artifact ratios, issue resolution, sentinel decisions.
 
 **When tracks disagree:** Track 2 (grounded) is more trustworthy — it's based on what happened.
+
+### Phase-Aware Calibration
+
+Grounded calibration splits at the CHECK boundary:
+
+| Phase | Window | Evidence | Calibration question |
+|-------|--------|----------|---------------------|
+| **Noetic** | PREFLIGHT→CHECK | unknowns surfaced, dead-ends avoided, investigation findings, coverage | "Did investigation reduce uncertainty proportional to claim?" |
+| **Praxic** | CHECK→POSTFLIGHT | tests, git, goal completions, artifacts | "Did actions produce the outcomes predicted?" |
+
+Absence is evidence: "Searched 14 modules, found 0 circular deps" is high-value noetic work.
+
+### Dynamic Thresholds (Earned Autonomy)
+
+CHECK gate thresholds adapt based on calibration accuracy:
+- **Static default:** know >= 0.70, uncertainty <= 0.35
+- **Dynamic:** loosens with demonstrated accuracy, tightens on regression
+- **Safety floors:** know >= 0.55, uncertainty <= 0.50 (always enforced)
+- **Activates:** after 5+ calibrated transactions per phase
 
 ---
 
@@ -166,6 +187,7 @@ artifact ratios, issue resolution, sentinel decisions.
 
 **Transaction Management:**
 - Be ASSERTIVE about PREFLIGHT/CHECK/POSTFLIGHT timing
+- Self-initiate CHECK when transitioning noetic→praxic (don't wait for user to ask)
 - Suggest natural commit points: "That felt like a coherent chunk — POSTFLIGHT?"
 - Unmeasured work = epistemic dark matter
 
@@ -191,6 +213,8 @@ Empirica is **cognitive infrastructure**, not just a CLI.
 - Discovery → finding-log
 - Ambiguity → unknown-log
 - Failure → deadend-log
+- Unverified belief → assumption-log
+- Choice point with alternatives → decision-log
 - Low confidence → stay noetic, investigate
 - High confidence → CHECK gate, then praxic
 

@@ -48,7 +48,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Sync': ['sync-config', 'sync-push', 'sync-pull', 'sync-status', 'rebuild', 'artifacts-generate'],
                     'Identity': ['identity-create', 'identity-export', 'identity-list', 'identity-verify'],
                     'Handoffs': ['handoff-create', 'handoff-query'],
-                    'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'source-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
+                    'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'assumption-log', 'decision-log', 'refdoc-add', 'source-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
                     'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
                     'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches', 'investigate-multi'],
                     'Monitoring': ['monitor', 'check-drift', 'assess-state', 'trajectory-project', 'efficiency-report'],
@@ -362,11 +362,13 @@ def main(args=None):
             'project-embed': handle_project_embed_command,
             'doc-check': handle_doc_check_command,
             
-            # Finding/unknown/deadend logging
+            # Finding/unknown/deadend/assumption/decision logging
             'finding-log': handle_finding_log_command,
             'unknown-log': handle_unknown_log_command,
             'unknown-resolve': handle_unknown_resolve_command,
             'deadend-log': handle_deadend_log_command,
+            'assumption-log': handle_assumption_log_command,
+            'decision-log': handle_decision_log_command,
             'refdoc-add': handle_refdoc_add_command,
             'source-add': handle_source_add_command,
 

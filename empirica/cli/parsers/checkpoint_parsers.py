@@ -429,6 +429,37 @@ def add_checkpoint_parsers(subparsers):
     deadend_log_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     deadend_log_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
+    # Assumption log command
+    assumption_log_parser = subparsers.add_parser(
+        'assumption-log',
+        help='Log an unverified assumption (what you\'re taking for granted)'
+    )
+    assumption_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
+    assumption_log_parser.add_argument('--project-id', required=False, help='Project UUID')
+    assumption_log_parser.add_argument('--session-id', required=False, help='Session UUID')
+    assumption_log_parser.add_argument('--assumption', required=False, help='The assumption being made')
+    assumption_log_parser.add_argument('--confidence', type=float, default=0.5, help='Confidence in this assumption (0.0-1.0)')
+    assumption_log_parser.add_argument('--domain', help='Domain scope (e.g., security, architecture)')
+    assumption_log_parser.add_argument('--goal-id', help='Optional goal UUID')
+    assumption_log_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+
+    # Decision log command
+    decision_log_parser = subparsers.add_parser(
+        'decision-log',
+        help='Log a decision with alternatives and rationale'
+    )
+    decision_log_parser.add_argument('config', nargs='?', help='JSON config file or - for stdin (AI-first mode)')
+    decision_log_parser.add_argument('--project-id', required=False, help='Project UUID')
+    decision_log_parser.add_argument('--session-id', required=False, help='Session UUID')
+    decision_log_parser.add_argument('--choice', required=False, help='The choice made')
+    decision_log_parser.add_argument('--alternatives', required=False, help='Alternatives considered (comma-separated or JSON array)')
+    decision_log_parser.add_argument('--rationale', required=False, help='Why this choice was made')
+    decision_log_parser.add_argument('--confidence', type=float, default=0.7, help='Confidence in this decision (0.0-1.0)')
+    decision_log_parser.add_argument('--reversibility', choices=['exploratory', 'committal', 'forced'], default='exploratory', help='How reversible is this decision?')
+    decision_log_parser.add_argument('--domain', help='Domain scope (e.g., security, architecture)')
+    decision_log_parser.add_argument('--goal-id', help='Optional goal UUID')
+    decision_log_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+
     # Reference doc add command
     refdoc_add_parser = subparsers.add_parser(
         'refdoc-add',

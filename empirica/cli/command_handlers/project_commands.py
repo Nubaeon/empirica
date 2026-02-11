@@ -2195,6 +2195,269 @@ def handle_deadend_log_command(args):
         return None
 
 
+def handle_assumption_log_command(args):
+    """Handle assumption-log command — log unverified assumptions to Qdrant."""
+    try:
+        import os
+        import sys
+        import time
+        import uuid
+        from empirica.cli.cli_utils import parse_json_safely
+
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        if config_data:
+            project_id = config_data.get('project_id')
+            session_id = config_data.get('session_id')
+            assumption = config_data.get('assumption')
+            confidence = config_data.get('confidence', 0.5)
+            domain = config_data.get('domain')
+            goal_id = config_data.get('goal_id')
+            output_format = 'json'
+        else:
+            project_id = getattr(args, 'project_id', None)
+            session_id = getattr(args, 'session_id', None)
+            assumption = getattr(args, 'assumption', None)
+            confidence = getattr(args, 'confidence', 0.5)
+            domain = getattr(args, 'domain', None)
+            goal_id = getattr(args, 'goal_id', None)
+            output_format = getattr(args, 'output', 'json')
+
+        # Auto-derive session_id
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        if not assumption:
+            print(json.dumps({"ok": False, "error": "Assumption text is required (--assumption or config)"}))
+            sys.exit(1)
+
+        # Auto-resolve project_id
+        if not project_id:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            if session_id:
+                cursor = db.conn.cursor()
+                cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                if row and row['project_id']:
+                    project_id = row['project_id']
+            db.close()
+
+        if not project_id:
+            print(json.dumps({"ok": False, "error": "Could not resolve project_id"}))
+            sys.exit(1)
+
+        # Auto-derive transaction_id
+        transaction_id = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction
+            transaction_id = read_active_transaction()
+        except Exception:
+            pass
+
+        # Store to Qdrant
+        assumption_id = str(uuid.uuid4())
+        embedded = False
+        try:
+            from empirica.core.qdrant.vector_store import embed_assumption, _check_qdrant_available
+            if _check_qdrant_available():
+                embed_assumption(
+                    project_id=project_id,
+                    assumption_id=assumption_id,
+                    assumption=assumption,
+                    confidence=confidence,
+                    status="unverified",
+                    entity_type="project",
+                    entity_id=project_id,
+                    session_id=session_id,
+                    transaction_id=transaction_id,
+                    domain=domain,
+                    timestamp=time.time(),
+                )
+                embedded = True
+        except Exception as e:
+            logger.debug(f"Qdrant embed failed (non-fatal): {e}")
+
+        result = {
+            "ok": True,
+            "assumption_id": assumption_id,
+            "project_id": project_id,
+            "assumption": assumption,
+            "confidence": confidence,
+            "status": "unverified",
+            "embedded": embedded,
+            "message": "Assumption logged" + (" (Qdrant)" if embedded else " (Qdrant unavailable)"),
+        }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"Assumption logged: {assumption_id[:8]}...")
+            print(f"   Confidence: {confidence}")
+            if embedded:
+                print(f"   Stored in Qdrant")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Assumption log", getattr(args, 'verbose', False))
+        return None
+
+
+def handle_decision_log_command(args):
+    """Handle decision-log command — log decisions with alternatives to Qdrant."""
+    try:
+        import os
+        import sys
+        import time
+        import uuid
+        from empirica.cli.cli_utils import parse_json_safely
+
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        if config_data:
+            project_id = config_data.get('project_id')
+            session_id = config_data.get('session_id')
+            choice = config_data.get('choice')
+            alternatives = config_data.get('alternatives', '')
+            rationale = config_data.get('rationale', '')
+            confidence = config_data.get('confidence', 0.7)
+            reversibility = config_data.get('reversibility', 'exploratory')
+            domain = config_data.get('domain')
+            goal_id = config_data.get('goal_id')
+            output_format = 'json'
+        else:
+            project_id = getattr(args, 'project_id', None)
+            session_id = getattr(args, 'session_id', None)
+            choice = getattr(args, 'choice', None)
+            alternatives = getattr(args, 'alternatives', '')
+            rationale = getattr(args, 'rationale', '')
+            confidence = getattr(args, 'confidence', 0.7)
+            reversibility = getattr(args, 'reversibility', 'exploratory')
+            domain = getattr(args, 'domain', None)
+            goal_id = getattr(args, 'goal_id', None)
+            output_format = getattr(args, 'output', 'json')
+
+        # Auto-derive session_id
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        if not choice:
+            print(json.dumps({"ok": False, "error": "Choice text is required (--choice or config)"}))
+            sys.exit(1)
+
+        # Parse alternatives if comma-separated string
+        if isinstance(alternatives, str) and alternatives:
+            try:
+                import json as json_mod
+                alternatives_list = json_mod.loads(alternatives)
+            except (json.JSONDecodeError, ValueError):
+                alternatives_list = [a.strip() for a in alternatives.split(',') if a.strip()]
+        elif isinstance(alternatives, list):
+            alternatives_list = alternatives
+        else:
+            alternatives_list = []
+
+        # Auto-resolve project_id
+        if not project_id:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            if session_id:
+                cursor = db.conn.cursor()
+                cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                if row and row['project_id']:
+                    project_id = row['project_id']
+            db.close()
+
+        if not project_id:
+            print(json.dumps({"ok": False, "error": "Could not resolve project_id"}))
+            sys.exit(1)
+
+        # Auto-derive transaction_id
+        transaction_id = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction
+            transaction_id = read_active_transaction()
+        except Exception:
+            pass
+
+        # Store to Qdrant
+        decision_id = str(uuid.uuid4())
+        embedded = False
+        try:
+            from empirica.core.qdrant.vector_store import embed_decision, _check_qdrant_available
+            if _check_qdrant_available():
+                embed_decision(
+                    project_id=project_id,
+                    decision_id=decision_id,
+                    choice=choice,
+                    alternatives=json.dumps(alternatives_list),
+                    rationale=rationale,
+                    confidence_at_decision=confidence,
+                    reversibility=reversibility,
+                    entity_type="project",
+                    entity_id=project_id,
+                    session_id=session_id,
+                    transaction_id=transaction_id,
+                    timestamp=time.time(),
+                )
+                embedded = True
+        except Exception as e:
+            logger.debug(f"Qdrant embed failed (non-fatal): {e}")
+
+        result = {
+            "ok": True,
+            "decision_id": decision_id,
+            "project_id": project_id,
+            "choice": choice,
+            "alternatives": alternatives_list,
+            "rationale": rationale,
+            "confidence": confidence,
+            "reversibility": reversibility,
+            "embedded": embedded,
+            "message": "Decision logged" + (" (Qdrant)" if embedded else " (Qdrant unavailable)"),
+        }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"Decision logged: {decision_id[:8]}...")
+            print(f"   Choice: {choice}")
+            print(f"   Alternatives: {', '.join(alternatives_list) if alternatives_list else 'none'}")
+            print(f"   Reversibility: {reversibility}")
+            if embedded:
+                print(f"   Stored in Qdrant")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Decision log", getattr(args, 'verbose', False))
+        return None
+
+
 def handle_refdoc_add_command(args):
     """Handle refdoc-add command"""
     try:

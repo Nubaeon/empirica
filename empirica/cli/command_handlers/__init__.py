@@ -93,6 +93,8 @@ from .project_commands import (
     handle_unknown_log_command,
     handle_unknown_resolve_command,
     handle_deadend_log_command,
+    handle_assumption_log_command,
+    handle_decision_log_command,
     handle_refdoc_add_command,
     handle_source_add_command
 )
@@ -276,6 +278,8 @@ __all__ = [
     'handle_unknown_log_command',
     'handle_unknown_resolve_command',
     'handle_deadend_log_command',
+    'handle_assumption_log_command',
+    'handle_decision_log_command',
     'handle_refdoc_add_command',
     'handle_source_add_command',
     'handle_project_search_command',
