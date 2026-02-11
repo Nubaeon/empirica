@@ -54,8 +54,9 @@ SAFE_BASH_PREFIXES = (
     'cat ', 'head ', 'tail ', 'less ', 'more ',
     'ls', 'ls ', 'dir ', 'tree ', 'file ', 'stat ', 'wc ',
     'find ', 'locate ', 'which ', 'type ', 'whereis ',
-    # Text search/processing (read-only)
+    # Text/data search/processing (read-only)
     'grep ', 'rg ', 'ag ', 'ack ', 'sed -n', 'awk ',
+    'jq ', 'jq.',  # JSON processing (read-only)
     # Git read operations
     'git status', 'git log', 'git diff', 'git show', 'git branch',
     'git remote', 'git tag', 'git stash list', 'git blame',
