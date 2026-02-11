@@ -464,8 +464,12 @@ class PostTestCollector:
         mistakes_count = cursor.fetchone()[0]
 
         # Unknown resolution ratio → know proxy (scope-weighted)
+        # Floor at 0.3: logging unknowns shows domain awareness (knowing what
+        # you don't know IS knowledge). Resolution further improves the score.
+        # Without floor: 0 resolved = 0.0 which falsely signals "knows nothing"
         if unknowns_weighted_total > 0:
-            resolution_ratio = unknowns_weighted_resolved / unknowns_weighted_total
+            raw_ratio = unknowns_weighted_resolved / unknowns_weighted_total
+            resolution_ratio = 0.3 + (raw_ratio * 0.7)  # 0.3 (unresolved) → 1.0 (all resolved)
             items.append(EvidenceItem(
                 source="artifacts",
                 metric_name="unknown_resolution_ratio",
@@ -476,6 +480,8 @@ class PostTestCollector:
                     "scoped_total": scoped_total,
                     "unscoped_total": unscoped_total,
                     "unscoped_weight": UNSCOPED_ARTIFACT_WEIGHT,
+                    "raw_ratio": round(raw_ratio, 4),
+                    "floor_applied": True,
                 },
                 quality=EvidenceQuality.SEMI_OBJECTIVE,
                 supports_vectors=["know"],

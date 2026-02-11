@@ -382,6 +382,28 @@ Session Start
   └─ Transaction 3: Goal C...
 ```
 
+**Between transactions — artifact lifecycle:**
+At the start of each new transaction, review and resolve open artifacts from prior work:
+
+```bash
+# 1. Review goals — complete any that are done
+empirica goals-list
+empirica goals-complete --goal-id <ID> --reason "Completed in previous transaction"
+
+# 2. Review unknowns — resolve ones that investigation answered
+empirica unknown-resolve --unknown-id <UUID> --resolved-by "Found in docs / code"
+empirica finding-log --finding "Answer to unknown: ..." --impact 0.5
+
+# 3. Review assumptions — verify/falsify ones with evidence
+#    Verified assumption → finding (confirmed belief)
+empirica finding-log --finding "Confirmed: assumption X is true" --impact 0.4
+#    Falsified assumption → decision (chose alternative)
+empirica decision-log --choice "Use Y instead of X" --rationale "Assumption X was wrong"
+```
+
+Unresolved unknowns become findings. Verified assumptions become decisions.
+Stale artifacts are noise — keep the signal clean.
+
 **Scope by context capacity:** Pick up what you can properly handle in one transaction
 without losing coherence. Log noetic artifacts (findings, unknowns, dead-ends, assumptions)
 as they arise during BOTH phases — these persist in memory and guide future transactions.
@@ -461,6 +483,7 @@ empirica handoff-create ...              # Create handoff
 - Apply bias corrections from `.breadcrumbs.yaml` (both self-ref and grounded)
 - Be honest about uncertainty (it's data, not failure)
 - Log noetic artifacts as you discover them (also anti-gaming evidence)
+- At each new transaction: review goals, resolve unknowns→findings, verify assumptions→decisions
 - Use CHECK before major praxic actions
 - Compare POSTFLIGHT to PREFLIGHT (Track 1: learning delta)
 - Check `calibration-report --grounded` to see if self-assessment matches evidence (Track 2)

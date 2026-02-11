@@ -50,7 +50,7 @@ def detect_phase_boundary(session_id: str, db) -> Dict:
         # Get PREFLIGHT vectors and timestamp
         cursor.execute("""
             SELECT timestamp, know, uncertainty, completion, context,
-                   do_vector, signal, coherence, engagement
+                   do, signal, coherence, engagement
             FROM reflexes
             WHERE session_id = ? AND phase = 'PREFLIGHT'
             ORDER BY timestamp DESC LIMIT 1
@@ -73,7 +73,7 @@ def detect_phase_boundary(session_id: str, db) -> Dict:
         # Get all CHECK entries
         cursor.execute("""
             SELECT timestamp, reflex_data, know, uncertainty, completion,
-                   context, do_vector, signal, coherence, engagement
+                   context, do, signal, coherence, engagement
             FROM reflexes
             WHERE session_id = ? AND phase = 'CHECK'
             ORDER BY timestamp ASC
