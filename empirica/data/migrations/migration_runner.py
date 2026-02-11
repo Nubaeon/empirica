@@ -83,6 +83,9 @@ def column_exists(cursor: sqlite3.Cursor, table: str, column: str) -> bool:
         'project_dead_ends', 'mistakes_made', 'clients', 'engagements',
         'client_interactions', 'client_projects', 'investigation_branches',
         'epistemic_sources', 'assumptions', 'decisions',
+        # Post-test grounded calibration tables
+        'grounded_beliefs', 'verification_evidence', 'grounded_verifications',
+        'calibration_trajectory',
     }
 
     if table not in VALID_TABLES:
@@ -95,8 +98,20 @@ def column_exists(cursor: sqlite3.Cursor, table: str, column: str) -> bool:
     return cursor.fetchone()[0] > 0
 
 
+def table_exists(cursor: sqlite3.Cursor, table: str) -> bool:
+    """Check if a table exists in the database."""
+    cursor.execute(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
+        (table,)
+    )
+    return cursor.fetchone()[0] > 0
+
+
 def add_column_if_missing(cursor: sqlite3.Cursor, table: str, column: str, column_type: str, default: str = ""):
-    """Add a column to a table if it doesn't already exist"""
+    """Add a column to a table if it doesn't already exist.
+
+    Silently skips if the table doesn't exist (schema will create it later).
+    """
     VALID_TABLES = {
         'sessions', 'reflexes', 'cascades', 'findings', 'unknowns',
         'dead_ends', 'reference_docs', 'mistakes', 'goals', 'subtasks',
@@ -105,19 +120,26 @@ def add_column_if_missing(cursor: sqlite3.Cursor, table: str, column: str, colum
         'project_dead_ends', 'mistakes_made', 'clients', 'engagements',
         'client_interactions', 'client_projects', 'investigation_branches',
         'epistemic_sources', 'assumptions', 'decisions',
+        # Post-test grounded calibration tables
+        'grounded_beliefs', 'verification_evidence', 'grounded_verifications',
+        'calibration_trajectory',
     }
     VALID_COLUMN_TYPES = {
         'TEXT', 'INTEGER', 'REAL', 'BLOB', 'NULL',
         'TIMESTAMP', 'BOOLEAN', 'JSON'
     }
-    
+
     if table not in VALID_TABLES:
         raise ValueError(f"Invalid table name: {table}")
-    
+
     column_type_upper = column_type.upper().split('(')[0]
     if column_type_upper not in VALID_COLUMN_TYPES:
         raise ValueError(f"Invalid column type: {column_type}")
-    
+
+    # Skip if table doesn't exist yet (schema will create it with the column)
+    if not table_exists(cursor, table):
+        return
+
     if not column_exists(cursor, table, column):
         default_clause = f" DEFAULT {default}" if default else ""
         cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}{default_clause}")

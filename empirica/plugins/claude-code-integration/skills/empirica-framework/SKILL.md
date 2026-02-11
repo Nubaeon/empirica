@@ -1,14 +1,14 @@
 ---
 name: empirica-framework
 description: "This skill should be used when the user asks to 'assess my knowledge state', 'run preflight', 'do a postflight', 'use CASCADE workflow', 'track what I know', 'measure learning', 'check epistemic drift', 'spawn investigation agents', 'create handoff', or mentions epistemic vectors, calibration, noetic/praxic phases, functional self-awareness, or structured investigation before coding tasks."
-version: 2.1.0
+version: 1.5.1
 ---
 
 # Empirica: Epistemic Framework Reference
 
 Measure what you know. Track what you learn. Prevent overconfidence.
 
-**v2.1.0:** Dual-track calibration (grounded verification), 4-phase CASCADE with POST-TEST.
+**v1.5.1:** Dual-track calibration (grounded verification), 4-phase CASCADE with POST-TEST.
 See CLAUDE.md for canonical terms (noetic/praxic/epistemic/context).
 
 ---
@@ -263,6 +263,96 @@ Use project search during noetic phases:
 2. Before logging unknown — check if already resolved
 3. Pre-CHECK — similar decision patterns
 4. Pre-self-improvement — conflicting guidance
+
+### Memory Management (Advanced)
+
+For parallel agent coordination and attention budget allocation:
+
+```bash
+# Allocate attention budget for parallel investigation
+empirica memory-prime --session-id <ID> --domains '["security", "performance"]' --budget 20
+
+# Retrieve memories by scope vectors
+empirica memory-scope --session-id <ID> --zone working --limit 10
+
+# Prioritize by information gain / token cost
+empirica memory-value --session-id <ID> --query "authentication"
+
+# Check approach against known dead-ends (real-time sentinel)
+empirica pattern-check --session-id <ID> --approach "Use X to do Y"
+
+# Aggregate findings from parallel sub-agents
+empirica session-rollup --parent-session-id <ID>
+
+# Context budget report (like /proc/meminfo)
+empirica memory-report --session-id <ID>
+```
+
+**Pattern-check** is critical: before implementing an approach, check if it's a known dead-end.
+
+---
+
+## Document Querying (mq)
+
+**`mq` — structure-first document queries.** Single binary, no dependencies, no embeddings.
+
+When you need to understand or extract from markdown, PDF, HTML, JSON, YAML, or JSONL files,
+prefer `mq` over reading entire files. It exposes document structure so you reason over it
+in your own context — no wasted tokens on irrelevant sections.
+
+```bash
+# See structure of all docs in a directory
+mq docs/ '.tree("full")'
+
+# Extract a specific section by heading
+mq file.md '.section("Gate Logic") | .text'
+
+# List all tables in a file
+mq file.md '.tables'
+
+# Get just headings (quick overview)
+mq file.md '.headings'
+
+# Multi-file: tree of entire directory
+mq presentations/ '.tree("full")'
+```
+
+**When to use mq vs other tools:**
+| Need | Tool |
+|------|------|
+| Document structure / section extraction | `mq` |
+| Semantic similarity ("find things related to X") | Qdrant / `project-search` |
+| Epistemic state of what was *learned* | `docs-assess` / `docs-explain` |
+| Exact string search in code | `grep` / Grep tool |
+
+**Pattern:** `mq .tree("full")` first to see structure, then `.section("Name") | .text` to extract what you need. This is 74-83% fewer tokens than reading whole files.
+
+**Installed at:** `/usr/local/bin/mq` (fork: github.com/Nubaeon/mq)
+
+---
+
+## Messaging (Multi-AI Coordination)
+
+For asynchronous communication between AI instances:
+
+```bash
+# Send message to another AI
+empirica message-send --to-ai-id philipp-code --subject "Auth findings" --body "JWT with RS256"
+
+# Check inbox
+empirica message-inbox                      # List unread messages
+
+# Read specific message
+empirica message-read --message-id <ID>
+
+# Reply to message
+empirica message-reply --message-id <ID> --body "Acknowledged, proceeding"
+
+# View thread
+empirica message-thread --thread-id <ID>
+```
+
+**Use case:** David/Philipp coordination, parallel AI handoffs, async status updates.
 
 ---
 

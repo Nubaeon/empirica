@@ -1,7 +1,7 @@
 ---
 name: empirica
 description: "This skill should be used when the user says '/empirica', '/empirica status', '/empirica on', '/empirica off', asks 'how do I use empirica', 'what empirica commands are there', 'show empirica status', or needs a quick reference for Empirica's core commands and workflow state."
-version: 2.0.0
+version: 1.5.1
 ---
 
 # /empirica - Quick Reference & Status
