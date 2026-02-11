@@ -366,6 +366,30 @@ PREFLIGHT → agent-spawn (×N) → agent-aggregate → CHECK → POSTFLIGHT →
 
 POST-TEST is automatic — triggered by POSTFLIGHT. No manual step needed.
 
+### Multi-Transaction Workflow (Goals Drive Boundaries)
+
+For complex work, create goals upfront and work through them one transaction at a time.
+Each transaction = one goal's full noetic-praxic loop. Noetic artifacts from transaction N
+guide transaction N+1 (via PREFLIGHT pattern retrieval).
+
+```
+Session Start
+  └─ Create goals (from task or spec)
+  └─ Transaction 1: Goal A
+       PREFLIGHT → [noetic: investigate, log findings] → CHECK → [praxic: implement] → POSTFLIGHT
+  └─ Transaction 2: Goal B (informed by T1's findings via PREFLIGHT retrieval)
+       PREFLIGHT → [noetic] → CHECK → [praxic] → POSTFLIGHT
+  └─ Transaction 3: Goal C...
+```
+
+**Scope by context capacity:** Pick up what you can properly handle in one transaction
+without losing coherence. Log noetic artifacts (findings, unknowns, dead-ends, assumptions)
+as they arise during BOTH phases — these persist in memory and guide future transactions.
+
+**Earned autonomy:** Each honest transaction improves grounded calibration. Better
+calibration → Sentinel adapts → more autonomy. Gaming produces bad calibration → tighter
+constraints. The system rewards honest self-assessment over time.
+
 ---
 
 ## Hook Integration
