@@ -67,9 +67,12 @@ class PostTestCollector:
     """Collects objective evidence from multiple sources."""
 
     def __init__(self, session_id: str, project_id: Optional[str] = None,
-                 db=None):
+                 db=None, phase: str = "combined",
+                 check_timestamp: Optional[float] = None):
         self.session_id = session_id
         self.project_id = project_id
+        self.phase = phase  # "noetic", "praxic", or "combined"
+        self.check_timestamp = check_timestamp  # CHECK boundary timestamp
         self._db = db
         self._owns_db = False
         self._session_goal_ids: Optional[List[str]] = None
@@ -101,20 +104,41 @@ class PostTestCollector:
         return self._session_goal_ids
 
     def collect_all(self) -> EvidenceBundle:
-        """Collect evidence from all available sources."""
+        """Collect evidence from all available sources.
+
+        Phase-aware collection:
+        - "noetic": investigation evidence (artifacts, sentinel) — no git/pytest
+        - "praxic": action evidence (goals, pytest, git) — standard pipeline
+        - "combined": all sources (backward-compatible default)
+        """
         bundle = EvidenceBundle(
             session_id=self.session_id,
             collection_timestamp=time.time(),
         )
 
-        collectors = [
-            ("goals", self._collect_goal_metrics),
-            ("artifacts", self._collect_artifact_metrics),
-            ("issues", self._collect_issue_metrics),
-            ("sentinel", self._collect_sentinel_metrics),
-            ("pytest", self._collect_test_results),
-            ("git", self._collect_git_metrics),
-        ]
+        if self.phase == "noetic":
+            collectors = [
+                ("noetic", self._collect_noetic_metrics),
+                ("artifacts", self._collect_artifact_metrics),
+                ("sentinel", self._collect_sentinel_metrics),
+            ]
+        elif self.phase == "praxic":
+            collectors = [
+                ("goals", self._collect_goal_metrics),
+                ("artifacts", self._collect_artifact_metrics),
+                ("issues", self._collect_issue_metrics),
+                ("pytest", self._collect_test_results),
+                ("git", self._collect_git_metrics),
+            ]
+        else:
+            collectors = [
+                ("goals", self._collect_goal_metrics),
+                ("artifacts", self._collect_artifact_metrics),
+                ("issues", self._collect_issue_metrics),
+                ("sentinel", self._collect_sentinel_metrics),
+                ("pytest", self._collect_test_results),
+                ("git", self._collect_git_metrics),
+            ]
 
         for source_name, collector_fn in collectors:
             try:
@@ -133,6 +157,129 @@ class PostTestCollector:
 
         self._close_db()
         return bundle
+
+    def _collect_noetic_metrics(self) -> List[EvidenceItem]:
+        """Collect investigation-phase evidence for noetic calibration.
+
+        Noetic evidence measures epistemic process quality:
+        - Investigation coverage (files examined, queries issued)
+        - Unknowns surfaced during investigation
+        - Dead-ends identified before hitting them
+        - CHECK gate iterations (investigate rounds)
+        """
+        items = []
+        db = self._get_db()
+        cursor = db.conn.cursor()
+
+        # Investigation depth: unknowns surfaced (more = better epistemic honesty)
+        cursor.execute("""
+            SELECT COUNT(*) FROM project_unknowns
+            WHERE session_id = ?
+        """, (self.session_id,))
+        unknowns_surfaced = cursor.fetchone()[0]
+
+        if unknowns_surfaced > 0:
+            # Normalize: 1-2 = 0.3, 5+ = 1.0
+            honesty_score = min(1.0, unknowns_surfaced / 5.0)
+            items.append(EvidenceItem(
+                source="noetic",
+                metric_name="unknowns_surfaced",
+                value=honesty_score,
+                raw_value={"count": unknowns_surfaced},
+                quality=EvidenceQuality.SEMI_OBJECTIVE,
+                supports_vectors=["uncertainty", "know"],
+                metadata={"phase": "noetic"},
+            ))
+
+        # Dead-end avoidance: dead-ends logged before CHECK proceed
+        if self.check_timestamp:
+            cursor.execute("""
+                SELECT COUNT(*) FROM project_dead_ends
+                WHERE session_id = ? AND timestamp <= ?
+            """, (self.session_id, self.check_timestamp))
+            pre_check_dead_ends = cursor.fetchone()[0]
+
+            if pre_check_dead_ends > 0:
+                # Identifying dead-ends before action = good pattern recognition
+                avoidance_score = min(1.0, pre_check_dead_ends / 3.0)
+                items.append(EvidenceItem(
+                    source="noetic",
+                    metric_name="dead_end_avoidance",
+                    value=avoidance_score,
+                    raw_value={"pre_check_dead_ends": pre_check_dead_ends},
+                    quality=EvidenceQuality.SEMI_OBJECTIVE,
+                    supports_vectors=["signal", "know"],
+                    metadata={"phase": "noetic"},
+                ))
+
+        # Findings logged during investigation (pre-CHECK)
+        if self.check_timestamp:
+            cursor.execute("""
+                SELECT COUNT(*) FROM project_findings
+                WHERE session_id = ? AND timestamp <= ?
+            """, (self.session_id, self.check_timestamp))
+            pre_check_findings = cursor.fetchone()[0]
+        else:
+            cursor.execute("""
+                SELECT COUNT(*) FROM project_findings
+                WHERE session_id = ?
+            """, (self.session_id,))
+            pre_check_findings = cursor.fetchone()[0]
+
+        if pre_check_findings > 0:
+            # More findings during investigation = richer epistemic output
+            discovery_score = min(1.0, pre_check_findings / 5.0)
+            items.append(EvidenceItem(
+                source="noetic",
+                metric_name="investigation_findings",
+                value=discovery_score,
+                raw_value={"findings": pre_check_findings},
+                quality=EvidenceQuality.SEMI_OBJECTIVE,
+                supports_vectors=["know", "signal"],
+                metadata={"phase": "noetic"},
+            ))
+
+        # CHECK iteration count: more investigate rounds = thorough but uncertain
+        cursor.execute("""
+            SELECT reflex_data FROM reflexes
+            WHERE session_id = ? AND phase = 'CHECK'
+            ORDER BY timestamp ASC
+        """, (self.session_id,))
+        check_rows = cursor.fetchall()
+
+        investigate_count = 0
+        for row in check_rows:
+            try:
+                data = json.loads(row[0]) if row[0] else {}
+                if data.get("decision") == "investigate":
+                    investigate_count += 1
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        if len(check_rows) > 0:
+            # Investigation thoroughness: at least 1 investigate round = thorough
+            # But too many rounds (5+) suggests struggling, not thoroughness
+            if investigate_count == 0:
+                thoroughness = 0.5  # Went straight to proceed — moderate
+            elif investigate_count <= 3:
+                thoroughness = 0.7 + (investigate_count * 0.1)  # 0.8-1.0
+            else:
+                thoroughness = max(0.4, 1.0 - (investigate_count - 3) * 0.15)
+
+            items.append(EvidenceItem(
+                source="noetic",
+                metric_name="investigation_thoroughness",
+                value=thoroughness,
+                raw_value={
+                    "investigate_rounds": investigate_count,
+                    "total_checks": len(check_rows),
+                },
+                quality=EvidenceQuality.SEMI_OBJECTIVE,
+                supports_vectors=["know", "context"],
+                metadata={"phase": "noetic"},
+            ))
+
+        return items
 
     def _collect_goal_metrics(self) -> List[EvidenceItem]:
         """Collect goal/subtask completion ratios from SQLite."""

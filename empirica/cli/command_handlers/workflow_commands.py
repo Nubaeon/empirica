@@ -986,8 +986,8 @@ def handle_check_submit_command(args):
             raise ValueError("Vectors must be a dictionary")
 
         # AUTO-COMPUTE DECISION from vectors if not provided
-        # Readiness gate (from CLAUDE.md): know >= 0.70 AND uncertainty <= 0.35
-        # Apply GROUNDED corrections from .breadcrumbs.yaml (objective evidence, not learning deltas)
+        # Readiness gate: know >= threshold AND uncertainty <= threshold
+        # Thresholds are dynamic (earned autonomy from calibration history) with static fallback
         know = vectors.get('know', 0.5)
         uncertainty = vectors.get('uncertainty', 0.5)
         try:
@@ -997,6 +997,38 @@ def handle_check_submit_command(args):
             _corrections = {}
         corrected_know = know + _corrections.get('know', 0.0)
         corrected_uncertainty = uncertainty + _corrections.get('uncertainty', 0.0)
+
+        # Dynamic thresholds from calibration history (earned autonomy)
+        ready_know_threshold = 0.70  # Static default
+        ready_uncertainty_threshold = 0.35  # Static default
+        dynamic_thresholds_info = None
+        try:
+            from empirica.core.post_test.dynamic_thresholds import compute_dynamic_thresholds
+            dt_db = _get_db_for_session(session_id)
+            dt_result = compute_dynamic_thresholds(ai_id="claude-code", db=dt_db)
+            dt_db.close()
+
+            if dt_result.get("source") == "dynamic":
+                # Use noetic thresholds for CHECK gate (investigation → action boundary)
+                noetic = dt_result.get("noetic", {})
+                if noetic.get("calibration_accuracy") is not None:
+                    ready_know_threshold = noetic["ready_know_threshold"]
+                    ready_uncertainty_threshold = noetic["ready_uncertainty_threshold"]
+                    dynamic_thresholds_info = {
+                        "source": "dynamic",
+                        "know_threshold": ready_know_threshold,
+                        "uncertainty_threshold": ready_uncertainty_threshold,
+                        "calibration_accuracy": noetic["calibration_accuracy"],
+                        "transactions_analyzed": noetic["transactions_analyzed"],
+                    }
+                    logger.info(
+                        f"Dynamic thresholds: know>={ready_know_threshold:.3f}, "
+                        f"uncertainty<={ready_uncertainty_threshold:.3f} "
+                        f"(accuracy={noetic['calibration_accuracy']:.3f}, "
+                        f"n={noetic['transactions_analyzed']})"
+                    )
+        except Exception as e:
+            logger.debug(f"Dynamic thresholds unavailable (using static): {e}")
 
         # DIMINISHING RETURNS DETECTION: Analyze if investigation is still improving
         # Key insight: Speed and correctness are ALIGNED when calibration is good.
@@ -1060,8 +1092,9 @@ def handle_check_submit_command(args):
         # NOTE: Use RAW vectors, not bias-corrected. Biases are INFORMATIONAL for the AI
         # to self-correct, not for the system to pre-correct. True calibration happens
         # at POST-TEST when we compare claimed outcomes vs objective evidence.
+        # Thresholds are dynamic (earned autonomy) when calibration history is available.
         computed_decision = None
-        if know >= 0.70 and uncertainty <= 0.35:
+        if know >= ready_know_threshold and uncertainty <= ready_uncertainty_threshold:
             computed_decision = "proceed"
         elif diminishing_returns["recommend_proceed"]:
             # Override: investigation plateaued with adequate baseline
@@ -1304,6 +1337,13 @@ def handle_check_submit_command(args):
                 "metacog": {
                     "computed_decision": computed_decision,
                     "gate_passed": computed_decision == "proceed",
+                    "thresholds": {
+                        "know": ready_know_threshold,
+                        "uncertainty": ready_uncertainty_threshold,
+                        "source": "dynamic" if dynamic_thresholds_info else "static",
+                        "calibration_accuracy": dynamic_thresholds_info.get("calibration_accuracy") if dynamic_thresholds_info else None,
+                        "transactions_analyzed": dynamic_thresholds_info.get("transactions_analyzed") if dynamic_thresholds_info else None,
+                    },
                     "diminishing_returns": {
                         "detected": diminishing_returns.get("detected", False),
                         "recommend_proceed": diminishing_returns.get("recommend_proceed", False)
@@ -2020,27 +2060,44 @@ def handle_postflight_submit_command(args):
                 logger.debug(f"Bayesian belief update failed (non-fatal): {e}")
 
             # GROUNDED VERIFICATION: Post-test evidence-based calibration (parallel track)
+            # Phase-aware: detects CHECK boundary, splits into noetic + praxic tracks
             # Collects objective evidence → maps to vectors → Bayesian update → trajectory → export
             grounded_verification = None
             try:
                 from empirica.core.post_test.grounded_calibration import run_grounded_verification
+                from empirica.core.post_test.phase_boundary import detect_phase_boundary
 
                 db = _get_db_for_session(session_id)
                 session = db.get_session(session_id)
                 project_id = session.get('project_id') if session else None
+
+                # Detect CHECK phase boundary for noetic/praxic split
+                phase_boundary = None
+                try:
+                    phase_boundary = detect_phase_boundary(session_id, db)
+                    if phase_boundary and phase_boundary.get("has_check"):
+                        logger.debug(
+                            f"Phase boundary detected: check_count={phase_boundary['check_count']}, "
+                            f"investigate_count={phase_boundary['investigate_count']}, "
+                            f"noetic_only={phase_boundary.get('noetic_only', False)}"
+                        )
+                except Exception as e:
+                    logger.debug(f"Phase boundary detection failed (non-fatal): {e}")
 
                 grounded_verification = run_grounded_verification(
                     session_id=session_id,
                     postflight_vectors=vectors,
                     db=db,
                     project_id=project_id,
+                    phase_boundary=phase_boundary,
                 )
 
                 if grounded_verification:
+                    phase_aware = grounded_verification.get('phase_aware', False)
                     logger.debug(
                         f"Grounded verification: {grounded_verification['evidence_count']} evidence items, "
-                        f"coverage={grounded_verification['grounded_coverage']}, "
-                        f"score={grounded_verification['calibration_score']}"
+                        f"phase_aware={phase_aware}, "
+                        f"phases={list(grounded_verification.get('phases', {}).keys())}"
                     )
                 db.close()
             except Exception as e:
