@@ -264,7 +264,7 @@ beliefs = db.get_bayesian_beliefs(ai_id="claude-code")
 | `engagement` | Gate | Readiness to proceed | 0.6-0.9 |
 | `uncertainty` | Meta | Epistemic uncertainty (lower is better) | 0.1-0.35 |
 
-**Readiness Gate:** `know >= 0.70 AND uncertainty <= 0.35`
+**Readiness Gate:** Dynamic thresholds from Sentinel (static fallback: know >= 0.70, uncertainty <= 0.35)
 
 ---
 

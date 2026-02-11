@@ -54,7 +54,7 @@ All CASCADE commands accept these vectors (0.0-1.0):
 | `coherence` | Logical consistency | 0.6-0.95 |
 | `engagement` | Task engagement level | 0.5-0.9 |
 
-**Readiness gate:** `know >= 0.70 AND uncertainty <= 0.35`
+**Readiness gate:** Dynamic thresholds from Sentinel (static fallback: know >= 0.70, uncertainty <= 0.35)
 
 ---
 
