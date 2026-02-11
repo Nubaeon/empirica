@@ -4,7 +4,34 @@ CLI Utilities - Shared helper functions for modular CLI components
 
 import json
 import time
+import sys
 from typing import Dict, Any, List, Optional
+
+
+def safe_print(*args, **kwargs):
+    """
+    Print function that handles Windows console encoding errors.
+    Falls back to ASCII-safe output if Unicode fails.
+    """
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        # Replace Unicode chars with ASCII equivalents
+        safe_args = []
+        for arg in args:
+            if isinstance(arg, str):
+                # Replace common Unicode chars with ASCII
+                arg = arg.replace('━', '=').replace('─', '-')
+                arg = arg.replace('✅', '[OK]').replace('❌', '[ERR]')
+                arg = arg.replace('⚠️', '[WARN]').replace('ℹ️', '[INFO]')
+                arg = arg.replace('🔍', '[DEBUG]').replace('🎯', '[TARGET]')
+                arg = arg.replace('📁', '[FOLDER]').replace('🆔', '[ID]')
+                arg = arg.replace('🗄️', '[DB]').replace('🏗️', '[BUILD]')
+                arg = arg.replace('🛠️', '[TOOLS]').replace('🔄', '[LOAD]')
+                # Encode to ASCII, ignoring errors
+                arg = arg.encode('ascii', errors='replace').decode('ascii')
+            safe_args.append(arg)
+        print(*safe_args, **kwargs)
 
 
 def print_component_status(component_name: str, status: str, details: Optional[str] = None):
@@ -17,9 +44,9 @@ def print_component_status(component_name: str, status: str, details: Optional[s
         'loading': '🔄'
     }.get(status.lower(), '•')
     
-    print(f"{status_emoji} {component_name}: {status}")
+    safe_print(f"{status_emoji} {component_name}: {status}")
     if details:
-        print(f"   {details}")
+        safe_print(f"   {details}")
 
 
 def format_uncertainty_output(uncertainty_scores: Dict[str, float], verbose: bool = False) -> str:
@@ -62,12 +89,12 @@ def handle_cli_error(error: Exception, command: str, verbose: bool = False, sess
     if "Broken pipe" in str(error):
         return
 
-    print(f"❌ {command} error: {error}")
+    safe_print(f"❌ {command} error: {error}")
 
     if verbose:
         import traceback
-        print("🔍 Detailed error information:")
-        print(traceback.format_exc())
+        safe_print("🔍 Detailed error information:")
+        safe_print(traceback.format_exc())
 
     # Auto-capture the error for handoff to other AIs
     try:
@@ -115,11 +142,11 @@ def handle_cli_error(error: Exception, command: str, verbose: bool = False, sess
                 exc_info=error
             )
             if verbose and issue_id:
-                print(f"📋 Auto-captured as issue {issue_id[:8]}... for handoff")
+                safe_print(f"📋 Auto-captured as issue {issue_id[:8]}... for handoff")
     except Exception as capture_error:
         # Don't fail the error handler if auto-capture fails
         if verbose:
-            print(f"⚠️  Auto-capture failed: {capture_error}")
+            safe_print(f"⚠️  Auto-capture failed: {capture_error}")
 
 
 def parse_json_safely(json_string: Optional[str], default: Dict = None) -> Dict[str, Any]:
@@ -153,8 +180,8 @@ def parse_json_safely(json_string: Optional[str], default: Dict = None) -> Dict[
                 fixed_json = _fix_json_escapes(json_string)
                 return json.loads(fixed_json)
             except json.JSONDecodeError:
-                print(f"⚠️ JSON parsing error: {e}")
-                print(f"   Error details: Invalid \\escape in JSON string")
+                safe_print(f"⚠️ JSON parsing error: {e}")
+                safe_print(f"   Error details: Invalid \\escape in JSON string")
                 return default or {}
 
 
@@ -213,13 +240,13 @@ def validate_confidence_threshold(threshold: float) -> bool:
 
 def print_header(title: str, emoji: str = "🎯") -> None:
     """Print a formatted header for CLI sections"""
-    print(f"\n{emoji} {title}")
-    print("=" * (len(title) + 3))
+    safe_print(f"\n{emoji} {title}")
+    safe_print("=" * (len(title) + 3))
 
 
 def print_separator(char: str = "-", length: int = 50) -> None:
     """Print a separator line"""
-    print(char * length)
+    safe_print(char * length)
 
 
 def format_component_list(components: List[Dict[str, Any]], show_details: bool = False) -> str:
@@ -294,13 +321,13 @@ def print_project_context(quiet: bool = False, verbose: bool = False) -> Optiona
 
         if not git_root:
             if not quiet:
-                print("⚠️  Not in a git repository")
+                safe_print("⚠️  Not in a git repository")
             return None
 
         project_yaml = git_root / '.empirica' / 'project.yaml'
         if not project_yaml.exists():
             if not quiet:
-                print(f"⚠️  No .empirica/project.yaml - run 'empirica project-init'")
+                safe_print(f"⚠️  No .empirica/project.yaml - run 'empirica project-init'")
             return None
         
         # Load project config
@@ -334,15 +361,15 @@ def print_project_context(quiet: bool = False, verbose: bool = False) -> Optiona
         # Print based on mode
         if quiet:
             # Single line for quiet mode
-            print(f"📁 {project_info['name']} ({project_info['project_id'][:8]}...)")
+            safe_print(f"📁 {project_info['name']} ({project_info['project_id'][:8]}...)")
         else:
             # Full banner for normal mode
-            print(f"📁 Project: {project_info['name']}")
-            print(f"🆔 ID: {project_info['project_id'][:8]}...")
-            print(f"📍 Location: {project_info['git_root']}")
+            safe_print(f"📁 Project: {project_info['name']}")
+            safe_print(f"🆔 ID: {project_info['project_id'][:8]}...")
+            safe_print(f"📍 Location: {project_info['git_root']}")
             
             if verbose and git_url:
-                print(f"🔗 Repository: {git_url}")
+                safe_print(f"🔗 Repository: {git_url}")
         
         return project_info
         
@@ -351,5 +378,5 @@ def print_project_context(quiet: bool = False, verbose: bool = False) -> Optiona
         logger = logging.getLogger(__name__)
         logger.debug(f"Could not load project context: {e}")
         if not quiet:
-            print(f"⚠️  Error loading project context: {e}")
+            safe_print(f"⚠️  Error loading project context: {e}")
         return None
