@@ -16,18 +16,54 @@ Author: Claude Code
 Date: 2026-02-04
 """
 
-import fcntl
 import hashlib
 import json
 import os
+import sys
 import time
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, Optional, Any
 
+# Platform-specific file locking
+if sys.platform == 'win32':
+    import msvcrt
+    fcntl = None
+else:
+    import fcntl
+    msvcrt = None
+
 
 # Cache directory - persistent location
 CACHE_DIR = Path.home() / '.empirica' / 'statusline_cache'
+
+
+# Cross-platform file locking helpers
+def _lock_file(f, exclusive: bool = True):
+    """Lock a file (exclusive or shared) in a cross-platform way."""
+    if sys.platform == 'win32':
+        # Windows: use msvcrt
+        mode = msvcrt.LK_NBLCK if exclusive else msvcrt.LK_NBRLCK
+        try:
+            msvcrt.locking(f.fileno(), mode, 1)
+        except OSError:
+            # If non-blocking lock fails, try blocking
+            mode = msvcrt.LK_LOCK if exclusive else msvcrt.LK_RLCK
+            msvcrt.locking(f.fileno(), mode, 1)
+    else:
+        # Unix: use fcntl
+        lock_type = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+        fcntl.flock(f.fileno(), lock_type)
+
+
+def _unlock_file(f):
+    """Unlock a file in a cross-platform way."""
+    if sys.platform == 'win32':
+        # Windows: use msvcrt
+        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        # Unix: use fcntl
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 
 @dataclass
@@ -182,11 +218,11 @@ class StatuslineCache:
 
             # Write with exclusive lock
             with open(self.cache_file, 'w') as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                _lock_file(f, exclusive=True)
                 try:
                     json.dump(entry.to_dict(), f, indent=2)
                 finally:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    _unlock_file(f)
 
             return True
         except Exception:
@@ -208,11 +244,11 @@ class StatuslineCache:
 
         try:
             with open(self.cache_file, 'r') as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                _lock_file(f, exclusive=False)
                 try:
                     data = json.load(f)
                 finally:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    _unlock_file(f)
 
             entry = StatuslineCacheEntry.from_dict(data)
 
