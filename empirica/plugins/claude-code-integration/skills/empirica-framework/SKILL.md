@@ -42,9 +42,12 @@ empirica preflight-submit - << 'EOF'
 EOF
 ```
 
-### CHECK (Sentinel gate)
+### CHECK (Sentinel gate — WITHIN the transaction)
 
-Submit when ready to transition from noetic to praxic:
+Submit when ready to transition from noetic to praxic. CHECK is a **gate inside
+your transaction**, not a transaction boundary. `proceed` means start acting
+**in this same transaction**. `investigate` means keep exploring **in this same
+transaction**. Do NOT POSTFLIGHT after CHECK — that splits the measurement cycle.
 
 ```bash
 empirica check-submit - << 'EOF'
@@ -63,8 +66,7 @@ Returns `proceed` or `investigate`. The Sentinel evaluates your vectors holistic
 honest self-assessment matters more than hitting any particular number.
 
 **When to CHECK:**
-- High uncertainty (you're unsure about the approach)
-- High-impact changes (irreversible or broad scope)
+- After noetic investigation, before starting praxic work
 - Post-compact (context reduced, re-establish readiness)
 - Before irreversible actions
 
@@ -331,21 +333,30 @@ export EMPIRICA_SENTINEL_REQUIRE_BOOTSTRAP=true
 
 ---
 
-## Common Patterns
+## Common Patterns (All Single-Transaction)
 
-### Quick Task
+Every pattern below is **one transaction**. CHECK is a gate inside, not a boundary.
+
+### Quick Task (high confidence, skip noetic phase)
 ```
-PREFLIGHT → [praxic work] → POSTFLIGHT → POST-TEST
+PREFLIGHT → CHECK → [praxic work] → POSTFLIGHT → POST-TEST
 ```
 
-### Investigation → Implementation
+### Investigation → Implementation (the standard loop)
 ```
 PREFLIGHT → [noetic: explore] → CHECK → [praxic: implement] → POSTFLIGHT → POST-TEST
+          └── investigate, log findings ──┘    └── act on what you learned ──┘
 ```
 
-### Complex Feature
+### Complex Feature (multiple CHECK rounds, still one transaction)
 ```
-PREFLIGHT → Goal + Subtasks → [CHECK at each gate] → POSTFLIGHT → POST-TEST
+PREFLIGHT → Goal + Subtasks → [noetic] → CHECK → [praxic] → POSTFLIGHT → POST-TEST
+```
+
+**WRONG (split-brain anti-pattern):**
+```
+PREFLIGHT → [noetic] → POSTFLIGHT    ← BROKEN: closes before acting
+PREFLIGHT → [praxic] → POSTFLIGHT    ← BROKEN: acts without investigation baseline
 ```
 
 ### Parallel Investigation
@@ -432,6 +443,9 @@ empirica handoff-create ...              # Create handoff
 - Use `calibration-report --trajectory` to see if calibration is improving
 
 **DON'T:**
+- **Split noetic and praxic into separate transactions** — the #1 mistake. CHECK
+  gates the transition, it does NOT end the transaction. Investigation and
+  implementation belong in the SAME transaction. POSTFLIGHT captures the full cycle.
 - Inflate vectors to pass CHECK — grounded calibration catches this
 - Skip PREFLIGHT (lose baseline AND get blocked by Sentinel)
 - Ignore high uncertainty signals (uncertainty is data, not failure)
