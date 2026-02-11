@@ -85,19 +85,20 @@ See [system-prompts/README.md](system-prompts/README.md) for the full architectu
 
 ### CASCADE Workflow
 ```
-PREFLIGHT → CHECK → POSTFLIGHT
+PREFLIGHT → CHECK → POSTFLIGHT → POST-TEST
 ```
+
+POST-TEST automatically collects objective evidence (tests, git, goals) to ground
+self-assessments in reality. See dual-track calibration in CLAUDE.md.
 
 ### 13 Epistemic Vectors
-- **Foundation:** know, do, context
+- **Foundation:** engagement, know, do, context
 - **Comprehension:** clarity, coherence, signal, density
 - **Execution:** state, change, completion, impact
-- **Meta:** engagement, uncertainty
+- **Meta:** uncertainty
 
 ### Readiness Gate
-```
-know >= 0.70 AND uncertainty <= 0.35
-```
+Sentinel computes thresholds dynamically from calibration data in `.breadcrumbs.yaml`.
 
 ---
 
