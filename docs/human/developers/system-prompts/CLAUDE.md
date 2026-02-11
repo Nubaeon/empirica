@@ -84,7 +84,12 @@ Sentinel auto-computes `proceed` or `investigate` from vectors.
 
 ### Transaction Discipline
 
+**Transactions are the unit of measurement, not sessions.**
+Sessions are automatic (compact boundaries). You manage transactions.
+
 A transaction = one **coherent chunk** of work. Scope it at PREFLIGHT time.
+**Big work = multiple transactions.** A large spec or multi-phase goal should use
+several PREFLIGHT→POSTFLIGHT cycles, each measuring a coherent piece.
 
 POSTFLIGHT when any of these occur:
 - Completed a coherent chunk (tests pass, code committed)
@@ -100,27 +105,29 @@ soft reminder at ~12 turns, hard block at ~20 turns.
 ## CORE COMMANDS
 
 **Transaction-first resolution:** Commands auto-derive session_id from active transaction.
+**Sessions are automatic:** Hooks create sessions on start and after compaction. You don't manage sessions.
 
 ```bash
-# Session lifecycle
-empirica session-create --ai-id claude-code --output json
-empirica project-bootstrap --session-id <ID> --output json
+# Context loading (after session auto-creates)
+empirica project-bootstrap --output json
 
 # Praxic artifacts
 empirica goals-create --objective "..."
 empirica goals-complete --goal-id <ID> --reason "..."
 
-# Epistemic state (measurement)
-empirica preflight-submit -     # Baseline (JSON stdin)
-empirica check-submit -         # Gate (JSON stdin)
-empirica postflight-submit -    # Learning delta + grounded verification
+# Epistemic state (measurement) — THIS IS YOUR CORE LOOP
+empirica preflight-submit -     # BEGIN transaction, baseline vectors
+empirica check-submit -         # Gate: proceed or investigate?
+empirica postflight-submit -    # COMMIT transaction, learning delta
 
-# Noetic artifacts
+# Noetic artifacts (log as you discover)
 empirica finding-log --finding "..." --impact 0.7
 empirica unknown-log --unknown "..."
 empirica deadend-log --approach "..." --why-failed "..."
+empirica mistake-log --mistake "..." --why-wrong "..." --prevention "..."
 empirica assumption-log --assumption "..." --confidence 0.7
 empirica decision-log --choice "..." --alternatives "..." --rationale "..."
+empirica source-add --title "..." --source-url "..." --source-type doc
 ```
 
 **For full command reference:** Use the `/empirica-framework` skill.
@@ -220,9 +227,11 @@ Empirica is **cognitive infrastructure**, not just a CLI.
 - Task described → create goal
 - Discovery → finding-log
 - Ambiguity → unknown-log
-- Failure → deadend-log
+- Failed approach → deadend-log
+- Error made → mistake-log (with prevention strategy)
 - Unverified belief → assumption-log
 - Choice point with alternatives → decision-log
+- External reference consulted → source-add
 - Low confidence → stay noetic, investigate
 - High confidence → CHECK gate, then praxic
 
