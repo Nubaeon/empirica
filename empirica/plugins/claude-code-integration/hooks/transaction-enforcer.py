@@ -124,8 +124,7 @@ def main():
     # CRITICAL: Prevent infinite loops
     # If stop_hook_active is True, we already blocked once — let Claude stop
     if hook_input.get('stop_hook_active'):
-        # Allow stop — don't re-block
-        print(json.dumps({"ok": True, "skipped": True, "reason": "stop_hook_active — avoiding loop"}))
+        print(json.dumps({}))
         sys.exit(0)
 
     instance_id = _get_instance_id()
@@ -135,7 +134,7 @@ def main():
     if not tx_file:
         # No transaction file found — nothing to enforce
         _clear_turn_counter(instance_id)
-        print(json.dumps({"ok": True, "skipped": True, "reason": "no_open_transaction"}))
+        print(json.dumps({}))
         sys.exit(0)
 
     # Read transaction state
@@ -143,12 +142,12 @@ def main():
         with open(tx_file, 'r') as f:
             tx_data = json.load(f)
     except Exception:
-        print(json.dumps({"ok": True, "skipped": True, "reason": "tx_file_unreadable"}))
+        print(json.dumps({}))
         sys.exit(0)
 
     if tx_data.get('status') != 'open':
         _clear_turn_counter(instance_id)
-        print(json.dumps({"ok": True, "skipped": True, "reason": "transaction_not_open"}))
+        print(json.dumps({}))
         sys.exit(0)
 
     # Transaction is open — increment turn counter
@@ -167,10 +166,10 @@ def main():
 
     # Below soft threshold — allow stop silently
     if turns < SOFT_THRESHOLD:
-        print(json.dumps({"ok": True, "turns": turns, "threshold": SOFT_THRESHOLD}))
+        print(json.dumps({}))
         sys.exit(0)
 
-    # Between soft and hard threshold — inject reminder but allow stop
+    # Between soft and hard threshold — inject reminder via systemMessage but allow stop
     if turns < HARD_THRESHOLD:
         if not counter.get('soft_reminded'):
             counter['soft_reminded'] = True
@@ -178,24 +177,22 @@ def main():
 
         session_id = tx_data.get('session_id', 'unknown')
         output = {
-            "hookSpecificOutput": {
-                "hookEventName": "Stop",
-                "additionalContext": (
-                    f"\n## Transaction Discipline Reminder\n\n"
-                    f"You have an open transaction ({tx_id[:8]}...) that has been running "
-                    f"for {turns} turns without POSTFLIGHT.\n\n"
-                    f"**Consider:** Is this a natural commit point? If you've completed a "
-                    f"coherent chunk of work, run POSTFLIGHT to close the transaction and "
-                    f"capture your learning delta. Then open a new PREFLIGHT for the next chunk.\n\n"
-                    f"```bash\n"
-                    f"empirica postflight-submit - << 'EOF'\n"
-                    f'{{"session_id": "{session_id}", '
-                    f'"task_outcome": "<what was accomplished>", '
-                    f'"vectors": {{"know": ..., "uncertainty": ..., "completion": ...}}, '
-                    f'"reasoning": "<your assessment>"}}\n'
-                    f"EOF\n```\n"
-                )
-            }
+            "decision": "approve",
+            "systemMessage": (
+                f"## Transaction Discipline Reminder\n\n"
+                f"You have an open transaction ({tx_id[:8]}...) that has been running "
+                f"for {turns} turns without POSTFLIGHT.\n\n"
+                f"**Consider:** Is this a natural commit point? If you've completed a "
+                f"coherent chunk of work, run POSTFLIGHT to close the transaction and "
+                f"capture your learning delta. Then open a new PREFLIGHT for the next chunk.\n\n"
+                f"```bash\n"
+                f"empirica postflight-submit - << 'EOF'\n"
+                f'{{"session_id": "{session_id}", '
+                f'"task_outcome": "<what was accomplished>", '
+                f'"vectors": {{"know": ..., "uncertainty": ..., "completion": ...}}, '
+                f'"reasoning": "<your assessment>"}}\n'
+                f"EOF\n```\n"
+            )
         }
         print(json.dumps(output))
         sys.exit(0)
@@ -204,30 +201,24 @@ def main():
     session_id = tx_data.get('session_id', 'unknown')
     output = {
         "decision": "block",
-        "reason": (
-            f"Open transaction ({tx_id[:8]}...) has been running for {turns} turns "
-            f"without POSTFLIGHT. Submit POSTFLIGHT to close the transaction before stopping. "
-            f"This captures your learning delta and enables calibration."
-        ),
-        "hookSpecificOutput": {
-            "hookEventName": "Stop",
-            "additionalContext": (
-                f"\n## POSTFLIGHT Required (Transaction Enforcement)\n\n"
-                f"Your transaction has been open for **{turns} turns** (threshold: {HARD_THRESHOLD}). "
-                f"Submit POSTFLIGHT now to close the measurement cycle.\n\n"
-                f"**Session:** {session_id}\n"
-                f"**Transaction:** {tx_id[:8]}...\n\n"
-                f"```bash\n"
-                f"empirica postflight-submit - << 'EOF'\n"
-                f'{{"session_id": "{session_id}", '
-                f'"task_outcome": "<what was accomplished in this transaction>", '
-                f'"vectors": {{"know": ..., "uncertainty": ..., "context": ..., '
-                f'"completion": ..., "impact": ..., "do": ..., "change": ...}}, '
-                f'"reasoning": "<honest assessment of this work chunk>"}}\n'
-                f"EOF\n```\n\n"
-                f"After POSTFLIGHT, start a new PREFLIGHT for the next chunk of work.\n"
-            )
-        }
+        "reason": f"Open transaction requires POSTFLIGHT before stopping ({turns} turns).",
+        "systemMessage": (
+            f"## POSTFLIGHT Required (Transaction Enforcement)\n\n"
+            f"Your transaction ({tx_id[:8]}...) has been open for **{turns} turns** "
+            f"(threshold: {HARD_THRESHOLD}). Submit POSTFLIGHT now to close the "
+            f"measurement cycle before stopping.\n\n"
+            f"**Session:** {session_id}\n"
+            f"**Transaction:** {tx_id[:8]}...\n\n"
+            f"```bash\n"
+            f"empirica postflight-submit - << 'EOF'\n"
+            f'{{"session_id": "{session_id}", '
+            f'"task_outcome": "<what was accomplished in this transaction>", '
+            f'"vectors": {{"know": ..., "uncertainty": ..., "context": ..., '
+            f'"completion": ..., "impact": ..., "do": ..., "change": ...}}, '
+            f'"reasoning": "<honest assessment of this work chunk>"}}\n'
+            f"EOF\n```\n\n"
+            f"After POSTFLIGHT, start a new PREFLIGHT for the next chunk of work.\n"
+        )
     }
     print(json.dumps(output))
     sys.exit(0)

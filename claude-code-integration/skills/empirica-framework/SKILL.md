@@ -1,14 +1,14 @@
 ---
 name: empirica-framework
 description: "This skill should be used when the user asks to 'assess my knowledge state', 'run preflight', 'do a postflight', 'use CASCADE workflow', 'track what I know', 'measure learning', 'check epistemic drift', 'spawn investigation agents', 'create handoff', or mentions epistemic vectors, calibration, noetic/praxic phases, functional self-awareness, or structured investigation before coding tasks."
-version: 1.5.1
+version: 2.2.0
 ---
 
 # Empirica: Epistemic Framework Reference
 
 Measure what you know. Track what you learn. Prevent overconfidence.
 
-**v1.5.1:** Dual-track calibration (grounded verification), 4-phase CASCADE with POST-TEST.
+**v2.2.0:** Intent layer (assumptions, decisions), threshold-free readiness, transaction-first commands.
 See CLAUDE.md for canonical terms (noetic/praxic/epistemic/context).
 
 ---
@@ -59,12 +59,13 @@ empirica check-submit - << 'EOF'
 EOF
 ```
 
-Returns `proceed` or `investigate` based on readiness gate: `know >= 0.70 AND uncertainty <= 0.35` (after bias correction).
+Returns `proceed` or `investigate`. The Sentinel evaluates your vectors holistically —
+honest self-assessment matters more than hitting any particular number.
 
 **When to CHECK:**
-- Uncertainty > 0.5 (too uncertain)
-- Scope > 0.6 (high-impact changes)
-- Post-compact (context reduced)
+- High uncertainty (you're unsure about the approach)
+- High-impact changes (irreversible or broad scope)
+- Post-compact (context reduced, re-establish readiness)
 - Before irreversible actions
 
 ### POSTFLIGHT (Measure delta + trigger grounded verification)
@@ -182,14 +183,21 @@ empirica calibration-report --trajectory
 Log as you work — these link to your active goal automatically:
 
 ```bash
-# Findings — what was learned
-empirica finding-log --session-id <ID> --finding "Auth uses JWT not sessions" --impact 0.7
+# Findings — what was learned (session_id auto-derived from active transaction)
+empirica finding-log --finding "Auth uses JWT not sessions" --impact 0.7
 
 # Unknowns — what remains unclear
-empirica unknown-log --session-id <ID> --unknown "How does rate limiting work here?"
+empirica unknown-log --unknown "How does rate limiting work here?"
 
 # Dead-ends — approaches that failed (prevents re-exploration)
-empirica deadend-log --session-id <ID> --approach "Tried monkey-patching" --why-failed "Breaks in prod"
+empirica deadend-log --approach "Tried monkey-patching" --why-failed "Breaks in prod"
+
+# Assumptions — unverified beliefs (tracks urgency over time)
+empirica assumption-log --assumption "Token rotation uses 24h TTL" --confidence 0.6 --domain auth
+
+# Decisions — recorded choice points (permanent audit trail)
+empirica decision-log --choice "JWT over sessions" --rationale "Stateless scales better" \
+  --alternatives "sessions,OAuth" --reversibility exploratory
 
 # Resolve unknowns when answered
 empirica unknown-resolve --unknown-id <UUID> --resolved-by "Found in docs"
@@ -204,8 +212,8 @@ empirica unknown-resolve --unknown-id <UUID> --resolved-by "Found in docs"
 For complex work, create goals to track progress:
 
 ```bash
-# Create goal
-empirica goals-create --session-id <ID> --objective "Implement OAuth flow" \
+# Create goal (session_id auto-derived from active transaction)
+empirica goals-create --objective "Implement OAuth flow" \
   --scope-breadth 0.6 --scope-duration 0.5 --output json
 
 # Add subtasks
@@ -264,96 +272,6 @@ Use project search during noetic phases:
 3. Pre-CHECK — similar decision patterns
 4. Pre-self-improvement — conflicting guidance
 
-### Memory Management (Advanced)
-
-For parallel agent coordination and attention budget allocation:
-
-```bash
-# Allocate attention budget for parallel investigation
-empirica memory-prime --session-id <ID> --domains '["security", "performance"]' --budget 20
-
-# Retrieve memories by scope vectors
-empirica memory-scope --session-id <ID> --zone working --limit 10
-
-# Prioritize by information gain / token cost
-empirica memory-value --session-id <ID> --query "authentication"
-
-# Check approach against known dead-ends (real-time sentinel)
-empirica pattern-check --session-id <ID> --approach "Use X to do Y"
-
-# Aggregate findings from parallel sub-agents
-empirica session-rollup --parent-session-id <ID>
-
-# Context budget report (like /proc/meminfo)
-empirica memory-report --session-id <ID>
-```
-
-**Pattern-check** is critical: before implementing an approach, check if it's a known dead-end.
-
----
-
-## Document Querying (mq)
-
-**`mq` — structure-first document queries.** Single binary, no dependencies, no embeddings.
-
-When you need to understand or extract from markdown, PDF, HTML, JSON, YAML, or JSONL files,
-prefer `mq` over reading entire files. It exposes document structure so you reason over it
-in your own context — no wasted tokens on irrelevant sections.
-
-```bash
-# See structure of all docs in a directory
-mq docs/ '.tree("full")'
-
-# Extract a specific section by heading
-mq file.md '.section("Gate Logic") | .text'
-
-# List all tables in a file
-mq file.md '.tables'
-
-# Get just headings (quick overview)
-mq file.md '.headings'
-
-# Multi-file: tree of entire directory
-mq presentations/ '.tree("full")'
-```
-
-**When to use mq vs other tools:**
-| Need | Tool |
-|------|------|
-| Document structure / section extraction | `mq` |
-| Semantic similarity ("find things related to X") | Qdrant / `project-search` |
-| Epistemic state of what was *learned* | `docs-assess` / `docs-explain` |
-| Exact string search in code | `grep` / Grep tool |
-
-**Pattern:** `mq .tree("full")` first to see structure, then `.section("Name") | .text` to extract what you need. This is 74-83% fewer tokens than reading whole files.
-
-**Installed at:** `/usr/local/bin/mq` (fork: github.com/Nubaeon/mq)
-
----
-
-## Messaging (Multi-AI Coordination)
-
-For asynchronous communication between AI instances:
-
-```bash
-# Send message to another AI
-empirica message-send --to-ai-id philipp-code --subject "Auth findings" --body "JWT with RS256"
-
-# Check inbox
-empirica message-inbox                      # List unread messages
-
-# Read specific message
-empirica message-read --message-id <ID>
-
-# Reply to message
-empirica message-reply --message-id <ID> --body "Acknowledged, proceeding"
-
-# View thread
-empirica message-thread --thread-id <ID>
-```
-
-**Use case:** David/Philipp coordination, parallel AI handoffs, async status updates.
-
 ---
 
 ## Multi-Agent Operations
@@ -361,14 +279,12 @@ empirica message-thread --thread-id <ID>
 ### Spawn Investigation Agents
 
 ```bash
-# Single agent
-empirica agent-spawn --session-id <ID> \
-  --task "Investigate authentication patterns" \
+# Single agent (session_id auto-derived)
+empirica agent-spawn --task "Investigate authentication patterns" \
   --persona researcher --cascade-style exploratory
 
 # Parallel agents with attention budget
-empirica agent-parallel --session-id <ID> \
-  --task "Analyze security and architecture" \
+empirica agent-parallel --task "Analyze security and architecture" \
   --budget 20 --max-agents 5
 ```
 
@@ -384,8 +300,7 @@ SubagentStop hook auto-gates rollup: scores by confidence x novelty x relevance.
 | **Planning** | Any time | Documentation-only, no CASCADE required |
 
 ```bash
-empirica handoff-create --session-id <ID> \
-  --task-summary "Investigated auth patterns" \
+empirica handoff-create --task-summary "Investigated auth patterns" \
   --key-findings '["JWT with RS256", "Refresh in httpOnly cookies"]' \
   --next-session-context "Ready to implement token rotation"
 ```
@@ -396,12 +311,13 @@ empirica handoff-create --session-id <ID> \
 
 Sentinel controls praxic actions (Edit, Write, NotebookEdit):
 
-**Readiness gate:** `know >= 0.70 AND uncertainty <= 0.35` (after bias correction)
+**Readiness gate:** Holistic assessment of your epistemic vectors. The Sentinel evaluates
+readiness dynamically — honest self-assessment produces better outcomes than targeting numbers.
 
 **Core features (always on):**
 - PREFLIGHT requirement before acting
 - Decision parsing (blocks if CHECK returned "investigate")
-- Vector threshold validation
+- Holistic readiness assessment (dynamic, calibration-aware)
 - Anti-gaming: minimum noetic duration (30s) with evidence check
 
 **Configuration:**
@@ -464,25 +380,42 @@ pkill -f empirica-mcp  # Kill running server
 ## Full Command Reference
 
 ```bash
-empirica --help                          # All commands
-empirica session-create --ai-id <name>   # Start session
-empirica project-bootstrap --session-id <ID>  # Load context
-empirica preflight-submit -              # PREFLIGHT (stdin JSON)
-empirica check-submit -                  # CHECK gate (stdin JSON)
-empirica postflight-submit -             # POSTFLIGHT (stdin JSON)
-empirica finding-log --finding "..."     # Log noetic artifact (finding)
-empirica unknown-log --unknown "..."     # Log noetic artifact (unknown)
-empirica deadend-log --approach "..."    # Log noetic artifact (dead-end)
-empirica goals-create --objective "..."  # Create praxic artifact (goal)
+# Session lifecycle
+empirica session-create --ai-id claude-code --output json  # Start session
+empirica project-bootstrap --output json                   # Load context (auto-detects)
+
+# CASCADE workflow (stdin JSON, session_id auto-derived)
+empirica preflight-submit -              # PREFLIGHT (opens transaction)
+empirica check-submit -                  # CHECK gate (Sentinel decision)
+empirica postflight-submit -             # POSTFLIGHT (closes transaction + grounded verification)
+
+# Noetic artifacts (session_id auto-derived in transaction)
+empirica finding-log --finding "..."     # Discovery
+empirica unknown-log --unknown "..."     # Ambiguity
+empirica deadend-log --approach "..."    # Failed approach
+empirica assumption-log --assumption "..." --confidence 0.7  # Unverified belief
+empirica decision-log --choice "..." --rationale "..."       # Choice point
+
+# Praxic artifacts
+empirica goals-create --objective "..."  # Create goal
+empirica goals-complete --goal-id <ID> --reason "..."  # Complete goal
 empirica goals-list                      # Show active goals
-empirica check-drift --session-id <ID>   # Detect epistemic drift
-empirica calibration-report              # Self-referential calibration (Track 1)
-empirica calibration-report --grounded   # Grounded calibration (Track 2)
-empirica calibration-report --trajectory # Calibration trend over time
+
+# Calibration & drift
+empirica calibration-report              # Self-referential (Track 1)
+empirica calibration-report --grounded   # Grounded verification (Track 2)
+empirica calibration-report --trajectory # Trend: closing/widening/stable
+empirica check-drift                     # Detect epistemic drift
+
+# Project & memory
+empirica project-search --project-id <ID> --task "query"  # Semantic search
+empirica project-list                    # List all projects
+empirica project-switch <name>           # Switch active project
+
+# Multi-agent
 empirica agent-spawn --task "..."        # Spawn domain agent
 empirica agent-parallel --task "..."     # Parallel investigation
 empirica handoff-create ...              # Create handoff
-empirica project-search --task "..."     # Semantic memory search
 ```
 
 ---
@@ -499,12 +432,13 @@ empirica project-search --task "..."     # Semantic memory search
 - Use `calibration-report --trajectory` to see if calibration is improving
 
 **DON'T:**
-- Inflate scores (Sentinel detects rushed assessments)
-- Skip PREFLIGHT (lose baseline AND get blocked)
-- Ignore high uncertainty signals
-- Proceed without CHECK when uncertainty > 0.5
-- Rush PREFLIGHT→CHECK without actual noetic work
+- Inflate vectors to pass CHECK — grounded calibration catches this
+- Skip PREFLIGHT (lose baseline AND get blocked by Sentinel)
+- Ignore high uncertainty signals (uncertainty is data, not failure)
+- Rush PREFLIGHT→CHECK→POSTFLIGHT without actual noetic/praxic work
+- Create mega-transactions with 5+ goals — scope naturally, POSTFLIGHT at commit points
 - Trust Track 1 over Track 2 when they diverge (grounded evidence wins)
+- Skip the CLI and do programmatic DB inserts (bypasses grounded verification)
 
 ---
 

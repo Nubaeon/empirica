@@ -649,41 +649,41 @@ def handle_check_command(args):
         # Calculate confidence (use explicit if provided, else derive from uncertainty)
         confidence = explicit_confidence if explicit_confidence is not None else (1.0 - uncertainty)
 
-        # GATE LOGIC: Primary decision based on confidence threshold (≥0.70)
+        # GATE LOGIC: Primary decision based on readiness assessment
         # Secondary validation based on evidence (drift, unknowns)
         suggestions = []
 
         if confidence >= 0.70:
-            # PROCEED path - confidence threshold met
+            # PROCEED path - readiness sufficient
             if drift > 0.3 or unknowns_count > 5:
                 # High evidence of gaps - warn but allow proceed
                 decision = "proceed"
                 strength = "moderate"
-                reasoning = f"Confidence ({confidence:.2f}) meets threshold, but {unknowns_count} unknowns and drift ({drift:.2f}) suggest caution"
-                suggestions.append("Confidence threshold met - you may proceed")
+                reasoning = f"Readiness sufficient, but {unknowns_count} unknowns and drift ({drift:.2f}) suggest caution"
+                suggestions.append("Readiness met - you may proceed")
                 suggestions.append(f"Be aware: {unknowns_count} unknowns remain and drift is {drift:.2f}")
             else:
                 # Clean proceed
                 decision = "proceed"
                 strength = "strong"
-                reasoning = f"Confidence ({confidence:.2f}) ≥ 0.70 threshold, low drift ({drift:.2f}), {unknowns_count} unknowns"
+                reasoning = f"Readiness strong, low drift ({drift:.2f}), {unknowns_count} unknowns"
                 suggestions.append("Evidence supports proceeding to action phase")
         else:
-            # INVESTIGATE path - confidence below threshold
+            # INVESTIGATE path - readiness insufficient
             if unknowns_count > 5 or drift > 0.3:
-                # Strong evidence backing the low confidence
+                # Strong evidence backing the low readiness
                 decision = "investigate"
                 strength = "strong"
-                reasoning = f"Confidence ({confidence:.2f}) < 0.70 threshold + {unknowns_count} unknowns and drift ({drift:.2f}) - investigation required"
-                suggestions.append("Confidence below threshold - investigate before proceeding")
-                suggestions.append(f"Address {unknowns_count} unknowns to increase confidence")
+                reasoning = f"Readiness insufficient with {unknowns_count} unknowns and drift ({drift:.2f}) - investigation required"
+                suggestions.append("More investigation needed before proceeding")
+                suggestions.append(f"Address {unknowns_count} unknowns to increase readiness")
             else:
-                # Low confidence but low evidence - possible calibration issue
+                # Low readiness but low evidence - possible calibration issue
                 decision = "investigate"
                 strength = "moderate"
-                reasoning = f"Confidence ({confidence:.2f}) < 0.70 threshold, but only {unknowns_count} unknowns and drift ({drift:.2f}) - investigate to validate"
-                suggestions.append("Confidence below threshold - investigate or recalibrate")
-                suggestions.append("Evidence doesn't fully explain low confidence")
+                reasoning = f"Readiness insufficient, but only {unknowns_count} unknowns and drift ({drift:.2f}) - investigate to validate"
+                suggestions.append("Investigate further or recalibrate your assessment")
+                suggestions.append("Evidence doesn't fully explain low readiness")
 
         # Determine drift level
         if drift > 0.3:
@@ -1337,9 +1337,7 @@ def handle_check_submit_command(args):
                 "metacog": {
                     "computed_decision": computed_decision,
                     "gate_passed": computed_decision == "proceed",
-                    "thresholds": {
-                        "know": ready_know_threshold,
-                        "uncertainty": ready_uncertainty_threshold,
+                    "readiness": {
                         "source": "dynamic" if dynamic_thresholds_info else "static",
                         "calibration_accuracy": dynamic_thresholds_info.get("calibration_accuracy") if dynamic_thresholds_info else None,
                         "transactions_analyzed": dynamic_thresholds_info.get("transactions_analyzed") if dynamic_thresholds_info else None,

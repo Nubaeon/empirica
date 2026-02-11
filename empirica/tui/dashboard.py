@@ -514,7 +514,7 @@ class EpistemicArtifactsPanel(Static):
             try:
                 cursor = db.conn.cursor()
                 cursor.execute("""
-                    SELECT know, uncertainty, engagement, context
+                    SELECT know, uncertainty, engagement, context, do, completion
                     FROM reflexes ORDER BY timestamp DESC LIMIT 1
                 """)
                 row = cursor.fetchone()
@@ -523,8 +523,8 @@ class EpistemicArtifactsPanel(Static):
                     return {
                         'know': row['know'] or 0.0,
                         'uncertainty': row['uncertainty'] or 0.5,
-                        'completion': 0.0,  # from goals if available
-                        'do': 0.0,
+                        'completion': row['completion'] or 0.0,
+                        'do': row['do'] or 0.0,
                         'context': row['context'] or 0.0,
                     }
             except Exception:
@@ -572,22 +572,49 @@ class EpistemicArtifactsPanel(Static):
                 face_text = Text()
                 for line in face_lines:
                     face_text.append(line + "\n", style=emoji_color)
-                face_text.append(f"\n {emoji_char} {emoji_state.title()}", style=f"bold {emoji_color}")
+                face_text.append(f"\n {emoji_char} {emoji_state.title()}\n", style=f"bold {emoji_color}")
+                # Show vectors if available
+                know_val = vectors.get('know', 0.0)
+                do_val = vectors.get('do', 0.0)
+                unc_val = vectors.get('uncertainty', 0.5)
+                if vectors:
+                    know_bar = "█" * int(know_val * 6) + "░" * (6 - int(know_val * 6))
+                    do_bar = "█" * int(do_val * 6) + "░" * (6 - int(do_val * 6))
+                    face_text.append(f" K {know_bar} {know_val:.0%}\n", style="cyan")
+                    face_text.append(f" D {do_bar} {do_val:.0%}\n", style="magenta")
+                    confidence = (know_val * (1.0 - unc_val)) ** 0.5 if know_val > 0 else 0.0
+                    conf_color = "green" if confidence >= 0.7 else "yellow" if confidence >= 0.4 else "red"
+                    face_text.append(f" Conf: ", style="dim")
+                    face_text.append(f"{confidence:.0%}", style=f"bold {conf_color}")
                 self.update(Panel(
                     face_text,
                     title=f"[bold]EPISTEMIC ARTIFACTS ({entity_label.upper()})[/bold]",
                     border_style="dim"))
                 return
 
-            # Build pixel face column
+            # Build pixel face column with know/do vectors and confidence
             face_lines = get_pixel_face(emoji_state)
             face_text = Text()
             for line in face_lines:
                 face_text.append(line + "\n", style=emoji_color)
             face_text.append(f"\n {emoji_char} {emoji_state.title()}\n", style=f"bold {emoji_color}")
-            reason = emoji_detail.get('reason', '')
-            if reason:
-                face_text.append(f" {reason[:20]}", style="dim")
+
+            # Show KNOW and DO vectors with mini progress bars
+            know_val = vectors.get('know', 0.0)
+            do_val = vectors.get('do', 0.0)
+            know_bar = "█" * int(know_val * 6) + "░" * (6 - int(know_val * 6))
+            do_bar = "█" * int(do_val * 6) + "░" * (6 - int(do_val * 6))
+            face_text.append(f" K {know_bar} ", style="cyan")
+            face_text.append(f"{know_val:.0%}\n", style="white")
+            face_text.append(f" D {do_bar} ", style="magenta")
+            face_text.append(f"{do_val:.0%}\n", style="white")
+
+            # Confidence score (geometric mean of know and 1-uncertainty)
+            unc_val = vectors.get('uncertainty', 0.5)
+            confidence = (know_val * (1.0 - unc_val)) ** 0.5 if know_val > 0 else 0.0
+            conf_color = "green" if confidence >= 0.7 else "yellow" if confidence >= 0.4 else "red"
+            face_text.append(f" Conf: ", style="dim")
+            face_text.append(f"{confidence:.0%}", style=f"bold {conf_color}")
 
             # Build artifact summary table
             table = Table(show_header=False, box=None, padding=(0, 0, 0, 1))
@@ -616,7 +643,7 @@ class EpistemicArtifactsPanel(Static):
 
             # Side-by-side layout: pixel face | artifact table
             layout = Table(show_header=False, box=None, padding=(0, 1), expand=True)
-            layout.add_column("face", width=14, no_wrap=True)
+            layout.add_column("face", width=18, no_wrap=True)
             layout.add_column("artifacts", ratio=1)
             layout.add_row(face_text, table)
 

@@ -111,24 +111,6 @@ Cross-project artifact connections.
 
 ---
 
-### `instance_bindings`
-
-Maps AI instances (tmux panes) to projects.
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `instance_id` | TEXT | (required) | Instance ID (`tmux_0`, `pts-5`) |
-| `project_id` | TEXT | (required) | Bound project UUID |
-| `project_name` | TEXT | NULL | Cached project name |
-| `bound_at` | REAL | (required) | Unix timestamp of binding |
-| `bound_by` | TEXT | NULL | AI ID that created binding |
-| `notes` | TEXT | NULL | Binding notes |
-
-**Indexes:**
-- `idx_instance_bindings_project` — Query by project
-
----
-
 ## CLI Commands
 
 ```bash

@@ -296,9 +296,9 @@ See [WORKSPACE_DATABASE_SCHEMA.md](../WORKSPACE_DATABASE_SCHEMA.md) for full sch
 
 **Key tables:**
 - `global_projects` — Project registry
+- `global_sessions` — Cross-project session tracking
 - `trajectory_patterns` — Cross-project learning patterns
 - `trajectory_links` — Project relationships
-- `instance_bindings` — AI instance → project mappings
 
 ---
 
