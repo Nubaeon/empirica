@@ -104,14 +104,15 @@ Terminal 2 (pts-2) → ~/.empirica/tty_sessions/pts-2.json
 Transaction files use an instance suffix for multi-pane isolation:
 
 ```
-{project}/.empirica/active_transaction_tmux_4.json   # For tmux pane 4
-{project}/.empirica/active_transaction_pts-6.json    # Alternative: TTY-based
-{project}/.empirica/active_transaction.json          # Fallback (no suffix)
+{project}/.empirica/active_transaction_tmux_4.json   # For tmux pane %4
+{project}/.empirica/active_transaction_term_pts_6.json  # Alternative: TTY-based
+{project}/.empirica/active_transaction_default.json  # Fallback (no TTY/tmux)
 ```
 
 The suffix is determined by `get_instance_id()`:
 1. First: `TMUX_PANE` environment variable (e.g., `%4` → `tmux_4`)
-2. Fallback: TTY device name (e.g., `pts-6`)
+2. Fallback: TTY device name, sanitized (e.g., `/dev/pts/6` → `term_pts_6`)
+3. Final fallback: `default` (if no TTY available)
 
 ### 3.2 Transaction File Structure
 
@@ -685,6 +686,50 @@ Query now: `WHERE session_id = ? AND transaction_id = ?`
 **Commit:** `abb5c430`
 **Files:** `plugins/claude-code-integration/scripts/statusline_empirica.py`
 
+### 11.13 Orphaned Transaction After tmux Restart (2026-02-12)
+
+**Symptom:** After tmux session dies/freezes and is restarted, the AI in the new tmux session
+cannot find the previous transaction. The old transaction becomes "orphaned."
+
+**Status:** BY DESIGN (requires human intervention)
+
+**Scenario:**
+1. Claude working in tmux pane `%4` with open transaction in `active_transaction_tmux_4.json`
+2. tmux session freezes or is killed
+3. User restarts tmux → new pane IDs (e.g., `%7`)
+4. New Claude Code session starts with new `claude_session_id`
+5. New session creates new `active_work_{new_claude_session_id}.json`
+6. On compact, post-compact.py looks for `active_transaction_tmux_7.json` (doesn't exist)
+7. Old transaction in `tmux_4` is orphaned
+
+**Why auto-recovery is NOT done:**
+- Different Claude sessions should NOT inherit each other's transactions
+- Auto-picking up an old transaction could cause wrong-context pollution
+- The new AI has no epistemic continuity with the old one (different conversation)
+- tmux failure is rare and requires human intervention anyway
+
+**Expected behavior:**
+- Post-compact fails to find the old transaction
+- AI is prompted for new PREFLIGHT (fresh start)
+- Old transaction file remains on disk until manually cleaned up
+
+**Recovery options:**
+1. **Adopt the transaction (recommended):**
+   ```bash
+   # Adopt orphaned transaction from old instance to current instance
+   empirica transaction-adopt --from tmux_4 --dry-run  # Preview first
+   empirica transaction-adopt --from tmux_4            # Actually adopt
+   ```
+   This renames the transaction file and updates instance mappings.
+
+2. **Abandon old transaction:** Delete `{project}/.empirica/active_transaction_tmux_4.json`
+3. **Manually close:** Run `empirica postflight-submit` with the old session_id
+4. **Clean up stale transactions:** `find ~/.empirica -name 'active_transaction_*.json' -mtime +1 -delete`
+
+**Files involved:**
+- `claude-code-integration/hooks/post-compact.py` - instance_id-keyed handoff lookup
+- `claude-code-integration/hooks/pre-compact.py` - instance_id-keyed handoff write
+
 ---
 
 ## 12. Summary: Instance Isolation Key Insights
@@ -695,3 +740,4 @@ Query now: `WHERE session_id = ? AND transaction_id = ?`
 4. **Fail explicitly** - Better to error than silently use wrong project
 5. **Instance ID format matters** - Consistent `tmux_N` across all components
 6. **Transaction-scoped queries** - Always filter by `transaction_id` when available
+7. **Pane ID changes orphan transactions** - tmux restart requires human intervention

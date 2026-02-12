@@ -58,7 +58,7 @@ from .mcp_commands import (
 )
 from .session_commands import (
     handle_sessions_list_command, handle_sessions_show_command, handle_session_snapshot_command,
-    handle_sessions_export_command, handle_memory_compact_command,
+    handle_sessions_export_command, handle_memory_compact_command, handle_transaction_adopt_command,
 )
 from .session_create import handle_session_create_command
 from .checkpoint_commands import (
@@ -240,6 +240,7 @@ __all__ = [
     'handle_session_snapshot_command',
     'handle_sessions_export_command',
     'handle_memory_compact_command',
+    'handle_transaction_adopt_command',
 
     # Checkpoint commands (Phase 2)
     'handle_session_create_command',

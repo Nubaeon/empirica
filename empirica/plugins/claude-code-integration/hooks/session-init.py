@@ -91,20 +91,74 @@ def find_git_root() -> Path | None:
     return None
 
 
-def find_project_root() -> Path:
-    """Find project root - prefers git repo, falls back to cwd."""
-    # First check for explicit workspace root
+def find_project_root(claude_session_id: str = None) -> Path:
+    """
+    Find project root using instance-aware resolution.
+
+    Priority chain (matches INSTANCE_ISOLATION.md):
+    0. active_work_{claude_session_id}.json (if claude_session_id provided)
+    1. instance_projects/tmux_X.json (TMUX_PANE)
+    2. TTY session file
+    3. EMPIRICA_WORKSPACE_ROOT env var
+    4. Git repo root (fallback)
+    5. CWD (last resort)
+
+    This ensures project continuity across compactions and CWD resets.
+    """
+    # Priority 0: Check active_work file for this Claude session
+    if claude_session_id:
+        active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+        if active_work_file.exists():
+            try:
+                with open(active_work_file, 'r') as f:
+                    data = json.load(f)
+                    project_path = data.get('project_path')
+                    if project_path and Path(project_path).exists():
+                        return Path(project_path)
+            except Exception:
+                pass
+
+    # Priority 1: Check instance_projects (TMUX_PANE based)
+    tmux_pane = os.environ.get('TMUX_PANE')
+    if tmux_pane:
+        instance_id = f"tmux_{tmux_pane.lstrip('%')}"
+        instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
+        if instance_file.exists():
+            try:
+                with open(instance_file, 'r') as f:
+                    data = json.load(f)
+                    project_path = data.get('project_path')
+                    if project_path and Path(project_path).exists():
+                        return Path(project_path)
+            except Exception:
+                pass
+
+    # Priority 2: Check TTY session file
+    try:
+        tty_path = os.ttyname(sys.stdin.fileno())
+        tty_key = tty_path.replace('/', '-').lstrip('-')
+        tty_file = Path.home() / '.empirica' / 'tty_sessions' / f'{tty_key}.json'
+        if tty_file.exists():
+            with open(tty_file, 'r') as f:
+                data = json.load(f)
+                project_path = data.get('project_path')
+                if project_path and Path(project_path).exists():
+                    return Path(project_path)
+    except Exception:
+        pass
+
+    # Priority 3: Check explicit workspace root env var
     if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
         workspace_path = Path(workspace_root).expanduser().resolve()
         if workspace_path.exists():
             return workspace_path
 
-    # Try to find git repo root (most common case)
+    # Priority 4: Git repo root (common case for fresh sessions)
     git_root = find_git_root()
     if git_root:
         return git_root
 
-    # Fall back to current working directory
+    # Priority 5: Fall back to current working directory
     return Path.cwd()
 
 
@@ -287,8 +341,8 @@ def main():
     # Extract claude_session_id from hook input (critical for instance isolation)
     claude_session_id = hook_input.get('session_id')
 
-    # Find project root
-    project_root = find_project_root()
+    # Find project root (uses instance-aware resolution to survive CWD resets)
+    project_root = find_project_root(claude_session_id)
     os.chdir(project_root)
 
     ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')

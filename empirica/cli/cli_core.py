@@ -39,7 +39,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
             if isinstance(action, argparse._SubParsersAction):
                 categories = {
                     'Getting Started': ['onboard', 'setup-claude-code'],
-                    'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
+                    'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact', 'transaction-adopt'],
                     'CASCADE Workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
                     'Goals & Tasks': ['goals-create', 'goals-list', 'goals-search', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-add-dependency', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume', 'goals-mark-stale', 'goals-get-stale', 'goals-refresh'],
                     'Project Management': ['project-init', 'project-create', 'project-list', 'project-switch', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
@@ -280,6 +280,7 @@ def main(args=None):
             'sessions-resume': handle_sessions_resume_command,
             'session-snapshot': handle_session_snapshot_command,
             'memory-compact': handle_memory_compact_command,
+            'transaction-adopt': handle_transaction_adopt_command,
             
             # CASCADE commands (working -submit variants only)
             'preflight-submit': handle_preflight_submit_command,

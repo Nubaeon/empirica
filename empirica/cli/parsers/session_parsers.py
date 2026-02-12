@@ -59,3 +59,28 @@ def add_session_parsers(subparsers):
 
     # Session end command
     # session-end removed - use handoff-create instead (better parameter names, already in MCP)
+
+    # Transaction adopt command - recover orphaned transactions after tmux restart
+    tx_adopt_parser = subparsers.add_parser(
+        'transaction-adopt',
+        aliases=['tx-adopt'],
+        help='Adopt an orphaned transaction from a different instance (e.g., after tmux restart)'
+    )
+    tx_adopt_parser.add_argument(
+        '--from', dest='from_instance',
+        required=True,
+        help='Source instance ID (e.g., tmux_4) - the orphaned transaction\'s instance'
+    )
+    tx_adopt_parser.add_argument(
+        '--to', dest='to_instance',
+        help='Target instance ID (e.g., tmux_7) - your current instance (auto-detected if not specified)'
+    )
+    tx_adopt_parser.add_argument(
+        '--project', dest='project_path',
+        help='Project path containing the transaction (auto-detected if not specified)'
+    )
+    tx_adopt_parser.add_argument(
+        '--dry-run', action='store_true',
+        help='Show what would be done without making changes'
+    )
+    tx_adopt_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
