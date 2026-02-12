@@ -559,13 +559,17 @@ class PostTestCollector:
             total, resolved, severe = row[0], row[1] or 0, row[2] or 0
 
             # Issue resolution ratio → impact proxy
+            # Floor at 0.2: capturing issues shows situational awareness (like
+            # logging unknowns shows domain awareness). Resolution improves score.
+            # Without floor: 0 resolved = 0.0 which falsely signals "no impact"
             if total > 0:
-                resolution_ratio = resolved / total
+                raw_ratio = resolved / total
+                resolution_ratio = 0.2 + (raw_ratio * 0.8)  # 0.2 (unresolved) → 1.0 (all resolved)
                 items.append(EvidenceItem(
                     source="issues",
                     metric_name="issue_resolution_ratio",
                     value=resolution_ratio,
-                    raw_value={"resolved": resolved, "total": total},
+                    raw_value={"resolved": resolved, "total": total, "raw_ratio": round(raw_ratio, 4), "floor_applied": True},
                     quality=EvidenceQuality.SEMI_OBJECTIVE,
                     supports_vectors=["impact"],
                 ))
