@@ -341,6 +341,29 @@ def handle_project_bootstrap_command(args):
         except Exception as e:
             logger.debug(f"Project skills loading failed (non-fatal): {e}")
 
+        # Link session to project if both provided (fix for sentinel gate bootstrap requirement)
+        # This ensures sessions created without --project-id can be linked retroactively
+        if session_id and project_id:
+            try:
+                # Resolve short UUID to full UUID (e.g., "c29d9f04" -> "c29d9f04-b6ba-...")
+                from empirica.utils.session_resolver import resolve_session_id
+                resolved_session_id = resolve_session_id(session_id)
+
+                cursor = db.conn.cursor()
+                cursor.execute("""
+                    UPDATE sessions SET project_id = ? WHERE session_id = ?
+                """, (project_id, resolved_session_id))
+                rows_affected = cursor.rowcount
+                db.conn.commit()
+
+                if rows_affected > 0:
+                    logger.debug(f"Linked session {resolved_session_id[:8]} to project {project_id[:8]}")
+                else:
+                    logger.warning(f"Session {resolved_session_id[:8]} not found in database - link failed")
+
+            except Exception as e:
+                logger.debug(f"Session-project linking failed (non-fatal): {e}")
+
         db.close()
 
         if "error" in breadcrumbs:
