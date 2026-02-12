@@ -195,7 +195,7 @@ class PostTestCollector:
         if self.check_timestamp:
             cursor.execute("""
                 SELECT COUNT(*) FROM project_dead_ends
-                WHERE session_id = ? AND timestamp <= ?
+                WHERE session_id = ? AND created_timestamp <= ?
             """, (self.session_id, self.check_timestamp))
             pre_check_dead_ends = cursor.fetchone()[0]
 
@@ -216,7 +216,7 @@ class PostTestCollector:
         if self.check_timestamp:
             cursor.execute("""
                 SELECT COUNT(*) FROM project_findings
-                WHERE session_id = ? AND timestamp <= ?
+                WHERE session_id = ? AND created_timestamp <= ?
             """, (self.session_id, self.check_timestamp))
             pre_check_findings = cursor.fetchone()[0]
         else:
