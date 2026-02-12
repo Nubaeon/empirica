@@ -179,6 +179,53 @@ def find_project_root(claude_session_id: str = None) -> Optional[Path]:
     return None
 
 
+def _write_active_transaction_for_new_conversation(
+    active_transaction: dict,
+    project_path: str,
+    instance_id: str = None
+) -> bool:
+    """
+    Write active_transaction file for the NEW conversation after compaction.
+
+    This is CRITICAL: without this file, Sentinel and statusline cannot find
+    the current transaction's state. They fall back to querying without
+    transaction_id filter, potentially picking up wrong CHECK data from
+    older transactions.
+
+    The pre-compact hook captures the transaction in the snapshot.
+    This function writes it back to the filesystem for the new Claude process.
+    """
+    if not active_transaction:
+        return False
+
+    try:
+        suffix = f'_{instance_id}' if instance_id else ''
+
+        if project_path:
+            tx_file = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
+        else:
+            tx_file = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
+
+        tx_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Update timestamp but preserve original transaction data
+        tx_data = {
+            'transaction_id': active_transaction.get('transaction_id'),
+            'session_id': active_transaction.get('session_id'),
+            'preflight_timestamp': active_transaction.get('preflight_timestamp'),
+            'status': active_transaction.get('status', 'open'),
+            'project_path': project_path,
+            'updated_at': datetime.now().timestamp()
+        }
+
+        with open(tx_file, 'w') as f:
+            json.dump(tx_data, f, indent=2)
+
+        return True
+    except Exception:
+        return False
+
+
 def _write_active_work_for_new_conversation(
     claude_session_id: str,
     project_path: str,
@@ -297,7 +344,7 @@ def main():
     session_bootstrap = None
 
     # TRANSACTION CONTINUITY: If there's an open transaction, just continue
-    # The transaction file persists on disk - no action needed from AI
+    # We recreate the transaction file below (it doesn't persist across processes)
     if active_transaction and active_transaction.get('status') == 'open':
         recovery_prompt = _generate_transaction_continue_prompt(
             pre_vectors=pre_vectors,
@@ -313,6 +360,15 @@ def main():
             claude_session_id=claude_session_id,
             project_path=str(project_root),
             empirica_session_id=empirica_session,
+            instance_id=instance_id
+        )
+
+        # CRITICAL: Also write active_transaction file for Sentinel and statusline.
+        # The OLD Claude process created this file during PREFLIGHT, but it's gone now.
+        # Without this, Sentinel/statusline fall back to wrong transaction data.
+        _write_active_transaction_for_new_conversation(
+            active_transaction=active_transaction,
+            project_path=str(project_root),
             instance_id=instance_id
         )
     elif phase_state.get('is_complete'):
