@@ -74,6 +74,9 @@ SAFE_BASH_PREFIXES = (
     'cargo tree', 'cargo metadata',
     # Process inspection
     'ps ', 'top -b -n 1', 'pgrep ', 'jobs',
+    # Terminal/tmux inspection (read-only)
+    'tmux capture-pane', 'tmux list-panes', 'tmux list-windows',
+    'tmux list-sessions', 'tmux display-message', 'tmux show-option',
     # Disk inspection
     'df ', 'du ', 'mount', 'lsblk',
     # Network inspection (not modification)
@@ -126,6 +129,8 @@ TRANSITION_COMMANDS = (
     'empirica project-switch',       # Switch active project context
     'empirica project-list',         # List available projects
     'empirica preflight-submit',     # Start new epistemic cycle (was missing = chicken-and-egg bug)
+    'git add',                       # Stage work from completed transaction
+    'git commit',                    # Commit work from completed transaction
 )
 
 
@@ -182,6 +187,11 @@ EMPIRICA_TIER1_PREFIXES = (
     'empirica issue-list',
     'empirica docs-assess',  # Documentation assessment - read-only investigation tool
     'empirica calibration-report',  # Calibration analysis - read-only
+    'empirica lesson-list', 'empirica lesson-search', 'empirica lesson-recommend',
+    'empirica lesson-stats',  # Lesson queries - read-only
+    'empirica sentinel-status', 'empirica sentinel-check',  # Sentinel queries - read-only
+    'empirica goals-search', 'empirica goals-get-stale',  # Goal queries - read-only
+    'empirica workspace-list', 'empirica ecosystem-check',  # Workspace queries - read-only
     'empirica --help', 'empirica -h',
     'empirica version',
 )
@@ -205,6 +215,13 @@ EMPIRICA_TIER2_PREFIXES = (
     'empirica memory-compact', 'empirica resume-previous-session',
     'empirica agent-spawn', 'empirica investigate',
     'empirica refdoc-add', 'empirica source-add',
+    'empirica assumption-log', 'empirica decision-log',  # Noetic artifacts - assumptions/decisions
+    'empirica lesson-create', 'empirica lesson-load', 'empirica lesson-path',
+    'empirica lesson-replay-start', 'empirica lesson-replay-end',
+    'empirica lesson-embed',  # Lesson lifecycle commands
+    'empirica sentinel-orchestrate', 'empirica sentinel-load-profile',  # Sentinel management
+    'empirica artifacts-generate',  # Artifact generation
+    'empirica goals-mark-stale', 'empirica goals-refresh',  # Goal staleness management
 )
 
 
@@ -432,36 +449,39 @@ def is_safe_bash_command(tool_input: dict) -> bool:
     if is_safe_empirica_command(command):
         return True
 
-    # Special case: && chains where ALL segments are safe (noetic)
-    # This allows: cd /path && grep ..., cd /path && empirica check-submit
-    if '&&' in command:
-        segments = [s.strip() for s in command.split('&&')]
-        all_segments_safe = True
-        for segment in segments:
-            # Strip heredoc suffix for matching
-            segment_clean = segment.split('<<')[0].strip() if '<<' in segment else segment
-            # Check if segment is: cd, safe empirica, or starts with safe prefix
-            if segment_clean.startswith('cd '):
-                continue  # cd is always safe
-            if is_safe_empirica_command(segment_clean):
-                continue  # empirica tier1/tier2 commands are safe
-            # Check against SAFE_BASH_PREFIXES (grep, cat, ls, git status, etc.)
-            segment_is_safe = False
-            for prefix in SAFE_BASH_PREFIXES:
-                if segment_clean.startswith(prefix) or (prefix.endswith(' ') and segment_clean == prefix.rstrip()):
-                    segment_is_safe = True
+    # Special case: && and || chains where ALL segments are safe (noetic)
+    # This allows: cd /path && grep ..., tmux capture-pane || echo "fallback"
+    for chain_op in ('&&', '||'):
+        if chain_op in command:
+            segments = [s.strip() for s in command.split(chain_op)]
+            all_segments_safe = True
+            for segment in segments:
+                # Strip heredoc suffix for matching
+                segment_clean = segment.split('<<')[0].strip() if '<<' in segment else segment
+                # Strip safe redirects for matching (2>/dev/null, 2>&1)
+                segment_clean = SAFE_REDIRECT_PATTERN.sub('', segment_clean).strip()
+                # Check if segment is: cd, safe empirica, or starts with safe prefix
+                if segment_clean.startswith('cd '):
+                    continue  # cd is always safe
+                if is_safe_empirica_command(segment_clean):
+                    continue  # empirica tier1/tier2 commands are safe
+                # Check against SAFE_BASH_PREFIXES (grep, cat, ls, git status, etc.)
+                segment_is_safe = False
+                for prefix in SAFE_BASH_PREFIXES:
+                    if segment_clean.startswith(prefix) or (prefix.endswith(' ') and segment_clean == prefix.rstrip()):
+                        segment_is_safe = True
+                        break
+                if not segment_is_safe:
+                    all_segments_safe = False
                     break
-            if not segment_is_safe:
-                all_segments_safe = False
-                break
-        if all_segments_safe:
-            return True
+            if all_segments_safe:
+                return True
 
     # Check for dangerous shell operators (command injection prevention)
     # This blocks: ls; rm -rf, echo > file, etc.
-    # NOTE: && is handled above for safe chains, so we skip it here
+    # NOTE: && and || are handled above for safe chains, so we skip them here
     for operator in DANGEROUS_SHELL_OPERATORS:
-        if operator == '&&':
+        if operator in ('&&', '||'):
             continue  # Already handled above - only block if chain wasn't all-safe
         if operator in command:
             return False
@@ -728,10 +748,15 @@ def main():
     preflight_row = cursor.fetchone()
 
     if not preflight_row:
-        # No PREFLIGHT yet - but allow transition commands to enable project switch
-        # This handles the case where a new session was created but no PREFLIGHT submitted
+        # No PREFLIGHT yet - allow read-only/workflow commands + transitions
+        # This enables artifact lifecycle review before starting a new transaction:
+        # goals-list, epistemics-list, goals-complete, unknown-resolve, etc.
         if tool_name == 'Bash':
             command = tool_input.get('command', '')
+            if is_safe_bash_command(tool_input):
+                db.close()
+                respond("allow", "Safe Bash before PREFLIGHT (artifact review)")
+                sys.exit(0)
             if is_transition_command(command):
                 db.close()
                 respond("allow", "Transition command (no PREFLIGHT yet - starting new cycle)")
@@ -786,11 +811,20 @@ def main():
             postflight_ts = float(postflight_timestamp)
 
             if postflight_ts > preflight_ts:
-                # SELF-EXEMPTION: Allow toggle and transition commands when loop is closed
-                # This enables: 1) pause/unpause toggle, 2) project switch + new session
-                # Prevents prompt injection: only works when loop is genuinely closed.
+                # Loop closed. Only block truly praxic operations (file modification).
+                # Allow read-only, empirica workflow, toggles, and transitions.
+                # This enables artifact lifecycle between transactions:
+                # goals-list, goals-complete, unknown-resolve, finding-log, etc.
                 if tool_name == 'Bash':
                     command = tool_input.get('command', '')
+
+                    # Safe Bash (read-only + empirica workflow) — always allowed
+                    # This is a safety net: Rule 2 should catch most of these,
+                    # but edge cases (|| chains, complex pipes) may reach here.
+                    if is_safe_bash_command(tool_input):
+                        db.close()
+                        respond("allow", "Safe Bash between transactions (artifact lifecycle)")
+                        sys.exit(0)
 
                     # Toggle commands (pause/unpause)
                     toggle_action = is_toggle_command(command)
@@ -804,7 +838,6 @@ def main():
                         sys.exit(0)
 
                     # Transition commands (cd, session-create, project-bootstrap)
-                    # These enable starting a new cycle in a different project
                     if is_transition_command(command):
                         db.close()
                         respond("allow", "Transition command (starting new cycle)")
@@ -819,6 +852,32 @@ def main():
     # Use RAW vectors - bias corrections are feedback for AI to internalize, not silent adjustments
     raw_know = preflight_know or 0
     raw_unc = preflight_uncertainty or 1
+
+    # ANTI-GAMING: Check if previous transaction ended with INVESTIGATE
+    # If so, require explicit CHECK with evidence - can't just start fresh with high confidence
+    cursor.execute("""
+        SELECT json_extract(reflex_data, '$.decision') as decision, transaction_id
+        FROM reflexes
+        WHERE session_id = ? AND phase = 'CHECK'
+        ORDER BY timestamp DESC LIMIT 1
+    """, (session_id,))
+    prev_check = cursor.fetchone()
+
+    if prev_check:
+        prev_decision, prev_tx_id = prev_check
+        # If previous CHECK was INVESTIGATE and this is a NEW transaction, block auto-proceed
+        if prev_decision == 'investigate' and prev_tx_id != current_transaction_id:
+            # Check if there's been any noetic evidence since (findings, etc.)
+            cursor.execute("""
+                SELECT COUNT(*) FROM project_findings
+                WHERE session_id = ? AND created_timestamp > ?
+            """, (session_id, preflight_timestamp))
+            findings_since = cursor.fetchone()[0] or 0
+
+            if findings_since == 0:
+                db.close()
+                respond("deny", f"Previous transaction ended with INVESTIGATE. Show evidence of investigation (findings) or submit CHECK with proceed decision.")
+                sys.exit(0)
 
     # AUTO-PROCEED: If PREFLIGHT passes readiness gate, skip CHECK requirement
     if raw_know >= KNOW_THRESHOLD and raw_unc <= UNCERTAINTY_THRESHOLD:
@@ -846,7 +905,7 @@ def main():
     # NOTE: db kept open - reused for anti-gaming check below (single connection per invocation)
 
     if not check_row:
-        respond("deny", "Confidence below threshold. Run CHECK after investigation to proceed.")
+        respond("deny", "No valid CHECK found. Run CHECK after investigation to proceed.")
         sys.exit(0)
 
     know, uncertainty, reflex_data, check_timestamp = check_row
@@ -936,4 +995,12 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        # Fail-open: if sentinel crashes, allow the action but warn
+        # This prevents transient errors (DB lock, import race) from blocking work
+        import sys as _sys
+        _sys.stderr.write(f"SENTINEL_CRASH: {type(e).__name__}: {e}\n")
+        respond("allow", f"Sentinel error (fail-open): {type(e).__name__}: {e}")
+        _sys.exit(0)
