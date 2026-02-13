@@ -2,22 +2,282 @@
 """
 Empirica TUI Dashboard - Main Application
 
-Terminal-based dashboard for monitoring AI activity in current project.
-Shows active context (project, database, git repo) and epistemic state.
+Terminal-based dashboard for monitoring AI activity, epistemic state,
+and entity-aware artifacts (projects, contacts, engagements).
 """
 
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Static
-from textual.containers import Container, VerticalScroll
 from rich.text import Text
 from rich.table import Table
 from rich.panel import Panel
-import time
-from datetime import datetime, timedelta
+import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 from empirica.data.session_database import SessionDatabase
 from empirica.config.path_resolver import debug_paths
+
+
+# ---------------------------------------------------------------------------
+# Entity artifact query dispatch
+# ---------------------------------------------------------------------------
+
+def _get_workspace_db():
+    """Get connection to workspace.db (contacts, engagements, lessons)."""
+    db_path = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+    if not db_path.exists():
+        return None
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _get_project_db():
+    """Get connection to current project's sessions.db."""
+    try:
+        db = SessionDatabase()
+        return db
+    except Exception:
+        return None
+
+
+def get_entity_artifacts(entity_type, entity_id=None):
+    """
+    Query epistemic artifacts for any entity type.
+
+    Returns dict with artifact counts and recent items:
+    {
+        'findings': {'count': N, 'recent': [...]},
+        'unknowns': {'count': N, 'recent': [...]},
+        'dead_ends': {'count': N, 'recent': [...]},
+        'mistakes': {'count': N, 'recent': [...]},
+        'goals': {'count': N, 'recent': [...]},
+        'sources': {'count': N, 'recent': [...]},
+    }
+    """
+    if entity_type == 'project':
+        return _get_project_artifacts(entity_id)
+    elif entity_type == 'contact':
+        return _get_contact_artifacts(entity_id)
+    elif entity_type == 'engagement':
+        return _get_engagement_artifacts(entity_id)
+    return {}
+
+
+def _get_project_artifacts(project_id=None):
+    """Query artifacts from per-project sessions.db."""
+    db = _get_project_db()
+    if not db:
+        return {}
+    try:
+        cursor = db.conn.cursor()
+        result = {}
+
+        # Findings
+        cursor.execute("SELECT COUNT(*) as cnt FROM project_findings")
+        count = cursor.fetchone()['cnt']
+        cursor.execute("""
+            SELECT finding as content, impact, created_timestamp as timestamp
+            FROM project_findings ORDER BY created_timestamp DESC LIMIT 3
+        """)
+        result['findings'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+        # Unknowns
+        cursor.execute("SELECT COUNT(*) as cnt FROM project_unknowns WHERE is_resolved = 0")
+        count = cursor.fetchone()['cnt']
+        cursor.execute("""
+            SELECT unknown as content, impact, created_timestamp as timestamp
+            FROM project_unknowns WHERE is_resolved = 0
+            ORDER BY created_timestamp DESC LIMIT 3
+        """)
+        result['unknowns'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+        # Dead-ends
+        cursor.execute("SELECT COUNT(*) as cnt FROM project_dead_ends")
+        count = cursor.fetchone()['cnt']
+        cursor.execute("""
+            SELECT approach as content, why_failed, created_timestamp as timestamp
+            FROM project_dead_ends ORDER BY created_timestamp DESC LIMIT 3
+        """)
+        result['dead_ends'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+        # Mistakes
+        cursor.execute("SELECT COUNT(*) as cnt FROM mistakes_made")
+        count = cursor.fetchone()['cnt']
+        cursor.execute("""
+            SELECT mistake as content, cost_estimate as severity, created_timestamp as timestamp
+            FROM mistakes_made ORDER BY created_timestamp DESC LIMIT 3
+        """)
+        result['mistakes'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+        # Goals
+        cursor.execute("SELECT COUNT(*) as cnt FROM goals WHERE status = 'in_progress'")
+        count = cursor.fetchone()['cnt']
+        cursor.execute("""
+            SELECT objective as content, status, created_timestamp as timestamp
+            FROM goals WHERE status = 'in_progress'
+            ORDER BY created_timestamp DESC LIMIT 3
+        """)
+        result['goals'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+        # Sources
+        cursor.execute("SELECT COUNT(*) as cnt FROM epistemic_sources")
+        count = cursor.fetchone()['cnt']
+        cursor.execute("""
+            SELECT title as content, epistemic_layer, discovered_at as timestamp
+            FROM epistemic_sources ORDER BY discovered_at DESC LIMIT 3
+        """)
+        result['sources'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+        db.close()
+        return result
+    except Exception:
+        db.close()
+        return {}
+
+
+def _get_contact_artifacts(contact_id=None):
+    """Query artifacts from workspace.db for contacts."""
+    conn = _get_workspace_db()
+    if not conn:
+        return {}
+    try:
+        cursor = conn.cursor()
+        result = {}
+
+        if contact_id:
+            # Specific contact — use contact_memory (unified) + standalone tables
+            cursor.execute(
+                "SELECT COUNT(*) as cnt FROM contact_memory WHERE contact_id = ? AND memory_type = 'finding'",
+                (contact_id,))
+            count = cursor.fetchone()['cnt']
+            cursor.execute("""
+                SELECT content, confidence as impact, created_at as timestamp
+                FROM contact_memory WHERE contact_id = ? AND memory_type = 'finding'
+                ORDER BY created_at DESC LIMIT 3
+            """, (contact_id,))
+            result['findings'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+            cursor.execute(
+                "SELECT COUNT(*) as cnt FROM contact_memory WHERE contact_id = ? AND memory_type = 'unknown' AND is_resolved = 0",
+                (contact_id,))
+            count = cursor.fetchone()['cnt']
+            cursor.execute("""
+                SELECT content, confidence as priority, created_at as timestamp
+                FROM contact_memory WHERE contact_id = ? AND memory_type = 'unknown' AND is_resolved = 0
+                ORDER BY created_at DESC LIMIT 3
+            """, (contact_id,))
+            result['unknowns'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+            cursor.execute(
+                "SELECT COUNT(*) as cnt FROM contact_dead_ends WHERE contact_id = ?",
+                (contact_id,))
+            count = cursor.fetchone()['cnt']
+            cursor.execute("""
+                SELECT approach as content, why_failed, created_at as timestamp
+                FROM contact_dead_ends WHERE contact_id = ?
+                ORDER BY created_at DESC LIMIT 3
+            """, (contact_id,))
+            result['dead_ends'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+            cursor.execute(
+                "SELECT COUNT(*) as cnt FROM contact_mistakes WHERE contact_id = ?",
+                (contact_id,))
+            count = cursor.fetchone()['cnt']
+            cursor.execute("""
+                SELECT what_happened as content, severity, created_at as timestamp
+                FROM contact_mistakes WHERE contact_id = ?
+                ORDER BY created_at DESC LIMIT 3
+            """, (contact_id,))
+            result['mistakes'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+        else:
+            # All contacts aggregate
+            for mem_type in ['finding', 'unknown']:
+                key = 'findings' if mem_type == 'finding' else 'unknowns'
+                where = " AND is_resolved = 0" if mem_type == 'unknown' else ""
+                cursor.execute(f"SELECT COUNT(*) as cnt FROM contact_memory WHERE memory_type = ?{where}", (mem_type,))
+                count = cursor.fetchone()['cnt']
+                cursor.execute(f"""
+                    SELECT content, created_at as timestamp
+                    FROM contact_memory WHERE memory_type = ?{where}
+                    ORDER BY created_at DESC LIMIT 3
+                """, (mem_type,))
+                result[key] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+            cursor.execute("SELECT COUNT(*) as cnt FROM contact_dead_ends")
+            count = cursor.fetchone()['cnt']
+            result['dead_ends'] = {'count': count, 'recent': []}
+
+            cursor.execute("SELECT COUNT(*) as cnt FROM contact_mistakes")
+            count = cursor.fetchone()['cnt']
+            result['mistakes'] = {'count': count, 'recent': []}
+
+        conn.close()
+        return result
+    except Exception:
+        conn.close()
+        return {}
+
+
+def _get_engagement_artifacts(engagement_id=None):
+    """Query artifacts from workspace.db for engagements."""
+    conn = _get_workspace_db()
+    if not conn:
+        return {}
+    try:
+        cursor = conn.cursor()
+        result = {}
+
+        if engagement_id:
+            # Tasks as the primary praxic artifact for engagements
+            cursor.execute(
+                "SELECT COUNT(*) as cnt FROM engagement_tasks WHERE engagement_id = ? AND status != 'completed'",
+                (engagement_id,))
+            count = cursor.fetchone()['cnt']
+            cursor.execute("""
+                SELECT title as content, status, created_at as timestamp
+                FROM engagement_tasks WHERE engagement_id = ? AND status != 'completed'
+                ORDER BY created_at DESC LIMIT 3
+            """, (engagement_id,))
+            result['goals'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+            # Dead-ends via linked contacts
+            cursor.execute("""
+                SELECT COUNT(*) as cnt FROM contact_dead_ends
+                WHERE engagement_id = ?
+            """, (engagement_id,))
+            count = cursor.fetchone()['cnt']
+            cursor.execute("""
+                SELECT approach as content, why_failed, created_at as timestamp
+                FROM contact_dead_ends WHERE engagement_id = ?
+                ORDER BY created_at DESC LIMIT 3
+            """, (engagement_id,))
+            result['dead_ends'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+
+            # Mistakes via linked contacts
+            cursor.execute("""
+                SELECT COUNT(*) as cnt FROM contact_mistakes
+                WHERE engagement_id = ?
+            """, (engagement_id,))
+            count = cursor.fetchone()['cnt']
+            cursor.execute("""
+                SELECT what_happened as content, severity, created_at as timestamp
+                FROM contact_mistakes WHERE engagement_id = ?
+                ORDER BY created_at DESC LIMIT 3
+            """, (engagement_id,))
+            result['mistakes'] = {'count': count, 'recent': [dict(r) for r in cursor.fetchall()]}
+        else:
+            # Aggregate across all engagements
+            cursor.execute("SELECT COUNT(*) as cnt FROM engagement_tasks WHERE status != 'completed'")
+            count = cursor.fetchone()['cnt']
+            result['goals'] = {'count': count, 'recent': []}
+
+        conn.close()
+        return result
+    except Exception:
+        conn.close()
+        return {}
 
 
 class ProjectHeader(Static):
@@ -78,7 +338,10 @@ class ActivityPanel(Static):
                 start_time = row['start_time']
 
                 # Calculate session duration
-                start_dt = datetime.fromisoformat(start_time)
+                if isinstance(start_time, (int, float)):
+                    start_dt = datetime.fromtimestamp(start_time)
+                else:
+                    start_dt = datetime.fromisoformat(str(start_time))
                 duration = datetime.now() - start_dt
                 duration_str = str(duration).split('.')[0]  # Remove microseconds
 
@@ -104,7 +367,11 @@ class ActivityPanel(Static):
                 if reflex_row:
                     phase = reflex_row['phase']
                     round_num = reflex_row['round_num']
-                    reflex_time = datetime.fromisoformat(reflex_row['timestamp'])
+                    raw_rt = reflex_row['timestamp']
+                    if isinstance(raw_rt, (int, float)):
+                        reflex_time = datetime.fromtimestamp(raw_rt)
+                    else:
+                        reflex_time = datetime.fromisoformat(str(raw_rt))
                     time_in_phase = datetime.now() - reflex_time
 
                     content.append("🎯 Phase: ", style="bold cyan")
@@ -217,26 +484,196 @@ class VectorsPanel(Static):
             self.update(Panel(f"Error: {e}", title="[bold red]ERROR[/bold red]", border_style="red"))
 
 
-class CommandsLog(Static):
-    """Display recent activity log"""
+class EpistemicArtifactsPanel(Static):
+    """Display epistemic artifacts for any entity type (project, contact, engagement)."""
+
+    ARTIFACT_STYLES = {
+        'findings': ('green', 'F'),
+        'unknowns': ('yellow', '?'),
+        'dead_ends': ('red', 'X'),
+        'mistakes': ('bright_red', '!'),
+        'goals': ('cyan', 'G'),
+        'sources': ('blue', 'S'),
+    }
+
+    def __init__(self, entity_type='project', entity_id=None, **kwargs):
+        super().__init__(**kwargs)
+        self.entity_type = entity_type
+        self.entity_id = entity_id
 
     def on_mount(self) -> None:
-        """Initialize widget on mount and start periodic log refresh."""
+        self._refresh()
+        self.set_interval(2.0, self._refresh)
+
+    def _get_current_vectors(self):
+        """Get current epistemic vectors for emoji state computation."""
+        if self.entity_type == 'project':
+            db = _get_project_db()
+            if not db:
+                return {}
+            try:
+                cursor = db.conn.cursor()
+                cursor.execute("""
+                    SELECT know, uncertainty, engagement, context, do, completion
+                    FROM reflexes ORDER BY timestamp DESC LIMIT 1
+                """)
+                row = cursor.fetchone()
+                db.close()
+                if row:
+                    return {
+                        'know': row['know'] or 0.0,
+                        'uncertainty': row['uncertainty'] or 0.5,
+                        'completion': row['completion'] or 0.0,
+                        'do': row['do'] or 0.0,
+                        'context': row['context'] or 0.0,
+                    }
+            except Exception:
+                db.close()
+        elif self.entity_type == 'contact':
+            conn = _get_workspace_db()
+            if conn and self.entity_id:
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "SELECT relationship_health, knowledge_depth FROM contacts WHERE contact_id = ?",
+                        (self.entity_id,))
+                    row = cursor.fetchone()
+                    conn.close()
+                    if row:
+                        return {
+                            'relationship_health': row['relationship_health'] or 0.5,
+                            'knowledge_depth': row['knowledge_depth'] or 0.0,
+                            'sentiment_value': 0.5,
+                        }
+                except Exception:
+                    conn.close()
+        return {}
+
+    def _refresh(self):
+        try:
+            artifacts = get_entity_artifacts(self.entity_type, self.entity_id)
+
+            # Compute emoji state
+            from empirica.tui.emoji_state import compute_emoji_state, get_emoji_char, get_pixel_face, get_emoji_color
+            vectors = self._get_current_vectors()
+            if vectors:
+                emoji_state, emoji_detail = compute_emoji_state(self.entity_type, vectors)
+            else:
+                emoji_state = 'idle'
+                emoji_detail = {'reason': 'No vectors available'}
+
+            emoji_char = get_emoji_char(emoji_state)
+            emoji_color = get_emoji_color(emoji_state)
+
+            if not artifacts:
+                entity_label = self.entity_type.title()
+                # Show pixel face even with no artifacts
+                face_lines = get_pixel_face(emoji_state)
+                face_text = Text()
+                for line in face_lines:
+                    face_text.append(line + "\n", style=emoji_color)
+                face_text.append(f"\n {emoji_char} {emoji_state.title()}\n", style=f"bold {emoji_color}")
+                # Show vectors if available
+                know_val = vectors.get('know', 0.0)
+                do_val = vectors.get('do', 0.0)
+                unc_val = vectors.get('uncertainty', 0.5)
+                if vectors:
+                    know_bar = "█" * int(know_val * 6) + "░" * (6 - int(know_val * 6))
+                    do_bar = "█" * int(do_val * 6) + "░" * (6 - int(do_val * 6))
+                    face_text.append(f" K {know_bar} {know_val:.0%}\n", style="cyan")
+                    face_text.append(f" D {do_bar} {do_val:.0%}\n", style="magenta")
+                    confidence = (know_val * (1.0 - unc_val)) ** 0.5 if know_val > 0 else 0.0
+                    conf_color = "green" if confidence >= 0.7 else "yellow" if confidence >= 0.4 else "red"
+                    face_text.append(f" Conf: ", style="dim")
+                    face_text.append(f"{confidence:.0%}", style=f"bold {conf_color}")
+                self.update(Panel(
+                    face_text,
+                    title=f"[bold]EPISTEMIC ARTIFACTS ({entity_label.upper()})[/bold]",
+                    border_style="dim"))
+                return
+
+            # Build pixel face column with know/do vectors and confidence
+            face_lines = get_pixel_face(emoji_state)
+            face_text = Text()
+            for line in face_lines:
+                face_text.append(line + "\n", style=emoji_color)
+            face_text.append(f"\n {emoji_char} {emoji_state.title()}\n", style=f"bold {emoji_color}")
+
+            # Show KNOW and DO vectors with mini progress bars
+            know_val = vectors.get('know', 0.0)
+            do_val = vectors.get('do', 0.0)
+            know_bar = "█" * int(know_val * 6) + "░" * (6 - int(know_val * 6))
+            do_bar = "█" * int(do_val * 6) + "░" * (6 - int(do_val * 6))
+            face_text.append(f" K {know_bar} ", style="cyan")
+            face_text.append(f"{know_val:.0%}\n", style="white")
+            face_text.append(f" D {do_bar} ", style="magenta")
+            face_text.append(f"{do_val:.0%}\n", style="white")
+
+            # Confidence score (geometric mean of know and 1-uncertainty)
+            unc_val = vectors.get('uncertainty', 0.5)
+            confidence = (know_val * (1.0 - unc_val)) ** 0.5 if know_val > 0 else 0.0
+            conf_color = "green" if confidence >= 0.7 else "yellow" if confidence >= 0.4 else "red"
+            face_text.append(f" Conf: ", style="dim")
+            face_text.append(f"{confidence:.0%}", style=f"bold {conf_color}")
+
+            # Build artifact summary table
+            table = Table(show_header=False, box=None, padding=(0, 0, 0, 1))
+            table.add_column("type", style="bold", no_wrap=True)
+            table.add_column("cnt", justify="right", width=4, no_wrap=True)
+            table.add_column("latest", no_wrap=True, overflow="ellipsis")
+
+            for artifact_type, (style, icon) in self.ARTIFACT_STYLES.items():
+                data = artifacts.get(artifact_type)
+                if data is None:
+                    continue
+                count = data['count']
+                recent = data.get('recent', [])
+                latest_text = ""
+                if recent:
+                    content = recent[0].get('content', '')
+                    if content:
+                        latest_text = content[:42] + "..." if len(content) > 42 else content
+
+                count_style = style if count > 0 else "dim"
+                table.add_row(
+                    Text(f" {icon} {artifact_type.replace('_', ' ').title()}", style=style),
+                    Text(str(count), style=count_style),
+                    Text(latest_text, style="white" if count > 0 else "dim"),
+                )
+
+            # Side-by-side layout: pixel face | artifact table
+            layout = Table(show_header=False, box=None, padding=(0, 1), expand=True)
+            layout.add_column("face", width=18, no_wrap=True)
+            layout.add_column("artifacts", ratio=1)
+            layout.add_row(face_text, table)
+
+            entity_label = self.entity_type.upper()
+            if self.entity_id:
+                entity_label += f" ({self.entity_id[:12]}...)" if len(str(self.entity_id)) > 12 else f" ({self.entity_id})"
+
+            self.update(Panel(layout, title=f"[bold]EPISTEMIC ARTIFACTS ({entity_label})[/bold]", border_style="blue"))
+
+        except Exception as e:
+            self.update(Panel(f"Error: {e}", title="[bold red]ARTIFACTS ERROR[/bold red]", border_style="red"))
+
+
+class CommandsLog(Static):
+    """Display recent activity log across all entity types."""
+
+    def on_mount(self) -> None:
         self.update_log()
         self.set_interval(2.0, self.update_log)
 
     def update_log(self):
-        """Refresh command log from database"""
         try:
             db = SessionDatabase()
             cursor = db.conn.cursor()
 
-            # Get recent findings and unknowns as proxy for activity
             cursor.execute("""
-                SELECT 'FINDING' as type, finding as message, timestamp
+                SELECT 'FINDING' as type, finding as message, created_timestamp as timestamp
                 FROM project_findings
                 UNION ALL
-                SELECT 'UNKNOWN' as type, unknown as message, timestamp
+                SELECT 'UNKNOWN' as type, unknown as message, created_timestamp as timestamp
                 FROM project_unknowns
                 WHERE is_resolved = 0
                 ORDER BY timestamp DESC
@@ -250,16 +687,16 @@ class CommandsLog(Static):
                 for row in rows:
                     event_type = row['type']
                     message = row['message']
-                    timestamp = datetime.fromisoformat(row['timestamp'])
+                    raw_ts = row['timestamp']
+                    if isinstance(raw_ts, (int, float)):
+                        timestamp = datetime.fromtimestamp(raw_ts)
+                    else:
+                        timestamp = datetime.fromisoformat(str(raw_ts))
                     time_str = timestamp.strftime("%H:%M:%S")
-
-                    # Color based on type
                     type_style = "green" if event_type == "FINDING" else "yellow"
-
                     content.append(f"{time_str} ", style="dim")
                     content.append(f"[{event_type}] ", style=type_style)
                     content.append(f"{message[:60]}...\n" if len(message) > 60 else f"{message}\n")
-
                 self.update(Panel(content, title="[bold]RECENT ACTIVITY[/bold]", border_style="blue"))
             else:
                 self.update(Panel("No recent activity", title="[bold]RECENT ACTIVITY[/bold]", border_style="dim"))
@@ -271,7 +708,10 @@ class CommandsLog(Static):
 
 
 class EmpiricaDashboard(App):
-    """Empirica TUI Dashboard Application"""
+    """Empirica TUI Dashboard Application
+
+    Supports entity-aware artifact display for projects, contacts, and engagements.
+    """
 
     CSS = """
     Screen {
@@ -281,43 +721,72 @@ class EmpiricaDashboard(App):
     .container {
         height: auto;
     }
+
+    .entity-label {
+        text-style: bold;
+        color: $accent;
+    }
     """
 
     BINDINGS = [
         ("q", "quit", "Quit"),
         ("r", "refresh", "Refresh"),
-        ("c", "clear", "Clear"),
+        ("p", "entity_project", "Project"),
+        ("o", "entity_contact", "Contacts"),
+        ("e", "entity_engagement", "Engagements"),
     ]
 
+    def __init__(self, entity_type='project', entity_id=None, **kwargs):
+        super().__init__(**kwargs)
+        self._entity_type = entity_type
+        self._entity_id = entity_id
+
     def compose(self) -> ComposeResult:
-        """Create dashboard layout"""
         yield Header()
         yield ProjectHeader()
         yield ActivityPanel()
         yield VectorsPanel()
+        yield EpistemicArtifactsPanel(
+            entity_type=self._entity_type,
+            entity_id=self._entity_id,
+        )
         yield CommandsLog()
         yield Footer()
 
+    async def _switch_entity(self, entity_type, entity_id=None):
+        """Switch the artifacts panel to a different entity type."""
+        old_panel = self.query_one(EpistemicArtifactsPanel)
+        new_panel = EpistemicArtifactsPanel(entity_type=entity_type, entity_id=entity_id)
+        await old_panel.remove()
+        # Mount new panel before CommandsLog
+        cmd_log = self.query_one(CommandsLog)
+        await self.mount(new_panel, before=cmd_log)
+
     def action_refresh(self):
-        """Manually refresh all panels"""
         for widget in self.query(Static):
-            if hasattr(widget, 'update_context'):
-                widget.update_context()
-            elif hasattr(widget, 'update_activity'):
-                widget.update_activity()
-            elif hasattr(widget, 'update_vectors'):
-                widget.update_vectors()
-            elif hasattr(widget, 'update_log'):
-                widget.update_log()
+            for method in ('update_context', 'update_activity', 'update_vectors', 'update_log', '_refresh'):
+                if hasattr(widget, method):
+                    getattr(widget, method)()
+                    break
 
-    def action_clear(self):
-        """Clear the screen"""
-        self.clear()
+    async def action_entity_project(self):
+        await self._switch_entity('project')
+
+    async def action_entity_contact(self):
+        await self._switch_entity('contact')
+
+    async def action_entity_engagement(self):
+        await self._switch_entity('engagement')
 
 
-def run_dashboard():
-    """Entry point for dashboard command"""
-    app = EmpiricaDashboard()
+def run_dashboard(entity_type='project', entity_id=None):
+    """Entry point for dashboard command.
+
+    Args:
+        entity_type: 'project', 'contact', or 'engagement'
+        entity_id: Optional specific entity ID to focus on
+    """
+    app = EmpiricaDashboard(entity_type=entity_type, entity_id=entity_id)
     app.run()
 
 

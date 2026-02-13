@@ -1,0 +1,4 @@
+{
+  "description": "Empirica epistemic hooks - All hooks defined in ~/.claude/settings.json with absolute paths for local plugins (avoids ${CLAUDE_PLUGIN_ROOT} cache resolution issues). See install.sh for hook configuration.",
+  "hooks": {}
+}

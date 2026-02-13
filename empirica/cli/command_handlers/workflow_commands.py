@@ -259,6 +259,25 @@ def handle_preflight_submit_command(args):
         extracted_vectors = _extract_all_vectors(vectors)
         vectors = extracted_vectors
 
+        # CHECK FOR UNCLOSED TRANSACTION — warn but don't block
+        # Auto-closing would poison vector states (fabricated POSTFLIGHT vectors)
+        unclosed_transaction_warning = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction_full
+            existing_tx = read_active_transaction_full()
+            if existing_tx and existing_tx.get('status') == 'open':
+                existing_tx_id = existing_tx.get('transaction_id', 'unknown')
+                existing_tx_time = existing_tx.get('preflight_timestamp', 0)
+                age_minutes = int((time.time() - existing_tx_time) / 60) if existing_tx_time else 0
+                unclosed_transaction_warning = {
+                    "previous_transaction_id": existing_tx_id[:12] + "...",
+                    "age_minutes": age_minutes,
+                    "message": "Previous transaction was not closed with POSTFLIGHT. Learning delta from that work is lost. Run POSTFLIGHT before PREFLIGHT to measure learning.",
+                    "impact": "Unmeasured work = epistemic dark matter. Calibration cannot improve without POSTFLIGHT."
+                }
+        except Exception:
+            pass  # Non-fatal — proceed with new transaction
+
         # Use GitEnhancedReflexLogger for proper 3-layer storage (SQLite + Git Notes + JSON)
         try:
             # Generate transaction_id — this is the epistemic transaction boundary
@@ -414,9 +433,13 @@ def handle_preflight_submit_command(args):
                         project_id,
                         search_context,
                         last_session_timestamp=last_session_ts,
-                        include_eidetic=True,  # Include eidetic facts in PREFLIGHT
-                        include_episodic=True,  # Include episodic narratives in PREFLIGHT
-                        include_related_docs=True,  # Include related reference docs
+                        include_eidetic=True,
+                        include_episodic=True,
+                        include_related_docs=True,
+                        include_goals=True,
+                        include_assumptions=True,
+                        include_decisions=True,
+                        vectors=vectors,
                     )
                     if patterns and any(v for k, v in patterns.items() if k != 'time_gap'):
                         time_gap = patterns.get('time_gap', {})
@@ -426,7 +449,10 @@ def handle_preflight_submit_command(args):
                                    f"{len(patterns.get('relevant_findings', []))} findings, "
                                    f"{len(patterns.get('eidetic_facts', []))} eidetic, "
                                    f"{len(patterns.get('episodic_narratives', []))} episodic, "
-                                   f"{len(patterns.get('related_docs', []))} docs")
+                                   f"{len(patterns.get('related_docs', []))} docs, "
+                                   f"{len(patterns.get('related_goals', []))} goals, "
+                                   f"{len(patterns.get('unverified_assumptions', []))} assumptions, "
+                                   f"{len(patterns.get('prior_decisions', []))} decisions")
                 except Exception as e:
                     logger.debug(f"Pattern retrieval failed (optional): {e}")
 
@@ -455,7 +481,8 @@ def handle_preflight_submit_command(args):
                     "enabled": SentinelHooks.is_enabled(),
                     "decision": sentinel_decision.value if sentinel_decision else None
                 } if SentinelHooks.is_enabled() else None,
-                "patterns": patterns if patterns and any(patterns.values()) else None
+                "patterns": patterns if patterns and any(patterns.values()) else None,
+                "unclosed_transaction_warning": unclosed_transaction_warning
             }
 
             # NOTE: Statusline cache was removed (2026-02-06). Statusline reads directly from DB.
@@ -622,41 +649,41 @@ def handle_check_command(args):
         # Calculate confidence (use explicit if provided, else derive from uncertainty)
         confidence = explicit_confidence if explicit_confidence is not None else (1.0 - uncertainty)
 
-        # GATE LOGIC: Primary decision based on confidence threshold (≥0.70)
+        # GATE LOGIC: Primary decision based on readiness assessment
         # Secondary validation based on evidence (drift, unknowns)
         suggestions = []
 
         if confidence >= 0.70:
-            # PROCEED path - confidence threshold met
+            # PROCEED path - readiness sufficient
             if drift > 0.3 or unknowns_count > 5:
                 # High evidence of gaps - warn but allow proceed
                 decision = "proceed"
                 strength = "moderate"
-                reasoning = f"Confidence ({confidence:.2f}) meets threshold, but {unknowns_count} unknowns and drift ({drift:.2f}) suggest caution"
-                suggestions.append("Confidence threshold met - you may proceed")
+                reasoning = f"Readiness sufficient, but {unknowns_count} unknowns and drift ({drift:.2f}) suggest caution"
+                suggestions.append("Readiness met - you may proceed")
                 suggestions.append(f"Be aware: {unknowns_count} unknowns remain and drift is {drift:.2f}")
             else:
                 # Clean proceed
                 decision = "proceed"
                 strength = "strong"
-                reasoning = f"Confidence ({confidence:.2f}) ≥ 0.70 threshold, low drift ({drift:.2f}), {unknowns_count} unknowns"
+                reasoning = f"Readiness strong, low drift ({drift:.2f}), {unknowns_count} unknowns"
                 suggestions.append("Evidence supports proceeding to action phase")
         else:
-            # INVESTIGATE path - confidence below threshold
+            # INVESTIGATE path - readiness insufficient
             if unknowns_count > 5 or drift > 0.3:
-                # Strong evidence backing the low confidence
+                # Strong evidence backing the low readiness
                 decision = "investigate"
                 strength = "strong"
-                reasoning = f"Confidence ({confidence:.2f}) < 0.70 threshold + {unknowns_count} unknowns and drift ({drift:.2f}) - investigation required"
-                suggestions.append("Confidence below threshold - investigate before proceeding")
-                suggestions.append(f"Address {unknowns_count} unknowns to increase confidence")
+                reasoning = f"Readiness insufficient with {unknowns_count} unknowns and drift ({drift:.2f}) - investigation required"
+                suggestions.append("More investigation needed before proceeding")
+                suggestions.append(f"Address {unknowns_count} unknowns to increase readiness")
             else:
-                # Low confidence but low evidence - possible calibration issue
+                # Low readiness but low evidence - possible calibration issue
                 decision = "investigate"
                 strength = "moderate"
-                reasoning = f"Confidence ({confidence:.2f}) < 0.70 threshold, but only {unknowns_count} unknowns and drift ({drift:.2f}) - investigate to validate"
-                suggestions.append("Confidence below threshold - investigate or recalibrate")
-                suggestions.append("Evidence doesn't fully explain low confidence")
+                reasoning = f"Readiness insufficient, but only {unknowns_count} unknowns and drift ({drift:.2f}) - investigate to validate"
+                suggestions.append("Investigate further or recalibrate your assessment")
+                suggestions.append("Evidence doesn't fully explain low readiness")
 
         # Determine drift level
         if drift > 0.3:
@@ -831,6 +858,14 @@ def handle_check_submit_command(args):
             output_format = getattr(args, 'output', 'human')
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
 
+        # Auto-resolve session_id from active transaction if not provided
+        if not session_id:
+            try:
+                from empirica.utils.session_resolver import get_active_empirica_session_id
+                session_id = get_active_empirica_session_id()
+            except Exception:
+                pass
+
         # Resolve partial session IDs to full UUIDs
         try:
             session_id = resolve_session_id(session_id)
@@ -951,8 +986,8 @@ def handle_check_submit_command(args):
             raise ValueError("Vectors must be a dictionary")
 
         # AUTO-COMPUTE DECISION from vectors if not provided
-        # Readiness gate (from CLAUDE.md): know >= 0.70 AND uncertainty <= 0.35
-        # Apply GROUNDED corrections from .breadcrumbs.yaml (objective evidence, not learning deltas)
+        # Readiness gate: know >= threshold AND uncertainty <= threshold
+        # Thresholds are dynamic (earned autonomy from calibration history) with static fallback
         know = vectors.get('know', 0.5)
         uncertainty = vectors.get('uncertainty', 0.5)
         try:
@@ -962,6 +997,38 @@ def handle_check_submit_command(args):
             _corrections = {}
         corrected_know = know + _corrections.get('know', 0.0)
         corrected_uncertainty = uncertainty + _corrections.get('uncertainty', 0.0)
+
+        # Dynamic thresholds from calibration history (earned autonomy)
+        ready_know_threshold = 0.70  # Static default
+        ready_uncertainty_threshold = 0.35  # Static default
+        dynamic_thresholds_info = None
+        try:
+            from empirica.core.post_test.dynamic_thresholds import compute_dynamic_thresholds
+            dt_db = _get_db_for_session(session_id)
+            dt_result = compute_dynamic_thresholds(ai_id="claude-code", db=dt_db)
+            dt_db.close()
+
+            if dt_result.get("source") == "dynamic":
+                # Use noetic thresholds for CHECK gate (investigation → action boundary)
+                noetic = dt_result.get("noetic", {})
+                if noetic.get("calibration_accuracy") is not None:
+                    ready_know_threshold = noetic["ready_know_threshold"]
+                    ready_uncertainty_threshold = noetic["ready_uncertainty_threshold"]
+                    dynamic_thresholds_info = {
+                        "source": "dynamic",
+                        "know_threshold": ready_know_threshold,
+                        "uncertainty_threshold": ready_uncertainty_threshold,
+                        "calibration_accuracy": noetic["calibration_accuracy"],
+                        "transactions_analyzed": noetic["transactions_analyzed"],
+                    }
+                    logger.info(
+                        f"Dynamic thresholds: know>={ready_know_threshold:.3f}, "
+                        f"uncertainty<={ready_uncertainty_threshold:.3f} "
+                        f"(accuracy={noetic['calibration_accuracy']:.3f}, "
+                        f"n={noetic['transactions_analyzed']})"
+                    )
+        except Exception as e:
+            logger.debug(f"Dynamic thresholds unavailable (using static): {e}")
 
         # DIMINISHING RETURNS DETECTION: Analyze if investigation is still improving
         # Key insight: Speed and correctness are ALIGNED when calibration is good.
@@ -1025,8 +1092,9 @@ def handle_check_submit_command(args):
         # NOTE: Use RAW vectors, not bias-corrected. Biases are INFORMATIONAL for the AI
         # to self-correct, not for the system to pre-correct. True calibration happens
         # at POST-TEST when we compare claimed outcomes vs objective evidence.
+        # Thresholds are dynamic (earned autonomy) when calibration history is available.
         computed_decision = None
-        if know >= 0.70 and uncertainty <= 0.35:
+        if know >= ready_know_threshold and uncertainty <= ready_uncertainty_threshold:
             computed_decision = "proceed"
         elif diminishing_returns["recommend_proceed"]:
             # Override: investigation plateaued with adequate baseline
@@ -1249,12 +1317,12 @@ def handle_check_submit_command(args):
                 "reasoning": reasoning,
                 "auto_checkpoint_created": auto_checkpoint_created,
                 "persisted": True,
-                "storage_layers": {
+                "storage_layers": {k: v for k, v in {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
                     "epistemic_snapshots": snapshot_created
-                },
+                }.items() if v},
                 "snapshot": {
                     "created": snapshot_created,
                     "snapshot_id": snapshot_id,
@@ -1268,15 +1336,19 @@ def handle_check_submit_command(args):
                 },
                 "metacog": {
                     "computed_decision": computed_decision,
-                    "raw_vectors": {"know": know, "uncertainty": uncertainty},
-                    "bias_corrections": {"know": corrected_know - know, "uncertainty": corrected_uncertainty - uncertainty},
-                    "readiness_gate": "know>=0.70 AND uncertainty<=0.35 (uses RAW vectors, biases are informational)",
                     "gate_passed": computed_decision == "proceed",
-                    "diminishing_returns": diminishing_returns,
+                    "readiness": {
+                        "source": "dynamic" if dynamic_thresholds_info else "static",
+                        "calibration_accuracy": dynamic_thresholds_info.get("calibration_accuracy") if dynamic_thresholds_info else None,
+                        "transactions_analyzed": dynamic_thresholds_info.get("transactions_analyzed") if dynamic_thresholds_info else None,
+                    },
+                    "diminishing_returns": {
+                        "detected": diminishing_returns.get("detected", False),
+                        "recommend_proceed": diminishing_returns.get("recommend_proceed", False)
+                    },
                     "autopilot": {
                         "enabled": autopilot_mode,
-                        "binding": decision_binding,
-                        "note": "When binding=true, decision is enforced (not suggestive). Set EMPIRICA_AUTOPILOT_MODE=true to enable."
+                        "binding": decision_binding
                     }
                 },
                 "sentinel": {
@@ -1284,7 +1356,8 @@ def handle_check_submit_command(args):
                     "decision": sentinel_decision.value if sentinel_decision else None,
                     "override_applied": sentinel_override,
                     "note": "Sentinel feeds back to override AI decision"
-                } if SentinelHooks.is_enabled() else None
+                } if SentinelHooks.is_enabled() else None,
+                "transaction_reminder": "POSTFLIGHT is required when work is complete to close this transaction and measure learning delta"
             }
 
             # BLINDSPOT SCAN: Run negative-space inference on knowledge topology
@@ -1339,6 +1412,25 @@ def handle_check_submit_command(args):
             except Exception as e:
                 logger.debug(f"Blindspot scan skipped: {e}")
                 result["blindspots"] = {"count": 0, "error": str(e)}
+
+            # NOETIC RAG: CHECK pattern retrieval — enriched context for proceed/investigate decision
+            try:
+                check_project_id = (bootstrap_result or {}).get('project_id') or bootstrap_status.get('project_id')
+                if check_project_id:
+                    from empirica.core.qdrant.pattern_retrieval import check_against_patterns
+                    check_patterns = check_against_patterns(
+                        check_project_id,
+                        reasoning or "",
+                        vectors=vectors,
+                        include_findings=True,
+                        include_eidetic=True,
+                        include_goals=True,
+                        include_assumptions=True,
+                    )
+                    if check_patterns and check_patterns.get("has_warnings"):
+                        result["patterns"] = check_patterns
+            except Exception as e:
+                logger.debug(f"CHECK pattern retrieval failed (optional): {e}")
 
             # AUTO-POSTFLIGHT TRIGGER: Check if goal completion detected
             # Uses completion and impact vectors to determine if a goal was completed
@@ -1966,27 +2058,44 @@ def handle_postflight_submit_command(args):
                 logger.debug(f"Bayesian belief update failed (non-fatal): {e}")
 
             # GROUNDED VERIFICATION: Post-test evidence-based calibration (parallel track)
+            # Phase-aware: detects CHECK boundary, splits into noetic + praxic tracks
             # Collects objective evidence → maps to vectors → Bayesian update → trajectory → export
             grounded_verification = None
             try:
                 from empirica.core.post_test.grounded_calibration import run_grounded_verification
+                from empirica.core.post_test.phase_boundary import detect_phase_boundary
 
                 db = _get_db_for_session(session_id)
                 session = db.get_session(session_id)
                 project_id = session.get('project_id') if session else None
+
+                # Detect CHECK phase boundary for noetic/praxic split
+                phase_boundary = None
+                try:
+                    phase_boundary = detect_phase_boundary(session_id, db)
+                    if phase_boundary and phase_boundary.get("has_check"):
+                        logger.debug(
+                            f"Phase boundary detected: check_count={phase_boundary['check_count']}, "
+                            f"investigate_count={phase_boundary['investigate_count']}, "
+                            f"noetic_only={phase_boundary.get('noetic_only', False)}"
+                        )
+                except Exception as e:
+                    logger.debug(f"Phase boundary detection failed (non-fatal): {e}")
 
                 grounded_verification = run_grounded_verification(
                     session_id=session_id,
                     postflight_vectors=vectors,
                     db=db,
                     project_id=project_id,
+                    phase_boundary=phase_boundary,
                 )
 
                 if grounded_verification:
+                    phase_aware = grounded_verification.get('phase_aware', False)
                     logger.debug(
                         f"Grounded verification: {grounded_verification['evidence_count']} evidence items, "
-                        f"coverage={grounded_verification['grounded_coverage']}, "
-                        f"score={grounded_verification['calibration_score']}"
+                        f"phase_aware={phase_aware}, "
+                        f"phases={list(grounded_verification.get('phases', {}).keys())}"
                     )
                 db.close()
             except Exception as e:
@@ -2186,6 +2295,46 @@ def handle_postflight_submit_command(args):
                 # Memory sync is optional (requires Qdrant)
                 logger.debug(f"Memory sync skipped: {e}")
 
+            # NOETIC RAG: POSTFLIGHT decay triggers + auto-global-sync
+            global_synced = False
+            stale_decayed = False
+            assumptions_urgency_updated = False
+            try:
+                if _check_qdrant_available() and session and session.get('project_id'):
+                    postflight_project_id = session['project_id']
+
+                    # 1. Auto-sync high-impact findings to global learnings
+                    try:
+                        from empirica.core.qdrant.vector_store import auto_sync_session_to_global
+                        synced = auto_sync_session_to_global(postflight_project_id, session_id)
+                        global_synced = synced > 0
+                        if synced:
+                            logger.debug(f"POSTFLIGHT: Auto-synced {synced} findings to global learnings")
+                    except Exception as e_sync:
+                        logger.debug(f"Global sync skipped: {e_sync}")
+
+                    # 2. Apply staleness signal to old memory items
+                    try:
+                        from empirica.core.qdrant.vector_store import apply_staleness_signal
+                        stale_count = apply_staleness_signal(postflight_project_id)
+                        stale_decayed = stale_count > 0
+                        if stale_count:
+                            logger.debug(f"POSTFLIGHT: Applied staleness signal to {stale_count} memory items")
+                    except Exception as e_stale:
+                        logger.debug(f"Staleness decay skipped: {e_stale}")
+
+                    # 3. Update assumption urgency (unverified = higher risk over time)
+                    try:
+                        from empirica.core.qdrant.vector_store import update_assumption_urgency
+                        urgency_count = update_assumption_urgency(postflight_project_id)
+                        assumptions_urgency_updated = urgency_count > 0
+                        if urgency_count:
+                            logger.debug(f"POSTFLIGHT: Updated urgency for {urgency_count} assumptions")
+                    except Exception as e_urgency:
+                        logger.debug(f"Assumption urgency update skipped: {e_urgency}")
+            except Exception as e_decay:
+                logger.debug(f"POSTFLIGHT decay triggers skipped: {e_decay}")
+
             # EPISTEMIC SNAPSHOT: Create replay-capable snapshot with delta chain
             # This enables session replay by storing explicit deltas + previous_snapshot_id links
             snapshot_created = False
@@ -2249,7 +2398,7 @@ def handle_postflight_submit_command(args):
                 "calibration": grounded_verification,  # Grounded calibration is the real calibration
                 "auto_checkpoint_created": True,
                 "persisted": True,
-                "storage_layers": {
+                "storage_layers": {k: v for k, v in {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
@@ -2259,8 +2408,11 @@ def handle_postflight_submit_command(args):
                     "epistemic_snapshots": snapshot_created,
                     "qdrant_memory": memory_synced > 0,
                     "grounded_calibration": grounded_verification is not None,
-                    "grounded_calibration_embedded": grounded_embedded
-                },
+                    "grounded_calibration_embedded": grounded_embedded,
+                    "global_synced": global_synced,
+                    "stale_decayed": stale_decayed,
+                    "assumptions_urgency_updated": assumptions_urgency_updated,
+                }.items() if v},  # Only show layers that succeeded
                 "breadcrumbs": {
                     "learning_trajectory_exported": calibration_exported,
                     "note": "Learning trajectory written to .breadcrumbs.yaml (NOT calibration - see grounded_calibration)"
@@ -2279,6 +2431,14 @@ def handle_postflight_submit_command(args):
             }
 
             # NOTE: Statusline cache was removed (2026-02-06). Statusline reads directly from DB.
+
+            # Clear active transaction file — POSTFLIGHT closes the measurement window
+            try:
+                from empirica.utils.session_resolver import clear_active_transaction
+                clear_active_transaction()  # Resolves project path internally
+            except Exception as e_clear:
+                logger.debug(f"Failed to clear active transaction (non-fatal): {e_clear}")
+
         except Exception as e:
             logger.error(f"Failed to save postflight assessment: {e}")
             result = {

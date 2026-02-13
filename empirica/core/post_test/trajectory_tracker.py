@@ -59,11 +59,13 @@ class TrajectoryTracker:
         assessment: GroundedAssessment,
         domain: Optional[str] = None,
         goal_id: Optional[str] = None,
+        phase: str = "combined",
     ) -> int:
         """
         Record a trajectory point for each vector in the assessment.
 
         Called after each POSTFLIGHT + grounded verification.
+        Phase can be "noetic", "praxic", or "combined".
         Returns number of points recorded.
         """
         cursor = self.conn.cursor()
@@ -94,12 +96,12 @@ class TrajectoryTracker:
                 INSERT INTO calibration_trajectory (
                     point_id, session_id, ai_id, vector_name,
                     self_assessed, grounded, gap,
-                    domain, goal_id, timestamp
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    domain, goal_id, timestamp, phase
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 point_id, session_id, ai_id, vector_name,
                 self_val, grounded_val, gap,
-                domain, goal_id, timestamp,
+                domain, goal_id, timestamp, phase,
             ))
             recorded += 1
 
@@ -111,19 +113,31 @@ class TrajectoryTracker:
         ai_id: str,
         vector_name: str,
         lookback: int = 20,
+        phase: Optional[str] = None,
     ) -> List[TrajectoryPoint]:
-        """Get recent trajectory points for a vector."""
+        """Get recent trajectory points for a vector, optionally filtered by phase."""
         cursor = self.conn.cursor()
 
-        cursor.execute("""
-            SELECT point_id, session_id, ai_id, vector_name,
-                   self_assessed, grounded, gap,
-                   domain, goal_id, timestamp
-            FROM calibration_trajectory
-            WHERE ai_id = ? AND vector_name = ?
-            ORDER BY timestamp DESC
-            LIMIT ?
-        """, (ai_id, vector_name, lookback))
+        if phase:
+            cursor.execute("""
+                SELECT point_id, session_id, ai_id, vector_name,
+                       self_assessed, grounded, gap,
+                       domain, goal_id, timestamp
+                FROM calibration_trajectory
+                WHERE ai_id = ? AND vector_name = ? AND phase = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """, (ai_id, vector_name, phase, lookback))
+        else:
+            cursor.execute("""
+                SELECT point_id, session_id, ai_id, vector_name,
+                       self_assessed, grounded, gap,
+                       domain, goal_id, timestamp
+                FROM calibration_trajectory
+                WHERE ai_id = ? AND vector_name = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """, (ai_id, vector_name, lookback))
 
         points = []
         for row in cursor.fetchall():
@@ -148,9 +162,10 @@ class TrajectoryTracker:
         self,
         ai_id: str,
         lookback: int = 10,
+        phase: Optional[str] = None,
     ) -> Dict[str, CalibrationTrend]:
         """
-        Detect calibration trend per vector.
+        Detect calibration trend per vector, optionally filtered by phase.
 
         Uses simple linear regression on absolute gap values.
         Negative slope = gap is closing (improving).
@@ -162,16 +177,23 @@ class TrajectoryTracker:
         cursor = self.conn.cursor()
 
         # Get all vectors with trajectory data
-        cursor.execute("""
-            SELECT DISTINCT vector_name
-            FROM calibration_trajectory
-            WHERE ai_id = ?
-        """, (ai_id,))
+        if phase:
+            cursor.execute("""
+                SELECT DISTINCT vector_name
+                FROM calibration_trajectory
+                WHERE ai_id = ? AND phase = ?
+            """, (ai_id, phase))
+        else:
+            cursor.execute("""
+                SELECT DISTINCT vector_name
+                FROM calibration_trajectory
+                WHERE ai_id = ?
+            """, (ai_id,))
         vectors = [row[0] for row in cursor.fetchall()]
 
         trends = {}
         for vector in vectors:
-            points = self.get_trajectory(ai_id, vector, lookback)
+            points = self.get_trajectory(ai_id, vector, lookback, phase=phase)
 
             # Need at least 3 points with grounded values
             grounded_points = [p for p in points if p.gap is not None]

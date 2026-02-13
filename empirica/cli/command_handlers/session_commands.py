@@ -717,6 +717,230 @@ def handle_memory_compact_command(args):
         return 1
 
 
+def handle_transaction_adopt_command(args):
+    """
+    Adopt an orphaned transaction from a different instance.
+
+    Use case: After tmux restart, pane IDs change. The old transaction file
+    (e.g., active_transaction_tmux_4.json) is orphaned because the new pane
+    (e.g., tmux_7) can't find it.
+
+    This command:
+    1. Finds the orphaned transaction file
+    2. Renames it to the new instance ID
+    3. Updates instance_projects mapping
+    """
+    import os
+    import shutil
+    from pathlib import Path
+
+    from_instance = args.from_instance
+    to_instance = getattr(args, 'to_instance', None)
+    project_path = getattr(args, 'project_path', None)
+    dry_run = getattr(args, 'dry_run', False)
+    output_json = getattr(args, 'output', 'human') == 'json'
+
+    result = {
+        "ok": False,
+        "from_instance": from_instance,
+        "to_instance": to_instance,
+        "project_path": project_path,
+        "dry_run": dry_run,
+        "actions": []
+    }
+
+    # Auto-detect current instance if --to not specified
+    if not to_instance:
+        tmux_pane = os.environ.get('TMUX_PANE')
+        if tmux_pane:
+            to_instance = f"tmux_{tmux_pane.lstrip('%')}"
+        else:
+            # Try TTY fallback
+            try:
+                import sys
+                tty_path = os.ttyname(sys.stdin.fileno())
+                safe = tty_path.replace('/', '_').lstrip('_').replace('dev_', '')
+                to_instance = f"term_{safe}"
+            except Exception:
+                to_instance = "default"
+        result["to_instance"] = to_instance
+        result["actions"].append(f"Auto-detected current instance: {to_instance}")
+
+    # Auto-detect project path if not specified
+    if not project_path:
+        # Check instance_projects for from_instance
+        from_instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{from_instance}.json'
+        if from_instance_file.exists():
+            try:
+                with open(from_instance_file, 'r') as f:
+                    data = json.load(f)
+                project_path = data.get('project_path')
+                result["actions"].append(f"Found project in instance_projects: {project_path}")
+            except Exception:
+                pass
+
+        # Fallback: scan workspace.db for projects with matching transaction file
+        if not project_path:
+            try:
+                import sqlite3
+                ws_db = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+                if ws_db.exists():
+                    conn = sqlite3.connect(str(ws_db))
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT trajectory_path FROM global_projects WHERE trajectory_path IS NOT NULL")
+                    all_projects = [row[0] for row in cursor.fetchall()]
+                    conn.close()
+
+                    for proj in all_projects:
+                        tx_file = Path(proj) / '.empirica' / f'active_transaction_{from_instance}.json'
+                        if tx_file.exists():
+                            project_path = proj
+                            result["actions"].append(f"Found transaction in workspace project: {project_path}")
+                            break
+            except Exception:
+                pass
+
+        if not project_path:
+            result["error"] = f"Could not find project with transaction for instance {from_instance}. Specify --project."
+            if output_json:
+                print(json.dumps(result))
+            else:
+                print(f"❌ {result['error']}")
+            return 1
+
+        result["project_path"] = project_path
+
+    project_dir = Path(project_path)
+    empirica_dir = project_dir / '.empirica'
+
+    # Verify project exists
+    if not empirica_dir.exists():
+        result["error"] = f"Not an Empirica project: {project_path}"
+        if output_json:
+            print(json.dumps(result))
+        else:
+            print(f"❌ {result['error']}")
+        return 1
+
+    # Find the orphaned transaction file
+    from_tx_file = empirica_dir / f'active_transaction_{from_instance}.json'
+    to_tx_file = empirica_dir / f'active_transaction_{to_instance}.json'
+
+    if not from_tx_file.exists():
+        result["error"] = f"Transaction file not found: {from_tx_file}"
+        if output_json:
+            print(json.dumps(result))
+        else:
+            print(f"❌ {result['error']}")
+            print(f"💡 Check if {from_instance} is the correct source instance ID")
+            print(f"💡 List transaction files: ls {empirica_dir}/active_transaction_*.json")
+        return 1
+
+    # Check if target already exists
+    if to_tx_file.exists():
+        result["warning"] = f"Target transaction file already exists: {to_tx_file}"
+        result["actions"].append("Target file exists - will be overwritten")
+
+    # Read the transaction data
+    try:
+        with open(from_tx_file, 'r') as f:
+            tx_data = json.load(f)
+        result["transaction"] = {
+            "transaction_id": tx_data.get('transaction_id', 'unknown')[:8],
+            "session_id": tx_data.get('session_id', 'unknown')[:8],
+            "status": tx_data.get('status', 'unknown')
+        }
+    except Exception as e:
+        result["error"] = f"Failed to read transaction file: {e}"
+        if output_json:
+            print(json.dumps(result))
+        else:
+            print(f"❌ {result['error']}")
+        return 1
+
+    # Perform the adoption
+    if dry_run:
+        result["actions"].append(f"[DRY RUN] Would rename: {from_tx_file} → {to_tx_file}")
+        result["actions"].append(f"[DRY RUN] Would update: ~/.empirica/instance_projects/{to_instance}.json")
+        result["ok"] = True
+
+        if output_json:
+            print(json.dumps(result))
+        else:
+            print("🔍 DRY RUN - No changes made")
+            print(f"\n📋 Transaction to adopt:")
+            print(f"   ID: {result['transaction']['transaction_id']}...")
+            print(f"   Session: {result['transaction']['session_id']}...")
+            print(f"   Status: {result['transaction']['status']}")
+            print(f"\n📁 Files:")
+            print(f"   From: {from_tx_file}")
+            print(f"   To:   {to_tx_file}")
+            print(f"\n✅ Run without --dry-run to adopt")
+        return 0
+
+    # Step 1: Rename transaction file
+    try:
+        if to_tx_file.exists():
+            # Backup existing
+            backup_file = to_tx_file.with_suffix('.json.backup')
+            shutil.move(str(to_tx_file), str(backup_file))
+            result["actions"].append(f"Backed up existing: {backup_file}")
+
+        shutil.move(str(from_tx_file), str(to_tx_file))
+        result["actions"].append(f"Renamed: {from_tx_file.name} → {to_tx_file.name}")
+    except Exception as e:
+        result["error"] = f"Failed to rename transaction file: {e}"
+        if output_json:
+            print(json.dumps(result))
+        else:
+            print(f"❌ {result['error']}")
+        return 1
+
+    # Step 2: Update instance_projects mapping
+    instance_projects_dir = Path.home() / '.empirica' / 'instance_projects'
+    instance_projects_dir.mkdir(parents=True, exist_ok=True)
+
+    to_instance_file = instance_projects_dir / f'{to_instance}.json'
+    try:
+        instance_data = {
+            "project_path": str(project_path),
+            "adopted_from": from_instance,
+            "adopted_at": datetime.now().isoformat()
+        }
+        with open(to_instance_file, 'w') as f:
+            json.dump(instance_data, f, indent=2)
+        result["actions"].append(f"Updated: {to_instance_file}")
+    except Exception as e:
+        result["warning"] = f"Failed to update instance_projects: {e}"
+        result["actions"].append(f"Warning: {e}")
+
+    # Step 3: Optionally clean up old instance_projects file
+    from_instance_file = instance_projects_dir / f'{from_instance}.json'
+    if from_instance_file.exists():
+        try:
+            from_instance_file.unlink()
+            result["actions"].append(f"Removed: {from_instance_file}")
+        except Exception:
+            pass  # Non-fatal
+
+    result["ok"] = True
+
+    if output_json:
+        print(json.dumps(result))
+    else:
+        print("✅ Transaction adopted successfully")
+        print(f"\n📋 Transaction:")
+        print(f"   ID: {result['transaction']['transaction_id']}...")
+        print(f"   Session: {result['transaction']['session_id']}...")
+        print(f"   Status: {result['transaction']['status']}")
+        print(f"\n📁 Instance mapping:")
+        print(f"   {from_instance} → {to_instance}")
+        print(f"\n📂 Project: {project_path}")
+        print(f"\n💡 Your transaction is now active. Continue working!")
+
+    return 0
+
+
 def format_ide_injection(session_id, continuation_session_id, bootstrap_context, pre_compact_vectors):
     """
     Format bootstrap context for IDE injection into conversation summary

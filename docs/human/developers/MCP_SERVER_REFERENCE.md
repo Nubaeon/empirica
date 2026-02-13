@@ -218,7 +218,7 @@ Resume previous session(s).
 
 **Purpose:** Epistemic self-assessment workflow
 
-> **Note:** CASCADE phases (PREFLIGHT, CHECK, POSTFLIGHT) are now **direct submission tools**. Assess your 13 vectors honestly and submit directly - no template generation needed.
+> **Note:** CASCADE phases (PREFLIGHT, CHECK, POSTFLIGHT, POST-TEST) are now **direct submission tools**. Assess your 13 vectors honestly and submit directly - no template generation needed. POST-TEST runs automatically after POSTFLIGHT to collect objective evidence.
 
 ### `submit_preflight_assessment`
 

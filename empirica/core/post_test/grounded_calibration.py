@@ -124,6 +124,7 @@ class GroundedCalibrationManager:
         self,
         session_id: str,
         assessment: GroundedAssessment,
+        phase: str = "combined",
     ) -> Dict[str, Dict]:
         """
         Update grounded beliefs from a GroundedAssessment.
@@ -187,14 +188,16 @@ class GroundedCalibrationManager:
                     belief_id, session_id, ai_id, vector_name,
                     mean, variance, evidence_count,
                     last_observation, last_observation_source,
-                    self_referential_mean, divergence, last_updated
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    self_referential_mean, divergence, last_updated,
+                    phase
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 belief_id, session_id, ai_id, vector_name,
                 posterior_mean, posterior_var, new_evidence_count,
                 estimate.estimated_value, estimate.primary_source,
                 self_val, divergence,
                 datetime.now().timestamp(),
+                phase,
             ))
 
             updates[vector_name] = {
@@ -252,6 +255,7 @@ class GroundedCalibrationManager:
         bundle: EvidenceBundle,
         domain: Optional[str] = None,
         goal_id: Optional[str] = None,
+        phase: str = "combined",
     ) -> str:
         """Store a complete grounded verification record."""
         cursor = self.conn.cursor()
@@ -281,8 +285,8 @@ class GroundedCalibrationManager:
                 self_assessed_vectors, grounded_vectors, calibration_gaps,
                 grounded_coverage, overall_calibration_score,
                 evidence_count, sources_available, sources_failed,
-                domain, goal_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                domain, goal_id, phase
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             verification_id,
             session_id,
@@ -297,6 +301,7 @@ class GroundedCalibrationManager:
             json.dumps(bundle.sources_failed),
             domain,
             goal_id,
+            phase,
         ))
 
         self.conn.commit()
@@ -494,6 +499,69 @@ class GroundedCalibrationManager:
             return False
 
 
+def _run_single_phase_verification(
+    session_id: str,
+    vectors: Dict[str, float],
+    db,
+    phase: str,
+    project_id: Optional[str] = None,
+    domain: Optional[str] = None,
+    goal_id: Optional[str] = None,
+    check_timestamp: Optional[float] = None,
+) -> Optional[Dict]:
+    """Run grounded verification for a single phase (noetic, praxic, or combined)."""
+    collector = PostTestCollector(
+        session_id=session_id,
+        project_id=project_id,
+        db=db,
+        phase=phase,
+        check_timestamp=check_timestamp,
+    )
+    bundle = collector.collect_all()
+
+    if not bundle.items:
+        logger.debug(f"No {phase} evidence collected, skipping")
+        return None
+
+    mapper = EvidenceMapper()
+    assessment = mapper.map_evidence(bundle, vectors, phase=phase)
+
+    manager = GroundedCalibrationManager(db)
+    updates = manager.update_grounded_beliefs(session_id, assessment, phase=phase)
+
+    manager.store_evidence(bundle)
+    verification_id = manager.store_verification(
+        session_id, assessment, bundle,
+        domain=domain, goal_id=goal_id, phase=phase,
+    )
+
+    from .trajectory_tracker import TrajectoryTracker
+    tracker = TrajectoryTracker(db)
+    tracker.record_trajectory_point(
+        session_id, assessment,
+        domain=domain, goal_id=goal_id, phase=phase,
+    )
+
+    return {
+        'verification_id': verification_id,
+        'phase': phase,
+        'evidence_count': len(bundle.items),
+        'sources': bundle.sources_available,
+        'sources_failed': bundle.sources_failed,
+        'grounded_coverage': round(assessment.grounded_coverage, 2),
+        'calibration_score': assessment.overall_calibration_score,
+        'gaps': assessment.calibration_gaps,
+        'updates': {
+            v: {
+                'observation': u['observation'],
+                'self_assessed': u['self_assessed'],
+                'divergence': u['divergence'],
+            }
+            for v, u in updates.items()
+        },
+    }
+
+
 def run_grounded_verification(
     session_id: str,
     postflight_vectors: Dict[str, float],
@@ -501,51 +569,75 @@ def run_grounded_verification(
     project_id: Optional[str] = None,
     domain: Optional[str] = None,
     goal_id: Optional[str] = None,
+    phase_boundary: Optional[Dict] = None,
 ) -> Optional[Dict]:
     """
     Full grounded verification pipeline.
 
     Called after POSTFLIGHT: collect → map → update → store → trajectory → export.
 
+    Phase-aware when phase_boundary is provided (from detect_phase_boundary()):
+    - Splits into noetic (PREFLIGHT→CHECK) and praxic (CHECK→POSTFLIGHT) passes
+    - Each phase gets independent evidence collection and calibration
+    - Falls back to combined when no CHECK boundary exists
+
     Returns verification summary dict, or None on failure.
     """
     try:
-        # 1. Collect evidence
-        collector = PostTestCollector(
-            session_id=session_id,
-            project_id=project_id,
-            db=db,
-        )
-        bundle = collector.collect_all()
+        results = {}
 
-        if not bundle.items:
-            logger.debug("No evidence collected, skipping grounded verification")
+        if phase_boundary and phase_boundary.get("has_check"):
+            check_ts = phase_boundary.get("proceed_check_timestamp")
+            noetic_only = phase_boundary.get("noetic_only", False)
+
+            # Noetic vectors: delta from PREFLIGHT to CHECK
+            preflight_vectors = phase_boundary.get("preflight_vectors") or {}
+            check_vectors = phase_boundary.get("proceed_check_vectors") or {}
+
+            # Noetic self-assessment = CHECK vectors (what AI claimed at CHECK)
+            noetic_self = {}
+            for k, v in check_vectors.items():
+                if v is not None:
+                    noetic_self[k] = v
+
+            if noetic_self:
+                noetic_result = _run_single_phase_verification(
+                    session_id, noetic_self, db,
+                    phase="noetic",
+                    project_id=project_id,
+                    domain=domain, goal_id=goal_id,
+                    check_timestamp=check_ts,
+                )
+                if noetic_result:
+                    results["noetic"] = noetic_result
+
+            # Praxic: only if not noetic-only (had a proceed CHECK)
+            if not noetic_only:
+                praxic_result = _run_single_phase_verification(
+                    session_id, postflight_vectors, db,
+                    phase="praxic",
+                    project_id=project_id,
+                    domain=domain, goal_id=goal_id,
+                    check_timestamp=check_ts,
+                )
+                if praxic_result:
+                    results["praxic"] = praxic_result
+        else:
+            # No phase boundary — combined mode (backward-compatible)
+            combined_result = _run_single_phase_verification(
+                session_id, postflight_vectors, db,
+                phase="combined",
+                project_id=project_id,
+                domain=domain, goal_id=goal_id,
+            )
+            if combined_result:
+                results["combined"] = combined_result
+
+        if not results:
             return None
 
-        # 2. Map evidence to vector estimates
-        mapper = EvidenceMapper()
-        assessment = mapper.map_evidence(bundle, postflight_vectors)
-
-        # 3. Update grounded beliefs (Bayesian)
+        # Export to .breadcrumbs.yaml
         manager = GroundedCalibrationManager(db)
-        updates = manager.update_grounded_beliefs(session_id, assessment)
-
-        # 4. Store raw evidence + verification record
-        manager.store_evidence(bundle)
-        verification_id = manager.store_verification(
-            session_id, assessment, bundle,
-            domain=domain, goal_id=goal_id,
-        )
-
-        # 5. Record trajectory point for trend detection
-        from .trajectory_tracker import TrajectoryTracker
-        tracker = TrajectoryTracker(db)
-        tracker.record_trajectory_point(
-            session_id, assessment,
-            domain=domain, goal_id=goal_id,
-        )
-
-        # 6. Export to .breadcrumbs.yaml
         cursor = db.conn.cursor()
         cursor.execute(
             "SELECT ai_id FROM sessions WHERE session_id = ?",
@@ -555,23 +647,33 @@ def run_grounded_verification(
         if row:
             manager.export_grounded_calibration(row[0])
 
-        # Build summary
+        # Build unified summary
+        all_gaps = {}
+        all_updates = {}
+        total_evidence = 0
+        all_sources = []
+        all_failed = []
+        verification_ids = []
+
+        for phase_name, phase_result in results.items():
+            total_evidence += phase_result['evidence_count']
+            all_sources.extend(phase_result['sources'])
+            all_failed.extend(phase_result['sources_failed'])
+            verification_ids.append(phase_result['verification_id'])
+            for v, gap in phase_result['gaps'].items():
+                all_gaps[f"{phase_name}:{v}"] = gap
+            for v, u in phase_result['updates'].items():
+                all_updates[f"{phase_name}:{v}"] = u
+
         return {
-            'verification_id': verification_id,
-            'evidence_count': len(bundle.items),
-            'sources': bundle.sources_available,
-            'sources_failed': bundle.sources_failed,
-            'grounded_coverage': round(assessment.grounded_coverage, 2),
-            'calibration_score': assessment.overall_calibration_score,
-            'gaps': assessment.calibration_gaps,
-            'updates': {
-                v: {
-                    'observation': u['observation'],
-                    'self_assessed': u['self_assessed'],
-                    'divergence': u['divergence'],
-                }
-                for v, u in updates.items()
-            },
+            'verification_ids': verification_ids,
+            'phase_aware': phase_boundary is not None and phase_boundary.get("has_check", False),
+            'phases': results,
+            'evidence_count': total_evidence,
+            'sources': list(set(all_sources)),
+            'sources_failed': list(set(all_failed)),
+            'gaps': all_gaps,
+            'updates': all_updates,
         }
 
     except Exception as e:

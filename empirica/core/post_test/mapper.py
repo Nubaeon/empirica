@@ -47,6 +47,7 @@ class GroundedAssessment:
     calibration_gaps: Dict[str, float]
     grounded_coverage: float
     overall_calibration_score: float
+    phase: str = "combined"  # "noetic", "praxic", or "combined"
 
 
 class EvidenceMapper:
@@ -56,6 +57,7 @@ class EvidenceMapper:
         self,
         bundle: EvidenceBundle,
         self_assessed_vectors: Dict[str, float],
+        phase: str = "combined",
     ) -> GroundedAssessment:
         """Map evidence to grounded vector estimates and compare to self-assessment."""
         # Group evidence by supported vector
@@ -114,4 +116,5 @@ class EvidenceMapper:
             calibration_gaps=calibration_gaps,
             grounded_coverage=bundle.coverage,
             overall_calibration_score=round(overall_score, 4),
+            phase=phase,
         )

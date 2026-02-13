@@ -171,8 +171,17 @@ EMPIRICA_NOTES_REFS = [
 
 
 def _get_workspace_root() -> str:
-    """Get workspace root (git root or cwd)"""
+    """Get workspace root - checks active context, then git root, then cwd"""
     import os
+    # Priority 0: Check active project context (respects project-switch)
+    try:
+        from empirica.utils.session_resolver import get_active_project_path
+        context_project = get_active_project_path()
+        if context_project:
+            return context_project
+    except Exception:
+        pass
+    # Priority 1: Git root
     try:
         result = subprocess.run(
             ['git', 'rev-parse', '--show-toplevel'],
@@ -182,6 +191,7 @@ def _get_workspace_root() -> str:
             return result.stdout.strip()
     except:
         pass
+    # Priority 2: CWD fallback
     return os.getcwd()
 
 

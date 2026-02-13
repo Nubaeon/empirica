@@ -20,8 +20,10 @@ def handle_dashboard_command(args):
             print("\nInstall with: pip install textual")
             sys.exit(1)
 
-        # Launch dashboard
-        run_dashboard()
+        # Launch dashboard with optional entity context
+        entity_type = getattr(args, 'entity_type', 'project')
+        entity_id = getattr(args, 'entity_id', None)
+        run_dashboard(entity_type=entity_type, entity_id=entity_id)
 
     except KeyboardInterrupt:
         print("\n👋 Dashboard closed")

@@ -16,3 +16,6 @@ def add_user_interface_parsers(subparsers):
     # Dashboard command - TUI monitoring
     dashboard_parser = subparsers.add_parser('dashboard', help='Launch TUI dashboard for project monitoring')
     dashboard_parser.add_argument('--refresh-rate', type=float, default=1.0, help='Refresh rate in seconds (default: 1.0)')
+    dashboard_parser.add_argument('--entity-type', choices=['project', 'contact', 'engagement'],
+                                  default='project', help='Entity type to show artifacts for (default: project)')
+    dashboard_parser.add_argument('--entity-id', help='Specific entity ID to focus on')

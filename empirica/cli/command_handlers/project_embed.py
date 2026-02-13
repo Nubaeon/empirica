@@ -37,9 +37,11 @@ def handle_project_embed_command(args):
         )
         import hashlib
         from empirica.data.session_database import SessionDatabase
+        from empirica.utils.session_resolver import get_active_project_path
 
         project_id = args.project_id
-        root = os.getcwd()
+        context_project = get_active_project_path()
+        root = context_project if context_project else os.getcwd()
         sync_global = getattr(args, 'global_sync', False)
 
         init_collections(project_id)

@@ -304,6 +304,49 @@ def _check_calibration_bias(
         return None
 
 
+def _compute_adaptive_limits(vectors: Optional[Dict], base_limit: int) -> Dict[str, int]:
+    """Compute per-collection retrieval limits based on vector state.
+
+    Higher uncertainty → more context from all collections (up to 2x).
+    Low know → more lessons, dead-ends, assumptions.
+    Low context → more episodic, goals, decisions.
+    """
+    if not vectors:
+        return {k: base_limit for k in [
+            "lessons", "dead_ends", "findings", "eidetic", "episodic",
+            "goals", "assumptions", "decisions", "global_dead_ends", "docs"
+        ]}
+
+    uncertainty = vectors.get("uncertainty", 0.5)
+    know = vectors.get("know", 0.5)
+    context = vectors.get("context", 0.5)
+
+    # Base multiplier: scales 1.0x at u=0.0 to 2.0x at u=1.0
+    uncertainty_mult = 1.0 + uncertainty
+
+    # Knowledge gap: low know → more procedural/warning context
+    know_gap = max(0.0, 1.0 - know)  # 0.0 at know=1.0, 1.0 at know=0.0
+
+    # Context gap: low context → more situational awareness
+    context_gap = max(0.0, 1.0 - context)  # 0.0 at context=1.0, 1.0 at context=0.0
+
+    def _limit(base_mult: float, gap_bonus: float = 0.0) -> int:
+        return max(1, int(base_limit * base_mult * uncertainty_mult + gap_bonus))
+
+    return {
+        "lessons": _limit(1.0, know_gap * 2),
+        "dead_ends": _limit(1.0, know_gap * 2),
+        "findings": _limit(1.0),
+        "eidetic": _limit(1.0, know_gap),
+        "episodic": _limit(1.0, context_gap * 2),
+        "goals": _limit(1.0, context_gap * 2),
+        "assumptions": _limit(1.0, know_gap * 2),
+        "decisions": _limit(1.0, context_gap),
+        "global_dead_ends": max(1, int(2 * uncertainty_mult)),
+        "docs": _limit(1.0),
+    }
+
+
 def retrieve_task_patterns(
     project_id: str,
     task_context: str,
@@ -313,9 +356,13 @@ def retrieve_task_patterns(
     include_eidetic: bool = False,
     include_episodic: bool = False,
     include_related_docs: bool = False,
+    include_goals: bool = False,
+    include_assumptions: bool = False,
+    include_decisions: bool = False,
+    vectors: Optional[Dict] = None,
 ) -> Dict[str, any]:
     """
-    PREFLIGHT hook: Retrieve relevant patterns for a task.
+    PREFLIGHT hook: Retrieve relevant patterns for a task (Noetic RAG).
 
     Returns patterns that should inform the AI before starting work:
     - lessons: Procedural knowledge (HOW to do things)
@@ -324,6 +371,9 @@ def retrieve_task_patterns(
     - eidetic_facts: Stable facts with confidence (optional)
     - episodic_narratives: Recent session arcs (optional)
     - related_docs: Reference documents related to retrieved memory (optional)
+    - related_goals: Goals/subtasks related to task context (optional)
+    - unverified_assumptions: Unverified beliefs that may affect this work (optional)
+    - prior_decisions: Past decisions relevant to this area (optional)
     - time_gap: Metadata about time since last session (for human context awareness)
 
     Args:
@@ -335,18 +385,10 @@ def retrieve_task_patterns(
         include_eidetic: Include eidetic facts in retrieval
         include_episodic: Include episodic narratives in retrieval
         include_related_docs: Include related reference docs in retrieval
-
-    Returns:
-        {
-            "lessons": [{name, description, domain, confidence, score}],
-            "dead_ends": [{approach, why_failed, score}],
-            "relevant_findings": [{finding, impact, score}],
-            "calibration_warnings": [...],
-            "eidetic_facts": [...],  # if include_eidetic
-            "episodic_narratives": [...],  # if include_episodic
-            "related_docs": [...],  # if include_related_docs
-            "time_gap": {gap_seconds, gap_human_readable, gap_category, note}
-        }
+        include_goals: Include related goals/subtasks
+        include_assumptions: Include unverified assumptions ("What are you assuming?")
+        include_decisions: Include prior decisions ("What was already decided?")
+        vectors: Current epistemic vectors for adaptive depth scaling
     """
     # Compute time gap metadata (signal for Claude, not retrieval control)
     time_gap_info = compute_time_gap_info(last_session_timestamp)
@@ -354,12 +396,15 @@ def retrieve_task_patterns(
     if not get_qdrant_url():
         return {"lessons": [], "dead_ends": [], "relevant_findings": [], "time_gap": time_gap_info}
 
+    # Adaptive limits: scale retrieval depth by vector state
+    limits = _compute_adaptive_limits(vectors, limit)
+
     # Search for lessons (procedural knowledge)
     lessons_raw = _search_memory_by_type(
         project_id,
         f"How to: {task_context}",
         "lesson",
-        limit,
+        limits["lessons"],
         threshold
     )
     lessons = [
@@ -378,7 +423,7 @@ def retrieve_task_patterns(
         project_id,
         f"Approach for: {task_context}",
         "dead_end",
-        limit,
+        limits["dead_ends"],
         threshold
     )
     dead_ends = [
@@ -395,7 +440,7 @@ def retrieve_task_patterns(
         project_id,
         task_context,
         "finding",
-        limit,
+        limits["findings"],
         threshold
     )
     relevant_findings = [
@@ -408,7 +453,7 @@ def retrieve_task_patterns(
     ]
 
     # Search for calibration warnings (grounded verification gaps from similar tasks)
-    calibration_warnings = _search_calibration_for_task(project_id, task_context, limit)
+    calibration_warnings = _search_calibration_for_task(project_id, task_context, limits["findings"])
 
     # Build result
     result = {
@@ -427,7 +472,7 @@ def retrieve_task_patterns(
                 project_id,
                 task_context,
                 min_confidence=0.5,
-                limit=limit
+                limit=limits["eidetic"]
             )
             result["eidetic_facts"] = [
                 {
@@ -450,7 +495,7 @@ def retrieve_task_patterns(
             episodic_raw = search_episodic(
                 project_id,
                 task_context,
-                limit=limit,
+                limit=limits["episodic"],
                 apply_recency_decay=True
             )
             result["episodic_narratives"] = [
@@ -467,6 +512,97 @@ def retrieve_task_patterns(
             logger.debug(f"Episodic retrieval failed: {e}")
             result["episodic_narratives"] = []
 
+    # Cross-project patterns: global dead-ends (avoid repeating mistakes from other projects)
+    try:
+        from .vector_store import search_global_dead_ends
+        global_dead_ends_raw = search_global_dead_ends(
+            f"Approach for: {task_context}",
+            limit=limits["global_dead_ends"]
+        )
+        if global_dead_ends_raw:
+            result["global_dead_ends"] = [
+                {
+                    "approach": g.get("approach", g.get("text", "")),
+                    "why_failed": g.get("why_failed", ""),
+                    "project": g.get("project_name", "other project"),
+                    "score": g.get("score", 0.0)
+                }
+                for g in global_dead_ends_raw
+            ]
+    except Exception as e:
+        logger.debug(f"Global dead-ends retrieval failed: {e}")
+
+    # Noetic RAG: Goals related to this task context
+    if include_goals:
+        try:
+            from .vector_store import search_goals
+            goals_raw = search_goals(
+                project_id,
+                task_context,
+                include_subtasks=True,
+                limit=limits["goals"]
+            )
+            if goals_raw:
+                result["related_goals"] = [
+                    {
+                        "objective": g.get("objective") or g.get("description", ""),
+                        "status": g.get("status", ""),
+                        "type": g.get("type", "goal"),
+                        "goal_id": g.get("goal_id", ""),
+                        "score": g.get("score", 0.0)
+                    }
+                    for g in goals_raw
+                ]
+        except Exception as e:
+            logger.debug(f"Goals retrieval failed: {e}")
+
+    # Noetic RAG: Unverified assumptions — "What are you assuming here?"
+    if include_assumptions:
+        try:
+            from .vector_store import search_assumptions
+            assumptions_raw = search_assumptions(
+                project_id,
+                task_context,
+                status="unverified",
+                limit=limits["assumptions"]
+            )
+            if assumptions_raw:
+                result["unverified_assumptions"] = [
+                    {
+                        "assumption": a.get("assumption", ""),
+                        "confidence": a.get("confidence", 0.5),
+                        "urgency_signal": a.get("urgency_signal", 0.0),
+                        "domain": a.get("domain"),
+                        "score": a.get("score", 0.0)
+                    }
+                    for a in assumptions_raw
+                ]
+        except Exception as e:
+            logger.debug(f"Assumptions retrieval failed: {e}")
+
+    # Noetic RAG: Prior decisions — "What was already decided about this?"
+    if include_decisions:
+        try:
+            from .vector_store import search_decisions
+            decisions_raw = search_decisions(
+                project_id,
+                task_context,
+                limit=limits["decisions"]
+            )
+            if decisions_raw:
+                result["prior_decisions"] = [
+                    {
+                        "choice": d.get("choice", ""),
+                        "rationale": d.get("rationale", ""),
+                        "reversibility": d.get("reversibility", ""),
+                        "confidence_at_decision": d.get("confidence_at_decision", 0.5),
+                        "score": d.get("score", 0.0)
+                    }
+                    for d in decisions_raw
+                ]
+        except Exception as e:
+            logger.debug(f"Decisions retrieval failed: {e}")
+
     # Optional: Include related reference docs (cross-reference with retrieved memory)
     if include_related_docs:
         try:
@@ -474,7 +610,7 @@ def retrieve_task_patterns(
             related_raw = _search_related_docs(
                 project_id,
                 task_context,
-                limit=limit,
+                limit=limits["docs"],
                 min_score=threshold
             )
             result["related_docs"] = [
@@ -499,13 +635,18 @@ def check_against_patterns(
     current_approach: str,
     vectors: Optional[Dict] = None,
     threshold: float = DEFAULT_THRESHOLD,
-    limit: int = DEFAULT_LIMIT
+    limit: int = DEFAULT_LIMIT,
+    include_findings: bool = False,
+    include_eidetic: bool = False,
+    include_goals: bool = False,
+    include_assumptions: bool = False,
 ) -> Dict[str, any]:
     """
-    CHECK hook: Validate current approach against known patterns.
+    CHECK hook: Validate current approach against known patterns (Noetic RAG).
 
     Returns warnings if the approach matches known failures or
-    if vector patterns indicate risk.
+    if vector patterns indicate risk. Optionally enriches with
+    findings, eidetic facts, goals, and unverified assumptions.
 
     Args:
         project_id: Project ID
@@ -513,13 +654,10 @@ def check_against_patterns(
         vectors: Current epistemic vectors (know, uncertainty, etc.)
         threshold: Minimum similarity for dead_end match (default 0.7)
         limit: Max warnings to return (default 3)
-
-    Returns:
-        {
-            "dead_end_matches": [{approach, why_failed, similarity}],
-            "mistake_risk": str or None,
-            "has_warnings": bool
-        }
+        include_findings: Include related findings as context
+        include_eidetic: Include eidetic facts (stable knowledge)
+        include_goals: Include active goals for alignment check
+        include_assumptions: Include unverified assumptions as risk signal
     """
     if not get_qdrant_url():
         return {"dead_end_matches": [], "mistake_risk": None, "has_warnings": False}
@@ -573,11 +711,94 @@ def check_against_patterns(
     if calibration_bias:
         warnings["calibration_bias"] = calibration_bias
 
+    # Noetic RAG: Related findings as additional context
+    if include_findings and current_approach:
+        try:
+            findings_raw = _search_memory_by_type(
+                project_id, current_approach, "finding", limit, threshold
+            )
+            if findings_raw:
+                warnings["related_findings"] = [
+                    {
+                        "finding": f.get("text", ""),
+                        "impact": f.get("impact", 0.5),
+                        "score": f.get("score", 0.0)
+                    }
+                    for f in findings_raw
+                ]
+        except Exception as e:
+            logger.debug(f"CHECK findings retrieval failed: {e}")
+
+    # Noetic RAG: Eidetic facts — stable knowledge relevant to approach
+    if include_eidetic and current_approach:
+        try:
+            from .vector_store import search_eidetic
+            eidetic_raw = search_eidetic(
+                project_id, current_approach, min_confidence=0.5, limit=limit
+            )
+            if eidetic_raw:
+                warnings["eidetic_context"] = [
+                    {
+                        "content": e.get("content", ""),
+                        "confidence": e.get("confidence", 0.5),
+                        "domain": e.get("domain"),
+                        "score": e.get("score", 0.0)
+                    }
+                    for e in eidetic_raw
+                ]
+        except Exception as e:
+            logger.debug(f"CHECK eidetic retrieval failed: {e}")
+
+    # Noetic RAG: Active goals — alignment check
+    if include_goals:
+        try:
+            from .vector_store import search_goals
+            goals_raw = search_goals(
+                project_id, current_approach or "current work",
+                status="in_progress", include_subtasks=True, limit=limit
+            )
+            if goals_raw:
+                warnings["active_goals"] = [
+                    {
+                        "objective": g.get("objective") or g.get("description", ""),
+                        "status": g.get("status", ""),
+                        "type": g.get("type", "goal"),
+                        "score": g.get("score", 0.0)
+                    }
+                    for g in goals_raw
+                ]
+        except Exception as e:
+            logger.debug(f"CHECK goals retrieval failed: {e}")
+
+    # Noetic RAG: Unverified assumptions — risk signal at CHECK gate
+    # Per spec §4.1, CHECK is where intent crystallizes. Unverified assumptions
+    # related to the current approach inform the proceed/investigate decision.
+    if include_assumptions:
+        try:
+            from .vector_store import search_assumptions
+            assumptions_raw = search_assumptions(
+                project_id, current_approach or "current approach",
+                status="unverified", limit=limit
+            )
+            if assumptions_raw:
+                warnings["unverified_assumptions"] = [
+                    {
+                        "assumption": a.get("assumption", ""),
+                        "confidence": a.get("confidence", 0.5),
+                        "urgency_signal": a.get("urgency_signal", 0.0),
+                        "score": a.get("score", 0.0)
+                    }
+                    for a in assumptions_raw
+                ]
+        except Exception as e:
+            logger.debug(f"CHECK assumptions retrieval failed: {e}")
+
     # Set has_warnings flag
     warnings["has_warnings"] = (
         bool(warnings["dead_end_matches"])
         or bool(warnings["mistake_risk"])
         or bool(warnings.get("calibration_bias"))
+        or bool(warnings.get("unverified_assumptions"))
     )
 
     return warnings

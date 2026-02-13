@@ -6,6 +6,7 @@ Organizes CLI command handlers by semantic function for maintainability.
 
 # Import all command handlers
 from .onboard import handle_onboard_command
+from .setup_claude_code import handle_setup_claude_code_command
 # noetic_praxic_commands removed - deprecated stubs
 from .modality_commands import handle_modality_route_command
 # handle_modality_decision_command removed - was using deprecated cascade
@@ -57,7 +58,7 @@ from .mcp_commands import (
 )
 from .session_commands import (
     handle_sessions_list_command, handle_sessions_show_command, handle_session_snapshot_command,
-    handle_sessions_export_command, handle_memory_compact_command,
+    handle_sessions_export_command, handle_memory_compact_command, handle_transaction_adopt_command,
 )
 from .session_create import handle_session_create_command
 from .checkpoint_commands import (
@@ -92,7 +93,10 @@ from .project_commands import (
     handle_unknown_log_command,
     handle_unknown_resolve_command,
     handle_deadend_log_command,
-    handle_refdoc_add_command
+    handle_assumption_log_command,
+    handle_decision_log_command,
+    handle_refdoc_add_command,
+    handle_source_add_command
 )
 from .project_init import handle_project_init_command
 from .workspace_init import handle_workspace_init_command
@@ -174,6 +178,7 @@ from .lesson_commands import (
 __all__ = [
     # Onboarding commands
     'handle_onboard_command',
+    'handle_setup_claude_code_command',
 
     # Modality commands (EXPERIMENTAL)
     'handle_modality_route_command',
@@ -235,6 +240,7 @@ __all__ = [
     'handle_session_snapshot_command',
     'handle_sessions_export_command',
     'handle_memory_compact_command',
+    'handle_transaction_adopt_command',
 
     # Checkpoint commands (Phase 2)
     'handle_session_create_command',
@@ -273,7 +279,10 @@ __all__ = [
     'handle_unknown_log_command',
     'handle_unknown_resolve_command',
     'handle_deadend_log_command',
+    'handle_assumption_log_command',
+    'handle_decision_log_command',
     'handle_refdoc_add_command',
+    'handle_source_add_command',
     'handle_project_search_command',
     'handle_project_embed_command',
 

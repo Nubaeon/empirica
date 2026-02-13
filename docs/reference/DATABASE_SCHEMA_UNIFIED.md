@@ -1,10 +1,10 @@
 # Empirica Database Schema (Unified)
 
-**Total Tables:** 40 (active)
+**Total Tables:** 36 (active)
 **Database Type:** SQLite (with PostgreSQL adapter support)
-**Architecture:** Modular with unified goal/task system
+**Architecture:** Modular with unified goal/task system, transaction-first tracking
 **Every project (mapped to git repo) has its own SQLite database**
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-11
 
 ---
 
@@ -123,21 +123,9 @@ goals (1) ──> (N) mistakes_made
 sessions (1) ──> (N) token_savings
 ```
 
-### 9. Session-Level Breadcrumbs (4 tables)
-- **session_findings** - Findings logged during session
-- **session_unknowns** - Unknowns logged during session
-- **session_dead_ends** - Dead-end approaches logged during session
-- **session_mistakes** - Mistakes logged during session
+### ~~9. Session-Level Breadcrumbs~~ *(REMOVED v1.5.0)*
 
-**Relationships:**
-```
-sessions (1) ──> (N) session_findings
-sessions (1) ──> (N) session_unknowns
-sessions (1) ──> (N) session_dead_ends
-sessions (1) ──> (N) session_mistakes
-```
-
-> These tables mirror the project-level tables but are scoped to individual sessions.
+> **Dropped in v1.5.0 (Migration 027):** `session_findings`, `session_unknowns`, `session_dead_ends`, `session_mistakes` were removed. Session-scoped queries now use the project-level tables with `session_id` + `transaction_id` filters. This simplifies the schema and avoids data duplication.
 
 ### 10. Lessons System (6 tables)
 - **lessons** - Reusable learning units with procedural knowledge
@@ -222,7 +210,7 @@ projects (1) ──> (N) auto_captured_issues
 - `drift_monitored` BOOLEAN DEFAULT 0
 
 #### `reflexes`
-**22 columns**
+**24 columns**
 - `id` INTEGER PRIMARY KEY AUTOINCREMENT
 - `session_id` TEXT NOT NULL (FK: sessions.session_id)
 - `cascade_id` TEXT (FK: cascades.cascade_id)
@@ -245,6 +233,8 @@ projects (1) ──> (N) auto_captured_issues
 - `reflex_data` TEXT
 - `reasoning` TEXT
 - `evidence` TEXT
+- `project_id` TEXT *(v1.4.0 — project context tracking)*
+- `transaction_id` TEXT *(v1.5.0 — epistemic transaction scoping)*
 
 ---
 
@@ -331,7 +321,7 @@ projects (1) ──> (N) auto_captured_issues
 ### Verification & Grounded Calibration Tables (v1.5.0)
 
 #### `grounded_beliefs`
-**12 columns**
+**13 columns**
 - `belief_id` TEXT PRIMARY KEY
 - `session_id` TEXT NOT NULL (FK: sessions.session_id)
 - `ai_id` TEXT NOT NULL
@@ -344,8 +334,9 @@ projects (1) ──> (N) auto_captured_issues
 - `self_referential_mean` REAL
 - `divergence` REAL
 - `last_updated` REAL
+- `phase` TEXT DEFAULT 'combined' *(v1.5.1 — noetic/praxic/combined)*
 
-> Parallel to `bayesian_beliefs` but evidence-based. Tracks grounded belief distributions per AI per vector, with divergence from self-assessed values. Indexed on `(ai_id, vector_name)`.
+> Parallel to `bayesian_beliefs` but evidence-based. Tracks grounded belief distributions per AI per vector, with divergence from self-assessed values. Phase-aware: noetic beliefs (investigation-grounded), praxic beliefs (action-grounded), or combined. Indexed on `(ai_id, vector_name)`.
 
 #### `verification_evidence`
 **10 columns**
@@ -363,7 +354,7 @@ projects (1) ──> (N) auto_captured_issues
 > Raw objective evidence records per session. Each record identifies which epistemic vectors it supports via `supports_vectors` (JSON array). Sources include test results, artifact counts, goal completion rates. Indexed on `(session_id)`.
 
 #### `grounded_verifications`
-**13 columns**
+**14 columns**
 - `verification_id` TEXT PRIMARY KEY
 - `session_id` TEXT NOT NULL (FK: sessions.session_id)
 - `ai_id` TEXT NOT NULL
@@ -377,12 +368,13 @@ projects (1) ──> (N) auto_captured_issues
 - `sources_failed` TEXT
 - `domain` TEXT
 - `goal_id` TEXT
+- `phase` TEXT DEFAULT 'combined' *(v1.5.1 — noetic/praxic/combined)*
 - `created_at` REAL DEFAULT (strftime('%s', 'now'))
 
-> Per-session comparison results: self-assessed vectors vs objectively grounded vectors, with calibration gap analysis, coverage metrics, and source diagnostics. Indexed on `(session_id)`.
+> Per-session comparison results: self-assessed vectors vs objectively grounded vectors, with calibration gap analysis, coverage metrics, and source diagnostics. Phase-aware: noetic verifications use CHECK vectors, praxic use POSTFLIGHT vectors. Indexed on `(session_id)`.
 
 #### `calibration_trajectory`
-**10 columns**
+**11 columns**
 - `point_id` TEXT PRIMARY KEY
 - `session_id` TEXT NOT NULL (FK: sessions.session_id)
 - `ai_id` TEXT NOT NULL
@@ -392,16 +384,17 @@ projects (1) ──> (N) auto_captured_issues
 - `gap` REAL
 - `domain` TEXT
 - `goal_id` TEXT
+- `phase` TEXT DEFAULT 'combined' *(v1.5.1 — noetic/praxic/combined)*
 - `timestamp` REAL NOT NULL
 
-> POSTFLIGHT-to-POSTFLIGHT trajectory points. Tracks how self-assessed vs grounded values evolve over time per vector, enabling long-term calibration trend analysis. Indexed on `(ai_id, vector_name, timestamp)`.
+> POSTFLIGHT-to-POSTFLIGHT trajectory points. Tracks how self-assessed vs grounded values evolve over time per vector, enabling long-term calibration trend analysis. Phase-aware: noetic trajectory (investigation calibration), praxic trajectory (action calibration). Used by dynamic thresholds to compute earned autonomy. Indexed on `(ai_id, vector_name, timestamp)` and `(ai_id, phase, vector_name, timestamp)`.
 
 ---
 
 ### Goals & Tasks Tables
 
 #### `goals`
-**11 columns**
+**14 columns**
 - `id` TEXT PRIMARY KEY
 - `session_id` TEXT NOT NULL (FK: sessions.session_id)
 - `objective` TEXT NOT NULL
@@ -413,6 +406,9 @@ projects (1) ──> (N) auto_captured_issues
 - `goal_data` TEXT NOT NULL
 - `status` TEXT DEFAULT 'in_progress'
 - `beads_issue_id` TEXT
+- `transaction_id` TEXT *(v1.5.0 — epistemic transaction scoping)*
+- `entity_type` TEXT DEFAULT 'project' *(v1.5.1 — entity-agnostic intent layer)*
+- `entity_id` TEXT *(v1.5.1 — entity-agnostic intent layer)*
 
 #### `subtasks`
 **13 columns**
@@ -486,7 +482,7 @@ projects (1) ──> (N) auto_captured_issues
 - `created_at` REAL NOT NULL
 
 #### `project_findings`
-**8 columns**
+**11 columns**
 - `id` TEXT PRIMARY KEY
 - `project_id` TEXT NOT NULL (FK: projects.id)
 - `session_id` TEXT NOT NULL (FK: sessions.session_id)
@@ -495,9 +491,12 @@ projects (1) ──> (N) auto_captured_issues
 - `finding` TEXT NOT NULL
 - `created_timestamp` REAL NOT NULL
 - `finding_data` TEXT NOT NULL
+- `transaction_id` TEXT *(v1.5.0 — epistemic transaction scoping)*
+- `entity_type` TEXT DEFAULT 'project' *(v1.5.1 — entity-agnostic intent layer)*
+- `entity_id` TEXT *(v1.5.1 — entity-agnostic intent layer)*
 
 #### `project_unknowns`
-**11 columns**
+**14 columns**
 - `id` TEXT PRIMARY KEY
 - `project_id` TEXT NOT NULL (FK: projects.id)
 - `session_id` TEXT NOT NULL (FK: sessions.session_id)
@@ -509,9 +508,12 @@ projects (1) ──> (N) auto_captured_issues
 - `created_timestamp` REAL NOT NULL
 - `resolved_timestamp` REAL
 - `unknown_data` TEXT NOT NULL
+- `transaction_id` TEXT *(v1.5.0 — epistemic transaction scoping)*
+- `entity_type` TEXT DEFAULT 'project' *(v1.5.1 — entity-agnostic intent layer)*
+- `entity_id` TEXT *(v1.5.1 — entity-agnostic intent layer)*
 
 #### `project_dead_ends`
-**9 columns**
+**12 columns**
 - `id` TEXT PRIMARY KEY
 - `project_id` TEXT NOT NULL (FK: projects.id)
 - `session_id` TEXT NOT NULL (FK: sessions.session_id)
@@ -521,6 +523,9 @@ projects (1) ──> (N) auto_captured_issues
 - `why_failed` TEXT NOT NULL
 - `created_timestamp` REAL NOT NULL
 - `dead_end_data` TEXT NOT NULL
+- `transaction_id` TEXT *(v1.5.0 — epistemic transaction scoping)*
+- `entity_type` TEXT DEFAULT 'project' *(v1.5.1 — entity-agnostic intent layer)*
+- `entity_id` TEXT *(v1.5.1 — entity-agnostic intent layer)*
 
 #### `project_reference_docs`
 **7 columns**
@@ -533,7 +538,7 @@ projects (1) ──> (N) auto_captured_issues
 - `doc_data` TEXT NOT NULL
 
 #### `epistemic_sources`
-**19 columns**
+**16 columns**
 - `id` TEXT PRIMARY KEY
 - `project_id` TEXT NOT NULL (FK: projects.id)
 - `session_id` TEXT (FK: sessions.session_id)
@@ -548,6 +553,8 @@ projects (1) ──> (N) auto_captured_issues
 - `discovered_by_ai` TEXT
 - `discovered_at` TIMESTAMP NOT NULL
 - `source_metadata` TEXT
+- `entity_type` TEXT DEFAULT 'project' *(v1.5.1 — entity-agnostic intent layer)*
+- `entity_id` TEXT *(v1.5.1 — entity-agnostic intent layer)*
 
 ---
 
@@ -592,7 +599,7 @@ projects (1) ──> (N) auto_captured_issues
 - `assessed_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 #### `investigation_branches`
-**20 columns**
+**21 columns**
 - `id` TEXT PRIMARY KEY
 - `session_id` TEXT NOT NULL (FK: sessions.session_id)
 - `branch_name` TEXT NOT NULL
@@ -610,6 +617,7 @@ projects (1) ──> (N) auto_captured_issues
 - `merged_timestamp` REAL
 - `status` TEXT DEFAULT 'active'
 - `branch_metadata` TEXT
+- `transaction_id` TEXT *(v1.5.0 — epistemic transaction scoping)*
 
 #### `merge_decisions`
 **11 columns**
@@ -630,7 +638,7 @@ projects (1) ──> (N) auto_captured_issues
 ### Learning & Efficiency Tables
 
 #### `mistakes_made`
-**11 columns**
+**14 columns**
 - `id` TEXT PRIMARY KEY
 - `session_id` TEXT NOT NULL (FK: sessions.session_id)
 - `goal_id` TEXT (FK: goals.id)
@@ -641,6 +649,9 @@ projects (1) ──> (N) auto_captured_issues
 - `prevention` TEXT
 - `created_timestamp` REAL NOT NULL
 - `mistake_data` TEXT NOT NULL
+- `transaction_id` TEXT *(v1.5.0 — epistemic transaction scoping)*
+- `entity_type` TEXT DEFAULT 'project' *(v1.5.1 — entity-agnostic intent layer)*
+- `entity_id` TEXT *(v1.5.1 — entity-agnostic intent layer)*
 
 #### `token_savings`
 **6 columns**
@@ -713,7 +724,10 @@ projects (1) ──> (N) auto_captured_issues
 - **Indexing**: All tables have appropriate indexes for performance
 - **Every project has its own SQLite database** mapped to the git repository
 - **Grounded Calibration (v1.5.0)**: Four verification tables provide post-test objective grounding for epistemic calibration, enabling comparison of self-assessed vs evidence-based vector values
+- **Transaction-First Architecture (v1.5.0)**: `transaction_id` column added to reflexes and all artifact tables (findings, unknowns, dead-ends, mistakes, goals, branches) for epistemic transaction scoping across compaction boundaries
+- **Entity-Agnostic Intent Layer (v1.5.1)**: `entity_type` + `entity_id` columns on artifact tables enable cross-entity tracking beyond project scope
+- **Phase-Aware Calibration (v1.5.1)**: `phase` column on grounded verification tables splits calibration into noetic (investigation) and praxic (action) tracks with dynamic thresholds
 
 ---
 
-Generated: 2026-02-01
+Generated: 2026-02-11

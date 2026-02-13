@@ -5,6 +5,25 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-02-13
+
+### Added
+- **Instance Isolation Docs** - Reorganized into use-case-specific guides:
+  - `CLAUDE_CODE.md` - Hook input structure, automatic sessions
+  - `MCP_AND_CLI.md` - TTY-based isolation for non-Claude-Code users
+  - `ARCHITECTURE.md` - File taxonomy, resolution chains
+  - Container guidance for automated workflows
+
+### Fixed
+- **Windows Compatibility** - Platform detection for file locking (PR #32)
+- **Windows Unicode** - safe_print() wrapper for cp1252 console (PR #31)
+- **Post-Compact Session Mismatch** - Use transaction's session_id for instance_projects
+- **Instance Isolation Resilience** - Works when claude_session_id unavailable via Bash
+
+### Closed
+- Issue #28: Sentinel multi-window race condition (fixed by instance isolation)
+- Issue #29: goals-create wrong DB after compact (fixed by unified resolver)
+
 ## [1.5.0] - 2026-01-31
 
 ### Added

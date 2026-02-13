@@ -134,6 +134,16 @@ def _update_active_work(project_path: str, folder_name: str, empirica_session_id
                 except Exception:
                     pass
 
+        # Warn if claude_session_id is still null - instance isolation works but active_work
+        # cross-referencing will be limited. Hooks (session-init, post-compact) are responsible
+        # for establishing the claude_session_id linkage.
+        if not claude_session_id and instance_id:
+            logger.warning(
+                f"claude_session_id unknown for {instance_id}. Instance isolation works via "
+                f"instance_id, but active_work cross-referencing limited. This is normal if "
+                f"called via Bash before any hook established the linkage."
+            )
+
         # Write instance_projects FIRST - works via Bash tool where tty fails
         if instance_id:
             instance_dir = marker_dir / 'instance_projects'
@@ -288,6 +298,33 @@ def handle_project_create_command(args):
             parent_project_id=parent
         )
         db.close()
+
+        # Register in workspace.db for cross-project visibility (project-list, project-switch)
+        try:
+            from empirica.config.path_resolver import get_git_root
+            from .workspace_init import _register_in_workspace_db
+
+            # Determine trajectory_path: use git root if in repo, otherwise first repo path
+            git_root = get_git_root()
+            if git_root:
+                trajectory_path = str(git_root)
+            elif repos and len(repos) > 0:
+                trajectory_path = repos[0]
+            else:
+                trajectory_path = None
+
+            if trajectory_path:
+                _register_in_workspace_db(
+                    project_id=project_id,
+                    name=name,
+                    trajectory_path=trajectory_path,
+                    description=description,
+                    git_remote_url=None  # Could extract from git if needed
+                )
+                logger.debug(f"Registered project {name} in workspace.db")
+        except Exception as e:
+            logger.warning(f"Failed to register in workspace.db: {e}")
+            # Non-fatal - project still created in local DB
 
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
@@ -475,10 +512,14 @@ def handle_project_bootstrap_command(args):
         if not project_id:
             # Method 1: Read from local .empirica/project.yaml (highest priority)
             # This is what project-init creates - no git remote required
+            # Use active context first, fall back to CWD
             try:
                 import yaml
                 import os
-                project_yaml = os.path.join(os.getcwd(), '.empirica', 'project.yaml')
+                from empirica.utils.session_resolver import get_active_project_path
+                context_project = get_active_project_path()
+                base_path = context_project if context_project else os.getcwd()
+                project_yaml = os.path.join(base_path, '.empirica', 'project.yaml')
                 if os.path.exists(project_yaml):
                     with open(project_yaml, 'r') as f:
                         project_config = yaml.safe_load(f)
@@ -573,9 +614,12 @@ def handle_project_bootstrap_command(args):
         if trigger == 'post_compact':
             from empirica.config.mco_loader import get_mco_config
             from pathlib import Path
+            from empirica.utils.session_resolver import get_active_project_path
 
-            # Find latest pre_summary snapshot
-            ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+            # Find latest pre_summary snapshot - use active context, not CWD
+            context_project = get_active_project_path()
+            project_base = Path(context_project) if context_project else Path.cwd()
+            ref_docs_dir = project_base / ".empirica" / "ref-docs"
             if ref_docs_dir.exists():
                 snapshot_files = sorted(
                     ref_docs_dir.glob("pre_summary_*.json"),
@@ -740,7 +784,10 @@ def handle_project_bootstrap_command(args):
         try:
             import yaml
             import os
-            skills_dir = os.path.join(os.getcwd(), 'project_skills')
+            from empirica.utils.session_resolver import get_active_project_path
+            context_project = get_active_project_path()
+            base_path = context_project if context_project else os.getcwd()
+            skills_dir = os.path.join(base_path, 'project_skills')
             if os.path.exists(skills_dir):
                 skills_list = []
                 for filename in os.listdir(skills_dir):
@@ -1619,9 +1666,38 @@ def handle_finding_log_command(args):
             )
             if decayed_lessons:
                 logger.info(f"IMMUNE: Decayed {len(decayed_lessons)} related lessons in domain '{subject}'")
+
+                # Cross-layer sync: propagate YAML lesson decay to Qdrant payloads
+                try:
+                    from empirica.core.qdrant.vector_store import propagate_lesson_confidence_to_qdrant
+                    if project_id:
+                        for dl in decayed_lessons:
+                            propagate_lesson_confidence_to_qdrant(
+                                project_id,
+                                dl.get('name', ''),
+                                dl.get('new_confidence', 0.3)
+                            )
+                except Exception as qdrant_sync_err:
+                    logger.debug(f"Lesson→Qdrant sync skipped: {qdrant_sync_err}")
         except Exception as decay_err:
             # Non-fatal - log but continue
             logger.debug(f"Lesson decay check failed: {decay_err}")
+
+        # Cross-layer: decay eidetic facts that contradict this finding
+        # Only when a domain/subject is provided — domainless findings spray too broadly
+        eidetic_decayed = 0
+        try:
+            from empirica.core.qdrant.vector_store import decay_eidetic_by_finding
+            if project_id and subject:
+                eidetic_decayed = decay_eidetic_by_finding(
+                    project_id,
+                    finding,
+                    domain=subject,
+                )
+                if eidetic_decayed:
+                    logger.info(f"IMMUNE: Decayed {eidetic_decayed} eidetic facts by finding in domain '{subject}'")
+        except Exception as eidetic_err:
+            logger.debug(f"Eidetic decay skipped: {eidetic_err}")
 
         result = {
             "ok": True,
@@ -1632,6 +1708,7 @@ def handle_finding_log_command(args):
             "embedded": embedded,
             "eidetic": eidetic_result,  # "created" | "confirmed" | None
             "immune_decay": decayed_lessons if decayed_lessons else None,  # Lessons affected by this finding
+            "eidetic_decayed": eidetic_decayed if eidetic_decayed else None,
             "message": "Finding logged to project scope"
         }
 
@@ -2128,6 +2205,269 @@ def handle_deadend_log_command(args):
         return None
 
 
+def handle_assumption_log_command(args):
+    """Handle assumption-log command — log unverified assumptions to Qdrant."""
+    try:
+        import os
+        import sys
+        import time
+        import uuid
+        from empirica.cli.cli_utils import parse_json_safely
+
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        if config_data:
+            project_id = config_data.get('project_id')
+            session_id = config_data.get('session_id')
+            assumption = config_data.get('assumption')
+            confidence = config_data.get('confidence', 0.5)
+            domain = config_data.get('domain')
+            goal_id = config_data.get('goal_id')
+            output_format = 'json'
+        else:
+            project_id = getattr(args, 'project_id', None)
+            session_id = getattr(args, 'session_id', None)
+            assumption = getattr(args, 'assumption', None)
+            confidence = getattr(args, 'confidence', 0.5)
+            domain = getattr(args, 'domain', None)
+            goal_id = getattr(args, 'goal_id', None)
+            output_format = getattr(args, 'output', 'json')
+
+        # Auto-derive session_id
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        if not assumption:
+            print(json.dumps({"ok": False, "error": "Assumption text is required (--assumption or config)"}))
+            sys.exit(1)
+
+        # Auto-resolve project_id
+        if not project_id:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            if session_id:
+                cursor = db.conn.cursor()
+                cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                if row and row['project_id']:
+                    project_id = row['project_id']
+            db.close()
+
+        if not project_id:
+            print(json.dumps({"ok": False, "error": "Could not resolve project_id"}))
+            sys.exit(1)
+
+        # Auto-derive transaction_id
+        transaction_id = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction
+            transaction_id = read_active_transaction()
+        except Exception:
+            pass
+
+        # Store to Qdrant
+        assumption_id = str(uuid.uuid4())
+        embedded = False
+        try:
+            from empirica.core.qdrant.vector_store import embed_assumption, _check_qdrant_available
+            if _check_qdrant_available():
+                embed_assumption(
+                    project_id=project_id,
+                    assumption_id=assumption_id,
+                    assumption=assumption,
+                    confidence=confidence,
+                    status="unverified",
+                    entity_type="project",
+                    entity_id=project_id,
+                    session_id=session_id,
+                    transaction_id=transaction_id,
+                    domain=domain,
+                    timestamp=time.time(),
+                )
+                embedded = True
+        except Exception as e:
+            logger.debug(f"Qdrant embed failed (non-fatal): {e}")
+
+        result = {
+            "ok": True,
+            "assumption_id": assumption_id,
+            "project_id": project_id,
+            "assumption": assumption,
+            "confidence": confidence,
+            "status": "unverified",
+            "embedded": embedded,
+            "message": "Assumption logged" + (" (Qdrant)" if embedded else " (Qdrant unavailable)"),
+        }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"Assumption logged: {assumption_id[:8]}...")
+            print(f"   Confidence: {confidence}")
+            if embedded:
+                print(f"   Stored in Qdrant")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Assumption log", getattr(args, 'verbose', False))
+        return None
+
+
+def handle_decision_log_command(args):
+    """Handle decision-log command — log decisions with alternatives to Qdrant."""
+    try:
+        import os
+        import sys
+        import time
+        import uuid
+        from empirica.cli.cli_utils import parse_json_safely
+
+        # AI-FIRST MODE: Check if config file provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+
+        if config_data:
+            project_id = config_data.get('project_id')
+            session_id = config_data.get('session_id')
+            choice = config_data.get('choice')
+            alternatives = config_data.get('alternatives', '')
+            rationale = config_data.get('rationale', '')
+            confidence = config_data.get('confidence', 0.7)
+            reversibility = config_data.get('reversibility', 'exploratory')
+            domain = config_data.get('domain')
+            goal_id = config_data.get('goal_id')
+            output_format = 'json'
+        else:
+            project_id = getattr(args, 'project_id', None)
+            session_id = getattr(args, 'session_id', None)
+            choice = getattr(args, 'choice', None)
+            alternatives = getattr(args, 'alternatives', '')
+            rationale = getattr(args, 'rationale', '')
+            confidence = getattr(args, 'confidence', 0.7)
+            reversibility = getattr(args, 'reversibility', 'exploratory')
+            domain = getattr(args, 'domain', None)
+            goal_id = getattr(args, 'goal_id', None)
+            output_format = getattr(args, 'output', 'json')
+
+        # Auto-derive session_id
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        if not choice:
+            print(json.dumps({"ok": False, "error": "Choice text is required (--choice or config)"}))
+            sys.exit(1)
+
+        # Parse alternatives if comma-separated string
+        if isinstance(alternatives, str) and alternatives:
+            try:
+                import json as json_mod
+                alternatives_list = json_mod.loads(alternatives)
+            except (json.JSONDecodeError, ValueError):
+                alternatives_list = [a.strip() for a in alternatives.split(',') if a.strip()]
+        elif isinstance(alternatives, list):
+            alternatives_list = alternatives
+        else:
+            alternatives_list = []
+
+        # Auto-resolve project_id
+        if not project_id:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            if session_id:
+                cursor = db.conn.cursor()
+                cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                if row and row['project_id']:
+                    project_id = row['project_id']
+            db.close()
+
+        if not project_id:
+            print(json.dumps({"ok": False, "error": "Could not resolve project_id"}))
+            sys.exit(1)
+
+        # Auto-derive transaction_id
+        transaction_id = None
+        try:
+            from empirica.utils.session_resolver import read_active_transaction
+            transaction_id = read_active_transaction()
+        except Exception:
+            pass
+
+        # Store to Qdrant
+        decision_id = str(uuid.uuid4())
+        embedded = False
+        try:
+            from empirica.core.qdrant.vector_store import embed_decision, _check_qdrant_available
+            if _check_qdrant_available():
+                embed_decision(
+                    project_id=project_id,
+                    decision_id=decision_id,
+                    choice=choice,
+                    alternatives=json.dumps(alternatives_list),
+                    rationale=rationale,
+                    confidence_at_decision=confidence,
+                    reversibility=reversibility,
+                    entity_type="project",
+                    entity_id=project_id,
+                    session_id=session_id,
+                    transaction_id=transaction_id,
+                    timestamp=time.time(),
+                )
+                embedded = True
+        except Exception as e:
+            logger.debug(f"Qdrant embed failed (non-fatal): {e}")
+
+        result = {
+            "ok": True,
+            "decision_id": decision_id,
+            "project_id": project_id,
+            "choice": choice,
+            "alternatives": alternatives_list,
+            "rationale": rationale,
+            "confidence": confidence,
+            "reversibility": reversibility,
+            "embedded": embedded,
+            "message": "Decision logged" + (" (Qdrant)" if embedded else " (Qdrant unavailable)"),
+        }
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"Decision logged: {decision_id[:8]}...")
+            print(f"   Choice: {choice}")
+            print(f"   Alternatives: {', '.join(alternatives_list) if alternatives_list else 'none'}")
+            print(f"   Reversibility: {reversibility}")
+            if embedded:
+                print(f"   Stored in Qdrant")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Decision log", getattr(args, 'verbose', False))
+        return None
+
+
 def handle_refdoc_add_command(args):
     """Handle refdoc-add command"""
     try:
@@ -2208,6 +2548,141 @@ def handle_refdoc_add_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Reference doc add", getattr(args, 'verbose', False))
+        return None
+
+
+def handle_source_add_command(args):
+    """Handle source-add command — entity-agnostic epistemic source logging.
+
+    Sources are bidirectional:
+      --noetic: evidence IN (source_used — informed knowledge)
+      --praxic: output OUT (source_created — produced by action)
+    """
+    try:
+        import time
+        import uuid
+        from empirica.data.session_database import SessionDatabase
+        from empirica.cli.utils.project_resolver import resolve_project_id
+
+        title = args.title
+        description = getattr(args, 'description', None)
+        source_type = getattr(args, 'source_type', 'document')
+        doc_path = getattr(args, 'path', None)
+        source_url = getattr(args, 'url', None)
+        confidence = getattr(args, 'confidence', 0.7)
+        direction = 'noetic' if getattr(args, 'noetic', False) else 'praxic'
+        session_id = getattr(args, 'session_id', None)
+        project_id = getattr(args, 'project_id', None)
+        output_format = getattr(args, 'output', 'human')
+
+        # Auto-derive session_id from active transaction
+        if not session_id:
+            from empirica.utils.session_resolver import get_active_empirica_session_id
+            session_id = get_active_empirica_session_id()
+
+        if not session_id:
+            print(json.dumps({
+                "ok": False,
+                "error": "No active transaction and --session-id not provided",
+                "hint": "Either run PREFLIGHT first, or provide --session-id explicitly"
+            }))
+            return 1
+
+        db = SessionDatabase()
+
+        # Auto-resolve project_id from session if not provided
+        if not project_id:
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+            row = cursor.fetchone()
+            if row:
+                project_id = row['project_id'] if isinstance(row, dict) else row[0]
+
+        if not project_id:
+            print(json.dumps({
+                "ok": False,
+                "error": "Could not resolve project_id",
+                "hint": "Provide --project-id or ensure active session has a project"
+            }))
+            db.close()
+            return 1
+
+        # Auto-derive transaction_id
+        transaction_id = None
+        try:
+            from empirica.cli.command_handlers.workflow_commands import read_active_transaction
+            tx = read_active_transaction()
+            if tx:
+                transaction_id = tx.get('transaction_id')
+        except Exception:
+            pass
+
+        source_id = str(uuid.uuid4())
+
+        # Build metadata
+        metadata = {
+            "direction": direction,
+            "doc_path": doc_path,
+            "source_url": source_url,
+            "transaction_id": transaction_id,
+        }
+
+        # Insert into epistemic_sources table
+        db.conn.execute("""
+            INSERT INTO epistemic_sources (
+                id, project_id, session_id, source_type, source_url,
+                title, description, confidence, epistemic_layer,
+                discovered_by_ai, discovered_at, source_metadata
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            source_id, project_id, session_id, source_type,
+            source_url or doc_path,
+            title, description, confidence, direction,
+            'claude-code', time.time(), json.dumps(metadata)
+        ))
+        db.conn.commit()
+
+        # Also add to project_reference_docs for backwards compatibility
+        if doc_path:
+            try:
+                db.add_reference_doc(
+                    project_id=project_id,
+                    doc_path=doc_path,
+                    doc_type=source_type,
+                    description=description
+                )
+            except Exception:
+                pass  # Not critical if legacy table fails
+
+        db.close()
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": True,
+                "source_id": source_id,
+                "project_id": project_id,
+                "session_id": session_id,
+                "transaction_id": transaction_id,
+                "direction": direction,
+                "title": title,
+                "message": f"Source added ({direction})"
+            }, indent=2))
+        else:
+            direction_emoji = "📥" if direction == 'noetic' else "📤"
+            print(f"{direction_emoji} Source added ({direction})")
+            print(f"   Source ID: {source_id[:12]}...")
+            print(f"   Title: {title}")
+            print(f"   Type: {source_type}")
+            print(f"   Direction: {direction} ({'evidence IN' if direction == 'noetic' else 'output OUT'})")
+            if doc_path:
+                print(f"   Path: {doc_path}")
+            if source_url:
+                print(f"   URL: {source_url}")
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Source add", getattr(args, 'verbose', False))
         return None
 
 
@@ -3048,36 +3523,54 @@ def handle_project_switch_command(args):
                         tx_data = _json.load(f)
 
                     if tx_data.get('status') == 'open':
-                        # Auto-close with POSTFLIGHT
-                        import subprocess
-                        tx_session_id = tx_data.get('session_id')
-                        if tx_session_id:
-                            postflight_cmd = ['empirica', 'postflight-submit', '-']
-                            postflight_input = _json.dumps({
-                                "session_id": tx_session_id,
-                                "vectors": {
-                                    "know": 0.7,
-                                    "uncertainty": 0.3,
-                                    "context": 0.7,
-                                    "completion": 0.5
-                                },
-                                "reasoning": f"Auto-POSTFLIGHT: Project switch to {folder_name}. Transaction auto-closed to maintain epistemic measurement integrity."
-                            })
-                            # Run in current project directory (before switch)
-                            result = subprocess.run(
-                                postflight_cmd,
-                                input=postflight_input,
-                                capture_output=True,
-                                text=True,
-                                timeout=30,
-                                cwd=str(current_empirica_root.parent)  # Project root
-                            )
-                            if result.returncode == 0:
-                                postflight_result = {"ok": True, "reason": "project_switch"}
-                                if output_format == 'human':
-                                    print("📊 Auto-closed previous transaction (POSTFLIGHT)")
-                            else:
-                                postflight_result = {"ok": False, "error": result.stderr[:200]}
+                        # Only auto-close if the transaction is from a DIFFERENT project
+                        # than the destination. Switching to the same project (or switching
+                        # right after opening a transaction) should NOT destroy the transaction.
+                        tx_project_path = tx_data.get('project_path', '')
+                        dest_project_str = str(project_path) if project_path else ''
+                        # Normalize for comparison (resolve symlinks, trailing slashes)
+                        tx_project_normalized = str(Path(tx_project_path).resolve()) if tx_project_path else ''
+                        dest_normalized = str(Path(dest_project_str).resolve()) if dest_project_str else ''
+
+                        if tx_project_normalized == dest_normalized:
+                            # Transaction is for the destination project — don't close it
+                            postflight_result = {"ok": True, "reason": "transaction_preserved", "note": "Transaction is for destination project, not closed"}
+                        else:
+                            # Transaction is for a different project — close it
+                            import subprocess
+                            tx_session_id = tx_data.get('session_id')
+                            if tx_session_id:
+                                postflight_cmd = ['empirica', 'postflight-submit', '-']
+                                postflight_input = _json.dumps({
+                                    "session_id": tx_session_id,
+                                    "vectors": {
+                                        "know": 0.7,
+                                        "uncertainty": 0.3,
+                                        "context": 0.7,
+                                        "completion": 0.5
+                                    },
+                                    "reasoning": f"Auto-POSTFLIGHT: Project switch to {folder_name}. Transaction auto-closed to maintain epistemic measurement integrity."
+                                })
+                                # Run in current project directory (before switch)
+                                result = subprocess.run(
+                                    postflight_cmd,
+                                    input=postflight_input,
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=30,
+                                    cwd=str(current_empirica_root.parent)  # Project root
+                                )
+                                if result.returncode == 0:
+                                    postflight_result = {"ok": True, "reason": "project_switch"}
+                                    # Clear the old transaction file so sentinel doesn't see stale state
+                                    try:
+                                        tx_path.unlink()
+                                    except Exception:
+                                        pass
+                                    if output_format == 'human':
+                                        print("📊 Auto-closed previous transaction (POSTFLIGHT)")
+                                else:
+                                    postflight_result = {"ok": False, "error": result.stderr[:200]}
         except Exception as e:
             # Non-fatal - continue with switch even if POSTFLIGHT fails
             postflight_result = {"ok": False, "error": str(e)}
@@ -3130,6 +3623,53 @@ def handle_project_switch_command(args):
                     # Update the session's current project in global registry
                     update_session_project(row['session_id'], project_id)
                 conn.close()
+
+            # 4b. ENSURE SESSION EXISTS IN TARGET PROJECT'S DB
+            # The session from global_sessions may not exist in the target project's
+            # per-project sessions.db (it was created in a different project).
+            # The statusline reads from per-project DB, so a missing session = "inactive".
+            if attached_session and project_path:
+                try:
+                    target_db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                    if target_db_path.exists():
+                        target_conn = sqlite3.connect(str(target_db_path))
+                        target_cursor = target_conn.cursor()
+
+                        # Check if session already exists in target DB
+                        target_cursor.execute(
+                            "SELECT session_id FROM sessions WHERE session_id = ?",
+                            (attached_session['session_id'],)
+                        )
+                        if not target_cursor.fetchone():
+                            # Session doesn't exist in target — mirror it
+                            from datetime import datetime, timezone
+                            target_cursor.execute("""
+                                INSERT INTO sessions (
+                                    session_id, ai_id, start_time, bootstrap_level,
+                                    components_loaded, project_id, instance_id
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                attached_session['session_id'],
+                                attached_session['ai_id'],
+                                attached_session.get('start_time') or datetime.now(timezone.utc).isoformat(),
+                                1,  # bootstrap_level
+                                0,  # components_loaded
+                                project_id,
+                                current_instance_id
+                            ))
+                            target_conn.commit()
+                            if output_format == 'human':
+                                print(f"📎 Session mirrored to target project database")
+                        else:
+                            # Session exists but may have wrong project_id — update it
+                            target_cursor.execute(
+                                "UPDATE sessions SET project_id = ? WHERE session_id = ?",
+                                (project_id, attached_session['session_id'])
+                            )
+                            target_conn.commit()
+                        target_conn.close()
+                except Exception as e2:
+                    logger.debug(f"Session mirroring to target DB failed (non-fatal): {e2}")
         except Exception as e:
             logger.debug(f"Session continuity update failed (non-fatal): {e}")
 
@@ -3230,16 +3770,12 @@ def handle_project_switch_command(args):
             print("💡 Next Steps")
             print("━" * 70)
             print()
-            print("  1. Create a session to start work:")
-            print(f"     empirica session-create --ai-id <your-id>")
+            print("  1. Start a transaction (PREFLIGHT) to begin measured work")
             print()
-            print("  2. Find work matching your capability:")
-            print(f"     empirica goals-ready")
+            print("  2. Investigate before acting — log findings, unknowns, dead-ends")
             print()
-            if project_path:
-                print(f"  3. Navigate to project directory:")
-                print(f"     cd {project_path}")
-                print()
+            print("  3. CHECK when ready to proceed, POSTFLIGHT when work is complete")
+            print()
             print("⚠️  All commands now write to this project's database.")
             print("    Findings, sessions, goals → stored in this project context.")
             print()
@@ -3256,8 +3792,9 @@ def handle_project_switch_command(args):
                     'goals': project.get('total_goals', 0)
                 },
                 'next_steps': [
-                    'empirica session-create --ai-id <your-id>' if not attached_session else f'Session attached: {attached_session["session_id"][:8]}...',
-                    'empirica goals-ready'
+                    'Run PREFLIGHT to start a measured transaction',
+                    'Investigate before acting — log findings and unknowns',
+                    'CHECK when ready, POSTFLIGHT when complete'
                 ],
                 'postflight_result': postflight_result,
                 'attached_session': attached_session,

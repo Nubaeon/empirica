@@ -114,6 +114,16 @@ class EpistemicDocsAgent:
     @staticmethod
     def _detect_project_root() -> Path:
         """Auto-detect project root by walking up to find markers."""
+        # Priority 0: Use active context from instance isolation
+        try:
+            from empirica.utils.session_resolver import get_active_project_path
+            context_project = get_active_project_path()
+            if context_project:
+                return Path(context_project)
+        except Exception:
+            pass
+
+        # Fallback: Walk up from CWD looking for project markers
         cwd = Path.cwd()
 
         # Walk up the directory tree looking for project markers
@@ -1145,7 +1155,7 @@ def handle_docs_assess(args) -> int:
 
         # Lightweight summary for bootstrap context (~50 tokens)
         if summary_only:
-            summary = _generate_summary(result, agent.categories)
+            summary = _generate_summary(result, agent.categories, agent.root)
             if output_format == 'json':
                 print(json.dumps(summary))
             else:
@@ -1165,7 +1175,7 @@ def handle_docs_assess(args) -> int:
         return handle_cli_error(e, "docs-assess")
 
 
-def _generate_summary(result: dict, categories: list) -> dict:
+def _generate_summary(result: dict, categories: list, project_root: Path = None) -> dict:
     """Generate lightweight summary (~50 tokens) for bootstrap context."""
     overall = result["overall"]
     epistemic = result["epistemic_assessment"]
@@ -1173,8 +1183,15 @@ def _generate_summary(result: dict, categories: list) -> dict:
     # Find top gaps (categories with coverage < 70%)
     top_gaps = [c.name for c in categories if c.coverage < 0.70][:3]
 
-    # Count total docs
-    docs_dir = Path.cwd() / "docs"
+    # Count total docs - use provided root or resolve from active context
+    if project_root is None:
+        try:
+            from empirica.utils.session_resolver import get_active_project_path
+            context_project = get_active_project_path()
+            project_root = Path(context_project) if context_project else Path.cwd()
+        except Exception:
+            project_root = Path.cwd()
+    docs_dir = project_root / "docs"
     doc_count = len(list(docs_dir.rglob("*.md"))) if docs_dir.exists() else 0
 
     return {

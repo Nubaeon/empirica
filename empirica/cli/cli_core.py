@@ -38,8 +38,8 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
         try:
             if isinstance(action, argparse._SubParsersAction):
                 categories = {
-                    'Getting Started': ['onboard'],
-                    'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
+                    'Getting Started': ['onboard', 'setup-claude-code'],
+                    'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact', 'transaction-adopt'],
                     'CASCADE Workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
                     'Goals & Tasks': ['goals-create', 'goals-list', 'goals-search', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-add-dependency', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume', 'goals-mark-stale', 'goals-get-stale', 'goals-refresh'],
                     'Project Management': ['project-init', 'project-create', 'project-list', 'project-switch', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
@@ -48,7 +48,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Sync': ['sync-config', 'sync-push', 'sync-pull', 'sync-status', 'rebuild', 'artifacts-generate'],
                     'Identity': ['identity-create', 'identity-export', 'identity-list', 'identity-verify'],
                     'Handoffs': ['handoff-create', 'handoff-query'],
-                    'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
+                    'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'assumption-log', 'decision-log', 'refdoc-add', 'source-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
                     'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
                     'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches', 'investigate-multi'],
                     'Monitoring': ['monitor', 'check-drift', 'assess-state', 'trajectory-project', 'efficiency-report'],
@@ -280,6 +280,7 @@ def main(args=None):
             'sessions-resume': handle_sessions_resume_command,
             'session-snapshot': handle_session_snapshot_command,
             'memory-compact': handle_memory_compact_command,
+            'transaction-adopt': handle_transaction_adopt_command,
             
             # CASCADE commands (working -submit variants only)
             'preflight-submit': handle_preflight_submit_command,
@@ -362,12 +363,15 @@ def main(args=None):
             'project-embed': handle_project_embed_command,
             'doc-check': handle_doc_check_command,
             
-            # Finding/unknown/deadend logging
+            # Finding/unknown/deadend/assumption/decision logging
             'finding-log': handle_finding_log_command,
             'unknown-log': handle_unknown_log_command,
             'unknown-resolve': handle_unknown_resolve_command,
             'deadend-log': handle_deadend_log_command,
+            'assumption-log': handle_assumption_log_command,
+            'decision-log': handle_decision_log_command,
             'refdoc-add': handle_refdoc_add_command,
+            'source-add': handle_source_add_command,
 
             # Sync commands (git notes synchronization)
             'sync-config': handle_sync_config_command,
@@ -463,8 +467,9 @@ def main(args=None):
             'lesson-stats': handle_lesson_stats_command,
             'lesson-embed': handle_lesson_embed_command,
 
-            # Onboarding command
+            # Onboarding commands
             'onboard': handle_onboard_command,
+            'setup-claude-code': handle_setup_claude_code_command,
 
             # Trajectory commands (experimental epistemic prediction)
             'trajectory-show': handle_trajectory_show_command,
