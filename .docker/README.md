@@ -21,7 +21,7 @@ Empirica enables AI agents to genuinely assess their knowledge and uncertainty. 
 ### Pull the Image
 
 ```bash
-docker pull nubaeon/empirica:1.5.0
+docker pull nubaeon/empirica:1.5.1
 # Or use :latest for the latest stable version
 docker pull nubaeon/empirica:latest
 ```
@@ -30,20 +30,20 @@ docker pull nubaeon/empirica:latest
 
 ```bash
 # Get help
-docker run --rm nubaeon/empirica:1.5.0 empirica --help
+docker run --rm nubaeon/empirica:1.5.1 empirica --help
 
 # Check version
-docker run --rm nubaeon/empirica:1.5.0 empirica --version
+docker run --rm nubaeon/empirica:1.5.1 empirica --version
 
 # Create a session
-docker run --rm nubaeon/empirica:1.5.0 empirica session-create --ai-id docker-agent --output json
+docker run --rm nubaeon/empirica:1.5.1 empirica session-create --ai-id docker-agent --output json
 ```
 
 ### Interactive Shell with Persistent Data
 
 ```bash
 # Run with volume mount for persistent data
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.5.0 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.5.1 /bin/bash
 
 # Inside the container:
 empirica session-create --ai-id myagent
@@ -56,7 +56,7 @@ empirica postflight-submit postflight.json
 
 ```bash
 # 1. Start interactive session
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.5.0 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.5.1 /bin/bash
 
 # 2. Inside container - create session
 SESSION_ID=$(empirica session-create --ai-id docker-agent --output json | jq -r '.session_id')
@@ -100,7 +100,7 @@ empirica postflight-submit /tmp/postflight.json
 
 ## Image Tags
 
-- `1.5.0` - Stable release v1.5.0
+- `1.5.1` - Stable release v1.5.1
 - `latest` - Latest stable release
 - `develop` - Development branch (bleeding edge)
 
@@ -114,7 +114,7 @@ empirica postflight-submit /tmp/postflight.json
 Mount `/data` to persist session data between runs:
 
 ```bash
-docker run -v /path/to/your/data:/data nubaeon/empirica:1.5.0
+docker run -v /path/to/your/data:/data nubaeon/empirica:1.5.1
 ```
 
 ## Image Details
@@ -130,7 +130,7 @@ docker run -v /path/to/your/data:/data nubaeon/empirica:1.5.0
 The image includes a health check that runs `empirica --version`:
 
 ```bash
-docker inspect nubaeon/empirica:1.5.0 | jq '.[0].Config.Healthcheck'
+docker inspect nubaeon/empirica:1.5.1 | jq '.[0].Config.Healthcheck'
 ```
 
 ## Use Cases
@@ -143,7 +143,7 @@ jobs:
   epistemic-test:
     runs-on: ubuntu-latest
     container:
-      image: nubaeon/empirica:1.5.0
+      image: nubaeon/empirica:1.5.1
     steps:
       - name: Run Empirica Session
         run: |
@@ -155,7 +155,7 @@ jobs:
 
 ```bash
 # Run MCP server in Docker
-docker run -p 8080:8080 nubaeon/empirica:1.5.0 \
+docker run -p 8080:8080 nubaeon/empirica:1.5.1 \
   python -m mcp_local.empirica_mcp_server
 ```
 
@@ -167,7 +167,7 @@ docker run -it \
   -v $(pwd):/workspace \
   -v $(pwd)/.empirica:/data/.empirica \
   -w /workspace \
-  nubaeon/empirica:1.5.0 \
+  nubaeon/empirica:1.5.1 \
   /bin/bash
 ```
 
@@ -208,4 +208,4 @@ docker run -it empirica:custom empirica --help
 
 **License:** MIT  
 **Maintainer:** Empirica Team  
-**Version:** 1.5.0
+**Version:** 1.5.1
