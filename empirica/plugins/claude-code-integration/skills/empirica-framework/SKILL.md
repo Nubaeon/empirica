@@ -436,9 +436,10 @@ pkill -f empirica-mcp  # Kill running server
 
 ## Full Command Reference
 
+**NOTE:** Sessions are created AUTOMATICALLY by hooks. Do NOT run `session-create` manually.
+
 ```bash
-# Session lifecycle
-empirica session-create --ai-id claude-code --output json  # Start session
+# Project context (session created by hooks)
 empirica project-bootstrap --output json                   # Load context (auto-detects)
 
 # CASCADE workflow (stdin JSON, session_id auto-derived)

@@ -1,7 +1,7 @@
 ---
 name: empirica
 description: "This skill should be used when the user says '/empirica', '/empirica status', '/empirica on', '/empirica off', asks 'how do I use empirica', 'what empirica commands are there', 'show empirica status', or needs a quick reference for Empirica's core commands and workflow state."
-version: 1.5.1
+version: 2.0.0
 ---
 
 # /empirica - Quick Reference & Status
@@ -42,10 +42,11 @@ cat ~/.empirica/sentinel_paused 2>/dev/null
 
 ### Session & Project
 
+**NOTE:** Sessions are created AUTOMATICALLY by hooks. Do NOT run `session-create` manually.
+
 | Command | Purpose |
 |---------|---------|
-| `empirica session-create --ai-id claude-code` | Start new session |
-| `empirica project-bootstrap --session-id <ID>` | Load project context |
+| `empirica project-bootstrap --output json` | Load project context (session auto-exists) |
 | `empirica project-switch <name>` | Switch active project |
 | `empirica project-list` | List all projects |
 
