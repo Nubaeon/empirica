@@ -140,9 +140,12 @@ class EmbeddingsProvider:
         # Get provider from env, default to "auto"
         provider_env = os.getenv("EMPIRICA_EMBEDDINGS_PROVIDER", "auto").lower()
 
-        # Resolve "auto" to actual provider
+        # Resolve "auto" to actual provider, tracking if we fell back
+        self._auto_fallback = False
         if provider_env == "auto":
             self.provider = _resolve_auto_provider(self.ollama_url)
+            if self.provider == "local":
+                self._auto_fallback = True
         else:
             self.provider = provider_env
 
@@ -177,7 +180,11 @@ class EmbeddingsProvider:
         elif self.provider == "local":
             # No external dependency; simple hashing-based embedding (for testing)
             self._client = None
-            self._vector_size = 1536
+            if self._auto_fallback:
+                # Match Ollama dimensions so fallback vectors fit existing collections
+                self._vector_size = MODEL_DIMENSIONS.get("nomic-embed-text", 768)
+            else:
+                self._vector_size = 768  # Default to 768 for consistency
         else:
             raise RuntimeError(f"Unsupported provider '{self.provider}'. Set EMPIRICA_EMBEDDINGS_PROVIDER=openai|ollama|jina|voyage|local|auto")
 
@@ -312,14 +319,21 @@ class EmbeddingsProvider:
             return self._embed_local_hash(text)
 
     def _embed_local_hash(self, text: str) -> List[float]:
-        """Simple hashing embedding for testing (no external deps)."""
+        """Simple hashing embedding for testing/fallback (no external deps).
+
+        Uses the configured vector size so fallback embeddings match
+        the collection dimensions created by the primary provider.
+        """
         import hashlib
         import math
 
-        vec = [0.0] * 1536
+        # Use the provider's known vector size to avoid dimension mismatches
+        # when falling back from Ollama (768) or other providers
+        dim = self._vector_size or 768
+        vec = [0.0] * dim
         for tok in text.split():
             h = int(hashlib.sha256(tok.encode()).hexdigest(), 16)
-            idx = h % 1536
+            idx = h % dim
             vec[idx] += 1.0
         # L2 normalize
         norm = math.sqrt(sum(v*v for v in vec)) or 1.0
