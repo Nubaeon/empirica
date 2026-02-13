@@ -730,9 +730,61 @@ cannot find the previous transaction. The old transaction becomes "orphaned."
 - `claude-code-integration/hooks/post-compact.py` - instance_id-keyed handoff lookup
 - `claude-code-integration/hooks/pre-compact.py` - instance_id-keyed handoff write
 
+### 11.14 Post-Compact Writes Wrong Session to instance_projects (2026-02-13)
+
+**Symptom:** Statusline shows stale CHECK data from a different session after compaction.
+**Status:** FIXED
+**Root cause:** When continuing an open transaction after compaction, `_write_active_work_for_new_conversation()`
+was called with `empirica_session_id=empirica_session` where `empirica_session` came from `_get_empirica_session()`.
+This function returns the session from active_work (stale) or DB (might be different session), NOT the transaction's session.
+**Fix:** Use `active_transaction.get('session_id')` when continuing a transaction:
+```python
+tx_session_id = active_transaction.get('session_id') or empirica_session
+_write_active_work_for_new_conversation(..., empirica_session_id=tx_session_id, ...)
+```
+**Commit:** `f8d9a82f`
+**Files:** `plugins/claude-code-integration/hooks/post-compact.py`
+
+### 11.15 Instance Isolation Fails When claude_session_id Unavailable (2026-02-13)
+
+**Symptom:** `instance_projects` has `claude_session_id: null`, breaking active_work cross-referencing.
+**Status:** FIXED (graceful degradation)
+**Root cause:** CLI commands (e.g., `project-switch`) called via Bash can't access `claude_session_id` -
+it's only available in hook stdin. If existing `instance_projects` also had null, there's nothing to preserve.
+**Fix:**
+1. `post-compact`: Always write `instance_projects` even without `claude_session_id` (instance_id isolation works)
+2. `project-switch`: Log warning when `claude_session_id` unavailable
+**Key insight:** `instance_id` (tmux_N) is the PRIMARY isolation key. `claude_session_id` is supplementary
+for active_work cross-referencing. System works without `claude_session_id`, just with limited cross-referencing.
+**Commit:** `23f79366`
+**Files:** `project_commands.py`, `post-compact.py`
+
 ---
 
-## 12. Summary: Instance Isolation Key Insights
+## 12. Simplification Opportunities
+
+The current file taxonomy has redundancy:
+
+| File | Key | Written By | Could Simplify? |
+|------|-----|------------|-----------------|
+| `instance_projects/tmux_N.json` | TMUX_PANE | Hooks, CLI | **PRIMARY** - keep |
+| `tty_sessions/pts-N.json` | tty device | CLI | Redundant with instance_projects |
+| `active_work_{claude_id}.json` | claude_session_id | Hooks, CLI | Keep for non-tmux users |
+| `active_transaction_*.json` | instance_id | PREFLIGHT | Keep (transaction state) |
+
+**Root cause of complexity:**
+- Hooks have `claude_session_id` (stdin from Claude Code), CLI commands don't
+- tmux users have `TMUX_PANE`, non-tmux users rely on `claude_session_id`
+- TTY is available in CLI context, fails in hook context
+
+**Recommended ownership model:**
+- **HOOKS** own writing all isolation files (they have full context)
+- **CLI commands** read but don't write isolation files (they lack claude_session_id)
+- Exception: CLI can PRESERVE existing claude_session_id when updating
+
+---
+
+## 13. Summary: Instance Isolation Key Insights
 
 1. **File-based isolation** trumps database queries for multi-instance support
 2. **Transaction files** are the real unit of work (sessions became containers)
@@ -741,3 +793,6 @@ cannot find the previous transaction. The old transaction becomes "orphaned."
 5. **Instance ID format matters** - Consistent `tmux_N` across all components
 6. **Transaction-scoped queries** - Always filter by `transaction_id` when available
 7. **Pane ID changes orphan transactions** - tmux restart requires human intervention
+8. **instance_id is primary** - Works without claude_session_id (graceful degradation)
+9. **Hooks own the linkage** - CLI commands read, hooks write isolation files
+10. **Transaction session_id matters** - Use transaction's session, not generic lookup
