@@ -45,6 +45,31 @@ Hooks write these files (you don't need to):
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Hook Input Structure
+
+Claude Code provides structured JSON to hooks via stdin:
+
+```json
+{
+  "session_id": "fad66571-1bde-4ee1-aa0d-e9d3dfd8e833",
+  "transcript_path": "/home/user/.claude/projects/my-project/fad66571.jsonl",
+  "cwd": "/home/user/my-project",
+  "permission_mode": "default",
+  "hook_event_name": "PreToolUse"
+}
+```
+
+| Field | Purpose | Notes |
+|-------|---------|-------|
+| `session_id` | Claude conversation UUID | Maps to `active_work_{id}.json` |
+| `transcript_path` | Full transcript file path | Used by pre-compact for state capture |
+| `cwd` | Working directory | **UNRELIABLE** - do not use for project resolution |
+| `permission_mode` | Claude permission level | Used by Sentinel for gate decisions |
+| `hook_event_name` | Hook event type | Conditional hook logic |
+
+**Critical:** The `cwd` field is unreliable because Claude Code can reset it (e.g., after
+compaction). Hooks must use `session_id` → `active_work` file → `project_path` resolution.
+
 ---
 
 ## Multi-Pane tmux Setup

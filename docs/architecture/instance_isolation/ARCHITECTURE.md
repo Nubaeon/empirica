@@ -174,8 +174,27 @@ only have `TTY` + maybe `TMUX_PANE`. This asymmetry is why we need multiple file
 
 ---
 
+## Design Decisions
+
+### No File-Based Statusline Caching
+
+**Decision (2026-02-06):** Removed file-based statusline caching.
+
+**Rationale:**
+- Statusline only refreshes on PREFLIGHT/CHECK/POSTFLIGHT (not every second)
+- DB queries are fast (local SQLite)
+- Cache caused stale data bugs when projects changed
+- Single source of truth (DB) is simpler and more reliable
+
+**What remains:**
+- TTY session files (not cache — actual session linkage)
+- Transaction files (not cache — transaction state)
+- Instance project files (not cache — pane-to-project mapping)
+
+---
+
 ## Related Documentation
 
-- [TRANSACTION_CONTINUITY_SPEC.md](../TRANSACTION_CONTINUITY_SPEC.md) - How transactions survive compaction
-- [CLAUDE_CODE.md](./CLAUDE_CODE.md) - Claude Code specific patterns
+- [CLAUDE_CODE.md](./CLAUDE_CODE.md) - Claude Code specific patterns (includes compaction flow)
 - [MCP_AND_CLI.md](./MCP_AND_CLI.md) - MCP/CLI integration patterns
+- [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) - Bug history and debugging

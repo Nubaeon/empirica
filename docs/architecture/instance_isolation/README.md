@@ -33,3 +33,31 @@ at the database level. CWD gets reset unpredictably. Which project am I working 
 3. **Fail explicitly** - Better to error than silently use wrong project
 4. **Hooks own the linkage** for Claude Code users
 5. **TTY is the fallback** for non-Claude-Code integrations
+
+---
+
+## Automated Workflows & Containers
+
+For truly isolated automated workflows (CI/CD, parallel batch processing, scheduled jobs),
+**containers are essential** — not just for isolation but for security hardening.
+
+Empirica's file-based isolation works for interactive use cases (tmux panes, terminals).
+For automated scenarios where you need:
+
+- **Process isolation** - No shared filesystem state
+- **Security hardening** - Untrusted code execution
+- **Reproducible environments** - Consistent starting conditions
+- **Parallel scaling** - Multiple identical workers
+
+Use containerization (Docker, Podman, etc.):
+
+```bash
+# Example: Run Empirica in isolated container
+docker run -v /path/to/project:/workspace \
+  -e EMPIRICA_SESSION_DB=/workspace/.empirica/sessions/sessions.db \
+  empirica-worker empirica preflight-submit ...
+```
+
+This is out of scope for Empirica itself — use your infrastructure tooling.
+The key point: Empirica's isolation is for **interactive multi-instance**, not
+**security boundaries**.
