@@ -242,34 +242,37 @@ def _write_active_work_for_new_conversation(
 
     The pre-compact hook writes compact_handoff for project resolution,
     but this function writes active_work for CLI command resolution.
-    """
-    if not claude_session_id:
-        return False
 
+    NOTE: Even if claude_session_id is null, we still write instance_projects
+    because instance_id-based isolation still works. The active_work file
+    requires claude_session_id as its key, so that's skipped if null.
+    """
     try:
-        active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
         folder_name = Path(project_path).name if project_path else None
 
-        work_data = {
-            'project_path': project_path,
-            'folder_name': folder_name,
-            'claude_session_id': claude_session_id,
-            'empirica_session_id': empirica_session_id,
-            'source': 'post-compact',
-            'timestamp': datetime.now().isoformat(),
-            'timestamp_epoch': datetime.now().timestamp()
-        }
+        # Write active_work file only if we have claude_session_id (it's the filename key)
+        if claude_session_id:
+            active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+            work_data = {
+                'project_path': project_path,
+                'folder_name': folder_name,
+                'claude_session_id': claude_session_id,
+                'empirica_session_id': empirica_session_id,
+                'source': 'post-compact',
+                'timestamp': datetime.now().isoformat(),
+                'timestamp_epoch': datetime.now().timestamp()
+            }
+            with open(active_work_file, 'w') as f:
+                json.dump(work_data, f, indent=2)
 
-        with open(active_work_file, 'w') as f:
-            json.dump(work_data, f, indent=2)
-
-        # Also update instance_projects for consistency
+        # ALWAYS update instance_projects - instance_id isolation works even without claude_session_id
+        # This is the primary isolation mechanism for multi-pane tmux setups
         if instance_id:
             instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
             instance_file.parent.mkdir(parents=True, exist_ok=True)
             instance_data = {
                 'project_path': project_path,
-                'claude_session_id': claude_session_id,
+                'claude_session_id': claude_session_id,  # May be null, that's OK
                 'empirica_session_id': empirica_session_id,
                 'timestamp': datetime.now().isoformat()
             }

@@ -134,6 +134,16 @@ def _update_active_work(project_path: str, folder_name: str, empirica_session_id
                 except Exception:
                     pass
 
+        # Warn if claude_session_id is still null - instance isolation works but active_work
+        # cross-referencing will be limited. Hooks (session-init, post-compact) are responsible
+        # for establishing the claude_session_id linkage.
+        if not claude_session_id and instance_id:
+            logger.warning(
+                f"claude_session_id unknown for {instance_id}. Instance isolation works via "
+                f"instance_id, but active_work cross-referencing limited. This is normal if "
+                f"called via Bash before any hook established the linkage."
+            )
+
         # Write instance_projects FIRST - works via Bash tool where tty fails
         if instance_id:
             instance_dir = marker_dir / 'instance_projects'
