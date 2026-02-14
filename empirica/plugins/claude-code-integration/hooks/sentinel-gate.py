@@ -173,7 +173,10 @@ def is_empirica_paused() -> bool:
 # Also includes administrative commands (project-switch, project-list) that should always be allowed
 EMPIRICA_TIER1_PREFIXES = (
     'empirica epistemics-list', 'empirica epistemics-show',
-    'empirica goals-list', 'empirica get-goal-progress', 'empirica get-goal-subtasks',
+    'empirica goals-list', 'empirica goal-list', 'empirica gl',  # Goal list + aliases
+    'empirica goals-progress', 'empirica goal-progress',  # Goal progress + alias
+    'empirica get-goal-progress', 'empirica get-goal-subtasks', 'empirica goals-get-subtasks',
+    'empirica goals-discover', 'empirica goal-analysis',  # Goal queries
     'empirica project-bootstrap', 'empirica project-search',
     'empirica project-switch', 'empirica project-list',  # Administrative - always allowed
     'empirica session-snapshot', 'empirica get-session-summary',
@@ -204,8 +207,12 @@ EMPIRICA_TIER2_PREFIXES = (
     'empirica preflight-submit', 'empirica check-submit', 'empirica postflight-submit',
     'empirica finding-log', 'empirica unknown-log', 'empirica deadend-log',
     'empirica mistake-log', 'empirica log-mistake',
-    'empirica goals-create', 'empirica goals-complete', 'empirica goals-add-subtask',
-    'empirica goals-complete-subtask', 'empirica goals-claim',
+    'empirica goals-create', 'empirica goal-create', 'empirica gc',  # Goal create + aliases
+    'empirica goals-complete', 'empirica goal-complete',  # Goal complete + alias
+    'empirica goals-add-subtask', 'empirica goal-add-subtask',  # Add subtask + alias
+    'empirica goals-complete-subtask', 'empirica goal-complete-subtask',  # Complete subtask + alias
+    'empirica goals-add-dependency', 'empirica goals-resume',  # Goal management
+    'empirica goals-claim',
     'empirica session-create', 'empirica session-end',
     'empirica create-goal', 'empirica add-subtask', 'empirica complete-subtask',
     'empirica create-handoff', 'empirica resume-goal',
