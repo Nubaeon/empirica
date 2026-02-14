@@ -4,6 +4,7 @@ Project Commands - Multi-repo/multi-session project tracking
 
 import json
 import logging
+import os
 import sqlite3
 from pathlib import Path
 from typing import Optional, Dict, List, Any
