@@ -134,7 +134,22 @@ TRANSITION_COMMANDS = (
 )
 
 
-PAUSE_FILE = Path.home() / '.empirica' / 'sentinel_paused'
+PAUSE_FILE_BASE = Path.home() / '.empirica'
+PAUSE_FILE_GLOBAL = PAUSE_FILE_BASE / 'sentinel_paused'
+
+
+def get_pause_file_path() -> Path:
+    """Get instance-specific pause file path.
+
+    Returns ~/.empirica/sentinel_paused_{instance_id} for per-instance control.
+    Falls back to ~/.empirica/sentinel_paused global file if no instance_id.
+    """
+    instance_id = get_instance_id()
+    if instance_id:
+        # Sanitize instance_id for filename (remove special chars)
+        safe_id = instance_id.replace('/', '-').replace('%', '')
+        return PAUSE_FILE_BASE / f'sentinel_paused_{safe_id}'
+    return PAUSE_FILE_GLOBAL
 
 
 def get_instance_id() -> Optional[str]:
@@ -162,10 +177,18 @@ def get_instance_id() -> Optional[str]:
 def is_empirica_paused() -> bool:
     """Check if Empirica tracking is paused (off-the-record mode).
 
-    Signal file: ~/.empirica/sentinel_paused (JSON with timestamp, reason).
+    Checks instance-specific pause file first, then global.
+    Instance: ~/.empirica/sentinel_paused_{instance_id}
+    Global:   ~/.empirica/sentinel_paused
+
     This is the cheapest check - no DB needed. Called before any other logic.
     """
-    return PAUSE_FILE.exists()
+    # Check instance-specific pause file first
+    instance_pause = get_pause_file_path()
+    if instance_pause.exists():
+        return True
+    # Fallback to global pause (backward compat, also allows pausing ALL instances)
+    return PAUSE_FILE_GLOBAL.exists()
 
 
 # Tiered Empirica CLI whitelist (replaces blanket 'empirica ' whitelist)
