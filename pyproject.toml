@@ -81,9 +81,15 @@ mcp = [
     "mcp>=1.0.0",
 ]
 
+# Lens features (Epistemic Lens - text extraction for delta scoring)
+lens = [
+    "trafilatura>=1.5.0",
+    "pymupdf4llm>=0.0.15",
+]
+
 # All optional features
 all = [
-    "empirica[api,vector,vision,mcp]",
+    "empirica[api,vector,vision,mcp,lens]",
 ]
 
 test = [

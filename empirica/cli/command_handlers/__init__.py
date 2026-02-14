@@ -172,6 +172,12 @@ from .lesson_commands import (
     handle_lesson_stats_command,
     handle_lesson_embed_command,
 )
+from .lens_commands import (
+    handle_lens_profile_command,
+    handle_lens_ingest_command,
+    handle_lens_delta_command,
+    handle_lens_status_command,
+)
 
 
 # Export all handlers
@@ -364,6 +370,12 @@ __all__ = [
 
     # Artifact generation
     'handle_artifacts_generate_command',
+
+    # Lens commands (Epistemic Lens - Human Epistemic State)
+    'handle_lens_profile_command',
+    'handle_lens_ingest_command',
+    'handle_lens_delta_command',
+    'handle_lens_status_command',
 
     # Session-end command
     # 'handle_session_end_command',  # removed - use handoff-create

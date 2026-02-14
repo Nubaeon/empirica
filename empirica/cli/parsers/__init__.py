@@ -67,6 +67,7 @@ from .concept_graph_parsers import add_concept_graph_parsers
 from .mcp_parsers import add_mcp_parsers
 from .message_parsers import add_message_parsers
 from .memory_parsers import add_memory_parsers
+from .lens_parsers import add_lens_parsers
 
 __all__ = [
     'format_help_text',
@@ -98,4 +99,5 @@ __all__ = [
     'add_mcp_parsers',
     'add_message_parsers',
     'add_memory_parsers',
+    'add_lens_parsers',
 ]

@@ -64,6 +64,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats'],
                     'MCP Server': ['mcp-start', 'mcp-stop', 'mcp-status', 'mcp-test', 'mcp-list-tools', 'mcp-call'],
                     'Memory': ['memory-prime', 'memory-scope', 'memory-value', 'pattern-check', 'session-rollup', 'memory-report'],
+                    'Lens': ['lens-profile', 'lens-ingest', 'lens-delta', 'lens-status'],
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -111,6 +112,7 @@ from .parsers import (
     add_mcp_parsers,
     add_message_parsers,
     add_memory_parsers,
+    add_lens_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -177,6 +179,12 @@ from .command_handlers.memory_commands import (
     handle_session_rollup_command,
     handle_memory_report_command,
 )
+from .command_handlers.lens_commands import (
+    handle_lens_profile_command,
+    handle_lens_ingest_command,
+    handle_lens_delta_command,
+    handle_lens_status_command,
+)
 
 
 def _get_version():
@@ -241,6 +249,7 @@ def create_argument_parser():
     add_mcp_parsers(subparsers)
     add_message_parsers(subparsers)
     add_memory_parsers(subparsers)
+    add_lens_parsers(subparsers)
 
     return parser
 
@@ -507,6 +516,12 @@ def main(args=None):
             'session-rollup': handle_session_rollup_command,
             'memory-report': handle_memory_report_command,
 
+            # Lens commands (Epistemic Lens - HESM)
+            'lens-profile': handle_lens_profile_command,
+            'lens-ingest': handle_lens_ingest_command,
+            'lens-delta': handle_lens_delta_command,
+            'lens-status': handle_lens_status_command,
+
             # === ALIASES ===
             # Argparse registers aliases for --help, but handler lookup needs them too
             # CASCADE aliases
@@ -546,6 +561,11 @@ def main(args=None):
             'msg-read': handle_message_read_command,
             'mr': handle_message_read_command,
             'msg-reply': handle_message_reply_command,
+            # Lens aliases
+            'lp': handle_lens_profile_command,
+            'li': handle_lens_ingest_command,
+            'ld': handle_lens_delta_command,
+            'ls-status': handle_lens_status_command,
         }
         
         if parsed_args.command in command_handlers:
