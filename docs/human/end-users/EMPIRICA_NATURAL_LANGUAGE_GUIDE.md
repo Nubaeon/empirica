@@ -253,6 +253,128 @@ Claude handles the rest - tool selection, artifact logging, transaction manageme
 
 ---
 
+## 🔮 Predictive Tool Selection (Future Direction)
+
+Empirica's grounded prediction system can suggest tool chains based on task description. This enables Claude to predict not just epistemic vectors but the optimal workflow.
+
+### Current State → Future State
+
+**Current:** 145+ granular CLI commands
+**Future:** Higher-level abstractions with predictive tool chains
+
+```
+# Current (granular)
+empirica preflight-submit --session-id xyz
+empirica finding-log --finding "..." --impact 0.8
+empirica check-submit --decision proceed
+empirica postflight-submit --reasoning "..."
+
+# Future (abstracted)
+empirica transaction start --scope "implement auth endpoint"
+empirica noetic log finding "..." --impact 0.8
+empirica transaction gate
+empirica transaction close
+```
+
+### Proposed Abstraction Layers
+
+| Layer | Commands | Purpose |
+|-------|----------|---------|
+| **transaction** | `start`, `gate`, `close`, `adopt` | Measurement boundaries |
+| **noetic** | `log`, `resolve`, `investigate`, `search` | Investigation artifacts |
+| **praxic** | `goal`, `act`, `complete`, `subtask` | Action artifacts |
+| **agent** | `spawn`, `report`, `orchestrate`, `parallel` | Multi-agent coordination |
+| **project** | `init`, `switch`, `bootstrap`, `handoff` | Project lifecycle |
+| **calibrate** | `report`, `drift`, `trajectory` | Calibration & monitoring |
+
+### Tool-Use Prediction
+
+When Claude receives a task, Empirica can predict the optimal workflow:
+
+**Input:**
+> "Implement OAuth2 authentication with PKCE for mobile clients"
+
+**Predicted Workflow:**
+```yaml
+task_analysis:
+  complexity: 0.7
+  domains: [auth, security, api]
+  estimated_transactions: 2
+
+transaction_1:
+  phase: noetic
+  tools_predicted:
+    - Grep: "OAuth2|PKCE|auth" in codebase
+    - Read: existing auth files
+    - WebSearch: "PKCE implementation patterns"
+  artifacts_expected:
+    - findings: 3-5
+    - unknowns: 1-2
+  gate_confidence_threshold: 0.75
+
+transaction_2:
+  phase: praxic
+  tools_predicted:
+    - Edit: auth endpoint files
+    - Write: new PKCE handler
+    - Bash: run auth tests
+  goals:
+    - "Implement PKCE flow"
+    - "Add token endpoint"
+    - "Write integration tests"
+```
+
+### Grounded Prediction Integration
+
+The prediction system uses:
+1. **Historical patterns** - What tools were used for similar tasks?
+2. **Calibration data** - How accurate were past predictions?
+3. **Domain signatures** - What tools work best for auth/perf/architecture?
+4. **Complexity estimation** - How many transactions will this need?
+
+```
+empirica suggest-workflow --task "Fix the authentication bug"
+
+Predicted workflow:
+├── Transaction 1 (noetic)
+│   ├── Grep: auth patterns
+│   ├── Read: auth files
+│   ├── finding-log: expected 2-3
+│   └── CHECK gate
+│
+└── Transaction 2 (praxic)
+    ├── Edit: fix implementation
+    ├── Bash: run tests
+    ├── goals-complete
+    └── POSTFLIGHT
+
+Confidence: 0.82 (based on 47 similar tasks)
+```
+
+### Why This Matters
+
+1. **Reduced cognitive load** - Claude doesn't decide tools, system predicts
+2. **Better calibration** - Compare predicted vs actual tool usage
+3. **Workflow optimization** - Learn which tool chains work best
+4. **Earned autonomy** - Accurate predictions → less human oversight
+
+### Deprecation Candidates
+
+As abstractions mature, granular commands can be deprecated:
+
+| Deprecate | Replace With |
+|-----------|--------------|
+| `preflight-submit` | `transaction start` |
+| `check-submit` | `transaction gate` |
+| `postflight-submit` | `transaction close` |
+| `finding-log`, `unknown-log`, `deadend-log` | `noetic log <type>` |
+| `goals-create`, `goals-complete` | `praxic goal <action>` |
+| `agent-spawn`, `agent-report` | `agent <action>` |
+
+The granular commands remain available for power users and scripting, but the natural workflow uses abstractions.
+
+---
+
 ## 🗣️ Natural Language Patterns for Empirica
 
 ### 1. Starting a Project
