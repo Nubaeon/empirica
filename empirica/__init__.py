@@ -15,7 +15,7 @@ Key Features:
 Version: 1.5.1
 """
 
-__version__ = "1.5.1"
+__version__ = "1.5.2"
 __author__ = "Empirica Project"
 
 # Lazy imports — heavy modules (git, cryptography, jsonschema) are only
