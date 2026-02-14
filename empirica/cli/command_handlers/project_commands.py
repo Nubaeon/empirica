@@ -121,6 +121,24 @@ def _update_active_work(project_path: str, folder_name: str, empirica_session_id
         tmux_pane = os.environ.get('TMUX_PANE')
         instance_id = f"tmux_{tmux_pane.lstrip('%')}" if tmux_pane else None
 
+        # When TMUX_PANE is absent (Bash tool subprocess), resolve instance_id
+        # from claude_session_id by scanning instance_projects/ files.
+        # Hooks (which DO have TMUX_PANE) write claude_session_id to instance_projects
+        # at session start — this reverse-lookup finds the correct tmux pane.
+        if not instance_id and claude_session_id:
+            instance_dir = marker_dir / 'instance_projects'
+            if instance_dir.exists():
+                for ip_file in instance_dir.glob('tmux_*.json'):
+                    try:
+                        with open(ip_file, 'r') as f:
+                            ip_data = json.load(f)
+                        if ip_data.get('claude_session_id') == claude_session_id:
+                            instance_id = ip_file.stem  # e.g. "tmux_14"
+                            logger.debug(f"Resolved instance_id={instance_id} from claude_session_id match in {ip_file.name}")
+                            break
+                    except Exception:
+                        continue
+
         # PRESERVE existing claude_session_id if TTY session doesn't have it
         # This handles the case where session-init hook ran and wrote claude_session_id
         # to instance_projects, but TTY session wasn't updated (e.g., Bash tool context)
