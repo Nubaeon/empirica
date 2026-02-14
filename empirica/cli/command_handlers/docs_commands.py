@@ -862,11 +862,16 @@ class EpistemicDocsAgent:
         return refs[:5]  # Limit results
 
     def _detect_project_id(self) -> str | None:
-        """Detect project ID from .empirica config."""
+        """Detect project ID from sessions.db (authoritative) or .empirica config (fallback)."""
         try:
-            import yaml
+            # Primary: sessions.db is authoritative
+            from empirica.utils.session_resolver import _get_project_id_from_local_db
+            db_project_id = _get_project_id_from_local_db(self.root)
+            if db_project_id:
+                return db_project_id
 
-            # Try reading from .empirica/project.yaml (primary method)
+            # Fallback: project.yaml for fresh projects
+            import yaml
             project_yaml = self.root / ".empirica" / "project.yaml"
             if project_yaml.exists():
                 with open(project_yaml, 'r') as f:

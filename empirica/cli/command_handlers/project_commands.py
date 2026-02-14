@@ -509,23 +509,26 @@ def handle_project_bootstrap_command(args):
             return None
 
         # Auto-detect project if not provided
-        # Priority: 1) local .empirica/project.yaml, 2) git remote URL
+        # Priority: 1) sessions.db (authoritative), 2) project.yaml (fallback), 3) git remote URL
         if not project_id:
-            # Method 1: Read from local .empirica/project.yaml (highest priority)
-            # This is what project-init creates - no git remote required
+            # Method 1: Get project_id from sessions.db (authoritative) or project.yaml (fallback)
             # Use active context first, fall back to CWD
             try:
-                import yaml
                 import os
-                from empirica.utils.session_resolver import get_active_project_path
+                from empirica.utils.session_resolver import get_active_project_path, _get_project_id_from_local_db
                 context_project = get_active_project_path()
                 base_path = context_project if context_project else os.getcwd()
-                project_yaml = os.path.join(base_path, '.empirica', 'project.yaml')
-                if os.path.exists(project_yaml):
-                    with open(project_yaml, 'r') as f:
-                        project_config = yaml.safe_load(f)
-                        if project_config and project_config.get('project_id'):
-                            project_id = project_config['project_id']
+                # Primary: sessions.db is authoritative
+                project_id = _get_project_id_from_local_db(base_path)
+                # Fallback: project.yaml for fresh projects
+                if not project_id:
+                    import yaml
+                    project_yaml = os.path.join(base_path, '.empirica', 'project.yaml')
+                    if os.path.exists(project_yaml):
+                        with open(project_yaml, 'r') as f:
+                            project_config = yaml.safe_load(f)
+                            if project_config and project_config.get('project_id'):
+                                project_id = project_config['project_id']
             except Exception:
                 pass  # Fall through to git remote method
 

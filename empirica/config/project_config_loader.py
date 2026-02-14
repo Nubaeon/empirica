@@ -74,29 +74,43 @@ class ProjectConfig:
 def load_project_config(project_root: Optional[Path] = None) -> Optional[ProjectConfig]:
     """
     Load project configuration from .empirica/project.yaml
-    
+
+    Note: project_id is taken from sessions.db (authoritative) if available,
+    with project.yaml as fallback for fresh projects. Other config data
+    (name, subjects, etc.) always comes from project.yaml.
+
     Args:
         project_root: Root directory of project (defaults to current directory)
-        
+
     Returns:
         ProjectConfig if found, None otherwise
     """
     if project_root is None:
         project_root = Path.cwd()
-    
+
     config_path = project_root / '.empirica' / 'project.yaml'
-    
+
     if not config_path.exists():
         logger.debug(f"No project config found at {config_path}")
         return None
-    
+
     try:
         with open(config_path, 'r') as f:
             config_data = yaml.safe_load(f)
-        
+
+        # Override project_id with authoritative value from sessions.db
+        # This prevents UUID mismatch when yaml and workspace.db diverge
+        try:
+            from empirica.utils.session_resolver import _get_project_id_from_local_db
+            db_project_id = _get_project_id_from_local_db(project_root)
+            if db_project_id:
+                config_data['project_id'] = db_project_id
+        except Exception:
+            pass  # Keep yaml project_id as fallback
+
         logger.info(f"Loaded project config: {config_data.get('name', 'Unknown')}")
         return ProjectConfig(config_data)
-    
+
     except Exception as e:
         logger.error(f"Failed to load project config from {config_path}: {e}")
         return None
