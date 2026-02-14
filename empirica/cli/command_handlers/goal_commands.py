@@ -508,22 +508,37 @@ def handle_goals_add_subtask_command(args):
     """Handle goals-add-subtask command"""
     try:
         from empirica.core.tasks.repository import TaskRepository
+        from empirica.core.goals.repository import GoalRepository
         from empirica.core.tasks.types import SubTask, EpistemicImportance, TaskStatus
         import uuid
-        
+
         # Parse arguments
         goal_id = args.goal_id
         description = args.description
         importance = EpistemicImportance[args.importance.upper()] if args.importance else EpistemicImportance.MEDIUM
         dependencies = parse_json_safely(args.dependencies) if args.dependencies else []
         estimated_tokens = getattr(args, 'estimated_tokens', None)
-        
+
+        # Resolve short ID prefix to full ID
+        goal_repo = GoalRepository()
+        goal = goal_repo.get_goal(goal_id)
+        if not goal:
+            goal_repo.close()
+            result = {"ok": False, "error": f"Goal not found: {goal_id}"}
+            if hasattr(args, 'output') and args.output == 'json':
+                print(json.dumps(result))
+            else:
+                print(f"❌ Goal not found: {goal_id}")
+            return result
+        resolved_goal_id = goal.id
+        goal_repo.close()
+
         # Use the real Task repository
         task_repo = TaskRepository()
-        
+
         # Create real SubTask object
         subtask = SubTask.create(
-            goal_id=goal_id,
+            goal_id=resolved_goal_id,
             description=description,
             epistemic_importance=importance,
             dependencies=dependencies,
@@ -865,18 +880,18 @@ def handle_goals_progress_command(args):
         goal_repo = GoalRepository()
         task_repo = TaskRepository()
         
-        # Get the goal
+        # Get the goal (supports short ID prefix matching)
         goal = goal_repo.get_goal(goal_id)
         if not goal:
             result = {
                 "ok": False,
                 "goal_id": goal_id,
-                "message": "Goal not found",
+                "message": "Goal not found (check ID or use longer prefix if ambiguous)",
                 "timestamp": time.time()
             }
         else:
-            # Get all subtasks for this goal
-            subtasks = task_repo.get_goal_subtasks(goal_id)
+            # Get all subtasks using the resolved full goal ID
+            subtasks = task_repo.get_goal_subtasks(goal.id)
             
             # Calculate real progress
             total_subtasks = len(subtasks)
@@ -1177,13 +1192,20 @@ def handle_goals_get_subtasks_command(args):
     """Handle goals-get-subtasks command - get detailed subtask information"""
     try:
         from empirica.core.tasks.repository import TaskRepository
-        
+        from empirica.core.goals.repository import GoalRepository
+
         # Parse arguments
         goal_id = args.goal_id
-        
-        # Use task repository to get subtasks
+
+        # Resolve short ID prefix to full ID first
+        goal_repo = GoalRepository()
+        goal = goal_repo.get_goal(goal_id)
+        resolved_goal_id = goal.id if goal else goal_id
+        goal_repo.close()
+
+        # Use task repository to get subtasks with resolved ID
         task_repo = TaskRepository()
-        subtasks = task_repo.get_goal_subtasks(goal_id)
+        subtasks = task_repo.get_goal_subtasks(resolved_goal_id)
         
         if not subtasks:
             result = {

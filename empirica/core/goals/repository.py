@@ -172,27 +172,44 @@ class GoalRepository:
     
     def get_goal(self, goal_id: str) -> Optional[Goal]:
         """
-        Retrieve goal by ID
-        
+        Retrieve goal by ID (supports short ID prefix matching)
+
         Args:
-            goal_id: Goal identifier
-            
+            goal_id: Goal identifier (full UUID or short prefix like '8f5e49f2')
+
         Returns:
-            Goal object or None if not found
+            Goal object or None if not found (also None if prefix is ambiguous)
         """
         try:
+            # First try exact match
             cursor = self.db.conn.execute(
                 "SELECT goal_data FROM goals WHERE id = ?",
                 (goal_id,)
             )
             row = cursor.fetchone()
-            
+
             if row:
                 goal_dict = json.loads(row[0])
                 return Goal.from_dict(goal_dict)
-            
+
+            # Fallback: prefix match for short IDs (like git short hashes)
+            cursor = self.db.conn.execute(
+                "SELECT goal_data FROM goals WHERE id LIKE ?",
+                (f"{goal_id}%",)
+            )
+            rows = cursor.fetchall()
+
+            if len(rows) == 1:
+                # Unique prefix match
+                goal_dict = json.loads(rows[0][0])
+                return Goal.from_dict(goal_dict)
+            elif len(rows) > 1:
+                # Ambiguous prefix - log warning and return None
+                logger.warning(f"Ambiguous goal prefix '{goal_id}' matches {len(rows)} goals")
+                return None
+
             return None
-            
+
         except Exception as e:
             logger.error(f"Error retrieving goal {goal_id}: {e}")
             return None
