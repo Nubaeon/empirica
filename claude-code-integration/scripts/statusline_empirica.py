@@ -1081,6 +1081,7 @@ def main():
         # NOTE: We do NOT fall back to global ~/.empirica/ to prevent cross-project data leakage
         project_path = None
         is_local_project = False
+        active_work_project_name = None  # Authoritative name from project-switch
 
         # Priority 0: Claude session_id from stdin → active_work file → project_path
         if stdin_claude_session_id:
@@ -1091,6 +1092,27 @@ def main():
                     with open(active_work_path, 'r') as f:
                         active_work = _json.load(f)
                     aw_project_path = active_work.get('project_path')
+                    active_work_project_name = active_work.get('folder_name')
+                    if aw_project_path:
+                        aw_db = Path(aw_project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                        if aw_db.exists():
+                            project_path = aw_project_path
+                            is_local_project = True
+            except Exception:
+                pass
+
+        # Priority 0b: Canonical active_work.json (no session_id needed)
+        # Always updated by project-switch — works even without stdin context
+        if not project_path:
+            try:
+                import json as _json
+                canonical_work_path = Path.home() / '.empirica' / 'active_work.json'
+                if canonical_work_path.exists():
+                    with open(canonical_work_path, 'r') as f:
+                        active_work = _json.load(f)
+                    aw_project_path = active_work.get('project_path')
+                    if not active_work_project_name:
+                        active_work_project_name = active_work.get('folder_name')
                     if aw_project_path:
                         aw_db = Path(aw_project_path) / '.empirica' / 'sessions' / 'sessions.db'
                         if aw_db.exists():
@@ -1160,17 +1182,18 @@ def main():
 
         # Get project_id and project_name from session for filtering and display
         project_id = None
-        project_name = None
+        project_name = active_work_project_name  # Priority: active_work file (set by project-switch)
         if session:
             cursor = db.conn.cursor()
             cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session['session_id'],))
             row = cursor.fetchone()
             if row and row[0]:
                 project_id = row[0]
-                cursor.execute("SELECT name FROM projects WHERE id = ?", (project_id,))
-                prow = cursor.fetchone()
-                if prow:
-                    project_name = prow[0]
+                if not project_name:
+                    cursor.execute("SELECT name FROM projects WHERE id = ?", (project_id,))
+                    prow = cursor.fetchone()
+                    if prow:
+                        project_name = prow[0]
 
         # If no session yet, still try to get project name from the most recent session
         if not project_name:
