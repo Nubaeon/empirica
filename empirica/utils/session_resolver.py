@@ -877,8 +877,23 @@ def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
         logger.debug(f"get_active_project_path: from instance_projects: {instance_path}")
         return instance_path
 
+    # Priority 2: Canonical active_work.json (written by project-switch)
+    # This is the last resort before failing — covers non-tmux terminals
+    # where instance_projects doesn't exist and no claude_session_id is available.
+    canonical_path = Path.home() / '.empirica' / 'active_work.json'
+    if canonical_path.exists():
+        try:
+            with open(canonical_path, 'r') as f:
+                data = json.load(f)
+                canonical_project_path = data.get('project_path')
+                if canonical_project_path:
+                    logger.debug(f"get_active_project_path: from canonical active_work.json: {canonical_project_path}")
+                    return canonical_project_path
+        except Exception:
+            pass
+
     # NO CWD FALLBACK - fail explicitly
-    logger.debug("get_active_project_path: could not resolve (no active_work or instance_projects)")
+    logger.debug("get_active_project_path: could not resolve (no active_work, instance_projects, or canonical)")
     return None
 
 
@@ -1153,28 +1168,9 @@ def get_active_context(claude_session_id: str = None) -> dict:
             except Exception:
                 pass
 
-    # Priority 0b: Canonical active_work.json (no session suffix)
-    # CLI commands via Bash subprocess have no claude_session_id and no TMUX_PANE.
-    # project-switch writes to both active_work_{id}.json AND active_work.json.
-    # Without this fallback, SessionDatabase() resolves to the wrong project DB.
-    if not context['project_path']:
-        canonical_work_file = Path.home() / '.empirica' / 'active_work.json'
-        if canonical_work_file.exists():
-            try:
-                with open(canonical_work_file, 'r') as f:
-                    data = json.load(f)
-                    if not context['empirica_session_id']:
-                        context['empirica_session_id'] = data.get('empirica_session_id')
-                    if not context['project_path']:
-                        context['project_path'] = data.get('project_path')
-                    if not context['claude_session_id']:
-                        context['claude_session_id'] = data.get('claude_session_id')
-                    logger.debug(f"get_active_context: loaded from canonical active_work.json")
-            except Exception:
-                pass
-
-    # Priority 1: Instance projects (HIGHER priority - updated by project-switch)
-    # This is the most reliable source when user switches projects
+    # Priority 1: Instance projects (HIGHER priority - instance-specific isolation)
+    # MUST come before canonical active_work.json to prevent cross-pane pollution.
+    # When multiple panes exist, each has its own instance_projects/tmux_N.json.
     if context['instance_id'] and (not context['empirica_session_id'] or not context['project_path']):
         instance_file = Path.home() / '.empirica' / 'instance_projects' / f"{context['instance_id']}.json"
         if instance_file.exists():
@@ -1200,6 +1196,25 @@ def get_active_context(claude_session_id: str = None) -> dict:
                 context['empirica_session_id'] = tty_session.get('empirica_session_id')
             if not context['project_path']:
                 context['project_path'] = tty_session.get('project_path')
+
+    # Priority 3: Canonical active_work.json (LAST RESORT — no session suffix)
+    # Only used when ALL instance-specific mechanisms fail (no claude_session_id,
+    # no TMUX_PANE, no TTY session). Prevents cross-pane pollution in multi-pane setups.
+    if not context['project_path']:
+        canonical_work_file = Path.home() / '.empirica' / 'active_work.json'
+        if canonical_work_file.exists():
+            try:
+                with open(canonical_work_file, 'r') as f:
+                    data = json.load(f)
+                    if not context['empirica_session_id']:
+                        context['empirica_session_id'] = data.get('empirica_session_id')
+                    if not context['project_path']:
+                        context['project_path'] = data.get('project_path')
+                    if not context['claude_session_id']:
+                        context['claude_session_id'] = data.get('claude_session_id')
+                    logger.debug(f"get_active_context: loaded from canonical active_work.json (last resort)")
+            except Exception:
+                pass
 
     # Load transaction from transaction file
     if context['project_path']:

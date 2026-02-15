@@ -98,19 +98,7 @@ def get_active_project_path(claude_session_id: str = None) -> Optional[str]:
             except Exception:
                 pass
 
-    # Canonical active_work.json (no session_id needed)
-    # Always updated by project-switch — works even without claude_session_id
-    if not active_work_path:
-        canonical_work_file = Path.home() / '.empirica' / 'active_work.json'
-        if canonical_work_file.exists():
-            try:
-                with open(canonical_work_file, 'r') as f:
-                    data = json.load(f)
-                    active_work_path = data.get('project_path')
-            except Exception:
-                pass
-
-    # Read instance_projects (TMUX_PANE-based)
+    # Read instance_projects (TMUX_PANE-based) - AUTHORITATIVE source
     instance_id = get_instance_id()
     if instance_id:
         instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
@@ -122,14 +110,24 @@ def get_active_project_path(claude_session_id: str = None) -> Optional[str]:
             except Exception:
                 pass
 
-    # PRIORITY: active_work wins (explicit user intent from project-switch)
-    # Self-heal: if instance_projects disagrees, active_work is more current
+    # PRIORITY: session-specific active_work wins (from hooks with claude_session_id)
     if active_work_path:
         return active_work_path
 
-    # Fallback: instance_projects
+    # Instance-specific files win over canonical (prevents cross-pane pollution)
     if instance_path:
         return instance_path
+
+    # Last resort: Canonical active_work.json (no session_id needed)
+    # Only used when ALL instance-specific mechanisms fail
+    canonical_work_file = Path.home() / '.empirica' / 'active_work.json'
+    if canonical_work_file.exists():
+        try:
+            with open(canonical_work_file, 'r') as f:
+                data = json.load(f)
+                return data.get('project_path')
+        except Exception:
+            pass
 
     return None
 

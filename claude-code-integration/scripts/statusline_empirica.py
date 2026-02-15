@@ -1101,26 +1101,6 @@ def main():
             except Exception:
                 pass
 
-        # Priority 0b: Canonical active_work.json (no session_id needed)
-        # Always updated by project-switch — works even without stdin context
-        if not project_path:
-            try:
-                import json as _json
-                canonical_work_path = Path.home() / '.empirica' / 'active_work.json'
-                if canonical_work_path.exists():
-                    with open(canonical_work_path, 'r') as f:
-                        active_work = _json.load(f)
-                    aw_project_path = active_work.get('project_path')
-                    if not active_work_project_name:
-                        active_work_project_name = active_work.get('folder_name')
-                    if aw_project_path:
-                        aw_db = Path(aw_project_path) / '.empirica' / 'sessions' / 'sessions.db'
-                        if aw_db.exists():
-                            project_path = aw_project_path
-                            is_local_project = True
-            except Exception:
-                pass
-
         # Priority 1: EMPIRICA_PROJECT_PATH env var
         if not project_path:
             project_path = os.getenv('EMPIRICA_PROJECT_PATH')
@@ -1167,6 +1147,27 @@ def main():
                     break
                 if parent == Path.home() or parent == parent.parent:
                     break
+
+        # Priority 5 (LAST RESORT): Canonical active_work.json (no session suffix)
+        # Only used when ALL instance-specific mechanisms fail
+        # Must be AFTER instance_projects/TTY to prevent cross-pane pollution
+        if not project_path:
+            try:
+                import json as _json
+                canonical_work_file = Path.home() / '.empirica' / 'active_work.json'
+                if canonical_work_file.exists():
+                    with open(canonical_work_file, 'r') as f:
+                        data = _json.load(f)
+                    canonical_project_path = data.get('project_path')
+                    if canonical_project_path:
+                        canonical_db = Path(canonical_project_path) / '.empirica' / 'sessions' / 'sessions.db'
+                        if canonical_db.exists():
+                            project_path = canonical_project_path
+                            is_local_project = True
+                            if not active_work_project_name:
+                                active_work_project_name = data.get('folder_name')
+            except Exception:
+                pass
 
         if project_path:
             db_path = Path(project_path) / '.empirica' / 'sessions' / 'sessions.db'
