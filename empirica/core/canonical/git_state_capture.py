@@ -36,6 +36,31 @@ class GitStateCapture:
             git_repo_path: Path to git repository
         """
         self.git_repo_path = git_repo_path
+        self._is_git_repo: Optional[bool] = None
+
+    def is_git_repo(self) -> bool:
+        """
+        Check if the path is inside a git repository.
+
+        Returns:
+            True if inside a git work tree, False otherwise.
+        """
+        if self._is_git_repo is not None:
+            return self._is_git_repo
+
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--is-inside-work-tree"],
+                capture_output=True,
+                text=True,
+                cwd=self.git_repo_path,
+                timeout=2
+            )
+            self._is_git_repo = result.returncode == 0 and result.stdout.strip() == "true"
+        except Exception:
+            self._is_git_repo = False
+
+        return self._is_git_repo
 
     def capture_state(self, get_last_checkpoint_fn: Optional[callable] = None) -> Dict[str, Any]:
         """
@@ -52,6 +77,11 @@ class GitStateCapture:
             - commits_since_last_checkpoint: List of commits since last checkpoint
             - uncommitted_changes: Working directory changes
         """
+        # Skip silently for non-git projects
+        if not self.is_git_repo():
+            logger.debug(f"Not a git repository: {self.git_repo_path}")
+            return {}
+
         try:
             # Get HEAD commit SHA
             head_result = subprocess.run(
@@ -63,7 +93,7 @@ class GitStateCapture:
             )
 
             if head_result.returncode != 0:
-                logger.warning("Failed to get HEAD commit")
+                logger.debug("Failed to get HEAD commit (empty repo or detached HEAD)")
                 return {}
 
             head_commit = head_result.stdout.strip()
