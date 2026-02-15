@@ -1153,6 +1153,26 @@ def get_active_context(claude_session_id: str = None) -> dict:
             except Exception:
                 pass
 
+    # Priority 0b: Canonical active_work.json (no session suffix)
+    # CLI commands via Bash subprocess have no claude_session_id and no TMUX_PANE.
+    # project-switch writes to both active_work_{id}.json AND active_work.json.
+    # Without this fallback, SessionDatabase() resolves to the wrong project DB.
+    if not context['project_path']:
+        canonical_work_file = Path.home() / '.empirica' / 'active_work.json'
+        if canonical_work_file.exists():
+            try:
+                with open(canonical_work_file, 'r') as f:
+                    data = json.load(f)
+                    if not context['empirica_session_id']:
+                        context['empirica_session_id'] = data.get('empirica_session_id')
+                    if not context['project_path']:
+                        context['project_path'] = data.get('project_path')
+                    if not context['claude_session_id']:
+                        context['claude_session_id'] = data.get('claude_session_id')
+                    logger.debug(f"get_active_context: loaded from canonical active_work.json")
+            except Exception:
+                pass
+
     # Priority 1: Instance projects (HIGHER priority - updated by project-switch)
     # This is the most reliable source when user switches projects
     if context['instance_id'] and (not context['empirica_session_id'] or not context['project_path']):
