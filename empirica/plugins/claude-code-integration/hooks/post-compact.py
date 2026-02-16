@@ -29,16 +29,26 @@ except ImportError:
 
 
 def _get_instance_id() -> Optional[str]:
-    """Derive instance ID from environment. TMUX_PANE → TTY → 'default'."""
+    """Derive instance ID from environment. TMUX_PANE → TERM_SESSION_ID → WINDOWID → 'default'.
+
+    NOTE: os.ttyname(sys.stdin.fileno()) is NOT attempted here because hooks
+    receive stdin as a pipe from Claude Code, so it always fails. Use env vars
+    that are reliably inherited instead.
+    """
     tmux_pane = os.environ.get('TMUX_PANE')
     if tmux_pane:
         return f"tmux_{tmux_pane.lstrip('%')}"
-    try:
-        tty_path = os.ttyname(sys.stdin.fileno())
-        safe = tty_path.replace('/', '_').lstrip('_').replace('dev_', '')
-        return f"term_{safe}"
-    except Exception:
-        pass
+
+    # macOS Terminal.app session (matches resolver priority chain)
+    term_session = os.environ.get('TERM_SESSION_ID')
+    if term_session:
+        return f"term:{term_session[:16]}"
+
+    # X11 window ID
+    window_id = os.environ.get('WINDOWID')
+    if window_id:
+        return f"x11:{window_id}"
+
     return "default"
 
 
