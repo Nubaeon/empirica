@@ -254,20 +254,25 @@ def format_context(ctx: dict) -> str:
 def _get_instance_id() -> str:
     """
     Derive instance ID from environment. Fallback chain:
-    TMUX_PANE → TTY name → 'default'
+    TMUX_PANE → TERM_SESSION_ID → WINDOWID → 'default'
+
+    NOTE: os.ttyname(sys.stdin.fileno()) is NOT attempted here because hooks
+    receive stdin as a pipe from Claude Code, so it always fails. Use env vars
+    that are reliably inherited instead.
     """
     tmux_pane = os.environ.get('TMUX_PANE')
     if tmux_pane:
         return f"tmux_{tmux_pane.lstrip('%')}"
 
-    # Fallback: TTY-based instance ID
-    try:
-        tty_path = os.ttyname(sys.stdin.fileno())
-        # e.g. /dev/pts/3 → term_pts_3, /dev/ttys005 → term_ttys005
-        safe = tty_path.replace('/', '_').lstrip('_').replace('dev_', '')
-        return f"term_{safe}"
-    except:
-        pass
+    # macOS Terminal.app session (matches resolver priority chain)
+    term_session = os.environ.get('TERM_SESSION_ID')
+    if term_session:
+        return f"term:{term_session[:16]}"
+
+    # X11 window ID
+    window_id = os.environ.get('WINDOWID')
+    if window_id:
+        return f"x11:{window_id}"
 
     return "default"
 
@@ -286,13 +291,9 @@ def _write_instance_projects(project_path: str, claude_session_id: str, empirica
         instance_dir.mkdir(parents=True, exist_ok=True)
         instance_file = instance_dir / f'{instance_id}.json'
 
-        # Get TTY key if available
+        # TTY key is not available in hook context (stdin is a pipe)
+        # Instance isolation is handled by instance_id (TMUX_PANE/TERM_SESSION_ID)
         tty_key = None
-        try:
-            tty_path = os.ttyname(sys.stdin.fileno())
-            tty_key = tty_path.replace('/', '-').lstrip('-')
-        except:
-            pass
 
         instance_data = {
             'project_path': project_path,
