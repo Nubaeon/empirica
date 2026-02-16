@@ -182,7 +182,7 @@ def handle_preflight_submit_command(args):
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         from empirica.data.session_database import SessionDatabase
 
-        # AI-FIRST MODE: Check if config file provided as positional argument
+        # AI-FIRST MODE: Check if config file provided or stdin piped
         config_data = None
         if hasattr(args, 'config') and args.config:
             # Read config from file or stdin
@@ -194,6 +194,9 @@ def handle_preflight_submit_command(args):
                     sys.exit(1)
                 with open(args.config, 'r') as f:
                     config_data = parse_json_safely(f.read())
+        elif not sys.stdin.isatty():
+            # Auto-detect piped stdin (no `-` argument needed)
+            config_data = parse_json_safely(sys.stdin.read())
 
         # Extract parameters from config or fall back to legacy flags
         if config_data:
@@ -1703,7 +1706,7 @@ def handle_postflight_submit_command(args):
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         from empirica.data.session_database import SessionDatabase
 
-        # AI-FIRST MODE: Check if config file provided
+        # AI-FIRST MODE: Check if config file provided or stdin piped
         config_data = None
         if hasattr(args, 'config') and args.config:
             if args.config == '-':
@@ -1714,6 +1717,9 @@ def handle_postflight_submit_command(args):
                     sys.exit(1)
                 with open(args.config, 'r') as f:
                     config_data = parse_json_safely(f.read())
+        elif not sys.stdin.isatty():
+            # Auto-detect piped stdin (no `-` argument needed)
+            config_data = parse_json_safely(sys.stdin.read())
 
         # Extract parameters from config or fall back to legacy flags
         if config_data:

@@ -21,7 +21,7 @@ Empirica enables AI agents to genuinely assess their knowledge and uncertainty. 
 ### Pull the Image
 
 ```bash
-docker pull nubaeon/empirica:1.5.1
+docker pull nubaeon/empirica:1.5.2
 # Or use :latest for the latest stable version
 docker pull nubaeon/empirica:latest
 ```

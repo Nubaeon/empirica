@@ -6,6 +6,375 @@ This guide translates natural human language patterns into Empirica's epistemic 
 
 ---
 
+## 🏗️ Working with Claude: Transaction Architecture
+
+When working with Claude (or any AI) using Empirica, the key insight is that **work happens in measured chunks called transactions**. Understanding this architecture helps you collaborate more effectively.
+
+### What is a Transaction?
+
+A transaction is a measurement window: `PREFLIGHT → work → POSTFLIGHT`
+
+- **PREFLIGHT** declares what you're about to do and your starting state
+- **Work** happens (investigation + action)
+- **POSTFLIGHT** captures what you learned and accomplished
+
+The system compares these to measure learning delta and ground calibration against objective evidence.
+
+### The Noetic-Praxic Flow
+
+Within each transaction, Claude naturally moves through two phases:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      ONE TRANSACTION                             │
+│                                                                  │
+│  PREFLIGHT ──► NOETIC ──► CHECK ──► PRAXIC ──► POSTFLIGHT       │
+│      │          │          │         │            │              │
+│   Baseline   Investigate   Gate    Implement   Measure          │
+│   Assessment  & Learn    Decision  & Build    Learning          │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Noetic phase:** Reading, searching, exploring, logging findings/unknowns
+**CHECK gate:** "Do I understand enough to act?"
+**Praxic phase:** Writing code, making changes, completing goals
+
+Both phases happen **within the same transaction**. CHECK is a gate, not a boundary.
+
+### Scoping Transactions
+
+**Human language:**
+> "I want to implement user authentication with OAuth2"
+
+**Claude's decomposition:**
+This is too big for one transaction. Claude will naturally break it down:
+
+1. **Transaction 1:** Research OAuth2 patterns, understand PKCE, log findings
+2. **Transaction 2:** Implement auth endpoints, write tests
+3. **Transaction 3:** Add token refresh, handle edge cases
+
+Each transaction has coherent scope - investigation + action on one aspect.
+
+### Spec-Driven Goal Decomposition
+
+For complex work, start with a spec. Claude can decompose it into goals:
+
+**Human language:**
+> "Here's the spec for our new feature. Can you break this into goals and work through them?"
+
+**What happens:**
+1. Claude reads the spec
+2. Creates goals for each major component
+3. Works through goals across multiple transactions
+4. Each transaction picks up one goal (or related subset)
+5. Artifacts (findings, unknowns) persist in memory across transactions
+
+```
+Spec Document
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│  Goal A: Design auth flow               │
+│  Goal B: Implement endpoints            │
+│  Goal C: Add tests                      │
+│  Goal D: Write documentation            │
+└─────────────────────────────────────────┘
+    │
+    ▼
+Transaction 1: Goal A (noetic → praxic)
+Transaction 2: Goal B (informed by T1's findings)
+Transaction 3: Goal C + D (related, can combine)
+```
+
+### Transaction Scoping Guidelines
+
+| Scope | Example | Transactions |
+|-------|---------|--------------|
+| Small fix | Bug fix, config change | 1 transaction |
+| Feature | Schema + endpoints + tests | 2-3 transactions |
+| Architecture | Cross-cutting redesign | 3-5 transactions |
+
+**Signs you need a new transaction:**
+- Scope grew beyond what PREFLIGHT declared
+- Confidence inflected (know jumped or uncertainty spiked)
+- Switching domains or approaches
+- Completed a coherent chunk (tests pass, code committed)
+
+---
+
+## 🤖 Earned Autonomy: How Claude Picks Tools
+
+Claude doesn't need to be told which Empirica commands to use. Given awareness of the available tools, Claude naturally selects the best fit for the work at hand.
+
+### The Abstraction Principle
+
+**Instead of:**
+> "Run empirica preflight-submit, then empirica finding-log, then..."
+
+**Just say:**
+> "Investigate the authentication flow and implement the fix"
+
+Claude will naturally:
+1. Run PREFLIGHT to open a measurement window
+2. Use noetic tools (Read, Grep, Glob) to investigate
+3. Log findings and unknowns as discovered
+4. Submit CHECK when ready to act
+5. Use praxic tools (Edit, Write, Bash) to implement
+6. Complete goals and run POSTFLIGHT
+
+### Epistemic Agents for Complex Investigation
+
+For multi-faceted problems, Claude can spawn epistemic agents in parallel:
+
+**Human language:**
+> "This bug could be in the auth layer, the database, or the API. Can you investigate all three?"
+
+**What happens:**
+Claude spawns parallel investigation agents:
+- `agent-spawn security` → investigates auth layer
+- `agent-spawn performance` → checks database queries
+- `agent-spawn architecture` → reviews API structure
+
+Results are consolidated, findings logged, and the noetic phase completes faster.
+
+### Creating Reusable Personas (Agent-Spawn)
+
+When Claude encounters novel problem domains, it can create new agent personas:
+
+**Human language:**
+> "We keep running into OAuth2 edge cases. Can you create an auth specialist agent?"
+
+**What happens:**
+Claude uses `agent-spawn` to create a reusable persona with:
+- Domain expertise in OAuth2/OIDC patterns
+- Specific investigation strategies
+- Knowledge of common pitfalls
+
+This persona persists and can be used in future work, providing better results for auth-related tasks.
+
+### The Autonomy Gradient
+
+Honest use of Empirica leads to **earned autonomy**:
+
+```
+Low Trust ────────────────────────────────────► High Trust
+    │                                               │
+    │  Sentinel gates every action                  │  Sentinel adapts thresholds
+    │  Must justify each CHECK                      │  Streamlined workflows
+    │  More investigation required                  │  Can proceed on confidence
+    │                                               │
+    └───────────────────────────────────────────────┘
+                    Calibration improves
+                    over honest transactions
+```
+
+**Key insight:** Gaming vectors degrades calibration. Honest self-assessment improves it. Better calibration → Sentinel trusts more → more autonomy.
+
+---
+
+## 🧩 Multi-Agent Collaboration Patterns
+
+### Pattern 1: Parallel Investigation
+```
+Human: "Research this problem from multiple angles"
+
+Claude spawns:
+├── Agent A: Security perspective
+├── Agent B: Performance perspective
+└── Agent C: Architecture perspective
+
+All run noetic phase in parallel
+Results consolidate → single CHECK → proceed to praxic
+```
+
+### Pattern 2: Sequential Handoff
+```
+Transaction 1: Agent A investigates
+    └── Logs findings, unknowns
+    └── POSTFLIGHT captures state
+
+Transaction 2: Agent B picks up
+    └── Retrieves Agent A's artifacts
+    └── Continues from where A stopped
+```
+
+### Pattern 3: Specialist Delegation
+```
+Human: "Fix this auth bug"
+
+Claude recognizes auth domain:
+    └── Spawns auth-specialist agent (reusable persona)
+    └── Specialist runs full noetic-praxic cycle
+    └── Results flow back to main transaction
+```
+
+---
+
+## 💬 Collaborative Problem Solving
+
+For complex collaborative work, structure your requests to enable Claude's full toolkit:
+
+### Good Patterns
+
+**Spec-first:**
+> "Here's our feature spec. Break it into goals, then work through each with proper investigation before implementing."
+
+**Multi-angle investigation:**
+> "This is a complex bug. Investigate from security, performance, and architecture angles before proposing a fix."
+
+**Measured iteration:**
+> "Implement this feature in transactions. After each transaction, tell me what you learned and what's next."
+
+### What Claude Does Automatically
+
+Given these patterns, Claude will naturally:
+
+| When Claude sees... | Claude does... |
+|---------------------|----------------|
+| Complex task | Creates goals, decomposes into transactions |
+| Ambiguity | Logs unknowns, investigates before acting |
+| Discovery | Logs findings immediately |
+| Failed approach | Logs dead-end to prevent re-exploration |
+| Decision point | Runs CHECK to assess readiness |
+| Coherent completion | Runs POSTFLIGHT, measures learning |
+| Multi-faceted problem | Spawns parallel investigation agents |
+| Recurring domain | Creates/uses specialist persona |
+
+### The Human's Role
+
+Your job is to:
+1. **Provide specs** for complex work (Claude decomposes)
+2. **Describe the outcome** you want (not the commands)
+3. **Review transaction boundaries** (approve POSTFLIGHT timing)
+4. **Provide feedback** on calibration (help Claude learn)
+
+Claude handles the rest - tool selection, artifact logging, transaction management.
+
+---
+
+## 🔮 Predictive Tool Selection (Future Direction)
+
+Empirica's grounded prediction system can suggest tool chains based on task description. This enables Claude to predict not just epistemic vectors but the optimal workflow.
+
+### Current State → Future State
+
+**Current:** 145+ granular CLI commands
+**Future:** Higher-level abstractions with predictive tool chains
+
+```
+# Current (granular)
+empirica preflight-submit --session-id xyz
+empirica finding-log --finding "..." --impact 0.8
+empirica check-submit --decision proceed
+empirica postflight-submit --reasoning "..."
+
+# Future (abstracted)
+empirica transaction start --scope "implement auth endpoint"
+empirica noetic log finding "..." --impact 0.8
+empirica transaction gate
+empirica transaction close
+```
+
+### Proposed Abstraction Layers
+
+| Layer | Commands | Purpose |
+|-------|----------|---------|
+| **transaction** | `start`, `gate`, `close`, `adopt` | Measurement boundaries |
+| **noetic** | `log`, `resolve`, `investigate`, `search` | Investigation artifacts |
+| **praxic** | `goal`, `act`, `complete`, `subtask` | Action artifacts |
+| **agent** | `spawn`, `report`, `orchestrate`, `parallel` | Multi-agent coordination |
+| **project** | `init`, `switch`, `bootstrap`, `handoff` | Project lifecycle |
+| **calibrate** | `report`, `drift`, `trajectory` | Calibration & monitoring |
+
+### Tool-Use Prediction
+
+When Claude receives a task, Empirica can predict the optimal workflow:
+
+**Input:**
+> "Implement OAuth2 authentication with PKCE for mobile clients"
+
+**Predicted Workflow:**
+```yaml
+task_analysis:
+  complexity: 0.7
+  domains: [auth, security, api]
+  estimated_transactions: 2
+
+transaction_1:
+  phase: noetic
+  tools_predicted:
+    - Grep: "OAuth2|PKCE|auth" in codebase
+    - Read: existing auth files
+    - WebSearch: "PKCE implementation patterns"
+  artifacts_expected:
+    - findings: 3-5
+    - unknowns: 1-2
+  gate_confidence_threshold: 0.75
+
+transaction_2:
+  phase: praxic
+  tools_predicted:
+    - Edit: auth endpoint files
+    - Write: new PKCE handler
+    - Bash: run auth tests
+  goals:
+    - "Implement PKCE flow"
+    - "Add token endpoint"
+    - "Write integration tests"
+```
+
+### Grounded Prediction Integration
+
+The prediction system uses:
+1. **Historical patterns** - What tools were used for similar tasks?
+2. **Calibration data** - How accurate were past predictions?
+3. **Domain signatures** - What tools work best for auth/perf/architecture?
+4. **Complexity estimation** - How many transactions will this need?
+
+```
+empirica suggest-workflow --task "Fix the authentication bug"
+
+Predicted workflow:
+├── Transaction 1 (noetic)
+│   ├── Grep: auth patterns
+│   ├── Read: auth files
+│   ├── finding-log: expected 2-3
+│   └── CHECK gate
+│
+└── Transaction 2 (praxic)
+    ├── Edit: fix implementation
+    ├── Bash: run tests
+    ├── goals-complete
+    └── POSTFLIGHT
+
+Confidence: 0.82 (based on 47 similar tasks)
+```
+
+### Why This Matters
+
+1. **Reduced cognitive load** - Claude doesn't decide tools, system predicts
+2. **Better calibration** - Compare predicted vs actual tool usage
+3. **Workflow optimization** - Learn which tool chains work best
+4. **Earned autonomy** - Accurate predictions → less human oversight
+
+### Deprecation Candidates
+
+As abstractions mature, granular commands can be deprecated:
+
+| Deprecate | Replace With |
+|-----------|--------------|
+| `preflight-submit` | `transaction start` |
+| `check-submit` | `transaction gate` |
+| `postflight-submit` | `transaction close` |
+| `finding-log`, `unknown-log`, `deadend-log` | `noetic log <type>` |
+| `goals-create`, `goals-complete` | `praxic goal <action>` |
+| `agent-spawn`, `agent-report` | `agent <action>` |
+
+The granular commands remain available for power users and scripting, but the natural workflow uses abstractions.
+
+---
+
 ## 🗣️ Natural Language Patterns for Empirica
 
 ### 1. Starting a Project

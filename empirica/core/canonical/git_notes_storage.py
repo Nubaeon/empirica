@@ -47,6 +47,7 @@ class GitNotesStorage:
         self.git_repo_path = git_repo_path
         self.signing_persona = signing_persona
         self.signed_git_ops: Optional[SignedGitOperations] = None
+        self._is_git_repo: Optional[bool] = None
 
         # Initialize signed git operations if persona provided
         if signing_persona:
@@ -54,6 +55,30 @@ class GitNotesStorage:
                 self.signed_git_ops = SignedGitOperations(repo_path=str(git_repo_path))
             except Exception as e:
                 logger.warning(f"Failed to initialize SignedGitOperations: {e}")
+
+    def is_git_repo(self) -> bool:
+        """
+        Check if the path is inside a git repository.
+
+        Returns:
+            True if inside a git work tree, False otherwise.
+        """
+        if self._is_git_repo is not None:
+            return self._is_git_repo
+
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--is-inside-work-tree"],
+                capture_output=True,
+                text=True,
+                cwd=self.git_repo_path,
+                timeout=2
+            )
+            self._is_git_repo = result.returncode == 0 and result.stdout.strip() == "true"
+        except Exception:
+            self._is_git_repo = False
+
+        return self._is_git_repo
 
     def add_note(self, checkpoint: Dict[str, Any]) -> Optional[str]:
         """
@@ -68,6 +93,11 @@ class GitNotesStorage:
         Returns:
             Note SHA if successful, None if failed
         """
+        # Skip silently for non-git projects
+        if not self.is_git_repo():
+            logger.debug(f"Skipping git notes - not a git repository: {self.git_repo_path}")
+            return None
+
         try:
             # Validate JSON serialization
             checkpoint_json = json.dumps(checkpoint)
@@ -130,6 +160,11 @@ class GitNotesStorage:
         Returns:
             Commit SHA if successful, None if failed
         """
+        # Skip silently for non-git projects
+        if not self.is_git_repo():
+            logger.debug(f"Skipping signed git notes - not a git repository: {self.git_repo_path}")
+            return None
+
         try:
             if not self.signed_git_ops or not self.signing_persona:
                 logger.debug("Signed operations not available, falling back to unsigned")
@@ -198,6 +233,10 @@ class GitNotesStorage:
         Returns:
             Checkpoint dictionary or None
         """
+        # Skip silently for non-git projects
+        if not self.is_git_repo():
+            return None
+
         try:
             # Search for the most recent checkpoint across rounds and phases
             phases_to_check = ["POSTFLIGHT", "ACT", "CHECK", "INVESTIGATE", "PLAN", "THINK", "PREFLIGHT"]
@@ -256,6 +295,10 @@ class GitNotesStorage:
         Returns:
             List of checkpoint metadata dicts, sorted newest first
         """
+        # Skip silently for non-git projects
+        if not self.is_git_repo():
+            return []
+
         checkpoints = []
         filter_session_id = session_id or self.session_id
 

@@ -66,7 +66,8 @@ def get_tty_key() -> Optional[str]:
                 break
 
             tty = parts[0]
-            if tty and tty != '?':
+            # macOS ps returns '??' for no-TTY processes (not '?' like Linux)
+            if tty and not tty.startswith('?'):
                 return tty.replace('/', '-')
 
             # Move to parent

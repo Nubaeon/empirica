@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  Empirica Qdrant launchd service
+
+  This plist includes increased file descriptor limits (65536) to handle
+  large numbers of collections. Default macOS launchd limit is 256 which
+  is insufficient for production Empirica use with 50+ collections.
+
+  Installation:
+    empirica install --setup-qdrant-launchd
+
+  Manual installation:
+    1. Copy to ~/Library/LaunchAgents/com.empirica.qdrant.plist
+    2. Replace __QDRANT_BINARY__ with path to qdrant binary
+    3. Replace __QDRANT_CONFIG__ with path to config.yaml (or remove WorkingDirectory)
+    4. launchctl load ~/Library/LaunchAgents/com.empirica.qdrant.plist
+
+  Verification:
+    lsof -p $(pgrep qdrant) | wc -l
+-->
+<dict>
+    <key>Label</key>
+    <string>com.empirica.qdrant</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__QDRANT_BINARY__</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__QDRANT_CONFIG_DIR__</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>__QDRANT_LOG_DIR__/qdrant.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__QDRANT_LOG_DIR__/qdrant.error.log</string>
+
+    <!-- File descriptor limits - critical for large collection counts -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+    </dict>
+
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+    </dict>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>QDRANT_STORAGE_DIR</key>
+        <string>__QDRANT_STORAGE__</string>
+    </dict>
+</dict>
+</plist>

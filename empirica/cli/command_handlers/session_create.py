@@ -368,9 +368,15 @@ def handle_session_create_command(args):
                         if resolved:
                             return resolved
 
-                    # Priority 3: project_path (read project.yaml at that path)
+                    # Priority 3: project_path (query sessions.db, fallback to project.yaml)
                     if context_data.get('project_path'):
                         project_path = context_data['project_path']
+                        # Primary: sessions.db is authoritative
+                        from empirica.utils.session_resolver import _get_project_id_from_local_db
+                        db_project_id = _get_project_id_from_local_db(project_path)
+                        if db_project_id:
+                            return db_project_id
+                        # Fallback: project.yaml for fresh projects
                         import yaml
                         project_yaml = os.path.join(project_path, '.empirica', 'project.yaml')
                         if os.path.exists(project_yaml):
@@ -423,22 +429,25 @@ def handle_session_create_command(args):
             except Exception:
                 pass  # Fall through to other methods
 
-            # Method 1: Read from local .empirica/project.yaml (only if Method 0 didn't find)
+            # Method 1: Get project_id from sessions.db (authoritative) or project.yaml (fallback)
             # Use active context project_path - NO CWD FALLBACK (CWD is unreliable)
             if not early_project_id:
                 try:
-                    import yaml
-                    from empirica.utils.session_resolver import get_active_project_path
+                    from empirica.utils.session_resolver import get_active_project_path, _get_project_id_from_local_db
                     context_project = get_active_project_path()
                     if not context_project:
-                        raise ValueError("No active project context - skip project.yaml method")
-                    base_path = context_project
-                    project_yaml = os.path.join(base_path, '.empirica', 'project.yaml')
-                    if os.path.exists(project_yaml):
-                        with open(project_yaml, 'r') as f:
-                            project_config = yaml.safe_load(f)
-                            if project_config and project_config.get('project_id'):
-                                early_project_id = project_config['project_id']
+                        raise ValueError("No active project context - skip Method 1")
+                    # Primary: sessions.db is authoritative
+                    early_project_id = _get_project_id_from_local_db(context_project)
+                    # Fallback: project.yaml for fresh projects
+                    if not early_project_id:
+                        import yaml
+                        project_yaml = os.path.join(context_project, '.empirica', 'project.yaml')
+                        if os.path.exists(project_yaml):
+                            with open(project_yaml, 'r') as f:
+                                project_config = yaml.safe_load(f)
+                                if project_config and project_config.get('project_id'):
+                                    early_project_id = project_config['project_id']
                 except Exception:
                     pass
 

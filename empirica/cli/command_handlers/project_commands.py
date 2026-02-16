@@ -4,6 +4,7 @@ Project Commands - Multi-repo/multi-session project tracking
 
 import json
 import logging
+import os
 import sqlite3
 from pathlib import Path
 from typing import Optional, Dict, List, Any
@@ -119,6 +120,24 @@ def _update_active_work(project_path: str, folder_name: str, empirica_session_id
         tty_key = get_tty_key()
         tmux_pane = os.environ.get('TMUX_PANE')
         instance_id = f"tmux_{tmux_pane.lstrip('%')}" if tmux_pane else None
+
+        # When TMUX_PANE is absent (Bash tool subprocess), resolve instance_id
+        # from claude_session_id by scanning instance_projects/ files.
+        # Hooks (which DO have TMUX_PANE) write claude_session_id to instance_projects
+        # at session start — this reverse-lookup finds the correct tmux pane.
+        if not instance_id and claude_session_id:
+            instance_dir = marker_dir / 'instance_projects'
+            if instance_dir.exists():
+                for ip_file in instance_dir.glob('tmux_*.json'):
+                    try:
+                        with open(ip_file, 'r') as f:
+                            ip_data = json.load(f)
+                        if ip_data.get('claude_session_id') == claude_session_id:
+                            instance_id = ip_file.stem  # e.g. "tmux_14"
+                            logger.debug(f"Resolved instance_id={instance_id} from claude_session_id match in {ip_file.name}")
+                            break
+                    except Exception:
+                        continue
 
         # PRESERVE existing claude_session_id if TTY session doesn't have it
         # This handles the case where session-init hook ran and wrote claude_session_id
@@ -508,23 +527,26 @@ def handle_project_bootstrap_command(args):
             return None
 
         # Auto-detect project if not provided
-        # Priority: 1) local .empirica/project.yaml, 2) git remote URL
+        # Priority: 1) sessions.db (authoritative), 2) project.yaml (fallback), 3) git remote URL
         if not project_id:
-            # Method 1: Read from local .empirica/project.yaml (highest priority)
-            # This is what project-init creates - no git remote required
+            # Method 1: Get project_id from sessions.db (authoritative) or project.yaml (fallback)
             # Use active context first, fall back to CWD
             try:
-                import yaml
                 import os
-                from empirica.utils.session_resolver import get_active_project_path
+                from empirica.utils.session_resolver import get_active_project_path, _get_project_id_from_local_db
                 context_project = get_active_project_path()
                 base_path = context_project if context_project else os.getcwd()
-                project_yaml = os.path.join(base_path, '.empirica', 'project.yaml')
-                if os.path.exists(project_yaml):
-                    with open(project_yaml, 'r') as f:
-                        project_config = yaml.safe_load(f)
-                        if project_config and project_config.get('project_id'):
-                            project_id = project_config['project_id']
+                # Primary: sessions.db is authoritative
+                project_id = _get_project_id_from_local_db(base_path)
+                # Fallback: project.yaml for fresh projects
+                if not project_id:
+                    import yaml
+                    project_yaml = os.path.join(base_path, '.empirica', 'project.yaml')
+                    if os.path.exists(project_yaml):
+                        with open(project_yaml, 'r') as f:
+                            project_config = yaml.safe_load(f)
+                            if project_config and project_config.get('project_id'):
+                                project_id = project_config['project_id']
             except Exception:
                 pass  # Fall through to git remote method
 

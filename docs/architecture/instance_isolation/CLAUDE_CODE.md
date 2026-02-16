@@ -91,7 +91,15 @@ Each pane gets its own:
 - `instance_projects/tmux_N.json`
 - `active_transaction_tmux_N.json` (in project dir)
 
-The `TMUX_PANE` environment variable (`%4`, `%5`) is available in hooks AND Bash tool calls.
+**Environment variable availability:**
+- **Hooks:** `TMUX_PANE` is reliably available (inherited from Claude Code process)
+- **Bash tool subprocesses:** `TMUX_PANE` may NOT be inherited (depends on how Claude Code spawns subprocesses)
+
+When `TMUX_PANE` is unavailable in Bash subprocess, CLI commands use TTY-based resolution
+(walking PPID chain to find controlling TTY) and can look up `claude_session_id` from
+`tty_sessions/` files that hooks wrote earlier. Additionally, `project-switch` can scan
+`instance_projects/tmux_*.json` files to find one with matching `claude_session_id`
+and resolve the correct instance.
 
 ---
 

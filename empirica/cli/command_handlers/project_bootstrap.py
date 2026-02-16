@@ -54,14 +54,19 @@ def handle_project_bootstrap_command(args):
                 from empirica.utils.session_resolver import get_active_project_path
                 active_project = get_active_project_path()
                 if active_project:
-                    # Load project_id from the project's local config
-                    import yaml
-                    project_yaml = os.path.join(active_project, '.empirica', 'project.yaml')
-                    if os.path.exists(project_yaml):
-                        with open(project_yaml, 'r') as f:
-                            project_config = yaml.safe_load(f)
-                            if project_config and project_config.get('project_id'):
-                                project_id = project_config['project_id']
+                    # Load project_id from sessions.db (authoritative) or project.yaml (fallback)
+                    from empirica.utils.session_resolver import _get_project_id_from_local_db
+                    project_id = _get_project_id_from_local_db(active_project)
+
+                    # Fallback: project.yaml for fresh projects without sessions
+                    if not project_id:
+                        import yaml
+                        project_yaml = os.path.join(active_project, '.empirica', 'project.yaml')
+                        if os.path.exists(project_yaml):
+                            with open(project_yaml, 'r') as f:
+                                project_config = yaml.safe_load(f)
+                                if project_config and project_config.get('project_id'):
+                                    project_id = project_config['project_id']
             except Exception:
                 pass
 

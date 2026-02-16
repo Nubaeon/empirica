@@ -122,13 +122,21 @@ Priority 2: tty_sessions (via tty command)
 | Component | Writes | Reads |
 |-----------|--------|-------|
 | **Hooks** (session-init, post-compact) | `active_work`, `instance_projects` | All |
-| **CLI** (session-create, project-switch) | `tty_sessions`, preserves `instance_projects` | All |
+| **CLI** (session-create, project-switch) | `tty_sessions`, `active_work`, conditionally `instance_projects` | All |
 | **PREFLIGHT** | `active_transaction` | All |
 | **Statusline** | Nothing | All |
 | **Sentinel** | Nothing | All |
 
 **Key insight:** Hooks have full context (`claude_session_id` + `TMUX_PANE`). CLI commands
 only have `TTY` + maybe `TMUX_PANE`. This asymmetry is why we need multiple file types.
+
+**CLI instance_projects updates:** CLI only writes to `instance_projects` when it can
+correctly identify the instance via:
+1. `TMUX_PANE` environment variable (if inherited)
+2. Reverse lookup: scanning `instance_projects/tmux_*.json` for matching `claude_session_id`
+
+When neither is available, CLI writes only to `active_work_{claude_session_id}.json`.
+The next hook invocation will sync `instance_projects` from `active_work`.
 
 ---
 
