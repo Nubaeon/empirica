@@ -3501,10 +3501,18 @@ def handle_project_switch_command(args):
         trajectory_path = project.get('trajectory_path', '')
 
         # Derive project root from trajectory path
-        # trajectory_path = /home/user/project/.empirica -> project_path = /home/user/project
+        # Two formats exist:
+        # 1. Old format: /home/user/project/.empirica -> project_path = /home/user/project
+        # 2. New format: /home/user/project (no .empirica suffix) -> use as-is
         project_path = None
         if trajectory_path:
-            project_path = Path(trajectory_path).parent
+            traj = Path(trajectory_path)
+            if traj.name == '.empirica':
+                # Old format: path ends with .empirica, take parent
+                project_path = traj.parent
+            else:
+                # New format: path is the project root directly
+                project_path = traj
 
         # 3. FORCED POSTFLIGHT: Close any open transaction from current project
         # Transactions are project-scoped, so switching projects should close the current one

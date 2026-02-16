@@ -186,10 +186,12 @@ def handle_project_init_command(args):
         # Register project in global workspace.db for cross-project visibility
         try:
             from .workspace_init import _register_in_workspace_db
+            # Store trajectory_path with .empirica suffix for consistency with existing projects
+            # project-switch expects this format: /home/user/project/.empirica
             _register_in_workspace_db(
                 project_id=project_id,
                 name=project_name,
-                trajectory_path=str(git_root),
+                trajectory_path=str(git_root / '.empirica'),
                 description=project_description,
                 git_remote_url=git_url
             )
