@@ -17,6 +17,56 @@ import os
 
 
 # =============================================================================
+# Instance Isolation: Prevent tests from corrupting live Empirica state
+# =============================================================================
+#
+# Tests that invoke CASCADE commands (preflight/check/postflight) through the
+# CLI handler read/write active_transaction files via get_instance_id(). Without
+# isolation, they share TMUX_PANE with the live session and close real transactions.
+#
+# Fix: Back up and restore all active_transaction files around the test session.
+# This is more surgical than changing EMPIRICA_INSTANCE_ID (which would break
+# project resolution since there'd be no matching instance_projects file).
+
+@pytest.fixture(autouse=True, scope="session")
+def protect_live_transactions():
+    """Back up active transaction files before tests, restore after.
+
+    Tests may call postflight-submit which closes the active_transaction file.
+    We snapshot all transaction files before the test session and restore them
+    after, so the live Empirica state is never corrupted by test runs.
+    """
+    import glob
+
+    # Find all active_transaction files (in project .empirica dirs and ~/.empirica)
+    backup = {}  # path -> contents
+    patterns = [
+        str(Path.home() / '.empirica' / 'active_transaction*.json'),
+    ]
+    # Also check CWD project
+    cwd_pattern = str(Path.cwd() / '.empirica' / 'active_transaction*.json')
+    patterns.append(cwd_pattern)
+
+    for pattern in patterns:
+        for filepath in glob.glob(pattern):
+            try:
+                with open(filepath, 'r') as f:
+                    backup[filepath] = f.read()
+            except Exception:
+                pass
+
+    yield
+
+    # Restore all backed-up transaction files
+    for filepath, contents in backup.items():
+        try:
+            with open(filepath, 'w') as f:
+                f.write(contents)
+        except Exception:
+            pass
+
+
+# =============================================================================
 # Fixtures: Temporary Directories
 # ============================================================================
 
