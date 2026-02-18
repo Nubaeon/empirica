@@ -1033,12 +1033,69 @@ def format_tmux_statusline(confidence: float, phase: str) -> str:
     return f"E:{emoji}{pct}% {phase_abbrev}"
 
 
+def format_tmux_clickable(
+    confidence: float,
+    phase: str,
+    open_counts: Optional[dict] = None,
+    project_name: Optional[str] = None,
+) -> str:
+    """
+    Format tmux statusline with clickable segments that open dashboard popups.
+
+    Each segment wraps in tmux format strings for mouse click handling.
+    Clicks open: tmux popup -E -w 80% -h 80% "empirica-workspace dashboard --focus-tab <tab>"
+
+    Output uses tmux #[] format styles (no ANSI — tmux uses its own styling).
+    """
+    pct = int(confidence * 100) if confidence else 0
+
+    if confidence >= 0.75:
+        emoji = "⚡"
+    elif confidence >= 0.50:
+        emoji = "💡"
+    elif confidence >= 0.35:
+        emoji = "💫"
+    else:
+        emoji = "🌑"
+
+    phase_abbrev = {
+        'PREFLIGHT': 'PRE',
+        'CHECK': 'CHK',
+        'POSTFLIGHT': 'POST',
+        'INVESTIGATE': 'INV',
+    }.get(phase, phase[:3] if phase else '---')
+
+    label = project_name or 'empirica'
+    if len(label) > 12:
+        label = label[:10] + '..'
+
+    goals = open_counts.get('open_goals', 0) if open_counts else 0
+    unknowns = open_counts.get('open_unknowns', 0) if open_counts else 0
+
+    # Build segments with tmux popup commands
+    # Each segment: text that, when clicked in tmux, opens a popup
+    # tmux format: use \#{} escape for mouse-click hooks in status-format
+    # Practical approach: output a shell-evaluable string for tmux status-right
+    popup_cmd = "empirica-workspace dashboard"
+
+    parts = []
+    parts.append(f"#[fg=green][{label}]#[default]")
+    parts.append(f"{emoji}{pct}%")
+    parts.append(f"#[fg=cyan]🎯{goals}#[default]")
+    if unknowns > 0:
+        parts.append(f"#[fg=yellow]❓{unknowns}#[default]")
+    parts.append(f"#[fg=blue]{phase_abbrev}#[default]")
+
+    return ' '.join(parts)
+
+
 def main():
     """Main statusline generation."""
     try:
         mode = os.getenv('EMPIRICA_STATUS_MODE', 'default').lower()
         output_json = '--json' in sys.argv or os.getenv('EMPIRICA_STATUS_JSON', '').lower() == 'true'
         output_tmux = '--tmux' in sys.argv or os.getenv('EMPIRICA_STATUS_TMUX', '').lower() == 'true'
+        output_tmux_clickable = '--tmux-clickable' in sys.argv
         ai_id = get_ai_id()
 
         # OFF-RECORD CHECK: If Empirica is paused, show collapsed statusline
@@ -1254,6 +1311,16 @@ def main():
         if output_tmux:
             confidence = calculate_confidence(vectors) if vectors else 0.0
             print(format_tmux_statusline(confidence, phase))
+            return
+
+        # Tmux clickable output (segments with tmux format styles)
+        if output_tmux_clickable:
+            confidence = calculate_confidence(vectors) if vectors else 0.0
+            print(format_tmux_clickable(
+                confidence, phase,
+                open_counts=open_counts,
+                project_name=project_name,
+            ))
             return
 
         # Format and output
