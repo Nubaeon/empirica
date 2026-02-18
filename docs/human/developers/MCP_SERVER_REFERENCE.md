@@ -1,7 +1,7 @@
-# Empirica MCP Server Reference (v5.0)
+# Empirica MCP Server Reference (v5.1)
 
-**Last Updated:** 2026-01-09
-**Total Tools:** 55
+**Last Updated:** 2026-02-18
+**Total Tools:** 58
 **Architecture:** Thin wrappers around CLI commands
 
 ---
@@ -17,7 +17,7 @@ The Empirica MCP (Model Context Protocol) server exposes Empirica functionality 
 - **Command:** `empirica-mcp`
 - **Protocol:** MCP (Model Context Protocol)
 - **Transport:** stdio
-- **Tools:** 55 tools (stateless utilities + CLI wrappers)
+- **Tools:** 58 tools (stateless utilities + CLI wrappers)
 
 **For complete MCP ↔ CLI mapping:** See [`api/mcp_cli_mapping.md`](api/mcp_cli_mapping.md)
 
@@ -789,64 +789,449 @@ Query logged mistakes for learning.
 
 ## Tool Reference
 
-**Complete tool list (40 tools):**
+**Complete tool list (58 tools):**
 
 **For complete MCP ↔ CLI mapping and detailed reference:** See [`MCP_CLI_MAPPING.md`](MCP_CLI_MAPPING.md)
 
-**High-level categories:**
-
-### Documentation
+### Documentation (3)
 1. `get_empirica_introduction` - Framework introduction
-2. `get_workflow_guidance` - CASCADE guidance
+2. `get_workflow_guidance` - CASCADE phase guidance
 3. `cli_help` - CLI command help
 
-### Session Management
+### Session Management (4)
 4. `session_create` - Create session
 5. `get_session_summary` - Session overview
-6. `get_epistemic_state` - Current epistemic state
-7. `resume_previous_session` - Resume sessions
+6. `get_epistemic_state` - Current epistemic state (13 vectors)
+7. `resume_previous_session` - Resume sessions by AI ID
 
-### CASCADE Workflow
-8. `submit_preflight_assessment` - Submit PREFLIGHT (assess directly)
-9. `submit_check_assessment` - Submit CHECK (assess directly)
-10. `submit_postflight_assessment` - Submit POSTFLIGHT (assess directly)
+### CASCADE Workflow (3)
+8. `submit_preflight_assessment` - Submit PREFLIGHT (13 vectors + reasoning)
+9. `submit_check_assessment` - Submit CHECK gate (proceed/investigate)
+10. `submit_postflight_assessment` - Submit POSTFLIGHT (triggers grounded verification)
 
-### Goals & Tasks
-14. `create_goal` - Create goal
-15. `add_subtask` - Add subtask
-16. `complete_subtask` - Complete subtask
-17. `get_goal_progress` - Get progress
-18. `get_goal_subtasks` - Get subtask details
-19. `list_goals` - List session goals
+### Noetic Artifacts (7)
+11. `finding_log` - Log a finding (what was learned)
+12. `unknown_log` - Log an unknown (what's unclear)
+13. `deadend_log` - Log a dead-end (approach that failed)
+14. `mistake_log` - Log a mistake (with prevention strategy)
+15. `assumption_log` - Log unverified assumption (with confidence + domain)
+16. `decision_log` - Log decision (with alternatives + reversibility)
+17. `unknown_resolve` - Resolve a logged unknown
 
-### Continuity
-20. `create_git_checkpoint` - Create checkpoint
-21. `load_git_checkpoint` - Load checkpoint
-22. `create_handoff_report` - Create handoff
-23. `query_handoff_reports` - Query handoffs
+### Goals & Tasks (6)
+18. `create_goal` - Create structured goal with scope vectors
+19. `add_subtask` - Add subtask to goal
+20. `complete_subtask` - Complete subtask with evidence
+21. `get_goal_progress` - Get goal completion progress
+22. `get_goal_subtasks` - Get subtask details
+23. `list_goals` - List session goals
 
-### Multi-AI
-24. `discover_goals` - Discover goals from other AIs
-25. `resume_goal` - Resume another AI's goal
+### Project Context (4)
+24. `project_bootstrap` - Load project breadcrumbs (findings, unknowns, dead-ends, goals)
+25. `session_snapshot` - Complete session snapshot with learning delta
+26. `goals_ready` - Get goals ready to work on (unblocked)
+27. `goals_claim` - Claim a goal and create epistemic branch
 
-### Identity
-26. `create_identity` - Create Ed25519 identity
-27. `list_identities` - List identities
-28. `export_public_key` - Export public key
-29. `verify_signature` - Verify signature
+### Investigation & Analysis (2)
+28. `investigate` - Run systematic investigation with epistemic tracking
+29. `blindspot_scan` - Scan for unknown unknowns via artifact pattern analysis
 
-### Project Tracking
-30. `project_bootstrap` - Load project breadcrumbs
-31. `finding_log` - Log finding
-32. `unknown_log` - Log unknown
-33. `deadend_log` - Log dead end
-34. `refdoc_add` - Add reference doc
+### Epistemic Monitoring (4)
+30. `epistemics_list` - List all assessments (PREFLIGHT/CHECK/POSTFLIGHT) for session
+31. `epistemics_show` - Show detailed assessment, optionally by phase
+32. `get_calibration_report` - Calibration metrics (self-ref + grounded)
+33. `check_drift` - Detect epistemic drift (confidence vs performance)
 
-### Metacognitive
-35. `edit_with_confidence` - Smart file editing
-36. `get_calibration_report` - Calibration metrics
-37. `log_mistake` - Log mistake
-38. `query_mistakes` - Query mistakes
+### Human Copilot & Oversight (6)
+34. `monitor` - Real-time monitoring: stats, cost, request history, health
+35. `system_status` - Unified system status (/proc-style snapshot)
+36. `efficiency_report` - Productivity metrics: learning velocity, CASCADE completeness
+37. `issue_list` - List auto-captured issues (bugs, errors, TODOs)
+38. `issue_handoff` - Hand off issue to another AI or human
+39. `workspace_overview` - Multi-repo epistemic overview
+
+### Workspace & Skills (2)
+40. `skill_suggest` - Vector-aware skill/tool recommendations
+41. `workspace_map` - Map workspace structure and cross-repo dependencies
+
+### Memory & Continuity (1)
+42. `memory_compact` - Compact session for epistemic continuity across context boundaries
+
+### Checkpoints & Handoffs (4)
+43. `create_git_checkpoint` - Create compressed checkpoint in git notes
+44. `load_git_checkpoint` - Load checkpoint from git notes
+45. `create_handoff_report` - Create epistemic handoff report (~90% token reduction)
+46. `query_handoff_reports` - Query handoff reports by AI ID/session
+
+### Multi-AI Coordination (2)
+47. `discover_goals` - Discover goals from other AIs via git notes
+48. `resume_goal` - Resume another AI's goal with epistemic handoff
+
+### Mistakes Tracking (2)
+49. `log_mistake` - Log mistake with root cause vector and prevention
+50. `query_mistakes` - Query mistakes for patterns and learning
+
+### Identity & Security (4)
+51. `create_identity` - Create Ed25519 identity keypair
+52. `list_identities` - List all AI identities
+53. `export_public_key` - Export public key for sharing
+54. `verify_signature` - Verify signed session
+
+### Reference Docs (1)
+55. `refdoc_add` - Add reference document to project knowledge base
+
+### Vision (2)
+56. `vision_analyze` - Analyze image(s) and extract metadata
+57. `vision_log` - Log visual observation to session
+
+### Metacognitive Edit (1)
+58. `edit_with_confidence` - Edit with epistemic confidence assessment (4.7x success rate)
+
+---
+
+## Noetic Intent Tools
+
+**Purpose:** Track assumptions and decisions (epistemic intent layer)
+
+### `assumption_log`
+
+Log an unverified assumption with confidence level.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+- `assumption` (required): The assumption being made
+- `confidence` (optional): Confidence in assumption (0.0-1.0)
+- `domain` (optional): Domain scope (e.g., "security", "architecture")
+- `goal_id` (optional): Related goal UUID
+
+**Returns:** Assumption UUID
+
+**Use when:** Making an unverified belief that should be tracked and validated later
+
+---
+
+### `decision_log`
+
+Log a decision with alternatives considered and rationale.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+- `choice` (required): The choice made
+- `alternatives` (required): Alternatives considered (comma-separated or JSON array)
+- `rationale` (required): Why this choice was made
+- `confidence` (optional): Confidence in decision (0.0-1.0)
+- `reversibility` (optional): `"exploratory"`, `"committal"`, or `"forced"`
+- `domain` (optional): Domain scope
+- `goal_id` (optional): Related goal UUID
+
+**Returns:** Decision UUID
+
+**Use when:** Making a choice point that should be recorded for audit trail
+
+---
+
+### `unknown_resolve`
+
+Resolve a logged unknown when the answer is found.
+
+**Parameters:**
+- `unknown_id` (required): Unknown UUID to resolve
+- `resolved_by` (required): How was this unknown resolved?
+
+**Returns:** Confirmation
+
+**Use when:** Investigation answered a previously logged unknown
+
+---
+
+## Session State Tools
+
+**Purpose:** Session snapshots and goal scheduling
+
+### `session_snapshot`
+
+Get complete session snapshot with learning delta, findings, unknowns, mistakes, and active goals.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+
+**Returns:** Full session state including epistemic vectors, artifacts, and progress
+
+**Use when:** Need complete session state overview (richer than `get_session_summary`)
+
+---
+
+### `goals_ready`
+
+Get goals that are ready to work on (unblocked by dependencies and epistemic state).
+
+**Parameters:**
+- `session_id` (optional): Session UUID
+
+**Returns:** Array of goals that can be started
+
+**Use when:** Deciding which goal to pick up next
+
+---
+
+### `goals_claim`
+
+Claim a goal and create epistemic branch for work.
+
+**Parameters:**
+- `goal_id` (required): Goal UUID to claim
+
+**Returns:** Claim confirmation with branch info
+
+**Use when:** Starting work on a specific goal
+
+---
+
+## Investigation Tools
+
+**Purpose:** Systematic investigation and blindspot detection
+
+### `investigate`
+
+Run systematic investigation with epistemic tracking.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+- `investigation_goal` (required): What to investigate
+- `max_rounds` (optional): Max investigation rounds (default: 5)
+
+**Returns:** Investigation results with findings and epistemic state changes
+
+**Use when:** Need structured investigation with automatic artifact logging
+
+---
+
+### `blindspot_scan`
+
+Scan for epistemic blindspots (unknown unknowns) by analyzing artifact patterns.
+
+**Parameters:**
+- `project_id` (optional): Project ID (auto-detects)
+- `session_id` (optional): Session ID for context
+- `max_predictions` (optional): Maximum predictions (default: 10)
+- `min_confidence` (optional): Minimum confidence threshold (default: 0.4)
+
+**Returns:** Predicted knowledge gaps based on artifact topology
+
+**Use when:** Starting new work or suspecting hidden unknowns
+
+---
+
+## Epistemic History
+
+**Purpose:** Review assessment history
+
+### `epistemics_list`
+
+List all epistemic assessments (PREFLIGHT, CHECK, POSTFLIGHT) for a session.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+
+**Returns:** Array of assessments with timestamps and phases
+
+**Use when:** Reviewing session trajectory
+
+---
+
+### `epistemics_show`
+
+Show detailed epistemic assessment, optionally filtered by phase.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+- `phase` (optional): Phase filter (`"PREFLIGHT"`, `"CHECK"`, `"POSTFLIGHT"`)
+
+**Returns:** Detailed vector data for matching assessments
+
+**Use when:** Examining specific assessment details
+
+---
+
+## Monitoring & Oversight
+
+**Purpose:** Human copilot tools for oversight and productivity
+
+### `monitor`
+
+Real-time monitoring of AI work — stats, cost analysis, request history, adapter health.
+
+**Parameters:**
+- `cost` (optional): Show cost analysis
+- `history` (optional): Show recent request history
+- `health` (optional): Include adapter health checks
+- `project` (optional): Show cost projections
+- `verbose` (optional): Show detailed stats
+
+**Returns:** Monitoring dashboard data
+
+**Use when:** Human needs oversight of AI work session
+
+---
+
+### `system_status`
+
+Unified system status — aggregates config, memory, bus, attention, integrity, and gate status.
+
+**Parameters:**
+- `session_id` (optional): Session UUID (auto-detects)
+- `summary` (optional): Return one-line summary instead of full status
+
+**Returns:** /proc-style system snapshot
+
+**Use when:** Need system health overview
+
+---
+
+### `check_drift`
+
+Detect epistemic drift — when AI confidence diverges from actual performance.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+- `trigger` (optional): `"manual"`, `"pre_summary"`, `"post_summary"`
+- `threshold` (optional): Drift threshold (default: 0.2)
+- `lookback` (optional): Number of checkpoints to analyze (default: 5)
+
+**Returns:** Drift analysis with vectors that diverged
+
+**Use when:** Suspecting calibration is off or after significant work
+
+---
+
+### `efficiency_report`
+
+Get productivity metrics — learning velocity, CASCADE completeness, goal completion rate.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+
+**Returns:** Efficiency metrics for the session
+
+**Use when:** Evaluating session productivity
+
+---
+
+### `issue_list`
+
+List auto-captured issues for human review.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+- `status` (optional): Filter: `"new"`, `"investigating"`, `"handoff"`, `"resolved"`, `"wontfix"`
+- `category` (optional): Filter: `"bug"`, `"error"`, `"warning"`, `"deprecation"`, `"todo"`, `"performance"`, `"compatibility"`, `"design"`, `"other"`
+- `severity` (optional): Filter: `"blocker"`, `"high"`, `"medium"`, `"low"`
+- `limit` (optional): Max results (default: 100)
+
+**Returns:** Array of issues with metadata
+
+---
+
+### `issue_handoff`
+
+Hand off an issue to another AI or human.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+- `issue_id` (required): Issue ID to hand off
+- `assigned_to` (required): AI ID or name to assign to
+
+**Returns:** Handoff confirmation
+
+---
+
+### `workspace_overview`
+
+Multi-repo epistemic overview — project health, knowledge state, uncertainty.
+
+**Parameters:**
+- `sort_by` (optional): `"activity"`, `"knowledge"`, `"uncertainty"`, `"name"`
+- `filter` (optional): `"active"`, `"inactive"`, `"complete"`
+- `verbose` (optional): Show detailed info
+
+**Returns:** Workspace-level epistemic summary
+
+---
+
+### `skill_suggest`
+
+Vector-aware skill/tool recommendations for a task.
+
+**Parameters:**
+- `task` (optional): Task description
+- `session_id` (optional): Session ID for current epistemic vectors
+- `project_id` (optional): Project ID for context
+- `verbose` (optional): Show detailed suggestions
+
+**Returns:** Recommended skills, agents, and tools based on epistemic state
+
+---
+
+### `workspace_map`
+
+Map workspace structure — repos, relationships, cross-repo dependencies.
+
+**Parameters:**
+- `verbose` (optional): Show detailed info
+
+**Returns:** Workspace structure map
+
+---
+
+## Memory Management
+
+**Purpose:** Session compaction for epistemic continuity
+
+### `memory_compact`
+
+Compact session for epistemic continuity across conversation boundaries.
+
+**Parameters:**
+- `session_id` (required): Session UUID or alias
+- `create_continuation` (optional): Create continuation session (default: true)
+- `include_bootstrap` (optional): Load project bootstrap (default: true)
+- `checkpoint_current` (optional): Checkpoint current state (default: true)
+- `compact_mode` (optional): `"full"`, `"minimal"`, `"context_only"`
+
+**Returns:** Compaction result with continuation session ID
+
+**Use when:** Approaching context limit, need to preserve epistemic state
+
+---
+
+## Vision Tools
+
+**Purpose:** Image analysis with epistemic tracking
+
+### `vision_analyze`
+
+Analyze image(s) and extract metadata.
+
+**Parameters:**
+- `image` (optional): Single image path
+- `pattern` (optional): Image pattern (e.g., `"slides/*.png"`)
+- `session_id` (optional): Session ID to log findings
+
+**Returns:** Image metadata (size, format, aspect ratio)
+
+---
+
+### `vision_log`
+
+Log visual observation to session.
+
+**Parameters:**
+- `session_id` (required): Session UUID
+- `observation` (required): Visual observation text
+
+**Returns:** Confirmation
+
+**Use when:** Recording observations not captured by `vision_analyze`
 
 ---
 
@@ -1022,7 +1407,7 @@ get_session_summary(session_id="latest:active:copilot")
 
 ---
 
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-18
 **MCP Server:** empirica-v2
-**Total Tools:** 38
+**Total Tools:** 58
 **Protocol:** MCP (stdio)
