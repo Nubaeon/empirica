@@ -402,4 +402,4 @@ See [LICENSE](LICENSE) for details.
 **Author:** David S. L. Van Assche
 **Version:** 1.5.3
 
-*Built through 800+ sessions of genuine epistemic collaboration between humans and AI.*
+*Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*
