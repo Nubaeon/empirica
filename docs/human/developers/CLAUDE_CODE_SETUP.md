@@ -171,6 +171,11 @@ The plugin (v1.5.3) enforces the CASCADE workflow and preserves epistemic state 
 - **Noetic firewall** (`sentinel-gate.py`): Gates praxic tools (Edit/Write/Bash) until CHECK passes
 - **Session hooks** (`session-init.py`, `post-compact.py`): Auto-creates session, bootstraps projects, detects git repos
 - **POSTFLIGHT capture** (`session-end-postflight.py`): Auto-captures learning at session end
+- **Tool router** (`tool-router.py`): Assesses each prompt against epistemic state and recommends tools/agents
+- **Transaction enforcer** (`transaction-enforcer.py`): Ensures open transactions get POSTFLIGHT before session ends
+- **Subagent lifecycle** (`subagent-start.py`, `subagent-stop.py`): Creates child sessions and rolls up findings from sub-agents
+- **EWM protocol** (`ewm-protocol-loader.py`): Loads personalized workflow protocol from `workflow-protocol.yaml`
+- **Pre-compact** (`pre-compact.py`): Saves epistemic state to git notes before memory compaction
 - **Templates**: CLAUDE.md, mcp.json, statusline config - ready to copy
 - **Statusline script**: Real-time epistemic state display
 
@@ -254,6 +259,12 @@ The Sentinel gate (noetic firewall) requires PreToolUse hooks. Add to `~/.claude
         "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/sentinel-gate.py", "timeout": 10}]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/tool-router.py", "timeout": 5}]
+      }
+    ],
     "PreCompact": [
       {
         "matcher": "auto|manual",
@@ -267,7 +278,28 @@ The Sentinel gate (noetic firewall) requires PreToolUse hooks. Add to `~/.claude
       },
       {
         "matcher": "new|fresh",
-        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/session-init.py", "timeout": 30}]
+        "hooks": [
+          {"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/session-init.py", "timeout": 30},
+          {"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/ewm-protocol-loader.py", "timeout": 10, "allowFailure": true}
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/transaction-enforcer.py", "timeout": 5, "allowFailure": true}]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": ".*",
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/subagent-start.py", "timeout": 10, "allowFailure": true}]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": ".*",
+        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/subagent-stop.py", "timeout": 15, "allowFailure": true}]
       }
     ],
     "SessionEnd": [
@@ -282,6 +314,22 @@ The Sentinel gate (noetic firewall) requires PreToolUse hooks. Add to `~/.claude
   }
 }
 ```
+
+**Hook pipeline summary:**
+
+| Hook | Event | Purpose |
+|------|-------|---------|
+| `sentinel-gate.py` | PreToolUse | Gates Edit/Write/Bash until valid CHECK |
+| `tool-router.py` | UserPromptSubmit | Routes prompts to appropriate tools/agents based on epistemic state |
+| `pre-compact.py` | PreCompact | Saves epistemic state to git notes before compaction |
+| `session-init.py` | SessionStart:new | Auto-creates session, bootstraps project, detects git repo |
+| `ewm-protocol-loader.py` | SessionStart:new | Loads personalized workflow protocol |
+| `post-compact.py` | SessionStart:compact | Recovers session state after memory compaction |
+| `transaction-enforcer.py` | Stop | Ensures POSTFLIGHT before session ends if transaction is open |
+| `subagent-start.py` | SubagentStart | Creates child session with parent lineage |
+| `subagent-stop.py` | SubagentStop | Rolls up findings from sub-agent to parent session |
+| `session-end-postflight.py` | SessionEnd | Auto-captures POSTFLIGHT and cleans up |
+| `curate-snapshots.py` | SessionEnd | Prunes old snapshots to prevent data bloat |
 
 **Note:** Use absolute paths (replace `~` with your actual home directory like `/home/username`).
 
