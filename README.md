@@ -358,16 +358,15 @@ Projects using Empirica's epistemic foundations:
 
 ---
 
-## What's New in 1.5.0
+## What's New in 1.5.3
 
-- **Simplified CASCADE Workflow** — Direct `submit_preflight_assessment` / `submit_postflight_assessment` (removed execute_* theater)
-- **Python 3.10+ Support** — Lowered minimum from 3.11 to 3.10 for broader compatibility
-- **Fixed Homebrew/Installer** — Corrected checksums and version, added Python version check
-- **Plugin Auto-Discovery** — Entry points for extending Empirica
-- **Qdrant Memory Integration** — Full 4-collection semantic memory system
-- **Lessons System** — Cold storage procedural knowledge with cognitive immune decay
-- **Cross-Platform Installer** — One-command setup for Linux, macOS, Windows
-- **Sentinel Safety Gates** — Human-in-the-loop gates bounding AI autonomy
+- **Phase-Aware Calibration** — Separate noetic/praxic tracks with earned autonomy thresholds
+- **Assumption & Decision Logging** — Track unverified beliefs and choice points with `assumption-log` and `decision-log`
+- **Transaction Adoption** — Recover orphaned transactions after crash or compaction with `transaction-adopt`
+- **Sentinel Anti-Gaming** — Blocks INVESTIGATE loops without genuine transaction boundaries
+- **Statusline Simplification** — Single summary symbols replace verbose delta figures
+- **Unified Versioning** — One version number across all artifacts (no separate prompt versioning)
+- **Automated Release Pipeline** — `release.py` covers all version locations to prevent drift
 
 ---
 

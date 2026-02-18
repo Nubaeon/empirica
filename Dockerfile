@@ -1,11 +1,11 @@
 # Empirica Docker Image
 # Includes Python CLI, system prompts, and SKILL.md for AI agent usage
 #
-# Build: docker build -t empirica:1.5.2 .
-# Run:   docker run -it --rm empirica:1.5.2 empirica --help
-# Shell: docker run -it --rm empirica:1.5.2 /bin/bash
+# Build: docker build -t empirica:1.5.3 .
+# Run:   docker run -it --rm empirica:1.5.3 empirica --help
+# Shell: docker run -it --rm empirica:1.5.3 /bin/bash
 #
-# For security-hardened Alpine version: docker build -f Dockerfile.alpine -t empirica:1.5.2-alpine .
+# For security-hardened Alpine version: docker build -f Dockerfile.alpine -t empirica:1.5.3-alpine .
 
 FROM python:3.11-slim-bookworm
 
@@ -26,11 +26,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir --upgrade pip setuptools
 
 # Copy package files
-COPY dist/empirica-1.5.2-py3-none-any.whl /tmp/
+COPY dist/empirica-1.5.3-py3-none-any.whl /tmp/
 
 # Install Empirica with security flags
-RUN pip install --no-cache-dir --no-compile /tmp/empirica-1.5.2-py3-none-any.whl \
-    && rm /tmp/empirica-1.5.2-py3-none-any.whl \
+RUN pip install --no-cache-dir --no-compile /tmp/empirica-1.5.3-py3-none-any.whl \
+    && rm /tmp/empirica-1.5.3-py3-none-any.whl \
     && pip cache purge 2>/dev/null || true
 
 # Create directory for user data
@@ -60,6 +60,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
 CMD ["empirica", "--help"]
 
 # Usage examples (add as labels for documentation)
-LABEL example.bootstrap="docker run -v $(pwd)/.empirica:/data/.empirica empirica:1.5.2 bootstrap --ai-id docker-agent --level extended"
-LABEL example.session="docker run -v $(pwd)/.empirica:/data/.empirica empirica:1.5.2 sessions list"
-LABEL example.shell="docker run -it -v $(pwd)/.empirica:/data/.empirica empirica:1.5.2 /bin/bash"
+LABEL example.bootstrap="docker run -v $(pwd)/.empirica:/data/.empirica empirica:1.5.3 bootstrap --ai-id docker-agent --level extended"
+LABEL example.session="docker run -v $(pwd)/.empirica:/data/.empirica empirica:1.5.3 sessions list"
+LABEL example.shell="docker run -it -v $(pwd)/.empirica:/data/.empirica empirica:1.5.3 /bin/bash"

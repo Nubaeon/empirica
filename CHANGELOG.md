@@ -5,6 +5,44 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] - 2026-02-18
+
+### Added
+- **`transaction-adopt` Command** - Recover orphaned transactions when session state is lost after crash or compaction
+- **`assumption-log` Command** - Log unverified beliefs with confidence and domain scoping (CLI + MCP)
+- **`decision-log` Command** - Record choice points with rationale and reversibility (CLI + MCP)
+- **Automated Release Script** - `release.py` now covers all version locations: `__init__.py`, plugin.json, install.sh, CLAUDE.md templates, README badge, and more
+
+### Changed
+- **Statusline Delta Display** - Replaced per-vector delta figures with single summary symbols (green check, red warning, white delta) to prevent single-line overflow
+- **Unified Versioning** - CLAUDE.md system prompt now uses the same version number as the package (no separate prompt versioning)
+
+### Fixed
+- **Session Resolver Validation** - Validates session_id against DB to prevent stale post-compact propagation
+- **MCP `--transaction-id` Flag** - Removed broken flag that was never wired up; MCP tools now use active transaction resolution
+- **Test Isolation** - Tests no longer interfere with live transactions
+- **Project Switch** - Handles both `trajectory_path` formats (string and dict)
+
+## [1.5.2] - 2026-02-14
+
+### Added
+- **Phase-Aware Calibration** - Separate noetic/praxic calibration tracks with earned autonomy thresholds
+- **Know Grounding** - Artifact counts now ground the `know` vector in post-test verification
+- **Artifact Lifecycle** - Automatic resolution of stale unknowns and assumptions between transactions
+- **Per-Instance Sentinel Toggle** - Each tmux pane can independently enable/disable Sentinel
+- **Short ID Goal Matching** - Goals can be referenced by prefix instead of full UUID
+- **Stdin Auto-Detect** - `preflight-submit` and `postflight-submit` auto-detect `-` for stdin
+- **Sentinel INVESTIGATE Gaming Prevention** - Blocks investigation loops when a new transaction hasn't been opened
+- **macOS Qdrant Launchd** - Setup script with 65536 file descriptor limits (#27)
+
+### Fixed
+- **macOS Instance Isolation** - TTY resolution bug and hook/resolver asymmetry (#39)
+- **Non-Git Projects** - Git operations skip silently instead of erroring (#30)
+- **Qdrant Hash Fallback** - Vector dimensions now match configured provider (#34)
+- **Project Switch Without TMUX_PANE** - Resolves instance_id from claude_session_id (#36)
+- **Session-Authoritative Project ID** - Uses sessions.db as authoritative source
+- **Sentinel CLI Whitelist** - Added missing command aliases
+
 ## [1.5.1] - 2026-02-13
 
 ### Added

@@ -38,9 +38,7 @@ AI agents exhibit **confident ignorance** — they generate plausible-sounding r
 
 Empirica introduces **epistemic vectors** — quantified measures of knowledge state (0.0-1.0) that AI agents track in real-time. Actions are gated until confidence thresholds are met.
 
-**Readiness Gate:** `know >= 0.70` AND `uncertainty <= 0.35`
-
-Below these thresholds? Investigation mode. Above? Action mode.
+**Readiness Gate:** The Sentinel assesses readiness holistically — investigation mode when confidence is low, action mode when ready.
 
 ---
 
@@ -148,12 +146,12 @@ docker run --rm nubaeon/empirica:1.5.3-alpine empirica --version
 
 | Tag | Base | Size | Use Case |
 |-----|------|------|----------|
-| `1.5.1-alpine` | Alpine 3.23 | ~85MB | Production, security-hardened |
-| `1.5.1` | Debian Bookworm | ~150MB | Development, glibc compatibility |
+| `1.5.3-alpine` | Alpine 3.23 | ~85MB | Production, security-hardened |
+| `1.5.3` | Debian Bookworm | ~150MB | Development, glibc compatibility |
 
 ---
 
-## Key Features in 1.5.1
+## Key Features in 1.5.3
 
 - **Qdrant Memory Integration** — Semantic search across sessions
 - **Cognitive Immune System** — New learnings decay stale knowledge

@@ -100,7 +100,7 @@ empirica postflight-submit /tmp/postflight.json
 
 ## Image Tags
 
-- `1.5.1` - Stable release v1.5.1
+- `1.5.3` - Stable release v1.5.3
 - `latest` - Latest stable release
 - `develop` - Development branch (bleeding edge)
 
@@ -208,4 +208,4 @@ docker run -it empirica:custom empirica --help
 
 **License:** MIT  
 **Maintainer:** Empirica Team  
-**Version:** 1.5.1
+**Version:** 1.5.3

@@ -1,6 +1,6 @@
 # Workspace Management API Reference
 
-**Version:** 1.5.0
+**Version:** 1.5.3
 **Database:** `~/.empirica/workspace/workspace.db`
 **Purpose:** Cross-project portfolio management and trajectory tracking
 

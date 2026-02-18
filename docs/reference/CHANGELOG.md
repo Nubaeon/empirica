@@ -278,5 +278,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-**Current Version:** 1.5.0 (Grounded Calibration)
+**Current Version:** 1.5.3
 **Previous Milestone:** 1.4.0 (Epistemic-First Model, January 2026)
