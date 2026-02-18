@@ -27,7 +27,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 PLUGIN_NAME = "empirica-integration"
-PLUGIN_VERSION = "1.5.1"
+PLUGIN_VERSION = "1.5.3"
 
 
 def _find_python() -> str:
