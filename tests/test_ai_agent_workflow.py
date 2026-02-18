@@ -161,7 +161,7 @@ class TestAIAgentWorkflow:
             postflight_response = json.loads(result.stdout)
             assert postflight_response['ok'] is True
             assert 'deltas' in postflight_response
-            assert 'calibration_accuracy' in postflight_response
+            assert 'calibration' in postflight_response
 
         finally:
             os.unlink(postflight_config_path)
