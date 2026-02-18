@@ -170,6 +170,97 @@ class ReleaseManager:
         else:
             info(f"Would update Chocolatey nuspec: {nuspec_path}")
 
+    def update_version_strings(self):
+        """Update version strings in all source files not covered by other methods.
+
+        Covers: __init__.py, empirica-mcp/pyproject.toml, install.py,
+        setup_claude_code.py, install.sh (both copies), plugin.json (both copies),
+        Dockerfile.alpine.
+        """
+        version_files = [
+            # (path, pattern, replacement)
+            (
+                self.repo_root / "empirica" / "__init__.py",
+                r'__version__\s*=\s*"[^"]+"',
+                f'__version__ = "{self.version}"',
+            ),
+            (
+                self.repo_root / "empirica-mcp" / "pyproject.toml",
+                r'^version\s*=\s*"[^"]+"',
+                f'version = "{self.version}"',
+            ),
+            (
+                self.repo_root / "scripts" / "install.py",
+                r'EMPIRICA_VERSION\s*=\s*"[^"]+"',
+                f'EMPIRICA_VERSION = "{self.version}"',
+            ),
+            (
+                self.repo_root / "empirica" / "cli" / "command_handlers" / "setup_claude_code.py",
+                r'PLUGIN_VERSION\s*=\s*"[^"]+"',
+                f'PLUGIN_VERSION = "{self.version}"',
+            ),
+            (
+                self.repo_root / "claude-code-integration" / "install.sh",
+                r'PLUGIN_VERSION="[^"]+"',
+                f'PLUGIN_VERSION="{self.version}"',
+            ),
+            (
+                self.repo_root / "empirica" / "plugins" / "claude-code-integration" / "install.sh",
+                r'PLUGIN_VERSION="[^"]+"',
+                f'PLUGIN_VERSION="{self.version}"',
+            ),
+            (
+                self.repo_root / "claude-code-integration" / ".claude-plugin" / "plugin.json",
+                r'"version":\s*"[^"]+"',
+                f'"version": "{self.version}"',
+            ),
+            (
+                self.repo_root / "empirica" / "plugins" / "claude-code-integration" / ".claude-plugin" / "plugin.json",
+                r'"version":\s*"[^"]+"',
+                f'"version": "{self.version}"',
+            ),
+        ]
+
+        # Dockerfile.alpine (same patterns as Dockerfile)
+        alpine_path = self.repo_root / "Dockerfile.alpine"
+        if alpine_path.exists():
+            content = alpine_path.read_text()
+            content = re.sub(r'LABEL version="[^"]+"', f'LABEL version="{self.version}"', content)
+            content = re.sub(
+                r'COPY dist/empirica-[^-]+-py3-none-any\.whl',
+                f'COPY dist/empirica-{self.version}-py3-none-any.whl',
+                content,
+            )
+            content = re.sub(
+                r'/tmp/empirica-[^-]+-py3-none-any\.whl',
+                f'/tmp/empirica-{self.version}-py3-none-any.whl',
+                content,
+                count=2,
+            )
+            if not self.dry_run:
+                alpine_path.write_text(content)
+                success(f"Updated: {alpine_path}")
+            else:
+                info(f"Would update: {alpine_path}")
+
+        for filepath, pattern, replacement in version_files:
+            if not filepath.exists():
+                warning(f"Not found: {filepath}")
+                continue
+
+            content = filepath.read_text()
+            new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+
+            if content == new_content:
+                info(f"Already up to date: {filepath}")
+                continue
+
+            if not self.dry_run:
+                filepath.write_text(new_content)
+                success(f"Updated: {filepath}")
+            else:
+                info(f"Would update: {filepath}")
+
     def run_command(self, cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
         """Run a shell command"""
         cmd_str = " ".join(cmd)
@@ -319,6 +410,7 @@ docker pull nubaeon/empirica:{self.version}
             self.tarball_sha256 = self.calculate_sha256()
 
             # Update all distribution files
+            self.update_version_strings()
             self.update_homebrew_formula()
             self.update_dockerfile()
             self.update_chocolatey_nuspec()
