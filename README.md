@@ -331,7 +331,7 @@ Each session starts higher because learnings persist. No more re-investigating t
 With Claude Code hooks enabled, you see epistemic state in your terminal:
 
 ```
-[empirica] ⚡94% │ 🎯3 ❓12/5 │ POSTFLIGHT │ K:95% U:5% C:92% │ Δ K:+0.07 U:-0.05 ✓:+0.90 │ ✓ stable
+[empirica] ⚡94% │ 🎯3 ❓12/5 │ POSTFLIGHT │ K:95% U:5% C:92% │ ✓ │ ✓ stable
 ```
 
 **What this tells you:**
@@ -339,7 +339,7 @@ With Claude Code hooks enabled, you see epistemic state in your terminal:
 - **🎯3 ❓12/5** — Open goals (3) and unknowns (12 total, 5 blocking goals)
 - **POSTFLIGHT** — CASCADE phase (PREFLIGHT → CHECK → POSTFLIGHT)
 - **K:95% U:5% C:92%** — Knowledge, Uncertainty, Context scores
-- **Δ K:+0.07 ✓:+0.90** — Learning deltas (K=know, U=uncertainty, ✓=completion)
+- **✓** / **⚠** / **△** — Learning delta summary (net positive / net negative / neutral)
 - **✓ stable** — Drift indicator (✓ stable, ⚠ drifting, ✗ severe)
 
 ---

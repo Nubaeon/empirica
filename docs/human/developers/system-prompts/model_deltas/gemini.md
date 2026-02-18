@@ -1,7 +1,10 @@
-# Gemini Model Delta - v1.5.0
+# Gemini Model Delta - v1.5.3
 
 **Applies to:** Gemini (all versions)
-**Last Updated:** 2026-01-31
+**Last Updated:** 2026-02-18
+
+**Hooks:** Gemini CLI supports hooks (10 events, similar to Claude Code).
+Empirica hooks for Gemini CLI are experimental — see Claude Code hooks for reference.
 
 This delta contains Gemini-specific guidance to be used with the base Empirica system prompt.
 

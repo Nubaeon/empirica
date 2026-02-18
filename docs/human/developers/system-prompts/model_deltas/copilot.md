@@ -1,7 +1,10 @@
-# GitHub Copilot Model Delta - v1.5.0
+# GitHub Copilot Model Delta - v1.5.3
 
 **Applies to:** GitHub Copilot
-**Last Updated:** 2026-01-31
+**Last Updated:** 2026-02-18
+
+**Hooks:** GitHub Copilot does not currently support lifecycle hooks.
+All session management and CASCADE workflow must be done manually via CLI.
 
 This delta contains Copilot-specific guidance to be used with the base Empirica system prompt.
 

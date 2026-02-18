@@ -1,7 +1,10 @@
-# Rovo Model Delta - v1.5.0
+# Rovo Model Delta - v1.5.3
 
 **Applies to:** Atlassian Rovo
-**Last Updated:** 2026-01-31
+**Last Updated:** 2026-02-18
+
+**Hooks:** Rovo does not currently support lifecycle hooks.
+All session management and CASCADE workflow must be done manually via CLI.
 
 This delta contains Rovo-specific guidance to be used with the base Empirica system prompt.
 

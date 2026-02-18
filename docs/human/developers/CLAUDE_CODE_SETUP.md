@@ -158,7 +158,7 @@ cat ~/.claude/plugins/local/empirica-integration/templates/settings-statusline.j
 - `🎯3 ❓12/5` = open goals (3) and unknowns (12 total, 5 blocking goals)
 - `PREFLIGHT/CHECK/POSTFLIGHT/POST-TEST` = CASCADE workflow phase
 - `K:90% U:15% C:90%` = know/uncertainty/context vectors
-- `Δ K:+0.25 U:-0.15 ✓:+0.80` = learning deltas (K=know, U=uncertainty, ✓=completion)
+- `✓` / `⚠` / `△` = learning delta summary (net positive / net negative / neutral)
 - `✓ stable` / `⚠ drifting` / `✗ severe` = drift status
 
 ---

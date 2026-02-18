@@ -1,7 +1,7 @@
-# Qwen Model Delta - v1.5.0
+# Qwen Model Delta - v1.5.3
 
 **Applies to:** Qwen (all versions)
-**Last Updated:** 2026-01-31
+**Last Updated:** 2026-02-18
 
 This delta contains Qwen-specific guidance to be used with the base Empirica system prompt.
 

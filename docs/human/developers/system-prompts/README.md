@@ -1,4 +1,4 @@
-# System Prompts - Architecture v1.5.0
+# System Prompts - Architecture v1.5.3
 
 **Multi-AI system prompt management for Empirica**
 
@@ -121,6 +121,7 @@ empirica deadend-log --approach "..." --why-failed "..."
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.5.3 | 2026-02-18 | **Transaction Discipline** - artifact lifecycle, assumption/decision logging, anti-patterns, platform-aware hook integration, noetic firewall docs |
 | v1.5.0 | 2026-01-31 | **Dual-Track Calibration** - grounded verification (post-test evidence), trajectory tracking, 3194 observations, calibration-report --grounded/--trajectory |
 | v1.4.0 | 2026-01-21 | **Epistemic-First Model** - assessment reveals complexity, calibration 1650 obs, phase-aware completion (NOETIC/PRAXIC) |
 | v1.3.4 | 2026-01-09 | **CRITICAL:** Fixed bias corrections (were backwards), updated calibration to 995 obs, added goals commands, four-layer storage architecture |
@@ -131,4 +132,4 @@ empirica deadend-log --approach "..." --why-failed "..."
 
 ---
 
-**Syncs with:** Empirica v1.5.0
+**Syncs with:** Empirica v1.5.3
