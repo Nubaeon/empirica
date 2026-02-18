@@ -1,6 +1,6 @@
 # Empirica CLI Commands - Unified Reference
 
-**Total Commands:** 134
+**Total Commands:** 138
 **Framework Version:** 1.5.3
 **Generated:** 2026-02-07
 **Status:** Production Ready
@@ -104,7 +104,7 @@ The CLI uses `get_active_empirica_session_id()` with this priority chain:
 - **handoff-create** - Create AI-to-AI handoff
 - **handoff-query** - Query for available handoffs
 
-### 9. Logging (9 commands)
+### 9. Logging (13 commands)
 - **finding-log** - Log new finding discovered during work
 - **unknown-log** - Log unknown or unresolved question
 - **unknown-resolve** - Mark unknown as resolved with explanation
@@ -112,8 +112,12 @@ The CLI uses `get_active_empirica_session_id()` with this priority chain:
 - **refdoc-add** - Add reference documentation
 - **mistake-log** - Log mistake made during work
 - **mistake-query** - Query for logged mistakes
+- **assumption-log** - Log unverified belief with confidence and domain
+- **decision-log** - Log choice point with rationale and reversibility
+- **source-add** - Add external reference source (noetic or praxic)
 - **act-log** - Log action taken with confidence score
 - **investigate-log** - Log investigation activities
+- **transaction-adopt** - Adopt orphaned transaction from crashed/closed instance
 
 ### 10. Issue Capture (6 commands)
 - **issue-list** - List all captured issues
@@ -675,6 +679,54 @@ empirica unknown-resolve \
 #### `mistake-query`
 **Purpose:** Query for logged mistakes
 **Usage:** `empirica mistake-query --session-id <session_id>`
+
+#### `assumption-log`
+**Purpose:** Log unverified belief with confidence and domain. Assumptions age — urgency increases over time until verified or falsified.
+**Usage:** `empirica assumption-log --assumption <text> --confidence <0.0-1.0> --domain <domain> [options]`
+**Options:**
+- `--session-id`: Session ID (auto-derived from active transaction)
+- `--project-id`: Project UUID
+- `--goal-id`: Link assumption to specific goal
+- `--confidence`: Confidence in this assumption (0.0-1.0)
+- `--domain`: Domain area (e.g., config, auth, architecture)
+**Example:** `empirica assumption-log --assumption "Config reload is atomic" --confidence 0.5 --domain config`
+
+#### `decision-log`
+**Purpose:** Log choice point with rationale and reversibility level. Creates permanent audit trail.
+**Usage:** `empirica decision-log --choice <text> --rationale <text> --reversibility <level> [options]`
+**Options:**
+- `--session-id`: Session ID (auto-derived from active transaction)
+- `--project-id`: Project UUID
+- `--goal-id`: Link decision to specific goal
+- `--alternatives`: JSON list of alternatives considered
+- `--confidence`: Confidence in this choice (0.0-1.0)
+- `--reversibility`: `exploratory` (easily changed), `committal` (costly to reverse), `forced` (no alternatives)
+- `--domain`: Domain area
+**Example:** `empirica decision-log --choice "Use SQLite over Postgres" --rationale "Single-user, no server needed" --reversibility exploratory`
+
+#### `source-add`
+**Purpose:** Add external reference source consulted or produced. Tracks provenance of knowledge (noetic source IN) or artifacts (praxic source OUT).
+**Usage:** `empirica source-add --title <text> (--noetic | --praxic) [options]`
+**Options:**
+- `--title`: Source title (required)
+- `--description`: Source description
+- `--source-type`: Type: document, meeting, email, calendar, code, web, design, api
+- `--path`: File path (for local documents)
+- `--url`: URL (for web sources)
+- `--noetic`: Source used — evidence that informed knowledge (source IN)
+- `--praxic`: Source created — output produced by action (source OUT)
+- `--confidence`: Confidence in source quality (0.0-1.0, default: 0.7)
+**Example:** `empirica source-add --title "RFC 6749" --url "https://..." --source-type web --noetic`
+
+#### `transaction-adopt`
+**Purpose:** Adopt orphaned transaction from crashed or closed instance. Recovers transaction state so work can continue without data loss.
+**Usage:** `empirica transaction-adopt --from <instance_id> [options]`
+**Options:**
+- `--from`: Source instance ID (e.g., tmux_4) — the orphaned transaction's instance
+- `--to`: Target instance ID (auto-detected if not specified)
+- `--project`: Project path containing the transaction (auto-detected)
+- `--dry-run`: Show what would be done without making changes
+**Example:** `empirica transaction-adopt --from tmux_4 --dry-run`
 
 #### `act-log`
 **Purpose:** Log action taken with confidence score
@@ -1353,5 +1405,5 @@ empirica --verbose check --session-id xyz # CHECK with debugging
 ---
 
 **Generated from:** empirica --help output (2026-02-07)
-**Total Commands:** 134
+**Total Commands:** 138
 **Framework Version:** 1.5.3
