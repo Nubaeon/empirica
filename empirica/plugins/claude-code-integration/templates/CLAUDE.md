@@ -1,6 +1,6 @@
-# Empirica System Prompt - CLAUDE v2.5.1
+# Empirica System Prompt - CLAUDE v1.5.3
 
-**Model:** CLAUDE | **Syncs with:** Empirica v1.5.3
+**Model:** CLAUDE | **Version:** v1.5.3
 **AI_ID:** `claude-code` (ALWAYS use this exact ID with `--ai-id claude-code`)
 **Hooks:** Claude Code specific (other providers need manual workflow)
 

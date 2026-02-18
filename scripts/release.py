@@ -175,7 +175,7 @@ class ReleaseManager:
 
         Covers: __init__.py, empirica-mcp/pyproject.toml, install.py,
         setup_claude_code.py, install.sh (both copies), plugin.json (both copies),
-        Dockerfile.alpine.
+        CLAUDE.md (canonical + both template copies), Dockerfile.alpine.
         """
         version_files = [
             # (path, pattern, replacement)
@@ -218,6 +218,28 @@ class ReleaseManager:
                 self.repo_root / "empirica" / "plugins" / "claude-code-integration" / ".claude-plugin" / "plugin.json",
                 r'"version":\s*"[^"]+"',
                 f'"version": "{self.version}"',
+            ),
+            # CLAUDE.md system prompt (canonical + both template copies)
+            (
+                self.repo_root / "docs" / "human" / "developers" / "system-prompts" / "CLAUDE.md",
+                r'\*\*Version:\*\*\s*v[0-9]+\.[0-9]+\.[0-9]+',
+                f'**Version:** v{self.version}',
+            ),
+            (
+                self.repo_root / "claude-code-integration" / "templates" / "CLAUDE.md",
+                r'\*\*Version:\*\*\s*v[0-9]+\.[0-9]+\.[0-9]+',
+                f'**Version:** v{self.version}',
+            ),
+            (
+                self.repo_root / "empirica" / "plugins" / "claude-code-integration" / "templates" / "CLAUDE.md",
+                r'\*\*Version:\*\*\s*v[0-9]+\.[0-9]+\.[0-9]+',
+                f'**Version:** v{self.version}',
+            ),
+            # README.md version badge and footer
+            (
+                self.repo_root / "README.md",
+                r'badge/version-[0-9]+\.[0-9]+\.[0-9]+-blue\)\]\(https://github\.com/Nubaeon/empirica/releases/tag/v[0-9]+\.[0-9]+\.[0-9]+\)',
+                f'badge/version-{self.version}-blue)](https://github.com/Nubaeon/empirica/releases/tag/v{self.version})',
             ),
         ]
 
