@@ -2,7 +2,7 @@
 
 > **Teaching AI to know what it knows—and what it doesn't**
 
-[![Version](https://img.shields.io/badge/version-1.5.2-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.5.2)
+[![Version](https://img.shields.io/badge/version-1.5.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.5.3)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -176,13 +176,13 @@ brew install empirica
 
 ```bash
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.5.0
+docker pull nubaeon/empirica:1.5.3
 
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.5.0-alpine
+docker pull nubaeon/empirica:1.5.3-alpine
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.5.0 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.5.3 /bin/bash
 ```
 
 ---
@@ -400,6 +400,6 @@ See [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.5.0
+**Version:** 1.5.3
 
 *Built through 800+ sessions of genuine epistemic collaboration between humans and AI.*
