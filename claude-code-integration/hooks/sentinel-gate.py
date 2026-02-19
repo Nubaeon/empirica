@@ -875,18 +875,32 @@ def main():
         instance_id = get_instance_id()
         suffix = f'_{instance_id}' if instance_id else ''
         tx_file = empirica_root / f'active_transaction{suffix}.json'
-        # DEBUG: Log what we're looking for
-        import sys as _sys
-        _sys.stderr.write(f"SENTINEL_DEBUG: instance_id={instance_id}, tx_file={tx_file}, exists={tx_file.exists()}\n")
         if tx_file.exists():
             try:
                 with open(tx_file, 'r') as f:
                     tx_data = json.load(f)
-                current_transaction_id = tx_data.get('transaction_id')
-                tx_session_id = tx_data.get('session_id')  # Session that started this transaction
-                _sys.stderr.write(f"SENTINEL_DEBUG: current_transaction_id={current_transaction_id}, tx_session_id={tx_session_id}\n")
-            except Exception as e:
-                _sys.stderr.write(f"SENTINEL_DEBUG: tx file read error: {e}\n")
+
+                # STALE TRANSACTION CHECK: Purge closed-but-not-deleted files.
+                # POSTFLIGHT sets status="closed" then clear_active_transaction()
+                # deletes the file. If deletion fails (CWD wrong, resolution
+                # chain degraded during session-end), the file persists.
+                # Only purge status != "open" — never time-based (transactions
+                # can legitimately last overnight).
+                tx_candidate_session = tx_data.get('session_id')
+                _tx_stale = False
+
+                if tx_data.get('status') != 'open':
+                    _tx_stale = True
+                    try:
+                        tx_file.unlink()
+                    except Exception:
+                        pass
+
+                if not _tx_stale:
+                    current_transaction_id = tx_data.get('transaction_id')
+                    tx_session_id = tx_candidate_session
+            except Exception:
+                pass
 
     # Get session_id - transaction file takes priority (survives compaction)
     # Fallback to active_work file for when no transaction is open
