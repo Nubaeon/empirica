@@ -905,6 +905,59 @@ def write_active_transaction(
         raise
 
 
+def increment_transaction_tool_count(claude_session_id: str = None) -> Optional[dict]:
+    """Atomically increment tool_call_count in the active transaction file.
+
+    Called by Sentinel on every PreToolUse (both noetic and praxic) to track
+    how much work has been done in this transaction. Returns the updated
+    transaction data including current count and avg_turns for nudge calculation.
+
+    Returns None if no active transaction exists.
+    """
+    import tempfile
+
+    from pathlib import Path
+    suffix = _get_instance_suffix()
+
+    # Find the transaction file
+    project_path = get_active_project_path(claude_session_id)
+    if project_path:
+        tx_path = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
+    else:
+        tx_path = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
+
+    if not tx_path.exists():
+        return None
+
+    try:
+        with open(tx_path, 'r') as f:
+            tx_data = json.load(f)
+
+        if tx_data.get('status') != 'open':
+            return None
+
+        # Increment count
+        tx_data['tool_call_count'] = tx_data.get('tool_call_count', 0) + 1
+        tx_data['updated_at'] = __import__('time').time()
+
+        # Atomic write
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=str(tx_path.parent))
+        try:
+            with __import__('os').fdopen(tmp_fd, 'w') as tmp_f:
+                json.dump(tx_data, tmp_f, indent=2)
+            __import__('os').rename(tmp_path, str(tx_path))
+        except BaseException:
+            try:
+                __import__('os').unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+
+        return tx_data
+    except Exception:
+        return None
+
+
 def read_active_transaction_full(claude_session_id: str = None) -> Optional[dict]:
     """Read the full active transaction data from the tracking file.
 

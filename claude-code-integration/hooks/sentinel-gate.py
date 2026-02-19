@@ -61,6 +61,11 @@ SAFE_BASH_PREFIXES = (
     'git status', 'git log', 'git diff', 'git show', 'git branch',
     'git remote', 'git tag', 'git stash list', 'git blame',
     'git ls-files', 'git ls-tree', 'git cat-file',
+    # GitHub CLI read operations
+    'gh issue list', 'gh issue view', 'gh issue status',
+    'gh pr list', 'gh pr view', 'gh pr status', 'gh pr checks',
+    'gh repo view', 'gh release list', 'gh release view',
+    'gh api ',  # API calls (read-only by default)
     # Environment inspection
     'pwd', 'echo ', 'printf ', 'env', 'printenv', 'set',
     'whoami', 'id', 'hostname', 'uname', 'date', 'cal',
@@ -346,17 +351,136 @@ def is_transition_command(command: str) -> bool:
     return False
 
 
+# --- AUTONOMY CALIBRATION LOOP ---
+# Tracks tool call count per transaction and nudges at adaptive thresholds.
+# The nudge is informational — Claude decides when to POSTFLIGHT based on
+# information completeness, not forced thresholds.
+
+_autonomy_nudge = ""  # Module-level: set during increment, read by respond
+
+
+def _try_increment_tool_count(claude_session_id: str = None) -> tuple:
+    """Increment tool_call_count in the active transaction file.
+
+    Lightweight — no heavy imports. Uses project_resolver (already imported)
+    and direct file I/O.
+
+    Returns (tool_call_count, avg_turns) or (0, 0) if no transaction.
+    """
+    import tempfile
+
+    instance_id = get_instance_id()
+    suffix = f'_{instance_id}' if instance_id else ''
+
+    # Find the transaction file via active_work → project_path → .empirica/
+    tx_path = None
+
+    # Try 1: active_work file for project_path
+    if claude_session_id:
+        aw_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+        if aw_file.exists():
+            try:
+                with open(aw_file, 'r') as f:
+                    pp = json.load(f).get('project_path')
+                if pp:
+                    candidate = Path(pp) / '.empirica' / f'active_transaction{suffix}.json'
+                    if candidate.exists():
+                        tx_path = candidate
+            except Exception:
+                pass
+
+    # Try 2: project_resolver canonical path
+    if not tx_path:
+        pp = get_active_project_path(claude_session_id)
+        if pp:
+            candidate = Path(pp) / '.empirica' / f'active_transaction{suffix}.json'
+            if candidate.exists():
+                tx_path = candidate
+
+    # Try 3: global fallback
+    if not tx_path:
+        candidate = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
+        if candidate.exists():
+            tx_path = candidate
+
+    if not tx_path:
+        return 0, 0
+
+    try:
+        with open(tx_path, 'r') as f:
+            tx = json.load(f)
+
+        if tx.get('status') != 'open':
+            return 0, 0
+
+        tx['tool_call_count'] = tx.get('tool_call_count', 0) + 1
+        count = tx['tool_call_count']
+        avg = tx.get('avg_turns', 0)
+
+        # Atomic write-back
+        fd, tmp = tempfile.mkstemp(dir=str(tx_path.parent))
+        try:
+            with os.fdopen(fd, 'w') as tf:
+                json.dump(tx, tf, indent=2)
+            os.rename(tmp, str(tx_path))
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+
+        return count, avg
+    except Exception:
+        return 0, 0
+
+
+def _compute_nudge(count: int, avg: int) -> str:
+    """Compute autonomy nudge message based on tool call count vs average.
+
+    Returns empty string if no nudge needed. Nudges are informational —
+    Claude decides when to POSTFLIGHT based on coherence, not thresholds.
+    """
+    if avg <= 0 or count <= 0:
+        return ""
+
+    ratio = count / avg
+
+    if ratio >= 2.0:
+        return (
+            f"AUTONOMY: Transaction extended ({count} tool calls, avg {avg}). "
+            f"POSTFLIGHT strongly recommended to capture learning and maintain calibration."
+        )
+    elif ratio >= 1.5:
+        return (
+            f"AUTONOMY: Transaction at {count}/{avg} tool calls (1.5x avg). "
+            f"Consider POSTFLIGHT soon to preserve measurement fidelity."
+        )
+    elif ratio >= 1.0:
+        return (
+            f"AUTONOMY: Transaction at {count}/{avg} tool calls (past avg). "
+            f"Natural POSTFLIGHT point when current coherent chunk completes."
+        )
+    return ""
+
+
 def respond(decision: str, reason: str = "") -> None:
-    """Output in Claude Code's expected format."""
+    """Output in Claude Code's expected format. Appends autonomy nudge on allow."""
+    global _autonomy_nudge
+    full_reason = reason
+    show_nudge = False
+    if decision == "allow" and _autonomy_nudge:
+        full_reason = f"{reason} | {_autonomy_nudge}"
+        show_nudge = True
+
     output: dict = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": decision,
-            "permissionDecisionReason": reason
+            "permissionDecisionReason": full_reason
         }
     }
-    # Suppress output for "allow" to avoid "hook error" display bug in Claude Code TUI
-    if decision == "allow":
+    # Suppress output for "allow" UNLESS there's a nudge to show Claude
+    if decision == "allow" and not show_nudge:
         output["suppressOutput"] = True
     print(json.dumps(output))
 
@@ -653,6 +777,17 @@ def main():
 
     tool_name = hook_input.get('tool_name', 'unknown')
     tool_input = hook_input.get('tool_input', {})
+
+    # === AUTONOMY CALIBRATION: Track tool calls per transaction ===
+    # Counts ALL tool calls (noetic + praxic) to measure transaction length.
+    # Nudge thresholds are informational — Claude decides when to POSTFLIGHT.
+    global _autonomy_nudge
+    try:
+        _claude_sid = hook_input.get('session_id')
+        _count, _avg = _try_increment_tool_count(_claude_sid)
+        _autonomy_nudge = _compute_nudge(_count, _avg)
+    except Exception:
+        pass  # Counter failure is non-fatal
 
     # === NOETIC FIREWALL: Whitelist-based access control ===
 
