@@ -3773,7 +3773,60 @@ def handle_project_switch_command(args):
             bootstrap_result = {"ok": False, "error": str(e)}
             logger.debug(f"Auto-bootstrap on project-switch failed (non-fatal): {e}")
 
-        # 6. Show project context summary from workspace data
+        # 8. AUTO-PREFLIGHT: Open a new transaction in the target project
+        # After switching, the AI's epistemic state is "just arrived, low context."
+        # Auto-PREFLIGHT with conservative baseline vectors honestly represents this.
+        # The AI then naturally does noetic investigation and CHECKs when ready.
+        preflight_result = None
+        try:
+            if attached_session and project_path:
+                import subprocess
+                preflight_cmd = ['empirica', 'preflight-submit', '-']
+                preflight_input = json.dumps({
+                    "session_id": attached_session['session_id'],
+                    "task_context": f"Project switch to {folder_name}. Assessing new project context.",
+                    "vectors": {
+                        "know": 0.3,
+                        "uncertainty": 0.6,
+                        "context": 0.4,
+                        "clarity": 0.5,
+                        "do": 0.5,
+                        "completion": 0.0,
+                        "engagement": 0.7,
+                        "coherence": 0.4,
+                        "signal": 0.3,
+                        "density": 0.3,
+                        "state": 0.3,
+                        "change": 0.5,
+                        "impact": 0.5
+                    },
+                    "reasoning": f"Auto-PREFLIGHT after project-switch to {folder_name}. Conservative baseline — just arrived in new project context."
+                })
+                result = subprocess.run(
+                    preflight_cmd,
+                    input=preflight_input,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd=str(project_path)
+                )
+                if result.returncode == 0:
+                    try:
+                        preflight_result = json.loads(result.stdout)
+                    except Exception:
+                        preflight_result = {"ok": True, "note": "PREFLIGHT ran but non-JSON output"}
+                    if output_format == 'human':
+                        tx_id = preflight_result.get('transaction_id', 'unknown')
+                        print(f"🔄 Transaction opened (auto-PREFLIGHT: {tx_id[:8]}...)")
+                else:
+                    preflight_result = {"ok": False, "error": result.stderr[:200]}
+                    if output_format == 'human':
+                        logger.debug(f"Auto-PREFLIGHT failed: {result.stderr[:200]}")
+        except Exception as e:
+            preflight_result = {"ok": False, "error": str(e)}
+            logger.debug(f"Auto-PREFLIGHT on project-switch failed (non-fatal): {e}")
+
+        # 9. Show project context summary from workspace data
         if output_format == 'human':
             findings = project.get('total_findings', 0)
             unknowns = project.get('total_unknowns', 0)
@@ -3802,18 +3855,25 @@ def handle_project_switch_command(args):
                 print(f"   cd {project_path} && empirica project-bootstrap")
                 print()
         
-        # 6. Show next steps
+        # 10. Show next steps
         if output_format == 'human':
             print()
             print("━" * 70)
             print("💡 Next Steps")
             print("━" * 70)
             print()
-            print("  1. Start a transaction (PREFLIGHT) to begin measured work")
-            print()
-            print("  2. Investigate before acting — log findings, unknowns, dead-ends")
-            print()
-            print("  3. CHECK when ready to proceed, POSTFLIGHT when work is complete")
+            if preflight_result and preflight_result.get('ok'):
+                print("  Transaction is open — you're in noetic phase.")
+                print()
+                print("  1. Investigate — log findings, unknowns, dead-ends")
+                print()
+                print("  2. CHECK when ready to act, POSTFLIGHT when work is complete")
+            else:
+                print("  1. Start a transaction (PREFLIGHT) to begin measured work")
+                print()
+                print("  2. Investigate before acting — log findings, unknowns, dead-ends")
+                print()
+                print("  3. CHECK when ready to proceed, POSTFLIGHT when work is complete")
             print()
             print("⚠️  All commands now write to this project's database.")
             print("    Findings, sessions, goals → stored in this project context.")
@@ -3837,7 +3897,8 @@ def handle_project_switch_command(args):
                 ],
                 'postflight_result': postflight_result,
                 'attached_session': attached_session,
-                'bootstrap_result': bootstrap_result
+                'bootstrap_result': bootstrap_result,
+                'preflight_result': preflight_result
             }
             print(json.dumps(result, indent=2))
         
