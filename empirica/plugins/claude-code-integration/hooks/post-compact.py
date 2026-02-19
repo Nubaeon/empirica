@@ -29,26 +29,16 @@ except ImportError:
 
 
 def _get_instance_id() -> Optional[str]:
-    """Derive instance ID from environment. TMUX_PANE → TERM_SESSION_ID → WINDOWID → 'default'.
-
-    NOTE: os.ttyname(sys.stdin.fileno()) is NOT attempted here because hooks
-    receive stdin as a pipe from Claude Code, so it always fails. Use env vars
-    that are reliably inherited instead.
-    """
+    """Derive instance ID from environment. TMUX_PANE → TTY → 'default'."""
     tmux_pane = os.environ.get('TMUX_PANE')
     if tmux_pane:
         return f"tmux_{tmux_pane.lstrip('%')}"
-
-    # macOS Terminal.app session (matches resolver priority chain)
-    term_session = os.environ.get('TERM_SESSION_ID')
-    if term_session:
-        return f"term:{term_session[:16]}"
-
-    # X11 window ID
-    window_id = os.environ.get('WINDOWID')
-    if window_id:
-        return f"x11:{window_id}"
-
+    try:
+        tty_path = os.ttyname(sys.stdin.fileno())
+        safe = tty_path.replace('/', '_').lstrip('_').replace('dev_', '')
+        return f"term_{safe}"
+    except Exception:
+        pass
     return "default"
 
 
@@ -369,20 +359,9 @@ def main():
         # CRITICAL: Write active_work file for NEW conversation even when continuing transaction.
         # The transaction file has the right session_id, but CLI commands need active_work
         # keyed by the NEW claude_session_id to resolve the correct project.
-        # BUG FIX: Use transaction's session_id, but VALIDATE it exists in sessions table.
-        # After compaction, the pre-compact session_id may be stale (different UUID that
-        # happens to share the same prefix). If stale, fall back to empirica_session.
-        tx_session_id = active_transaction.get('session_id')
-        if tx_session_id:
-            try:
-                from empirica.utils.session_resolver import _validate_session_in_db
-                if not _validate_session_in_db(tx_session_id):
-                    print(f"WARNING: Transaction session_id {tx_session_id[:8]}... not in sessions table (stale after compact)", file=sys.stderr)
-                    print(f"  Falling back to current empirica_session: {empirica_session[:8] if empirica_session else 'None'}...", file=sys.stderr)
-                    tx_session_id = empirica_session
-            except Exception:
-                pass  # If validation fails, use tx_session_id as-is
-        tx_session_id = tx_session_id or empirica_session
+        # BUG FIX: Use transaction's session_id, not _get_empirica_session()'s which might
+        # return a DIFFERENT session. This was causing statusline to query wrong session.
+        tx_session_id = active_transaction.get('session_id') or empirica_session
         _write_active_work_for_new_conversation(
             claude_session_id=claude_session_id,
             project_path=str(project_root),
@@ -462,6 +441,15 @@ def main():
         "potential_drift_warning": potential_drift,
         "session_bootstrap": session_bootstrap  # NEW: Include bootstrap result
     }
+
+    # Clean up compact handoff — consumed, no longer needed
+    try:
+        if instance_id:
+            handoff_file = Path.home() / '.empirica' / f'compact_handoff_{instance_id}.json'
+            if handoff_file.exists():
+                handoff_file.unlink()
+    except Exception:
+        pass  # Cleanup failure is non-fatal
 
     print(json.dumps(output), file=sys.stdout)
 

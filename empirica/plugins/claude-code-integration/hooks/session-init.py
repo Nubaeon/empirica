@@ -378,6 +378,15 @@ def main():
 
     ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
 
+    # Opportunistic cleanup: remove stale instance_projects for dead tmux panes
+    stale_removed = 0
+    try:
+        sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
+        from empirica.utils.session_resolver import cleanup_stale_instance_projects
+        stale_removed = cleanup_stale_instance_projects()
+    except Exception:
+        pass  # Cleanup failure is non-fatal
+
     # Archive stale plans (whose goals are complete)
     archived_plans = archive_stale_plans()
 

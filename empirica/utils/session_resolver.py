@@ -1170,6 +1170,115 @@ def clear_active_transaction(claude_session_id: str = None) -> None:
             pass
 
 
+def clear_compact_handoff() -> bool:
+    """Remove the compact handoff file after post-compact has consumed it.
+
+    Compact handoff is a one-shot bridge: pre-compact writes it, post-compact reads it.
+    After consumption, it's stale and should be purged to prevent confusion.
+
+    Returns True if a file was removed.
+    """
+    from pathlib import Path
+    instance_id = get_instance_id()
+    if not instance_id:
+        return False
+
+    handoff_file = Path.home() / '.empirica' / f'compact_handoff_{instance_id}.json'
+    if handoff_file.exists():
+        try:
+            handoff_file.unlink()
+            logger.debug(f"Cleared compact handoff: {handoff_file.name}")
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def clear_active_work(claude_session_id: str = None) -> bool:
+    """Remove the active_work file for a completed Claude session.
+
+    Called after POSTFLIGHT (post-test) completes — the last consumer of session state.
+    Also called by session-end as safety net.
+
+    Args:
+        claude_session_id: Claude Code conversation UUID. Required — without it
+            we can't identify which file to clean up.
+
+    Returns True if a file was removed.
+    """
+    from pathlib import Path
+    if not claude_session_id:
+        return False
+
+    active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+    if active_work_file.exists():
+        try:
+            active_work_file.unlink()
+            logger.debug(f"Cleared active_work: {active_work_file.name}")
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def cleanup_stale_instance_projects() -> int:
+    """Remove instance_projects entries for tmux panes that no longer exist.
+
+    Tmux pane IDs are monotonic — once a pane is destroyed, its ID is never
+    reused. This detects dead panes and removes their stale mapping files.
+
+    Returns number of files removed.
+    """
+    from pathlib import Path
+    import subprocess
+
+    instance_dir = Path.home() / '.empirica' / 'instance_projects'
+    if not instance_dir.exists():
+        return 0
+
+    # Get current tmux pane IDs
+    live_panes = set()
+    try:
+        result = subprocess.run(
+            ['tmux', 'list-panes', '-a', '-F', '#{pane_id}'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            for line in result.stdout.strip().split('\n'):
+                pane_id = line.strip().lstrip('%')
+                if pane_id:
+                    live_panes.add(f"tmux_{pane_id}")
+    except Exception:
+        return 0  # Can't verify — don't remove anything
+
+    if not live_panes:
+        return 0  # No tmux running or no panes found — bail
+
+    removed = 0
+    for instance_file in instance_dir.glob('tmux_*.json'):
+        instance_id = instance_file.stem  # e.g., "tmux_25"
+        if instance_id not in live_panes:
+            try:
+                instance_file.unlink()
+                removed += 1
+                logger.debug(f"Removed stale instance_projects: {instance_file.name}")
+            except Exception:
+                pass
+
+    # Also clean up stale compact_handoff files for dead panes
+    for handoff_file in (Path.home() / '.empirica').glob('compact_handoff_tmux_*.json'):
+        handoff_instance = handoff_file.stem.replace('compact_handoff_', '')
+        if handoff_instance not in live_panes:
+            try:
+                handoff_file.unlink()
+                removed += 1
+                logger.debug(f"Removed stale compact_handoff: {handoff_file.name}")
+            except Exception:
+                pass
+
+    return removed
+
+
 # ============================================================================
 # Unified Context Resolver
 # ============================================================================
