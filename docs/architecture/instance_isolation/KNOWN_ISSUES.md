@@ -92,21 +92,35 @@ Historical bugs and fixes related to instance isolation. Useful for debugging an
 **Key insight:** instance_id is PRIMARY isolation key; claude_session_id is supplementary.
 **Commit:** `23f79366`
 
-### 11.14 project-switch Via Bash Tool Fails to Update instance_projects (2026-02-19)
+### 11.14 project-switch Reverted by Self-Heal in get_active_project_path (2026-02-19)
 
-**Symptom:** `empirica project-switch <project>` runs via Bash tool but instance_projects
-not updated. TTY session file updated correctly, but Sentinel/statusline still see old project.
-**Root cause:** `_update_active_work()` resolved `instance_id` only from:
-1. TMUX_PANE env var (absent in Bash tool subprocess)
-2. Reverse-lookup via claude_session_id (null in TTY session because session-create
-   doesn't have it and session-init hook didn't propagate it to TTY file)
+**Symptom:** `empirica project-switch <project>` runs successfully but Sentinel and
+statusline still see the old project. `instance_projects` shows
+`"source": "self-heal-from-active_work"` — the self-heal overwrote the switch.
 
-The TTY session file already stored `instance_id` from a prior hook, but the code
-never read it as a fallback.
-**Fix (two-part):**
-1. `_update_active_work()`: Added third fallback reading `instance_id` from TTY session dict
-2. `session-init hook`: Now propagates `claude_session_id` to TTY session file (previously
-   only wrote to instance_projects and active_work)
+**Root cause (regression):** Commit `55b2e4ac` (Feb 9) flipped the priority in
+`get_active_project_path()` from instance_projects-first (correct, `a3f74a33` Feb 7)
+to active_work-first. It also added a self-heal that overwrote `instance_projects`
+from `active_work` when they disagreed.
+
+After project-switch:
+- `instance_projects` correctly points to new project (CLI just wrote it)
+- `active_work` still points to old project (CLI can't update it — no claude_session_id)
+- Next hook (Sentinel) calls `get_active_project_path(claude_session_id)` → reads
+  stale `active_work` → self-heals `instance_projects` BACK to old project
+
+The commit's comment "active_work (set by project-switch, user intent)" was incorrect —
+project-switch CANNOT write active_work because it doesn't know claude_session_id.
+
+**Fix:** Reverted to instance_projects-first priority. Removed self-heal entirely.
+`instance_projects` is the most current source because it's writable by both hooks
+AND project-switch CLI. `active_work` is fallback for non-TMUX only.
+
+**Also committed (safe, additive):**
+1. `_update_active_work()`: Added TTY session fallback for instance_id resolution
+2. `session-init hook`: Propagates `claude_session_id` to TTY session file
+
+**Commit:** `f9d607ed` (TTY fallback), pending (priority fix)
 
 ---
 

@@ -68,7 +68,8 @@ Claude Code provides structured JSON to hooks via stdin:
 | `hook_event_name` | Hook event type | Conditional hook logic |
 
 **Critical:** The `cwd` field is unreliable because Claude Code can reset it (e.g., after
-compaction). Hooks must use `session_id` → `active_work` file → `project_path` resolution.
+compaction). Hooks use `get_active_project_path()` which reads `instance_projects` first
+(updated by both hooks and project-switch), falling back to `active_work` for non-TMUX.
 
 ---
 
