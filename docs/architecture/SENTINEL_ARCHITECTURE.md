@@ -339,6 +339,95 @@ sentinel.start_loop()    sentinel.check_compliance()   sentinel.complete_loop() 
 
 ---
 
+## Autonomy Calibration Loop
+
+The Sentinel implements an adaptive transaction scope feedback loop:
+
+### Three Touch Points
+
+```
+PREFLIGHT                    Sentinel (each PreToolUse)          POSTFLIGHT
+    |                               |                                |
+ Queries last 20             Increments tool_call_count        Records final count
+ POSTFLIGHT reflex_data      Computes nudge ratio              in reflex_data
+ → avg_turns                 = count / avg_turns               → closes feedback loop
+```
+
+### Implementation Details
+
+**PREFLIGHT** (`workflow_commands.py`):
+- Queries `json_extract(reflex_data, '$.tool_call_count')` from last 20 POSTFLIGHTs
+- Computes mean → writes `avg_turns` to `active_transaction_{instance}.json`
+- First transaction has no history → `avg_turns = 0` (nudging disabled)
+
+**Sentinel** (`sentinel-gate.py`):
+- `_try_increment_tool_count()`: Reads transaction file, increments `tool_call_count`, atomic write-back via tmpfile+rename
+- `_compute_nudge()`: Computes `ratio = count / avg_turns`, returns threshold message
+- Nudge appended to `permissionDecisionReason` on allow decisions
+- `suppressOutput` set to `False` when nudge active (ensures user sees it)
+
+**POSTFLIGHT** (`workflow_commands.py`):
+- Reads `tool_call_count` and `avg_turns` from transaction file
+- Stores both in `reflex_data` checkpoint metadata
+- This data feeds the NEXT transaction's PREFLIGHT avg calculation
+
+### Nudge Thresholds
+
+| Ratio | Level | Behavior |
+|-------|-------|----------|
+| < 1.0x | None | Silent pass-through |
+| >= 1.0x | Info | "Past average. Natural POSTFLIGHT point." |
+| >= 1.5x | Warning | "Consider POSTFLIGHT soon." |
+| >= 2.0x | Strong | "POSTFLIGHT strongly recommended." |
+
+### Design Rationale
+
+- **Informational, not forced:** The agent decides when to POSTFLIGHT. Forcing closure
+  at arbitrary points produces incoherent transactions with meaningless deltas.
+- **Adaptive to working style:** avg_turns converges to the agent's actual pattern.
+  A thorough researcher will have higher avg_turns than a quick fixer.
+- **Includes delegated work:** Subagent tool calls are added to parent's count,
+  preventing budget evasion via delegation.
+
+---
+
+## Subagent CASCADE Exemption
+
+Subagents (spawned via Claude Code's Task tool) are exempt from Sentinel gating.
+
+### Detection Mechanism
+
+```python
+# In sentinel-gate.py main(), before main processing:
+claude_session_id = hook_input.get('session_id')
+for aw_file in (~/.empirica/).glob('active_work_*.json'):
+    if aw_file.stem.replace('active_work_', '') == claude_session_id:
+        is_known_session = True
+        break
+if not is_known_session:
+    respond("allow", "Subagent exemption")
+    sys.exit(0)
+```
+
+**Logic:** Parent sessions always have an `active_work_{session_id}.json` file
+(written by session-init hook). Subagents have different Claude session IDs
+and no active_work file → they're detected and exempted.
+
+### Rationale
+
+1. The parent's CHECK already authorized the spawn
+2. Subagents don't have their own PREFLIGHT/CHECK state
+3. Double-gating would block all subagent tool use
+4. Subagents are bounded by `maxTurns` and attention budget instead
+
+### Tool Count Isolation
+
+Subagent tool calls are NOT counted in the Sentinel's per-PreToolUse increment.
+Instead, SubagentStop aggregates the count post-hoc and adds it to the parent's
+`delegated_tool_calls`. This prevents double-counting.
+
+---
+
 ## Claude Code Hook Integration
 
 The Sentinel also integrates with Claude Code via a PreToolUse hook that gates praxic tools (Edit, Write, certain Bash commands).

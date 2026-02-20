@@ -5,6 +5,26 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4] - 2026-02-20
+
+### Added
+- **Autonomy Calibration Loop** - Sentinel tracks `tool_call_count` per transaction, PREFLIGHT calculates `avg_turns` from past POSTFLIGHTs, nudges at adaptive 1x/1.5x/2x thresholds (informational, not forced)
+- **Subagent Governance** - Delegated work counting in SubagentStop (transcript tool_use parsing), pre-spawn budget check in SubagentStart (advisory, fail-open), `maxTurns: 25` default ceiling on all 9 agent types
+- **Subagent CASCADE Exemption** - Subagents detected via `active_work` file absence bypass Sentinel gates (parent CHECK authorizes spawn)
+- **Auto-PREFLIGHT on `project-switch`** - Conservative baseline vectors submitted automatically after project bootstrap
+- **Lifecycle Cleanup** - Automatic cleanup of stale `active_work`, `compact_handoff`, and `instance_projects` files at session boundaries
+- **Release Pipeline: empirica-mcp** - `release.py` now builds and publishes `empirica-mcp` to PyPI alongside the main package
+
+### Changed
+- **install.sh Consolidation** - Remote installer is now a thin wrapper that delegates to `empirica setup-claude-code --force`
+- **Release Pipeline** - Added `chocolateyinstall.ps1` and `CANONICAL_CORE.md` version header to automated version sync
+
+### Fixed
+- **Stale Transaction Detection** - Uses status-only check (`status != "open"`) instead of time-based eviction that broke overnight sessions
+- **Instance Resolution Priority** - `instance_projects` checked first, `active_work` used as fallback only for non-TMUX environments
+- **Project Switch via Bash** - Resolves `instance_id` from TTY session file when switching projects
+- **Subagent Session Close** - `db.end_session()` now runs unconditionally (fixes #43)
+
 ## [1.5.3] - 2026-02-18
 
 ### Added
