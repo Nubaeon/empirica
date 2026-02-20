@@ -37,19 +37,37 @@ def handle_project_embed_command(args):
         )
         import hashlib
         from empirica.data.session_database import SessionDatabase
-        from empirica.utils.session_resolver import get_active_project_path
+        from empirica.utils.session_resolver import resolve_project_identifier, get_active_project_path
 
         project_id = args.project_id
-        context_project = get_active_project_path()
-        root = context_project if context_project else os.getcwd()
         sync_global = getattr(args, 'global_sync', False)
+
+        # Resolve project root and sessions.db from workspace.db trajectory_path
+        # This ensures we open the TARGET project's DB, not the CWD's DB
+        project_info = resolve_project_identifier(project_id)
+        if project_info and project_info.get('project_path'):
+            root = project_info['project_path']
+            # trajectory_path may include /.empirica suffix or not
+            db_path = os.path.join(root, '.empirica', 'sessions', 'sessions.db')
+            if not os.path.exists(db_path):
+                # Try trajectory_path directly as .empirica root
+                alt_db = os.path.join(project_info['project_path'], 'sessions', 'sessions.db')
+                if os.path.exists(alt_db):
+                    db_path = alt_db
+            logger.info(f"Resolved project {project_id[:8]}... to {root}")
+        else:
+            # Fallback to active project (CWD-based) for unregistered projects
+            context_project = get_active_project_path()
+            root = context_project if context_project else os.getcwd()
+            db_path = None
+            logger.warning(f"Could not resolve project {project_id} in workspace.db, falling back to CWD: {root}")
 
         init_collections(project_id)
         if sync_global:
             init_global_collection()
 
-        # Initialize DB early for reference docs
-        db = SessionDatabase()
+        # Initialize DB pointing to the target project's sessions.db
+        db = SessionDatabase(db_path=db_path)
 
         # Prepare docs from semantic index
         idx = _load_semantic_index(root)
@@ -107,7 +125,8 @@ def handle_project_embed_command(args):
         upsert_docs(project_id, docs_to_upsert)
 
         # Prepare memory from DB (db already initialized above)
-        findings = db.get_project_findings(project_id)
+        # Use depth="complete" to embed ALL findings, not just relevance-filtered ones
+        findings = db.get_project_findings(project_id, depth="complete")
         unknowns = db.get_project_unknowns(project_id)
         # mistakes: join via sessions already built into breadcrumbs; simple select here
         cur = db.conn.cursor()
