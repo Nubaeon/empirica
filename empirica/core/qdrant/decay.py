@@ -34,6 +34,8 @@ def decay_eidetic_fact(
     try:
         import time as _time
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _eidetic_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -143,6 +145,8 @@ def propagate_lesson_confidence_to_qdrant(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _memory_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -261,6 +265,8 @@ def apply_staleness_signal(
     try:
         import time as _time
         client = _get_qdrant_client()
+        if client is None:
+            return 0
         coll = _memory_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -354,6 +360,8 @@ def update_assumption_urgency(
     try:
         import time as _time
         client = _get_qdrant_client()
+        if client is None:
+            return 0
         coll = _assumptions_collection(project_id)
 
         if not client.collection_exists(coll):

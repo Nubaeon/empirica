@@ -78,6 +78,8 @@ def init_collections(project_id: str) -> bool:
     try:
         _, Distance, VectorParams, _ = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         vector_size = _get_vector_size()
         collections = [
             _docs_collection(project_id),
@@ -111,6 +113,8 @@ def init_global_collection() -> bool:
     try:
         _, Distance, VectorParams, _ = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _global_learnings_collection()
         if not client.collection_exists(coll):
             vector_size = _get_vector_size()
@@ -138,6 +142,8 @@ def recreate_collection(collection_name: str) -> bool:
     try:
         _, Distance, VectorParams, _ = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         vector_size = _get_vector_size()
 
         # Delete if exists
@@ -192,6 +198,8 @@ def get_collection_info() -> List[dict]:
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return []
         collections = client.get_collections()
         info = []
         for c in collections.collections:

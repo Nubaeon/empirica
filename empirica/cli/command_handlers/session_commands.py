@@ -878,16 +878,19 @@ def handle_transaction_adopt_command(args):
             print(f"\n✅ Run without --dry-run to adopt")
         return 0
 
-    # Step 1: Rename transaction file
+    # Step 1: Rename transaction file (skip if same instance — already in place)
     try:
-        if to_tx_file.exists():
-            # Backup existing
-            backup_file = to_tx_file.with_suffix('.json.backup')
-            shutil.move(str(to_tx_file), str(backup_file))
-            result["actions"].append(f"Backed up existing: {backup_file}")
+        if from_instance == to_instance:
+            result["actions"].append(f"Same instance ({from_instance}) — transaction file already in place")
+        else:
+            if to_tx_file.exists():
+                # Backup existing
+                backup_file = to_tx_file.with_suffix('.json.backup')
+                shutil.move(str(to_tx_file), str(backup_file))
+                result["actions"].append(f"Backed up existing: {backup_file}")
 
-        shutil.move(str(from_tx_file), str(to_tx_file))
-        result["actions"].append(f"Renamed: {from_tx_file.name} → {to_tx_file.name}")
+            shutil.move(str(from_tx_file), str(to_tx_file))
+            result["actions"].append(f"Renamed: {from_tx_file.name} → {to_tx_file.name}")
     except Exception as e:
         result["error"] = f"Failed to rename transaction file: {e}"
         if output_json:

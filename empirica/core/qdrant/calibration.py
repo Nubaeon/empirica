@@ -42,6 +42,8 @@ def embed_grounded_verification(
     try:
         _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _calibration_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -119,6 +121,8 @@ def embed_calibration_trajectory(
     try:
         _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _calibration_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -203,6 +207,8 @@ def search_calibration_patterns(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return []
         coll = _calibration_collection(project_id)
 
         if not client.collection_exists(coll):

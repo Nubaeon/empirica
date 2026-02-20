@@ -41,6 +41,8 @@ def embed_assumption(
         import time as _time
         _, _, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _assumptions_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -110,6 +112,8 @@ def embed_decision(
         import time as _time
         _, _, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _decisions_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -182,6 +186,8 @@ def embed_intent_edge(
         import json as _json
         _, _, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _intents_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -249,6 +255,8 @@ def search_assumptions(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return []
         coll = _assumptions_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -316,6 +324,8 @@ def search_decisions(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return []
         coll = _decisions_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -376,6 +386,8 @@ def search_intents(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return []
         coll = _intents_collection(project_id)
 
         if not client.collection_exists(coll):

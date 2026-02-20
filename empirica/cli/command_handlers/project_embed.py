@@ -48,8 +48,22 @@ def handle_project_embed_command(args):
         if sync_global:
             init_global_collection()
 
-        # Initialize DB early for reference docs
-        db = SessionDatabase()
+        # Resolve correct sessions.db for the target project (#46)
+        # Use trajectory_path from workspace.db, not CWD
+        db_path = None
+        try:
+            from empirica.utils.session_resolver import _resolve_via_workspace_db
+            project_info = _resolve_via_workspace_db(project_id)
+            if project_info and project_info.get('project_path'):
+                project_root = project_info['project_path']
+                candidate = os.path.join(project_root, '.empirica', 'sessions', 'sessions.db')
+                if os.path.exists(candidate):
+                    db_path = candidate
+                    root = project_root  # Also use resolved path for doc loading
+        except Exception:
+            pass  # Fall through to default resolution
+
+        db = SessionDatabase(db_path=db_path)
 
         # Prepare docs from semantic index
         idx = _load_semantic_index(root)

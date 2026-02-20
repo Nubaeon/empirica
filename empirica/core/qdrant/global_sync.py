@@ -36,6 +36,8 @@ def embed_to_global(
     try:
         _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _global_learnings_collection()
 
         # Ensure collection exists
@@ -98,6 +100,8 @@ def search_global(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return []
         coll = _global_learnings_collection()
 
         if not client.collection_exists(coll):
@@ -264,6 +268,8 @@ def embed_dead_end_with_branch_context(
     try:
         _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _memory_collection(project_id)
 
         # Ensure collection exists
@@ -335,6 +341,8 @@ def search_similar_dead_ends(
     try:
         from qdrant_client.models import Filter, FieldCondition, MatchValue
         client = _get_qdrant_client()
+        if client is None:
+            return []
         coll = _memory_collection(project_id)
 
         if not client.collection_exists(coll):

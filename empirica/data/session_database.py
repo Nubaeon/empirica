@@ -248,6 +248,17 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_savings_session ON token_savings(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_savings_type ON token_savings(saving_type)")
 
+        # transaction_id indexes — must run AFTER migrations that add the column (#44)
+        for table, idx_name in [
+            ("assumptions", "idx_assumptions_transaction"),
+            ("decisions", "idx_decisions_transaction"),
+            ("project_findings", "idx_findings_transaction"),
+            ("project_unknowns", "idx_unknowns_transaction"),
+            ("project_dead_ends", "idx_dead_ends_transaction"),
+        ]:
+            if self.adapter.column_exists(table, "transaction_id"):
+                cursor.execute(f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table}(transaction_id)")
+
         self.conn.commit()
     
     def create_session(self, ai_id: str, components_loaded: int = 0,

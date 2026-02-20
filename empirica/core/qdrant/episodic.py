@@ -41,6 +41,8 @@ def embed_episodic(
     try:
         _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _episodic_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -111,6 +113,8 @@ def search_episodic(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return []
         coll = _episodic_collection(project_id)
 
         if not client.collection_exists(coll):

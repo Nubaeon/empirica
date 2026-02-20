@@ -252,22 +252,17 @@ SCHEMAS = [
     )
     """,
 
-    # Indexes for new tables
+    # Indexes for new tables (non-migration-dependent columns only)
     "CREATE INDEX IF NOT EXISTS idx_assumptions_entity ON assumptions(entity_type, entity_id)",
     "CREATE INDEX IF NOT EXISTS idx_assumptions_status ON assumptions(status)",
-    "CREATE INDEX IF NOT EXISTS idx_assumptions_transaction ON assumptions(transaction_id)",
     "CREATE INDEX IF NOT EXISTS idx_decisions_entity ON decisions(entity_type, entity_id)",
-    "CREATE INDEX IF NOT EXISTS idx_decisions_transaction ON decisions(transaction_id)",
 
-    # Indexes for existing tables
+    # Indexes for existing tables (non-migration-dependent columns only)
     "CREATE INDEX IF NOT EXISTS idx_project_findings_project ON project_findings(project_id)",
     "CREATE INDEX IF NOT EXISTS idx_project_findings_session ON project_findings(session_id)",
-    "CREATE INDEX IF NOT EXISTS idx_findings_transaction ON project_findings(transaction_id)",
     "CREATE INDEX IF NOT EXISTS idx_project_unknowns_project ON project_unknowns(project_id)",
     "CREATE INDEX IF NOT EXISTS idx_project_unknowns_resolved ON project_unknowns(is_resolved)",
-    "CREATE INDEX IF NOT EXISTS idx_unknowns_transaction ON project_unknowns(transaction_id)",
     "CREATE INDEX IF NOT EXISTS idx_project_dead_ends_project ON project_dead_ends(project_id)",
-    "CREATE INDEX IF NOT EXISTS idx_dead_ends_transaction ON project_dead_ends(transaction_id)",
     "CREATE INDEX IF NOT EXISTS idx_epistemic_sources_project ON epistemic_sources(project_id)",
     "CREATE INDEX IF NOT EXISTS idx_epistemic_sources_session ON epistemic_sources(session_id)",
     "CREATE INDEX IF NOT EXISTS idx_epistemic_sources_type ON epistemic_sources(source_type)",

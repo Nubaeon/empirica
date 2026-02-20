@@ -1048,15 +1048,33 @@ _storage: Optional[LessonStorageManager] = None
 
 
 def _try_get_qdrant_client():
-    """Try to get a Qdrant client, return None if unavailable"""
+    """Try to get a Qdrant client, return None if unavailable.
+
+    Requires a running Qdrant server. File-based storage was removed (#45)
+    because it creates incompatible storage formats and CWD-relative paths.
+    """
     try:
         import os
         from qdrant_client import QdrantClient
+
+        # Priority 1: Explicit URL
         url = os.getenv("EMPIRICA_QDRANT_URL")
-        path = os.getenv("EMPIRICA_QDRANT_PATH", "./.qdrant_data")
         if url:
             return QdrantClient(url=url)
-        return QdrantClient(path=path)
+
+        # Priority 2: Check if Qdrant server is running on localhost
+        default_url = "http://localhost:6333"
+        try:
+            import urllib.request
+            req = urllib.request.Request(f"{default_url}/collections", method='GET')
+            with urllib.request.urlopen(req, timeout=1) as resp:
+                if resp.status == 200:
+                    return QdrantClient(url=default_url)
+        except Exception:
+            pass  # Server not available
+
+        logger.debug("Qdrant server not available for lessons storage")
+        return None
     except ImportError:
         logger.debug("qdrant-client not installed, SEARCH layer disabled")
         return None

@@ -58,6 +58,8 @@ def embed_goal(
     try:
         _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _goals_collection(project_id)
 
         # Ensure collection exists
@@ -152,6 +154,8 @@ def embed_subtask(
     try:
         _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _goals_collection(project_id)
 
         # Ensure collection exists
@@ -234,6 +238,8 @@ def search_goals(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return []
         coll = _goals_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -318,6 +324,8 @@ def update_goal_status(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _goals_collection(project_id)
 
         if not client.collection_exists(coll):

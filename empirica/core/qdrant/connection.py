@@ -73,7 +73,10 @@ def _get_qdrant_client():
     Priority:
     1. EMPIRICA_QDRANT_URL environment variable (explicit URL)
     2. localhost:6333 if Qdrant server is running
-    3. EMPIRICA_QDRANT_PATH for file-based storage (fallback)
+
+    Returns None if no Qdrant server is available. File-based storage was
+    removed (#45) because it creates incompatible storage formats, causes
+    lock conflicts with concurrent processes, and uses CWD-relative paths.
     """
     QdrantClient, _, _, _ = _get_qdrant_imports()
 
@@ -91,11 +94,11 @@ def _get_qdrant_client():
             if resp.status == 200:
                 return QdrantClient(url=default_url)
     except Exception:
-        pass  # Server not available, fall through to file storage
+        pass  # Server not available
 
-    # Priority 3: File-based storage (fallback)
-    path = os.getenv("EMPIRICA_QDRANT_PATH", "./.qdrant_data")
-    return QdrantClient(path=path)
+    # No Qdrant server available — skip gracefully
+    logger.debug("Qdrant server not available. Start with: qdrant or empirica mcp-start")
+    return None
 
 
 def _service_url() -> Optional[str]:

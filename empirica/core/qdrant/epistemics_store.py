@@ -22,6 +22,8 @@ def upsert_epistemics(project_id: str, items: List[Dict]) -> int:
     try:
         _, _, _, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return 0
         coll = _epistemics_collection(project_id)
         points = []
 
@@ -59,6 +61,8 @@ def search_epistemics(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return []
         coll = _epistemics_collection(project_id)
         results = client.query_points(
             collection_name=coll,

@@ -40,6 +40,8 @@ def embed_eidetic(
     try:
         _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _eidetic_collection(project_id)
 
         # Ensure collection exists
@@ -105,6 +107,8 @@ def search_eidetic(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return []
         coll = _eidetic_collection(project_id)
 
         if not client.collection_exists(coll):
@@ -181,6 +185,8 @@ def confirm_eidetic_fact(
 
     try:
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _eidetic_collection(project_id)
 
         if not client.collection_exists(coll):

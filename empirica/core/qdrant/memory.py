@@ -40,6 +40,8 @@ def embed_single_memory_item(
     try:
         _, Distance, VectorParams, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return False
         coll = _memory_collection(project_id)
 
         # Ensure collection exists
@@ -91,6 +93,8 @@ def upsert_docs(project_id: str, docs: List[Dict]) -> int:
     try:
         _, _, _, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return 0
         coll = _docs_collection(project_id)
         points = []
         for d in docs:
@@ -125,6 +129,8 @@ def upsert_memory(project_id: str, items: List[Dict]) -> int:
     try:
         _, _, _, PointStruct = _get_qdrant_imports()
         client = _get_qdrant_client()
+        if client is None:
+            return 0
         coll = _memory_collection(project_id)
         points = []
         for it in items:
@@ -193,6 +199,8 @@ def search(project_id: str, query_text: str, kind: str = "focused", limit: int =
 
     results: Dict[str, List[Dict]] = {}
     client = _get_qdrant_client()
+    if client is None:
+        return empty_result
 
     # Query each collection independently (so one failure doesn't block the other)
     if "docs" in search_kinds:
