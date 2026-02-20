@@ -1,7 +1,7 @@
-# Claude Model Delta - v1.5.3
+# Claude Model Delta - v1.5.4
 
 **Applies to:** Claude (all versions)
-**Last Updated:** 2026-02-18
+**Last Updated:** 2026-02-20
 
 This delta contains Claude-specific calibration and guidance to be used with the base Empirica system prompt.
 

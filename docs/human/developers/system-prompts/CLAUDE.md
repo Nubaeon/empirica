@@ -1,8 +1,8 @@
-# Empirica System Prompt - CLAUDE v1.5.3
+# Empirica System Prompt - CLAUDE v1.5.4
 
 **Model:** CLAUDE | **Generated:** 2026-02-20
-**Syncs with:** Empirica v1.5.3
-**Change:** Transaction discipline, artifact lifecycle, assumption/decision logging, anti-patterns
+**Syncs with:** Empirica v1.5.4
+**Change:** Autonomy calibration, subagent governance, transaction discipline, artifact lifecycle
 **Status:** AUTHORITATIVE
 
 ---
@@ -467,10 +467,10 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 
 ## CLAUDE-SPECIFIC
 
-# Claude Model Delta - v1.5.3
+# Claude Model Delta - v1.5.4
 
 **Applies to:** Claude (all versions)
-**Last Updated:** 2026-02-18
+**Last Updated:** 2026-02-20
 
 This delta contains Claude-specific calibration and guidance to be used with the base Empirica system prompt.
 

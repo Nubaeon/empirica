@@ -1,8 +1,8 @@
-# Empirica System Prompt - Canonical Core v1.5.3
+# Empirica System Prompt - Canonical Core v1.5.4
 
 **AI-Agnostic Core - All agents extend this**
-**Syncs with:** Empirica v1.5.3
-**Change:** Transaction discipline, artifact lifecycle, assumption/decision logging, anti-patterns
+**Syncs with:** Empirica v1.5.4
+**Change:** Autonomy calibration, subagent governance, transaction discipline, artifact lifecycle
 **Status:** AUTHORITATIVE
 
 ---

@@ -1,8 +1,8 @@
-# Empirica System Prompt - COPILOT v1.5.3
+# Empirica System Prompt - COPILOT v1.5.4
 
 **Model:** COPILOT | **Generated:** 2026-02-20
-**Syncs with:** Empirica v1.5.3
-**Change:** Transaction discipline, artifact lifecycle, assumption/decision logging, anti-patterns
+**Syncs with:** Empirica v1.5.4
+**Change:** Autonomy calibration, subagent governance, transaction discipline, artifact lifecycle
 **Status:** AUTHORITATIVE
 
 ---
@@ -467,7 +467,7 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 
 ## COPILOT-SPECIFIC
 
-# GitHub Copilot Model Delta - v1.5.3
+# GitHub Copilot Model Delta - v1.5.4
 
 **Applies to:** GitHub Copilot
 **Last Updated:** 2026-02-18

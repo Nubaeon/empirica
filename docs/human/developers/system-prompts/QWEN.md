@@ -1,8 +1,8 @@
-# Empirica System Prompt - QWEN v1.5.3
+# Empirica System Prompt - QWEN v1.5.4
 
 **Model:** QWEN | **Generated:** 2026-02-20
-**Syncs with:** Empirica v1.5.3
-**Change:** Transaction discipline, artifact lifecycle, assumption/decision logging, anti-patterns
+**Syncs with:** Empirica v1.5.4
+**Change:** Autonomy calibration, subagent governance, transaction discipline, artifact lifecycle
 **Status:** AUTHORITATIVE
 
 ---
@@ -467,7 +467,7 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 
 ## QWEN-SPECIFIC
 
-# Qwen Model Delta - v1.5.3
+# Qwen Model Delta - v1.5.4
 
 **Applies to:** Qwen (all versions)
 **Last Updated:** 2026-02-18

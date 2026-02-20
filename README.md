@@ -2,7 +2,7 @@
 
 > **Teaching AI to know what it knows—and what it doesn't**
 
-[![Version](https://img.shields.io/badge/version-1.5.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.5.3)
+[![Version](https://img.shields.io/badge/version-1.5.4-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.5.4)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -176,13 +176,13 @@ brew install empirica
 
 ```bash
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.5.3
+docker pull nubaeon/empirica:1.5.4
 
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.5.3-alpine
+docker pull nubaeon/empirica:1.5.4-alpine
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.5.3 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.5.4 /bin/bash
 ```
 
 ---
@@ -358,15 +358,13 @@ Projects using Empirica's epistemic foundations:
 
 ---
 
-## What's New in 1.5.3
+## What's New in 1.5.4
 
-- **Phase-Aware Calibration** — Separate noetic/praxic tracks with earned autonomy thresholds
-- **Assumption & Decision Logging** — Track unverified beliefs and choice points with `assumption-log` and `decision-log`
-- **Transaction Adoption** — Recover orphaned transactions after crash or compaction with `transaction-adopt`
-- **Sentinel Anti-Gaming** — Blocks INVESTIGATE loops without genuine transaction boundaries
-- **Statusline Simplification** — Single summary symbols replace verbose delta figures
-- **Unified Versioning** — One version number across all artifacts (no separate prompt versioning)
-- **Automated Release Pipeline** — `release.py` covers all version locations to prevent drift
+- **Autonomy Calibration Loop** — Adaptive transaction nudging based on your actual working patterns (3-point closed loop: PREFLIGHT, Sentinel, POSTFLIGHT)
+- **Subagent Governance** — CASCADE exemption for subagents, delegated work counting, pre-spawn budget checks, turn ceiling enforcement
+- **Release Pipeline Enhancement** — empirica-mcp build/publish integrated into release.py, Chocolatey and CANONICAL_CORE version sync
+- **Stale Transaction Detection** — Status-only detection prevents blocking on orphaned transactions
+- **Lifecycle Cleanup** — Automatic cleanup of active_work, compact_handoff, and instance_projects files
 
 ---
 
@@ -399,6 +397,6 @@ See [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.5.3
+**Version:** 1.5.4
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*
