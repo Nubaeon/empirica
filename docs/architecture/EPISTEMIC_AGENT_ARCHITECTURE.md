@@ -272,14 +272,18 @@ reputation = reputation_seed + (Σ import_successes / Σ imports) × 0.5
 | Multi-persona orchestration | ✅ Done | investigate-multi |
 | Winner→Extract→Embed flow | ❌ Not wired | `emerged_personas.py` exists but not connected to agent workflow |
 
-### Tier 4: Sentinel Autonomy (Next)
+### Tier 4: Sentinel Autonomy (Implemented v1.5.4)
 
-| Item | Description |
-|------|-------------|
-| Automatic branch pruning | Sentinel prunes low-merge-score branches |
-| Dynamic persona selection | Sentinel chooses personas based on task |
-| Cross-session learning | Sentinels learn optimal aggregation strategies |
-| Escalation protocols | Auto-escalate to human when uncertainty > threshold |
+| Item | Status | Implementation |
+|------|--------|----------------|
+| Autonomy calibration loop | ✅ Done | Sentinel tracks `tool_call_count` per transaction, PREFLIGHT calculates `avg_turns` from history, nudges at 1x/1.5x/2x thresholds. See [SENTINEL_ARCHITECTURE.md](./SENTINEL_ARCHITECTURE.md#autonomy-calibration-loop). |
+| Subagent CASCADE exemption | ✅ Done | Subagents (no `active_work` file) bypass Sentinel gates. Parent CHECK authorizes spawn. See [SENTINEL_ARCHITECTURE.md](./SENTINEL_ARCHITECTURE.md#subagent-cascade-exemption). |
+| Subagent governance | ✅ Done | Delegated work counting (SubagentStop transcript parsing), pre-spawn budget check (SubagentStart), `maxTurns: 25` default ceiling on all agents. |
+| Stale transaction detection | ✅ Done | Status-only purge (`status != "open"`). No time-based eviction — overnight sessions survive. |
+| Automatic branch pruning | ❌ Not started | Sentinel prunes low-merge-score branches |
+| Dynamic persona selection | ❌ Not started | Sentinel chooses personas based on task |
+| Cross-session learning | ⚠️ Partial | Calibration data persists across sessions via `.breadcrumbs.yaml` and Qdrant. Full sentinel strategy learning not implemented. |
+| Escalation protocols | ⚠️ Partial | CHECK "investigate" loops back to noetic phase. Human checkpoint hooks exist. Full auto-escalation not wired. |
 
 ### Tier 5: Cognitive Vault (Future)
 

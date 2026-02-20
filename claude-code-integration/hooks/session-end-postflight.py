@@ -177,6 +177,59 @@ def get_active_session() -> str:
         return None
 
 
+def _find_session_via_active_work(claude_session_id: str) -> tuple:
+    """Find empirica session_id and project_path from active_work file.
+
+    Returns (empirica_session_id, project_path) or (None, None).
+    """
+    if not claude_session_id:
+        return None, None
+    try:
+        active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+        if active_work_file.exists():
+            with open(active_work_file, 'r') as f:
+                data = json.load(f)
+            return data.get('empirica_session_id'), data.get('project_path')
+    except Exception:
+        pass
+    return None, None
+
+
+def _cleanup_session_files(claude_session_id: str):
+    """Clean up isolation files for a completed session.
+
+    Safety net: removes active_work for this Claude session. The primary
+    cleanup happens in the POSTFLIGHT pipeline (post-test), but if the
+    session ends without POSTFLIGHT, this catches it.
+    """
+    if not claude_session_id:
+        return
+
+    # Clean up active_work file
+    try:
+        active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+        if active_work_file.exists():
+            active_work_file.unlink()
+    except Exception:
+        pass
+
+    # Clean up TTY session file (terminal association is gone)
+    try:
+        tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
+        if tty_sessions_dir.exists():
+            for tty_file in tty_sessions_dir.glob('*.json'):
+                try:
+                    with open(tty_file, 'r') as f:
+                        data = json.load(f)
+                    if data.get('claude_session_id') == claude_session_id:
+                        tty_file.unlink()
+                        break
+                except Exception:
+                    continue
+    except Exception:
+        pass
+
+
 def main():
     """Main session end logic."""
     hook_input = {}
@@ -185,16 +238,34 @@ def main():
     except:
         pass
 
-    project_root = find_project_root()
-    os.chdir(project_root)
+    # CRITICAL: Use claude_session_id from hook input for instance-aware resolution
+    claude_session_id = hook_input.get('session_id')
 
-    session_id = get_active_session()
+    # Find session via active_work (instance-aware) before falling back to DB
+    session_id = None
+    project_path = None
+
+    if claude_session_id:
+        session_id, project_path = _find_session_via_active_work(claude_session_id)
+
+    if project_path:
+        os.chdir(project_path)
+    else:
+        project_root = find_project_root()
+        os.chdir(project_root)
+
+    # Fallback: DB query if active_work didn't have it
+    if not session_id:
+        session_id = get_active_session()
 
     if not session_id:
+        # No session — still clean up files
+        _cleanup_session_files(claude_session_id)
         output = {
             "ok": True,
             "skipped": True,
-            "reason": "No active Empirica session"
+            "reason": "No active Empirica session",
+            "cleanup": "active_work purged"
         }
         print(json.dumps(output))
         sys.exit(0)
@@ -204,12 +275,15 @@ def main():
 
     if not state.get("needs_postflight"):
         reason = "POSTFLIGHT already exists" if state.get("has_postflight") else "No PREFLIGHT found"
+        # Clean up even if no POSTFLIGHT needed — session is ending
+        _cleanup_session_files(claude_session_id)
         output = {
             "ok": True,
             "skipped": True,
             "reason": reason,
             "session_id": session_id,
-            "state": state
+            "state": state,
+            "cleanup": "active_work purged"
         }
         print(json.dumps(output))
         sys.exit(0)
@@ -218,11 +292,13 @@ def main():
     vectors = state.get("last_vectors", {})
 
     if not vectors:
+        _cleanup_session_files(claude_session_id)
         output = {
             "ok": True,
             "skipped": True,
             "reason": "No vectors available for auto-POSTFLIGHT",
-            "session_id": session_id
+            "session_id": session_id,
+            "cleanup": "active_work purged"
         }
         print(json.dumps(output))
         sys.exit(0)
@@ -232,6 +308,9 @@ def main():
 
     result = auto_postflight(session_id, vectors)
 
+    # Clean up session files AFTER POSTFLIGHT (post-test is the last consumer)
+    _cleanup_session_files(claude_session_id)
+
     if result.get("ok"):
         print(f"""
 📊 Empirica: Auto-POSTFLIGHT captured
@@ -239,6 +318,7 @@ def main():
 Session: {session_id}
 Vectors: know={vectors.get('know', 'N/A')}, uncertainty={vectors.get('uncertainty', 'N/A')}
 Learning delta will be calculated from PREFLIGHT baseline.
+🧹 Session files cleaned up.
 """, file=sys.stderr)
 
     output = {
@@ -246,7 +326,8 @@ Learning delta will be calculated from PREFLIGHT baseline.
         "session_id": session_id,
         "auto_postflight": True,
         "vectors_used": vectors,
-        "result": result
+        "result": result,
+        "cleanup": "active_work purged"
     }
 
     print(json.dumps(output))

@@ -1,4 +1,5 @@
 ---
+maxTurns: 25
 name: security
 description: Use this agent for implementation, modification, and execution tasks requiring security, authentication, authorization, encryption, vulnerabilities expertise. This agent has Security Expert's epistemic profile with calibrated confidence thresholds.
 
@@ -22,6 +23,7 @@ model: inherit
 color: red
 tools: ["Read", "Grep", "Glob", "Edit", "Write", "Bash"]
 ---
+maxTurns: 25
 
 You are Security Expert, a specialized Empirica epistemic agent for implementation, modification, and execution.
 

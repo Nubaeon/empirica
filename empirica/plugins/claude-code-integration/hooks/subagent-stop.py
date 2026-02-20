@@ -63,6 +63,97 @@ def mark_session_completed(session_file: str, summary: dict):
         pass
 
 
+def count_transcript_tool_calls(transcript_path: str) -> int:
+    """Count tool use invocations in a subagent's transcript.
+
+    Counts assistant messages that contain tool_use content blocks.
+    This represents the actual work done by the subagent.
+    """
+    if not transcript_path or not Path(transcript_path).exists():
+        return 0
+
+    count = 0
+    try:
+        content = Path(transcript_path).read_text()
+        for line in content.strip().split('\n'):
+            try:
+                entry = json.loads(line)
+                msg = entry.get("message", {})
+                if msg.get("role") != "assistant":
+                    continue
+                # Count tool_use blocks in content
+                content_blocks = msg.get("content", [])
+                if isinstance(content_blocks, list):
+                    for block in content_blocks:
+                        if isinstance(block, dict) and block.get("type") == "tool_use":
+                            count += 1
+            except json.JSONDecodeError:
+                continue
+    except (OSError, UnicodeDecodeError):
+        pass
+
+    return count
+
+
+def add_delegated_work_to_parent(tool_call_count: int) -> bool:
+    """Add subagent's tool call count to the parent's active transaction.
+
+    This ensures the autonomy calibration loop accounts for delegated work.
+    Without this, spawning subagents would be a blind spot — the parent's
+    transaction would appear shorter than the actual work done.
+
+    Returns True if the update succeeded.
+    """
+    if tool_call_count <= 0:
+        return False
+
+    try:
+        import tempfile
+        from empirica.utils.session_resolver import (
+            get_active_project_path, _get_instance_suffix
+        )
+
+        suffix = _get_instance_suffix()
+        project_path = get_active_project_path()
+
+        if project_path:
+            tx_path = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
+        else:
+            tx_path = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
+
+        if not tx_path.exists():
+            return False
+
+        with open(tx_path, 'r') as f:
+            tx_data = json.load(f)
+
+        if tx_data.get('status') != 'open':
+            return False
+
+        # Add delegated work to the parent's count
+        tx_data['tool_call_count'] = tx_data.get('tool_call_count', 0) + tool_call_count
+        tx_data['delegated_tool_calls'] = tx_data.get('delegated_tool_calls', 0) + tool_call_count
+
+        # Atomic write
+        fd, tmp = tempfile.mkstemp(dir=str(tx_path.parent))
+        try:
+            import os
+            with os.fdopen(fd, 'w') as tf:
+                json.dump(tx_data, tf, indent=2)
+            os.rename(tmp, str(tx_path))
+        except BaseException:
+            try:
+                import os
+                os.unlink(tmp)
+            except OSError:
+                pass
+            return False
+
+        return True
+    except Exception:
+        return False
+
+
 def extract_findings_from_transcript(transcript_path: str) -> dict:
     """Extract epistemic artifacts from agent transcript.
 
@@ -205,16 +296,6 @@ def rollup_to_parent(parent_session_id: str, agent_name: str, extracted: dict,
                 logged["dead_ends"] += 1
             except Exception:
                 pass
-
-        # End the child session
-        subagent_data = find_subagent_session(agent_name)
-        if subagent_data:
-            child_session_id = subagent_data.get("child_session_id")
-            if child_session_id:
-                try:
-                    db.end_session(child_session_id)
-                except Exception:
-                    pass
 
         db.close()
     except ImportError:
@@ -394,6 +475,19 @@ def main():
     parent_session_id = subagent_data.get("parent_session_id")
     child_session_id = subagent_data.get("child_session_id")
 
+    # Count subagent's tool calls from transcript (delegated work tracking)
+    subagent_tool_calls = count_transcript_tool_calls(transcript_path)
+
+    # Add delegated work to parent's transaction counter
+    # This ensures the autonomy calibration loop sees ALL work, not just direct tool calls
+    delegated_ok = False
+    if subagent_tool_calls > 0:
+        try:
+            sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
+            delegated_ok = add_delegated_work_to_parent(subagent_tool_calls)
+        except Exception:
+            pass
+
     # Extract findings from transcript
     extracted = extract_findings_from_transcript(transcript_path)
     total_extracted = sum(len(v) for v in extracted.values())
@@ -404,12 +498,24 @@ def main():
         logged = rollup_to_parent(parent_session_id, agent_name, extracted,
                                   subagent_data=subagent_data)
 
+    # Always close the child session in DB, regardless of extracted findings
+    if child_session_id:
+        try:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            db.end_session(child_session_id)
+            db.close()
+        except Exception:
+            pass
+
     # Mark session completed
     if subagent_data.get("_file_path"):
         mark_session_completed(subagent_data["_file_path"], {
             "extracted": total_extracted,
             "logged": logged,
-            "transcript_path": transcript_path
+            "transcript_path": transcript_path,
+            "subagent_tool_calls": subagent_tool_calls,
+            "delegated_to_parent": delegated_ok
         })
 
     rejected_count = logged.get("rejected", 0)
@@ -425,8 +531,24 @@ def main():
         remaining = regulation.get("budget_remaining", "?")
         total = regulation.get("budget_total", "?")
         reason = regulation.get("reason", "")
-        action = "continue" if regulation.get("should_spawn_more") else "stop"
+        spawn_more = regulation.get("should_spawn_more", True)
+        action = "continue" if spawn_more else "STOP"
         budget_msg = f" Budget: {remaining}/{total} remaining. Regulation: {action} ({reason})."
+
+    delegation_msg = ""
+    if subagent_tool_calls > 0:
+        delegation_msg = (
+            f" Delegated work: {subagent_tool_calls} tool calls"
+            f"{' added to parent transaction' if delegated_ok else ' (parent tx not found)'}."
+        )
+
+    # Regulation enforcement: make STOP unmissable
+    regulation_directive = ""
+    if regulation and not regulation.get("should_spawn_more", True):
+        regulation_directive = (
+            " REGULATION: DO NOT spawn more agents — "
+            f"{regulation.get('reason', 'budget/gain threshold reached')}."
+        )
 
     result = {
         "continue": True,
@@ -434,8 +556,12 @@ def main():
                    f"Extracted {total_extracted} artifacts, accepted {accepted_count}, "
                    f"rejected {rejected_count} via rollup gate. "
                    f"Parent: {parent_session_id[:8] if parent_session_id else 'none'}."
-                   f"{budget_msg}",
+                   f"{budget_msg}{delegation_msg}{regulation_directive}",
         "regulation": regulation,
+        "delegated_work": {
+            "subagent_tool_calls": subagent_tool_calls,
+            "added_to_parent_transaction": delegated_ok
+        }
     }
     print(json.dumps(result))
 

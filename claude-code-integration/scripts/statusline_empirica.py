@@ -486,8 +486,30 @@ def get_active_session(db: SessionDatabase, ai_id: str, stdin_claude_session_id:
     """
     cursor = db.conn.cursor()
 
-    # Priority 0: Claude session_id → active_work file → empirica_session_id
-    # Sources: stdin JSON from Claude Code (works without tmux) OR TTY session (needs TMUX_PANE)
+    # Priority 0: instance_projects → empirica_session_id (most current after project-switch)
+    try:
+        import json as _json
+        from empirica.utils.session_resolver import get_instance_id as _gas_get_inst
+        _gas_inst_id = _gas_get_inst()
+        if _gas_inst_id:
+            _gas_inst_file = Path.home() / '.empirica' / 'instance_projects' / f'{_gas_inst_id}.json'
+            if _gas_inst_file.exists():
+                with open(_gas_inst_file, 'r') as f:
+                    _gas_inst_data = _json.load(f)
+                _gas_session_id = _gas_inst_data.get('empirica_session_id')
+                if _gas_session_id:
+                    cursor.execute("""
+                        SELECT session_id, ai_id, start_time
+                        FROM sessions
+                        WHERE session_id = ? AND end_time IS NULL
+                    """, (_gas_session_id,))
+                    row = cursor.fetchone()
+                    if row:
+                        return dict(row)
+    except Exception:
+        pass
+
+    # Priority 1: Claude session_id → active_work file → empirica_session_id (fallback for non-TMUX)
     try:
         import json as _json
 
@@ -495,14 +517,13 @@ def get_active_session(db: SessionDatabase, ai_id: str, stdin_claude_session_id:
         if claude_session_id:
             empirica_session_id = None
 
-            # Priority 0a: active_work file (authoritative, updated by project-switch)
             active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
             if active_work_path.exists():
                 with open(active_work_path, 'r') as f:
                     active_work = _json.load(f)
                     empirica_session_id = active_work.get('empirica_session_id')
 
-            # Priority 0b: TTY session empirica_session_id (fallback)
+            # TTY session fallback
             if not empirica_session_id:
                 try:
                     from empirica.utils.session_resolver import get_tty_session
@@ -1074,14 +1095,36 @@ def main():
             pass
 
         # Auto-detect project from active context
-        # Priority: 0) stdin Claude session → active_work file, 1) EMPIRICA_PROJECT_PATH env var,
-        #           2) TTY session (needs TMUX_PANE), 3) path_resolver, 4) manual upward search
+        # Priority: 0) instance_projects (most current — updated by hooks AND project-switch),
+        #           1) active_work (fallback — only hooks can update),
+        #           2) EMPIRICA_PROJECT_PATH env var,
+        #           3) TTY session, 4) path_resolver, 5) manual upward search
+        # See docs/architecture/instance_isolation/ARCHITECTURE.md
         # NOTE: We do NOT fall back to global ~/.empirica/ to prevent cross-project data leakage
         project_path = None
         is_local_project = False
 
-        # Priority 0: Claude session_id from stdin → active_work file → project_path
-        if stdin_claude_session_id:
+        # Priority 0: instance_projects (updated by BOTH hooks AND project-switch CLI)
+        try:
+            from empirica.utils.session_resolver import get_instance_id as _sl_get_inst
+            import json as _json
+            _sl_inst_id = _sl_get_inst()
+            if _sl_inst_id:
+                _sl_inst_file = Path.home() / '.empirica' / 'instance_projects' / f'{_sl_inst_id}.json'
+                if _sl_inst_file.exists():
+                    with open(_sl_inst_file, 'r') as f:
+                        _sl_inst_data = _json.load(f)
+                    _sl_inst_project = _sl_inst_data.get('project_path')
+                    if _sl_inst_project:
+                        _sl_inst_db = Path(_sl_inst_project) / '.empirica' / 'sessions' / 'sessions.db'
+                        if _sl_inst_db.exists():
+                            project_path = _sl_inst_project
+                            is_local_project = True
+        except Exception:
+            pass
+
+        # Priority 1: active_work file (fallback for non-TMUX environments)
+        if not project_path and stdin_claude_session_id:
             try:
                 import json as _json
                 active_work_path = Path.home() / '.empirica' / f'active_work_{stdin_claude_session_id}.json'
@@ -1097,19 +1140,17 @@ def main():
             except Exception:
                 pass
 
-        # Priority 1: EMPIRICA_PROJECT_PATH env var
+        # Priority 2: EMPIRICA_PROJECT_PATH env var
         if not project_path:
             project_path = os.getenv('EMPIRICA_PROJECT_PATH')
 
-        # Priority 2: Check TTY session for project-switch context
-        # TTY session has project_path directly from session_create/project_switch
+        # Priority 3: Check TTY session for project-switch context
         if not project_path:
             try:
                 from empirica.utils.session_resolver import get_tty_session
 
                 tty_session = get_tty_session(warn_if_stale=False)
                 if tty_session:
-                    # Use project_path directly from TTY session (most reliable)
                     tty_project_path = tty_session.get('project_path')
                     if tty_project_path:
                         tty_db = Path(tty_project_path) / '.empirica' / 'sessions' / 'sessions.db'

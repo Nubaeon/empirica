@@ -61,6 +61,11 @@ SAFE_BASH_PREFIXES = (
     'git status', 'git log', 'git diff', 'git show', 'git branch',
     'git remote', 'git tag', 'git stash list', 'git blame',
     'git ls-files', 'git ls-tree', 'git cat-file',
+    # GitHub CLI read operations
+    'gh issue list', 'gh issue view', 'gh issue status',
+    'gh pr list', 'gh pr view', 'gh pr status', 'gh pr checks',
+    'gh repo view', 'gh release list', 'gh release view',
+    'gh api ',  # API calls (read-only by default)
     # Environment inspection
     'pwd', 'echo ', 'printf ', 'env', 'printenv', 'set',
     'whoami', 'id', 'hostname', 'uname', 'date', 'cal',
@@ -346,17 +351,136 @@ def is_transition_command(command: str) -> bool:
     return False
 
 
+# --- AUTONOMY CALIBRATION LOOP ---
+# Tracks tool call count per transaction and nudges at adaptive thresholds.
+# The nudge is informational — Claude decides when to POSTFLIGHT based on
+# information completeness, not forced thresholds.
+
+_autonomy_nudge = ""  # Module-level: set during increment, read by respond
+
+
+def _try_increment_tool_count(claude_session_id: str = None) -> tuple:
+    """Increment tool_call_count in the active transaction file.
+
+    Lightweight — no heavy imports. Uses project_resolver (already imported)
+    and direct file I/O.
+
+    Returns (tool_call_count, avg_turns) or (0, 0) if no transaction.
+    """
+    import tempfile
+
+    instance_id = get_instance_id()
+    suffix = f'_{instance_id}' if instance_id else ''
+
+    # Find the transaction file via active_work → project_path → .empirica/
+    tx_path = None
+
+    # Try 1: active_work file for project_path
+    if claude_session_id:
+        aw_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+        if aw_file.exists():
+            try:
+                with open(aw_file, 'r') as f:
+                    pp = json.load(f).get('project_path')
+                if pp:
+                    candidate = Path(pp) / '.empirica' / f'active_transaction{suffix}.json'
+                    if candidate.exists():
+                        tx_path = candidate
+            except Exception:
+                pass
+
+    # Try 2: project_resolver canonical path
+    if not tx_path:
+        pp = get_active_project_path(claude_session_id)
+        if pp:
+            candidate = Path(pp) / '.empirica' / f'active_transaction{suffix}.json'
+            if candidate.exists():
+                tx_path = candidate
+
+    # Try 3: global fallback
+    if not tx_path:
+        candidate = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
+        if candidate.exists():
+            tx_path = candidate
+
+    if not tx_path:
+        return 0, 0
+
+    try:
+        with open(tx_path, 'r') as f:
+            tx = json.load(f)
+
+        if tx.get('status') != 'open':
+            return 0, 0
+
+        tx['tool_call_count'] = tx.get('tool_call_count', 0) + 1
+        count = tx['tool_call_count']
+        avg = tx.get('avg_turns', 0)
+
+        # Atomic write-back
+        fd, tmp = tempfile.mkstemp(dir=str(tx_path.parent))
+        try:
+            with os.fdopen(fd, 'w') as tf:
+                json.dump(tx, tf, indent=2)
+            os.rename(tmp, str(tx_path))
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+
+        return count, avg
+    except Exception:
+        return 0, 0
+
+
+def _compute_nudge(count: int, avg: int) -> str:
+    """Compute autonomy nudge message based on tool call count vs average.
+
+    Returns empty string if no nudge needed. Nudges are informational —
+    Claude decides when to POSTFLIGHT based on coherence, not thresholds.
+    """
+    if avg <= 0 or count <= 0:
+        return ""
+
+    ratio = count / avg
+
+    if ratio >= 2.0:
+        return (
+            f"AUTONOMY: Transaction extended ({count} tool calls, avg {avg}). "
+            f"POSTFLIGHT strongly recommended to capture learning and maintain calibration."
+        )
+    elif ratio >= 1.5:
+        return (
+            f"AUTONOMY: Transaction at {count}/{avg} tool calls (1.5x avg). "
+            f"Consider POSTFLIGHT soon to preserve measurement fidelity."
+        )
+    elif ratio >= 1.0:
+        return (
+            f"AUTONOMY: Transaction at {count}/{avg} tool calls (past avg). "
+            f"Natural POSTFLIGHT point when current coherent chunk completes."
+        )
+    return ""
+
+
 def respond(decision: str, reason: str = "") -> None:
-    """Output in Claude Code's expected format."""
+    """Output in Claude Code's expected format. Appends autonomy nudge on allow."""
+    global _autonomy_nudge
+    full_reason = reason
+    show_nudge = False
+    if decision == "allow" and _autonomy_nudge:
+        full_reason = f"{reason} | {_autonomy_nudge}"
+        show_nudge = True
+
     output: dict = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": decision,
-            "permissionDecisionReason": reason
+            "permissionDecisionReason": full_reason
         }
     }
-    # Suppress output for "allow" to avoid "hook error" display bug in Claude Code TUI
-    if decision == "allow":
+    # Suppress output for "allow" UNLESS there's a nudge to show Claude
+    if decision == "allow" and not show_nudge:
         output["suppressOutput"] = True
     print(json.dumps(output))
 
@@ -654,6 +778,22 @@ def main():
     tool_name = hook_input.get('tool_name', 'unknown')
     tool_input = hook_input.get('tool_input', {})
 
+    # === AUTONOMY CALIBRATION: Track tool calls per transaction ===
+    # Counts PARENT tool calls only (subagent work counted via SubagentStop delegation).
+    # Nudge thresholds are informational — Claude decides when to POSTFLIGHT.
+    global _autonomy_nudge
+    try:
+        _claude_sid = hook_input.get('session_id')
+        # Only increment for sessions with active_work (parent sessions).
+        # Subagent tool calls are counted from transcript by SubagentStop and
+        # added to parent's delegated_tool_calls — no double-counting.
+        _aw_check = Path.home() / '.empirica' / f'active_work_{_claude_sid}.json'
+        if _claude_sid and _aw_check.exists():
+            _count, _avg = _try_increment_tool_count(_claude_sid)
+            _autonomy_nudge = _compute_nudge(_count, _avg)
+    except Exception:
+        pass  # Counter failure is non-fatal
+
     # === NOETIC FIREWALL: Whitelist-based access control ===
 
     # Rule 1: Noetic tools always allowed (read/investigate)
@@ -668,6 +808,27 @@ def main():
 
     # Rule 3: Everything else is PRAXIC - requires CHECK authorization
     # This includes: Edit, Write, NotebookEdit, unsafe Bash, unknown tools
+
+    # Rule 3a: SUBAGENT EXEMPTION - subagents don't need their own CASCADE
+    # The parent's CHECK already authorized the spawn. Subagents have a different
+    # Claude session_id than the parent (who owns the active_work file).
+    claude_session_id_early = hook_input.get('session_id')
+    if claude_session_id_early:
+        try:
+            # Check if this session_id matches ANY active_work file
+            _aw_dir = Path.home() / '.empirica'
+            _is_known_session = False
+            for aw_file in _aw_dir.glob('active_work_*.json'):
+                _aw_sid = aw_file.stem.replace('active_work_', '')
+                if _aw_sid == claude_session_id_early:
+                    _is_known_session = True
+                    break
+            if not _is_known_session:
+                # No active_work file for this session_id — it's a subagent
+                respond("allow", f"Subagent exemption: {tool_name} (no active_work for session)")
+                sys.exit(0)
+        except Exception:
+            pass  # Detection failure → continue with normal sentinel logic
 
     # OFF-RECORD CHECK: If Empirica is paused, allow everything (cheapest check first)
     if is_empirica_paused():
@@ -714,18 +875,32 @@ def main():
         instance_id = get_instance_id()
         suffix = f'_{instance_id}' if instance_id else ''
         tx_file = empirica_root / f'active_transaction{suffix}.json'
-        # DEBUG: Log what we're looking for
-        import sys as _sys
-        _sys.stderr.write(f"SENTINEL_DEBUG: instance_id={instance_id}, tx_file={tx_file}, exists={tx_file.exists()}\n")
         if tx_file.exists():
             try:
                 with open(tx_file, 'r') as f:
                     tx_data = json.load(f)
-                current_transaction_id = tx_data.get('transaction_id')
-                tx_session_id = tx_data.get('session_id')  # Session that started this transaction
-                _sys.stderr.write(f"SENTINEL_DEBUG: current_transaction_id={current_transaction_id}, tx_session_id={tx_session_id}\n")
-            except Exception as e:
-                _sys.stderr.write(f"SENTINEL_DEBUG: tx file read error: {e}\n")
+
+                # STALE TRANSACTION CHECK: Purge closed-but-not-deleted files.
+                # POSTFLIGHT sets status="closed" then clear_active_transaction()
+                # deletes the file. If deletion fails (CWD wrong, resolution
+                # chain degraded during session-end), the file persists.
+                # Only purge status != "open" — never time-based (transactions
+                # can legitimately last overnight).
+                tx_candidate_session = tx_data.get('session_id')
+                _tx_stale = False
+
+                if tx_data.get('status') != 'open':
+                    _tx_stale = True
+                    try:
+                        tx_file.unlink()
+                    except Exception:
+                        pass
+
+                if not _tx_stale:
+                    current_transaction_id = tx_data.get('transaction_id')
+                    tx_session_id = tx_candidate_session
+            except Exception:
+                pass
 
     # Get session_id - transaction file takes priority (survives compaction)
     # Fallback to active_work file for when no transaction is open

@@ -1,4 +1,5 @@
 ---
+maxTurns: 25
 name: outreach-factscorer
 description: Use this agent for investigation, analysis, and exploration tasks requiring fact_verification, source_citation, confidence_scoring, outreach expertise. This agent has Epistemic Fact Scorer's epistemic profile with calibrated confidence thresholds.
 
@@ -22,6 +23,7 @@ model: inherit
 color: magenta
 tools: ["Read", "Grep", "Glob"]
 ---
+maxTurns: 25
 
 You are Epistemic Fact Scorer, a specialized Empirica epistemic agent for investigation, analysis, and exploration.
 

@@ -254,25 +254,20 @@ def format_context(ctx: dict) -> str:
 def _get_instance_id() -> str:
     """
     Derive instance ID from environment. Fallback chain:
-    TMUX_PANE → TERM_SESSION_ID → WINDOWID → 'default'
-
-    NOTE: os.ttyname(sys.stdin.fileno()) is NOT attempted here because hooks
-    receive stdin as a pipe from Claude Code, so it always fails. Use env vars
-    that are reliably inherited instead.
+    TMUX_PANE → TTY name → 'default'
     """
     tmux_pane = os.environ.get('TMUX_PANE')
     if tmux_pane:
         return f"tmux_{tmux_pane.lstrip('%')}"
 
-    # macOS Terminal.app session (matches resolver priority chain)
-    term_session = os.environ.get('TERM_SESSION_ID')
-    if term_session:
-        return f"term:{term_session[:16]}"
-
-    # X11 window ID
-    window_id = os.environ.get('WINDOWID')
-    if window_id:
-        return f"x11:{window_id}"
+    # Fallback: TTY-based instance ID
+    try:
+        tty_path = os.ttyname(sys.stdin.fileno())
+        # e.g. /dev/pts/3 → term_pts_3, /dev/ttys005 → term_ttys005
+        safe = tty_path.replace('/', '_').lstrip('_').replace('dev_', '')
+        return f"term_{safe}"
+    except:
+        pass
 
     return "default"
 
@@ -291,9 +286,13 @@ def _write_instance_projects(project_path: str, claude_session_id: str, empirica
         instance_dir.mkdir(parents=True, exist_ok=True)
         instance_file = instance_dir / f'{instance_id}.json'
 
-        # TTY key is not available in hook context (stdin is a pipe)
-        # Instance isolation is handled by instance_id (TMUX_PANE/TERM_SESSION_ID)
+        # Get TTY key if available
         tty_key = None
+        try:
+            tty_path = os.ttyname(sys.stdin.fileno())
+            tty_key = tty_path.replace('/', '-').lstrip('-')
+        except:
+            pass
 
         instance_data = {
             'project_path': project_path,
@@ -325,6 +324,37 @@ def _write_instance_projects(project_path: str, claude_session_id: str, empirica
         with open(active_work_file, 'w') as f:
             json.dump(active_work_data, f, indent=2)
 
+        # Also write claude_session_id to TTY session file if available.
+        # CLI commands (session-create) write TTY session but WITHOUT claude_session_id
+        # because they don't have access to it. Hooks DO have it from stdin.
+        # Without this, project-switch via Bash tool can't reverse-lookup instance_id.
+        if tty_key and claude_session_id:
+            tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
+            tty_sessions_dir.mkdir(parents=True, exist_ok=True)
+            tty_session_file = tty_sessions_dir / f'{tty_key}.json'
+
+            # Read existing data (session-create may have written it already)
+            tty_data = {}
+            if tty_session_file.exists():
+                try:
+                    with open(tty_session_file, 'r') as f:
+                        tty_data = json.load(f)
+                except Exception:
+                    pass
+
+            # Update with claude_session_id and instance_id (preserving other fields)
+            tty_data['claude_session_id'] = claude_session_id
+            tty_data['instance_id'] = instance_id
+            tty_data['project_path'] = project_path
+            tty_data['empirica_session_id'] = empirica_session_id
+            tty_data['tty_key'] = tty_key
+            tty_data['timestamp'] = datetime.now().isoformat()
+            tty_data['pid'] = os.getpid()
+            tty_data['ppid'] = os.getppid()
+
+            with open(tty_session_file, 'w') as f:
+                json.dump(tty_data, f, indent=2)
+
         return True
     except Exception as e:
         print(f"Warning: Failed to write instance_projects: {e}", file=sys.stderr)
@@ -347,6 +377,15 @@ def main():
     os.chdir(project_root)
 
     ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
+
+    # Opportunistic cleanup: remove stale instance_projects for dead tmux panes
+    stale_removed = 0
+    try:
+        sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
+        from empirica.utils.session_resolver import cleanup_stale_instance_projects
+        stale_removed = cleanup_stale_instance_projects()
+    except Exception:
+        pass  # Cleanup failure is non-fatal
 
     # Archive stale plans (whose goals are complete)
     archived_plans = archive_stale_plans()

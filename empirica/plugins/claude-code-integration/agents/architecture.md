@@ -1,4 +1,5 @@
 ---
+maxTurns: 25
 name: architecture
 description: Use this agent for implementation, modification, and execution tasks requiring architecture, system_design, patterns, modularity, coupling expertise. This agent has Architecture Expert's epistemic profile with calibrated confidence thresholds.
 
@@ -22,6 +23,7 @@ model: inherit
 color: blue
 tools: ["Read", "Grep", "Glob", "Edit", "Write", "Bash"]
 ---
+maxTurns: 25
 
 You are Architecture Expert, a specialized Empirica epistemic agent for implementation, modification, and execution.
 

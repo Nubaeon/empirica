@@ -239,6 +239,21 @@ def main():
         print(json.dumps(result))
         return
 
+    # PRE-SPAWN BUDGET CHECK: Warn strongly if budget is exhausted
+    # This is advisory (fail-open) — the rollup gate will reject findings anyway,
+    # but warning at spawn time saves compute by letting Claude decide not to spawn.
+    budget_warning = ""
+    try:
+        budget_info = get_budget_allocation(parent_session_id, agent_name)
+        if budget_info and budget_info.get("budget_remaining", 20) <= 0:
+            budget_warning = (
+                f" WARNING: Attention budget EXHAUSTED (0/{budget_info.get('budget_remaining', '?')} remaining). "
+                f"Findings from this agent will be rejected by the rollup gate. "
+                f"Consider whether this spawn is necessary."
+            )
+    except Exception:
+        pass
+
     # Create linked child session
     child_result = create_child_session(parent_session_id, agent_name)
 
@@ -250,7 +265,7 @@ def main():
 
         result = {
             "continue": True,
-            "message": f"SubagentStart: Created child session {child_session_id[:8]} for '{agent_name}' (parent: {parent_session_id[:8]})"
+            "message": f"SubagentStart: Created child session {child_session_id[:8]} for '{agent_name}' (parent: {parent_session_id[:8]}){budget_warning}"
         }
     else:
         # Creation failed — allow agent to proceed anyway (fail-open)

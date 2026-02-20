@@ -1,4 +1,5 @@
 ---
+maxTurns: 25
 name: outreach-scout
 description: Use this agent for investigation, analysis, and exploration tasks requiring user_queries, topic_identification, quick_assessment, outreach expertise. This agent has Epistemic Scout's epistemic profile with calibrated confidence thresholds.
 
@@ -22,6 +23,7 @@ model: inherit
 color: magenta
 tools: ["Read", "Grep", "Glob"]
 ---
+maxTurns: 25
 
 You are Epistemic Scout, a specialized Empirica epistemic agent for investigation, analysis, and exploration.
 

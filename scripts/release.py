@@ -241,6 +241,24 @@ class ReleaseManager:
                 r'badge/version-[0-9]+\.[0-9]+\.[0-9]+-blue\)\]\(https://github\.com/Nubaeon/empirica/releases/tag/v[0-9]+\.[0-9]+\.[0-9]+\)',
                 f'badge/version-{self.version}-blue)](https://github.com/Nubaeon/empirica/releases/tag/v{self.version})',
             ),
+            # Chocolatey install script version
+            (
+                self.repo_root / "packaging" / "chocolatey" / "tools" / "chocolateyinstall.ps1",
+                r"\$packageVersion\s*=\s*'[^']+'",
+                f"$packageVersion = '{self.version}'",
+            ),
+            # Canonical Core prompt version header
+            (
+                self.repo_root / "docs" / "human" / "developers" / "system-prompts" / "CANONICAL_CORE.md",
+                r'Canonical Core v[0-9]+\.[0-9]+\.[0-9]+',
+                f'Canonical Core v{self.version}',
+            ),
+            # PROJECT_CONFIG version
+            (
+                self.repo_root / ".empirica-project" / "PROJECT_CONFIG.yaml",
+                r'version:\s*"[^"]+"',
+                f'version: "{self.version}"',
+            ),
         ]
 
         # Dockerfile.alpine (same patterns as Dockerfile)
@@ -283,15 +301,16 @@ class ReleaseManager:
             else:
                 info(f"Would update: {filepath}")
 
-    def run_command(self, cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
+    def run_command(self, cmd: list[str], check: bool = True, cwd: Optional[str] = None) -> subprocess.CompletedProcess:
         """Run a shell command"""
         cmd_str = " ".join(cmd)
+        cwd_info = f" (in {cwd})" if cwd else ""
         if self.dry_run:
-            info(f"Would run: {cmd_str}")
+            info(f"Would run: {cmd_str}{cwd_info}")
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
-        info(f"Running: {cmd_str}")
-        return subprocess.run(cmd, check=check, capture_output=True, text=True)
+        info(f"Running: {cmd_str}{cwd_info}")
+        return subprocess.run(cmd, check=check, capture_output=True, text=True, cwd=cwd)
 
     def build_package(self):
         """Build Python package"""
@@ -315,6 +334,36 @@ class ReleaseManager:
         self.run_command(["python3", "-m", "build", "--wheel", "--sdist"])
         success("Package built successfully")
 
+    def build_mcp_package(self):
+        """Build empirica-mcp package"""
+        log("\n" + "="*60)
+        log("📦 Building empirica-mcp package")
+        log("="*60)
+
+        mcp_dir = self.repo_root / "empirica-mcp"
+        if not mcp_dir.exists():
+            warning(f"empirica-mcp directory not found: {mcp_dir}")
+            return
+
+        # Clean old builds
+        for path in ["dist", "build", "empirica_mcp.egg-info"]:
+            full_path = mcp_dir / path
+            if full_path.exists():
+                if not self.dry_run:
+                    if full_path.is_dir():
+                        import shutil
+                        shutil.rmtree(full_path)
+                    else:
+                        full_path.unlink()
+                    info(f"Removed empirica-mcp/{path}")
+
+        # Build
+        self.run_command(
+            ["python3", "-m", "build", "--wheel", "--sdist"],
+            cwd=str(mcp_dir)
+        )
+        success("empirica-mcp package built successfully")
+
     def publish_to_pypi(self):
         """Publish to PyPI"""
         log("\n" + "="*60)
@@ -327,6 +376,27 @@ class ReleaseManager:
 
         self.run_command(["python3", "-m", "twine", "upload", f"dist/empirica-{self.version}*"])
         success(f"Published to PyPI: https://pypi.org/project/empirica/{self.version}/")
+
+    def publish_mcp_to_pypi(self):
+        """Publish empirica-mcp to PyPI"""
+        log("\n" + "="*60)
+        log("📤 Publishing empirica-mcp to PyPI")
+        log("="*60)
+
+        mcp_dir = self.repo_root / "empirica-mcp"
+        if not (mcp_dir / "dist").exists():
+            warning("empirica-mcp dist/ not found, skipping MCP publish")
+            return
+
+        if self.dry_run:
+            info("Would publish empirica-mcp to PyPI using twine")
+            return
+
+        self.run_command([
+            "python3", "-m", "twine", "upload",
+            str(mcp_dir / "dist" / f"empirica_mcp-{self.version}*")
+        ])
+        success(f"Published empirica-mcp to PyPI: https://pypi.org/project/empirica-mcp/{self.version}/")
 
     def create_git_tag(self):
         """Create and push git tag"""
@@ -389,6 +459,17 @@ class ReleaseManager:
         wheel = f"dist/empirica-{self.version}-py3-none-any.whl"
         tarball = f"dist/empirica-{self.version}.tar.gz"
 
+        # Include empirica-mcp assets if built
+        mcp_wheel = f"empirica-mcp/dist/empirica_mcp-{self.version}-py3-none-any.whl"
+        mcp_tarball = f"empirica-mcp/dist/empirica_mcp-{self.version}.tar.gz"
+        assets = [wheel, tarball]
+        mcp_wheel_path = self.repo_root / mcp_wheel
+        mcp_tarball_path = self.repo_root / mcp_tarball
+        if mcp_wheel_path.exists():
+            assets.append(mcp_wheel)
+        if mcp_tarball_path.exists():
+            assets.append(mcp_tarball)
+
         notes = f"""## What's in v{self.version}
 
 See CHANGELOG.md for detailed release notes.
@@ -406,7 +487,7 @@ docker pull nubaeon/empirica:{self.version}
 
         self.run_command([
             "gh", "release", "create", tag,
-            wheel, tarball,
+            *assets,
             "--title", f"v{self.version}",
             "--notes", notes
         ])
@@ -425,8 +506,9 @@ docker pull nubaeon/empirica:{self.version}
             # Read version from pyproject.toml (single source of truth)
             self.version = self.read_version()
 
-            # Build package first
+            # Build packages
             self.build_package()
+            self.build_mcp_package()
 
             # Calculate tarball SHA256
             self.tarball_sha256 = self.calculate_sha256()
@@ -439,6 +521,7 @@ docker pull nubaeon/empirica:{self.version}
 
             # Publish
             self.publish_to_pypi()
+            self.publish_mcp_to_pypi()
             self.create_git_tag()
             self.build_and_push_docker()
             self.create_github_release()
@@ -449,6 +532,7 @@ docker pull nubaeon/empirica:{self.version}
 
             success(f"Released empirica v{self.version}")
             info(f"PyPI: https://pypi.org/project/empirica/{self.version}/")
+            info(f"PyPI (MCP): https://pypi.org/project/empirica-mcp/{self.version}/")
             info(f"Docker: docker pull nubaeon/empirica:{self.version}")
             info(f"GitHub: https://github.com/Nubaeon/empirica/releases/tag/v{self.version}")
 

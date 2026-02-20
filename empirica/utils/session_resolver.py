@@ -752,54 +752,6 @@ def _get_instance_suffix() -> str:
     return ""
 
 
-def _update_instance_project(instance_id: str, project_path: str, claude_session_id: str = None) -> bool:
-    """Update instance_projects file to match active_work (self-heal stale instance mapping).
-
-    Called when active_work (set by project-switch) disagrees with instance_projects
-    (set by session-init). active_work represents explicit user intent and wins.
-
-    Args:
-        instance_id: The instance ID (e.g., 'tmux_4')
-        project_path: The authoritative project path from active_work
-        claude_session_id: Optional Claude session ID to include
-
-    Returns:
-        True if successfully updated, False otherwise
-    """
-    import time
-    from pathlib import Path
-
-    try:
-        instance_dir = Path.home() / '.empirica' / 'instance_projects'
-        instance_dir.mkdir(parents=True, exist_ok=True)
-        instance_file = instance_dir / f'{instance_id}.json'
-
-        # Read existing data to preserve other fields
-        existing_data = {}
-        if instance_file.exists():
-            try:
-                with open(instance_file, 'r') as f:
-                    existing_data = json.load(f)
-            except Exception:
-                pass
-
-        # Update with new project_path (authoritative from active_work)
-        existing_data['project_path'] = project_path
-        existing_data['timestamp'] = time.strftime('%Y-%m-%dT%H:%M:%S%z')
-        existing_data['source'] = 'self-heal-from-active_work'
-        if claude_session_id:
-            existing_data['claude_session_id'] = claude_session_id
-
-        with open(instance_file, 'w') as f:
-            json.dump(existing_data, f, indent=2)
-
-        logger.debug(f"_update_instance_project: updated {instance_id} -> {project_path}")
-        return True
-
-    except Exception as e:
-        logger.warning(f"_update_instance_project failed: {e}")
-        return False
-
 
 def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
     """Get the active project path for the current instance.
@@ -807,12 +759,14 @@ def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
     CANONICAL function for project resolution. All components should use this
     instead of implementing their own priority chain.
 
-    Priority chain (NO CWD FALLBACK) - per INSTANCE_ISOLATION.md Section 4.1:
-    0. active_work_{claude_session_id}.json - AUTHORITATIVE (set by project-switch, user intent)
-    1. instance_projects/{instance_id}.json - fallback (set by session-init, may be stale)
+    Priority chain (NO CWD FALLBACK):
+    0. instance_projects/{instance_id}.json - AUTHORITATIVE (updated by hooks AND project-switch CLI)
+    1. active_work_{claude_session_id}.json - fallback (only hooks can update, not CLI)
 
-    Self-healing: If both exist but disagree, active_work wins (explicit user intent
-    via project-switch) and instance_projects is updated to match.
+    Rationale: instance_projects is updated by BOTH hooks (session-init, post-compact)
+    AND the project-switch CLI command. active_work is ONLY updated by hooks (which
+    have claude_session_id from stdin). project-switch CLI can't update active_work
+    because it doesn't know claude_session_id. Therefore instance_projects is more current.
 
     Args:
         claude_session_id: Optional Claude Code conversation UUID (from hook input)
@@ -856,27 +810,18 @@ def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
             except Exception:
                 pass
 
-    # PRIORITY 0: active_work wins (set by project-switch - explicit user intent)
-    # Per INSTANCE_ISOLATION.md Section 4.1:
-    #   Priority 0: active_work file (set by project-switch)
-    #   Priority 1: instance_projects (set by session-init, can be stale)
-    if active_work_path:
-        # Self-heal: If instance_projects disagrees, update it to match active_work
-        if instance_id and instance_path and instance_path != active_work_path:
-            logger.info(f"get_active_project_path: self-healing stale instance_projects "
-                       f"({Path(instance_path).name} → {Path(active_work_path).name})")
-            try:
-                _update_instance_project(instance_id, active_work_path, claude_session_id)
-            except Exception as e:
-                logger.debug(f"Failed to self-heal instance_projects: {e}")
-
-        logger.debug(f"get_active_project_path: from active_work: {active_work_path}")
-        return active_work_path
-
-    # Fallback: instance_projects (only if active_work doesn't exist)
+    # PRIORITY 0: instance_projects wins (updated by BOTH hooks AND project-switch CLI)
+    # active_work is only updated by hooks (which have claude_session_id).
+    # project-switch CLI updates instance_projects but CAN'T update active_work
+    # (doesn't know claude_session_id). So instance_projects is more current.
     if instance_path:
         logger.debug(f"get_active_project_path: from instance_projects: {instance_path}")
         return instance_path
+
+    # Fallback: active_work (for non-TMUX environments where instance_id is None)
+    if active_work_path:
+        logger.debug(f"get_active_project_path: from active_work: {active_work_path}")
+        return active_work_path
 
     # NO CWD FALLBACK - fail explicitly
     logger.debug("get_active_project_path: could not resolve (no active_work or instance_projects)")
@@ -958,6 +903,59 @@ def write_active_transaction(
         except OSError:
             pass
         raise
+
+
+def increment_transaction_tool_count(claude_session_id: str = None) -> Optional[dict]:
+    """Atomically increment tool_call_count in the active transaction file.
+
+    Called by Sentinel on every PreToolUse (both noetic and praxic) to track
+    how much work has been done in this transaction. Returns the updated
+    transaction data including current count and avg_turns for nudge calculation.
+
+    Returns None if no active transaction exists.
+    """
+    import tempfile
+
+    from pathlib import Path
+    suffix = _get_instance_suffix()
+
+    # Find the transaction file
+    project_path = get_active_project_path(claude_session_id)
+    if project_path:
+        tx_path = Path(project_path) / '.empirica' / f'active_transaction{suffix}.json'
+    else:
+        tx_path = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
+
+    if not tx_path.exists():
+        return None
+
+    try:
+        with open(tx_path, 'r') as f:
+            tx_data = json.load(f)
+
+        if tx_data.get('status') != 'open':
+            return None
+
+        # Increment count
+        tx_data['tool_call_count'] = tx_data.get('tool_call_count', 0) + 1
+        tx_data['updated_at'] = __import__('time').time()
+
+        # Atomic write
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=str(tx_path.parent))
+        try:
+            with __import__('os').fdopen(tmp_fd, 'w') as tmp_f:
+                json.dump(tx_data, tmp_f, indent=2)
+            __import__('os').rename(tmp_path, str(tx_path))
+        except BaseException:
+            try:
+                __import__('os').unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+
+        return tx_data
+    except Exception:
+        return None
 
 
 def read_active_transaction_full(claude_session_id: str = None) -> Optional[dict]:
@@ -1223,6 +1221,115 @@ def clear_active_transaction(claude_session_id: str = None) -> None:
             global_candidate.unlink()
         except Exception:
             pass
+
+
+def clear_compact_handoff() -> bool:
+    """Remove the compact handoff file after post-compact has consumed it.
+
+    Compact handoff is a one-shot bridge: pre-compact writes it, post-compact reads it.
+    After consumption, it's stale and should be purged to prevent confusion.
+
+    Returns True if a file was removed.
+    """
+    from pathlib import Path
+    instance_id = get_instance_id()
+    if not instance_id:
+        return False
+
+    handoff_file = Path.home() / '.empirica' / f'compact_handoff_{instance_id}.json'
+    if handoff_file.exists():
+        try:
+            handoff_file.unlink()
+            logger.debug(f"Cleared compact handoff: {handoff_file.name}")
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def clear_active_work(claude_session_id: str = None) -> bool:
+    """Remove the active_work file for a completed Claude session.
+
+    Called after POSTFLIGHT (post-test) completes — the last consumer of session state.
+    Also called by session-end as safety net.
+
+    Args:
+        claude_session_id: Claude Code conversation UUID. Required — without it
+            we can't identify which file to clean up.
+
+    Returns True if a file was removed.
+    """
+    from pathlib import Path
+    if not claude_session_id:
+        return False
+
+    active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
+    if active_work_file.exists():
+        try:
+            active_work_file.unlink()
+            logger.debug(f"Cleared active_work: {active_work_file.name}")
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def cleanup_stale_instance_projects() -> int:
+    """Remove instance_projects entries for tmux panes that no longer exist.
+
+    Tmux pane IDs are monotonic — once a pane is destroyed, its ID is never
+    reused. This detects dead panes and removes their stale mapping files.
+
+    Returns number of files removed.
+    """
+    from pathlib import Path
+    import subprocess
+
+    instance_dir = Path.home() / '.empirica' / 'instance_projects'
+    if not instance_dir.exists():
+        return 0
+
+    # Get current tmux pane IDs
+    live_panes = set()
+    try:
+        result = subprocess.run(
+            ['tmux', 'list-panes', '-a', '-F', '#{pane_id}'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            for line in result.stdout.strip().split('\n'):
+                pane_id = line.strip().lstrip('%')
+                if pane_id:
+                    live_panes.add(f"tmux_{pane_id}")
+    except Exception:
+        return 0  # Can't verify — don't remove anything
+
+    if not live_panes:
+        return 0  # No tmux running or no panes found — bail
+
+    removed = 0
+    for instance_file in instance_dir.glob('tmux_*.json'):
+        instance_id = instance_file.stem  # e.g., "tmux_25"
+        if instance_id not in live_panes:
+            try:
+                instance_file.unlink()
+                removed += 1
+                logger.debug(f"Removed stale instance_projects: {instance_file.name}")
+            except Exception:
+                pass
+
+    # Also clean up stale compact_handoff files for dead panes
+    for handoff_file in (Path.home() / '.empirica').glob('compact_handoff_tmux_*.json'):
+        handoff_instance = handoff_file.stem.replace('compact_handoff_', '')
+        if handoff_instance not in live_panes:
+            try:
+                handoff_file.unlink()
+                removed += 1
+                logger.debug(f"Removed stale compact_handoff: {handoff_file.name}")
+            except Exception:
+                pass
+
+    return removed
 
 
 # ============================================================================

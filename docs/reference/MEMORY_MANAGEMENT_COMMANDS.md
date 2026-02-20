@@ -1,6 +1,6 @@
 # Memory Management Commands Reference
 
-**Version:** 1.5.3
+**Version:** 1.5.4
 **Purpose:** Epistemic memory management for parallel agents and context optimization
 
 ---

@@ -341,6 +341,49 @@ def handle_preflight_submit_command(args):
                             empirica_session_id=session_id,
                             project_path=resolved_project_path
                         )
+
+                    # AUTONOMY CALIBRATION: Calculate avg_turns from past transactions
+                    # and inject into the new transaction for Sentinel nudge thresholds
+                    try:
+                        from empirica.utils.session_resolver import (
+                            read_active_transaction_full, _get_instance_suffix
+                        )
+                        from empirica.data.session_database import SessionDatabase
+
+                        avg_db = SessionDatabase()
+                        avg_cursor = avg_db.conn.cursor()
+                        # Query past POSTFLIGHT reflex_data for tool_call_count
+                        avg_cursor.execute("""
+                            SELECT json_extract(reflex_data, '$.tool_call_count')
+                            FROM reflexes
+                            WHERE session_id = ? AND phase = 'POSTFLIGHT'
+                              AND json_extract(reflex_data, '$.tool_call_count') IS NOT NULL
+                            ORDER BY timestamp DESC
+                            LIMIT 20
+                        """, (session_id,))
+                        past_counts = [row[0] for row in avg_cursor.fetchall() if row[0] and row[0] > 0]
+                        avg_db.close()
+
+                        if past_counts:
+                            avg_turns = int(sum(past_counts) / len(past_counts))
+                        else:
+                            avg_turns = 0  # No history yet — nudge disabled until first complete cycle
+
+                        # Update the transaction file with avg_turns
+                        tx_data = read_active_transaction_full()
+                        if tx_data:
+                            tx_data['avg_turns'] = avg_turns
+                            suffix = _get_instance_suffix()
+                            from pathlib import Path as _Path
+                            tx_path = _Path(resolved_project_path) / '.empirica' / f'active_transaction{suffix}.json'
+                            if tx_path.exists():
+                                import tempfile as _tempfile
+                                fd, tmp = _tempfile.mkstemp(dir=str(tx_path.parent))
+                                with os.fdopen(fd, 'w') as tf:
+                                    _json.dump(tx_data, tf, indent=2)
+                                os.rename(tmp, str(tx_path))
+                    except Exception as e_avg:
+                        logger.debug(f"Avg turns calculation failed (non-fatal): {e_avg}")
             except Exception as e:
                 logger.debug(f"Active transaction file write failed (non-fatal): {e}")
 
@@ -1920,6 +1963,8 @@ def handle_postflight_submit_command(args):
             # Read and close active transaction (POSTFLIGHT closes the transaction)
             # Update status to "closed" instead of deleting - Sentinel reads this
             postflight_transaction_id = None
+            postflight_tool_call_count = 0
+            postflight_avg_turns = 0
             try:
                 import time
                 from empirica.utils.session_resolver import write_active_transaction, get_tty_session
@@ -1961,6 +2006,9 @@ def handle_postflight_submit_command(args):
                     with open(tx_file, 'r') as f:
                         tx_data = _json.load(f)
                     postflight_transaction_id = tx_data.get('transaction_id')
+                    # Capture tool_call_count before closing (for calibration history)
+                    postflight_tool_call_count = tx_data.get('tool_call_count', 0)
+                    postflight_avg_turns = tx_data.get('avg_turns', 0)
                     # Update to closed status - preserve project_path from transaction
                     write_active_transaction(
                         transaction_id=postflight_transaction_id,
@@ -1971,8 +2019,11 @@ def handle_postflight_submit_command(args):
                     )
             except Exception as e:
                 logger.debug(f"Transaction close failed (non-fatal): {e}")
+                postflight_tool_call_count = 0
+                postflight_avg_turns = 0
 
             # Add checkpoint - this writes to ALL 3 storage layers atomically (round auto-increments)
+            # tool_call_count is stored in reflex_data so PREFLIGHT can compute avg_turns
             checkpoint_id = logger_instance.add_checkpoint(
                 phase="POSTFLIGHT",
                 vectors=vectors,
@@ -1983,7 +2034,9 @@ def handle_postflight_submit_command(args):
                     "internal_consistency": internal_consistency,
                     "deltas": deltas,
                     "trajectory_issues": trajectory_issues,
-                    "transaction_id": postflight_transaction_id
+                    "transaction_id": postflight_transaction_id,
+                    "tool_call_count": postflight_tool_call_count,
+                    "avg_turns_at_start": postflight_avg_turns
                 }
             )
 

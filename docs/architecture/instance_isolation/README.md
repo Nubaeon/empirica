@@ -28,11 +28,12 @@ at the database level. CWD gets reset unpredictably. Which project am I working 
 
 ## Key Principles
 
-1. **File-based isolation** trumps database queries
-2. **CWD is unreliable** - Claude Code resets it unpredictably
-3. **Fail explicitly** - Better to error than silently use wrong project
-4. **Hooks own the linkage** for Claude Code users
-5. **TTY is the fallback** for non-Claude-Code integrations
+1. **Hooks write, everything else reads.** Hooks have full context (claude_session_id + TMUX_PANE). CLI, Sentinel, statusline are readers. Exception: `project-switch` writes to `instance_projects` as a signal.
+2. **instance_projects is the most current source** — writable by both hooks AND project-switch. `active_work` is fallback for non-TMUX only.
+3. **Never self-heal between files.** If they disagree after project-switch, that's expected. instance_projects has the newer data.
+4. **CWD is unreliable** — Claude Code resets it unpredictably.
+5. **Fail explicitly** — return None rather than silently using wrong project.
+6. **TTY is the fallback** for non-Claude-Code integrations.
 
 ---
 

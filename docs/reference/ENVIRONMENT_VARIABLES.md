@@ -1,6 +1,6 @@
 # Empirica Environment Variables Reference
 
-**Version:** 1.5.3
+**Version:** 1.5.4
 **Total Variables:** 35+
 **Status:** Production
 

@@ -2,13 +2,45 @@
 
 Core concepts and file taxonomy for multi-instance isolation.
 
+## The One Rule
+
+> **Hooks write. Everything else reads.**
+
+Hooks have full context (`claude_session_id` from stdin + `TMUX_PANE` from env).
+CLI commands, Sentinel, statusline, and MCP are **readers** — they resolve project
+context from files that hooks wrote.
+
+The sole exception is **`project-switch`**, which writes to `instance_projects` and
+`tty_sessions` as a **signal** to hooks. It cannot write `active_work` because it
+doesn't know `claude_session_id`. This is fine — `instance_projects` is read first.
+
 ## File Taxonomy
 
-### 1. Active Work Files (Claude Code)
+### 1. Instance Projects (tmux) — PRIMARY
+
+**Location:** `~/.empirica/instance_projects/tmux_N.json`
+**Key:** `TMUX_PANE` environment variable (e.g., `%4` → `tmux_4`)
+**Written by:** Hooks (session-init, post-compact) AND `project-switch` CLI
+**Read by:** Everyone (hooks, CLI, statusline, Sentinel)
+
+```json
+{
+  "project_path": "/home/user/my-project",
+  "claude_session_id": "fad66571-1bde-4ee1-aa0d-e9d3dfd8e833",
+  "empirica_session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
+  "timestamp": "2026-02-13T01:00:00"
+}
+```
+
+**Purpose:** Links tmux pane → project. **Most current source** because it's the only
+file writable by both hooks AND the project-switch CLI. In TMUX environments this is
+the authoritative source.
+
+### 2. Active Work Files (Claude Code) — FALLBACK
 
 **Location:** `~/.empirica/active_work_{claude_session_id}.json`
 **Key:** Claude Code conversation UUID (from hook stdin)
-**Written by:** Hooks (session-init, post-compact)
+**Written by:** Hooks ONLY (session-init, post-compact)
 
 ```json
 {
@@ -21,24 +53,9 @@ Core concepts and file taxonomy for multi-instance isolation.
 }
 ```
 
-**Purpose:** Links Claude conversation → project. Primary isolation for Claude Code users.
-
-### 2. Instance Projects (tmux)
-
-**Location:** `~/.empirica/instance_projects/tmux_N.json`
-**Key:** `TMUX_PANE` environment variable (e.g., `%4` → `tmux_4`)
-**Written by:** Hooks (session-init, post-compact), CLI (project-switch preserves)
-
-```json
-{
-  "project_path": "/home/user/my-project",
-  "claude_session_id": "fad66571-1bde-4ee1-aa0d-e9d3dfd8e833",
-  "empirica_session_id": "2bc1da78-2a28-4745-b75b-f021d563d819",
-  "timestamp": "2026-02-13T01:00:00"
-}
-```
-
-**Purpose:** Links tmux pane → project. Works in hook context where TTY unavailable.
+**Purpose:** Links Claude conversation → project. Fallback for non-TMUX environments
+where `instance_id` is unavailable. **Cannot be updated by project-switch** (CLI
+doesn't know claude_session_id), so may be stale after a project-switch.
 
 ### 3. TTY Sessions (CLI/MCP)
 
@@ -79,94 +96,98 @@ Core concepts and file taxonomy for multi-instance isolation.
 
 ---
 
-## Resolution Priority Chains
+## Resolution Priority Chain
 
-### Hooks (Sentinel, pre-compact, post-compact)
-
-```
-Priority 0: active_work_{claude_session_id}.json
-    ↓
-Priority 1: instance_projects/tmux_N.json (via TMUX_PANE)
-    ↓
-❌ NO CWD FALLBACK - fail explicitly
-```
-
-### CLI Commands
+All components use `get_active_project_path()` — the single canonical function.
 
 ```
-Priority 0: active_work_{claude_session_id}.json (if session_id known)
+Priority 0: instance_projects/tmux_N.json    (TMUX_PANE → instance_id)
     ↓
-Priority 1: tty_sessions/pts-N.json (via tty command)
+Priority 1: active_work_{claude_session_id}.json  (fallback for non-TMUX)
     ↓
-Priority 2: instance_projects/tmux_N.json (via TMUX_PANE)
-    ↓
-Priority 3: CWD-based detection (last resort)
+❌ NO CWD FALLBACK - return None, fail explicitly
 ```
 
-### Statusline
+**Why instance_projects first:** It's the only file writable by BOTH hooks AND
+project-switch CLI. After `project-switch`, instance_projects reflects user intent
+immediately. `active_work` may be stale (only hooks can update it, and no hook
+fires between project-switch and the next tool use).
 
-```
-Priority 0: active_work (via stdin session_id from Claude Code)
-    ↓
-Priority 1: instance_projects (via TMUX_PANE)
-    ↓
-Priority 2: tty_sessions (via tty command)
-    ↓
-❌ NO CWD FALLBACK
-```
+**Why no self-heal:** If the two files disagree after project-switch, that's
+expected and correct — instance_projects has the newer data. No file should
+overwrite another. The disagreement resolves naturally when the next SessionStart
+hook fires and writes both files consistently.
+
+**Non-TMUX environments:** `instance_id` is `None`, so instance_projects isn't
+found. Falls through to `active_work`, which hooks wrote at session start.
+project-switch in non-TMUX still works because it writes to `tty_sessions` and
+other CLI resolution paths.
 
 ---
 
 ## Ownership Model
 
-| Component | Writes | Reads |
-|-----------|--------|-------|
-| **Hooks** (session-init, post-compact) | `active_work`, `instance_projects` | All |
-| **CLI** (session-create, project-switch) | `tty_sessions`, `active_work`, conditionally `instance_projects` | All |
-| **PREFLIGHT** | `active_transaction` | All |
-| **Statusline** | Nothing | All |
-| **Sentinel** | Nothing | All |
+| Component | Writes | Reads | Has claude_session_id? |
+|-----------|--------|-------|------------------------|
+| **Hooks** (session-init, post-compact) | `active_work`, `instance_projects`, `tty_sessions` | All | Yes (stdin) |
+| **CLI** (project-switch) | `instance_projects`, `tty_sessions` | All | **No** |
+| **CLI** (session-create) | `tty_sessions` | All | **No** |
+| **PREFLIGHT** | `active_transaction` | All | No |
+| **Statusline** | Nothing | All | No |
+| **Sentinel** | Nothing | All | Yes (stdin) |
 
-**Key insight:** Hooks have full context (`claude_session_id` + `TMUX_PANE`). CLI commands
-only have `TTY` + maybe `TMUX_PANE`. This asymmetry is why we need multiple file types.
+**The asymmetry that matters:** Hooks have `claude_session_id` (from stdin).
+CLI commands do not. This means:
 
-**CLI instance_projects updates:** CLI only writes to `instance_projects` when it can
-correctly identify the instance via:
-1. `TMUX_PANE` environment variable (if inherited)
-2. Reverse lookup: scanning `instance_projects/tmux_*.json` for matching `claude_session_id`
+- `active_work_{claude_session_id}.json` → **only hooks can write** (need the key)
+- `instance_projects/tmux_N.json` → **hooks AND project-switch can write** (keyed by TMUX_PANE)
+- `tty_sessions/pts-N.json` → **hooks AND CLI can write** (keyed by TTY device)
 
-When neither is available, CLI writes only to `active_work_{claude_session_id}.json`.
-The next hook invocation will sync `instance_projects` from `active_work`.
+**Therefore instance_projects is the most complete source** — it's updated by every
+writer in the system. active_work can go stale after project-switch because the CLI
+can't update it.
+
+**NEVER self-heal between files.** If `active_work` and `instance_projects` disagree,
+instance_projects is more current (it was updated by project-switch). Overwriting
+instance_projects from active_work reverses the user's project-switch — this was
+bug #11.14.
 
 ---
 
 ## Data Flow Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     Claude Code Session                              │
-│                                                                      │
-│  SessionStart Hook                    Bash Tool (CLI)                │
-│  ─────────────────                    ───────────────                │
-│  Has: claude_session_id               Has: TMUX_PANE, TTY            │
-│       TMUX_PANE (if tmux)             Missing: claude_session_id     │
-│                                                                      │
-│  Writes:                              Writes:                        │
-│  • active_work_{id}.json              • tty_sessions/pts-N.json      │
-│  • instance_projects/tmux_N.json      • Preserves instance_projects  │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                     Project Database                                 │
-│  {project}/.empirica/sessions/sessions.db                           │
-│                                                                      │
-│  ┌────────────┐  ┌────────────┐  ┌────────────────────────────────┐ │
-│  │  sessions  │  │  reflexes  │  │ active_transaction_tmux_N.json │ │
-│  └────────────┘  └────────────┘  └────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────┘
+WRITERS                                    READERS
+───────                                    ───────
+
+SessionStart Hook ──────┐                  Sentinel Hook
+  Has: claude_session_id│                    │ Reads instance_projects (P0)
+  Has: TMUX_PANE        │                    │ Falls back to active_work (P1)
+  Writes:               │                    │ Resolves → project_path
+  • active_work         │                    │
+  • instance_projects   │                  Statusline
+  • tty_sessions        │                    │ Same priority chain
+                        ▼                    │
+              ┌──────────────────┐         CLI Commands
+              │ Isolation Files  │           │ Same priority chain
+              │                  │◄──────────┤
+              │ instance_projects│           │
+              │ active_work      │         MCP Server
+              │ tty_sessions     │           │ Same priority chain
+              └──────────────────┘
+                        ▲
+project-switch CLI ─────┘
+  Has: TMUX_PANE, TTY
+  Missing: claude_session_id
+  Writes:
+  • instance_projects  ← signals project change
+  • tty_sessions       ← signals project change
+  • CANNOT write active_work (no key)
 ```
+
+**After project-switch:** `instance_projects` has the new project, `active_work` has
+the old project. This is expected. `instance_projects` is read first, so the correct
+project is used. `active_work` gets updated when the next SessionStart hook fires.
 
 ---
 
