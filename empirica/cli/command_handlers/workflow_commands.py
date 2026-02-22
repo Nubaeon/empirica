@@ -204,6 +204,16 @@ def handle_preflight_submit_command(args):
             # Merge CLI flags with JSON config (CLI flags as fallback)
             if not config_data.get('session_id') and getattr(args, 'session_id', None):
                 config_data['session_id'] = args.session_id
+            # Auto-resolve session_id from active session if not provided
+            if not config_data.get('session_id'):
+                try:
+                    from empirica.utils.session_resolver import get_active_empirica_session_id
+                    auto_sid = get_active_empirica_session_id()
+                    if auto_sid:
+                        config_data['session_id'] = auto_sid
+                        logger.debug(f"PREFLIGHT: Auto-derived session_id: {auto_sid[:8]}...")
+                except Exception:
+                    pass
             validated, error = safe_validate(config_data, PreflightInput)
             if error:
                 print(json.dumps({
@@ -1773,12 +1783,26 @@ def handle_postflight_submit_command(args):
             reasoning = config_data.get('reasoning', '')
             output_format = 'json'
 
+            # Auto-resolve session_id from active transaction if not provided
+            # (matches check-submit behavior — postflight closes an existing tx)
+            if not session_id:
+                try:
+                    from empirica.utils.session_resolver import get_active_empirica_session_id
+                    session_id = get_active_empirica_session_id()
+                    if session_id:
+                        logger.debug(f"POSTFLIGHT: Auto-derived session_id: {session_id[:8]}...")
+                except Exception:
+                    pass
+
             # Validate required fields
             if not session_id or not vectors:
                 print(json.dumps({
                     "ok": False,
-                    "error": "Config file must include 'session_id' and 'vectors' fields",
-                    "hint": "See /tmp/postflight_config_example.json for schema"
+                    "error": "Config file must include 'vectors' field" + (
+                        " and 'session_id' (could not auto-derive from active transaction)"
+                        if not session_id else ""
+                    ),
+                    "hint": "Run PREFLIGHT first to open a transaction, or provide session_id explicitly"
                 }))
                 sys.exit(1)
         else:
@@ -1788,11 +1812,19 @@ def handle_postflight_submit_command(args):
             reasoning = args.reasoning
             output_format = getattr(args, 'output', 'json')
 
+            # Auto-resolve session_id from active transaction if not provided
+            if not session_id:
+                try:
+                    from empirica.utils.session_resolver import get_active_empirica_session_id
+                    session_id = get_active_empirica_session_id()
+                except Exception:
+                    pass
+
             # Validate required fields for legacy mode
             if not session_id or not vectors:
                 print(json.dumps({
                     "ok": False,
-                    "error": "Legacy mode requires --session-id and --vectors flags",
+                    "error": "Legacy mode requires --vectors flag (--session-id auto-derived if in transaction)",
                     "hint": "For AI-first mode, use: empirica postflight-submit config.json"
                 }))
                 sys.exit(1)
