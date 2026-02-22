@@ -113,7 +113,9 @@ def _create_entity_artifact_link(
         except Exception:
             pass
 
-    artifact_source = str(Path(project_path) / '.empirica' / 'sessions' / 'sessions.db') if project_path else None
+    # artifact_source = trajectory_path (.empirica dir), NOT full sessions.db path
+    # EntityArtifactStore._populate_content() appends /sessions/sessions.db
+    artifact_source = str(Path(project_path) / '.empirica') if project_path else None
 
     try:
         conn = sqlite3.connect(str(workspace_db))
