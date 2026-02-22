@@ -153,6 +153,31 @@ The file is only overwritten when a new PREFLIGHT starts a new transaction.
 
 **Commit:** pending
 
+### 11.16 Auto-POSTFLIGHT From CHECK Doesn't Close Transaction File (2026-02-22)
+
+**Symptom:** CHECK auto-triggers POSTFLIGHT on goal completion. Epistemic snapshot
+written to DB, but transaction file stays `status="open"`. Statusline/Sentinel
+still see an open transaction.
+
+**Root cause:** POSTFLIGHT handler used a custom project resolution chain
+(TTY→active_work→CWD) instead of canonical `get_active_project_path()`.
+
+The failure path:
+1. CHECK calls `_auto_postflight()` → spawns `empirica postflight-submit -` subprocess
+2. Subprocess inherits `TMUX_PANE` (instance_id resolves correctly)
+3. TTY session has `claude_session_id=None` (by design — CLI can't access it)
+4. Without claude_session_id, can't find `active_work_{id}.json` → `resolved_project_path=None`
+5. Falls back to `Path.cwd()` — **violates NO CWD FALLBACK rule**
+6. If CWD is wrong (post-compact, Claude reset), can't find `.empirica/` → silent fail
+7. DB snapshot written (uses session_id, not project_path) but transaction file untouched
+
+**Fix:** Replace custom resolution with `get_active_project_path()`:
+- P0: `instance_projects/tmux_N.json` (always available when TMUX_PANE set)
+- P1: `active_work_{claude_session_id}.json` (fallback for non-TMUX)
+- No CWD fallback
+
+**Commit:** `72149c86`
+
 ---
 
 ## By Design (Not Bugs)
