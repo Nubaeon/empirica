@@ -1967,7 +1967,7 @@ def handle_postflight_submit_command(args):
             postflight_avg_turns = 0
             try:
                 import time
-                from empirica.utils.session_resolver import write_active_transaction, get_tty_session
+                from empirica.utils.session_resolver import write_active_transaction, get_active_project_path
                 from empirica.core.statusline_cache import get_instance_id
                 from pathlib import Path
                 import json as _json
@@ -1976,30 +1976,15 @@ def handle_postflight_submit_command(args):
                 instance_id = get_instance_id()
                 suffix = f"_{instance_id}" if instance_id else ""
 
-                # Priority 0: Get project_path from active_work file (set by project-switch)
-                resolved_project_path = None
-                try:
-                    tty_session = get_tty_session(warn_if_stale=False)
-                    if tty_session:
-                        claude_session_id = tty_session.get('claude_session_id')
-                        if claude_session_id:
-                            active_work_path = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-                            if active_work_path.exists():
-                                with open(active_work_path, 'r') as f:
-                                    active_work = _json.load(f)
-                                    resolved_project_path = active_work.get('project_path')
-                except Exception:
-                    pass
+                # Use canonical project resolution (NO CWD FALLBACK)
+                # Priority 0: instance_projects (TMUX_PANE) — authoritative
+                # Priority 1: active_work (claude_session_id) — fallback
+                resolved_project_path = get_active_project_path()
 
-                # Fallback: CWD-based
                 if resolved_project_path:
-                    local_empirica = Path(resolved_project_path) / '.empirica'
+                    tx_file = Path(resolved_project_path) / '.empirica' / f'active_transaction{suffix}.json'
                 else:
-                    local_empirica = Path.cwd() / '.empirica'
-
-                if local_empirica.exists():
-                    tx_file = local_empirica / f'active_transaction{suffix}.json'
-                else:
+                    # Last resort: home directory (should not happen in normal use)
                     tx_file = Path.home() / '.empirica' / f'active_transaction{suffix}.json'
 
                 if tx_file.exists():
