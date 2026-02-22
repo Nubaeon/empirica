@@ -32,7 +32,7 @@ The CLI uses `get_active_empirica_session_id()` with this priority chain:
 
 ## Command Categories
 
-### 1. Session Management (7 commands)
+### 1. Session Management (8 commands)
 - **session-create** - Create new AI session with metadata
 - **sessions-list** - List all sessions for an AI or project
 - **sessions-show** - Show detailed information for a session
@@ -40,6 +40,7 @@ The CLI uses `get_active_empirica_session_id()` with this priority chain:
 - **sessions-resume** - Resume a previous session
 - **session-snapshot** - Create epistemic snapshot of current session
 - **memory-compact** - Compact session memory and optimize storage
+- **transaction-adopt** - Adopt an orphaned transaction from another instance (after tmux restart, etc.)
 
 ### 2. CASCADE Workflow (7 commands)
 - **preflight** - Execute preflight epistemic assessment
@@ -68,10 +69,11 @@ The CLI uses `get_active_empirica_session_id()` with this priority chain:
 - **goals-mark-stale** - Mark session goals as stale (for memory compaction)
 - **goals-get-stale** - Get list of stale goals
 
-### 4. Project Management (8 commands)
+### 4. Project Management (9 commands)
 - **project-init** - Initialize new project with configuration
 - **project-create** - Create project entity in database
 - **project-list** - List all projects
+- **project-switch** - Switch active project context (by name or ID)
 - **project-bootstrap** - Bootstrap project with context and goals
 - **project-handoff** - Create AI-to-AI handoff report
 - **project-search** - Search across projects
@@ -117,7 +119,6 @@ The CLI uses `get_active_empirica_session_id()` with this priority chain:
 - **source-add** - Add external reference source (noetic or praxic)
 - **act-log** - Log action taken with confidence score
 - **investigate-log** - Log investigation activities
-- **transaction-adopt** - Adopt orphaned transaction from crashed/closed instance
 
 ### 10. Issue Capture (6 commands)
 - **issue-list** - List all captured issues
@@ -127,8 +128,9 @@ The CLI uses `get_active_empirica_session_id()` with this priority chain:
 - **issue-export** - Export issues to external system
 - **issue-stats** - Show statistics about issues
 
-### 11. Investigation (4 commands)
+### 11. Investigation (5 commands)
 - **investigate** - Start investigation workflow
+- **investigate-multi** - Run parallel multi-branch investigation
 - **investigate-create-branch** - Create investigation branch
 - **investigate-checkpoint-branch** - Checkpoint investigation branch
 - **investigate-merge-branches** - Merge investigation branches
@@ -607,6 +609,13 @@ Part of: `pip install empirica-workspace`
 
 > **Transaction-First Pattern:** These commands auto-derive `--session-id` from the active transaction when running inside a CASCADE workflow (after PREFLIGHT). You only need to specify `--session-id` explicitly when logging outside a transaction.
 
+> **Entity Scoping (v1.5.5):** All artifact logging commands support cross-entity provenance via `--entity-type`, `--entity-id`, and `--via` flags. This allows artifacts to be scoped to organizations, contacts, engagements, or other non-project entities while preserving project-level storage.
+
+**Entity Scoping Options (available on all logging commands):**
+- `--entity-type`: Entity type (e.g., `organization`, `contact`, `engagement`, `project`)
+- `--entity-id`: Entity identifier
+- `--via`: Discovery channel (`cli`, `email`, `linkedin`, `calendar`, `agent`, `web`)
+
 #### `finding-log`
 **Purpose:** Log new finding discovered during work
 **Usage:** `empirica finding-log --finding <text> [options]`
@@ -614,6 +623,8 @@ Part of: `pip install empirica-workspace`
 - `--session-id`: Session ID (auto-derived from active transaction)
 - `--project-id`: Associated project ID
 - `--goal-id`: Associated goal ID
+- `--impact`: Impact score (0.0-1.0)
+- `--entity-type`, `--entity-id`, `--via`: Entity scoping (see above)
 
 #### `unknown-log`
 **Purpose:** Log unknown or unresolved question
@@ -622,6 +633,7 @@ Part of: `pip install empirica-workspace`
 - `--session-id`: Session ID (auto-derived from active transaction)
 - `--project-id`: Associated project ID
 - `--goal-id`: Associated goal ID
+- `--entity-type`, `--entity-id`, `--via`: Entity scoping (see above)
 
 #### `unknown-resolve`
 **Purpose:** Mark an unknown as resolved with explanation of how it was resolved
@@ -665,6 +677,7 @@ empirica unknown-resolve \
 - `--session-id`: Session ID (auto-derived from active transaction)
 - `--project-id`: Associated project ID
 - `--goal-id`: Associated goal ID
+- `--entity-type`, `--entity-id`, `--via`: Entity scoping (see above)
 
 #### `refdoc-add`
 **Purpose:** Add reference documentation

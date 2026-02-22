@@ -1,8 +1,7 @@
 """
 Onboarding Command - Interactive Introduction to Empirica
 
-Simplified onboarding for new users. Shows the core CASCADE workflow
-without outdated bootstrap ceremony.
+Shows the current Empirica capabilities, CASCADE workflow, and quick start guide.
 """
 
 import sys
@@ -10,164 +9,218 @@ from ..cli_utils import handle_cli_error
 
 
 def handle_onboard_command(args):
-    """Interactive onboarding wizard for new users"""
+    """Interactive onboarding guide for new users"""
     try:
-        print("""
+        ai_id = getattr(args, 'ai_id', 'claude-code')
+
+        print(f"""
 ╔══════════════════════════════════════════════════════════════════════╗
 ║                                                                      ║
-║  🧠 Welcome to Empirica - Epistemic Self-Awareness for AI Agents    ║
+║  Empirica - Epistemic Self-Awareness for AI Agents                   ║
 ║                                                                      ║
 ╚══════════════════════════════════════════════════════════════════════╝
 
 Empirica helps AI agents track what they KNOW, what they can DO, and
-how UNCERTAIN they are - throughout any task.
+how UNCERTAIN they are - throughout any task. It measures learning,
+detects overconfidence, and builds calibration over time.
 
 ═══════════════════════════════════════════════════════════════════════
 
-📚 CORE CONCEPTS
+CORE CONCEPTS
 
 1. 13-Vector Epistemic State
    Every assessment uses 13 dimensions to track your knowledge:
-   
-   TIER 0 (Foundation): KNOW, DO, CONTEXT
-   TIER 1 (Comprehension): CLARITY, COHERENCE, SIGNAL, DENSITY
-   TIER 2 (Execution): STATE, CHANGE, COMPLETION, IMPACT
-   
-   Gate: ENGAGEMENT (must be ≥ 0.6)
-   Meta: UNCERTAINTY (explicit uncertainty tracking)
 
-2. CASCADE Workflow
-   PREFLIGHT → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT
-   
-   - PREFLIGHT: Assess before starting (what do you know?)
-   - INVESTIGATE: Fill knowledge gaps (reduce uncertainty)
-   - CHECK: Validate readiness (proceed or investigate more?)
-   - ACT: Do the work
-   - POSTFLIGHT: Reflect on learning (what did you learn?)
+   Foundation:    KNOW, DO, CONTEXT
+   Comprehension: CLARITY, COHERENCE, SIGNAL, DENSITY
+   Execution:     STATE, CHANGE, COMPLETION, IMPACT
+   Gate:          ENGAGEMENT
+   Meta:          UNCERTAINTY (higher = more uncertain)
 
-3. Session-Based Tracking
-   Create a session to track epistemic state across workflow:
-   
-   $ empirica session-create --ai-id myai
-   
-   This stores your assessments in SQLite + git notes for continuity.
+2. CASCADE Workflow (Epistemic Transactions)
+   PREFLIGHT --> CHECK --> POSTFLIGHT --> POST-TEST
 
-═══════════════════════════════════════════════════════════════════════
+   - PREFLIGHT:  Assess baseline before starting (what do you know?)
+   - CHECK:      Sentinel gate - ready to act, or investigate more?
+   - POSTFLIGHT: Measure learning delta (what did you learn?)
+   - POST-TEST:  Automatic grounded verification against objective evidence
 
-🚀 QUICK START
+3. Noetic vs Praxic Phases
+   - Noetic:  Investigation (read, search, explore, log findings)
+   - Praxic:  Action (write code, edit files, commit)
+   - The Sentinel gates praxic tools until CHECK passes
 
-Step 1: Create a session
-   $ empirica session-create --ai-id myai --output json
-   # Returns session_id
-
-Step 2: Run PREFLIGHT assessment
-   $ empirica preflight --session-id <ID> --prompt "Your task"
-   # Returns self-assessment prompt
-
-Step 3: Submit your assessment (as JSON)
-   $ empirica preflight-submit \\
-       --session-id <ID> \\
-       --vectors '{"engagement":0.8,"know":0.6,...}' \\
-       --reasoning "Your honest self-assessment"
-
-Step 4: Do your work...
-
-Step 5: Run POSTFLIGHT to measure learning
-   $ empirica postflight-submit \\
-       --session-id <ID> \\
-       --vectors '{"engagement":0.9,"know":0.85,...}' \\
-       --reasoning "What you learned"
-
-Step 6: Get calibration report
-   $ empirica sessions-show --session-id <ID>
-   # Shows learning delta: PREFLIGHT → POSTFLIGHT
+4. Dual-Track Calibration
+   - Track 1 (Self-Referential): PREFLIGHT vs POSTFLIGHT delta
+   - Track 2 (Grounded): Self-assessment vs objective evidence (tests, git, goals)
+   - Bias corrections computed automatically from your history
 
 ═══════════════════════════════════════════════════════════════════════
 
-💡 KEY PRINCIPLES
+QUICK START
 
-1. Genuine Self-Assessment
+Step 1: Initialize project (once per repo)
+   $ cd /path/to/your/git/repo
+   $ empirica project-init
+
+Step 2: Create a session
+   $ empirica session-create --ai-id {ai_id} --output json
+
+Step 3: Load project context
+   $ empirica project-bootstrap --output json
+
+Step 4: Create a goal for your task
+   $ empirica goals-create --objective "What you're trying to do"
+
+Step 5: Run PREFLIGHT (opens a transaction)
+   $ empirica preflight-submit - << 'EOF'
+   {{
+     "task_context": "What you're about to do",
+     "vectors": {{"know": 0.6, "uncertainty": 0.4, "context": 0.7, "clarity": 0.8}},
+     "reasoning": "Honest assessment of current state"
+   }}
+   EOF
+
+Step 6: Investigate (noetic phase)
+   - Read code, search patterns, explore
+   - Log what you learn:
+     $ empirica finding-log --finding "Discovered X works by Y" --impact 0.7
+     $ empirica unknown-log --unknown "Need to investigate Z"
+     $ empirica deadend-log --approach "Tried X" --why-failed "Failed because Y"
+
+Step 7: CHECK gate (when ready to act)
+   $ empirica check-submit - << 'EOF'
+   {{
+     "vectors": {{"know": 0.75, "uncertainty": 0.3, "context": 0.8, "clarity": 0.85}},
+     "reasoning": "Why I'm ready to proceed"
+   }}
+   EOF
+
+Step 8: Act (praxic phase) - write code, run tests, commit
+
+Step 9: Complete your goal
+   $ empirica goals-complete --goal-id <ID> --reason "Done because..."
+
+Step 10: POSTFLIGHT (closes the transaction)
+   $ empirica postflight-submit - << 'EOF'
+   {{
+     "vectors": {{"know": 0.85, "uncertainty": 0.2, "context": 0.9, "clarity": 0.9}},
+     "reasoning": "What I learned - compare to PREFLIGHT"
+   }}
+   EOF
+
+═══════════════════════════════════════════════════════════════════════
+
+KEY CAPABILITIES
+
+Noetic Artifacts (breadcrumbs - log as you work):
+   $ empirica finding-log --finding "..."       # What was learned
+   $ empirica unknown-log --unknown "..."        # What's unclear
+   $ empirica deadend-log --approach "..."       # Failed approaches
+   $ empirica assumption-log --assumption "..."  # Unverified beliefs
+   $ empirica decision-log --choice "..."        # Choice points
+
+Praxic Artifacts (goals - track progress):
+   $ empirica goals-create --objective "..."     # Create goal
+   $ empirica goals-add-subtask --goal-id <ID>   # Add subtask
+   $ empirica goals-complete --goal-id <ID>      # Complete goal
+   $ empirica goals-list                         # Show active goals
+
+Project Management:
+   $ empirica project-init                       # Initialize in CWD
+   $ empirica project-bootstrap                  # Load project context
+   $ empirica project-list                       # List all projects
+   $ empirica project-switch <name>              # Switch project
+
+Calibration Reports:
+   $ empirica calibration-report                 # Self-referential (Track 1)
+   $ empirica calibration-report --grounded      # Grounded verification (Track 2)
+   $ empirica calibration-report --trajectory    # Trend over time
+
+Semantic Search (requires Qdrant):
+   $ empirica project-search --task "query"      # Search past learnings
+   $ empirica project-embed                      # Sync to vector store
+
+Session Management:
+   $ empirica sessions-show --session-id <ID>    # View session details
+   $ empirica session-snapshot <ID>              # Save snapshot
+   $ empirica handoff-create ...                 # Create handoff report
+
+═══════════════════════════════════════════════════════════════════════
+
+TRANSACTION DISCIPLINE
+
+A transaction = one measured chunk of work. PREFLIGHT opens a measurement
+window. POSTFLIGHT closes it and captures what you learned.
+
+   Session Start
+     +-- Create goals (from task description)
+     +-- Transaction 1: Goal A
+          PREFLIGHT -> [noetic: investigate] -> CHECK -> [praxic: implement] -> POSTFLIGHT
+     +-- Transaction 2: Goal B (informed by T1's findings)
+          PREFLIGHT -> [noetic: investigate] -> CHECK -> [praxic: implement] -> POSTFLIGHT
+
+Scope each transaction by what you can handle without losing context.
+Between transactions, review open artifacts: close completed goals,
+resolve unknowns into findings, verify or falsify assumptions.
+
+═══════════════════════════════════════════════════════════════════════
+
+KEY PRINCIPLES
+
+1. Honest Self-Assessment
    Rate what you ACTUALLY know, not what you hope to figure out.
-   High uncertainty → triggers INVESTIGATE phase.
+   High uncertainty is valid data, not failure.
 
-2. No Bootstrap Ceremony
-   Sessions create instantly. Components lazy-load on demand.
-   No pre-configuration needed.
-
-3. Epistemic Transparency
-   Track your uncertainty explicitly. Admit what you don't know.
-   This builds trust and enables systematic investigation.
-
-4. Measurable Learning
+2. Measure Learning
    Compare PREFLIGHT vs POSTFLIGHT to see epistemic growth:
    - KNOW increase = learned domain knowledge
-   - DO increase = built capability
    - UNCERTAINTY decrease = reduced ambiguity
+   - Grounded verification catches systematic biases
+
+3. Log As You Discover
+   Findings, unknowns, dead-ends - log them as they happen.
+   This builds searchable memory and prevents re-exploration.
+
+4. The Sentinel Is Your Ally
+   It gates praxic action until you've investigated enough.
+   Gaming vectors degrades calibration which degrades autonomy.
 
 ═══════════════════════════════════════════════════════════════════════
 
-📖 EXAMPLES
+INTEGRATION OPTIONS
+
+Claude Code (recommended):
+   $ empirica setup-claude-code
+   # Installs plugin, hooks, CLAUDE.md, MCP server
+
+MCP Server (for any AI agent):
+   $ empirica mcp-start
+   # Exposes Empirica as MCP tools
 
 Python API:
    from empirica.data.session_database import SessionDatabase
-   from empirica.core.canonical import GitEnhancedReflexLogger
-   
-   # Create session
    db = SessionDatabase()
-   session_id = db.create_session(ai_id="myai")
+   session_id = db.create_session(ai_id="{ai_id}")
    db.close()
-   
-   # Log assessment
-   logger = ReflexLogger(session_id=session_id)
-   logger.log_reflex(
-       phase="PREFLIGHT",
-       # round auto-increments
-       vectors={"engagement": 0.8, "know": 0.6, ...},
-       reasoning="Starting with moderate knowledge"
-   )
-
-MCP Tool (for AI agents):
-   # Create session
-   session_create(ai_id="myai")
-
-   # Execute workflow - assess directly, no execute_ steps needed
-   submit_preflight_assessment(session_id=sid, vectors={...}, reasoning="...")
-   submit_postflight_assessment(session_id=sid, vectors={...}, reasoning="...")
 
 ═══════════════════════════════════════════════════════════════════════
 
-📚 NEXT STEPS
+NEXT STEPS
 
-1. Try the quick start above
-2. Read the docs: docs/production/03_BASIC_USAGE.md
-3. Explore Python API: docs/production/13_PYTHON_API.md
-4. Understand CASCADE: docs/production/06_CASCADE_FLOW.md
+1. Initialize your project:   empirica project-init
+2. Set up Claude Code:        empirica setup-claude-code
+3. Create your first session:  empirica session-create --ai-id {ai_id}
+4. Run your first PREFLIGHT:  empirica preflight-submit -
+5. Check your calibration:    empirica calibration-report
 
-═══════════════════════════════════════════════════════════════════════
+For help with any command:
+   $ empirica <command> --help
 
-❓ QUESTIONS?
+For full command list:
+   $ empirica --help
+""")
 
-- When should I use CHECK?
-  After INVESTIGATE, to validate readiness before ACT
-
-- What if I don't know my vectors?
-  Use preflight --prompt-only to get self-assessment prompt
-
-- How do I resume after memory compression?
-  Use handoff reports or git checkpoints for continuity
-
-═══════════════════════════════════════════════════════════════════════
-
-For detailed documentation:
-  $ cd docs/production/
-  $ cat 03_BASIC_USAGE.md
-
-For help with specific commands:
-  $ empirica <command> --help
-
-Happy epistemic tracking! 🧠✨
-        """)
-        
     except Exception as e:
         handle_cli_error(e, "Onboarding", getattr(args, 'verbose', False))
         sys.exit(1)
