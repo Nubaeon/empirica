@@ -2,8 +2,8 @@
 
 **The canonical reference for all Empirica concepts.**
 
-Version: 1.0.0
-Last updated: 2026-01-31
+Version: 1.1.0
+Last updated: 2026-02-23
 
 This document is the single source of truth for Empirica's concept space. AI agents consume it natively. Human developers use it as a vocabulary reference — the Rosetta Stone section maps every term to familiar equivalents.
 
@@ -193,17 +193,43 @@ PREFLIGHT → [work] → CHECK → [work] → POSTFLIGHT → POST-TEST
 
 ### 4.1 Transaction
 
-An epistemic transaction is a measurement window bounded by PREFLIGHT (BEGIN) and POSTFLIGHT (COMMIT). Between measurements, epistemic state is continuous and wave-like. Assessments collapse it to discrete, trackable vectors.
+An epistemic transaction is the **full noetic-praxic loop** — a measured chunk of work where investigation and implementation happen together within a single measurement boundary.
+
+```
+PREFLIGHT ──► [Noetic Phase] ──► CHECK ──► [Praxic Phase] ──► POSTFLIGHT ──► POST-TEST
+  BEGIN         investigate        GATE       implement         COMMIT        VERIFY
+               findings                      goals completed
+               unknowns                      code committed
+               dead-ends                     subtasks done
+```
+
+PREFLIGHT opens the transaction (BEGIN). The agent investigates, producing **noetic artifacts** (findings, unknowns, dead-ends, assumptions, decisions). CHECK gates the transition from investigation to action. The agent implements, producing **praxic artifacts** (goal completions, commits, subtask evidence). POSTFLIGHT closes the transaction (COMMIT) and captures the learning delta. POST-TEST verifies against objective evidence.
+
+**The noetic-praxic split is the transaction's internal structure.** CHECK does not end the transaction — it gates the transition within it. Splitting noetic and praxic into separate transactions breaks the measurement cycle and produces meaningless deltas.
 
 **Properties:**
 - Bounded by coherence of changes, not by goals or time
+- Contains both noetic and praxic phases — investigation and action in one measured unit
 - Multiple goals can exist within one transaction
 - One goal can span multiple transactions
 - Transactions survive compaction — file-based `transaction_id` tracking persists across sessions
 - A single transaction can span 1..N sessions (PREFLIGHT in session A, POSTFLIGHT in session B)
 - Tracked via `transaction_id` (UUID) stored in all artifact tables and reflexes
 
-### 4.2 Session
+### 4.2 Trajectory
+
+An epistemic trajectory is the **sequence of transactions over time** — the arc of learning across a session or project. Each transaction's PREFLIGHT→POSTFLIGHT delta is one data point; the trajectory is the full curve.
+
+**Properties:**
+- Emerges from accumulated transaction deltas
+- Reveals calibration trends: is the agent getting more accurate over time?
+- Enables earned autonomy: consistent trajectory quality → looser Sentinel gates
+- Visible via `empirica calibration-report --trajectory`
+- Scope: per-project (typical) or ecosystem-wide (cross-project patterns)
+
+**Relationship to calibration:** Calibration measures bias per vector. Trajectory measures how calibration itself changes over time — closing (improving), widening (degrading), or stable.
+
+### 4.3 Session
 
 A temporal interval corresponding to one context window. Created on conversation start or after compaction. Multiple Empirica sessions can exist within one Claude Code conversation.
 
@@ -212,7 +238,7 @@ A temporal interval corresponding to one context window. Created on conversation
 - Purpose: audit trail, calibration checkpoints, epistemic snapshots
 - Artifacts link to sessions for temporal provenance ("when was this discovered?")
 
-### 4.3 Goal (structural)
+### 4.4 Goal (structural)
 
 A persistent work unit that outlives sessions. Owns subtasks and links to epistemic artifacts.
 
@@ -221,19 +247,20 @@ A persistent work unit that outlives sessions. Owns subtasks and links to episte
 - Purpose: structural organization, progress tracking
 - Artifacts link to goals for semantic organization ("what work does this belong to?")
 
-### 4.4 The Three Axes
+### 4.5 The Four Axes
 
-Sessions, goals, and transactions are orthogonal, not hierarchical:
+Sessions, goals, transactions, and trajectories are orthogonal, not hierarchical:
 
 | Concept | Axis | Bounded by | Persists across sessions? |
 |---------|------|-----------|--------------------------|
 | **Session** | Temporal | Context windows | No — each is an interval |
 | **Goal** | Structural | Completion criteria | Yes — indefinitely |
-| **Transaction** | Measurement | Coherence of changes | Yes — file-based tracking survives compaction |
+| **Transaction** | Measurement | Coherence of changes (one noetic-praxic loop) | Yes — file-based tracking survives compaction |
+| **Trajectory** | Progression | Project or ecosystem lifetime | Yes — computed from transaction history |
 
-**Cardinality:** 1 transaction : 1..N sessions (spans compaction). 1 session : 0..N transactions.
+**Cardinality:** 1 trajectory : 1..N transactions. 1 transaction : 1..N sessions (spans compaction). 1 session : 0..N transactions.
 
-**Triple linkage:** Every artifact carries `session_id` (when), `goal_id` (what), and `transaction_id` (which measurement window). This is intentional — don't collapse them.
+**Triple linkage:** Every artifact carries `session_id` (when), `goal_id` (what), and `transaction_id` (which measurement window). Trajectory is derived, not linked — it emerges from the sequence of transaction deltas.
 
 ---
 
@@ -454,7 +481,8 @@ Every Empirica term mapped to its closest developer-familiar equivalent. Where t
 | **PREFLIGHT** | Sprint planning / baseline | Opens epistemic transaction (BEGIN) |
 | **CHECK** | Quality gate / PR review | Auto-computed readiness with bias correction |
 | **POSTFLIGHT** | Retrospective / post-mortem | Closes transaction, captures learning delta (COMMIT) |
-| **Transaction** | Sprint / iteration | Bounded by coherence of changes, not time. Survives compaction. |
+| **Transaction** | Sprint / iteration | Full noetic-praxic loop. Bounded by coherence, not time. Contains both investigation and implementation. |
+| **Trajectory** | Velocity trend / burndown | Sequence of transactions showing learning progression. Enables earned autonomy. |
 | **Session** | Context window / connection | Temporal interval, new one on compaction. Transactions span sessions. |
 | **Noetic phase** | Research / spike / investigation | Produces noetic artifacts, no code changes |
 | **Praxic phase** | Implementation / execution | Produces code, gated by Sentinel |
@@ -485,36 +513,43 @@ How the major concepts relate to each other:
                     │ (orchestrates)
                     └──────┬──────┘
                            │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-        ┌──────────┐ ┌──────────┐ ┌──────────┐
-        │ NOETIC   │ │ CASCADE  │ │ PRAXIC   │
-        │ PHASE    │ │ WORKFLOW │ │ PHASE    │
-        └────┬─────┘ └────┬─────┘ └────┬─────┘
-             │            │            │
-             ▼            ▼            ▼
-        ┌──────────┐ ┌──────────┐ ┌──────────┐
-        │ Findings │ │PREFLIGHT │ │  Goals   │
-        │ Unknowns │ │  CHECK   │ │ Subtasks │
-        │Dead-ends │ │POSTFLIGHT│ │ Commits  │
-        │ Mistakes │ └────┬─────┘ └──────────┘
-        └──────────┘      │
-                          ▼
-                    ┌──────────┐
-                    │EPISTEMIC │
-                    │  STATE   │
-                    │ (vectors,│
-                    │  deltas, │
-                    │  calibr.)│
-                    └────┬─────┘
-                         │
-              ┌──────────┼──────────┐
-              ▼          ▼          ▼
-        ┌──────────┐┌────────┐┌──────────┐
-        │ SENTINEL ││IMMUNE  ││BLINDSPOT │
-        │ (gates)  ││SYSTEM  ││DETECTOR  │
-        │          ││(decays)││(infers)  │
-        └──────────┘└────────┘└──────────┘
+              ┌────────────┴────────────┐
+              ▼                         ▼
+   ┌─────────────────────────────┐  ┌──────────┐
+   │      TRANSACTION            │  │TRAJECTORY│
+   │  (one noetic-praxic loop)   │  │(sequence │
+   │                             │  │ of txns) │
+   │  PREFLIGHT                  │  └──────────┘
+   │    ▼                        │
+   │  ┌────────┐    ┌────────┐  │
+   │  │NOETIC  │───►│PRAXIC  │  │
+   │  │findings│ C  │goals   │  │
+   │  │unknowns│ H  │subtasks│  │
+   │  │dead-   │ E  │commits │  │
+   │  │ ends   │ C  │        │  │
+   │  │assump- │ K  │        │  │
+   │  │ tions  │    │        │  │
+   │  └────────┘    └────────┘  │
+   │    ▼                       │
+   │  POSTFLIGHT → POST-TEST    │
+   └────────────┬───────────────┘
+                │
+                ▼
+          ┌──────────┐
+          │EPISTEMIC │
+          │  STATE   │
+          │ (vectors,│
+          │  deltas, │
+          │  calibr.)│
+          └────┬─────┘
+               │
+    ┌──────────┼──────────┐
+    ▼          ▼          ▼
+┌──────────┐┌────────┐┌──────────┐
+│ SENTINEL ││IMMUNE  ││BLINDSPOT │
+│ (gates)  ││SYSTEM  ││DETECTOR  │
+│          ││(decays)││(infers)  │
+└──────────┘└────────┘└──────────┘
 ```
 
 ---
@@ -567,6 +602,7 @@ Quick lookup for any term:
 | Session | 4.2 | Structure |
 | Subtask | 1.2 | Praxic Artifact |
 | Tool Router | 5.4 | System |
+| Trajectory | 4.2 | Structure |
 | Transaction | 4.1 | Structure |
 | Unknown | 1.1 | Noetic Artifact |
 | Vector | 2.1 | Epistemic State |
