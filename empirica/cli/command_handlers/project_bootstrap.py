@@ -948,6 +948,58 @@ def handle_project_bootstrap_command(args):
 
                 safe_print()
 
+            # ===== WORKSPACE CONTEXT (plugin hook) =====
+            # If empirica-workspace is installed, load project-type-aware context
+            try:
+                from empirica_workspace.bootstrap.project_context import (
+                    get_project_bootstrap_context,
+                    render_workspace_context,
+                )
+                # Look up project_type from workspace.db
+                ws_project_type = 'product'
+                try:
+                    import sqlite3 as _sqlite3
+                    from pathlib import Path as _Path
+                    ws_db_path = _Path.home() / ".empirica" / "workspace" / "workspace.db"
+                    if ws_db_path.exists():
+                        ws_conn = _sqlite3.connect(str(ws_db_path))
+                        ws_cur = ws_conn.cursor()
+                        ws_cur.execute(
+                            "SELECT project_type FROM global_projects WHERE id = ?",
+                            (project_id,)
+                        )
+                        ws_row = ws_cur.fetchone()
+                        if ws_row and ws_row[0]:
+                            ws_project_type = ws_row[0]
+                        ws_conn.close()
+                except Exception:
+                    pass
+
+                # Resolve project root from active context
+                ws_project_root = None
+                try:
+                    from empirica.utils.session_resolver import get_active_project_path
+                    ws_project_root = get_active_project_path()
+                except Exception:
+                    pass
+                if not ws_project_root:
+                    ws_project_root = os.getcwd()
+
+                proj_info = breadcrumbs.get('project', {})
+                workspace_ctx = get_project_bootstrap_context(
+                    project_id=proj_info.get('id', project_id),
+                    project_type=ws_project_type,
+                    project_root=ws_project_root,
+                )
+                if workspace_ctx:
+                    rendered = render_workspace_context(workspace_ctx)
+                    if rendered.strip():
+                        safe_print(rendered)
+            except ImportError:
+                pass  # empirica-workspace not installed
+            except Exception as ws_err:
+                logger.debug("Workspace context hook failed: %s", ws_err)
+
         # Return None to avoid exit code issues and duplicate output
         return None
 
