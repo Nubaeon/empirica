@@ -1374,117 +1374,151 @@ class SessionDatabase:
             logger.debug(f"Error getting git status: {e}")
             return None
     
-    def generate_file_tree(
-        self,
-        project_root: str,
-        max_depth: Optional[int] = None,  # Auto-detect if None
-        use_cache: bool = True,
-        max_chars: int = 8000,  # Truncate if larger
-        adaptive: bool = True   # Auto-reduce depth for large projects
-    ) -> Optional[str]:
-        """Generate file tree respecting .gitignore with smart sizing
+    def _generate_dependency_summary(self, project_root: str) -> Optional[Dict]:
+        """Generate lightweight dependency summary using AST import analysis.
 
-        SEARCH-FIRST ARCHITECTURE: Limits tree size to prevent context bloat.
-        Uses adaptive depth for large projects and truncates with warning.
+        Produces a compact summary of project dependencies suitable for context
+        injection. Replaces the old file tree with semantically useful information.
 
-        Args:
-            project_root: Path to project root
-            max_depth: Tree depth (auto-detected if None: 2 for large, 3 for small)
-            use_cache: Use cached tree if <60s old
-            max_chars: Max characters before truncation (default: 8000)
-            adaptive: Auto-reduce depth for large projects
+        Uses 5-minute cache since import structure changes less often than files.
 
-        Returns:
-            str: Tree output (plain text, no ANSI codes) or None if tree not available
+        Returns dict with:
+          - packages: Top-level Python packages found
+          - hotspots: Modules with highest coupling (most importers)
+          - external_deps: Third-party imports
+          - entry_points: CLI/main modules
+          - module_count: Total .py files analyzed
         """
-        import subprocess
+        import ast
+        import json
         import time
         from pathlib import Path
-
-        # Check if tree is installed
-        try:
-            subprocess.run(["tree", "--version"], capture_output=True, check=True, timeout=1)
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-            logger.debug("tree command not available, skipping file tree generation")
-            return None
+        from collections import defaultdict
 
         root_path = Path(project_root)
 
-        # Adaptive depth: count top-level directories to estimate project size
-        if max_depth is None:
-            if adaptive:
-                try:
-                    # Count directories at depth 1 (excluding hidden and common large dirs)
-                    skip_dirs = {'.git', '.empirica', 'node_modules', '__pycache__', '.venv', 'venv', 'dist', 'build'}
-                    top_dirs = [d for d in root_path.iterdir() if d.is_dir() and d.name not in skip_dirs and not d.name.startswith('.')]
-
-                    if len(top_dirs) > 15:
-                        max_depth = 2  # Large project: shallow tree
-                        logger.debug(f"Adaptive depth: 2 (large project with {len(top_dirs)} top-level dirs)")
-                    else:
-                        max_depth = 3  # Normal project
-                except Exception:
-                    max_depth = 3
-            else:
-                max_depth = 3
-
-        cache_key = f"tree_{root_path.name}_{max_depth}_{max_chars}"
+        # Check cache (5-minute TTL)
         cache_dir = root_path / ".empirica" / "cache"
-        cache_file = cache_dir / f"{cache_key}.txt"
+        cache_file = cache_dir / f"dep_graph_{root_path.name}.json"
+        if cache_file.exists():
+            try:
+                age = time.time() - cache_file.stat().st_mtime
+                if age < 300:  # 5 minutes
+                    return json.loads(cache_file.read_text())
+            except Exception:
+                pass
 
-        # Check cache
-        if use_cache and cache_file.exists():
-            age = time.time() - cache_file.stat().st_mtime
-            if age < 60:  # 60 second cache
-                logger.debug(f"Using cached file tree (age: {age:.1f}s)")
-                return cache_file.read_text()
+        skip_exact = {'.git', '__pycache__', 'dist', 'build',
+                      'node_modules', '.empirica', '.qdrant_data', '.tox', '.mypy_cache'}
+        skip_prefixes = ('.venv', 'venv', '.eggs')
 
-        # Generate tree
-        cmd = [
-            "tree",
-            "-L", str(max_depth),
-            "--gitignore",
-            "--dirsfirst",
-            "-n",  # No color (plain text)
-            project_root
-        ]
+        def _should_skip(part: str) -> bool:
+            return part in skip_exact or part.startswith(skip_prefixes)
 
+        # Discover top-level packages (dirs with __init__.py)
+        packages = []
+        for d in sorted(root_path.iterdir()):
+            if d.is_dir() and not _should_skip(d.name) and not d.name.startswith('.'):
+                if (d / '__init__.py').exists():
+                    packages.append(d.name)
+
+        package_prefixes = set(packages)
+
+        # Walk .py files and parse imports
+        reverse_graph = defaultdict(set)  # module -> set of importers
+        external_deps = set()
+        entry_points = []
+        module_count = 0
+        all_module_basenames = set()  # Track all file basenames for filtering
+
+        for py_file in root_path.rglob("*.py"):
+            # Skip unwanted directories
+            if any(_should_skip(part) for part in py_file.relative_to(root_path).parts):
+                continue
+
+            module_count += 1
+            all_module_basenames.add(py_file.stem)
+
+            try:
+                content = py_file.read_text(errors='replace')
+                tree = ast.parse(content)
+            except (SyntaxError, UnicodeDecodeError):
+                continue
+
+            # Convert path to module name
+            try:
+                rel_parts = list(py_file.relative_to(root_path).parts)
+                if rel_parts[-1] == "__init__.py":
+                    rel_parts = rel_parts[:-1]
+                else:
+                    rel_parts[-1] = rel_parts[-1].replace(".py", "")
+                module_name = ".".join(rel_parts)
+            except ValueError:
+                continue
+
+            # Extract imports
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        top = alias.name.split('.')[0]
+                        if top in package_prefixes:
+                            reverse_graph[alias.name].add(module_name)
+                        else:
+                            external_deps.add(top)
+                elif isinstance(node, ast.ImportFrom):
+                    if node.module:
+                        top = node.module.split('.')[0]
+                        if top in package_prefixes:
+                            reverse_graph[node.module].add(module_name)
+                        elif node.level == 0:
+                            # Only count absolute from-imports as external
+                            # (relative imports like "from .foo import bar" are internal)
+                            external_deps.add(top)
+
+            # Detect entry points
+            for node in ast.walk(tree):
+                if (isinstance(node, ast.If) and isinstance(node.test, ast.Compare)
+                        and len(node.test.comparators) == 1):
+                    left = node.test.left
+                    comp = node.test.comparators[0]
+                    if (isinstance(left, ast.Name) and left.id == '__name__'
+                            and isinstance(comp, ast.Constant) and comp.value == '__main__'):
+                        entry_points.append(module_name)
+                        break
+
+        # Build hotspots (top 10 by importer count)
+        hotspots = sorted(
+            [{"module": mod, "importers": len(importers)}
+             for mod, importers in reverse_graph.items()],
+            key=lambda x: x["importers"],
+            reverse=True
+        )[:10]
+
+        # Filter out stdlib, project-internal, and private modules
+        import sys
+        stdlib_modules = getattr(sys, 'stdlib_module_names', set())
+        external_deps -= stdlib_modules
+        external_deps -= package_prefixes
+        external_deps -= all_module_basenames  # Remove local script imports
+        external_deps = {d for d in external_deps
+                         if not d.startswith('_')}
+
+        result = {
+            "packages": sorted(packages),
+            "hotspots": hotspots,
+            "external_deps": sorted(external_deps),
+            "entry_points": sorted(entry_points),
+            "module_count": module_count,
+        }
+
+        # Cache result
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_file.write_text(json.dumps(result, indent=2))
+        except Exception:
+            pass
 
-            if result.returncode == 0:
-                tree_output = result.stdout
-
-                # Truncate if too large
-                if len(tree_output) > max_chars:
-                    lines = tree_output.split('\n')
-                    truncated_lines = []
-                    char_count = 0
-                    for line in lines:
-                        if char_count + len(line) + 1 > max_chars - 100:  # Leave room for warning
-                            break
-                        truncated_lines.append(line)
-                        char_count += len(line) + 1
-
-                    tree_output = '\n'.join(truncated_lines)
-                    tree_output += f"\n\n... (truncated, showing {len(truncated_lines)} of {len(lines)} lines)"
-                    tree_output += "\n[Use 'tree -L 4' in Bash for full structure]"
-                    logger.debug(f"Truncated file tree from {len(lines)} to {len(truncated_lines)} lines")
-
-                # Cache it
-                cache_dir.mkdir(parents=True, exist_ok=True)
-                cache_file.write_text(tree_output)
-                logger.debug(f"Generated file tree (cached to {cache_file})")
-                return tree_output
-            else:
-                logger.warning(f"tree command failed: {result.stderr}")
-                return None
-        except subprocess.TimeoutExpired:
-            logger.warning("tree command timed out (>5s)")
-            return None
-        except Exception as e:
-            logger.warning(f"Error generating file tree: {e}")
-            return None
+        return result
     
 
     def _resolve_and_validate_project(self, project_id: str) -> Optional[Dict]:
@@ -1676,9 +1710,10 @@ class SessionDatabase:
         if all_warnings:
             breadcrumbs['truncation_warnings'] = all_warnings
 
-        # 5. Generate file tree
-        file_tree = self.generate_file_tree(project_root)
-        breadcrumbs['file_tree'] = file_tree
+        # 5. Generate dependency graph (replaces file tree)
+        dep_graph = self._generate_dependency_summary(project_root)
+        if dep_graph:
+            breadcrumbs['dependency_graph'] = dep_graph
 
         # 5b. Capture git status
         git_status = self.get_git_status(project_root)
@@ -1945,14 +1980,14 @@ class SessionDatabase:
         Apply adaptive depth filtering to breadcrumbs based on drift or explicit depth.
 
         Depth levels:
-        - minimal: Essentials only (~2k tokens) - findings/unknowns/goals limited, no file_tree
+        - minimal: Essentials only (~2k tokens) - findings/unknowns/goals limited, no dependency_graph
         - moderate: Balanced context (~8k tokens) - limited lists, no verbose metadata
         - full: Complete context (unlimited) - all fields included
         - auto: Determine depth based on drift (if post_compact trigger)
 
         Key optimizations:
         - Strip redundant 'finding_data' JSON from findings (duplicates text)
-        - Remove file_tree for minimal/moderate (expensive, rarely needed by MCP)
+        - Remove dependency_graph for minimal/moderate (rarely needed by MCP)
         - Remove verbose metadata like database_summary, structure_health
         - Limit active_goals (often stale accumulation)
         """
@@ -2019,7 +2054,7 @@ class SessionDatabase:
             breadcrumbs['active_goals'] = [_slim_goal(g) for g in breadcrumbs.get('active_goals', [])[:2]]
             breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:2]
             # Remove expensive/verbose fields entirely
-            for key in ['file_tree', 'git_status', 'database_summary', 'structure_health',
+            for key in ['dependency_graph', 'git_status', 'database_summary', 'structure_health',
                        'flow_metrics', 'health_score', 'recent_artifacts', 'active_sessions',
                        'integrity_analysis', 'feature_status', 'findings_with_goals',
                        'epistemic_artifacts', 'ai_activity', 'semantic_docs', 'available_skills',
@@ -2038,7 +2073,7 @@ class SessionDatabase:
             breadcrumbs['incomplete_work'] = breadcrumbs.get('incomplete_work', [])[:3]
             breadcrumbs['auto_captured_issues'] = breadcrumbs.get('auto_captured_issues', [])[:3]
             # Remove expensive/verbose fields
-            for key in ['file_tree', 'database_summary', 'structure_health',
+            for key in ['dependency_graph', 'database_summary', 'structure_health',
                        'integrity_analysis', 'epistemic_artifacts', 'semantic_docs',
                        'available_skills', 'findings_with_goals', 'recent_artifacts',
                        'active_sessions', 'ai_activity', 'key_decisions']:

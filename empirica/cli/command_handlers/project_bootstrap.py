@@ -802,17 +802,19 @@ def handle_project_bootstrap_command(args):
                         safe_print(f"      {suggestion}")
                     safe_print()
             
-            # ===== FILE TREE =====
-            if breadcrumbs.get('file_tree'):
-                safe_print(f"📁 Project Structure (depth 3, respects .gitignore):")
+            # ===== DEPENDENCY GRAPH =====
+            if breadcrumbs.get('dependency_graph'):
+                dep = breadcrumbs['dependency_graph']
+                safe_print(f"📊 Project Dependencies ({dep.get('module_count', '?')} modules):")
                 safe_print()
-                # Indent the tree output slightly
-                tree_lines = breadcrumbs['file_tree'].split('\n')
-                for line in tree_lines[:50]:  # Limit to 50 lines
-                    if line.strip():
-                        safe_print(f"   {line}")
-                if len(tree_lines) > 50:
-                    safe_print(f"   ... ({len(tree_lines) - 50} more lines)")
+                if dep.get('hotspots'):
+                    safe_print(f"   🔥 Coupling Hotspots:")
+                    for h in dep['hotspots'][:5]:
+                        safe_print(f"      {h['module']} ({h['importers']} importers)")
+                if dep.get('entry_points'):
+                    safe_print(f"   🚀 Entry Points: {', '.join(dep['entry_points'][:5])}")
+                if dep.get('external_deps'):
+                    safe_print(f"   📦 External: {', '.join(sorted(dep['external_deps'])[:10])}")
                 safe_print()
             
             if breadcrumbs['incomplete_work']:

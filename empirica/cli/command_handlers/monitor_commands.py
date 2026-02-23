@@ -670,10 +670,10 @@ def handle_post_summary_drift_check(session_id: str, output_format: str, signali
         session_data = db.get_session(session_id)
         project_id = session_data.get('project_id') if session_data else None
 
-        bootstrap = db.generate_project_bootstrap(
-            session_id=session_id,
+        bootstrap = db.bootstrap_project_breadcrumbs(
             project_id=project_id,
-            include_file_tree=False
+            session_id=session_id,
+            depth="minimal"
         ) if project_id else {}
     except Exception as e:
         logger.warning(f"Could not load bootstrap: {e}")
