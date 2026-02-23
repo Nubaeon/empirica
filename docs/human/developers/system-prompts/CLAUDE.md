@@ -1,8 +1,8 @@
-# Empirica System Prompt - CLAUDE v1.5.6
+# Empirica System Prompt - CLAUDE v1.5.7
 
-**Model:** CLAUDE | **Generated:** 2026-02-22
-**Syncs with:** Empirica v1.5.6
-**Change:** Auto-derive session_id in workflow commands, version bump
+**Model:** CLAUDE | **Generated:** 2026-02-23
+**Syncs with:** Empirica v1.5.7
+**Change:** Qdrant lazy collections, test isolation, local projects table fix
 **Status:** AUTHORITATIVE
 
 ---
@@ -467,7 +467,7 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 
 ## CLAUDE-SPECIFIC
 
-# Claude Model Delta - v1.5.6
+# Claude Model Delta - v1.5.7
 
 **Applies to:** Claude (all versions)
 **Last Updated:** 2026-02-21

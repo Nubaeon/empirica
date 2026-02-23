@@ -1,7 +1,7 @@
 # Empirica CLI Commands - Unified Reference
 
 **Total Commands:** 138
-**Framework Version:** 1.5.6
+**Framework Version:** 1.5.7
 **Generated:** 2026-02-07
 **Status:** Production Ready
 
@@ -604,7 +604,7 @@ Part of: `pip install empirica-workspace`
 
 > **Transaction-First Pattern:** These commands auto-derive `--session-id` from the active transaction when running inside a CASCADE workflow (after PREFLIGHT). You only need to specify `--session-id` explicitly when logging outside a transaction.
 
-> **Entity Scoping (v1.5.6):** All artifact logging commands support cross-entity provenance via `--entity-type`, `--entity-id`, and `--via` flags. This allows artifacts to be scoped to organizations, contacts, engagements, or other non-project entities while preserving project-level storage.
+> **Entity Scoping (v1.5.7):** All artifact logging commands support cross-entity provenance via `--entity-type`, `--entity-id`, and `--via` flags. This allows artifacts to be scoped to organizations, contacts, engagements, or other non-project entities while preserving project-level storage.
 
 **Entity Scoping Options (available on all logging commands):**
 - `--entity-type`: Entity type (e.g., `organization`, `contact`, `engagement`, `project`)
@@ -1414,4 +1414,4 @@ empirica --verbose check --session-id xyz # CHECK with debugging
 
 **Generated from:** empirica --help output (2026-02-07)
 **Total Commands:** 138
-**Framework Version:** 1.5.6
+**Framework Version:** 1.5.7

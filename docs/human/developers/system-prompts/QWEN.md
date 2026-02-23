@@ -1,7 +1,7 @@
-# Empirica System Prompt - QWEN v1.5.6
+# Empirica System Prompt - QWEN v1.5.7
 
 **Model:** QWEN | **Generated:** 2026-02-21
-**Syncs with:** Empirica v1.5.6
+**Syncs with:** Empirica v1.5.7
 **Change:** Qdrant hardening, schema migration fix, instance isolation anchors
 **Status:** AUTHORITATIVE
 
@@ -467,7 +467,7 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 
 ## QWEN-SPECIFIC
 
-# Qwen Model Delta - v1.5.6
+# Qwen Model Delta - v1.5.7
 
 **Applies to:** Qwen (all versions)
 **Last Updated:** 2026-02-21

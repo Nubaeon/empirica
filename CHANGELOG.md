@@ -5,6 +5,18 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.7] - 2026-02-23
+
+### Added
+- **Qdrant Lazy Collections** - Collections created on first use instead of eagerly at init; `qdrant-status` and `qdrant-cleanup` commands for inventory and empty collection removal (#49)
+
+### Fixed
+- **Test Isolation** - `EMPIRICA_SESSION_DB` elevated to priority 0 in both `get_session_db_path()` and `resolve_session_db_path()`, preventing pytest subprocess tests from polluting the live database
+- **Local Projects Table** - `project-switch` auto-populates `local_projects` table when switching to a project not yet registered locally (#48)
+
+### Changed
+- **Ref-Docs Coverage** - Updated CLI_ALIASES, ENVIRONMENT_VARIABLES, and MEMORY_MANAGEMENT_COMMANDS docs to cover qdrant commands and `EMPIRICA_SESSION_DB` priority 0 override
+
 ## [1.5.6] - 2026-02-22
 
 ### Added
