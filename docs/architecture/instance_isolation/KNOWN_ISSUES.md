@@ -224,6 +224,48 @@ and not checked at all in `resolve_session_db_path()`. The live DB always won.
 
 **Commit:** pending
 
+### 11.18 SessionStart Hook Matchers Never Matched (2026-02-22)
+
+**Symptom:** Instance isolation breaks when CWD-based resolution diverges from
+project-switch binding. `session-init.py` never fires on new conversations.
+
+**Root cause:** `~/.claude/settings.json` SessionStart hook matchers used invalid
+trigger values:
+- `"new|fresh"` → never matches (Claude Code triggers: `startup`, `resume`, `clear`, `compact`)
+- `"compact"` → missed `resume` trigger (continued conversations)
+
+This meant:
+1. `session-init.py` **never fired via hooks** — only via manual invocation
+2. `post-compact.py` only ran on compaction, not on conversation resume
+3. `ewm-protocol-loader.py` only loaded on compaction events
+
+**Why it appeared to work:** `post-compact.py` (on `"compact"` matcher) correctly
+writes `instance_projects` and `active_work` files. Since most long sessions involve
+compaction, isolation files were eventually created. `project-switch` also writes them.
+The gap only showed when a fresh conversation started in a different CWD than the
+bound project — `session-init` should have written the isolation files at startup
+but never did.
+
+**Fix:** Updated `~/.claude/settings.json` matchers:
+```json
+"SessionStart": [
+  { "matcher": "compact|resume", "hooks": [...post-compact, ewm-protocol-loader...] },
+  { "matcher": "startup",        "hooks": [...session-init, ewm-protocol-loader...] }
+]
+```
+
+**Claude Code SessionStart triggers (authoritative):**
+| Trigger | When |
+|---------|------|
+| `startup` | New conversation begins |
+| `resume` | Existing conversation continued |
+| `clear` | After `/clear` command |
+| `compact` | After auto/manual context compaction |
+
+**Prevention:** Verify hook trigger values against platform documentation, not intuition.
+
+**Commit:** applied to `~/.claude/settings.json` (not in git — user config file)
+
 ---
 
 ## By Design (Not Bugs)
