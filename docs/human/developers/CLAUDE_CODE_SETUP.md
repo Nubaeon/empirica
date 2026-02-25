@@ -17,7 +17,7 @@ This guide sets up Empirica for Claude Code users on Linux, macOS, or Windows.
 | Statusline | Real-time epistemic status display | Plugin scripts/ |
 | MCP config | MCP server configuration | `~/.claude/mcp.json` |
 
-The plugin (v1.5.7) now bundles everything in one package:
+The plugin (v1.5.8) now bundles everything in one package:
 - **Sentinel gate** - Noetic firewall that gates praxic tools until CHECK passes
 - **Session hooks** - Auto-creates sessions, bootstraps projects, captures POSTFLIGHT
 - **Statusline script** - Shows epistemic state in terminal
@@ -68,7 +68,7 @@ pip install empirica-mcp
 Verify:
 ```bash
 empirica --version
-# Should show: 1.5.7 (or later)
+# Should show: 1.5.8 (or later)
 ```
 
 ---
@@ -165,7 +165,7 @@ cat ~/.claude/plugins/local/empirica-integration/templates/settings-statusline.j
 
 ## Step 4: Install Empirica Plugin (Recommended)
 
-The plugin (v1.5.7) enforces the CASCADE workflow and preserves epistemic state automatically.
+The plugin (v1.5.8) enforces the CASCADE workflow and preserves epistemic state automatically.
 
 **What it includes:**
 - **Noetic firewall** (`sentinel-gate.py`): Gates praxic tools (Edit/Write/Bash) until CHECK passes
@@ -225,7 +225,7 @@ cp ~/.claude/plugins/local/empirica-integration/templates/mcp.json ~/.claude/mcp
       {
         "scope": "user",
         "installPath": "~/.claude/plugins/local/empirica-integration",
-        "version": "1.5.7",
+        "version": "1.5.8",
         "isLocal": true
       }
     ]

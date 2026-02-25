@@ -205,8 +205,8 @@ pip install empirica
 ## Docker
 
 ```bash
-docker pull nubaeon/empirica:1.5.7
-docker run -p 3000:3000 nubaeon/empirica:1.5.7 empirica-mcp
+docker pull nubaeon/empirica:1.5.8
+docker run -p 3000:3000 nubaeon/empirica:1.5.8 empirica-mcp
 ```
 
 ---

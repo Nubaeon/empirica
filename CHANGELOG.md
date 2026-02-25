@@ -5,6 +5,23 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.8] - 2026-02-25
+
+### Added
+- **Semantic Layer Check** - `setup-claude-code` now detects Ollama (+ nomic-embed-text) and Qdrant availability, shows clear setup instructions if missing. Non-blocking — Empirica works without them but loses pattern injection, cross-session memory, and project-search
+- **Workspace Context Plugin Hook** - Project-type-aware bootstrap via workspace context plugin hook
+- **AST Dependency Graph** - Bootstrap uses AST dependency graph instead of file tree for smarter project context
+
+### Fixed
+- **Workspace DB Schema** (#51) - `workspace-init` and `project-list` failed on fresh installs because `global_projects` table DDL was missing. Added `ensure_workspace_schema()` with `CREATE TABLE IF NOT EXISTS` for all workspace tables
+- **CLAUDE.md Overwrite** (#50) - `setup-claude-code` now writes Empirica prompt to separate file (`~/.claude/empirica-system-prompt.md`) with `@include` reference instead of overwriting user's CLAUDE.md. Preserves personal instructions, idempotent on re-run
+- **Missing global_sessions Table** - Session registration silently skipped on fresh installs, breaking project-switch session continuity. Added schema creation in `ensure_workspace_schema()`
+- **Missing entity_artifacts Table** - Entire entity cross-linking feature was non-functional; every artifact-log with `--entity-type` silently failed. Added schema creation
+- **SessionStart Matcher** - Documented and fixed matcher bug for `new|fresh` vs `startup` trigger values (11.18)
+
+### Changed
+- **Taxonomy** - Added trajectory concept, defined transaction as noetic-praxic loop in documentation
+
 ## [1.5.7] - 2026-02-23
 
 ### Added

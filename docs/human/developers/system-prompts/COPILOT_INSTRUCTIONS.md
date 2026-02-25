@@ -1,7 +1,7 @@
-# Empirica System Prompt - COPILOT v1.5.7
+# Empirica System Prompt - COPILOT v1.5.8
 
-**Model:** COPILOT | **Generated:** 2026-02-21
-**Syncs with:** Empirica v1.5.7
+**Model:** COPILOT | **Generated:** 2026-02-25
+**Syncs with:** Empirica v1.5.8
 **Change:** Qdrant hardening, schema migration fix, instance isolation anchors
 **Status:** AUTHORITATIVE
 
@@ -467,7 +467,7 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 
 ## COPILOT-SPECIFIC
 
-# GitHub Copilot Model Delta - v1.5.7
+# GitHub Copilot Model Delta - v1.5.8
 
 **Applies to:** GitHub Copilot
 **Last Updated:** 2026-02-21

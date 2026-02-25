@@ -1,6 +1,6 @@
 # Memory Management Commands Reference
 
-**Version:** 1.5.7
+**Version:** 1.5.8
 **Purpose:** Epistemic memory management for parallel agents and context optimization
 
 ---
@@ -389,7 +389,7 @@ empirica qdrant-cleanup --execute    # Actually delete empty collections
 ```
 
 **Background:** `init_collections()` was changed from eager creation (all 10 types per project)
-to lazy creation in v1.5.7. Existing installations may have empty collections from before this
+to lazy creation in v1.5.8. Existing installations may have empty collections from before this
 change. This command cleans them up.
 
 ---

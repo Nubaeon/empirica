@@ -1,8 +1,8 @@
-# Empirica System Prompt - CLAUDE v1.5.7
+# Empirica System Prompt - CLAUDE v1.5.8
 
-**Model:** CLAUDE | **Generated:** 2026-02-23
-**Syncs with:** Empirica v1.5.7
-**Change:** Qdrant lazy collections, test isolation, local projects table fix
+**Model:** CLAUDE | **Generated:** 2026-02-25
+**Syncs with:** Empirica v1.5.8
+**Change:** Qdrant hardening, schema migration fix, instance isolation anchors
 **Status:** AUTHORITATIVE
 
 ---
@@ -173,10 +173,10 @@ empirica goals-create --objective "..."
 empirica goals-complete --goal-id <ID> --reason "..."
 empirica goals-list
 
-# Epistemic state (measurement boundaries — session_id auto-derived from active transaction)
-empirica preflight-submit -     # Opens transaction (JSON stdin: {vectors: {...}, ...})
-empirica check-submit -         # Gate within transaction (JSON stdin: {vectors: {...}, ...})
-empirica postflight-submit -    # Closes transaction (JSON stdin: {vectors: {...}, ...})
+# Epistemic state (measurement boundaries)
+empirica preflight-submit -     # Opens transaction (JSON stdin)
+empirica check-submit -         # Gate within transaction (JSON stdin)
+empirica postflight-submit -    # Closes transaction + grounded verification (JSON stdin)
 
 # Noetic artifacts (log as you discover, session_id auto-derived)
 empirica finding-log --finding "..." --impact 0.7
@@ -467,7 +467,7 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 
 ## CLAUDE-SPECIFIC
 
-# Claude Model Delta - v1.5.7
+# Claude Model Delta - v1.5.8
 
 **Applies to:** Claude (all versions)
 **Last Updated:** 2026-02-21
