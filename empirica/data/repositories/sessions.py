@@ -34,17 +34,9 @@ def _register_session_globally(
             return False
 
         conn = sqlite3.connect(str(workspace_db))
+        from empirica.cli.command_handlers.project_commands import ensure_workspace_schema
+        ensure_workspace_schema(conn)
         cursor = conn.cursor()
-
-        # Check if table exists (graceful degradation for older workspaces)
-        cursor.execute("""
-            SELECT name FROM sqlite_master
-            WHERE type='table' AND name='global_sessions'
-        """)
-        if not cursor.fetchone():
-            logger.debug("global_sessions table not found - skipping registration")
-            conn.close()
-            return False
 
         # Insert or update (in case of re-registration)
         cursor.execute("""
@@ -84,6 +76,8 @@ def update_session_project(session_id: str, project_id: str) -> bool:
             return False
 
         conn = sqlite3.connect(str(workspace_db))
+        from empirica.cli.command_handlers.project_commands import ensure_workspace_schema
+        ensure_workspace_schema(conn)
         cursor = conn.cursor()
 
         cursor.execute("""

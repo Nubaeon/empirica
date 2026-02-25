@@ -80,6 +80,53 @@ def ensure_workspace_schema(conn) -> None:
             FOREIGN KEY (project_id) REFERENCES global_projects(id)
         )
     """)
+    # Global session registry — enables cross-project session tracking
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS global_sessions (
+            session_id TEXT PRIMARY KEY,
+            ai_id TEXT,
+            origin_project_id TEXT,
+            current_project_id TEXT,
+            instance_id TEXT,
+            status TEXT DEFAULT 'active',
+            parent_session_id TEXT,
+            created_at REAL,
+            last_activity REAL,
+            FOREIGN KEY (origin_project_id) REFERENCES global_projects(id),
+            FOREIGN KEY (current_project_id) REFERENCES global_projects(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_global_sessions_instance
+        ON global_sessions(instance_id, status)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_global_sessions_project
+        ON global_sessions(current_project_id)
+    """)
+    # Entity-artifact cross-references — links artifacts to CRM entities
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS entity_artifacts (
+            id TEXT PRIMARY KEY,
+            artifact_type TEXT NOT NULL,
+            artifact_id TEXT NOT NULL,
+            artifact_source TEXT,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            relationship TEXT DEFAULT 'about',
+            relevance REAL DEFAULT 1.0,
+            discovered_via TEXT,
+            engagement_id TEXT,
+            transaction_id TEXT,
+            created_at REAL,
+            created_by_ai TEXT,
+            UNIQUE(artifact_type, artifact_id, entity_type, entity_id)
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_entity_artifacts_entity
+        ON entity_artifacts(entity_type, entity_id)
+    """)
     conn.commit()
 
 
