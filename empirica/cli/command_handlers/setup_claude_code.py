@@ -17,6 +17,7 @@ Date: 2026-02-10
 
 import json
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -611,6 +612,62 @@ def handle_setup_claude_code_command(args):
             print("🎯 Skills")
             print("    - /empirica - Full command reference")
             print()
+            # ==================== SEMANTIC LAYER CHECK ====================
+            print("━" * 60)
+            print("SEMANTIC LAYER (for pattern injection & memory):")
+            print("━" * 60)
+            print()
+
+            # Check Ollama
+            ollama_ok = False
+            nomic_ok = False
+            try:
+                result = subprocess.run(
+                    ["ollama", "list"], capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    ollama_ok = True
+                    if "nomic-embed-text" in result.stdout:
+                        nomic_ok = True
+                        print("✓ Ollama: installed, nomic-embed-text available")
+                    else:
+                        print("⚠ Ollama: installed, but nomic-embed-text not pulled")
+                        print("    Fix: ollama pull nomic-embed-text")
+                else:
+                    print("⚠ Ollama: installed but not running")
+                    print("    Fix: ollama serve")
+            except FileNotFoundError:
+                print("✗ Ollama: not installed")
+                print("    Install: curl -fsSL https://ollama.com/install.sh | sh")
+                print("    Then: ollama pull nomic-embed-text")
+            except Exception:
+                print("⚠ Ollama: could not check status")
+
+            # Check Qdrant
+            qdrant_ok = False
+            qdrant_url = os.environ.get("EMPIRICA_QDRANT_URL", "http://localhost:6333")
+            try:
+                import urllib.request
+                urllib.request.urlopen(qdrant_url, timeout=2)
+                qdrant_ok = True
+                print(f"✓ Qdrant: running at {qdrant_url}")
+            except Exception:
+                print(f"✗ Qdrant: not running at {qdrant_url}")
+                print("    Docker: docker run -d -p 6333:6333 -v ~/.qdrant:/qdrant/storage qdrant/qdrant")
+                print("    Binary: https://github.com/qdrant/qdrant/releases")
+
+            print()
+            if ollama_ok and nomic_ok and qdrant_ok:
+                print("✓ Semantic layer ready — PREFLIGHT will inject patterns,")
+                print("  findings, dead-ends, and calibration from prior sessions")
+            else:
+                print("⚠ Without the semantic layer, Empirica works but:")
+                print("  - No pattern/anti-pattern injection in PREFLIGHT")
+                print("  - No cross-session memory (findings, dead-ends)")
+                print("  - No project-search or project-embed")
+                print("  - No eidetic/episodic memory across compactions")
+            print()
+
             print("━" * 60)
             print("NEXT STEPS:")
             print("━" * 60)
@@ -622,6 +679,15 @@ def handle_setup_claude_code_command(args):
             print()
             print("3. Connect MCP server: /mcp")
             print("   Should show: empirica connected")
+            if not (ollama_ok and nomic_ok and qdrant_ok):
+                print()
+                print("4. Set up semantic layer (recommended):")
+                if not ollama_ok:
+                    print("   curl -fsSL https://ollama.com/install.sh | sh")
+                if ollama_ok and not nomic_ok:
+                    print("   ollama pull nomic-embed-text")
+                if not qdrant_ok:
+                    print("   docker run -d -p 6333:6333 -v ~/.qdrant:/qdrant/storage qdrant/qdrant")
             print()
             print("To disable sentinel gating temporarily:")
             print("  export EMPIRICA_SENTINEL_LOOPING=false")
