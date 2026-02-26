@@ -135,11 +135,10 @@ The CLI uses `get_active_empirica_session_id()` with this priority chain:
 - **investigate-checkpoint-branch** - Checkpoint investigation branch
 - **investigate-merge-branches** - Merge investigation branches
 
-### 12. Monitoring (5 commands)
+### 12. Monitoring (4 commands)
 - **monitor** - Start monitoring session
-- **check-drift** - Check for behavioral drift
 - **efficiency-report** - Generate efficiency metrics
-- **calibration-report** - Analyze AI self-assessment calibration
+- **calibration-report** - Analyze AI self-assessment calibration (includes drift detection via grounded pipeline)
 - **system-status** - Show system health, adapter status, and configuration
 
 ### 13. Skills (3 commands)
@@ -802,10 +801,6 @@ empirica unknown-resolve \
 #### `monitor`
 **Purpose:** Start monitoring session
 **Usage:** `empirica monitor --session-id <session_id>`
-
-#### `check-drift`
-**Purpose:** Check for behavioral drift
-**Usage:** `empirica check-drift --session-id <session_id>`
 
 #### `efficiency-report`
 **Purpose:** Generate efficiency metrics

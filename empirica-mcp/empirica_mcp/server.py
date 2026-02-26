@@ -660,23 +660,6 @@ async def list_tools() -> List[types.Tool]:
         ),
 
         types.Tool(
-            name="check_drift",
-            description="Detect epistemic drift - when AI confidence diverges from actual performance. Critical for trust calibration.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "session_id": {"type": "string", "description": "Session ID to check for drift"},
-                    "trigger": {"type": "string", "enum": ["manual", "pre_summary", "post_summary"], "description": "When check is triggered"},
-                    "threshold": {"type": "number", "description": "Drift threshold (default: 0.2)"},
-                    "lookback": {"type": "integer", "description": "Number of checkpoints to analyze (default: 5)"},
-                    "cycle": {"type": "integer", "description": "Investigation cycle number (optional filter)"},
-                    "round": {"type": "integer", "description": "CHECK round number (optional filter)"}
-                },
-                "required": ["session_id"]
-            }
-        ),
-
-        types.Tool(
             name="issue_list",
             description="List auto-captured issues for human review - bugs, errors, warnings, TODOs. Filter by status, category, severity.",
             inputSchema={
@@ -1946,7 +1929,6 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         # Human Copilot Tools
         "monitor": ["monitor"],
         "system_status": ["system-status"],
-        "check_drift": ["check-drift"],
         "issue_list": ["issue-list"],
         "issue_handoff": ["issue-handoff"],
         "workspace_overview": ["workspace-overview"],
@@ -2054,7 +2036,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "memory-compact",
         "epistemics-list", "epistemics-show",
         # Human copilot tools
-        "check-drift", "issue-list", "issue-handoff",
+        "issue-list", "issue-handoff",
         "workspace-overview", "efficiency-report", "skill-suggest",
         "workspace-map", "unknown-resolve"
     }

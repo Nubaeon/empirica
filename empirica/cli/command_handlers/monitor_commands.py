@@ -456,7 +456,14 @@ def handle_monitor_cost_command(args):
         handle_cli_error(e, "Cost Analysis", getattr(args, 'verbose', False))
 
 
-def handle_pre_summary_snapshot(session_id: str, output_format: str, cycle=None, round_num=None, scope_depth=None):
+# NOTE: handle_pre_summary_snapshot, handle_post_summary_drift_check, and
+# handle_check_drift_command were removed in v1.5.9. MirrorDriftMonitor was
+# superseded by the grounded calibration pipeline (postflight → post-test →
+# bayesian updates) which detects drift through objective evidence rather
+# than vector-to-vector temporal comparison.
+
+
+def handle_mco_load_command(args):
     """
     Pre-summary trigger: Save current checkpoint as ref-doc.
 

@@ -141,7 +141,6 @@ class EpistemicMiddleware:
             'epistemics_show',
             # Human copilot tools
             'monitor',
-            'check_drift',
             'issue_list',
             'issue_handoff',
             'workspace_overview',

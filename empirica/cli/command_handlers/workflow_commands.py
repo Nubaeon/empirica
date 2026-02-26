@@ -1228,22 +1228,8 @@ def handle_check_submit_command(args):
                 # (Note: In real flow, pre_check would run BEFORE check-submit)
                 # For now, document that this should be called by orchestration layer
                 
-                # Post-CHECK hook: Capture state AFTER checkpoint for comparison
-                if decision and decision.lower() != 'pending':
-                    try:
-                        result = subprocess.run(
-                            ['empirica', 'check-drift', '--trigger', 'post_check', 
-                             '--session-id', session_id],
-                            capture_output=True,
-                            text=True,
-                            timeout=10
-                        )
-                        if result.returncode == 0:
-                            logger.info(f"Post-CHECK hook executed for {session_id}")
-                    except subprocess.TimeoutExpired:
-                        logger.warning("Post-CHECK hook timed out")
-                    except Exception as e:
-                        logger.warning(f"Post-CHECK hook failed: {e}")
+                # Post-CHECK drift detection removed in v1.5.9 — superseded by
+                # grounded calibration pipeline (postflight → post-test → bayesian updates)
             except Exception as e:
                 # Hook failures are non-critical
                 logger.warning(f"CHECK phase hooks error: {e}")

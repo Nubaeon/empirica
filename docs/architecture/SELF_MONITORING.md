@@ -1,7 +1,6 @@
 # Self-Monitoring Systems - Drift & Memory Gap Detection
 
 **Modules:**
-- `empirica.core.drift.mirror_drift_monitor`
 - `empirica.core.memory_gap_detector`
 
 These systems enable functional self-awareness - the ability to detect when knowledge has degraded, context is stale, or claims exceed evidence.
@@ -52,40 +51,9 @@ class DriftReport:
 - `LEARNING` - Discovering complexity (KNOW↓ + CLARITY↑)
 - `SCOPE_DRIFT` - Task expansion (KNOW↓ + scope indicators↑)
 
-### MirrorDriftMonitor
-
-Drift detection using temporal self-validation against Git checkpoints.
-
-```python
-monitor = MirrorDriftMonitor(
-    drift_threshold=0.2,   # Minimum drop to flag
-    lookback_window=5,     # Recent checkpoints for baseline
-    enable_logging=True
-)
-
-report = monitor.detect_drift(
-    current_assessment=assessment,  # EpistemicAssessmentSchema
-    session_id="abc123"
-)
-
-if report.drift_detected:
-    if report.pattern == 'TRUE_DRIFT':
-        # Memory corruption - stop and reload context
-        pass
-    elif report.pattern == 'LEARNING':
-        # Healthy complexity discovery - continue
-        pass
-    elif report.pattern == 'SCOPE_DRIFT':
-        # Task expanding - may need to refocus
-        pass
-```
-
-**Detection logic:**
-1. Load recent checkpoints from Git notes
-2. Calculate baseline by averaging history (excluding current)
-3. Compare current vectors to baseline
-4. Flag drops exceeding threshold (increases are learning, not drift)
-5. Special case: uncertainty INCREASE is also drift
+**Note:** Drift detection is now handled by the grounded calibration pipeline
+(see `empirica calibration-report --grounded`). The `DriftReport` data model above
+is retained for reference but is no longer produced by a standalone monitor class.
 
 ---
 
@@ -188,10 +156,10 @@ if not result['ok']:
 PREFLIGHT ──────────► CHECK ──────────► POSTFLIGHT ──────────► POST-TEST
     │                   │                   │                      │
     ▼                   ▼                   ▼                      ▼
-MemoryGapDetector   MirrorDrift        Update baseline       Grounded Verification
-(validate claims)   Monitor             for future drift     (evidence-based
-                    (compare to         detection             calibration against
-                     history)                                  actual outcomes)
+MemoryGapDetector   Grounded            Update baseline       Grounded Verification
+(validate claims)   Calibration          for future drift     (evidence-based
+                    Pipeline             detection             calibration against
+                                                               actual outcomes)
 ```
 
 ### With EpistemicBus
@@ -215,5 +183,5 @@ if drift_report.drift_detected:
 
 ## Source Files
 
-- `empirica/core/drift/mirror_drift_monitor.py` - Temporal drift detection
 - `empirica/core/memory_gap_detector.py` - Evidence-based gap detection
+- Drift detection is now handled by the grounded calibration pipeline (see `empirica calibration-report --grounded`)

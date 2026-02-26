@@ -24,7 +24,7 @@ The Epistemic Agent architecture follows a recursive self-similar pattern. Each 
 │                      LAYER 3: Sentinel                               │
 │  (Current: Aggregate, arbitrate, merge branches)                     │
 │  Epistemic State: Session-level vectors, merge scoring               │
-│  Commands: agent-aggregate, check-drift, assess-state                │
+│  Commands: agent-aggregate, assess-state                             │
 └──────────────────────────────────────────────────────────────────────┘
                                    ↓
 ┌──────────────────────────────────────────────────────────────────────┐

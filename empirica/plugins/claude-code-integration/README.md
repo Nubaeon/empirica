@@ -36,15 +36,15 @@ Session after compact: 5k token summary, context loss
 ### The Solution
 ```
 PreCompact Hook:
-  └─ empirica check-drift --trigger pre_summary
+  └─ Saves epistemic snapshot
      └─ Saves: .empirica/ref-docs/pre_summary_<timestamp>.json
 
 COMPACT HAPPENS
 
 SessionStart Hook (source=compact):
-  └─ empirica check-drift --trigger post_summary
-     └─ Loads: Bootstrap + pre-summary ref-doc
+  └─ Loads bootstrap + pre-summary ref-doc
      └─ Presents: Evidence for comparison
+     └─ Drift detected via grounded calibration pipeline
 ```
 
 ---
@@ -143,9 +143,8 @@ echo '{"session_id":"abc123","source":"compact"}' | \
 
 **Actions:**
 1. Reads `EMPIRICA_SESSION_ID` env var
-2. Runs `empirica check-drift --trigger pre_summary`
-3. Saves checkpoint as ref-doc
-4. Prints confirmation to stderr (visible to user)
+2. Saves epistemic snapshot as ref-doc
+3. Prints confirmation to stderr (visible to user)
 
 **Output (stdout):**
 ```json
@@ -165,9 +164,8 @@ echo '{"session_id":"abc123","source":"compact"}' | \
 
 **Actions:**
 1. Reads `EMPIRICA_SESSION_ID` env var
-2. Runs `empirica check-drift --trigger post_summary`
-3. Loads bootstrap + pre-summary ref-doc
-4. Prints evidence to stderr (visible to user)
+2. Loads bootstrap + pre-summary ref-doc
+3. Prints evidence to stderr (visible to user)
 
 **Output (stdout):**
 ```json
@@ -284,16 +282,15 @@ If hooks take >30s, increase timeout in `hooks.json`:
 PreCompact (before compact):
 ├─ Read hook input from stdin (Claude Code provides session_id, trigger)
 ├─ Check EMPIRICA_SESSION_ID env var
-├─ Run: empirica check-drift --session-id $ID --trigger pre_summary
-├─ Save checkpoint as: .empirica/ref-docs/pre_summary_<timestamp>.json
+├─ Save epistemic snapshot as: .empirica/ref-docs/pre_summary_<timestamp>.json
 └─ Exit 0 (success) or 2 (blocking error)
 
 SessionStart (after compact, source=compact):
 ├─ Read hook input from stdin (Claude Code provides session_id, source)
 ├─ Check EMPIRICA_SESSION_ID env var
-├─ Run: empirica check-drift --session-id $ID --trigger post_summary
 ├─ Load: Bootstrap + pre-summary ref-doc
 ├─ Present evidence in stderr (user-visible)
+├─ Drift detected via grounded calibration pipeline
 └─ Exit 0 (success) or 1 (non-blocking error)
 ```
 
@@ -327,11 +324,11 @@ The hook pattern (PreCompact → SessionStart) is useful for ANY tool that needs
 ## Further Reading
 
 - Empirica docs: `~/.empirica/core-docs/`
-- check-drift implementation: `empirica/cli/command_handlers/monitor_commands.py`
+- Calibration pipeline: `empirica calibration-report --grounded`
 - Claude Code hooks: Claude Code documentation
 
 ---
 
-**Status:** ✅ Active (hooks wire to Empirica check-drift)
+**Status:** ✅ Active (hooks wire to Empirica grounded calibration pipeline)
 **Tested:** Manual simulation (integration test pending)
 **Impact:** Solves 5 months of memory compacting issues

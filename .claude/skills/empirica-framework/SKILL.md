@@ -385,7 +385,6 @@ empirica unknown-log --unknown "..."     # Log noetic artifact (unknown)
 empirica deadend-log --approach "..."    # Log noetic artifact (dead-end)
 empirica goals-create --objective "..."  # Create praxic artifact (goal)
 empirica goals-list                      # Show active goals
-empirica check-drift --session-id <ID>   # Detect epistemic drift
 empirica calibration-report              # Self-referential calibration (Track 1)
 empirica calibration-report --grounded   # Grounded calibration (Track 2)
 empirica calibration-report --trajectory # Calibration trend over time

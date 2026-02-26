@@ -6,7 +6,7 @@ Extracted from SessionDatabase._create_tables()
 
 Note: Orphaned tables removed 2025-12-31:
 - divergence_tracking (never wired up)
-- drift_monitoring (replaced by MirrorDriftMonitor using Git)
+- drift_monitoring (removed — drift detection handled by grounded calibration pipeline)
 - noetic_tools (never wired up)
 - investigation_logs (never wired up)
 - praxic_logs (never wired up)

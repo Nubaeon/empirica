@@ -463,7 +463,6 @@ empirica goals-list                      # Show active goals
 empirica calibration-report              # Self-referential (Track 1)
 empirica calibration-report --grounded   # Grounded verification (Track 2)
 empirica calibration-report --trajectory # Trend: closing/widening/stable
-empirica check-drift                     # Detect epistemic drift
 
 # Project & memory
 empirica project-search --project-id <ID> --task "query"  # Semantic search

@@ -209,7 +209,7 @@ EMPIRICA_TIER1_PREFIXES = (
     'empirica project-switch', 'empirica project-list',  # Administrative - always allowed
     'empirica session-snapshot', 'empirica get-session-summary',
     'empirica get-epistemic-state', 'empirica get-calibration-report',
-    'empirica monitor', 'empirica check-drift',
+    'empirica monitor',
     'empirica workspace-overview', 'empirica workspace-map',
     'empirica efficiency-report', 'empirica skill-suggest',
     'empirica goals-ready', 'empirica list-goals',
