@@ -16,14 +16,16 @@ LABEL version="1.5.9"
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies with version pinning
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Upgrade system packages for security patches and install dependencies
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
     git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Upgrade pip and setuptools first (CVE-2025-47273, CVE-2024-6345)
-RUN pip install --no-cache-dir --upgrade pip setuptools
+# Upgrade pip, setuptools, and wheel
+# CVE-2025-47273 (setuptools), CVE-2024-6345 (setuptools), CVE-2026-24049 (wheel <0.46.2)
+RUN pip install --no-cache-dir --upgrade pip setuptools "wheel>=0.46.2"
 
 # Copy package files
 COPY dist/empirica-1.5.9-py3-none-any.whl /tmp/
