@@ -918,7 +918,7 @@ def main():
             pass
 
     if not session_id:
-        respond("allow", "WARNING: No active transaction or empirica_session_id. Run PREFLIGHT first.")
+        respond("allow", "WARNING: No session found. Run: empirica session-create --ai-id claude-code && empirica preflight-submit -")
         sys.exit(0)
 
     # SessionDatabase uses path_resolver internally for DB location
@@ -956,18 +956,48 @@ def main():
         # No PREFLIGHT yet - allow read-only/workflow commands + transitions
         # This enables artifact lifecycle review before starting a new transaction:
         # goals-list, epistemics-list, goals-complete, unknown-resolve, etc.
+        #
+        # PRE-TRANSACTION MONITORING: Track tool calls outside transactions.
+        # The Sentinel can't do vector analysis without a baseline, but it can
+        # count calls and nudge the AI to open a transaction.
+        pre_tx_nudge = ""
+        counter_file = None
+        try:
+            instance_id = get_instance_id()
+            suffix = f"_{instance_id}" if instance_id else ""
+            counter_file = Path.home() / '.empirica' / f'pre_tx_calls{suffix}.json'
+            count = 0
+            if counter_file.exists():
+                with open(counter_file, 'r') as f:
+                    count = json.load(f).get('count', 0)
+            count += 1
+            with open(counter_file, 'w') as f:
+                json.dump({'count': count, 'session_id': session_id}, f)
+            if count >= 10:
+                pre_tx_nudge = f" STRONGLY RECOMMENDED: {count} tool calls without a transaction. Submit PREFLIGHT now — this work is unmeasured."
+            elif count >= 5:
+                pre_tx_nudge = f" NOTE: {count} tool calls without a transaction. Consider submitting PREFLIGHT to begin measured work."
+        except Exception:
+            pass
+
         if tool_name == 'Bash':
             command = tool_input.get('command', '')
             if is_safe_bash_command(tool_input):
                 db.close()
-                respond("allow", "Safe Bash before PREFLIGHT (artifact review)")
+                respond("allow", f"Safe Bash before PREFLIGHT (artifact review).{pre_tx_nudge}")
                 sys.exit(0)
             if is_transition_command(command):
                 db.close()
-                respond("allow", "Transition command (no PREFLIGHT yet - starting new cycle)")
+                # Reset counter when AI submits PREFLIGHT
+                if 'preflight' in command.lower() and counter_file is not None:
+                    try:
+                        counter_file.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+                respond("allow", f"Transition command (no PREFLIGHT yet - starting new cycle).{pre_tx_nudge}")
                 sys.exit(0)
         db.close()
-        respond("deny", f"No PREFLIGHT. Assess your knowledge state first.")
+        respond("deny", f"No open transaction. Submit PREFLIGHT with your self-assessed vectors to begin measured work.{pre_tx_nudge}")
         sys.exit(0)
 
     preflight_know, preflight_uncertainty, preflight_timestamp, preflight_project_id = preflight_row

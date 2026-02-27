@@ -3880,41 +3880,23 @@ def handle_project_switch_command(args):
                             # Transaction is for the destination project — don't close it
                             postflight_result = {"ok": True, "reason": "transaction_preserved", "note": "Transaction is for destination project, not closed"}
                         else:
-                            # Transaction is for a different project — close it
-                            import subprocess
-                            tx_session_id = tx_data.get('session_id')
-                            if tx_session_id:
-                                postflight_cmd = ['empirica', 'postflight-submit', '-']
-                                postflight_input = _json.dumps({
-                                    "session_id": tx_session_id,
-                                    "vectors": {
-                                        "know": 0.7,
-                                        "uncertainty": 0.3,
-                                        "context": 0.7,
-                                        "completion": 0.5
-                                    },
-                                    "reasoning": f"Auto-POSTFLIGHT: Project switch to {folder_name}. Transaction auto-closed to maintain epistemic measurement integrity."
-                                })
-                                # Run in current project directory (before switch)
-                                result = subprocess.run(
-                                    postflight_cmd,
-                                    input=postflight_input,
-                                    capture_output=True,
-                                    text=True,
-                                    timeout=30,
-                                    cwd=str(current_empirica_root.parent)  # Project root
-                                )
-                                if result.returncode == 0:
-                                    postflight_result = {"ok": True, "reason": "project_switch"}
-                                    # Clear the old transaction file so sentinel doesn't see stale state
-                                    try:
-                                        tx_path.unlink()
-                                    except Exception:
-                                        pass
-                                    if output_format == 'human':
-                                        print("📊 Auto-closed previous transaction (POSTFLIGHT)")
-                                else:
-                                    postflight_result = {"ok": False, "error": result.stderr[:200]}
+                            # Transaction is for a different project — abandon it.
+                            # We do NOT submit fake POSTFLIGHT vectors because that
+                            # poisons calibration data. The delta is lost, but a lost
+                            # delta is better than a fabricated one.
+                            tx_id = tx_data.get('transaction_id', 'unknown')
+                            try:
+                                tx_path.unlink()
+                            except Exception:
+                                pass
+                            postflight_result = {
+                                "ok": True,
+                                "reason": "transaction_abandoned",
+                                "transaction_id": tx_id,
+                                "note": "Transaction abandoned on project-switch (no fake vectors submitted). Submit POSTFLIGHT before switching to preserve deltas."
+                            }
+                            if output_format == 'human':
+                                print(f"⚠️  Previous transaction abandoned (submit POSTFLIGHT before switching to preserve deltas)")
         except Exception as e:
             # Non-fatal - continue with switch even if POSTFLIGHT fails
             postflight_result = {"ok": False, "error": str(e)}
@@ -4134,58 +4116,16 @@ def handle_project_switch_command(args):
             bootstrap_result = {"ok": False, "error": str(e)}
             logger.debug(f"Auto-bootstrap on project-switch failed (non-fatal): {e}")
 
-        # 8. AUTO-PREFLIGHT: Open a new transaction in the target project
-        # After switching, the AI's epistemic state is "just arrived, low context."
-        # Auto-PREFLIGHT with conservative baseline vectors honestly represents this.
-        # The AI then naturally does noetic investigation and CHECKs when ready.
-        preflight_result = None
-        try:
-            if attached_session and project_path:
-                import subprocess
-                preflight_cmd = ['empirica', 'preflight-submit', '-']
-                preflight_input = json.dumps({
-                    "session_id": attached_session['session_id'],
-                    "task_context": f"Project switch to {folder_name}. Assessing new project context.",
-                    "vectors": {
-                        "know": 0.3,
-                        "uncertainty": 0.6,
-                        "context": 0.4,
-                        "clarity": 0.5,
-                        "do": 0.5,
-                        "completion": 0.0,
-                        "engagement": 0.7,
-                        "coherence": 0.4,
-                        "signal": 0.3,
-                        "density": 0.3,
-                        "state": 0.3,
-                        "change": 0.5,
-                        "impact": 0.5
-                    },
-                    "reasoning": f"Auto-PREFLIGHT after project-switch to {folder_name}. Conservative baseline — just arrived in new project context."
-                })
-                result = subprocess.run(
-                    preflight_cmd,
-                    input=preflight_input,
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                    cwd=str(project_path)
-                )
-                if result.returncode == 0:
-                    try:
-                        preflight_result = json.loads(result.stdout)
-                    except Exception:
-                        preflight_result = {"ok": True, "note": "PREFLIGHT ran but non-JSON output"}
-                    if output_format == 'human':
-                        tx_id = preflight_result.get('transaction_id', 'unknown')
-                        print(f"🔄 Transaction opened (auto-PREFLIGHT: {tx_id[:8]}...)")
-                else:
-                    preflight_result = {"ok": False, "error": result.stderr[:200]}
-                    if output_format == 'human':
-                        logger.debug(f"Auto-PREFLIGHT failed: {result.stderr[:200]}")
-        except Exception as e:
-            preflight_result = {"ok": False, "error": str(e)}
-            logger.debug(f"Auto-PREFLIGHT on project-switch failed (non-fatal): {e}")
+        # 8. NO AUTO-PREFLIGHT: The AI must submit its own PREFLIGHT with genuine
+        # self-assessed vectors. System-generated vectors poison calibration data.
+        # The Sentinel will nudge the AI to submit PREFLIGHT when it detects
+        # no open transaction after project-switch.
+        preflight_result = {
+            "needed": True,
+            "note": "Submit PREFLIGHT with your own vector self-assessment to open a transaction."
+        }
+        if output_format == 'human':
+            print("📋 Submit PREFLIGHT to open a transaction (self-assess your vectors)")
 
         # 9. Show project context summary from workspace data
         if output_format == 'human':

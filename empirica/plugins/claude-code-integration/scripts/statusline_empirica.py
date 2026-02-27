@@ -1262,7 +1262,11 @@ def main():
 
         # Get vectors from DB (real-time) - use transaction's session_id and transaction_id
         # transaction_id is CRITICAL to prevent cross-instance phase bleed
-        phase, vectors, gate_decision = get_latest_vectors(db, session_id, transaction_session_id, transaction_id)
+        # If no open transaction exists, don't show stale data from previous transactions
+        if transaction_id:
+            phase, vectors, gate_decision = get_latest_vectors(db, session_id, transaction_session_id, transaction_id)
+        else:
+            phase, vectors, gate_decision = None, {}, None
 
         # Get deltas (learning measurement) - use transaction's session for continuity
         deltas = get_vector_deltas(db, transaction_session_id or session_id)
