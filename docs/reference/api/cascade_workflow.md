@@ -387,7 +387,15 @@ touch ~/.empirica/sentinel_paused   # Pause
 rm ~/.empirica/sentinel_paused      # Unpause
 ```
 
-**Environment Variables:**
+**Configuration:**
+
+File-based (preferred — dynamically settable):
+```bash
+echo "false" > ~/.empirica/sentinel_enabled   # Disable sentinel
+echo "true" > ~/.empirica/sentinel_enabled    # Re-enable sentinel
+```
+
+Environment variables (fallback — requires session restart):
 ```bash
 EMPIRICA_SENTINEL_MODE=controller   # Active blocking (default)
 EMPIRICA_SENTINEL_MODE=observer     # Log-only (no blocking)

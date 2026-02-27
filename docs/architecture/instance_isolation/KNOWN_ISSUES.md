@@ -266,6 +266,35 @@ but never did.
 
 **Commit:** applied to `~/.claude/settings.json` (not in git — user config file)
 
+### 11.19 Ghost Session Propagation in post-compact (2026-02-25)
+
+**Symptom:** Statusline shows `[empirica-web:inactive]` despite hooks running successfully.
+`instance_projects` and `active_work` reference a session_id that doesn't exist in any database.
+
+**Root cause:** Session `7b56baa5` was created (likely in a different DB or deleted during cleanup)
+but all isolation files still referenced it. When post-compact ran on `resume`:
+
+1. `_get_empirica_session()` read `active_work` → found ghost session `7b56baa5`
+2. `_get_session_phase_state("7b56baa5")` queried local DB → zero reflexes found
+3. Zero reflexes → `is_complete = False` → routed to CHECK_GATE (not NEW_SESSION)
+4. CHECK_GATE path does NOT create a new session — just re-propagates the ghost ID
+5. Statusline queries `WHERE session_id = '7b56baa5' AND end_time IS NULL` → not found → "inactive"
+
+**The self-reinforcing loop:** Each resume/compact re-reads the ghost from active_work,
+fails to find it in DB, misinterprets as "mid-work incomplete session", and writes it back.
+The ghost persists across unlimited compaction cycles.
+
+**Fix:** Added ghost session detection in post-compact.py `main()`. After resolving
+`empirica_session` from active_work, verify it exists in the local DB via
+`SELECT 1 FROM sessions WHERE session_id = ?`. If not found, create a new session
+and update all isolation files — bypassing the normal phase-state routing.
+
+**Prevention:** Session existence check before using session_id from file-based state.
+File-based state can reference sessions that no longer exist (cleanup, DB restore,
+cross-DB creation). Always verify against the authoritative source (the database).
+
+**Commit:** applied to `~/.claude/plugins/local/empirica-integration/hooks/post-compact.py`
+
 ---
 
 ## By Design (Not Bugs)

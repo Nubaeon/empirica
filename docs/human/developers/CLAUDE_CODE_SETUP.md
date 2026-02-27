@@ -273,11 +273,11 @@ The Sentinel gate (noetic firewall) requires PreToolUse hooks. Add to `~/.claude
     ],
     "SessionStart": [
       {
-        "matcher": "compact",
+        "matcher": "compact|resume",
         "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/post-compact.py", "timeout": 30}]
       },
       {
-        "matcher": "new|fresh",
+        "matcher": "startup",
         "hooks": [
           {"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/session-init.py", "timeout": 30},
           {"type": "command", "command": "python3 ~/.claude/plugins/local/empirica-integration/hooks/ewm-protocol-loader.py", "timeout": 10, "allowFailure": true}

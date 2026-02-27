@@ -125,7 +125,7 @@ from .skill_commands import (
 from .monitor_commands import (
     handle_monitor_command, handle_monitor_export_command,
     handle_monitor_reset_command, handle_monitor_cost_command,
-    handle_check_drift_command, handle_mco_load_command,
+    handle_mco_load_command,
     handle_assess_state_command, handle_trajectory_project_command,
     handle_calibration_report_command, handle_system_status_command,
 )
@@ -304,7 +304,6 @@ __all__ = [
     'handle_monitor_export_command',
     'handle_monitor_reset_command',
     'handle_monitor_cost_command',
-    'handle_check_drift_command',
     'handle_mco_load_command',
     'handle_assess_state_command',
     'handle_trajectory_project_command',

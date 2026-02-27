@@ -446,8 +446,12 @@ Location: `plugins/claude-code-integration/hooks/sentinel-gate.py`
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `EMPIRICA_SENTINEL_LOOPING` | `true` | Set to `false` to disable Sentinel gating entirely |
+| `EMPIRICA_SENTINEL_LOOPING` | `true` | Set to `false` to disable Sentinel gating entirely (env var fallback) |
 | `EMPIRICA_SENTINEL_CHECK_EXPIRY` | `false` | Set to `true` to enable 30-minute CHECK expiry |
+
+**File-based control (preferred):** `~/.empirica/sentinel_enabled` — write `true` or `false`.
+Takes priority over the env var and is dynamically settable without session restart.
+The AI can toggle this at runtime; env vars require restarting the terminal/session.
 
 **Note on CHECK Expiry:** The age-based expiry is disabled by default because users may pause work and resume later. Wall-clock time doesn't reflect actual session activity. Enable with caution.
 

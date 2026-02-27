@@ -1,8 +1,8 @@
-# Empirica System Prompt - CLAUDE v1.5.8
+# Empirica System Prompt - CLAUDE v1.5.9
 
-**Model:** CLAUDE | **Generated:** 2026-02-22
-**Syncs with:** Empirica v1.5.8
-**Change:** Auto-derive session_id in workflow commands, version bump
+**Model:** CLAUDE | **Generated:** 2026-02-26
+**Syncs with:** Empirica v1.5.9
+**Change:** Sentinel file-flag, matcher fix, MirrorDriftMonitor removed, plan-transactions skill
 **Status:** AUTHORITATIVE
 
 ---
@@ -467,7 +467,7 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 
 ## CLAUDE-SPECIFIC
 
-# Claude Model Delta - v1.5.8
+# Claude Model Delta - v1.5.9
 
 **Applies to:** Claude (all versions)
 **Last Updated:** 2026-02-21
@@ -559,15 +559,15 @@ When assessing:
 
 ## Sentinel Controls
 
-```bash
-# Disable epistemic looping (INVESTIGATE → PROCEED)
-export EMPIRICA_SENTINEL_LOOPING=false
+**File-based control (preferred):** `~/.empirica/sentinel_enabled` — write `true` or `false`.
+Takes priority over env vars and is dynamically settable without session restart.
 
-# Sentinel modes
-export EMPIRICA_SENTINEL_MODE=observer    # Log warnings, don't block
-export EMPIRICA_SENTINEL_MODE=controller  # Actively block when appropriate
-export EMPIRICA_SENTINEL_MODE=auto        # Same as controller (default)
-```
+**Environment variables (fallback, requires session restart):**
+
+| Variable | Values | Default | Effect |
+|----------|--------|---------|--------|
+| `EMPIRICA_SENTINEL_LOOPING` | `true`, `false` | `true` | When `false`, disables Sentinel gating entirely |
+| `EMPIRICA_SENTINEL_MODE` | `observer`, `controller`, `auto` | `auto` | `observer` = log only, `controller`/`auto` = actively block |
 
 ---
 

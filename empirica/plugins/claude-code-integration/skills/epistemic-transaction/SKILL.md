@@ -1,7 +1,7 @@
 ---
 name: epistemic-transaction
-description: "Use when starting complex work, planning implementation, breaking down tasks, creating specs, or when the user says 'plan this as transactions', 'break this down', 'create a spec', 'how should I approach this', 'transaction plan', or mentions needing a structured approach to multi-step work. This skill guides the full epistemic workflow from task decomposition through measured execution."
-version: 1.0.0
+description: "Use when starting complex work, planning implementation, breaking down tasks, creating specs, or when the user says 'plan this as transactions', 'plan transactions', 'break this down', 'create a spec', 'how should I approach this', 'transaction plan', or mentions needing a structured approach to multi-step work. This skill guides the full epistemic workflow from task decomposition through measured execution. Prefer this over EnterPlanMode for non-trivial tasks."
+version: 1.1.0
 ---
 
 # Epistemic Transaction Planning
@@ -9,6 +9,134 @@ version: 1.0.0
 **Turn tasks into measured work.** This skill guides you through decomposing work into
 epistemic transactions — measured chunks where investigation and implementation happen
 together, artifacts are recorded, and learning compounds across boundaries.
+
+---
+
+## Plan Transactions Mode (Interactive)
+
+When a user asks to plan work, or when you face a non-trivial task, use this
+interactive mode **instead of EnterPlanMode**. It produces structured, measurable
+plans with executable commands rather than generic step lists.
+
+### How to Run
+
+1. **Interview** — Clarify the task using AskUserQuestion
+2. **Explore** — Read the codebase areas involved (Glob, Grep, Read)
+3. **Decompose** — Break into goals with `empirica goals-create`
+4. **Plan** — Generate transaction plan with estimated vectors
+5. **Output** — Present as structured plan with executable commands
+
+### Step P1: Interview the Task
+
+Use AskUserQuestion to clarify before decomposing. Key questions:
+
+| What to Ask | Why |
+|-------------|-----|
+| What is the end state? | Defines completion criteria |
+| What constraints exist? | Bounds the solution space |
+| Are there dependencies on other work? | Orders transactions |
+| What areas of the codebase are involved? | Scopes investigation |
+| What's the risk tolerance? | Determines noetic depth |
+
+Don't over-interview. 2-3 focused questions max. If the task is clear, skip to P2.
+
+### Step P2: Explore and Log
+
+Use read-only tools to explore. **Log everything you find:**
+
+```bash
+# What you discover
+empirica finding-log --finding "Auth module uses middleware pattern at routes/auth.py" --impact 0.5
+
+# What you don't know
+empirica unknown-log --unknown "How does the session store handle concurrent access?"
+
+# What you're assuming
+empirica assumption-log --assumption "Database migrations run automatically" --confidence 0.6 --domain infrastructure
+```
+
+### Step P3: Decompose into Goals
+
+Create goals from your exploration. Each goal = one coherent deliverable.
+
+```bash
+empirica goals-create --objective "Implement X"
+empirica goals-create --objective "Add tests for X"
+empirica goals-create --objective "Update docs for X"
+```
+
+### Step P4: Generate Transaction Plan
+
+For each goal, estimate the noetic-praxic loop:
+
+```yaml
+# Transaction Plan: [Task Name]
+# Generated: [timestamp]
+# Goals: [count]
+
+transactions:
+  - id: 1
+    goal: "Goal A description"
+    goal_id: "<from goals-create>"
+    noetic:
+      investigate:
+        - "Read module X to understand pattern"
+        - "Check if Y exists"
+      estimated_vectors:
+        know: 0.4
+        uncertainty: 0.5
+        context: 0.5
+    check_gate: "Understand X pattern and know where to make changes"
+    praxic:
+      implement:
+        - "Write implementation"
+        - "Add unit tests"
+        - "Commit"
+      estimated_vectors:
+        know: 0.85
+        uncertainty: 0.15
+        completion: 1.0
+    depends_on: []
+
+  - id: 2
+    goal: "Goal B description"
+    goal_id: "<from goals-create>"
+    noetic:
+      investigate:
+        - "Review output from T1"
+      estimated_vectors:
+        know: 0.6  # higher — informed by T1
+        uncertainty: 0.3
+    check_gate: "Know integration points from T1 findings"
+    praxic:
+      implement:
+        - "Build on T1's work"
+        - "Integration test"
+        - "Commit"
+      estimated_vectors:
+        know: 0.9
+        completion: 1.0
+    depends_on: [1]
+```
+
+### Step P5: Present and Execute
+
+Present the plan to the user for approval. Once approved:
+- Start Transaction 1 with PREFLIGHT using the estimated vectors
+- Follow the noetic-praxic loop per transaction
+- POSTFLIGHT at the end of each transaction
+- Adjust subsequent transactions based on learnings
+
+**Key principle:** The plan is a starting estimate, not a contract.
+Vectors will shift as you learn. That's the point — measuring the delta
+between estimated and actual is what builds calibration.
+
+---
+
+## Reference Guide
+
+The sections below are the full reference for epistemic transactions.
+Use them during execution, not just planning.
 
 ---
 

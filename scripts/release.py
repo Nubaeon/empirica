@@ -77,6 +77,9 @@ class ReleaseManager:
         tarball = dist_dir / tarball_pattern
 
         if not tarball.exists():
+            if self.dry_run:
+                info(f"Tarball not found (dry run): {tarball}")
+                return "0" * 64
             error(f"Tarball not found: {tarball}")
 
         sha256 = hashlib.sha256()
@@ -112,6 +115,55 @@ class ReleaseManager:
             success(f"Updated Homebrew formula: {formula_path}")
         else:
             info(f"Would update Homebrew formula: {formula_path}")
+
+    def update_homebrew_tap(self):
+        """Copy updated formula to the Homebrew tap repo and push"""
+        log("\n" + "="*60)
+        log("🍺 Updating Homebrew tap")
+        log("="*60)
+
+        local_formula = self.repo_root / "packaging/homebrew/empirica.rb"
+        if not local_formula.exists():
+            warning(f"Local formula not found: {local_formula}")
+            return
+
+        # Look for tap repo in common locations
+        tap_candidates = [
+            self.repo_root.parent / "homebrew-tap",          # sibling dir
+            Path.home() / "empirical-ai" / "homebrew-tap",   # home dir
+        ]
+
+        tap_repo = None
+        for candidate in tap_candidates:
+            if (candidate / "empirica.rb").exists():
+                tap_repo = candidate
+                break
+
+        if tap_repo is None:
+            warning("Homebrew tap repo not found. Checked:")
+            for c in tap_candidates:
+                warning(f"  {c}")
+            info("Manual step: copy packaging/homebrew/empirica.rb to your tap repo and push")
+            return
+
+        tap_formula = tap_repo / "empirica.rb"
+
+        if not self.dry_run:
+            import shutil
+            shutil.copy2(local_formula, tap_formula)
+            success(f"Copied formula to {tap_formula}")
+
+            # Commit and push
+            self.run_command(["git", "add", "empirica.rb"], cwd=str(tap_repo))
+            self.run_command([
+                "git", "commit", "-m",
+                f"Update empirica to {self.version}"
+            ], cwd=str(tap_repo), check=False)
+            self.run_command(["git", "push"], cwd=str(tap_repo))
+            success(f"Homebrew tap updated and pushed: {tap_repo}")
+        else:
+            info(f"Would copy {local_formula} → {tap_formula}")
+            info(f"Would commit and push in {tap_repo}")
 
     def update_dockerfile(self):
         """Update Dockerfile with new version"""
@@ -473,28 +525,47 @@ class ReleaseManager:
         success(f"Created and pushed tag: {tag}")
 
     def build_and_push_docker(self):
-        """Build and push Docker image"""
+        """Build and push Docker images (Debian + Alpine)"""
         log("\n" + "="*60)
-        log("🐳 Building and pushing Docker image")
+        log("🐳 Building and pushing Docker images")
         log("="*60)
 
-        tags = [
+        # Debian image
+        debian_tags = [
             f"nubaeon/empirica:{self.version}",
             "nubaeon/empirica:latest"
         ]
 
-        # Build
         build_cmd = ["docker", "build", "."]
-        for tag in tags:
+        for tag in debian_tags:
             build_cmd.extend(["-t", tag])
 
         self.run_command(build_cmd)
-        success("Docker image built")
+        success("Docker image built (Debian)")
 
-        # Push
-        for tag in tags:
+        for tag in debian_tags:
             self.run_command(["docker", "push", tag])
             success(f"Pushed: {tag}")
+
+        # Alpine image
+        alpine_dockerfile = self.repo_root / "Dockerfile.alpine"
+        if alpine_dockerfile.exists():
+            alpine_tags = [
+                f"nubaeon/empirica:{self.version}-alpine",
+            ]
+
+            build_cmd = ["docker", "build", "-f", "Dockerfile.alpine", "."]
+            for tag in alpine_tags:
+                build_cmd.extend(["-t", tag])
+
+            self.run_command(build_cmd)
+            success("Docker image built (Alpine)")
+
+            for tag in alpine_tags:
+                self.run_command(["docker", "push", tag])
+                success(f"Pushed: {tag}")
+        else:
+            warning("Dockerfile.alpine not found, skipping Alpine build")
 
     def create_github_release(self):
         """Create GitHub release"""
@@ -528,7 +599,17 @@ pip install empirica=={self.version}
 
 ### Docker
 ```bash
+# Security-hardened Alpine (recommended)
+docker pull nubaeon/empirica:{self.version}-alpine
+
+# Debian slim
 docker pull nubaeon/empirica:{self.version}
+```
+
+### Homebrew
+```bash
+brew tap nubaeon/tap
+brew install empirica
 ```
 """
 
@@ -599,6 +680,7 @@ docker pull nubaeon/empirica:{self.version}
             self.create_git_tag()
             self.build_and_push_docker()
             self.create_github_release()
+            self.update_homebrew_tap()
 
             log("\n╔════════════════════════════════════════════════════════════╗")
             log("║  ✅ Release Complete!                                      ║")
@@ -608,7 +690,9 @@ docker pull nubaeon/empirica:{self.version}
             info(f"PyPI: https://pypi.org/project/empirica/{self.version}/")
             info(f"PyPI (MCP): https://pypi.org/project/empirica-mcp/{self.version}/")
             info(f"Docker: docker pull nubaeon/empirica:{self.version}")
+            info(f"Docker: docker pull nubaeon/empirica:{self.version}-alpine")
             info(f"GitHub: https://github.com/Nubaeon/empirica/releases/tag/v{self.version}")
+            info(f"Homebrew: brew upgrade empirica")
 
         except Exception as e:
             error(f"Release failed: {e}")

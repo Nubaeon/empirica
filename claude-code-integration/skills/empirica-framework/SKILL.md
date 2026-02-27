@@ -322,14 +322,14 @@ readiness dynamically — honest self-assessment produces better outcomes than t
 - Holistic readiness assessment (dynamic, calibration-aware)
 - Anti-gaming: minimum noetic duration (30s) with evidence check
 
-**Configuration:**
-```bash
-export EMPIRICA_SENTINEL_LOOPING=false        # Disable investigate loops
-export EMPIRICA_SENTINEL_MODE=observer        # Log-only (no blocking)
-export EMPIRICA_SENTINEL_MODE=controller      # Active blocking (default)
-export EMPIRICA_SENTINEL_CHECK_EXPIRY=true    # 30-min CHECK expiry
-export EMPIRICA_SENTINEL_REQUIRE_BOOTSTRAP=true
-```
+**Configuration (user-only, DO NOT execute):**
+
+| Variable | Values | Default | Effect |
+|----------|--------|---------|--------|
+| `EMPIRICA_SENTINEL_LOOPING` | `true`, `false` | `true` | When `false`, disables Sentinel gating entirely |
+| `EMPIRICA_SENTINEL_MODE` | `observer`, `controller` | `controller` | `observer` = log only, `controller` = actively block |
+| `EMPIRICA_SENTINEL_CHECK_EXPIRY` | `true`, `false` | `false` | 30-min CHECK expiry |
+| `EMPIRICA_SENTINEL_REQUIRE_BOOTSTRAP` | `true`, `false` | `false` | Require bootstrap before proceed |
 
 ---
 
@@ -463,7 +463,6 @@ empirica goals-list                      # Show active goals
 empirica calibration-report              # Self-referential (Track 1)
 empirica calibration-report --grounded   # Grounded verification (Track 2)
 empirica calibration-report --trajectory # Trend: closing/widening/stable
-empirica check-drift                     # Detect epistemic drift
 
 # Project & memory
 empirica project-search --project-id <ID> --task "query"  # Semantic search

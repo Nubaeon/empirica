@@ -5,6 +5,24 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.9] - 2026-02-26
+
+### Added
+- **Sentinel File-Based Control** - Enable/disable Sentinel via `~/.empirica/sentinel_enabled` file flag, taking priority over `EMPIRICA_SENTINEL_LOOPING` env var. Dynamically settable without session restart
+- **Transaction Planning Skill** - `/epistemic-transaction` skill gains interactive `plan-transactions` mode (Steps P1-P5): interview task, explore codebase, decompose into goals, generate YAML transaction plan with estimated vectors, execute
+
+### Fixed
+- **Sentinel Bypass** - System prompt contained bare `export EMPIRICA_SENTINEL_LOOPING=false` commands in code blocks. Claudes executed these, disabling Sentinel globally. Replaced with tables and "DO NOT execute" warnings across all templates and system prompts
+- **SessionStart Matchers** - `setup-claude-code` generated invalid matchers (`new|fresh` and bare `compact`). Fixed to valid Claude Code values (`startup` and `compact|resume`). Updated all template files
+- **Phantom Project ID** - `_get_project_id_from_local_db()` now reads `project.yaml` as authoritative source before falling back to `sessions.db`, preventing self-propagating phantom project IDs
+- **Ghost Session Propagation** - Post-compact now detects and recovers from ghost sessions that don't exist in the database (documented as KNOWN_ISSUES 11.19)
+
+### Removed
+- **MirrorDriftMonitor** - Removed `empirica/core/drift/` module, `check-drift` CLI command, `check_drift` MCP tool, and all documentation references (-562 lines). Drift detection is handled by the grounded calibration pipeline (postflight → post-test → bayesian updates)
+
+### Changed
+- **README** - Removed empirica-crm from ecosystem projects, updated What's New to v1.5.9
+
 ## [1.5.8] - 2026-02-25
 
 ### Added

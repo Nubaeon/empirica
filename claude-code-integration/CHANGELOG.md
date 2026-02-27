@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Details
 - Hooks written in Python 3
-- Integrates with Empirica CLI commands (`project-bootstrap`, `check-drift`)
+- Integrates with Empirica CLI commands (`project-bootstrap`, `calibration-report`)
 - Compatible with Claude Code hook system (PreCompact, SessionStart, SessionEnd)
 - Timeout protection: 30s for PreCompact/SessionStart, 15s for SessionEnd
 

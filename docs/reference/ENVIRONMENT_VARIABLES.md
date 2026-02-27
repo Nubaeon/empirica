@@ -40,7 +40,10 @@ This document lists all environment variables that control Empirica's behavior.
 | Variable | Purpose | Default | Values |
 |----------|---------|---------|--------|
 | `EMPIRICA_SENTINEL_MODE` | Gate enforcement level | `controller` | `observer`, `controller` |
-| `EMPIRICA_SENTINEL_LOOPING` | Enable investigate loops | `true` | `true`, `false` |
+| `EMPIRICA_SENTINEL_LOOPING` | Enable investigate loops (env var fallback) | `true` | `true`, `false` |
+
+**File-based control (preferred):** Write `true` or `false` to `~/.empirica/sentinel_enabled`.
+This takes priority over the env var and is dynamically settable without restarting the session.
 | `EMPIRICA_KNOW_THRESHOLD` | Minimum KNOW confidence | Model-dependent | 0.0-1.0 |
 | `EMPIRICA_UNCERTAINTY_THRESHOLD` | Maximum UNCERTAINTY allowed | Model-dependent | 0.0-1.0 |
 | `EMPIRICA_ENFORCE_CASCADE_PHASES` | Enforce strict phase ordering | `false` | `true`, `false` |
@@ -144,9 +147,13 @@ export EMPIRICA_SENTINEL_MODE=controller
 # Force specific session database (useful in CI)
 export EMPIRICA_SESSION_DB=/tmp/test_sessions.db
 
-# Disable sentinel for automated tests
+# Disable sentinel for automated tests (env var — requires restart)
 export EMPIRICA_SENTINEL_MODE=observer
 export EMPIRICA_SENTINEL_LOOPING=false
+
+# Preferred: file-based toggle (takes effect immediately)
+echo "false" > ~/.empirica/sentinel_enabled   # disable
+echo "true" > ~/.empirica/sentinel_enabled    # re-enable
 ```
 
 ---

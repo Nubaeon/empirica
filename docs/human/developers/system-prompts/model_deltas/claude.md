@@ -1,4 +1,4 @@
-# Claude Model Delta - v1.5.8
+# Claude Model Delta - v1.5.9
 
 **Applies to:** Claude (all versions)
 **Last Updated:** 2026-02-21
@@ -90,15 +90,15 @@ When assessing:
 
 ## Sentinel Controls
 
-```bash
-# Disable epistemic looping (INVESTIGATE → PROCEED)
-export EMPIRICA_SENTINEL_LOOPING=false
+**File-based control (preferred):** `~/.empirica/sentinel_enabled` — write `true` or `false`.
+Takes priority over env vars and is dynamically settable without session restart.
 
-# Sentinel modes
-export EMPIRICA_SENTINEL_MODE=observer    # Log warnings, don't block
-export EMPIRICA_SENTINEL_MODE=controller  # Actively block when appropriate
-export EMPIRICA_SENTINEL_MODE=auto        # Same as controller (default)
-```
+**Environment variables (fallback, requires session restart):**
+
+| Variable | Values | Default | Effect |
+|----------|--------|---------|--------|
+| `EMPIRICA_SENTINEL_LOOPING` | `true`, `false` | `true` | When `false`, disables Sentinel gating entirely |
+| `EMPIRICA_SENTINEL_MODE` | `observer`, `controller`, `auto` | `auto` | `observer` = log only, `controller`/`auto` = actively block |
 
 ---
 

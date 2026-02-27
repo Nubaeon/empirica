@@ -54,7 +54,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'assumption-log', 'decision-log', 'refdoc-add', 'source-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
                     'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
                     'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches', 'investigate-multi'],
-                    'Monitoring': ['monitor', 'check-drift', 'assess-state', 'trajectory-project', 'efficiency-report'],
+                    'Monitoring': ['monitor', 'assess-state', 'trajectory-project', 'efficiency-report'],
                     'Skills': ['skill-suggest', 'skill-fetch', 'skill-extract'],
                     'Utilities': ['log-token-saving', 'config', 'performance', 'qdrant-status', 'qdrant-cleanup'],
                     'Vision': ['vision'],
@@ -324,7 +324,6 @@ def main(args=None):
             # Monitor commands
             'monitor': handle_monitor_command,
             'system-status': handle_system_status_command,
-            'check-drift': handle_check_drift_command,
             'assess-state': handle_assess_state_command,
             'mco-load': handle_mco_load_command,
             'trajectory-project': handle_trajectory_project_command,

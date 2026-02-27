@@ -34,7 +34,7 @@ This guide covers three ways to distribute the empirica-integration plugin.
    ```json
    {
      "name": "empirica-integration",
-     "description": "Epistemic continuity across memory compacting - automatic check-drift integration",
+     "description": "Epistemic continuity across memory compacting - automatic calibration integration",
      "version": "1.0.0",
      "author": {
        "name": "Empirica Team",

@@ -836,12 +836,10 @@ Query logged mistakes for learning.
 28. `investigate` - Run systematic investigation with epistemic tracking
 29. `blindspot_scan` - Scan for unknown unknowns via artifact pattern analysis
 
-### Epistemic Monitoring (4)
+### Epistemic Monitoring (3)
 30. `epistemics_list` - List all assessments (PREFLIGHT/CHECK/POSTFLIGHT) for session
 31. `epistemics_show` - Show detailed assessment, optionally by phase
 32. `get_calibration_report` - Calibration metrics (self-ref + grounded)
-33. `check_drift` - Detect epistemic drift (confidence vs performance)
-
 ### Human Copilot & Oversight (6)
 34. `monitor` - Real-time monitoring: stats, cost, request history, health
 35. `system_status` - Unified system status (/proc-style snapshot)
@@ -1085,22 +1083,6 @@ Unified system status — aggregates config, memory, bus, attention, integrity, 
 **Returns:** /proc-style system snapshot
 
 **Use when:** Need system health overview
-
----
-
-### `check_drift`
-
-Detect epistemic drift — when AI confidence diverges from actual performance.
-
-**Parameters:**
-- `session_id` (required): Session UUID
-- `trigger` (optional): `"manual"`, `"pre_summary"`, `"post_summary"`
-- `threshold` (optional): Drift threshold (default: 0.2)
-- `lookback` (optional): Number of checkpoints to analyze (default: 5)
-
-**Returns:** Drift analysis with vectors that diverged
-
-**Use when:** Suspecting calibration is off or after significant work
 
 ---
 

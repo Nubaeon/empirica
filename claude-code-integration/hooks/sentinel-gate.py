@@ -209,7 +209,7 @@ EMPIRICA_TIER1_PREFIXES = (
     'empirica project-switch', 'empirica project-list',  # Administrative - always allowed
     'empirica session-snapshot', 'empirica get-session-summary',
     'empirica get-epistemic-state', 'empirica get-calibration-report',
-    'empirica monitor', 'empirica check-drift',
+    'empirica monitor',
     'empirica workspace-overview', 'empirica workspace-map',
     'empirica efficiency-report', 'empirica skill-suggest',
     'empirica goals-ready', 'empirica list-goals',
@@ -836,8 +836,15 @@ def main():
         sys.exit(0)
 
     # Check if sentinel looping is disabled (escape hatch)
-    if os.getenv('EMPIRICA_SENTINEL_LOOPING', 'true').lower() == 'false':
-        respond("allow", "Sentinel disabled")
+    # Priority: file flag > env var (file is dynamically settable, env var requires restart)
+    sentinel_flag = Path.home() / '.empirica' / 'sentinel_enabled'
+    if sentinel_flag.exists():
+        flag_val = sentinel_flag.read_text().strip().lower()
+        if flag_val == 'false':
+            respond("allow", "Sentinel disabled (file flag)")
+            sys.exit(0)
+    elif os.getenv('EMPIRICA_SENTINEL_LOOPING', 'true').lower() == 'false':
+        respond("allow", "Sentinel disabled (env var)")
         sys.exit(0)
 
     # === AUTHORIZATION CHECK ===

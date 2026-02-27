@@ -1592,18 +1592,36 @@ def resolve_project_identifier(identifier: str) -> Optional[dict]:
 
 
 def _get_project_id_from_local_db(project_path: 'Path') -> Optional[str]:
-    """Extract project_id from a project's local sessions.db."""
-    import sqlite3
+    """Extract project_id from a project's local config or sessions.db.
+
+    Priority: project.yaml (authoritative) > sessions.db (can be corrupted
+    by phantom project_ids from historical sessions).
+    """
     from pathlib import Path as P
 
-    db_path = P(project_path) / '.empirica' / 'sessions' / 'sessions.db'
+    project_path = P(project_path)
+
+    # Priority 1: project.yaml is the authoritative source
+    project_yaml = project_path / '.empirica' / 'project.yaml'
+    if project_yaml.exists():
+        try:
+            import yaml
+            with open(project_yaml, 'r') as f:
+                config = yaml.safe_load(f)
+                if config and config.get('project_id'):
+                    return config['project_id']
+        except Exception:
+            pass
+
+    # Priority 2: Fall back to sessions.db most recent session
+    import sqlite3
+    db_path = project_path / '.empirica' / 'sessions' / 'sessions.db'
     if not db_path.exists():
         return None
 
     try:
         conn = sqlite3.connect(str(db_path))
         cursor = conn.cursor()
-        # Get project_id from the most recent session
         cursor.execute("""
             SELECT DISTINCT project_id FROM sessions
             WHERE project_id IS NOT NULL AND project_id != ''

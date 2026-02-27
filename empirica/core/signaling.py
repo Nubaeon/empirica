@@ -10,7 +10,6 @@ This module provides the single source of truth for:
 Used by:
 - statusline_empirica.py (CLI statusline)
 - post-compact.py hook (memory learning)
-- check-drift CLI command
 
 Author: Claude Code
 Date: 2025-12-30

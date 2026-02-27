@@ -28,7 +28,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 PLUGIN_NAME = "empirica-integration"
-PLUGIN_VERSION = "1.5.8"
+PLUGIN_VERSION = "1.5.9"
 
 
 def _find_python() -> str:
@@ -345,14 +345,14 @@ def handle_setup_claude_code_command(args):
         if not _hook_exists(settings['hooks']['SessionStart'], 'post-compact.py'):
             settings['hooks']['SessionStart'].extend([
                 {
-                    "matcher": "compact",
+                    "matcher": "compact|resume",
                     "hooks": [
                         {"type": "command", "command": postcompact_script, "timeout": 30},
                         {"type": "command", "command": ewm_script, "timeout": 10, "allowFailure": True}
                     ]
                 },
                 {
-                    "matcher": "new|fresh",
+                    "matcher": "startup",
                     "hooks": [
                         {"type": "command", "command": sessioninit_script, "timeout": 30},
                         {"type": "command", "command": ewm_script, "timeout": 10, "allowFailure": True}

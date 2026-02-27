@@ -314,14 +314,14 @@ Sentinel controls praxic actions (Edit, Write, NotebookEdit):
 - Vector threshold validation
 - Anti-gaming: minimum noetic duration (30s) with evidence check
 
-**Configuration:**
-```bash
-export EMPIRICA_SENTINEL_LOOPING=false        # Disable investigate loops
-export EMPIRICA_SENTINEL_MODE=observer        # Log-only (no blocking)
-export EMPIRICA_SENTINEL_MODE=controller      # Active blocking (default)
-export EMPIRICA_SENTINEL_CHECK_EXPIRY=true    # 30-min CHECK expiry
-export EMPIRICA_SENTINEL_REQUIRE_BOOTSTRAP=true
-```
+**Configuration (user-only, DO NOT execute):**
+
+| Variable | Values | Default | Effect |
+|----------|--------|---------|--------|
+| `EMPIRICA_SENTINEL_LOOPING` | `true`, `false` | `true` | When `false`, disables Sentinel gating entirely |
+| `EMPIRICA_SENTINEL_MODE` | `observer`, `controller` | `controller` | `observer` = log only, `controller` = actively block |
+| `EMPIRICA_SENTINEL_CHECK_EXPIRY` | `true`, `false` | `false` | 30-min CHECK expiry |
+| `EMPIRICA_SENTINEL_REQUIRE_BOOTSTRAP` | `true`, `false` | `false` | Require bootstrap before proceed |
 
 ---
 
@@ -385,7 +385,6 @@ empirica unknown-log --unknown "..."     # Log noetic artifact (unknown)
 empirica deadend-log --approach "..."    # Log noetic artifact (dead-end)
 empirica goals-create --objective "..."  # Create praxic artifact (goal)
 empirica goals-list                      # Show active goals
-empirica check-drift --session-id <ID>   # Detect epistemic drift
 empirica calibration-report              # Self-referential calibration (Track 1)
 empirica calibration-report --grounded   # Grounded calibration (Track 2)
 empirica calibration-report --trajectory # Calibration trend over time

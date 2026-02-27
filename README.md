@@ -94,42 +94,46 @@ Empirica was battle-tested here before expanding to other domains.
 
 **Visit [getempirica.com](https://getempirica.com)** for the guided setup experience with tutorials and support.
 
-### For Developers: One-Command Install
+### For Developers
 
-The installer sets up everything: Claude Code hooks, system prompts, environment configuration, and a demo project.
-
-#### Linux / macOS
+#### Install + Claude Code Integration (Recommended)
 
 ```bash
+pip install empirica
+empirica setup-claude-code
+```
+
+`setup-claude-code` is the one-command integration that installs everything Claude Code needs:
+
+- **Plugin** — `empirica-integration` to `~/.claude/plugins/local/` (skills, agents, hooks, scripts)
+- **Sentinel hooks** — PreToolUse gates that block praxic tools (Edit/Write/Bash) until CHECK passes
+- **Session lifecycle hooks** — SessionStart/SessionEnd for automatic session management, SubagentStart/Stop for delegation tracking, PreCompact for epistemic state persistence across context compaction
+- **System prompt** — Empirica prompt as `@include` reference in CLAUDE.md (preserves your existing instructions)
+- **StatusLine** — Live metacognitive signal in your terminal (confidence, phase, drift)
+- **MCP server** — Installs `empirica-mcp` and configures `.claude/mcp.json`
+- **Semantic layer check** — Detects Ollama + nomic-embed-text + Qdrant availability (optional but recommended for cross-session memory)
+
+```bash
+# Options
+empirica setup-claude-code --force        # Reinstall even if already present
+empirica setup-claude-code --skip-mcp     # Skip MCP server setup
+empirica setup-claude-code --skip-claude-md  # Keep existing system prompt
+```
+
+#### One-Line Installer (Alternative)
+
+The installer handles pip install + Claude Code setup + demo project:
+
+```bash
+# Linux / macOS
 curl -fsSL https://raw.githubusercontent.com/Nubaeon/empirica/main/scripts/install.py | python3 -
-```
 
-Or download and run manually:
-
-```bash
-wget https://raw.githubusercontent.com/Nubaeon/empirica/main/scripts/install.py
-python3 install.py
-```
-
-#### Windows (PowerShell)
-
-```powershell
+# Windows (PowerShell)
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Nubaeon/empirica/main/scripts/install.py" -OutFile "install.py"
 python install.py
 ```
 
-#### What the Installer Does
-
-1. **Installs Empirica** via pip
-2. **Sets up Claude Code hooks** for automatic epistemic continuity
-3. **Places CLAUDE.md** in the correct location (`~/.claude/CLAUDE.md`)
-4. **Configures environment variables** for your shell
-5. **Creates a demo project** so you can try it immediately
-6. **Optionally sets up Qdrant** for semantic memory (local vector search)
-
-### Manual Installation
-
-If you prefer manual setup:
+#### Manual Installation
 
 ```bash
 # Install from PyPI
@@ -146,33 +150,20 @@ cd your-project
 empirica project-init
 ```
 
-> **⚠️ Important: System Prompt Required**
->
-> Empirica requires a system prompt to function correctly. The CLI tools work without it,
-> but the full epistemic workflow (CASCADE phases, calibration, Sentinel gates) requires
-> the AI to understand the framework.
->
-> **For manual installations, copy the system prompt:**
-> ```bash
-> # Create Claude Code config directory
-> mkdir -p ~/.claude
->
-> # Copy the system prompt (choose your AI)
-> curl -fsSL https://raw.githubusercontent.com/Nubaeon/empirica/main/docs/human/developers/system-prompts/CLAUDE.md \
->   -o ~/.claude/CLAUDE.md
-> ```
->
-> The installer handles this automatically. See [System Prompts](docs/human/developers/system-prompts/)
-> for prompts for other AI assistants (Copilot, etc.).
+> **Note:** The CLI tools work standalone, but the full epistemic workflow (CASCADE phases,
+> calibration, Sentinel gates) requires the AI to have the system prompt loaded.
+> `setup-claude-code` handles this automatically. For other AI platforms, see
+> [System Prompts](docs/human/developers/system-prompts/) for Copilot, Gemini, Qwen, and Roo Code.
 
-### Homebrew (macOS)
+#### Homebrew (macOS)
 
 ```bash
 brew tap nubaeon/tap
 brew install empirica
+empirica setup-claude-code  # Don't forget this step
 ```
 
-### Docker
+#### Docker
 
 ```bash
 # Standard image (Debian slim, ~414MB)
@@ -189,63 +180,42 @@ docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.5.8 /bin/b
 
 ## After Installation: Getting Started
 
-Once installed, let Empirica teach you how it works:
-
-### Option 1: Interactive Onboarding (Recommended)
+### Interactive Onboarding (Recommended)
 
 ```bash
-# Start the guided onboarding experience
 empirica onboard
 ```
 
-This walks you through creating your first session, understanding vectors, and logging your first finding.
+Walks you through the full workflow: CASCADE phases, 13 epistemic vectors, noetic/praxic phases, transaction discipline, goal tracking, calibration reports, and all CLI commands with examples.
 
-### Option 2: Ask the AI to Explain
+### Initialize Your Project
 
-If you're using Claude Code or another AI with Empirica installed:
-
-```
-"Explain how Empirica works using docs-explain"
-"What are epistemic vectors and how do I use them?"
-"Help me set up Empirica for my project"
+```bash
+cd your-project
+empirica project-init
+empirica session-create --ai-id claude-code --output json
 ```
 
-The AI can query Empirica's documentation semantically and explain concepts tailored to your context.
+Then just start working — with Claude Code hooks active, the Sentinel automatically manages the epistemic workflow. Log findings as you discover them, create goals for your tasks, and let the measurement system track your learning.
 
-### Option 3: Explore Documentation
+### Explore Documentation
 
 ```bash
 # Search documentation semantically
 empirica docs-explain --topic "epistemic vectors"
 empirica docs-explain --topic "CASCADE workflow"
-empirica docs-explain --topic "session management"
 
 # List all available topics
 empirica docs-list
 ```
 
-### Option 4: Try the Demo Project
+### Try the Demo Project
 
-The installer creates a demo project at `~/empirica-demo/`. Navigate there and follow the `WALKTHROUGH.md`:
+The one-line installer creates a demo project at `~/empirica-demo/`:
 
 ```bash
 cd ~/empirica-demo
 cat WALKTHROUGH.md
-```
-
-### Expanding Your Own Projects
-
-Once you understand the basics, add epistemic foundations to your existing projects:
-
-```bash
-cd your-existing-project
-empirica project-init
-
-# Create your first session
-empirica session-create --ai-id claude-code --output json
-
-# Start tracking what you know
-empirica preflight-submit -
 ```
 
 ---
@@ -352,19 +322,18 @@ Projects using Empirica's epistemic foundations:
 |---------|-------------|----------|
 | **[Docpistemic](https://github.com/Nubaeon/docpistemic)** | Epistemic documentation system | Self-aware documentation that tracks what it explains well vs. poorly |
 | **[Carapace](https://github.com/Nubaeon/carapace)** | Defensive AI shell | Security-focused AI wrapper with epistemic safety gates |
-| **[Empirica CRM](https://github.com/Nubaeon/empirica-crm)** | Customer relationship management | CRM where AI knows its confidence about customer insights |
-
 **Building something with Empirica?** Open an issue to get listed here.
 
 ---
 
-## What's New in 1.5.8
+## What's New in 1.5.9
 
-- **Qdrant Hardening** — File-based fallback removed (#45), None guards on all 36 call sites, graceful degradation when no server
-- **Schema Migration Fix** (#44) — CREATE INDEX runs after migrations that add columns, fixing crash on existing DBs
-- **project-embed Path Resolution** (#46) — Resolves correct sessions.db from workspace.db, not CWD
-- **Instance Isolation** — Closed transactions persist as project anchors for post-compact resolution
-- **transaction-adopt Fix** — Same-instance adoption no longer loses the transaction file
+- **Sentinel File-Based Control** — Sentinel enable/disable via `~/.empirica/sentinel_enabled` file flag. Dynamically settable without session restart (env vars required terminal restart)
+- **Sentinel Bypass Fix** — System prompt contained bare `export` commands that Claudes would execute, disabling the Sentinel. Replaced with tables + "DO NOT execute" warnings
+- **SessionStart Matcher Fix** — `setup-claude-code` generated invalid matchers (`new|fresh`, bare `compact`). Fixed to valid Claude Code values (`startup`, `compact|resume`)
+- **MirrorDriftMonitor Removed** — Vestigial drift detection superseded by grounded calibration pipeline. Removed `check-drift` CLI command, MCP tool, and drift module (-562 lines)
+- **Transaction Planning Skill** — `/epistemic-transaction` skill gains interactive `plan-transactions` mode: interview → explore → decompose → plan with estimated vectors → execute
+- **Phantom Project Fix** — Project ID resolution uses `project.yaml` as authoritative source, preventing self-propagating phantom project IDs
 
 ---
 
