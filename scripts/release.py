@@ -409,7 +409,13 @@ class ReleaseManager:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         info(f"Running: {cmd_str}{cwd_info}")
-        return subprocess.run(cmd, check=check, capture_output=True, text=True, cwd=cwd)
+        result = subprocess.run(cmd, check=False, capture_output=True, text=True, cwd=cwd)
+        if result.returncode != 0:
+            if result.stderr:
+                warning(f"stderr: {result.stderr.strip()}")
+            if check:
+                error(f"Command failed (exit {result.returncode}): {cmd_str}")
+        return result
 
     def build_package(self):
         """Build Python package"""
@@ -430,7 +436,8 @@ class ReleaseManager:
                     info(f"Removed {path}")
 
         # Build
-        self.run_command(["python3", "-m", "build", "--wheel", "--sdist"])
+        self.run_command(["python3", "-m", "build", "--wheel", "--sdist"],
+                         cwd=str(self.repo_root))
         success("Package built successfully")
 
     def build_mcp_package(self):
@@ -540,7 +547,7 @@ class ReleaseManager:
         for tag in debian_tags:
             build_cmd.extend(["-t", tag])
 
-        self.run_command(build_cmd)
+        self.run_command(build_cmd, cwd=str(self.repo_root))
         success("Docker image built (Debian)")
 
         for tag in debian_tags:
@@ -558,7 +565,7 @@ class ReleaseManager:
             for tag in alpine_tags:
                 build_cmd.extend(["-t", tag])
 
-            self.run_command(build_cmd)
+            self.run_command(build_cmd, cwd=str(self.repo_root))
             success("Docker image built (Alpine)")
 
             for tag in alpine_tags:
