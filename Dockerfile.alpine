@@ -16,9 +16,13 @@ LABEL security.hardened="true"
 # Set working directory
 WORKDIR /app
 
+# Upgrade all system packages to pick up security patches
+# Fixes: CVE-2025-15467, CVE-2025-69419/20/21 (OpenSSL), CVE-2026-25210 (expat),
+#         CVE-2025-14017 (curl), CVE-2025-11187, CVE-2025-15468 (OpenSSL)
+RUN apk upgrade --no-cache
+
 # Install minimal system dependencies
 # - git: required for empirica git operations
-# - build deps: only for compilation, removed after
 RUN apk add --no-cache \
     git \
     && rm -rf /var/cache/apk/*
@@ -26,8 +30,9 @@ RUN apk add --no-cache \
 # Copy package files
 COPY dist/empirica-1.5.9-py3-none-any.whl /tmp/
 
-# Upgrade pip and setuptools first (CVE-2025-47273, CVE-2024-6345)
-RUN pip install --no-cache-dir --upgrade pip setuptools
+# Upgrade pip, setuptools, and wheel
+# CVE-2025-47273 (setuptools), CVE-2024-6345 (setuptools), CVE-2026-24049 (wheel <0.46.2)
+RUN pip install --no-cache-dir --upgrade pip setuptools "wheel>=0.46.2"
 
 # Install Empirica with no cache
 RUN pip install --no-cache-dir --no-compile /tmp/empirica-1.5.9-py3-none-any.whl \
