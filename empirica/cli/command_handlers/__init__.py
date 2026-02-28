@@ -34,12 +34,12 @@ from .goal_commands import (
     handle_goals_get_stale_command,
     handle_goals_refresh_command
 )
-from .goals_ready_command import handle_goals_ready_command
-from .goal_claim_command import handle_goals_claim_command
-from .goal_complete_command import handle_goals_complete_command
-from .goal_discovery_commands import (
+from .goal_commands import (
+    handle_goals_ready_command,
+    handle_goals_claim_command,
+    handle_goals_complete_command,
     handle_goals_discover_command,
-    handle_goals_resume_command
+    handle_goals_resume_command,
 )
 from .identity_commands import (
     handle_identity_create_command,
@@ -85,10 +85,8 @@ from .project_commands import (
     handle_project_handoff_command,
     handle_project_list_command,
     handle_project_switch_command,
-    handle_workspace_overview_command,
-    handle_workspace_map_command,
-    handle_workspace_list_command,
-    handle_ecosystem_check_command,
+)
+from .artifact_log_commands import (
     handle_finding_log_command,
     handle_unknown_log_command,
     handle_unknown_resolve_command,
@@ -96,7 +94,15 @@ from .project_commands import (
     handle_assumption_log_command,
     handle_decision_log_command,
     handle_refdoc_add_command,
-    handle_source_add_command
+    handle_source_add_command,
+)
+from .workspace_commands import (
+    handle_workspace_overview_command,
+    handle_workspace_map_command,
+    handle_workspace_list_command,
+)
+from .ecosystem_commands import (
+    handle_ecosystem_check_command,
 )
 from .project_init import handle_project_init_command
 from .workspace_init import handle_workspace_init_command

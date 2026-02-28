@@ -14,8 +14,11 @@ These commands provide JSON output for MCP v2 server integration.
 
 import json
 import logging
+import subprocess
 import time
 import sys
+from pathlib import Path
+from typing import List, Dict, Any
 from ..cli_utils import handle_cli_error, parse_json_safely
 
 logger = logging.getLogger(__name__)
@@ -1648,3 +1651,849 @@ def handle_goals_refresh_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Refresh goal", getattr(args, 'verbose', False))
+
+# --- Merged from goals_ready_command.py ---
+
+def handle_goals_ready_command(args):
+    """Query BEADS ready work + filter by Empirica epistemic criteria
+    
+    Returns tasks that are:
+    1. Dependency-ready (BEADS: no open blockers)
+    2. Epistemically-ready (Empirica: confidence/uncertainty thresholds)
+    """
+    try:
+        from empirica.integrations.beads import BeadsAdapter
+        from empirica.data.session_database import SessionDatabase
+        
+        # Session ID is optional - auto-detect active session if not provided
+        session_id = getattr(args, 'session_id', None)
+        min_confidence = getattr(args, 'min_confidence', 0.7)
+        max_uncertainty = getattr(args, 'max_uncertainty', 0.3)
+        min_priority = getattr(args, 'min_priority', None)
+        output_format = getattr(args, 'output', 'json')
+
+        # Initialize adapters
+        beads = BeadsAdapter()
+        db = SessionDatabase()
+
+        # Auto-detect active session if not provided
+        if not session_id:
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT session_id FROM sessions
+                WHERE end_time IS NULL
+                ORDER BY start_time DESC
+                LIMIT 1
+            """)
+            row = cursor.fetchone()
+            if row:
+                session_id = row['session_id']
+                if getattr(args, 'verbose', False):
+                    print(f"📍 Auto-detected active session: {session_id[:8]}...", file=sys.stderr)
+            else:
+                result = {
+                    "ok": False,
+                    "error": "No active session found",
+                    "hint": "Create a session: empirica session-create --ai-id <YOUR_AI_ID>"
+                }
+                if output_format == 'json':
+                    print(json.dumps(result, indent=2))
+                else:
+                    print("❌ No active session found")
+                    print("   Hint: Create a session: empirica session-create --ai-id <YOUR_AI_ID>")
+                db.close()
+                return 0
+        
+        ready_work = []
+        
+        # Check if BEADS available
+        if not beads.is_available():
+            result = {
+                "ok": False,
+                "error": "BEADS not available",
+                "hint": "Install bd CLI or use goals without --use-beads",
+                "ready_work": []
+            }
+            
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                print("❌ BEADS not available")
+                print("   Hint: Install bd CLI: curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash")
+            
+            db.close()
+            # Return 0 to indicate success
+            return 0
+        
+        # Query BEADS for ready work
+        beads_ready = beads.get_ready_work(limit=50, priority=min_priority)
+        
+        if not beads_ready:
+            result = {
+                "ok": True,
+                "ready_work": [],
+                "message": "No ready work found in BEADS"
+            }
+            
+            if output_format == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                print("📭 No ready work found")
+            
+            db.close()
+            # Return 0 to indicate success
+            return 0
+        
+        # Map BEADS issues to Empirica goals
+        for beads_issue in beads_ready:
+            beads_id = beads_issue.get('id')
+            
+            # Find Empirica goal with this beads_issue_id
+            cursor = db.conn.execute("""
+                SELECT id, objective, scope, status
+                FROM goals
+                WHERE beads_issue_id = ? AND session_id = ?
+            """, (beads_id, session_id))
+            
+            goal_row = cursor.fetchone()
+            
+            if not goal_row:
+                # BEADS issue not linked to Empirica goal
+                continue
+            
+            goal_id = goal_row[0]
+            objective = goal_row[1]
+            scope_json = goal_row[2]
+            status = goal_row[3]
+            
+            # Parse scope
+            scope = json.loads(scope_json) if scope_json else {}
+            
+            # Get epistemic state from latest CHECK or PREFLIGHT
+            cursor = db.conn.execute("""
+                SELECT phase, engagement, know, do, context, clarity, coherence, 
+                       signal, density, state, change, completion, impact, uncertainty
+                FROM reflexes
+                WHERE session_id = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """, (session_id,))
+            
+            reflex_row = cursor.fetchone()
+            
+            epistemic_ready = True
+            last_confidence = None
+            last_uncertainty = None
+            why_not_ready = None
+            
+            if reflex_row:
+                # Build vectors dict from individual columns
+                vectors = {
+                    'engagement': reflex_row[1],
+                    'know': reflex_row[2],
+                    'do': reflex_row[3],
+                    'context': reflex_row[4],
+                    'clarity': reflex_row[5],
+                    'coherence': reflex_row[6],
+                    'signal': reflex_row[7],
+                    'density': reflex_row[8],
+                    'state': reflex_row[9],
+                    'change': reflex_row[10],
+                    'completion': reflex_row[11],
+                    'impact': reflex_row[12],
+                    'uncertainty': reflex_row[13]
+                }
+                phase = reflex_row[0]
+                
+                # Extract epistemic state
+                last_confidence = vectors.get('know', 0.5)
+                last_uncertainty = vectors.get('uncertainty', 0.5)
+                
+                # Check epistemic readiness
+                if last_confidence < min_confidence:
+                    epistemic_ready = False
+                    why_not_ready = f"Confidence too low ({last_confidence:.2f} < {min_confidence})"
+                
+                if last_uncertainty > max_uncertainty:
+                    epistemic_ready = False
+                    why_not_ready = f"Uncertainty too high ({last_uncertainty:.2f} > {max_uncertainty})"
+            else:
+                # No epistemic data available - assume not ready
+                epistemic_ready = False
+                why_not_ready = "No PREFLIGHT/CHECK data available"
+            
+            # Build ready work item
+            ready_item = {
+                "goal_id": goal_id,
+                "beads_issue_id": beads_id,
+                "objective": objective,
+                "priority": beads_issue.get('priority', 2),
+                "no_blockers": True,  # BEADS already filtered for this
+                "epistemic_ready": epistemic_ready,
+                "last_check_confidence": last_confidence,
+                "preflight_uncertainty": last_uncertainty,
+                "scope": scope,
+                "status": status
+            }
+            
+            if epistemic_ready:
+                ready_item["why_ready"] = "High confidence, low uncertainty, no blockers"
+            else:
+                ready_item["why_not_ready"] = why_not_ready
+            
+            ready_work.append(ready_item)
+        
+        # Filter to only epistemically-ready items
+        epistemically_ready_work = [item for item in ready_work if item["epistemic_ready"]]
+        
+        result = {
+            "ok": True,
+            "ready_work": epistemically_ready_work,
+            "total_beads_ready": len(beads_ready),
+            "total_mapped_to_goals": len(ready_work),
+            "epistemically_ready_count": len(epistemically_ready_work),
+            "filters": {
+                "min_confidence": min_confidence,
+                "max_uncertainty": max_uncertainty,
+                "min_priority": min_priority
+            }
+        }
+        
+        # Format output
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"📋 Ready Work (Dependency + Epistemic)")
+            print(f"   BEADS ready: {len(beads_ready)}")
+            print(f"   Mapped to goals: {len(ready_work)}")
+            print(f"   Epistemically ready: {len(epistemically_ready_work)}")
+            print()
+            
+            if epistemically_ready_work:
+                for item in epistemically_ready_work:
+                    print(f"✅ {item['beads_issue_id']}: {item['objective']}")
+                    print(f"   Priority: {item['priority']}, Confidence: {item['last_check_confidence']:.2f}, Uncertainty: {item['preflight_uncertainty']:.2f}")
+                    print(f"   Why ready: {item['why_ready']}")
+                    print()
+            else:
+                print("📭 No epistemically-ready work found")
+                print("   (Tasks may have BEADS blockers cleared but epistemic confidence too low)")
+        
+        db.close()
+        print(json.dumps(result, indent=2))
+        return 0
+        
+    except Exception as e:
+        logger.error(f"goals-ready error: {e}", exc_info=True)
+        result = {
+            "ok": False,
+            "error": str(e)
+        }
+        print(json.dumps(result, indent=2))
+        return 1
+
+
+# --- Merged from goal_claim_command.py ---
+
+def handle_goals_claim_command(args):
+    """Handle goals-claim command - Claim goal and create git branch"""
+    try:
+        from empirica.core.goals.repository import GoalRepository
+        from empirica.integrations.branch_mapping import get_branch_mapping
+        from empirica.data.session_database import SessionDatabase
+        
+        goal_id = args.goal_id
+        create_branch = getattr(args, 'create_branch', True)
+        run_preflight = getattr(args, 'run_preflight', False)
+        output_format = getattr(args, 'output', 'json')
+        
+        # Validate goal exists
+        goal_repo = GoalRepository()
+        goal = goal_repo.get_goal(goal_id)
+
+        if not goal:
+            result = {
+                "ok": False,
+                "error": f"Goal not found: {goal_id}"
+            }
+            print(json.dumps(result) if output_format == 'json' else f"❌ {result['error']}")
+            sys.exit(1)
+
+        # Get session_id from the database (not stored in the Goal object itself)
+        db = SessionDatabase()
+        cursor = db.conn.execute(
+            "SELECT session_id FROM goals WHERE id = ?",
+            (goal_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            result = {
+                "ok": False,
+                "error": f"Goal session not found in database: {goal_id}"
+            }
+            print(json.dumps(result) if output_format == 'json' else f"❌ {result['error']}")
+            db.close()
+            sys.exit(1)
+        session_id = row[0]
+
+        # Get AI ID from session
+        cursor = db.conn.execute(
+            "SELECT ai_id FROM sessions WHERE session_id = ?",
+            (session_id,)
+        )
+        row = cursor.fetchone()
+        ai_id = row[0] if row else "unknown"
+        
+        # Get BEADS issue ID
+        cursor = db.conn.execute(
+            "SELECT beads_issue_id FROM goals WHERE id = ?",
+            (goal_id,)
+        )
+        row = cursor.fetchone()
+        beads_issue_id = row[0] if row and row[0] else None
+        db.close()
+        
+        result = {
+            "ok": True,
+            "goal_id": goal_id,
+            "session_id": session_id,
+            "beads_issue_id": beads_issue_id
+        }
+        
+        # Update BEADS status to in_progress
+        if beads_issue_id:
+            try:
+                from empirica.integrations.beads import BeadsAdapter
+                beads = BeadsAdapter()
+                if beads.is_available():
+                    beads.update_status(beads_issue_id, "in_progress")
+                    result["beads_status_updated"] = True
+            except Exception as e:
+                logger.warning(f"Failed to update BEADS status: {e}")
+                result["beads_status_updated"] = False
+        
+        # Create git branch
+        if create_branch:
+            try:
+                # Generate branch name
+                if beads_issue_id:
+                    branch_name = f"epistemic/reasoning/issue-{beads_issue_id}"
+                else:
+                    branch_name = f"epistemic/reasoning/goal-{goal_id[:8]}"
+                
+                # Check if branch already exists
+                check_result = subprocess.run(
+                    ["git", "rev-parse", "--verify", branch_name],
+                    capture_output=True,
+                    text=True
+                )
+                
+                if check_result.returncode == 0:
+                    # Branch exists, just checkout
+                    subprocess.run(
+                        ["git", "checkout", branch_name],
+                        check=True,
+                        capture_output=True
+                    )
+                    result["branch_action"] = "checked_out_existing"
+                else:
+                    # Create new branch
+                    subprocess.run(
+                        ["git", "checkout", "-b", branch_name],
+                        check=True,
+                        capture_output=True
+                    )
+                    result["branch_action"] = "created_new"
+                
+                result["branch_name"] = branch_name
+                result["branch_created"] = True
+                
+                # Add branch mapping
+                try:
+                    branch_mapping = get_branch_mapping()
+                    branch_mapping.add_mapping(
+                        branch_name=branch_name,
+                        goal_id=goal_id,
+                        beads_issue_id=beads_issue_id,
+                        ai_id=ai_id,
+                        session_id=session_id
+                    )
+                    result["branch_mapping_saved"] = True
+                except Exception as e:
+                    logger.warning(f"Failed to save branch mapping: {e}")
+                    result["branch_mapping_saved"] = False
+                
+            except subprocess.CalledProcessError as e:
+                result["branch_created"] = False
+                result["branch_error"] = str(e)
+        else:
+            result["branch_created"] = False
+            result["branch_skipped"] = True
+        
+        # Run PREFLIGHT if requested
+        if run_preflight:
+            try:
+                # Import preflight command
+                from .cascade_commands import handle_preflight_command
+                
+                # Create mock args for preflight
+                class MockArgs:
+                    """Mock arguments for calling preflight handler."""
+
+                    def __init__(self, session_id: str, prompt: str) -> None:
+                        """Initialize mock args with session ID and prompt."""
+                        self.session_id = session_id
+                        self.prompt = prompt
+                        self.prompt_only = False
+                        self.output = 'json'
+                
+                preflight_args = MockArgs(
+                    session_id=goal.session_id,
+                    prompt=f"Starting work on goal: {goal.objective}"
+                )
+                
+                # Run preflight (this will print its own output)
+                handle_preflight_command(preflight_args)
+                result["preflight_started"] = True
+                
+            except Exception as e:
+                logger.warning(f"Failed to run PREFLIGHT: {e}")
+                result["preflight_started"] = False
+                result["preflight_error"] = str(e)
+        else:
+            result["preflight_started"] = False
+        
+        # Output result
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"✅ Claimed goal: {goal_id[:8]}")
+            if beads_issue_id and result.get("beads_status_updated"):
+                print(f"✅ Updated BEADS status: in_progress")
+            if result.get("branch_created"):
+                print(f"✅ {'Created' if result['branch_action'] == 'created_new' else 'Checked out'} branch: {result['branch_name']}")
+            if result.get("branch_mapping_saved"):
+                print(f"✅ Branch mapping saved")
+            if result.get("preflight_started"):
+                print(f"🧠 Running PREFLIGHT...")
+            print(f"✅ Ready to start work!")
+        
+    except Exception as e:
+        handle_cli_error(e, "goals-claim", getattr(args, 'output', 'json'))
+
+
+# --- Merged from goal_complete_command.py ---
+
+def handle_goals_complete_command(args):
+    """Handle goals-complete command - Complete goal, merge branch, close BEADS"""
+    try:
+        from empirica.core.goals.repository import GoalRepository
+        from empirica.integrations.branch_mapping import get_branch_mapping
+        from empirica.data.session_database import SessionDatabase
+        
+        goal_id = args.goal_id
+        run_postflight = getattr(args, 'run_postflight', False)
+        merge_branch = getattr(args, 'merge_branch', False)
+        close_reason = getattr(args, 'reason', 'completed')
+        output_format = getattr(args, 'output', 'json')
+        
+        # Validate goal exists - support prefix matching like git
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # First try exact match
+        cursor.execute("SELECT * FROM goals WHERE id = ?", (goal_id,))
+        goal = cursor.fetchone()
+
+        # If no exact match, try prefix match
+        if not goal:
+            cursor.execute("SELECT * FROM goals WHERE id LIKE ?", (f"{goal_id}%",))
+            matches = cursor.fetchall()
+
+            if len(matches) == 0:
+                result = {
+                    "ok": False,
+                    "error": f"Goal not found: {goal_id}"
+                }
+                print(json.dumps(result) if output_format == 'json' else f"❌ {result['error']}")
+                sys.exit(1)
+            elif len(matches) > 1:
+                # Ambiguous prefix - show matching IDs
+                match_ids = [m['id'][:12] for m in matches]
+                result = {
+                    "ok": False,
+                    "error": f"Ambiguous goal prefix '{goal_id}' matches {len(matches)} goals",
+                    "matches": match_ids,
+                    "hint": "Provide more characters to disambiguate"
+                }
+                if output_format == 'json':
+                    print(json.dumps(result))
+                else:
+                    print(f"❌ Ambiguous prefix '{goal_id}' matches {len(matches)} goals:")
+                    for mid in match_ids:
+                        print(f"   - {mid}...")
+                sys.exit(1)
+            else:
+                goal = matches[0]
+                goal_id = goal['id']  # Use full ID for subsequent operations
+        
+        # Get BEADS issue ID and session info  
+        cursor = db.conn.execute(
+            "SELECT beads_issue_id FROM goals WHERE id = ?",
+            (goal_id,)
+        )
+        row = cursor.fetchone()
+        beads_issue_id = row[0] if row and row[0] else None
+        db.close()
+        
+        # Update goal status to completed
+        import time
+        db2 = SessionDatabase()
+        db2.conn.execute(
+            "UPDATE goals SET status = 'completed', is_completed = 1, completed_timestamp = ? WHERE id = ?",
+            (time.time(), goal_id)
+        )
+        db2.conn.commit()
+        db2.close()
+
+        result = {
+            "ok": True,
+            "goal_id": goal_id,
+            "objective": goal['objective'],
+            "session_id": goal['session_id'],
+            "beads_issue_id": beads_issue_id,
+            "status_updated": True
+        }
+        
+        # Run POSTFLIGHT if requested
+        if run_postflight:
+            try:
+                from .cascade_commands import handle_postflight_command
+                
+                # Create mock args for postflight
+                class MockArgs:
+                    """Mock arguments for calling postflight handler."""
+
+                    def __init__(self, session_id: str, task_summary: str) -> None:
+                        """Initialize mock args with session ID and task summary."""
+                        self.session_id = session_id
+                        self.task_summary = task_summary
+                        self.output = 'json'
+                
+                postflight_args = MockArgs(
+                    session_id=goal['session_id'],
+                    task_summary=f"Completed goal: {goal['objective']}"
+                )
+                
+                # Run postflight (this will print its own output)
+                handle_postflight_command(postflight_args)
+                result["postflight_started"] = True
+                
+            except Exception as e:
+                logger.warning(f"Failed to run POSTFLIGHT: {e}")
+                result["postflight_started"] = False
+                result["postflight_error"] = str(e)
+        else:
+            result["postflight_started"] = False
+        
+        # Close BEADS issue
+        if beads_issue_id:
+            try:
+                from empirica.integrations.beads import BeadsAdapter
+                beads = BeadsAdapter()
+                if beads.is_available():
+                    beads.close_issue(beads_issue_id, reason=close_reason)
+                    result["beads_issue_closed"] = True
+            except Exception as e:
+                logger.warning(f"Failed to close BEADS issue: {e}")
+                result["beads_issue_closed"] = False
+                result["beads_error"] = str(e)
+        else:
+            result["beads_issue_closed"] = False
+            result["beads_not_linked"] = True
+        
+        # Get branch mapping (gracefully degrade if not in git repo)
+        try:
+            branch_mapping = get_branch_mapping()
+            branch_name = branch_mapping.get_branch_for_goal(goal_id)
+        except Exception as e:
+            # Not in a git repo or git not available - that's fine, goal is already completed in DB
+            logger.debug(f"Git operations unavailable: {e}")
+            branch_mapping = None
+            branch_name = None
+            result["git_available"] = False
+
+        if branch_name:
+            result["branch_name"] = branch_name
+
+            # Merge branch if requested
+            if merge_branch:
+                try:
+                    # Get current branch
+                    current_branch_result = subprocess.run(
+                        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    current_branch = current_branch_result.stdout.strip()
+
+                    # If we're on the goal branch, switch to main first
+                    if current_branch == branch_name:
+                        subprocess.run(
+                            ["git", "checkout", "main"],
+                            check=True,
+                            capture_output=True
+                        )
+
+                    # Merge the branch
+                    merge_result = subprocess.run(
+                        ["git", "merge", "--no-ff", branch_name, "-m", f"Merge goal: {goal['objective']}"],
+                        capture_output=True,
+                        text=True
+                    )
+
+                    if merge_result.returncode == 0:
+                        result["branch_merged"] = True
+                        result["merge_commit"] = subprocess.run(
+                            ["git", "rev-parse", "HEAD"],
+                            capture_output=True,
+                            text=True,
+                            check=True
+                        ).stdout.strip()
+
+                        # Optionally delete the branch
+                        if getattr(args, 'delete_branch', False):
+                            subprocess.run(
+                                ["git", "branch", "-d", branch_name],
+                                check=True,
+                                capture_output=True
+                            )
+                            result["branch_deleted"] = True
+                    else:
+                        result["branch_merged"] = False
+                        result["merge_error"] = merge_result.stderr
+
+                except subprocess.CalledProcessError as e:
+                    result["branch_merged"] = False
+                    result["merge_error"] = str(e)
+            else:
+                result["branch_merged"] = False
+                result["merge_skipped"] = True
+
+            # Remove branch mapping
+            try:
+                if branch_mapping:
+                    branch_mapping.remove_mapping(branch_name, archive=True)
+                    result["branch_mapping_removed"] = True
+            except Exception as e:
+                logger.warning(f"Failed to remove branch mapping: {e}")
+                result["branch_mapping_removed"] = False
+        else:
+            result["branch_found"] = False
+            result["branch_merged"] = False
+        
+        # Create handoff report if requested
+        if getattr(args, 'create_handoff', False):
+            try:
+                from .handoff_commands import handle_handoff_create_command
+                
+                # Create mock args for handoff
+                class MockArgs:
+                    """Mock arguments for calling handoff create handler."""
+
+                    def __init__(self, session_id: str, task_summary: str) -> None:
+                        """Initialize mock args with session ID and task summary."""
+                        self.session_id = session_id
+                        self.task_summary = task_summary
+                        self.key_findings = None
+                        self.remaining_unknowns = None
+                        self.next_session_context = None
+                        self.artifacts_created = None
+                        self.output = 'json'
+                
+                handoff_args = MockArgs(
+                    session_id=goal.session_id,
+                    task_summary=f"Completed goal: {goal.objective}"
+                )
+                
+                # Run handoff creation (this will print its own output)
+                handle_handoff_create_command(handoff_args)
+                result["handoff_created"] = True
+                
+            except Exception as e:
+                logger.warning(f"Failed to create handoff: {e}")
+                result["handoff_created"] = False
+                result["handoff_error"] = str(e)
+        else:
+            result["handoff_created"] = False
+        
+        # Output result
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"✅ Completed goal: {goal_id[:8]}")
+            if result.get("postflight_started"):
+                print(f"🧠 POSTFLIGHT completed")
+            if result.get("beads_issue_closed"):
+                print(f"✅ Closed BEADS issue: {beads_issue_id}")
+            if result.get("branch_merged"):
+                print(f"✅ Merged branch: {branch_name}")
+                if result.get("branch_deleted"):
+                    print(f"✅ Deleted branch: {branch_name}")
+            if result.get("branch_mapping_removed"):
+                print(f"✅ Branch mapping archived")
+            if result.get("handoff_created"):
+                print(f"✅ Handoff report created")
+            print(f"✅ Goal complete!")
+        
+    except Exception as e:
+        handle_cli_error(e, "goals-complete", getattr(args, 'output', 'json'))
+
+
+# --- Merged from goal_discovery_commands.py ---
+
+def handle_goals_discover_command(args):
+    """Discover goals from other AIs via git notes"""
+    try:
+        from empirica.core.canonical.empirica_git import GitGoalStore
+        
+        goal_store = GitGoalStore()
+        
+        from_ai_id = getattr(args, 'from_ai_id', None)
+        session_id = getattr(args, 'session_id', None)
+        
+        # Discover goals
+        goals = goal_store.discover_goals(
+            from_ai_id=from_ai_id,
+            session_id=session_id
+        )
+        
+        result = {
+            "ok": True,
+            "count": len(goals),
+            "goals": goals,
+            "filter": {
+                "from_ai_id": from_ai_id,
+                "session_id": session_id
+            }
+        }
+        
+        # Format output
+        if hasattr(args, 'output') and args.output == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            if not goals:
+                print("🔍 No goals found")
+                if from_ai_id:
+                    print(f"   Searched for goals from: {from_ai_id}")
+                if session_id:
+                    print(f"   Searched in session: {session_id}")
+                print("\n💡 Tip: Goals are stored in git notes when created")
+                print("   Make sure you've run 'git fetch' to get latest goals")
+            else:
+                print(f"🔍 Discovered {len(goals)} goal(s):\n")
+                for i, goal_data in enumerate(goals, 1):
+                    print(f"{i}. Goal ID: {goal_data['goal_id'][:8]}...")
+                    print(f"   Created by: {goal_data['ai_id']}")
+                    print(f"   Session: {goal_data['session_id'][:8]}...")
+                    print(f"   Objective: {goal_data['goal_data']['objective'][:80]}")
+                    print(f"   Scope: {goal_data['goal_data']['scope']}")
+                    
+                    # Show lineage
+                    if 'lineage' in goal_data and len(goal_data['lineage']) > 1:
+                        print(f"   Lineage: {len(goal_data['lineage'])} action(s)")
+                        for entry in goal_data['lineage']:
+                            print(f"     • {entry['ai_id']} - {entry['action']} at {entry['timestamp'][:10]}")
+                    
+                    print()
+                
+                print("💡 To resume a goal, use:")
+                print("   empirica goals-resume <goal-id> --ai-id <your-ai-id>")
+        
+        return result
+        
+    except Exception as e:
+        handle_cli_error(e, "Goal discovery", getattr(args, 'verbose', False))
+        # Error handler already manages output, return None to avoid duplicate output
+        return None
+
+
+def handle_goals_resume_command(args):
+    """Resume another AI's goal with epistemic handoff"""
+    try:
+        from empirica.core.canonical.empirica_git import GitGoalStore
+        from empirica.core.goals.repository import GoalRepository
+        
+        goal_id = args.goal_id
+        ai_id = getattr(args, 'ai_id', 'empirica_cli')
+        
+        goal_store = GitGoalStore()
+        
+        # Load goal from git
+        goal_data = goal_store.load_goal(goal_id)
+        
+        if not goal_data:
+            result = {
+                "ok": False,
+                "error": f"Goal {goal_id} not found in git notes"
+            }
+            
+            if hasattr(args, 'output') and args.output == 'json':
+                print(json.dumps(result, indent=2))
+            else:
+                print(f"❌ Goal {goal_id[:8]}... not found")
+                print("\n💡 Try:")
+                print("   1. empirica goals-discover --from-ai-id <other-ai>")
+                print("   2. git fetch  # Pull latest goals from remote")
+            
+            return result
+        
+        # Add lineage entry
+        goal_store.add_lineage(goal_id, ai_id, "resumed")
+        
+        # Load into local database
+        goal_repo = GoalRepository()
+        # TODO: Import goal into local database
+        
+        result = {
+            "ok": True,
+            "goal_id": goal_id,
+            "ai_id": ai_id,
+            "original_ai": goal_data['ai_id'],
+            "message": "Goal resumed successfully",
+            "objective": goal_data['goal_data']['objective'],
+            "epistemic_state": goal_data.get('epistemic_state', {})
+        }
+        
+        # Format output
+        if hasattr(args, 'output') and args.output == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"✅ Goal resumed successfully")
+            print(f"   Goal ID: {goal_id[:8]}...")
+            print(f"   Original AI: {goal_data['ai_id']}")
+            print(f"   Resuming as: {ai_id}")
+            print(f"   Objective: {goal_data['goal_data']['objective'][:80]}")
+            
+            # Show epistemic handoff
+            epistemic_state = goal_data.get('epistemic_state', {})
+            if epistemic_state:
+                print(f"\n📊 Epistemic State from {goal_data['ai_id']}:")
+                for key, value in epistemic_state.items():
+                    if isinstance(value, (int, float)):
+                        print(f"   • {key.upper()}: {value:.2f}")
+            
+            print(f"\n💡 Next steps:")
+            print(f"   1. Review original AI's epistemic state")
+            print(f"   2. Run your own preflight: empirica preflight \"<task>\" --ai-id {ai_id}")
+            print(f"   3. Compare your vectors with original AI's")
+        
+        goal_repo.close()
+        return result
+        
+    except Exception as e:
+        handle_cli_error(e, "Goal resume", getattr(args, 'verbose', False))
+        # Error handler already manages output, return None to avoid duplicate output
+        return None
+
