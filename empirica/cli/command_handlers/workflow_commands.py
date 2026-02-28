@@ -458,6 +458,45 @@ def handle_preflight_submit_command(args):
             except Exception:
                 pass
 
+            # INTRA-SESSION CALIBRATION FEEDBACK: Surface previous transaction's grounded gaps
+            # This closes the feedback loop WITHIN a session — the AI sees where it was wrong
+            # in the last transaction while it still has context to understand why.
+            # Distinct from learning_prior (aggregate Bayesian across all sessions) and
+            # calibration_warnings (semantically similar past tasks via Qdrant).
+            previous_transaction_feedback = None
+            try:
+                if ai_id and ai_id != 'unknown' and project_id:
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT gv.calibration_gaps, gv.overall_calibration_score,
+                               gv.grounded_coverage, gv.created_at,
+                               gv.self_assessed_vectors
+                        FROM grounded_verifications gv
+                        JOIN sessions s ON gv.session_id = s.session_id
+                        WHERE gv.ai_id = ? AND s.project_id = ?
+                        ORDER BY gv.created_at DESC
+                        LIMIT 1
+                    """, (ai_id, project_id))
+                    prev = cursor.fetchone()
+                    if prev and prev[0]:
+                        gaps = json.loads(prev[0])
+                        # Only surface significant gaps (|gap| > 0.1)
+                        significant = {v: round(g, 3) for v, g in gaps.items() if abs(g) > 0.1}
+                        if significant:
+                            overestimates = {v: g for v, g in significant.items() if g > 0}
+                            underestimates = {v: g for v, g in significant.items() if g < 0}
+                            previous_transaction_feedback = {
+                                "calibration_score": round(prev[1], 3) if prev[1] else None,
+                                "grounded_coverage": round(prev[2], 3) if prev[2] else None,
+                                "significant_gaps": significant,
+                                "overestimates": {v: f"+{g}" for v, g in overestimates.items()},
+                                "underestimates": {v: str(g) for v, g in underestimates.items()},
+                                "note": "Grounded gaps from your previous transaction — adjust accordingly"
+                            }
+                            logger.debug(f"Previous transaction feedback: {len(significant)} significant gaps")
+            except Exception as e:
+                logger.debug(f"Previous transaction feedback lookup failed (non-fatal): {e}")
+
             db.close()
 
             # PATTERN RETRIEVAL: Load relevant patterns based on task_context or reasoning
@@ -533,6 +572,7 @@ def handle_preflight_submit_command(args):
                     "summary": calibration_report.get('calibration_summary') if calibration_report else None,
                     "note": "Learning trajectory from previous sessions (NOT calibration - see grounded_calibration after POSTFLIGHT)"
                 } if calibration_adjustments or calibration_report else None,
+                "previous_transaction_feedback": previous_transaction_feedback,
                 "sentinel": {
                     "enabled": SentinelHooks.is_enabled(),
                     "decision": sentinel_decision.value if sentinel_decision else None
