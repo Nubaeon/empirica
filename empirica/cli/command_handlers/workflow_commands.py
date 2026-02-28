@@ -24,6 +24,22 @@ auto_enable_sentinel()
 logger = logging.getLogger(__name__)
 
 
+def _remap_trajectory_summary(calibration_summary):
+    """Remap Bayesian calibration_summary keys to learning trajectory language.
+
+    The BayesianBeliefManager uses calibration terms (overestimates/underestimates)
+    but these represent learning patterns, not accuracy corrections.
+    Remap to make the distinction clear in PREFLIGHT output.
+    """
+    if not calibration_summary:
+        return None
+    return {
+        "typically_increases": calibration_summary.get("underestimates", []),
+        "typically_decreases": calibration_summary.get("overestimates", []),
+        "stable": calibration_summary.get("well_calibrated", []),
+    }
+
+
 def _get_db_for_session(session_id: str):
     """
     Get SessionDatabase for a specific session_id.
@@ -566,11 +582,13 @@ def handle_preflight_submit_command(args):
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True
                 },
-                "learning_prior": {
-                    "adjustments": calibration_adjustments if calibration_adjustments else None,
-                    "total_evidence": calibration_report.get('total_evidence', 0) if calibration_report else 0,
-                    "summary": calibration_report.get('calibration_summary') if calibration_report else None,
-                    "note": "Learning trajectory from previous sessions (NOT calibration - see grounded_calibration after POSTFLIGHT)"
+                "learning_trajectory": {
+                    "typical_deltas": calibration_adjustments if calibration_adjustments else None,
+                    "total_observations": calibration_report.get('total_evidence', 0) if calibration_report else 0,
+                    "summary": _remap_trajectory_summary(
+                        calibration_report.get('calibration_summary')
+                    ) if calibration_report else None,
+                    "note": "INFORMATIONAL: How your vectors typically change across transactions (PREFLIGHT->POSTFLIGHT deltas). Shows learning patterns, NOT accuracy corrections. For accuracy, see previous_transaction_feedback."
                 } if calibration_adjustments or calibration_report else None,
                 "previous_transaction_feedback": previous_transaction_feedback,
                 "sentinel": {
