@@ -341,36 +341,6 @@ def resolve_session_db_path(session_id: str) -> Optional[Path]:
     return None
 
 
-def get_identity_dir() -> Path:
-    """Get identity keys directory."""
-    config = load_empirica_config()
-    if config and 'paths' in config and 'identity' in config['paths']:
-        root = get_empirica_root()
-        return root / config['paths']['identity']
-
-    return get_empirica_root() / 'identity'
-
-
-def get_metrics_dir() -> Path:
-    """Get metrics directory."""
-    config = load_empirica_config()
-    if config and 'paths' in config and 'metrics' in config['paths']:
-        root = get_empirica_root()
-        return root / config['paths']['metrics']
-
-    return get_empirica_root() / 'metrics'
-
-
-def get_messages_dir() -> Path:
-    """Get messages directory."""
-    config = load_empirica_config()
-    if config and 'paths' in config and 'messages' in config['paths']:
-        root = get_empirica_root()
-        return root / config['paths']['messages']
-
-    return get_empirica_root() / 'messages'
-
-
 def get_global_empirica_home() -> Path:
     """
     Get the global Empirica home directory (~/.empirica).
@@ -382,43 +352,6 @@ def get_global_empirica_home() -> Path:
         Path to ~/.empirica/
     """
     return Path.home() / '.empirica'
-
-
-# Cache for global config to avoid repeated file reads
-_global_config_cache = None
-
-
-def load_global_config() -> Optional[dict]:
-    """
-    Load global Empirica config from ~/.empirica/config.yaml.
-
-    Returns:
-        Config dict if file exists and is valid YAML, None otherwise.
-        Cached after first load.
-
-    Example config structure:
-        version: '2.0'
-        defaults:
-          auto_init_projects: true
-        settings:
-          auto_checkpoint: true
-    """
-    global _global_config_cache
-    if _global_config_cache is not None:
-        return _global_config_cache
-
-    config_path = get_global_empirica_home() / 'config.yaml'
-    if not config_path.exists():
-        return None
-
-    try:
-        import yaml
-        with open(config_path, 'r') as f:
-            _global_config_cache = yaml.safe_load(f)
-            return _global_config_cache
-    except Exception as e:
-        logger.warning(f"Failed to load global config: {e}")
-        return None
 
 
 def get_crm_db_path() -> Path:
@@ -446,22 +379,6 @@ def get_crm_db_path() -> Path:
 
     # Default: global home
     return get_global_empirica_home() / 'crm' / 'crm.db'
-
-
-def get_client_lessons_dir(client_id: Optional[str] = None) -> Path:
-    """
-    Get directory for client-scoped lessons (procedural knowledge).
-
-    Args:
-        client_id: Optional client UUID. If provided, returns client-specific dir.
-
-    Returns:
-        Path to ~/.empirica/lessons/clients/ or ~/.empirica/lessons/clients/{client_id}/
-    """
-    base = get_global_empirica_home() / 'lessons' / 'clients'
-    if client_id:
-        return base / client_id
-    return base
 
 
 def ensure_crm_structure() -> None:
@@ -550,16 +467,16 @@ def debug_paths() -> dict:
     Returns:
         Dict with all path information
     """
+    root = get_empirica_root()
     return {
         'git_root': str(get_git_root()) if get_git_root() else None,
-        'empirica_root': str(get_empirica_root()),
+        'empirica_root': str(root),
         'session_db': str(get_session_db_path()),
-        'identity_dir': str(get_identity_dir()),
-        'metrics_dir': str(get_metrics_dir()),
-        'messages_dir': str(get_messages_dir()),
+        'identity_dir': str(root / 'identity'),
+        'metrics_dir': str(root / 'metrics'),
+        'messages_dir': str(root / 'messages'),
         'global_home': str(get_global_empirica_home()),
         'crm_db': str(get_crm_db_path()),
-        'client_lessons_dir': str(get_client_lessons_dir()),
         'env_vars': {
             'EMPIRICA_DATA_DIR': os.getenv('EMPIRICA_DATA_DIR'),
             'EMPIRICA_SESSION_DB': os.getenv('EMPIRICA_SESSION_DB'),
