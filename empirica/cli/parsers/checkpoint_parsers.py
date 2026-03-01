@@ -378,10 +378,8 @@ def add_checkpoint_parsers(subparsers):
     doc_check_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     doc_check_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
-    # NOTE: skill-suggest and skill-fetch are NOT YET IMPLEMENTED
-    # Placeholder parsers removed to avoid confusion (use project-bootstrap instead)
-    # TODO: Implement skill discovery and fetching in Phase 4
-    
+    # NOTE: skill-suggest and skill-fetch are implemented in skill_commands.py
+
     # Finding log command
     finding_log_parser = subparsers.add_parser(
         'finding-log',

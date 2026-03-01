@@ -113,7 +113,7 @@ class SigningPersona:
 
         Args:
             epistemic_vectors: The 13 epistemic vectors
-            phase: CASCADE phase (PREFLIGHT, INVESTIGATE, CHECK, ACT, POSTFLIGHT)
+            phase: CASCADE phase (PREFLIGHT, CHECK, POSTFLIGHT)
             timestamp: Optional timestamp (for testing determinism; defaults to now)
 
         Returns:
