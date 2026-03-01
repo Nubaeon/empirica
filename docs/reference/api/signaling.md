@@ -101,28 +101,15 @@ class VectorHealth(Enum):
 
 ## Functions
 
-### get_drift_level
+### format_vectors_compact
 
-Get drift level from score using Traffic Light calibration.
-
-```python
-from empirica.core.signaling import get_drift_level, DriftLevel
-
-level = get_drift_level(0.25)  # Returns DriftLevel.EMERGENT
-level = get_drift_level(None)  # Returns DriftLevel.UNKNOWN
-```
-
----
-
-### get_drift_emoji
-
-Get emoji for drift level.
+Format multiple vectors as a compact string for statusline display.
 
 ```python
-from empirica.core.signaling import get_drift_emoji
+from empirica.core.signaling import format_vectors_compact
 
-emoji = get_drift_emoji(0.15)  # Returns ':green_circle:'
-emoji = get_drift_emoji(0.45)  # Returns ':white_circle:'
+vectors = {'know': 0.85, 'uncertainty': 0.15, 'context': 0.8}
+compact = format_vectors_compact(vectors)  # "K:85% U:15% C:80%"
 ```
 
 ---
@@ -148,9 +135,9 @@ uncertainty_config = VECTOR_CONFIGS['uncertainty']
 
 ## Implementation Files
 
-- `empirica/core/signaling.py` - DriftLevel, SentinelAction, CognitivePhase, VectorHealth, VECTOR_CONFIGS
+- `empirica/core/signaling.py` - Enums, VECTOR_CONFIGS, format_vectors_compact
 
 ---
 
 **API Stability:** Stable
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-03-01

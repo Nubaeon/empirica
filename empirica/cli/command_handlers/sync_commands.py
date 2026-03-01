@@ -120,7 +120,7 @@ def _get_remote_url(remote: str = 'origin') -> Optional[str]:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except:
+    except Exception:
         pass
     return None
 
@@ -149,7 +149,7 @@ def _list_remotes() -> Dict[str, str]:
                 if len(parts) >= 2:
                     remotes[parts[0]] = parts[1]
         return remotes
-    except:
+    except Exception:
         return {}
 
 
@@ -189,7 +189,7 @@ def _get_workspace_root() -> str:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except:
+    except Exception:
         pass
     # Priority 2: CWD fallback
     return os.getcwd()
@@ -203,7 +203,7 @@ def _check_remote(remote: str = 'origin') -> bool:
             capture_output=True, text=True, timeout=5
         )
         return result.returncode == 0
-    except:
+    except Exception:
         return False
 
 
@@ -220,7 +220,7 @@ def _count_local_notes() -> Dict[str, int]:
                 counts[ref] = len(result.stdout.strip().split('\n'))
             else:
                 counts[ref] = 0
-        except:
+        except Exception:
             counts[ref] = 0
     return counts
 
@@ -472,7 +472,7 @@ def handle_sync_push_command(args):
                 capture_output=True, text=True, timeout=30
             )
             push_results['breadcrumbs'] = result.returncode == 0
-        except:
+        except Exception:
             push_results['breadcrumbs'] = False
 
         # Push empirica-precompact separately
@@ -482,7 +482,7 @@ def handle_sync_push_command(args):
                 capture_output=True, text=True, timeout=30
             )
             push_results['empirica-precompact'] = result.returncode == 0
-        except:
+        except Exception:
             push_results['empirica-precompact'] = False
 
         success = push_results.get('empirica/*', False)
@@ -577,7 +577,7 @@ def handle_sync_pull_command(args):
                 capture_output=True, text=True, timeout=30
             )
             fetch_results['breadcrumbs'] = result.returncode == 0
-        except:
+        except Exception:
             fetch_results['breadcrumbs'] = False
 
         # Fetch empirica-precompact separately
@@ -587,7 +587,7 @@ def handle_sync_pull_command(args):
                 capture_output=True, text=True, timeout=30
             )
             fetch_results['empirica-precompact'] = result.returncode == 0
-        except:
+        except Exception:
             fetch_results['empirica-precompact'] = False
 
         # Count local notes after pull

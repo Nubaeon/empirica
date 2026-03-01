@@ -5,6 +5,16 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-03-01
+
+### Added
+- **Portable docs-assess** - `docs-assess` now works on any Python project via `ProjectConfig` auto-detection from `pyproject.toml`. Replaces 12+ hardcoded Empirica paths with config-driven references
+- **Click CLI detection** - `docs-assess` discovers Click commands alongside existing argparse support. Tested on empirica (argparse, 197 commands) and empirica-outreach (Click, 6 commands)
+
+### Fixed
+- **Handler error returns** - `handle_docs_assess` and `handle_docs_explain` returned `None` on error (from `handle_cli_error()`) instead of exit code `1`, causing errors to be silently swallowed as success
+- **Inconsistent arg access** - Unified both handlers to use `getattr()` pattern for `project_root` argument
+
 ## [1.5.9] - 2026-02-26
 
 ### Added

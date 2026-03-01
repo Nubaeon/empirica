@@ -19,6 +19,10 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 
+# Import shared utilities from plugin lib
+sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+from project_resolver import get_instance_id, find_project_root  # noqa: E402
+
 def archive_stale_plans() -> list:
     """
     Archive plan files whose goals are complete.
@@ -75,91 +79,6 @@ def archive_stale_plans() -> list:
             continue
 
     return archived
-
-
-def find_git_root() -> Path | None:
-    """Find git repository root from current directory."""
-    try:
-        result = subprocess.run(
-            ['git', 'rev-parse', '--show-toplevel'],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
-            return Path(result.stdout.strip())
-    except:
-        pass
-    return None
-
-
-def find_project_root(claude_session_id: str = None) -> Path:
-    """
-    Find project root using instance-aware resolution.
-
-    Priority chain (matches INSTANCE_ISOLATION.md):
-    0. active_work_{claude_session_id}.json (if claude_session_id provided)
-    1. instance_projects/tmux_X.json (TMUX_PANE)
-    2. TTY session file
-    3. EMPIRICA_WORKSPACE_ROOT env var
-    4. Git repo root (fallback)
-    5. CWD (last resort)
-
-    This ensures project continuity across compactions and CWD resets.
-    """
-    # Priority 0: Check active_work file for this Claude session
-    if claude_session_id:
-        active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-        if active_work_file.exists():
-            try:
-                with open(active_work_file, 'r') as f:
-                    data = json.load(f)
-                    project_path = data.get('project_path')
-                    if project_path and Path(project_path).exists():
-                        return Path(project_path)
-            except Exception:
-                pass
-
-    # Priority 1: Check instance_projects (TMUX_PANE based)
-    tmux_pane = os.environ.get('TMUX_PANE')
-    if tmux_pane:
-        instance_id = f"tmux_{tmux_pane.lstrip('%')}"
-        instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
-        if instance_file.exists():
-            try:
-                with open(instance_file, 'r') as f:
-                    data = json.load(f)
-                    project_path = data.get('project_path')
-                    if project_path and Path(project_path).exists():
-                        return Path(project_path)
-            except Exception:
-                pass
-
-    # Priority 2: Check TTY session file
-    try:
-        tty_path = os.ttyname(sys.stdin.fileno())
-        tty_key = tty_path.replace('/', '-').lstrip('-')
-        tty_file = Path.home() / '.empirica' / 'tty_sessions' / f'{tty_key}.json'
-        if tty_file.exists():
-            with open(tty_file, 'r') as f:
-                data = json.load(f)
-                project_path = data.get('project_path')
-                if project_path and Path(project_path).exists():
-                    return Path(project_path)
-    except Exception:
-        pass
-
-    # Priority 3: Check explicit workspace root env var
-    if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
-        workspace_path = Path(workspace_root).expanduser().resolve()
-        if workspace_path.exists():
-            return workspace_path
-
-    # Priority 4: Git repo root (common case for fresh sessions)
-    git_root = find_git_root()
-    if git_root:
-        return git_root
-
-    # Priority 5: Fall back to current working directory
-    return Path.cwd()
 
 
 def create_session_and_bootstrap(ai_id: str, project_id: str = None) -> dict:
@@ -251,27 +170,6 @@ def format_context(ctx: dict) -> str:
     return "\n".join(parts) if parts else "  (No context loaded)"
 
 
-def _get_instance_id() -> str:
-    """
-    Derive instance ID from environment. Fallback chain:
-    TMUX_PANE → TTY name → 'default'
-    """
-    tmux_pane = os.environ.get('TMUX_PANE')
-    if tmux_pane:
-        return f"tmux_{tmux_pane.lstrip('%')}"
-
-    # Fallback: TTY-based instance ID
-    try:
-        tty_path = os.ttyname(sys.stdin.fileno())
-        # e.g. /dev/pts/3 → term_pts_3, /dev/ttys005 → term_ttys005
-        safe = tty_path.replace('/', '_').lstrip('_').replace('dev_', '')
-        return f"term_{safe}"
-    except:
-        pass
-
-    return "default"
-
-
 def _write_instance_projects(project_path: str, claude_session_id: str, empirica_session_id: str) -> bool:
     """
     Write instance isolation files. Establishes linkage between Claude's
@@ -281,7 +179,7 @@ def _write_instance_projects(project_path: str, claude_session_id: str, empirica
     Works with or without tmux. Falls back to TTY or 'default' instance.
     """
     try:
-        instance_id = _get_instance_id()
+        instance_id = get_instance_id()
         instance_dir = Path.home() / '.empirica' / 'instance_projects'
         instance_dir.mkdir(parents=True, exist_ok=True)
         instance_file = instance_dir / f'{instance_id}.json'
@@ -373,7 +271,8 @@ def main():
     claude_session_id = hook_input.get('session_id')
 
     # Find project root (uses instance-aware resolution to survive CWD resets)
-    project_root = find_project_root(claude_session_id)
+    # session-init needs CWD and git root fallbacks for first-time projects
+    project_root = find_project_root(claude_session_id, allow_cwd_fallback=True, allow_git_root=True)
     os.chdir(project_root)
 
     ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')

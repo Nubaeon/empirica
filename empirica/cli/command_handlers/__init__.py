@@ -7,9 +7,6 @@ Organizes CLI command handlers by semantic function for maintainability.
 # Import all command handlers
 from .onboard import handle_onboard_command
 from .setup_claude_code import handle_setup_claude_code_command
-# noetic_praxic_commands removed - deprecated stubs
-from .modality_commands import handle_modality_route_command
-# handle_modality_decision_command removed - was using deprecated cascade
 from .action_commands import (
     handle_investigate_log_command,
     handle_act_log_command
@@ -34,12 +31,12 @@ from .goal_commands import (
     handle_goals_get_stale_command,
     handle_goals_refresh_command
 )
-from .goals_ready_command import handle_goals_ready_command
-from .goal_claim_command import handle_goals_claim_command
-from .goal_complete_command import handle_goals_complete_command
-from .goal_discovery_commands import (
+from .goal_commands import (
+    handle_goals_ready_command,
+    handle_goals_claim_command,
+    handle_goals_complete_command,
     handle_goals_discover_command,
-    handle_goals_resume_command
+    handle_goals_resume_command,
 )
 from .identity_commands import (
     handle_identity_create_command,
@@ -85,10 +82,8 @@ from .project_commands import (
     handle_project_handoff_command,
     handle_project_list_command,
     handle_project_switch_command,
-    handle_workspace_overview_command,
-    handle_workspace_map_command,
-    handle_workspace_list_command,
-    handle_ecosystem_check_command,
+)
+from .artifact_log_commands import (
     handle_finding_log_command,
     handle_unknown_log_command,
     handle_unknown_resolve_command,
@@ -96,7 +91,15 @@ from .project_commands import (
     handle_assumption_log_command,
     handle_decision_log_command,
     handle_refdoc_add_command,
-    handle_source_add_command
+    handle_source_add_command,
+)
+from .workspace_commands import (
+    handle_workspace_overview_command,
+    handle_workspace_map_command,
+    handle_workspace_list_command,
+)
+from .ecosystem_commands import (
+    handle_ecosystem_check_command,
 )
 from .project_init import handle_project_init_command
 from .workspace_init import handle_workspace_init_command
@@ -140,9 +143,6 @@ from .investigation_commands import (
 )
 from .performance_commands import handle_benchmark_command, handle_performance_command
 # handle_goal_analysis_command removed - was in noetic_praxic_commands (deprecated)
-from .ask_handler import handle_ask_command
-from .chat_handler import handle_chat_command
-from .dashboard import handle_dashboard_command
 from .vision_commands import (
     handle_vision_analyze,
     handle_vision_log,
@@ -180,9 +180,6 @@ __all__ = [
     'handle_onboard_command',
     'handle_setup_claude_code_command',
 
-    # Modality commands (EXPERIMENTAL)
-    'handle_modality_route_command',
-    
     # Action commands (INVESTIGATE and ACT phase tracking)
     'handle_investigate_log_command',
     'handle_act_log_command',
@@ -328,11 +325,6 @@ __all__ = [
     'handle_sessions_show_command',
     'handle_sessions_export_command',
     
-    # User interface commands (for human users)
-    'handle_ask_command',
-    'handle_chat_command',
-    'handle_dashboard_command',
-
     # Vision commands
     'handle_vision_analyze',
     'handle_vision_log',

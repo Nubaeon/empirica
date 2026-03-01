@@ -11,12 +11,11 @@ Subsystems monitored:
   EpistemicBus         - Event throughput (observer count, event count)
   BusPersistence       - Storage backends (SQLite, Qdrant availability)
   AttentionBudget      - Investigation resource allocation
-  MemoryGapDetector    - Integrity (gap count, confabulation risk)
   Sentinel             - Access control (gate status, phase)
 
 Architecture: EpistemicObserver on the bus (push) + lazy queries (pull).
 - Push: CBM events (pressure, eviction, injection, page fault) update cached state
-- Pull: MCOLoader, Sentinel, MemoryGapDetector queried on get_system_status()
+- Pull: MCOLoader, Sentinel queried on get_system_status()
 
 Usage:
     from empirica.core.system_dashboard import get_dashboard, SystemStatus
@@ -109,7 +108,7 @@ class AttentionStatus:
 
 @dataclass
 class IntegrityStatus:
-    """MemoryGapDetector state snapshot."""
+    """Placeholder for removed MemoryGapDetector — always returns healthy."""
     gaps_detected: bool = False
     gap_count: int = 0
     overall_gap: float = 0.0
@@ -469,80 +468,8 @@ class SystemDashboard(EpistemicObserver):
         return AttentionStatus()
 
     def _query_integrity(self) -> IntegrityStatus:
-        """Pull MemoryGapDetector state from persisted vectors + breadcrumbs."""
-        try:
-            from empirica.data.session_database import SessionDatabase
-            from empirica.core.memory_gap_detector import MemoryGapDetector
-
-            db = SessionDatabase()
-            if db.conn is None:
-                return IntegrityStatus()
-            cursor = db.conn.cursor()
-
-            # Pull latest vectors from reflexes table
-            cursor.execute("""
-                SELECT reflex_data FROM reflexes
-                WHERE session_id = ?
-                ORDER BY timestamp DESC LIMIT 1
-            """, (self.session_id,))
-            row = cursor.fetchone()
-            if not row or not row[0]:
-                db.close()
-                return IntegrityStatus()
-
-            import json as _json
-            reflex = _json.loads(row[0])
-            vectors = reflex.get('vectors', {})
-            if not vectors:
-                db.close()
-                return IntegrityStatus()
-
-            # Pull breadcrumbs from project tables
-            cursor.execute(
-                "SELECT project_id FROM sessions WHERE session_id = ?",
-                (self.session_id,)
-            )
-            proj_row = cursor.fetchone()
-            project_id = proj_row[0] if proj_row else None
-
-            breadcrumbs: Dict[str, Any] = {}
-            if project_id:
-                cursor.execute(
-                    "SELECT COUNT(*) FROM project_findings WHERE project_id = ?",
-                    (project_id,)
-                )
-                breadcrumbs['findings'] = [{}] * (cursor.fetchone()[0] or 0)
-
-                cursor.execute(
-                    "SELECT COUNT(*) FROM project_unknowns WHERE project_id = ? AND is_resolved = 0",
-                    (project_id,)
-                )
-                breadcrumbs['unknowns'] = [{}] * (cursor.fetchone()[0] or 0)
-
-            db.close()
-
-            # Run gap detection
-            detector = MemoryGapDetector()
-            session_context = {"session_id": self.session_id}
-            report = detector.detect_gaps(vectors, breadcrumbs, session_context)
-
-            severity_counts: Dict[str, int] = {}
-            for gap in report.gaps:
-                sev = gap.severity
-                severity_counts[sev] = severity_counts.get(sev, 0) + 1
-
-            return IntegrityStatus(
-                gaps_detected=report.detected,
-                gap_count=len(report.gaps),
-                overall_gap=report.overall_gap,
-                severity_counts=severity_counts,
-                confabulation_risk=max(
-                    report.claimed_know - report.expected_know, 0.0
-                ),
-            )
-        except Exception as e:
-            logger.debug(f"Integrity query failed: {e}")
-            return IntegrityStatus()
+        """Stub — MemoryGapDetector was removed (overlaps with Qdrant + compact hooks)."""
+        return IntegrityStatus()
 
     def _query_gate(self) -> GateStatus:
         """Pull sentinel gate state from database."""

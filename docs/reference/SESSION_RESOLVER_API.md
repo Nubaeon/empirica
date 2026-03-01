@@ -1,7 +1,7 @@
 # Session Resolver API Reference
 
 **Module:** `empirica.utils.session_resolver`
-**Version:** 1.5.9
+**Version:** 1.6.0
 **Purpose:** Session ID resolution, multi-instance isolation, and context management
 
 ---
@@ -499,6 +499,6 @@ Returns `"_tmux_0"` for instance `tmux_0`, or `""` if no instance.
 
 ## Related Documentation
 
-- [Multi-Instance Isolation Architecture](../architecture/INSTANCE_ISOLATION.md)
+- [Multi-Instance Isolation Architecture](../architecture/instance_isolation/ARCHITECTURE.md)
 - [Environment Variables](./ENVIRONMENT_VARIABLES.md) — `EMPIRICA_INSTANCE_ID`, `TMUX_PANE`
 - [Database Schema](./DATABASE_SCHEMA_UNIFIED.md) — `sessions`, `projects` tables

@@ -405,10 +405,6 @@ def main(args=None):
             'goals-get-stale': handle_goals_get_stale_command,
             'goals-refresh': handle_goals_refresh_command,
 
-            # User interface commands
-            'chat': handle_chat_command,
-            'dashboard': handle_dashboard_command,
-
             # Vision commands
             'vision': handle_vision_analyze,
             

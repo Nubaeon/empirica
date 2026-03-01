@@ -200,6 +200,6 @@ export EMPIRICA_INSTANCE_ID=manual_1
 
 ## Related Documentation
 
-- [Multi-Instance Isolation](../architecture/INSTANCE_ISOLATION.md) — Technical architecture
+- [Multi-Instance Isolation](../architecture/instance_isolation/ARCHITECTURE.md) — Technical architecture
 - [Project Switching](./PROJECT_SWITCHING_FOR_AIS.md) — Project context management
 - [Session Management](../human/end-users/SESSION_GOAL_WORKFLOW.md) — Session and goal workflows

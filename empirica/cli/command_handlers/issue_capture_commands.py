@@ -214,7 +214,7 @@ def handle_issue_show_command(args):
             # Parse context if it's JSON string
             try:
                 issue['context'] = json.loads(issue['context']) if isinstance(issue['context'], str) else issue['context']
-            except:
+            except Exception:
                 pass
             
             result = {
@@ -250,7 +250,7 @@ def handle_issue_show_command(args):
                     ctx = json.loads(issue['context']) if isinstance(issue['context'], str) else issue['context']
                     for key, value in ctx.items():
                         print(f"  {key}: {value}")
-                except:
+                except Exception:
                     print(f"  {issue['context']}")
         
         return 0

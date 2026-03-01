@@ -486,8 +486,8 @@ cat postflight.json | empirica postflight-submit -
 
 ## Further Reading
 
-- [Empirica CLI Reference](../reference/CLI_COMMANDS_COMPLETE.md)
-- [CASCADE Workflow](CASCADE_WORKFLOW.md)
+- [Empirica CLI Reference](../developers/CLI_COMMANDS_UNIFIED.md)
+- [Noetic-Praxic Framework](../../architecture/NOETIC_PRAXIC_FRAMEWORK.md)
 - [First-Time Setup](FIRST_TIME_SETUP.md)
 - [MCP Specification](https://modelcontextprotocol.io/specification/2025-11-25)
 

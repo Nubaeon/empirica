@@ -30,6 +30,119 @@ from typing import Any
 from ..cli_utils import handle_cli_error
 
 
+# --- ProjectConfig: auto-detected project structure for portability ---
+
+@dataclass
+class ProjectConfig:
+    """Project structure config, auto-detected from pyproject.toml."""
+    project_name: str               # e.g., "empirica", "empirica-outreach"
+    project_root: Path              # absolute path
+    package_dirs: list[str]         # e.g., ["empirica/"] — top-level package dirs
+    cli_module: str | None = None   # e.g., "empirica.cli.cli_core"
+    cli_entry: str | None = None    # e.g., "main" or "cli"
+    docs_dir: Path | None = None     # project_root / "docs"
+    test_dir: Path | None = None     # project_root / "tests"
+    cli_framework: str = "unknown"  # "argparse" | "click" | "unknown"
+
+    def __post_init__(self):
+        if self.docs_dir is None:
+            self.docs_dir = self.project_root / "docs"
+        if self.test_dir is None:
+            self.test_dir = self.project_root / "tests"
+
+
+def _auto_detect_project_config(project_root: Path) -> ProjectConfig:
+    """
+    Build ProjectConfig by reading pyproject.toml at project_root.
+    Falls back to directory scanning if pyproject.toml is absent.
+    """
+    pyproject = project_root / "pyproject.toml"
+
+    # Defaults from directory scanning
+    name = project_root.name
+    package_dirs: list[str] = []
+    cli_module = None
+    cli_entry = None
+    cli_framework = "unknown"
+
+    if pyproject.exists():
+        try:
+            # Use tomllib (3.11+) or tomli
+            try:
+                import tomllib
+            except ImportError:
+                import tomli as tomllib  # type: ignore[no-redef]
+
+            with open(pyproject, "rb") as f:
+                data = tomllib.load(f)
+
+            # Project name
+            name = data.get("project", {}).get("name", name)
+
+            # CLI entry point
+            scripts = data.get("project", {}).get("scripts", {})
+            if scripts:
+                # Take the first script entry
+                script_name, entry_spec = next(iter(scripts.items()))
+                # entry_spec looks like "empirica.cli.cli_core:main"
+                if ":" in entry_spec:
+                    cli_module, cli_entry = entry_spec.rsplit(":", 1)
+                else:
+                    cli_module = entry_spec
+
+                # Detect framework from the entry module
+                cli_framework = _detect_cli_framework(project_root, cli_module)
+
+            # Package directories
+            find_cfg = data.get("tool", {}).get("setuptools", {}).get("packages", {}).get("find", {})
+            includes = find_cfg.get("include", [])
+            where = find_cfg.get("where", ["."])
+            base = where[0] if where else "."
+
+            for inc in includes:
+                # Strip trailing * for glob patterns like "empirica_outreach*"
+                pkg = inc.rstrip("*")
+                pkg_path = project_root / base / pkg
+                if pkg_path.is_dir():
+                    package_dirs.append(pkg + "/")
+        except Exception:
+            pass  # Fall through to directory scanning
+
+    # Fallback: scan for Python packages in project root
+    if not package_dirs:
+        for child in project_root.iterdir():
+            if child.is_dir() and (child / "__init__.py").exists():
+                if child.name not in {"tests", "test", "docs", "build", ".venv", "venv"}:
+                    package_dirs.append(child.name + "/")
+
+    return ProjectConfig(
+        project_name=name,
+        project_root=project_root,
+        package_dirs=package_dirs,
+        cli_module=cli_module,
+        cli_entry=cli_entry,
+        cli_framework=cli_framework,
+    )
+
+
+def _detect_cli_framework(project_root: Path, module_path: str) -> str:
+    """Detect whether a CLI module uses argparse or Click."""
+    # Convert module path to file path: empirica.cli.cli_core -> empirica/cli/cli_core.py
+    file_rel = module_path.replace(".", "/") + ".py"
+    file_path = project_root / file_rel
+    if not file_path.exists():
+        return "unknown"
+    try:
+        content = file_path.read_text(errors="replace")
+        if "import click" in content or "from click" in content:
+            return "click"
+        if "argparse" in content or "add_parser" in content or "add_subparsers" in content:
+            return "argparse"
+    except Exception:
+        pass
+    return "unknown"
+
+
 @dataclass
 class FeatureCoverage:
     """Tracks coverage for a feature category."""
@@ -110,6 +223,7 @@ class EpistemicDocsAgent:
         self.root = project_root or self._detect_project_root()
         self.verbose = verbose
         self.categories: list[FeatureCoverage] = []
+        self.config = _auto_detect_project_config(self.root)
 
     @staticmethod
     def _detect_project_root() -> Path:
@@ -130,9 +244,6 @@ class EpistemicDocsAgent:
         for parent in [cwd] + list(cwd.parents):
             # Check for pyproject.toml (Python project root)
             if (parent / "pyproject.toml").exists():
-                return parent
-            # Check for empirica package directory
-            if (parent / "empirica" / "__init__.py").exists():
                 return parent
             # Check for .git directory (repo root)
             if (parent / ".git").exists():
@@ -164,73 +275,110 @@ class EpistemicDocsAgent:
         return content.lower()
 
     def _extract_cli_commands(self) -> list[str]:
-        """Extract all CLI commands from cli_core.py."""
-        cli_core = self.root / "empirica" / "cli" / "cli_core.py"
-        commands = []
+        """Extract all CLI commands from the project's CLI module."""
+        if self.config.cli_framework == "click":
+            return self._extract_click_commands()
 
-        if not cli_core.exists():
-            return commands
+        # Argparse path: resolve CLI module to file
+        cli_file = self._resolve_cli_module_path()
+        if cli_file is None or not cli_file.exists():
+            return []
 
-        content = cli_core.read_text()
+        content = cli_file.read_text()
+        commands: list[str] = []
 
         # Find COMMAND_HANDLERS dictionary entries
-        # Pattern: 'command-name': handler_function (single quotes)
         pattern = r"'([a-z]+-?[a-z-]*)'\s*:\s*\w+"
-        matches = re.findall(pattern, content)
-        commands.extend(matches)
+        commands.extend(re.findall(pattern, content))
 
         # Also find add_parser calls with either quote style
         parser_pattern = r"add_parser\(\s*['\"]([a-z]+-?[a-z-]*)['\"]"
-        parser_matches = re.findall(parser_pattern, content)
-        commands.extend(parser_matches)
+        commands.extend(re.findall(parser_pattern, content))
 
         return list(set(commands))
 
+    def _extract_click_commands(self) -> list[str]:
+        """Extract CLI commands from a Click-based CLI."""
+        commands: list[str] = []
+        cli_file = self._resolve_cli_module_path()
+        if cli_file is None or not cli_file.exists():
+            return commands
+
+        # Scan CLI package directory for @click.command decorators
+        cli_dir = cli_file.parent
+        for py_file in cli_dir.rglob("*.py"):
+            if "__pycache__" in str(py_file):
+                continue
+            try:
+                content = py_file.read_text()
+                # @click.command(name="foo") or @app.command("foo")
+                named = re.findall(r'\.command\(\s*["\']([a-z][\w-]*)["\']', content)
+                commands.extend(named)
+                # @click.command() or @cli.command() followed by def
+                # May have blank lines, other decorators, or @click.argument/option between them
+                lines = content.split("\n")
+                for i, line in enumerate(lines):
+                    if re.match(r'\s*@\w+\.command\(\)', line):
+                        # Look ahead for the next def within 10 lines
+                        for j in range(i + 1, min(i + 10, len(lines))):
+                            m = re.match(r'\s*def\s+(\w+)', lines[j])
+                            if m:
+                                func_name = m.group(1)
+                                if func_name not in ("cli", "main", "app"):
+                                    commands.append(func_name.replace("_", "-"))
+                                break
+            except Exception:
+                continue
+        return list(set(commands))
+
+    def _resolve_cli_module_path(self) -> Path | None:
+        """Resolve config.cli_module to an actual file path."""
+        if not self.config.cli_module:
+            return None
+        file_rel = self.config.cli_module.replace(".", "/") + ".py"
+        return self.config.project_root / file_rel
+
     def _extract_core_modules(self) -> tuple[list[str], dict[str, list[str]]]:
         """
-        Extract ALL classes/modules from core/ with their categories.
+        Extract ALL classes/modules from package directories with their categories.
 
         Returns:
             tuple: (all_classes, category_map)
                 - all_classes: List of all discovered class names
                 - category_map: Dict mapping directory name -> list of classes
         """
-        core_dir = self.root / "empirica" / "core"
-        modules = []
-        category_map = {}
+        modules: list[str] = []
+        category_map: dict[str, list[str]] = {}
 
-        if not core_dir.exists():
-            return modules, category_map
-
-        for py_file in core_dir.rglob("*.py"):
-            if "__pycache__" in str(py_file):
+        for pkg_dir_name in self.config.package_dirs:
+            pkg_dir = self.root / pkg_dir_name.rstrip("/")
+            if not pkg_dir.exists():
                 continue
 
-            try:
-                content = py_file.read_text()
-                # Find class definitions
-                class_pattern = r"^class\s+(\w+)\s*[\(:]"
-                matches = re.findall(class_pattern, content, re.MULTILINE)
+            for py_file in pkg_dir.rglob("*.py"):
+                if "__pycache__" in str(py_file):
+                    continue
 
-                # Get category from parent directory
-                rel_path = py_file.relative_to(core_dir)
-                if len(rel_path.parts) > 1:
-                    # e.g., lessons/storage.py -> "Lessons"
-                    category = rel_path.parts[0].replace("_", " ").title()
-                else:
-                    # e.g., sentinel.py -> "Sentinel"
-                    category = py_file.stem.replace("_", " ").title()
+                try:
+                    content = py_file.read_text()
+                    class_pattern = r"^class\s+(\w+)\s*[\(:]"
+                    matches = re.findall(class_pattern, content, re.MULTILINE)
 
-                for match in matches:
-                    # Filter out internal/private classes
-                    if not match.startswith("_") and len(match) > 3:
-                        modules.append(match)
-                        # Add to category map
-                        if category not in category_map:
-                            category_map[category] = []
-                        category_map[category].append(match)
-            except Exception:
-                pass
+                    # Get category from parent directory relative to package
+                    rel_path = py_file.relative_to(pkg_dir)
+                    if len(rel_path.parts) > 1:
+                        category = rel_path.parts[0].replace("_", " ").title()
+                    else:
+                        category = py_file.stem.replace("_", " ").title()
+
+                    for match in matches:
+                        if not match.startswith("_") and len(match) > 3:
+                            modules.append(match)
+                            if category not in category_map:
+                                category_map[category] = []
+                            category_map[category].append(match)
+                except Exception:
+                    pass
 
         return list(set(modules)), category_map
 
@@ -264,9 +412,10 @@ class EpistemicDocsAgent:
         total_items = 0
         documented_items = 0
 
-        # Scan empirica package
-        package_dir = self.root / "empirica"
-        if not package_dir.exists():
+        # Scan all package directories
+        pkg_dirs = [self.root / d.rstrip("/") for d in self.config.package_dirs]
+        pkg_dirs = [d for d in pkg_dirs if d.exists()]
+        if not pkg_dirs:
             return {
                 "modules_missing": modules_missing,
                 "classes_missing": classes_missing,
@@ -276,48 +425,49 @@ class EpistemicDocsAgent:
                 "coverage": 0.0
             }
 
-        for py_file in package_dir.rglob("*.py"):
-            if "__pycache__" in str(py_file):
-                continue
+        for package_dir in pkg_dirs:
+            for py_file in package_dir.rglob("*.py"):
+                if "__pycache__" in str(py_file):
+                    continue
 
-            try:
-                content = py_file.read_text()
-                tree = ast.parse(content)
-                rel_path = py_file.relative_to(self.root)
+                try:
+                    content = py_file.read_text()
+                    tree = ast.parse(content)
+                    rel_path = py_file.relative_to(self.root)
 
-                # Check module docstring
-                total_items += 1
-                if ast.get_docstring(tree):
-                    documented_items += 1
-                else:
-                    modules_missing.append(str(rel_path))
+                    # Check module docstring
+                    total_items += 1
+                    if ast.get_docstring(tree):
+                        documented_items += 1
+                    else:
+                        modules_missing.append(str(rel_path))
 
-                # Check classes and functions
-                for node in ast.walk(tree):
-                    if isinstance(node, ast.ClassDef):
-                        total_items += 1
-                        if ast.get_docstring(node):
-                            documented_items += 1
-                        else:
-                            classes_missing.append(f"{rel_path}:{node.name}")
+                    # Check classes and functions
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.ClassDef):
+                            total_items += 1
+                            if ast.get_docstring(node):
+                                documented_items += 1
+                            else:
+                                classes_missing.append(f"{rel_path}:{node.name}")
 
-                    elif isinstance(node, ast.FunctionDef):
-                        # Skip private/dunder methods
-                        if node.name.startswith("_") and not node.name.startswith("__"):
-                            continue
-                        # Skip dunder except __init__
-                        if node.name.startswith("__") and node.name != "__init__":
-                            continue
+                        elif isinstance(node, ast.FunctionDef):
+                            # Skip private/dunder methods
+                            if node.name.startswith("_") and not node.name.startswith("__"):
+                                continue
+                            # Skip dunder except __init__
+                            if node.name.startswith("__") and node.name != "__init__":
+                                continue
 
-                        total_items += 1
-                        if ast.get_docstring(node):
-                            documented_items += 1
-                        else:
-                            functions_missing.append(f"{rel_path}:{node.name}")
+                            total_items += 1
+                            if ast.get_docstring(node):
+                                documented_items += 1
+                            else:
+                                functions_missing.append(f"{rel_path}:{node.name}")
 
-            except (SyntaxError, UnicodeDecodeError):
-                # Skip files that can't be parsed
-                continue
+                except (SyntaxError, UnicodeDecodeError):
+                    # Skip files that can't be parsed
+                    continue
 
         # Calculate coverage
         coverage = round(documented_items / total_items * 100, 1) if total_items > 0 else 0.0
@@ -650,7 +800,7 @@ class EpistemicDocsAgent:
                     "severity": "high",
                     "item": cmd,
                     "category": "CLI command",
-                    "suggestion": f"Add documentation for 'empirica {cmd}' command"
+                    "suggestion": f"Add documentation for '{self.config.project_name} {cmd}' command"
                 })
 
         # === Check 2: Undocumented core classes ===
@@ -778,12 +928,15 @@ class EpistemicDocsAgent:
             from collections import Counter
             dir_changes = Counter()
             for f in changed_files:
-                if f.startswith("empirica/"):
-                    # Map code path to potential doc area
-                    parts = f.split("/")
-                    if len(parts) >= 2:
-                        area = parts[1]  # e.g., "core", "cli", "data"
-                        dir_changes[area] += 1
+                # Check if file belongs to any package directory
+                for pkg_prefix in self.config.package_dirs:
+                    if f.startswith(pkg_prefix):
+                        # Map code path to potential doc area
+                        parts = f[len(pkg_prefix):].split("/")
+                        if parts:
+                            area = parts[0]  # e.g., "core", "cli", "data"
+                            dir_changes[area] += 1
+                        break
 
             # Check if corresponding docs have been updated
             for area, count in dir_changes.items():
@@ -1036,7 +1189,7 @@ class EpistemicDocsAgent:
         # Slide deck suggestions - grouped tutorials/guides
         if "guides" in doc_groups:
             suggestions["slide_decks"].append({
-                "topic": "Getting Started with Empirica",
+                "topic": f"Getting Started with {self.config.project_name.title()}",
                 "sources": doc_groups["guides"][:5],
                 "audience": "user",
                 "format": "tutorial"
@@ -1047,7 +1200,7 @@ class EpistemicDocsAgent:
                          if any(x in d.lower() for x in ["start", "install", "quickstart", "explained"])]
             if intro_docs:
                 suggestions["slide_decks"].append({
-                    "topic": "Empirica Overview",
+                    "topic": f"{self.config.project_name.title()} Overview",
                     "sources": intro_docs,
                     "audience": "user",
                     "format": "overview"
@@ -1062,7 +1215,7 @@ class EpistemicDocsAgent:
                 "recommended": True
             })
             suggestions["slide_decks"].append({
-                "topic": "Empirica Architecture Deep Dive",
+                "topic": f"{self.config.project_name.title()} Architecture Deep Dive",
                 "sources": doc_groups["architecture"],
                 "audience": "developer",
                 "format": "technical"
@@ -1113,7 +1266,8 @@ class EpistemicDocsAgent:
 def handle_docs_assess(args) -> int:
     """Handle the docs-assess command."""
     try:
-        project_root = Path(args.project_root) if args.project_root else None
+        project_root_arg = getattr(args, 'project_root', None)
+        project_root = Path(project_root_arg) if project_root_arg else None
         verbose = getattr(args, 'verbose', False)
         output_format = getattr(args, 'output', 'human')
         summary_only = getattr(args, 'summary_only', False)
@@ -1177,7 +1331,8 @@ def handle_docs_assess(args) -> int:
         return 0
 
     except Exception as e:
-        return handle_cli_error(e, "docs-assess")
+        handle_cli_error(e, "docs-assess")
+        return 1
 
 
 def _generate_summary(result: dict, categories: list, project_root: Path = None) -> dict:
@@ -1494,7 +1649,7 @@ class DocsExplainAgent:
     """
     Epistemic Documentation Explain Agent.
 
-    Retrieves focused information about Empirica topics for users and AIs.
+    Retrieves focused information about project topics for users and AIs.
     Inverts docs-assess: instead of analyzing coverage, it retrieves answers.
 
     Supports two search modes:
@@ -1522,34 +1677,28 @@ class DocsExplainAgent:
     def __init__(self, project_root: Path | None = None, project_id: str | None = None):
         """Initialize explain agent with optional project root and project ID."""
         self.root = project_root or EpistemicDocsAgent._detect_project_root()
-        self.docs_dir = self.root / "docs"
+        self.config = _auto_detect_project_config(self.root)
+        self.docs_dir = self.config.docs_dir or (self.root / "docs")
         self._docs_cache: dict[str, str] = {}
         self.project_id = project_id or self._detect_project_id()
         self._qdrant_available: bool | None = None
 
-        # Fallback: if docs_dir doesn't exist, try to find Empirica's package docs
-        # This enables docs-explain to work from any directory, not just within the project
+        # Fallback: if docs_dir doesn't exist, try to find the package's installed docs
         if not self.docs_dir.exists():
-            self.docs_dir = self._find_empirica_package_docs()
+            self.docs_dir = self._find_package_docs()
 
-    def _find_empirica_package_docs(self) -> Path:
-        """Find Empirica's installed package docs directory as fallback."""
-        try:
-            # Method 1: Use the package's __file__ location
-            import empirica
-            package_dir = Path(empirica.__file__).parent.parent
-            docs_candidate = package_dir / "docs"
-            if docs_candidate.exists():
-                return docs_candidate
-
-            # Method 2: Check common installation patterns
-            # For editable installs, the package is often in a 'empirica' subdir
-            if (package_dir / "empirica" / "__init__.py").exists():
+    def _find_package_docs(self) -> Path:
+        """Find the project's installed package docs directory as fallback."""
+        for pkg_dir_name in self.config.package_dirs:
+            pkg_name = pkg_dir_name.rstrip("/")
+            try:
+                mod = __import__(pkg_name)
+                package_dir = Path(mod.__file__).parent.parent
                 docs_candidate = package_dir / "docs"
                 if docs_candidate.exists():
                     return docs_candidate
-        except Exception:
-            pass
+            except Exception:
+                continue
 
         # Return original (non-existent) path if fallback fails
         return self.root / "docs"
@@ -1818,7 +1967,8 @@ class DocsExplainAgent:
 def handle_docs_explain(args) -> int:
     """Handle the docs-explain command."""
     try:
-        project_root = Path(args.project_root) if hasattr(args, 'project_root') and args.project_root else None
+        project_root_arg = getattr(args, 'project_root', None)
+        project_root = Path(project_root_arg) if project_root_arg else None
         project_id = getattr(args, 'project_id', None)
         output_format = getattr(args, 'output', 'human')
         topic = getattr(args, 'topic', None)
@@ -1840,13 +1990,14 @@ def handle_docs_explain(args) -> int:
         return 0
 
     except Exception as e:
-        return handle_cli_error(e, "docs-explain")
+        handle_cli_error(e, "docs-explain")
+        return 1
 
 
 def _print_explain_human_output(result: dict):
     """Print human-readable docs-explain output."""
     print("\n" + "=" * 60)
-    print("📖 EMPIRICA DOCS EXPLAIN")
+    print("📖 DOCS EXPLAIN")
     print("=" * 60)
 
     if not result.get("ok"):

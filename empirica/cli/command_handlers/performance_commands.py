@@ -24,9 +24,9 @@ def _get_profile_performance_thresholds():
                 'performance_high': getattr(constraints, 'performance_high_threshold', 0.8),
                 'engagement_gate': universal.engagement_gate,
             }
-        except:
+        except Exception:
             return {
-                'performance_low': 0.6, 
+                'performance_low': 0.6,
                 'performance_high': 0.8,
                 'engagement_gate': universal.engagement_gate,
             }

@@ -18,29 +18,11 @@ import os
 from pathlib import Path
 from datetime import datetime
 
+# Import shared utilities from plugin lib
+sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+from project_resolver import find_project_root  # noqa: E402
+
 sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
-
-
-def find_project_root() -> Path:
-    """Find Empirica project root."""
-    def has_valid_db(path: Path) -> bool:
-        db_path = path / '.empirica' / 'sessions' / 'sessions.db'
-        return db_path.exists() and db_path.stat().st_size > 0
-
-    if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
-        workspace_path = Path(workspace_root).expanduser().resolve()
-        if has_valid_db(workspace_path):
-            return workspace_path
-
-    known_paths = [
-        Path.home() / 'empirical-ai' / 'empirica',
-        Path.home() / 'empirica',
-    ]
-    for path in known_paths:
-        if has_valid_db(path):
-            return path
-
-    return Path.cwd()
 
 
 def get_session_state(session_id: str) -> dict:
@@ -251,7 +233,7 @@ def main():
     if project_path:
         os.chdir(project_path)
     else:
-        project_root = find_project_root()
+        project_root = find_project_root(allow_cwd_fallback=True)
         os.chdir(project_root)
 
     # Fallback: DB query if active_work didn't have it

@@ -1,6 +1,6 @@
 # Empirica Environment Variables Reference
 
-**Version:** 1.5.9
+**Version:** 1.6.0
 **Total Variables:** 35+
 **Status:** Production
 
@@ -83,6 +83,18 @@ This takes priority over the env var and is dynamically settable without restart
 
 ---
 
+## Calibration
+
+| Variable | Purpose | Default | Values |
+|----------|---------|---------|--------|
+| `EMPIRICA_CALIBRATION_FEEDBACK` | Gate all calibration feedback in workflow output | `true` | `true`, `false` |
+
+Controls PREFLIGHT enrichment (grounded gaps, calibration warnings), CHECK enrichment (calibration bias detection). Does NOT affect POSTFLIGHT data collection, Sentinel gating (raw vectors), or learning trajectory (informational).
+
+> **Cross-project calibration, multi-entity pattern matching, TUI analytics, and API integrations** are available in [empirica-workspace](https://github.com/Nubaeon/empirica-workspace).
+
+---
+
 ## Automation & Workflow
 
 | Variable | Purpose | Default | Required |
@@ -162,4 +174,4 @@ echo "true" > ~/.empirica/sentinel_enabled    # re-enable
 
 - [Configuration Reference](./CONFIGURATION_REFERENCE.md) — YAML config files
 - [Database Schema](./DATABASE_SCHEMA_UNIFIED.md) — Database structure
-- [Multi-Instance Isolation](../architecture/INSTANCE_ISOLATION.md) — Instance management
+- [Multi-Instance Isolation](../architecture/instance_isolation/ARCHITECTURE.md) — Instance management

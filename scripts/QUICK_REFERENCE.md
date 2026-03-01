@@ -38,19 +38,7 @@ Global `~/.empirica/` is used for credentials and as fallback when no local dir 
    ls -lt ~/.empirica_branch_backups/
    ```
 
-2. **Restore from empirica-server:**
-   ```bash
-   # Reflex logs
-   rsync -av empirica@192.168.1.66:empirica-server/empirica/.empirica_reflex_logs/ .empirica_reflex_logs/
-
-   # Sessions DB
-   rsync -av empirica@192.168.1.66:empirica-dev/.empirica/sessions.db ~/.empirica/
-
-   # Credentials
-   rsync -av empirica@192.168.1.66:empirica_backup2/.empirica/credentials.yaml ~/.empirica/
-   ```
-
-3. **Verify restoration:**
+2. **Verify restoration:**
    ```bash
    # Check project-local (primary)
    sqlite3 .empirica/sessions/sessions.db "SELECT COUNT(*) FROM sessions;"
@@ -58,7 +46,7 @@ Global `~/.empirica/` is used for credentials and as fallback when no local dir 
    sqlite3 ~/.empirica/sessions/sessions.db "SELECT COUNT(*) FROM sessions;"
    ```
 
-## See full guide:
+## See also:
 ```bash
-cat BRANCH_SWITCHING_GUIDE.md
+./scripts/safe-branch-switch.sh --help
 ```

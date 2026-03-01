@@ -2,7 +2,7 @@
 
 **Time:** 10 minutes  
 **Best for:** Terminal workflows, scripts, automation  
-**Prerequisites:** Empirica installed (see [04_INSTALLATION.md](04_INSTALLATION.md))
+**Prerequisites:** Empirica installed (see [02_INSTALLATION.md](02_INSTALLATION.md))
 
 ---
 

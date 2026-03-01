@@ -1,9 +1,10 @@
 # Self-Monitoring Systems - Drift & Memory Gap Detection
 
-**Modules:**
-- `empirica.core.memory_gap_detector`
-
 These systems enable functional self-awareness - the ability to detect when knowledge has degraded, context is stale, or claims exceed evidence.
+
+**Note:** The standalone `memory_gap_detector` module has been removed. Memory gap detection
+concepts are now handled by the grounded calibration pipeline (`empirica calibration-report --grounded`).
+The data models below are retained as architectural reference.
 
 ## Philosophy
 
@@ -104,9 +105,10 @@ class MemoryGapReport:
     actions: List[str]  # Recommended actions
 ```
 
-### MemoryGapDetector
+### MemoryGapDetector (Removed)
 
-Configurable gap detection with policy-driven enforcement.
+The standalone `MemoryGapDetector` class has been removed. Gap detection is now part of the
+grounded calibration pipeline. The API below is retained as architectural reference.
 
 ```python
 detector = MemoryGapDetector(policy={
@@ -183,5 +185,4 @@ if drift_report.drift_detected:
 
 ## Source Files
 
-- `empirica/core/memory_gap_detector.py` - Evidence-based gap detection
-- Drift detection is now handled by the grounded calibration pipeline (see `empirica calibration-report --grounded`)
+- Drift detection and memory gap detection are now handled by the grounded calibration pipeline (see `empirica calibration-report --grounded`)

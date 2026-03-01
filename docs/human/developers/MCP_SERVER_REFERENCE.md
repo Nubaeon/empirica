@@ -122,7 +122,7 @@ Get comprehensive introduction to Empirica framework.
 Get workflow guidance for CASCADE phases.
 
 **Parameters:**
-- `phase` (optional): Specific phase (`PREFLIGHT`, `CHECK`, `ACT`, `POSTFLIGHT`)
+- `phase` (optional): Specific phase (`PREFLIGHT`, `CHECK`, `POSTFLIGHT`)
 
 **Returns:** Phase-specific guidance
 
@@ -791,7 +791,7 @@ Query logged mistakes for learning.
 
 **Complete tool list (58 tools):**
 
-**For complete MCP ↔ CLI mapping and detailed reference:** See [`MCP_CLI_MAPPING.md`](MCP_CLI_MAPPING.md)
+**For complete MCP ↔ CLI mapping and detailed reference:** See the tool descriptions below and the [CLI Commands Unified](CLI_COMMANDS_UNIFIED.md) reference.
 
 ### Documentation (3)
 1. `get_empirica_introduction` - Framework introduction
@@ -1382,10 +1382,9 @@ get_session_summary(session_id="latest:active:copilot")
 
 ## See Also
 
-- [CLI Commands Reference](CLI_COMMANDS_GENERATED.md)
-- [Python API Reference](PYTHON_API_GENERATED.md)
-- [Configuration Reference](CONFIGURATION_REFERENCE.md)
-- [Canonical System Prompt](../system-prompts/CANONICAL_SYSTEM_PROMPT.md)
+- [CLI Commands Reference](CLI_COMMANDS_UNIFIED.md)
+- [Configuration Reference](../../reference/CONFIGURATION_REFERENCE.md)
+- [Canonical System Prompt](system-prompts/CANONICAL_CORE.md)
 
 ---
 

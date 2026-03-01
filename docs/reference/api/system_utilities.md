@@ -12,9 +12,7 @@ The System Utilities API provides essential infrastructure tools for:
 
 - Branch mapping and Git integration
 - Documentation-code integrity checking
-- Configuration management
 - Migration tools
-- Session state management
 
 ---
 
@@ -33,7 +31,7 @@ Initialize the branch mapping system.
 
 **Example:**
 ```python
-from empirica.utils.branch_mapping import BranchMapping
+from empirica.integrations.branch_mapping import BranchMapping
 
 branch_mapper = BranchMapping()
 # Or specify a specific repository
@@ -222,74 +220,6 @@ print(f"Missing documentation: {full_report['missing_documentation']}")
 
 ---
 
-## Configuration Utilities
-
-### `class ConfigManager`
-
-Manages Empirica configuration settings.
-
-#### `__init__(self, config_path: Optional[str] = None)`
-
-Initialize the configuration manager.
-
-**Parameters:**
-- `config_path: Optional[str]` - Path to config file, defaults to standard location
-
-**Example:**
-```python
-from empirica.utils.config_manager import ConfigManager
-
-config_mgr = ConfigManager()
-```
-
-### `get_config_value(self, key: str, default: Any = None) -> Any`
-
-Get a configuration value.
-
-**Parameters:**
-- `key: str` - Configuration key (dot notation: 'database.path' or 'ai.settings.temperature')
-- `default: Any` - Default value if key not found
-
-**Returns:** `Any` - Configuration value
-
-**Example:**
-```python
-db_path = config_mgr.get_config_value('database.path', './sessions.db')
-temperature = config_mgr.get_config_value('ai.settings.temperature', 0.7)
-```
-
-### `set_config_value(self, key: str, value: Any) -> bool`
-
-Set a configuration value.
-
-**Parameters:**
-- `key: str` - Configuration key
-- `value: Any` - Value to set
-
-**Returns:** `bool` - True if successful
-
-**Example:**
-```python
-success = config_mgr.set_config_value('ai.settings.temperature', 0.5)
-```
-
-### `validate_config(self) -> Dict[str, List[str]]`
-
-Validate configuration against schema.
-
-**Returns:** `Dict[str, List[str]]` - Validation results with errors and warnings
-
-**Example:**
-```python
-validation = config_mgr.validate_config()
-if validation['errors']:
-    print(f"Configuration errors: {validation['errors']}")
-if validation['warnings']:
-    print(f"Configuration warnings: {validation['warnings']}")
-```
-
----
-
 ## Migration Utilities
 
 ### `class MigrationRunner`
@@ -355,257 +285,15 @@ if pending:
 
 ---
 
-## Session Utilities
-
-### `class SessionUtils`
-
-Utility functions for session management.
-
-#### `__init__(self, db_path: Optional[str] = None)`
-
-Initialize session utilities.
-
-**Parameters:**
-- `db_path: Optional[str]` - Database path, defaults to standard location
-
-**Example:**
-```python
-from empirica.utils.session_utils import SessionUtils
-
-session_utils = SessionUtils()
-```
-
-### `get_session_summary(self, session_id: str, detail_level: str = 'summary') -> Optional[Dict]`
-
-Get comprehensive session summary.
-
-**Parameters:**
-- `session_id: str` - Session identifier
-- `detail_level: str` - Detail level ('summary', 'detailed', 'full'), default 'summary'
-
-**Returns:** `Optional[Dict]` - Session summary or None if not found
-
-**Example:**
-```python
-summary = session_utils.get_session_summary(
-    session_id="sess-123",
-    detail_level="detailed"
-)
-
-if summary:
-    print(f"AI: {summary['ai_id']}")
-    print(f"Duration: {summary['duration_seconds']}s")
-    print(f"Epistemic delta: {summary['epistemic_delta']}")
-```
-
-### `find_similar_sessions(self, session_id: str, similarity_threshold: float = 0.7) -> List[Dict]`
-
-Find sessions similar to the given session based on goals and context.
-
-**Parameters:**
-- `session_id: str` - Reference session
-- `similarity_threshold: float` - Minimum similarity threshold, default 0.7
-
-**Returns:** `List[Dict]` - List of similar session dictionaries
-
-**Example:**
-```python
-similar = session_utils.find_similar_sessions(
-    session_id="sess-123",
-    similarity_threshold=0.8
-)
-
-for sess in similar:
-    print(f"Similar session: {sess['session_id']} - {sess['task_similarity']:.2f}")
-```
-
-### `export_session_artifacts(self, session_id: str, export_path: str, include_vectors: bool = True, include_logs: bool = True) -> bool`
-
-Export session artifacts to a directory.
-
-**Parameters:**
-- `session_id: str` - Session identifier
-- `export_path: str` - Path to export directory
-- `include_vectors: bool` - Include epistemic vectors, default True
-- `include_logs: bool` - Include logs, default True
-
-**Returns:** `bool` - True if export successful
-
-**Example:**
-```python
-success = session_utils.export_session_artifacts(
-    session_id="sess-123",
-    export_path="./exports/session-123",
-    include_vectors=True,
-    include_logs=True
-)
-```
-
----
-
-## Git Integration Utilities
-
-### `class GitIntegration`
-
-Provides enhanced Git integration for Empirica's epistemic tracking.
-
-#### `__init__(self, repo_path: Optional[str] = None)`
-
-Initialize Git integration.
-
-**Parameters:**
-- `repo_path: Optional[str]` - Git repository path, defaults to current directory
-
-**Example:**
-```python
-from empirica.utils.git_integration import GitIntegration
-
-git_integrator = GitIntegration()
-```
-
-### `create_epistemic_checkpoint(self, session_id: str, phase: str, vectors: Dict[str, float], message: Optional[str] = None) -> Optional[str]`
-
-Create an epistemic checkpoint as a Git commit with vector data.
-
-**Parameters:**
-- `session_id: str` - Session identifier
-- `phase: str` - Current phase ('PREFLIGHT', 'CHECK', 'POSTFLIGHT')
-- `vectors: Dict[str, float]` - Epistemic vectors
-- `message: Optional[str]` - Optional commit message
-
-**Returns:** `Optional[str]` - Commit hash or None if failed
-
-**Example:**
-```python
-commit_hash = git_integrator.create_epistemic_checkpoint(
-    session_id="sess-123",
-    phase="POSTFLIGHT",
-    vectors={
-        "know": 0.85, "do": 0.78, "context": 0.92, "uncertainty": 0.15
-    },
-    message="POSTFLIGHT: Completed auth module implementation"
-)
-```
-
-### `get_epistemic_history(self, limit: int = 50) -> List[Dict[str, Any]]`
-
-Get epistemic history from Git commits.
-
-**Parameters:**
-- `limit: int` - Maximum number of commits to return, default 50
-
-**Returns:** `List[Dict[str, Any]]` - List of epistemic checkpoints from commits
-
-**Example:**
-```python
-history = git_integrator.get_epistemic_history(limit=20)
-for checkpoint in history:
-    print(f"Commit {checkpoint['commit_hash'][:8]}: {checkpoint['phase']} - {checkpoint['vectors']['know']:.2f} know")
-```
-
-### `restore_from_checkpoint(self, commit_hash: str) -> bool`
-
-Restore session state from a Git checkpoint.
-
-**Parameters:**
-- `commit_hash: str` - Git commit hash
-
-**Returns:** `bool` - True if restoration successful
-
-**Example:**
-```python
-success = git_integrator.restore_from_checkpoint(commit_hash="a1b2c3d4")
-if success:
-    print("Session state restored from checkpoint")
-```
-
----
-
-## Performance Utilities
-
-### `class PerformanceMonitor`
-
-Monitors and tracks performance metrics.
-
-#### `__init__(self, session_id: str)`
-
-Initialize performance monitoring for a session.
-
-**Parameters:**
-- `session_id: str` - Session identifier
-
-**Example:**
-```python
-from empirica.utils.performance_monitor import PerformanceMonitor
-
-perf_monitor = PerformanceMonitor(session_id="sess-123")
-```
-
-### `start_measurement(self, operation_name: str) -> str`
-
-Start timing an operation.
-
-**Parameters:**
-- `operation_name: str` - Name of the operation
-
-**Returns:** `str` - Measurement ID
-
-**Example:**
-```python
-measurement_id = perf_monitor.start_measurement("database_query")
-# ... perform operation ...
-result = perf_monitor.stop_measurement(measurement_id)
-print(f"Operation took {result['duration_ms']}ms")
-```
-
-### `stop_measurement(self, measurement_id: str) -> Dict[str, Any]`
-
-Stop timing an operation and return results.
-
-**Parameters:**
-- `measurement_id: str` - ID from start_measurement
-
-**Returns:** `Dict[str, Any]` - Performance results
-
-**Example:**
-```python
-results = perf_monitor.stop_measurement(measurement_id="measure-123")
-print(f"Duration: {results['duration_ms']}ms")
-print(f"Memory used: {results['memory_delta_bytes']} bytes")
-```
-
-### `get_performance_report(self) -> Dict[str, Any]`
-
-Get overall performance report for the session.
-
-**Returns:** `Dict[str, Any]` - Performance metrics
-
-**Example:**
-```python
-report = perf_monitor.get_performance_report()
-print(f"Average operation time: {report['avg_operation_time_ms']}ms")
-print(f"Peak memory usage: {report['peak_memory_mb']}MB")
-```
-
----
-
 ## Best Practices
 
 1. **Use branch mapping consistently** - Always map branches to goals to maintain traceability.
 
-2. **Validate configurations** - Regularly validate configuration against schema to prevent runtime errors.
+2. **Run migrations safely** - Always backup before running schema migrations.
 
-3. **Run migrations safely** - Always backup before running schema migrations.
+3. **Check integrity regularly** - Run doc-code integrity checks to maintain consistency.
 
-4. **Monitor performance** - Use performance utilities to identify bottlenecks.
-
-5. **Export session artifacts** - Regularly export important session data for backup and analysis.
-
-6. **Maintain Git integration** - Use epistemic checkpoints to maintain continuity across Git commits.
-
-7. **Check integrity regularly** - Run doc-code integrity checks to maintain consistency.
-
-8. **Handle errors gracefully** - All utility methods return appropriate success/failure indicators.
+4. **Handle errors gracefully** - All utility methods return appropriate success/failure indicators.
 
 ---
 
@@ -621,14 +309,10 @@ Methods typically raise:
 
 ---
 
-**Module Locations:** 
-- `empirica/utils/branch_mapping.py`
-- `empirica/utils/doc_code_integrity.py` 
-- `empirica/utils/config_manager.py`
+**Module Locations:**
+- `empirica/integrations/branch_mapping.py`
+- `empirica/utils/doc_code_integrity.py`
 - `empirica/data/migrations/migration_runner.py`
-- `empirica/utils/session_utils.py`
-- `empirica/utils/git_integration.py`
-- `empirica/utils/performance_monitor.py`
 
 ---
 
@@ -726,28 +410,6 @@ repo.checkpoint_branch(branch_id, findings, confidence)
 - `checkpoint_branch(branch_id, findings, confidence) -> bool` - Save checkpoint
 - `merge_branches(parent_id, child_ids, strategy) -> Dict` - Merge branches
 - `list_active_branches(session_id) -> List[Dict]` - List active branches
-
----
-
-### `class TokenRepository`
-
-Tracks token usage and compression savings.
-
-**Location:** `empirica/data/repositories/tokens.py`
-
-```python
-from empirica.data.repositories.tokens import TokenRepository
-
-repo = TokenRepository(db_path)
-repo.log_token_usage(session_id, tokens_used, context)
-savings = repo.get_compression_savings(session_id)
-```
-
-**Key Methods:**
-- `log_token_usage(session_id, tokens, context) -> bool` - Log usage
-- `get_session_token_usage(session_id) -> Dict` - Get session totals
-- `log_compression_savings(session_id, original, compressed) -> bool` - Log savings
-- `get_compression_savings(session_id) -> Dict` - Get savings report
 
 ---
 

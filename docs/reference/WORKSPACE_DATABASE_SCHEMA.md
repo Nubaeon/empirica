@@ -1,7 +1,7 @@
 # Workspace Database Schema Reference
 
 **Location:** `~/.empirica/workspace/workspace.db`
-**Version:** 1.5.9
+**Version:** 1.6.0
 **Purpose:** Cross-project portfolio management and trajectory tracking
 
 ---
@@ -161,6 +161,6 @@ WHERE tl.source_project_id = '<your-project-id>';
 
 ## Related Documentation
 
-- [Instance Isolation](../architecture/INSTANCE_ISOLATION.md) — How instances bind to projects
+- [Instance Isolation](../architecture/instance_isolation/ARCHITECTURE.md) — How instances bind to projects
 - [Database Schema (Project-Level)](./DATABASE_SCHEMA_UNIFIED.md) — Per-project sessions.db
 - [Project Switching](../guides/PROJECT_SWITCHING_FOR_AIS.md) — How projects are selected

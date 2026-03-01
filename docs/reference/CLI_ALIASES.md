@@ -101,4 +101,4 @@ Both must be updated for an alias to work.
 ## See Also
 
 - [CLI Quickstart](../human/end-users/04_QUICKSTART_CLI.md)
-- [Full Command Reference](CLI_COMMANDS_COMPLETE.md)
+- [Full Command Reference](../human/developers/CLI_COMMANDS_UNIFIED.md)

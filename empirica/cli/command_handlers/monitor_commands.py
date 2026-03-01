@@ -457,7 +457,7 @@ def handle_monitor_cost_command(args):
 
 
 # NOTE: handle_pre_summary_snapshot, handle_post_summary_drift_check, and
-# handle_check_drift_command were removed in v1.5.9. MirrorDriftMonitor was
+# handle_check_drift_command were removed in v1.6.0. MirrorDriftMonitor was
 # superseded by the grounded calibration pipeline (postflight → post-test →
 # bayesian updates) which detects drift through objective evidence rather
 # than vector-to-vector temporal comparison.
@@ -557,7 +557,7 @@ def handle_mco_load_command(args):
                 session_data = db.get_session(session_id)
                 if session_data:
                     ai_id = ai_id or session_data.get('ai_id')
-            except:
+            except Exception:
                 pass
 
         # Export snapshot
@@ -1425,7 +1425,7 @@ def handle_calibration_report_command(args):
             try:
                 dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                 week_key = dt.strftime('%Y-W%W')
-            except:
+            except Exception:
                 week_key = 'unknown'
 
             # Collect per-vector data

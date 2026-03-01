@@ -38,7 +38,6 @@ def add_mcp_parsers(subparsers):
         help='List available MCP tools'
     )
     mcp_list_tools.add_argument('--verbose', '-v', action='store_true', help='Show usage examples')
-    mcp_list_tools.add_argument('--show-all', action='store_true', help='Include disabled/optional tools')
 
     # mcp call - Call MCP tool directly (for testing)
     mcp_call = subparsers.add_parser(

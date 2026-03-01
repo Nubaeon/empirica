@@ -22,6 +22,11 @@ Optional features (off by default):
 - EMPIRICA_SENTINEL_COMPACT_INVALIDATION=true - Invalidate CHECK after compact
 - EMPIRICA_SENTINEL_CHECK_EXPIRY=true - Enable 30-minute CHECK expiry
 - EMPIRICA_SENTINEL_LOOPING=false - Disable sentinel entirely
+
+Related but NOT consumed here:
+- EMPIRICA_CALIBRATION_FEEDBACK=false - Suppress calibration feedback in workflow
+  output (PREFLIGHT/CHECK enrichment). Does NOT affect gating — the Sentinel always
+  uses raw vectors. See workflow_commands.py for where this flag is consumed.
 """
 import json
 import sys
@@ -117,9 +122,16 @@ SAFE_PIPE_TARGETS = (
     'jq', 'jq ',  # JSON processing (read-only)
 )
 
-# Thresholds for CHECK validation
-# NOTE: Using RAW thresholds - bias corrections are FEEDBACK for AI to internalize,
-# not silent adjustments. What AI sees in statusline = what sentinel evaluates.
+# Thresholds for CHECK validation.
+#
+# DESIGN: The Sentinel uses RAW (uncorrected) vectors for all gating decisions.
+# Calibration corrections (from grounded verification, Bayesian learning trajectory)
+# are FEEDBACK for the AI to internalize and self-correct — they are never applied
+# silently by the system. What the AI reports is what the Sentinel evaluates.
+#
+# This is intentional and NOT controlled by EMPIRICA_CALIBRATION_FEEDBACK.
+# The flag gates calibration FEEDBACK in workflow output (PREFLIGHT/CHECK enrichment),
+# not gating logic. The Sentinel always uses raw vectors regardless of the flag.
 KNOW_THRESHOLD = 0.70
 UNCERTAINTY_THRESHOLD = 0.35
 MAX_CHECK_AGE_MINUTES = 30

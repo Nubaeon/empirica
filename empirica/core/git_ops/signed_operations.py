@@ -268,8 +268,6 @@ class SignedGitOperations:
                 - state_timestamp: When state was signed
                 - vectors_preview: Sample of epistemic vectors
 
-        Raises:
-            GitCommandError: If git range is invalid
         """
         results = []
 

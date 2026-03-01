@@ -16,7 +16,9 @@ import subprocess
 import os
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
+# Import shared utilities from plugin lib
+sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+from project_resolver import get_instance_id, find_project_root  # noqa: E402
 
 
 def write_git_notes(
@@ -98,142 +100,6 @@ This enables drift detection between pre and post compact states.
         return False
 
 
-def _get_instance_id() -> Optional[str]:
-    """Derive instance ID from environment. TMUX_PANE → TTY → 'default'."""
-    tmux_pane = os.environ.get('TMUX_PANE')
-    if tmux_pane:
-        return f"tmux_{tmux_pane.lstrip('%')}"
-    try:
-        tty_path = os.ttyname(sys.stdin.fileno())
-        safe = tty_path.replace('/', '_').lstrip('_').replace('dev_', '')
-        return f"term_{safe}"
-    except Exception:
-        pass
-    return "default"
-
-
-def find_project_root(claude_session_id: str = None) -> Optional[Path]:
-    """
-    Find the Empirica project root using priority chain.
-
-    Priority order:
-    -1. Open transaction file (AUTHORITATIVE - survives compaction, written at PREFLIGHT)
-     0. Active work file by Claude session_id (most reliable - works for ALL users)
-     1. Instance projects file by instance_id (works in hook context without TTY)
-     2. EMPIRICA_WORKSPACE_ROOT environment variable
-    NO CWD FALLBACK - fails explicitly to prevent wrong context pollution
-    """
-    def has_valid_db(path: Path) -> bool:
-        """Check if path has valid Empirica database"""
-        db_path = path / '.empirica' / 'sessions' / 'sessions.db'
-        return db_path.exists() and db_path.stat().st_size > 0
-
-    instance_id = _get_instance_id()
-
-    # Collect ALL candidate paths first (don't return early for Priorities 0-1)
-    candidates = []
-
-    # Priority 0 candidate: active_work file by Claude session_id
-    if claude_session_id:
-        try:
-            active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-            if active_work_file.exists():
-                with open(active_work_file, 'r') as f:
-                    work_data = json.load(f)
-                project_path = work_data.get('project_path')
-                if project_path and has_valid_db(Path(project_path)):
-                    candidates.append(project_path)
-        except Exception:
-            pass
-
-    # Priority 1 candidate: instance_projects by instance_id
-    if instance_id:
-        try:
-            instance_file = Path.home() / '.empirica' / 'instance_projects' / f'{instance_id}.json'
-            if instance_file.exists():
-                with open(instance_file, 'r') as f:
-                    instance_data = json.load(f)
-                project_path = instance_data.get('project_path')
-                if project_path and has_valid_db(Path(project_path)):
-                    candidates.append(project_path)
-        except Exception:
-            pass
-
-    # Priority -1: Check candidates for open transaction (AUTHORITATIVE)
-    # The transaction file is written at PREFLIGHT with explicit project_path.
-    # If a candidate has an open transaction, that's definitively the right project.
-    if instance_id and candidates:
-        for path in candidates:
-            try:
-                tx_file = Path(path) / '.empirica' / f'active_transaction_{instance_id}.json'
-                if tx_file.exists():
-                    with open(tx_file, 'r') as f:
-                        tx_data = json.load(f)
-                    if tx_data.get('status') == 'open':
-                        # Open transaction wins - this IS the active project
-                        tx_project = tx_data.get('project_path')
-                        if tx_project and has_valid_db(Path(tx_project)):
-                            return Path(tx_project)
-                        return Path(path)
-            except Exception:
-                continue
-
-    # Priority -0.5: Workspace scan — if candidates didn't have open transactions,
-    # scan ALL registered projects for open transactions with this instance_id.
-    # Handles case where active_work/instance_projects are stale/wrong.
-    # Picks the most recently modified transaction file if multiple are open.
-    if instance_id:
-        try:
-            import sqlite3
-            ws_db = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
-            if ws_db.exists():
-                conn = sqlite3.connect(str(ws_db))
-                cursor = conn.cursor()
-                cursor.execute("SELECT trajectory_path FROM global_projects WHERE trajectory_path IS NOT NULL")
-                all_projects = [row[0] for row in cursor.fetchall()]
-                conn.close()
-
-                # Check each project for open transaction, track by mtime
-                best_match = None
-                best_mtime = 0
-                candidate_set = set(candidates)  # Skip already-checked candidates
-                for proj_path in all_projects:
-                    if proj_path in candidate_set:
-                        continue
-                    tx_file = Path(proj_path) / '.empirica' / f'active_transaction_{instance_id}.json'
-                    try:
-                        if tx_file.exists():
-                            with open(tx_file, 'r') as f:
-                                tx_data = json.load(f)
-                            if tx_data.get('status') == 'open':
-                                mtime = tx_file.stat().st_mtime
-                                if mtime > best_mtime:
-                                    tx_project = tx_data.get('project_path', proj_path)
-                                    if has_valid_db(Path(tx_project)):
-                                        best_match = Path(tx_project)
-                                        best_mtime = mtime
-                    except Exception:
-                        continue
-
-                if best_match:
-                    return best_match
-        except Exception:
-            pass
-
-    # No open transaction found - return first valid candidate (original behavior)
-    if candidates:
-        return Path(candidates[0])
-
-    # Priority 2: Check environment variable
-    if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
-        workspace_path = Path(workspace_root).expanduser().resolve()
-        if has_valid_db(workspace_path):
-            return workspace_path
-
-    # NO CWD FALLBACK - fail explicitly to prevent wrong context pollution
-    return None
-
-
 def main():
     # Read hook input from stdin (provided by Claude Code)
     hook_input = json.loads(sys.stdin.read())
@@ -260,7 +126,7 @@ def main():
     # This ensures post-compact resolves to the same project even if
     # active_work/instance_projects get stale between pre and post compact.
     try:
-        instance_id = _get_instance_id()
+        instance_id = get_instance_id()
         handoff_file = Path.home() / '.empirica' / f'compact_handoff_{instance_id}.json'
         handoff_data = {
             'project_path': str(project_root),

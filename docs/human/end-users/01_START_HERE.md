@@ -107,7 +107,7 @@ Empirica supports two distinct usage patterns:
 **Definition:** Focused executor of specific, well-defined tasks
 - **Characteristics:** Task-focused, minimal dialogue, simplified CASCADE
 - **Use for:** Implementation, testing, documentation, routine tasks
-- **CASCADE:** ACT-focused (execute subtasks efficiently)
+- **CASCADE:** Praxic-focused (execute subtasks efficiently)
 - **Examples:** Mini-agent implementing tests, code formatters
 
 **Quick Rule:** Use AI for thinking/planning, Agent for execution.  
@@ -211,6 +211,9 @@ submit_postflight_assessment(
 - **Quick start:** [04_QUICKSTART_CLI.md](04_QUICKSTART_CLI.md) - CLI workflow guide
 - **Understand vectors:** [05_EPISTEMIC_VECTORS_EXPLAINED.md](05_EPISTEMIC_VECTORS_EXPLAINED.md)
 - **Simple explanation:** [EMPIRICA_EXPLAINED_SIMPLE.md](EMPIRICA_EXPLAINED_SIMPLE.md)
+
+### For Teams & Organizations:
+- **[empirica-workspace](https://github.com/Nubaeon/empirica-workspace)** extends Empirica with cross-project calibration, multi-entity pattern matching, TUI analytics dashboards, and API integrations for external tools.
 
 ### Need Help?
 - **Installation issues:** [02_INSTALLATION.md](02_INSTALLATION.md)

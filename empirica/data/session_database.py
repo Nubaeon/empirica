@@ -112,14 +112,14 @@ class SessionDatabase:
 
         # Initialize domain repositories (sharing same connection)
         from empirica.data.repositories import (
-            SessionRepository, CascadeRepository, GoalRepository,
+            SessionRepository, CascadeRepository, GoalDataRepository,
             BranchRepository, BreadcrumbRepository, ProjectRepository,
             TokenRepository, CommandRepository, WorkspaceRepository,
             VectorRepository, MetricsRepository
         )
         self.sessions = SessionRepository(self.conn)
         self.cascades = CascadeRepository(self.conn)
-        self.goals = GoalRepository(self.conn)
+        self.goals = GoalDataRepository(self.conn)
         self.branches = BranchRepository(self.conn)
         self.breadcrumbs = BreadcrumbRepository(self.conn)
         self.projects = ProjectRepository(self.conn)
@@ -147,8 +147,8 @@ class SessionDatabase:
     def core_goals(self):
         """Lazy-load core GoalRepository for query methods"""
         if self._core_goals is None:
-            from empirica.core.goals.repository import GoalRepository as CoreGoalRepository
-            self._core_goals = CoreGoalRepository()
+            from empirica.core.goals.repository import GoalRepository
+            self._core_goals = GoalRepository()
         return self._core_goals
 
     @staticmethod

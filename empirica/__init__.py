@@ -12,10 +12,10 @@ Key Features:
 - Session database (SQLite) with breadcrumb tracking
 - Drift detection and signaling
 
-Version: 1.5.9
+Version: 1.6.0
 """
 
-__version__ = "1.5.9"
+__version__ = "1.6.0"
 __author__ = "Empirica Project"
 
 # Lazy imports — heavy modules (git, cryptography, jsonschema) are only
@@ -31,14 +31,10 @@ def __getattr__(name):
     if name == "SessionDatabase":
         from empirica.data.session_database import SessionDatabase
         return SessionDatabase
-    if name == "SessionJSONHandler":
-        from empirica.data.session_json_handler import SessionJSONHandler
-        return SessionJSONHandler
     raise AttributeError(f"module 'empirica' has no attribute {name!r}")
 
 
 __all__ = [
     'GitEnhancedReflexLogger',
     'SessionDatabase',
-    'SessionJSONHandler',
 ]

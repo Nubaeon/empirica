@@ -4,6 +4,10 @@ Pattern Retrieval for Cognitive Workflow Hooks
 Provides pattern retrieval for PREFLIGHT (proactive loading) and CHECK (reactive validation).
 Integrates with Qdrant memory collections for lessons, dead_ends, and findings.
 
+Calibration-related retrieval (calibration_warnings in PREFLIGHT, calibration_bias in CHECK)
+is gated by the `include_calibration` parameter, which is controlled by the
+EMPIRICA_CALIBRATION_FEEDBACK env var (default: true) in the caller (workflow_commands.py).
+
 Defaults:
 - similarity_threshold: 0.7
 - limit: 3
@@ -359,6 +363,7 @@ def retrieve_task_patterns(
     include_goals: bool = False,
     include_assumptions: bool = False,
     include_decisions: bool = False,
+    include_calibration: bool = True,
     vectors: Optional[Dict] = None,
 ) -> Dict[str, any]:
     """
@@ -388,6 +393,10 @@ def retrieve_task_patterns(
         include_goals: Include related goals/subtasks
         include_assumptions: Include unverified assumptions ("What are you assuming?")
         include_decisions: Include prior decisions ("What was already decided?")
+        include_calibration: Include calibration warnings from grounded verification
+            history. Controlled by EMPIRICA_CALIBRATION_FEEDBACK env var in the
+            caller (workflow_commands.py). When False, skips the Qdrant search for
+            calibration patterns from similar past tasks. Default True.
         vectors: Current epistemic vectors for adaptive depth scaling
     """
     # Compute time gap metadata (signal for Claude, not retrieval control)
@@ -452,15 +461,21 @@ def retrieve_task_patterns(
         for f in findings_raw
     ]
 
-    # Search for calibration warnings (grounded verification gaps from similar tasks)
-    calibration_warnings = _search_calibration_for_task(project_id, task_context, limits["findings"])
+    # Search for calibration warnings (grounded verification gaps from similar tasks).
+    # Gated by include_calibration flag, which is controlled by the
+    # EMPIRICA_CALIBRATION_FEEDBACK env var (default: true) in the caller.
+    # When disabled, this Qdrant search is skipped entirely — no calibration
+    # context is injected into PREFLIGHT output.
+    calibration_warnings = []
+    if include_calibration:
+        calibration_warnings = _search_calibration_for_task(project_id, task_context, limits["findings"])
 
     # Build result
     result = {
         "lessons": lessons,
         "dead_ends": dead_ends,
         "relevant_findings": relevant_findings,
-        "calibration_warnings": calibration_warnings,
+        "calibration_warnings": calibration_warnings if calibration_warnings else None,
         "time_gap": time_gap_info,
     }
 
@@ -640,6 +655,7 @@ def check_against_patterns(
     include_eidetic: bool = False,
     include_goals: bool = False,
     include_assumptions: bool = False,
+    include_calibration: bool = True,
 ) -> Dict[str, any]:
     """
     CHECK hook: Validate current approach against known patterns (Noetic RAG).
@@ -658,6 +674,10 @@ def check_against_patterns(
         include_eidetic: Include eidetic facts (stable knowledge)
         include_goals: Include active goals for alignment check
         include_assumptions: Include unverified assumptions as risk signal
+        include_calibration: Include calibration bias detection from grounded
+            verification history. Controlled by EMPIRICA_CALIBRATION_FEEDBACK
+            env var in the caller. When False, skips the systematic bias check
+            across similar past sessions. Default True.
     """
     if not get_qdrant_url():
         return {"dead_end_matches": [], "mistake_risk": None, "has_warnings": False}
@@ -706,10 +726,14 @@ def check_against_patterns(
                 "Proceeding without understanding current state increases mistake probability."
             )
 
-    # Check calibration history for systematic bias
-    calibration_bias = _check_calibration_bias(project_id, current_approach, vectors)
-    if calibration_bias:
-        warnings["calibration_bias"] = calibration_bias
+    # Check calibration history for systematic bias across similar past sessions.
+    # Gated by include_calibration flag, which is controlled by the
+    # EMPIRICA_CALIBRATION_FEEDBACK env var (default: true) in the caller.
+    # When disabled, no calibration bias warnings are added to CHECK output.
+    if include_calibration:
+        calibration_bias = _check_calibration_bias(project_id, current_approach, vectors)
+        if calibration_bias:
+            warnings["calibration_bias"] = calibration_bias
 
     # Noetic RAG: Related findings as additional context
     if include_findings and current_approach:

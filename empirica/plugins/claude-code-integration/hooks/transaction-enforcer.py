@@ -29,24 +29,14 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
+# Import shared utilities from plugin lib
+sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+from project_resolver import get_instance_id  # noqa: E402
+
 
 # Thresholds (can be tuned via env vars)
 SOFT_THRESHOLD = int(os.environ.get('EMPIRICA_TX_SOFT_TURNS', '12'))
 HARD_THRESHOLD = int(os.environ.get('EMPIRICA_TX_HARD_TURNS', '20'))
-
-
-def _get_instance_id() -> Optional[str]:
-    """Derive instance ID from environment."""
-    tmux_pane = os.environ.get('TMUX_PANE')
-    if tmux_pane:
-        return f"tmux_{tmux_pane.lstrip('%')}"
-    try:
-        tty_path = os.ttyname(sys.stdin.fileno())
-        safe = tty_path.replace('/', '_').lstrip('_').replace('dev_', '')
-        return f"term_{safe}"
-    except Exception:
-        pass
-    return "default"
 
 
 def _find_transaction_file(instance_id: str) -> Optional[Path]:
@@ -127,7 +117,7 @@ def main():
         print(json.dumps({}))
         sys.exit(0)
 
-    instance_id = _get_instance_id()
+    instance_id = get_instance_id()
 
     # Find open transaction
     tx_file = _find_transaction_file(instance_id)

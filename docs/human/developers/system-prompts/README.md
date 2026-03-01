@@ -1,4 +1,4 @@
-# System Prompts - Architecture v1.5.9
+# System Prompts - Architecture v1.6.0
 
 **Multi-AI system prompt management for Empirica**
 
@@ -132,4 +132,4 @@ empirica deadend-log --approach "..." --why-failed "..."
 
 ---
 
-**Syncs with:** Empirica v1.5.9
+**Syncs with:** Empirica v1.6.0

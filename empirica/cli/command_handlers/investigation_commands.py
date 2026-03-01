@@ -58,9 +58,9 @@ def _get_profile_thresholds():
                 'engagement_gate': universal.engagement_gate,
                 'coherence_min': universal.coherence_min,
             }
-        except:
+        except Exception:
             return {
-                'confidence_low': 0.5, 
+                'confidence_low': 0.5,
                 'confidence_high': 0.7,
                 'engagement_gate': universal.engagement_gate,
                 'coherence_min': universal.coherence_min,

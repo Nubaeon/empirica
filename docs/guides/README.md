@@ -20,7 +20,7 @@ Generate professional slide decks for Empirica using NotebookLM:
 2. Upload sources from github.com/Nubaeon/empirica:
    - README.md
    - docs/EMPIRICA_EXPLAINED_SIMPLE.md
-   - docs/CASCADE_WORKFLOW.md
+   - docs/architecture/NOETIC_PRAXIC_FRAMEWORK.md
    - docs/05_EPISTEMIC_VECTORS_EXPLAINED.md
    - .github/copilot-instructions.md
 3. Copy prompt from PROMPT_DECK1_FOUNDATIONS.txt

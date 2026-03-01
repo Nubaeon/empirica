@@ -641,6 +641,15 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 - `EMPIRICA_AUTOPILOT_MODE`: Enable binding Sentinel decisions (`true`, `false`, default: `false`). When `true`, CHECK decisions are enforced (not suggestive).
 - `EMPIRICA_STATUS_MODE`: Status display mode for statusline (`basic`, `default`, `learning`, `full`). Default: `default`. Shows confidence, open goals/unknowns, phase, vectors, and drift status.
 
+### Calibration
+
+- `EMPIRICA_CALIBRATION_FEEDBACK`: Enable/disable calibration feedback in workflow output (`true`, `false`, default: `true`). Controls:
+  - PREFLIGHT: `previous_transaction_feedback` (grounded gaps), `calibration_warnings` (Qdrant)
+  - CHECK: `calibration_bias` (systematic bias detection)
+  - Does NOT affect: POSTFLIGHT grounded verification (always runs), Sentinel gating (always uses raw vectors), learning trajectory (informational)
+
+> **Cross-project calibration, multi-entity pattern matching, TUI analytics, and API integrations** are available in [empirica-workspace](https://github.com/Nubaeon/empirica-workspace) — the commercial extension for teams and organizations.
+
 ### Features
 
 - `EMPIRICA_AUTO_CHECKPOINT`: Enable/disable auto checkpoints (`true`, `false`)
@@ -792,9 +801,8 @@ EMPIRICA_LOG_LEVEL=debug empirica session-create --ai-id test
 
 ## See Also
 
-- [CLI Commands Reference](CLI_COMMANDS_GENERATED.md)
-- [Python API Reference](PYTHON_API_GENERATED.md)
-- [MCP Server Documentation](MCP_SERVER_GENERATED.md)
+- [CLI Commands Reference](../human/developers/CLI_COMMANDS_UNIFIED.md)
+- [MCP Server Reference](../human/developers/MCP_SERVER_REFERENCE.md)
 
 ---
 

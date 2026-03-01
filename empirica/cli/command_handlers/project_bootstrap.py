@@ -13,7 +13,6 @@ import json
 import logging
 import os
 from ..cli_utils import handle_cli_error, safe_print
-from empirica.core.memory_gap_detector import MemoryGapDetector
 
 logger = logging.getLogger(__name__)
 
@@ -254,38 +253,8 @@ def handle_project_bootstrap_command(args):
         if episodic_memories:
             breadcrumbs['episodic_memories'] = episodic_memories
 
-        # Optional: Detect memory gaps if session-id provided
-        memory_gap_report = None
-        session_id = getattr(args, 'session_id', None)
-
-        if session_id:
-            # Get current session vectors
-            current_vectors = db.get_latest_vectors(session_id)
-
-            if current_vectors:
-                # Get memory gap policy from config or use default
-                gap_policy = getattr(args, 'memory_gap_policy', None)
-                if gap_policy:
-                    policy = {'enforcement': gap_policy}
-                else:
-                    policy = {'enforcement': 'inform'}  # Default: just show gaps
-
-                # Detect memory gaps
-                detector = MemoryGapDetector(policy)
-                session_context = {
-                    'session_id': session_id,
-                    'breadcrumbs_loaded': False,  # Will be updated if AI loads them
-                    'finding_references': 0,  # TODO: Track actual references
-                    'compaction_events': []  # TODO: Load from database
-                }
-
-                memory_gap_report = detector.detect_gaps(
-                    current_vectors=current_vectors,
-                    breadcrumbs=breadcrumbs,
-                    session_context=session_context
-                )
-
         # Add workflow suggestions based on session state
+        session_id = getattr(args, 'session_id', None)
         workflow_suggestions = None
         if session_id:
             from empirica.cli.utils.workflow_suggestions import get_workflow_suggestions
@@ -358,29 +327,6 @@ def handle_project_bootstrap_command(args):
             safe_print(f"❌ {breadcrumbs['error']}")
             return None
 
-        # Add memory gaps to breadcrumbs if detected
-        if memory_gap_report and memory_gap_report.detected:
-            breadcrumbs['memory_gaps'] = [
-                {
-                    'gap_id': gap.gap_id,
-                    'type': gap.gap_type,
-                    'content': gap.content,
-                    'severity': gap.severity,
-                    'gap_score': gap.gap_score,
-                    'evidence': gap.evidence,
-                    'resolution_action': gap.resolution_action
-                }
-                for gap in memory_gap_report.gaps
-            ]
-            breadcrumbs['memory_gap_analysis'] = {
-                'detected': True,
-                'overall_gap': memory_gap_report.overall_gap,
-                'claimed_know': memory_gap_report.claimed_know,
-                'expected_know': memory_gap_report.expected_know,
-                'enforcement_mode': policy.get('enforcement', 'inform'),
-                'recommended_actions': memory_gap_report.actions
-            }
-
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
             result = {
@@ -437,9 +383,9 @@ def handle_project_bootstrap_command(args):
                 if result.returncode == 0:
                     git_url = result.stdout.strip()
                     safe_print(f"🔗 Repository: {git_url}")
-            except:
+            except Exception:
                 pass
-            
+
             safe_print(f"📍 Location: {db.db_path.parent.parent if hasattr(db, 'db_path') and db.db_path else 'Unknown'}")
             safe_print(f"💾 Database: .empirica/sessions/sessions.db")
             safe_print()

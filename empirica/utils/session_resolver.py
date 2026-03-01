@@ -91,7 +91,10 @@ def get_tty_session(warn_if_stale: bool = True) -> Optional[Dict[str, Any]]:
         - empirica_session_id: Empirica session UUID
         - project_path: Project directory path
         - tty_key: The TTY key used
+        - instance_id: TMUX pane instance identifier (e.g. 'tmux_3')
         - timestamp: When the mapping was written
+        - pid: Process ID that wrote the session
+        - ppid: Parent process ID
 
     Args:
         warn_if_stale: If True, logs warnings for potentially stale sessions
@@ -156,7 +159,8 @@ def write_tty_session(
         project_path: Project directory path (optional)
 
     Returns:
-        True if successfully written, False if neither TTY nor TMUX_PANE available.
+        True if at least one session file was written (TTY or instance_projects),
+        False if neither TTY nor TMUX_PANE is available.
     """
     from datetime import datetime
 
@@ -303,76 +307,6 @@ def validate_tty_session(session: Dict[str, Any] = None) -> Dict[str, Any]:
         result['valid'] = False
 
     return result
-
-
-def cleanup_stale_tty_sessions(max_age_hours: float = 24) -> int:
-    """Remove stale TTY session files.
-
-    Removes files where:
-    - The TTY device no longer exists
-    - The original process is dead AND file is older than max_age_hours
-
-    Args:
-        max_age_hours: Maximum age in hours before a session with dead process is removed
-
-    Returns:
-        Number of files removed
-    """
-    from datetime import datetime, timedelta
-
-    tty_sessions_dir = Path.home() / '.empirica' / 'tty_sessions'
-    if not tty_sessions_dir.exists():
-        return 0
-
-    removed = 0
-    for session_file in tty_sessions_dir.glob('*.json'):
-        try:
-            with open(session_file, 'r') as f:
-                session = json.load(f)
-
-            should_remove = False
-            reason = ""
-
-            # Check TTY device
-            tty_key = session.get('tty_key', '')
-            if tty_key.startswith('pts-'):
-                tty_device = f"/dev/{tty_key.replace('-', '/')}"
-                if not Path(tty_device).exists():
-                    should_remove = True
-                    reason = "TTY device gone"
-
-            # Check process + age
-            if not should_remove:
-                pid = session.get('pid')
-                process_alive = False
-                if pid:
-                    try:
-                        os.kill(pid, 0)
-                        process_alive = True
-                    except OSError:
-                        pass
-
-                if not process_alive:
-                    timestamp_str = session.get('timestamp')
-                    if timestamp_str:
-                        try:
-                            timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00').split('+')[0])
-                            age = datetime.now() - timestamp
-                            if age > timedelta(hours=max_age_hours):
-                                should_remove = True
-                                reason = f"Process dead, file {age.total_seconds()/3600:.1f}h old"
-                        except (ValueError, TypeError):
-                            pass
-
-            if should_remove:
-                session_file.unlink()
-                removed += 1
-                logger.debug(f"Removed stale TTY session {session_file.name}: {reason}")
-
-        except Exception as e:
-            logger.debug(f"Error checking TTY session {session_file}: {e}")
-
-    return removed
 
 
 # =============================================================================
@@ -597,61 +531,6 @@ def get_latest_session_id(ai_id: Optional[str] = None, active_only: bool = False
     return resolve_session_id(alias)
 
 
-def get_session_empirica_root(session_id: str) -> Optional[Path]:
-    """
-    Get the .empirica root directory for a session's project.
-
-    Looks up the session in the database to find its project,
-    then returns the path to that project's .empirica directory.
-
-    Args:
-        session_id: UUID of the session
-
-    Returns:
-        Path to the project's .empirica directory, or None if not found
-
-    Examples:
-        >>> get_session_empirica_root("88dbf132-cc7c-4a4b-9b59-77df3b13dbd2")
-        PosixPath('/home/user/project/.empirica')
-    """
-    try:
-        from empirica.data.session_database import SessionDatabase
-
-        db = SessionDatabase()
-        cursor = db.conn.cursor()
-
-        # Get project_id from session
-        cursor.execute("""
-            SELECT project_id FROM sessions WHERE session_id = ?
-        """, (session_id,))
-        row = cursor.fetchone()
-
-        if not row or not row[0]:
-            logger.debug(f"No project_id found for session {session_id}")
-            return None
-
-        project_id = row[0]
-
-        # Get project path from projects table
-        cursor.execute("""
-            SELECT project_path FROM projects WHERE project_id = ?
-        """, (project_id,))
-        project_row = cursor.fetchone()
-
-        if project_row and project_row[0]:
-            project_path = Path(project_row[0])
-            empirica_root = project_path / '.empirica'
-            if empirica_root.exists():
-                return empirica_root
-
-        logger.debug(f"No project path found for project {project_id}")
-        return None
-
-    except Exception as e:
-        logger.debug(f"Failed to get empirica root for session: {e}")
-        return None
-
-
 def is_session_alias(session_id_or_alias: str) -> bool:
     """
     Check if string is a session alias (not a UUID).
@@ -709,8 +588,8 @@ def get_instance_id() -> Optional[str]:
     """
     import os
 
-    # Priority 1: Explicit override
-    explicit_id = os.environ.get('EMPIRICA_INSTANCE_ID')
+    # Priority 1: Explicit override (EMPIRICA or CLAUDE)
+    explicit_id = os.environ.get('EMPIRICA_INSTANCE_ID') or os.environ.get('CLAUDE_INSTANCE_ID')
     if explicit_id:
         logger.debug(f"Using explicit instance_id: {explicit_id}")
         return explicit_id
@@ -834,16 +713,6 @@ def get_active_project_path(claude_session_id: str = None) -> 'Optional[str]':
     # NO CWD FALLBACK - fail explicitly
     logger.debug("get_active_project_path: could not resolve (no active_work or instance_projects)")
     return None
-
-
-def _get_tracking_file(name: str) -> 'Path':
-    """Get the path for a tracking file (active_session, active_transaction, etc.)."""
-    from pathlib import Path
-    suffix = _get_instance_suffix()
-    local_empirica = Path.cwd() / '.empirica'
-    if local_empirica.exists():
-        return local_empirica / f'{name}{suffix}'
-    return Path.home() / '.empirica' / f'{name}{suffix}'
 
 
 def write_active_transaction(
@@ -1229,57 +1098,6 @@ def clear_active_transaction(claude_session_id: str = None) -> None:
             global_candidate.unlink()
         except Exception:
             pass
-
-
-def clear_compact_handoff() -> bool:
-    """Remove the compact handoff file after post-compact has consumed it.
-
-    Compact handoff is a one-shot bridge: pre-compact writes it, post-compact reads it.
-    After consumption, it's stale and should be purged to prevent confusion.
-
-    Returns True if a file was removed.
-    """
-    from pathlib import Path
-    instance_id = get_instance_id()
-    if not instance_id:
-        return False
-
-    handoff_file = Path.home() / '.empirica' / f'compact_handoff_{instance_id}.json'
-    if handoff_file.exists():
-        try:
-            handoff_file.unlink()
-            logger.debug(f"Cleared compact handoff: {handoff_file.name}")
-            return True
-        except Exception:
-            pass
-    return False
-
-
-def clear_active_work(claude_session_id: str = None) -> bool:
-    """Remove the active_work file for a completed Claude session.
-
-    Called after POSTFLIGHT (post-test) completes — the last consumer of session state.
-    Also called by session-end as safety net.
-
-    Args:
-        claude_session_id: Claude Code conversation UUID. Required — without it
-            we can't identify which file to clean up.
-
-    Returns True if a file was removed.
-    """
-    from pathlib import Path
-    if not claude_session_id:
-        return False
-
-    active_work_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-    if active_work_file.exists():
-        try:
-            active_work_file.unlink()
-            logger.debug(f"Cleared active_work: {active_work_file.name}")
-            return True
-        except Exception:
-            pass
-    return False
 
 
 def cleanup_stale_instance_projects() -> int:

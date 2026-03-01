@@ -542,6 +542,10 @@ def default_epistemic_evaluator(checkpoint_data: Dict[str, Any]) -> SentinelDeci
     to internalize and self-correct, NOT for the system to pre-apply. What the AI
     reports is what the Sentinel evaluates.
 
+    This evaluator is NOT affected by the EMPIRICA_CALIBRATION_FEEDBACK env var.
+    That flag gates calibration FEEDBACK in workflow output (PREFLIGHT/CHECK
+    enrichment), not gating logic. The Sentinel always evaluates raw vectors.
+
     Thresholds are configurable via:
     - .breadcrumbs.yaml: learning_trajectory.readiness.{min_know, max_uncertainty}
     - Environment: EMPIRICA_KNOW_THRESHOLD, EMPIRICA_UNCERTAINTY_THRESHOLD

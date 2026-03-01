@@ -34,7 +34,7 @@ def _get_checkpoint_profile_thresholds():
                 'engagement_gate': universal.engagement_gate,
                 'coherence_min': universal.coherence_min,
             }
-        except:
+        except Exception:
             return {
                 'display_high': 0.7,
                 'display_medium': 0.5,

@@ -113,8 +113,8 @@ All events will be logged with format: `[EpistemicBus] {event_type}: agent={agen
 | `PREFLIGHT_COMPLETE` | After preflight-submit |
 | `INVESTIGATE_ROUND_COMPLETE` | After each investigation round |
 | `CHECK_COMPLETE` | After check-submit |
-| `ACT_STARTED` | When entering praxic phase |
-| `ACT_COMPLETE` | After action execution |
+| `ACT_STARTED` | When entering praxic phase (legacy name, retained for compatibility) |
+| `ACT_COMPLETE` | After praxic phase execution (legacy name, retained for compatibility) |
 | `POSTFLIGHT_COMPLETE` | After postflight-submit |
 
 ### Goal/Task Events
@@ -170,7 +170,7 @@ from empirica.core.epistemic_bus import (
 bus = get_global_bus()
 
 # Create a custom observer
-class DriftMonitor(EpistemicObserver):
+class CalibrationObserver(EpistemicObserver):
     def handle_event(self, event: EpistemicEvent) -> None:
         if event.event_type == EventTypes.CALIBRATION_DRIFT_DETECTED:
             # Alert, log, or take corrective action
@@ -178,7 +178,7 @@ class DriftMonitor(EpistemicObserver):
             print(f"Drift detected: {drift_data}")
 
 # Subscribe
-bus.subscribe(DriftMonitor())
+bus.subscribe(CalibrationObserver())
 ```
 
 ---

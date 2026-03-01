@@ -62,9 +62,17 @@ def get_current_git_repo() -> Optional[str]:
 
 
 def resolve_project_by_git_repo(git_repo: str, db) -> Optional[str]:
-    """
-    Resolve project by normalized git repo URL.
-    Returns the canonical project ID for this repo (creates if needed).
+    """Resolve project by normalized git repo URL.
+
+    Searches the projects table for a project whose repos JSON array contains
+    the given URL (after normalization). Returns the most recently active match.
+
+    Args:
+        git_repo: Normalized git remote URL to search for.
+        db: SessionDatabase instance with an adapter.conn connection.
+
+    Returns:
+        Project UUID if found, None otherwise.
     """
     if not git_repo:
         return None
@@ -136,35 +144,6 @@ def resolve_project_id(project_id_or_name: str, db=None) -> str:
 
         return resolved_id
 
-    finally:
-        if close_db:
-            db.close()
-
-
-def get_project_name(project_id: str, db=None) -> Optional[str]:
-    """
-    Get project name from UUID (for display purposes).
-
-    Args:
-        project_id: Project UUID
-        db: Optional SessionDatabase instance
-
-    Returns:
-        Project name or None if not found
-    """
-    from empirica.data.session_database import SessionDatabase
-
-    if db is None:
-        db = SessionDatabase()
-        close_db = True
-    else:
-        close_db = False
-
-    try:
-        project = db.get_project(project_id)
-        if project:
-            return project.get('name', project_id[:8] + '...')
-        return None
     finally:
         if close_db:
             db.close()

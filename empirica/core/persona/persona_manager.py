@@ -79,9 +79,6 @@ class PersonaManager:
 
         Returns:
             PersonaProfile instance
-
-        Raises:
-            ValidationError: If configuration invalid
         """
         # Use template if provided
         if template:

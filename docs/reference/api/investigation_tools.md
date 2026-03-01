@@ -1,6 +1,6 @@
 # Investigation Tools API Reference
 
-**Version:** 1.5.9
+**Version:** 1.6.0
 **Module:** `empirica.cli.command_handlers.workflow_commands`
 **Purpose:** NOETIC phase tools for exploration, hypothesizing, and evidence gathering
 
@@ -444,7 +444,7 @@ from empirica.cli.command_handlers.workflow_commands import (
     handle_deadend_log_command
 )
 
-from empirica.core.knowledge.breadcrumbs import BreadcrumbRepository
+from empirica.data.repositories.breadcrumbs import BreadcrumbRepository
 
 # Log findings programmatically
 breadcrumbs = BreadcrumbRepository()
@@ -519,8 +519,7 @@ Investigation tools feed into the CASCADE workflow:
 
 - `empirica/cli/command_handlers/workflow_commands.py` - Core handlers
 - `empirica/cli/command_handlers/investigation_commands.py` - Branch operations
-- `empirica/cli/parsers/workflow_parsers.py` - Argument parsers
-- `empirica/core/knowledge/breadcrumbs.py` - Artifact storage
+- `empirica/data/repositories/breadcrumbs.py` - Artifact storage
 
 ---
 
