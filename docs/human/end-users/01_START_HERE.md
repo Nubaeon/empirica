@@ -107,7 +107,7 @@ Empirica supports two distinct usage patterns:
 **Definition:** Focused executor of specific, well-defined tasks
 - **Characteristics:** Task-focused, minimal dialogue, simplified CASCADE
 - **Use for:** Implementation, testing, documentation, routine tasks
-- **CASCADE:** ACT-focused (execute subtasks efficiently)
+- **CASCADE:** Praxic-focused (execute subtasks efficiently)
 - **Examples:** Mini-agent implementing tests, code formatters
 
 **Quick Rule:** Use AI for thinking/planning, Agent for execution.  

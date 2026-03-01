@@ -205,7 +205,7 @@ Store epistemic vectors in the reflexes table.
 
 **Parameters:**
 - `session_id: str` - Session identifier
-- `phase: str` - Current phase ('PREFLIGHT', 'CHECK', 'ACT', 'POSTFLIGHT')
+- `phase: str` - Current phase ('PREFLIGHT', 'CHECK', 'POSTFLIGHT')
 - `vectors: Dict[str, float]` - Dictionary of 13 epistemic vectors
 - `cascade_id: Optional[str]` - Optional cascade identifier
 - `round_num: int` - Current round number, default 1

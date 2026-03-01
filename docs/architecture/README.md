@@ -146,14 +146,19 @@ Empirica is designed with privacy as a core principle. All data generated during
 *   **Qdrant Vector DB (Optional, Local):** A self-hosted vector database for semantic search over documentation and learning experiences.
 
 ### 2. The CASCADE Workflow (Epistemic Process)
-The core process for ensuring epistemic rigor.
-*   **PREFLIGHT (Baseline Assessment):** The AI assesses its 13 epistemic vectors *before* starting work to establish a baseline.
-*   **THINK (Initial Reasoning):** The AI analyzes task requirements and constraints.
-*   **PLAN (Investigation Strategy):** For complex tasks, the AI creates a systematic investigation plan.
-*   **INVESTIGATE (Knowledge Gathering):** The AI uses tools to address unknowns and fill knowledge gaps.
-*   **CHECK (Readiness Assessment):** The AI self-assesses if remaining unknowns are acceptable before proceeding. A confidence score of >= 0.70 is typically required.
-*   **ACT (Execute Task):** The AI performs the work, documenting decisions and reasoning.
-*   **POSTFLIGHT (Final Assessment):** The AI re-assesses its 13 vectors *after* work to measure the "epistemic delta" (learning).
+The core process for ensuring epistemic rigor. CASCADE uses a measurement-first approach with two orthogonal axes: mandatory workflow phases and AI-chosen thinking phases.
+
+**Workflow Phases (Mandatory):**
+*   **PREFLIGHT (Baseline Assessment):** The AI assesses its 13 epistemic vectors *before* starting work to establish a baseline. Opens a measurement window (transaction).
+*   **CHECK (Decision Gate):** The AI self-assesses readiness and the Sentinel decides `proceed` (transition to praxic action) or `investigate` (stay in noetic exploration). Multiple CHECKs can occur within one transaction.
+*   **POSTFLIGHT (Final Assessment):** The AI re-assesses its 13 vectors *after* work to measure the "epistemic delta" (learning). Closes the measurement window.
+*   **POST-TEST (Grounded Verification):** Automatic collection of objective evidence (test results, git metrics, goal completion) compared against POSTFLIGHT self-assessment.
+
+**Thinking Phases (AI-Chosen):**
+*   **NOETIC (Investigation):** Explore, hypothesize, search, read, question. Completion = "Have I learned enough to proceed?"
+*   **PRAXIC (Action):** Execute, write, commit, deploy. Completion = "Have I implemented enough to ship?"
+
+The AI chooses noetic vs praxic. CHECK gates the transition between them.
 
 ### 3. Sessions vs Goals (Orthogonal Organization)
 Sessions and goals serve different organizational purposes and are **orthogonal**, not hierarchical:

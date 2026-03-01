@@ -168,7 +168,7 @@ EOF
 - Sentinel gates praxic action (Edit, Write) until CHECK passes
 - Returns `proceed` or `investigate` (keep exploring)
 
-### 4. ACT (Do the Work)
+### 4. PRAXIC Phase (Do the Work)
 **"Execute with goal tracking"**
 
 ```bash
@@ -232,7 +232,7 @@ empirica unknown-log --unknown "How to handle session persistence?"
 empirica check-submit -   # Returns: proceed
 ```
 
-**ACT:**
+**PRAXIC (Execute):**
 ```bash
 empirica goals-create --objective "Integrate Auth0 OAuth2"
 # ... implement ...

@@ -122,7 +122,7 @@ Get comprehensive introduction to Empirica framework.
 Get workflow guidance for CASCADE phases.
 
 **Parameters:**
-- `phase` (optional): Specific phase (`PREFLIGHT`, `CHECK`, `ACT`, `POSTFLIGHT`)
+- `phase` (optional): Specific phase (`PREFLIGHT`, `CHECK`, `POSTFLIGHT`)
 
 **Returns:** Phase-specific guidance
 
