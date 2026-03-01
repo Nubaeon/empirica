@@ -13,8 +13,13 @@ from typing import Dict, List
 from .base import BaseRepository
 
 
-class GoalRepository(BaseRepository):
-    """Repository for goal and subtask management"""
+class GoalDataRepository(BaseRepository):
+    """Data-layer repository for goal and subtask management.
+
+    Note: This is the thin ORM layer used by SessionDatabase.
+    For business logic and structured Goal objects, see
+    empirica.core.goals.repository.GoalRepository.
+    """
 
     @staticmethod
     def _dedupe_by_objective(items: List[Dict]) -> List[Dict]:

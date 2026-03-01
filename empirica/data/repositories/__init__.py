@@ -8,7 +8,7 @@ sharing a single SQLite connection for transactional consistency.
 from .base import BaseRepository
 from .sessions import SessionRepository
 from .cascades import CascadeRepository
-from .goals import GoalRepository
+from .goals import GoalDataRepository
 from .branches import BranchRepository
 from .breadcrumbs import BreadcrumbRepository
 from .projects import ProjectRepository
@@ -20,7 +20,7 @@ __all__ = [
     'BaseRepository',
     'SessionRepository',
     'CascadeRepository',
-    'GoalRepository',
+    'GoalDataRepository',
     'BranchRepository',
     'BreadcrumbRepository',
     'ProjectRepository',

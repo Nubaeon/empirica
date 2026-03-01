@@ -588,8 +588,8 @@ def get_instance_id() -> Optional[str]:
     """
     import os
 
-    # Priority 1: Explicit override
-    explicit_id = os.environ.get('EMPIRICA_INSTANCE_ID')
+    # Priority 1: Explicit override (EMPIRICA or CLAUDE)
+    explicit_id = os.environ.get('EMPIRICA_INSTANCE_ID') or os.environ.get('CLAUDE_INSTANCE_ID')
     if explicit_id:
         logger.debug(f"Using explicit instance_id: {explicit_id}")
         return explicit_id
