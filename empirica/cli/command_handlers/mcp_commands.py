@@ -118,10 +118,6 @@ def handle_mcp_status_command(args):
             print(f"🆔 PID: {pid}")
             print(f"📝 Log file: {MCP_PID_FILE.parent / 'mcp_server.log'}")
             
-            # Check modality switcher status
-            modality_enabled = os.environ.get('EMPIRICA_ENABLE_MODALITY_SWITCHER', 'false').lower() == 'true'
-            print(f"🔀 Modality Switcher: {'Enabled' if modality_enabled else 'Disabled'}")
-            
             if args.verbose:
                 # Show process info
                 try:
@@ -262,28 +258,10 @@ def handle_mcp_list_tools_command(args):
         for name, desc in guidance_tools:
             print(f"   • {name:35s} - {desc}")
         
-        # Optional modality switcher
-        modality_enabled = os.environ.get('EMPIRICA_ENABLE_MODALITY_SWITCHER', 'false').lower() == 'true'
-        if modality_enabled or args.show_all:
-            print("\n🔀 Modality Switcher (Optional):")
-            if not modality_enabled:
-                print("   ⚠️  Currently disabled. Enable with: export EMPIRICA_ENABLE_MODALITY_SWITCHER=true")
-            modality_tools = [
-                ("modality_route_query", "Route to specialist AI"),
-                ("modality_list_adapters", "List available AIs"),
-                ("modality_adapter_health", "Health check"),
-                ("modality_decision_assist", "Routing recommendation"),
-            ]
-            for name, desc in modality_tools:
-                status = "✅" if modality_enabled else "⭕"
-                print(f"   {status} {name:33s} - {desc}")
-        
-        total = (len(core_tools) + len(session_tools) + len(goal_tools) + 
-                 len(coordination_tools) + len(checkpoint_tools) + 
+        total = (len(core_tools) + len(session_tools) + len(goal_tools) +
+                 len(coordination_tools) + len(checkpoint_tools) +
                  len(handoff_tools) + len(guidance_tools))
-        if modality_enabled:
-            total += 4
-        
+
         print(f"\n📊 Total tools: {total}")
         
         if args.verbose:

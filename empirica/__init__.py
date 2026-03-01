@@ -31,14 +31,10 @@ def __getattr__(name):
     if name == "SessionDatabase":
         from empirica.data.session_database import SessionDatabase
         return SessionDatabase
-    if name == "SessionJSONHandler":
-        from empirica.data.session_json_handler import SessionJSONHandler
-        return SessionJSONHandler
     raise AttributeError(f"module 'empirica' has no attribute {name!r}")
 
 
 __all__ = [
     'GitEnhancedReflexLogger',
     'SessionDatabase',
-    'SessionJSONHandler',
 ]
