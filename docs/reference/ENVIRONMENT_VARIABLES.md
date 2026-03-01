@@ -83,6 +83,18 @@ This takes priority over the env var and is dynamically settable without restart
 
 ---
 
+## Calibration
+
+| Variable | Purpose | Default | Values |
+|----------|---------|---------|--------|
+| `EMPIRICA_CALIBRATION_FEEDBACK` | Gate all calibration feedback in workflow output | `true` | `true`, `false` |
+
+Controls PREFLIGHT enrichment (grounded gaps, calibration warnings), CHECK enrichment (calibration bias detection). Does NOT affect POSTFLIGHT data collection, Sentinel gating (raw vectors), or learning trajectory (informational).
+
+> **Cross-project calibration, multi-entity pattern matching, TUI analytics, and API integrations** are available in [empirica-workspace](https://github.com/Nubaeon/empirica-workspace).
+
+---
+
 ## Automation & Workflow
 
 | Variable | Purpose | Default | Required |

@@ -212,6 +212,9 @@ submit_postflight_assessment(
 - **Understand vectors:** [05_EPISTEMIC_VECTORS_EXPLAINED.md](05_EPISTEMIC_VECTORS_EXPLAINED.md)
 - **Simple explanation:** [EMPIRICA_EXPLAINED_SIMPLE.md](EMPIRICA_EXPLAINED_SIMPLE.md)
 
+### For Teams & Organizations:
+- **[empirica-workspace](https://github.com/Nubaeon/empirica-workspace)** extends Empirica with cross-project calibration, multi-entity pattern matching, TUI analytics dashboards, and API integrations for external tools.
+
 ### Need Help?
 - **Installation issues:** [02_INSTALLATION.md](02_INSTALLATION.md)
 - **Troubleshooting:** [03_TROUBLESHOOTING.md](03_TROUBLESHOOTING.md)
