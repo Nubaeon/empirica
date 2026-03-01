@@ -571,30 +571,16 @@ def handle_preflight_submit_command(args):
                 "ok": True,
                 "session_id": session_id,
                 "transaction_id": transaction_id,
-                "checkpoint_id": checkpoint_id,
-                "message": "PREFLIGHT assessment submitted to database and git notes",
-                "vectors_submitted": len(vectors),
-                "vectors_received": vectors,
-                "reasoning": reasoning,
-                "persisted": True,
-                "storage_layers": {
-                    "sqlite": True,
-                    "git_notes": checkpoint_id is not None and checkpoint_id != "",
-                    "json_logs": True
-                },
                 "learning_trajectory": {
                     "typical_deltas": calibration_adjustments if calibration_adjustments else None,
                     "total_observations": calibration_report.get('total_evidence', 0) if calibration_report else 0,
                     "summary": _remap_trajectory_summary(
                         calibration_report.get('calibration_summary')
                     ) if calibration_report else None,
-                    "note": "INFORMATIONAL: How your vectors typically change across transactions (PREFLIGHT->POSTFLIGHT deltas). Shows learning patterns, NOT accuracy corrections. For accuracy, see previous_transaction_feedback."
+                    "note": "INFORMATIONAL: How your vectors typically change (PREFLIGHT->POSTFLIGHT deltas). NOT accuracy corrections."
                 } if calibration_adjustments or calibration_report else None,
                 "previous_transaction_feedback": previous_transaction_feedback,
-                "sentinel": {
-                    "enabled": SentinelHooks.is_enabled(),
-                    "decision": sentinel_decision.value if sentinel_decision else None
-                } if SentinelHooks.is_enabled() else None,
+                "sentinel": sentinel_decision.value if sentinel_decision else None,
                 "patterns": patterns if patterns and any(patterns.values()) else None,
                 "unclosed_transaction_warning": unclosed_transaction_warning
             }
@@ -1409,55 +1395,19 @@ def handle_check_submit_command(args):
             result = {
                 "ok": True,
                 "session_id": session_id,
-                "checkpoint_id": checkpoint_id,
                 "decision": decision,
                 "round": round_num,
                 "cycle": cycle,
-                "vectors_count": len(vectors),
-                "reasoning": reasoning,
-                "auto_checkpoint_created": auto_checkpoint_created,
-                "persisted": True,
-                "storage_layers": {k: v for k, v in {
-                    "sqlite": True,
-                    "git_notes": checkpoint_id is not None and checkpoint_id != "",
-                    "json_logs": True,
-                    "epistemic_snapshots": snapshot_created
-                }.items() if v},
-                "snapshot": {
-                    "created": snapshot_created,
-                    "snapshot_id": snapshot_id,
-                    "note": "CHECK vectors captured for trajectory analysis"
-                } if snapshot_created else None,
-                "bootstrap": {
-                    "had_context": bootstrap_status.get('has_bootstrap', False),
-                    "auto_run": bootstrap_result is not None,
-                    "reground_reason": reground_reason,
-                    "project_id": bootstrap_result.get('project_id') if bootstrap_result else bootstrap_status.get('project_id')
-                },
                 "metacog": {
                     "computed_decision": computed_decision,
                     "gate_passed": computed_decision == "proceed",
-                    "readiness": {
-                        "source": "dynamic" if dynamic_thresholds_info else "static",
-                        "calibration_accuracy": dynamic_thresholds_info.get("calibration_accuracy") if dynamic_thresholds_info else None,
-                        "transactions_analyzed": dynamic_thresholds_info.get("transactions_analyzed") if dynamic_thresholds_info else None,
-                    },
-                    "diminishing_returns": {
-                        "detected": diminishing_returns.get("detected", False),
-                        "recommend_proceed": diminishing_returns.get("recommend_proceed", False)
-                    },
-                    "autopilot": {
-                        "enabled": autopilot_mode,
-                        "binding": decision_binding
-                    }
+                    "calibration_accuracy": dynamic_thresholds_info.get("calibration_accuracy") if dynamic_thresholds_info else None,
+                    "diminishing_returns": diminishing_returns.get("detected", False),
                 },
                 "sentinel": {
-                    "enabled": SentinelHooks.is_enabled(),
                     "decision": sentinel_decision.value if sentinel_decision else None,
                     "override_applied": sentinel_override,
-                    "note": "Sentinel feeds back to override AI decision"
-                } if SentinelHooks.is_enabled() else None,
-                "transaction_reminder": "POSTFLIGHT is required when work is complete to close this transaction and measure learning delta"
+                } if SentinelHooks.is_enabled() and sentinel_override else None,
             }
 
             # BLINDSPOT SCAN: Run negative-space inference on knowledge topology
@@ -1505,13 +1455,10 @@ def handle_check_submit_command(args):
 
                         logger.info(f"Blindspot scan: {len(bs_report.predictions)} predictions, "
                                     f"uncertainty_adj={bs_report.uncertainty_adjustment}")
-                    else:
-                        result["blindspots"] = {"count": 0, "note": "No blindspots detected"}
             except ImportError:
                 pass  # empirica-prediction not installed
             except Exception as e:
                 logger.debug(f"Blindspot scan skipped: {e}")
-                result["blindspots"] = {"count": 0, "error": str(e)}
 
             # NOETIC RAG: CHECK pattern retrieval — enriched context for proceed/investigate decision
             try:
@@ -1538,11 +1485,8 @@ def handle_check_submit_command(args):
             # Controlled by EMPIRICA_AUTO_POSTFLIGHT env var (default: true)
             auto_postflight_enabled = os.getenv('EMPIRICA_AUTO_POSTFLIGHT', 'true').lower() == 'true'
 
-            if not auto_postflight_enabled:
-                result["auto_postflight"] = {"triggered": False, "disabled": True, "reason": "EMPIRICA_AUTO_POSTFLIGHT=false"}
-            else:
+            if auto_postflight_enabled:
                 goal_completion = _check_goal_completion(vectors)
-                result["goal_completion"] = goal_completion
 
                 if goal_completion.get("triggered"):
                     import sys as _sys
@@ -1565,8 +1509,6 @@ def handle_check_submit_command(args):
                         print("✅ Auto-POSTFLIGHT captured successfully", file=_sys.stderr)
                     else:
                         print(f"⚠️  Auto-POSTFLIGHT failed: {postflight_result.get('error', 'unknown')}", file=_sys.stderr)
-                else:
-                    result["auto_postflight"] = {"triggered": False}
 
             # NOTE: Statusline cache was removed (2026-02-06). Statusline reads directly from DB.
 
@@ -2505,49 +2447,12 @@ def handle_postflight_submit_command(args):
             result = {
                 "ok": True,
                 "session_id": session_id,
-                "checkpoint_id": checkpoint_id,
-                "message": "POSTFLIGHT assessment submitted to database and git notes",
-                "vectors_submitted": len(vectors),
-                "reasoning": reasoning,
                 "postflight_confidence": postflight_confidence,
                 "internal_consistency": internal_consistency,
                 "deltas": deltas,
-                "trajectory_issues_detected": len(trajectory_issues),
                 "trajectory_issues": trajectory_issues if trajectory_issues else None,
-                "bayesian_beliefs_updated": len(belief_updates) if belief_updates else 0,
-                "calibration": grounded_verification,  # Grounded calibration is the real calibration
-                "auto_checkpoint_created": True,
-                "persisted": True,
-                "storage_layers": {k: v for k, v in {
-                    "sqlite": True,
-                    "git_notes": checkpoint_id is not None and checkpoint_id != "",
-                    "json_logs": True,
-                    "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False,
-                    "breadcrumbs_learning_trajectory": calibration_exported,
-                    "episodic_memory": episodic_stored,
-                    "epistemic_snapshots": snapshot_created,
-                    "qdrant_memory": memory_synced > 0,
-                    "grounded_calibration": grounded_verification is not None,
-                    "grounded_calibration_embedded": grounded_embedded,
-                    "global_synced": global_synced,
-                    "stale_decayed": stale_decayed,
-                    "assumptions_urgency_updated": assumptions_urgency_updated,
-                }.items() if v},  # Only show layers that succeeded
-                "breadcrumbs": {
-                    "learning_trajectory_exported": calibration_exported,
-                    "note": "Learning trajectory written to .breadcrumbs.yaml (NOT calibration - see grounded_calibration)"
-                } if calibration_exported else None,
-                "memory_synced": memory_synced,
-                "snapshot": {
-                    "created": snapshot_created,
-                    "snapshot_id": snapshot_id,
-                    "note": "Snapshot enables session replay with delta chains"
-                } if snapshot_created else None,
-                "sentinel": {
-                    "enabled": SentinelHooks.is_enabled(),
-                    "decision": sentinel_decision.value if sentinel_decision else None,
-                    "note": "Session complete. Sentinel can recommend handoff or flag issues."
-                } if SentinelHooks.is_enabled() else None
+                "calibration": grounded_verification,
+                "sentinel": sentinel_decision.value if sentinel_decision else None,
             }
 
             # NOTE: Statusline cache was removed (2026-02-06). Statusline reads directly from DB.
