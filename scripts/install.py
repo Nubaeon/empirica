@@ -26,7 +26,7 @@ from typing import Optional
 # Configuration
 # =============================================================================
 
-EMPIRICA_VERSION = "1.6.0"
+EMPIRICA_VERSION = "1.6.1"
 MIN_PYTHON_VERSION = (3, 10)
 
 # Recommended embeddings model (small, fast, good quality)
@@ -575,7 +575,7 @@ def configure_environment(config: dict) -> list[tuple[str, str]]:
         env_vars.append(("EMPIRICA_AUTOPILOT_MODE", "true"))
         print_success("Autopilot mode: ENABLED")
 
-    # EMPIRICA_AUTO_POSTFLIGHT removed in 1.6.0 — CHECK no longer auto-triggers POSTFLIGHT
+    # EMPIRICA_AUTO_POSTFLIGHT removed in 1.6.1 — CHECK no longer auto-triggers POSTFLIGHT
     # Kept for backwards compatibility: setting is silently ignored
 
     if config.get("sentinel_looping", True):

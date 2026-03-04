@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "empirica"
-version = "1.6.0"
+version = "1.6.1"
 description = "Genuine AI epistemic self-assessment framework - Universal interface for single AI tracking"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -57,9 +57,9 @@ dependencies = [
 [project.optional-dependencies]
 # API and Dashboard features
 api = [
-    "flask>=3.0",
+    "flask>=3.1.3",              # Security: CVE-2026-27205 fix
     "flask-cors>=4.0.2",        # Security: CVE-2024-6221, CVE-2024-6844 fixes
-    "werkzeug>=3.1.5",          # Security: CVE-2025-66221, CVE-2026-21860 fixes
+    "werkzeug>=3.1.6",          # Security: CVE-2026-27199 fix
     "fastapi>=0.115.0",         # Security: CVE-2024-24762, CVE-2024-47874 fixes
     "uvicorn>=0.24",
 ]
@@ -72,7 +72,7 @@ vector = [
 # Vision/OCR features (experimental)
 vision = [
     "pytesseract>=0.3",
-    "pillow>=11.3.0",           # Security: CVE-2025-48379 heap buffer overflow fix
+    "pillow>=12.1.1",           # Security: CVE-2026-25990 fix
     "opencv-contrib-python>=4.12.0",  # Security: Uninitialized pointer fix
 ]
 

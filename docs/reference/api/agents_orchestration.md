@@ -1,6 +1,6 @@
 # Agents Orchestration API Reference
 
-**Version:** 1.6.0
+**Version:** 1.6.1
 **Purpose:** Parallel investigation agents with epistemic budget allocation
 
 ---

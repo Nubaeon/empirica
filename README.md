@@ -2,7 +2,7 @@
 
 > **Teaching AI to know what it knows—and what it doesn't**
 
-[![Version](https://img.shields.io/badge/version-1.6.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.6.0)
+[![Version](https://img.shields.io/badge/version-1.6.1-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.6.1)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -167,13 +167,13 @@ empirica setup-claude-code  # Don't forget this step
 
 ```bash
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.6.0
+docker pull nubaeon/empirica:1.6.1
 
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.6.0-alpine
+docker pull nubaeon/empirica:1.6.1-alpine
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.6.0 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.6.1 /bin/bash
 ```
 
 ---
@@ -326,14 +326,13 @@ Projects using Empirica's epistemic foundations:
 
 ---
 
-## What's New in 1.6.0
+## What's New in 1.6.1
 
-- **Sentinel File-Based Control** — Sentinel enable/disable via `~/.empirica/sentinel_enabled` file flag. Dynamically settable without session restart (env vars required terminal restart)
-- **Sentinel Bypass Fix** — System prompt contained bare `export` commands that Claudes would execute, disabling the Sentinel. Replaced with tables + "DO NOT execute" warnings
-- **SessionStart Matcher Fix** — `setup-claude-code` generated invalid matchers (`new|fresh`, bare `compact`). Fixed to valid Claude Code values (`startup`, `compact|resume`)
-- **MirrorDriftMonitor Removed** — Vestigial drift detection superseded by grounded calibration pipeline. Removed `check-drift` CLI command, MCP tool, and drift module (-562 lines)
-- **Transaction Planning Skill** — `/epistemic-transaction` skill gains interactive `plan-transactions` mode: interview → explore → decompose → plan with estimated vectors → execute
-- **Phantom Project Fix** — Project ID resolution uses `project.yaml` as authoritative source, preventing self-propagating phantom project IDs
+- **Code Quality Evidence** — Grounded calibration now includes ruff, radon, and pyright metrics as objective evidence. Maps static analysis results to epistemic vectors. Evidence coverage ~38%→~62%
+- **docs-assess Ignore Patterns** — `[tool.empirica.docs-assess]` in pyproject.toml supports `ignore_classes` and `ignore_paths` with fnmatch patterns. Standalone `.docsignore` fallback
+- **API Reference Expansion** — 4 new API docs, 15+ class entries added. docs-assess coverage 71.8%→84.0%
+- **Claude Code Symbiosis Docs** — Architecture documentation for MEMORY.md hot cache, task-goal bridge, and session lifecycle hooks
+- **Security Updates** — flask ≥3.1.3, werkzeug ≥3.1.6, pillow ≥12.1.1
 
 ---
 
@@ -366,6 +365,6 @@ See [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.6.0
+**Version:** 1.6.1
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*

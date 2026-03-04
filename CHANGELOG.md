@@ -5,6 +5,26 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-03-04
+
+### Added
+- **Code quality evidence in grounded calibration** - 8th evidence source: ruff, radon, pyright metrics from session-changed files. Maps violations to epistemic vectors (ruff→clarity/coherence, radon→density/signal, pyright→know/do). Evidence coverage ~38%→~62%
+- **docs-assess ignore patterns** - `[tool.empirica.docs-assess]` in pyproject.toml with `ignore_classes` and `ignore_paths` (fnmatch patterns). Fallback `.docsignore` file support. Prevents internal utility classes from polluting coverage metrics
+- **API reference documentation** - 4 new API docs (config_profiles, data_infrastructure, context_budget, metrics) and 15+ class entries across existing docs. Coverage 71.8%→84.0%
+- **Architecture docs** - Claude Code symbiosis layer documentation (MEMORY.md hot cache, task-goal bridge, session lifecycle hooks). Updated storage architecture with 5th tier
+- **Elicitation hooks** (pending CC support) - Hooks for AskUserQuestion (true UQ measurement) and ElicitationResult (auto-log answers as findings/decisions)
+- **Tool failure hook** (pending CC support) - Auto-log tool failures as dead-ends
+
+### Fixed
+- **Git notes in empty repos** - `postflight-submit` no longer hangs in repos without commits. Added HEAD existence check before git notes operations (#53)
+- **Symbiosis hook code quality** - Fixed bare excepts, type annotations, operator type issues, and unicode chars in session-end-postflight, task-completed, and epistemic_summarizer hooks. Refactored format_epistemic_focus complexity (CC 27→13)
+- **Grounded calibration coverage** - `UNGROUNDABLE_VECTORS` reduced from {engagement, coherence, density} to {engagement}. Coherence and density now grounded via code quality metrics
+
+### Security
+- **flask** ≥3.1.3 (CVE-2026-27205)
+- **werkzeug** ≥3.1.6 (CVE-2026-27199)
+- **pillow** ≥12.1.1 (CVE-2026-25990)
+
 ## [1.6.0] - 2026-03-01
 
 ### Added
