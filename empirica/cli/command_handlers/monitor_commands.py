@@ -7,6 +7,7 @@ This module provides basic session monitoring via Empirica core.
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
 
@@ -37,10 +38,8 @@ class UsageMonitor:
         Args:
             stats_file: Path to stats file (default from config)
         """
-        config = get_config()
-        
         if stats_file is None:
-            default_path = config.get('monitoring.export_path', '~/.empirica/usage_stats.json')
+            default_path = '~/.empirica/usage_stats.json'
             self.stats_file = Path(default_path).expanduser()
         else:
             self.stats_file = stats_file

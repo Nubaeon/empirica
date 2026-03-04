@@ -388,7 +388,7 @@ def build_routing_advice(task, vectors, session_id):
         advice_parts.append(
             "This involves epistemic workflow. "
             "Use the Empirica MCP tools (preflight/check/postflight) "
-            "or invoke the `empirica-framework` skill for guidance."
+            "or invoke the `epistemic-transaction` skill for planning guidance."
         )
 
     if not has_advice:

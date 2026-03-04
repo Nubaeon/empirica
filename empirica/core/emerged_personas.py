@@ -10,14 +10,19 @@ When an investigation branch successfully converges, extract:
 This creates data-driven personas that can inform future Sentinel orchestration.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os
 import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 from pathlib import Path
+
+if TYPE_CHECKING:
+    from empirica.core.sentinel.orchestrator import EpistemicLoopTracker
 
 logger = logging.getLogger(__name__)
 

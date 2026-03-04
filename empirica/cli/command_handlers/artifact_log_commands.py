@@ -6,6 +6,7 @@ Split from project_commands.py for maintainability.
 
 import json
 import logging
+import sqlite3
 from pathlib import Path
 from typing import Optional
 from ..cli_utils import handle_cli_error
@@ -1254,7 +1255,7 @@ def handle_refdoc_add_command(args):
         from empirica.data.session_database import SessionDatabase
         from empirica.cli.utils.project_resolver import resolve_project_id
 
-        # Get project_id from args FIRST (bug fix: was using before assignment)
+        # Get project_id from args (required argument)
         project_id = args.project_id
         doc_path = args.doc_path
         doc_type = getattr(args, 'doc_type', None)
@@ -1262,46 +1263,8 @@ def handle_refdoc_add_command(args):
 
         db = SessionDatabase()
 
-        # Auto-resolve project_id if not provided
-        if not project_id:
-            # Try to get project from session record
-            cursor = db.conn.cursor()
-            cursor.execute("""
-                SELECT project_id FROM sessions WHERE session_id = ?
-            """, (session_id,))
-            row = cursor.fetchone()
-            if row and row['project_id']:
-                project_id = row['project_id']
-                logger.info(f"Auto-resolved project_id from session: {project_id[:8]}...")
-            else:
-                # Fallback: try to resolve from unified context (NOT CWD)
-                try:
-                    from empirica.utils.session_resolver import get_active_context
-                    context = get_active_context()
-                    project_path = context.get('project_path')
-                    if project_path:
-                        import yaml
-                        from pathlib import Path
-                        project_yaml = Path(project_path) / '.empirica' / 'project.yaml'
-                        if project_yaml.exists():
-                            with open(project_yaml) as f:
-                                project_config = yaml.safe_load(f)
-                                project_id = project_config.get('project_id')
-                                if project_id:
-                                    logger.info(f"Auto-resolved project_id from context: {project_id[:8]}...")
-                except Exception:
-                    pass
-
-        # Resolve project name to UUID if still not resolved
-        if project_id:
-            project_id = resolve_project_id(project_id, db)
-        else:
-            # Last resort: create a generic project ID based on session if no project context available
-            import hashlib
-            project_id = hashlib.md5(f"session-{session_id}".encode()).hexdigest()
-            logger.warning(f"Using fallback project_id derived from session: {project_id[:8]}...")
-
-        # At this point, project_id should be resolved
+        # Resolve project name to UUID
+        project_id = resolve_project_id(project_id, db)
 
         doc_id = db.add_reference_doc(
             project_id=project_id,

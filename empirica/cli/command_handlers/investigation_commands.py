@@ -276,7 +276,7 @@ def _investigate_directory(dir_path: str, verbose: bool = False) -> dict:
     try:
         from empirica.components.workspace_awareness import WorkspaceNavigator
         
-        workspace = WorkspaceAwareness()
+        workspace = WorkspaceNavigator()
         result = workspace.analyze_directory(dir_path)
         
         return {

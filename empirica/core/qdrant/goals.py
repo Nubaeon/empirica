@@ -2,6 +2,7 @@
 Goal and subtask semantic search and embedding.
 """
 from __future__ import annotations
+import json
 import logging
 from typing import Dict, List, Optional
 
