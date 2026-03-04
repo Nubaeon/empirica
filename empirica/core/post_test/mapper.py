@@ -5,7 +5,8 @@ Maps objective evidence items to estimated vector values.
 Only produces estimates for vectors with sufficient evidence.
 Uses weighted aggregation when multiple evidence items support the same vector.
 
-Ungroundable vectors (no objective signal): engagement, coherence, density.
+Ungroundable vectors (no objective signal): engagement.
+Coherence and density are now grounded via code quality metrics (ruff, radon).
 These keep self-referential calibration.
 """
 
@@ -24,7 +25,9 @@ QUALITY_WEIGHTS = {
     EvidenceQuality.INFERRED: 0.4,
 }
 
-UNGROUNDABLE_VECTORS = {"engagement", "coherence", "density"}
+# Vectors with no objective signal. Code quality metrics (ruff, radon) now
+# provide grounding for coherence and density, leaving only engagement.
+UNGROUNDABLE_VECTORS = {"engagement"}
 
 
 @dataclass

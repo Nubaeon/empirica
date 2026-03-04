@@ -121,6 +121,7 @@ class PostTestCollector:
                 ("noetic", self._collect_noetic_metrics),
                 ("artifacts", self._collect_artifact_metrics),
                 ("sentinel", self._collect_sentinel_metrics),
+                ("code_quality", self._collect_code_quality_metrics),
             ]
         elif self.phase == "praxic":
             collectors = [
@@ -129,6 +130,7 @@ class PostTestCollector:
                 ("issues", self._collect_issue_metrics),
                 ("pytest", self._collect_test_results),
                 ("git", self._collect_git_metrics),
+                ("code_quality", self._collect_code_quality_metrics),
             ]
         else:
             collectors = [
@@ -138,6 +140,7 @@ class PostTestCollector:
                 ("sentinel", self._collect_sentinel_metrics),
                 ("pytest", self._collect_test_results),
                 ("git", self._collect_git_metrics),
+                ("code_quality", self._collect_code_quality_metrics),
             ]
 
         for source_name, collector_fn in collectors:
@@ -776,3 +779,250 @@ class PostTestCollector:
             pass
 
         return items
+
+    def _collect_code_quality_metrics(self) -> List[EvidenceItem]:
+        """Collect code quality evidence from static analysis tools.
+
+        Runs ruff, radon, and pyright on files changed during this session.
+        These provide OBJECTIVE evidence for vectors previously considered
+        ungroundable (density, coherence) plus additional grounding for
+        clarity, know, do, and signal.
+
+        Tool availability is detected at runtime — missing tools are skipped.
+        """
+        items = []
+        import re
+
+        # Get files changed during this session from git
+        changed_files = self._get_session_changed_files()
+        if not changed_files:
+            return items
+
+        py_files = [f for f in changed_files if f.endswith('.py')]
+        if not py_files:
+            return items
+
+        # --- Ruff: linting violations → clarity, coherence ---
+        try:
+            result = subprocess.run(
+                ["ruff", "check", "--output-format", "json", "--quiet"] + py_files,
+                capture_output=True, text=True, timeout=30,
+            )
+            # ruff exits non-zero when violations found — that's expected
+            if result.stdout.strip():
+                import json as _json
+                violations = _json.loads(result.stdout)
+                violation_count = len(violations)
+                lines_total = self._count_lines(py_files)
+
+                if lines_total > 0:
+                    # Violations per 100 lines — lower is better
+                    density_per_100 = (violation_count / lines_total) * 100
+                    # Normalize: 0 violations = 1.0, 10+ per 100 lines = 0.0
+                    clarity_score = max(0.0, 1.0 - (density_per_100 / 10.0))
+
+                    items.append(EvidenceItem(
+                        source="code_quality",
+                        metric_name="ruff_violation_density",
+                        value=clarity_score,
+                        raw_value={
+                            "violations": violation_count,
+                            "lines": lines_total,
+                            "per_100_lines": round(density_per_100, 2),
+                            "files_checked": len(py_files),
+                        },
+                        quality=EvidenceQuality.OBJECTIVE,
+                        supports_vectors=["clarity", "coherence"],
+                    ))
+
+                    # Categorize violations by severity
+                    error_count = sum(1 for v in violations
+                                      if v.get("code", "").startswith(("E", "F")))
+                    style_count = violation_count - error_count
+                    if violation_count > 0:
+                        error_ratio = error_count / violation_count
+                        # More errors vs style = worse signal quality
+                        signal_score = max(0.0, 1.0 - error_ratio)
+                        items.append(EvidenceItem(
+                            source="code_quality",
+                            metric_name="ruff_error_ratio",
+                            value=signal_score,
+                            raw_value={
+                                "errors": error_count,
+                                "style": style_count,
+                                "total": violation_count,
+                            },
+                            quality=EvidenceQuality.OBJECTIVE,
+                            supports_vectors=["signal"],
+                        ))
+            elif result.returncode == 0:
+                # No violations at all — perfect clarity
+                items.append(EvidenceItem(
+                    source="code_quality",
+                    metric_name="ruff_violation_density",
+                    value=1.0,
+                    raw_value={"violations": 0, "files_checked": len(py_files)},
+                    quality=EvidenceQuality.OBJECTIVE,
+                    supports_vectors=["clarity", "coherence"],
+                ))
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
+
+        # --- Radon: cyclomatic complexity → density, signal ---
+        try:
+            result = subprocess.run(
+                ["radon", "cc", "-s", "-a", "-j"] + py_files,
+                capture_output=True, text=True, timeout=30,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                import json as _json
+                cc_data = _json.loads(result.stdout)
+
+                all_complexities = []
+                high_complexity_count = 0  # CC >= 11 (grade C or worse)
+                for file_path, functions in cc_data.items():
+                    for func in functions:
+                        cc = func.get("complexity", 0)
+                        all_complexities.append(cc)
+                        if cc >= 11:
+                            high_complexity_count += 1
+
+                if all_complexities:
+                    avg_cc = sum(all_complexities) / len(all_complexities)
+                    max_cc = max(all_complexities)
+
+                    # Normalize avg complexity: 1-5 = 1.0, 20+ = 0.0
+                    density_score = max(0.0, min(1.0, 1.0 - (avg_cc - 5) / 15.0))
+                    items.append(EvidenceItem(
+                        source="code_quality",
+                        metric_name="radon_avg_complexity",
+                        value=density_score,
+                        raw_value={
+                            "avg_cc": round(avg_cc, 1),
+                            "max_cc": max_cc,
+                            "functions_analyzed": len(all_complexities),
+                            "high_complexity_count": high_complexity_count,
+                        },
+                        quality=EvidenceQuality.OBJECTIVE,
+                        supports_vectors=["density", "signal"],
+                    ))
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
+
+        # --- Pyright: type errors → know, do ---
+        try:
+            result = subprocess.run(
+                ["pyright", "--outputjson"] + py_files,
+                capture_output=True, text=True, timeout=60,
+            )
+            if result.stdout.strip():
+                import json as _json
+                try:
+                    pyright_data = _json.loads(result.stdout)
+                    summary = pyright_data.get("summary", {})
+                    error_count = summary.get("errorCount", 0)
+                    warning_count = summary.get("warningCount", 0)
+                    files_analyzed = summary.get("filesAnalyzed", len(py_files))
+
+                    if files_analyzed > 0:
+                        # Errors per file — lower is better
+                        errors_per_file = error_count / files_analyzed
+                        # Normalize: 0 errors = 1.0, 5+ per file = 0.0
+                        type_safety_score = max(0.0, 1.0 - (errors_per_file / 5.0))
+                        items.append(EvidenceItem(
+                            source="code_quality",
+                            metric_name="pyright_type_safety",
+                            value=type_safety_score,
+                            raw_value={
+                                "errors": error_count,
+                                "warnings": warning_count,
+                                "files_analyzed": files_analyzed,
+                                "errors_per_file": round(errors_per_file, 2),
+                            },
+                            quality=EvidenceQuality.OBJECTIVE,
+                            supports_vectors=["know", "do"],
+                        ))
+                except (json.JSONDecodeError, KeyError):
+                    pass
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
+
+        return items
+
+    def _get_session_changed_files(self) -> List[str]:
+        """Get files changed during this session via git.
+
+        Combines three sources:
+        1. Committed changes since session start (git log)
+        2. Staged but uncommitted changes (git diff --cached)
+        3. Unstaged working tree changes (git diff)
+        """
+        all_files: set = set()
+
+        db = self._get_db()
+        cursor = db.conn.cursor()
+        cursor.execute(
+            "SELECT start_time FROM sessions WHERE session_id = ?",
+            (self.session_id,),
+        )
+        row = cursor.fetchone()
+
+        try:
+            # 1. Committed changes since session start
+            if row:
+                start_time = str(row[0])
+                # Handle both unix timestamps and ISO format
+                try:
+                    since = str(int(float(start_time)))
+                except ValueError:
+                    # ISO format — pass directly to git --since
+                    since = start_time
+                result = subprocess.run(
+                    ["git", "log", "--name-only", "--format=",
+                     "--diff-filter=ACMR", "--since=" + since],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if result.returncode == 0:
+                    all_files.update(f.strip() for f in result.stdout.strip().split('\n') if f.strip())
+
+            # 2. Staged changes
+            result = subprocess.run(
+                ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0:
+                all_files.update(f.strip() for f in result.stdout.strip().split('\n') if f.strip())
+
+            # 3. Unstaged working tree changes
+            result = subprocess.run(
+                ["git", "diff", "--name-only", "--diff-filter=ACMR"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0:
+                all_files.update(f.strip() for f in result.stdout.strip().split('\n') if f.strip())
+
+            # Fallback if nothing found: recent commits
+            if not all_files:
+                result = subprocess.run(
+                    ["git", "diff", "--name-only", "--diff-filter=ACMR", "HEAD~5..HEAD"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if result.returncode == 0:
+                    all_files.update(f.strip() for f in result.stdout.strip().split('\n') if f.strip())
+
+            # Filter to existing files only
+            return [f for f in all_files if Path(f).exists()]
+        except (subprocess.TimeoutExpired, FileNotFoundError, ValueError):
+            pass
+        return []
+
+    @staticmethod
+    def _count_lines(file_paths: List[str]) -> int:
+        """Count total lines across files."""
+        total = 0
+        for fp in file_paths:
+            try:
+                total += len(Path(fp).read_text().splitlines())
+            except OSError:
+                pass
+        return total
