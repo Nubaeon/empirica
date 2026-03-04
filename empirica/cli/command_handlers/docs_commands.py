@@ -19,6 +19,7 @@ Usage:
 """
 
 import ast
+import fnmatch
 import json
 import re
 import subprocess
@@ -43,6 +44,8 @@ class ProjectConfig:
     docs_dir: Path | None = None     # project_root / "docs"
     test_dir: Path | None = None     # project_root / "tests"
     cli_framework: str = "unknown"  # "argparse" | "click" | "unknown"
+    docs_ignore_classes: list[str] = field(default_factory=list)
+    docs_ignore_paths: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         if self.docs_dir is None:
@@ -105,8 +108,17 @@ def _auto_detect_project_config(project_root: Path) -> ProjectConfig:
                 pkg_path = project_root / base / pkg
                 if pkg_path.is_dir():
                     package_dirs.append(pkg + "/")
+
+            # docs-assess ignore patterns
+            docs_assess_cfg = data.get("tool", {}).get("empirica", {}).get("docs-assess", {})
+            docs_ignore_classes = docs_assess_cfg.get("ignore_classes", [])
+            docs_ignore_paths = docs_assess_cfg.get("ignore_paths", [])
         except Exception:
             pass  # Fall through to directory scanning
+
+    # Fallback: .docsignore file if no pyproject.toml config
+    if not docs_ignore_classes and not docs_ignore_paths:
+        docs_ignore_classes, docs_ignore_paths = _load_docsignore(project_root)
 
     # Fallback: scan for Python packages in project root
     if not package_dirs:
@@ -122,7 +134,34 @@ def _auto_detect_project_config(project_root: Path) -> ProjectConfig:
         cli_module=cli_module,
         cli_entry=cli_entry,
         cli_framework=cli_framework,
+        docs_ignore_classes=docs_ignore_classes,
+        docs_ignore_paths=docs_ignore_paths,
     )
+
+
+def _load_docsignore(project_root: Path) -> tuple[list[str], list[str]]:
+    """Parse .docsignore file into (class_patterns, path_patterns).
+
+    Patterns containing '/' are treated as path patterns.
+    All others are class name patterns. Lines starting with '#' are comments.
+    """
+    ignore_file = project_root / ".docsignore"
+    if not ignore_file.exists():
+        return [], []
+
+    class_patterns: list[str] = []
+    path_patterns: list[str] = []
+
+    for line in ignore_file.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "/" in line:
+            path_patterns.append(line)
+        else:
+            class_patterns.append(line)
+
+    return class_patterns, path_patterns
 
 
 def _detect_cli_framework(project_root: Path, module_path: str) -> str:
@@ -338,6 +377,23 @@ class EpistemicDocsAgent:
         file_rel = self.config.cli_module.replace(".", "/") + ".py"
         return self.config.project_root / file_rel
 
+    def _is_class_ignored(self, class_name: str) -> bool:
+        """Check if a class name matches any ignore pattern."""
+        return any(
+            fnmatch.fnmatch(class_name, pat)
+            for pat in self.config.docs_ignore_classes
+        )
+
+    def _is_path_ignored(self, rel_path: str) -> bool:
+        """Check if a file path matches any ignore pattern."""
+        for pat in self.config.docs_ignore_paths:
+            # Directory pattern (e.g., "scripts/") matches any file under it
+            if pat.endswith("/") and rel_path.startswith(pat):
+                return True
+            if fnmatch.fnmatch(rel_path, pat):
+                return True
+        return False
+
     def _extract_core_modules(self) -> tuple[list[str], dict[str, list[str]]]:
         """
         Extract ALL classes/modules from package directories with their categories.
@@ -359,6 +415,11 @@ class EpistemicDocsAgent:
                 if "__pycache__" in str(py_file):
                     continue
 
+                # Check path ignore patterns
+                rel_str = str(py_file.relative_to(self.root))
+                if self._is_path_ignored(rel_str):
+                    continue
+
                 try:
                     content = py_file.read_text()
                     class_pattern = r"^class\s+(\w+)\s*[\(:]"
@@ -373,6 +434,8 @@ class EpistemicDocsAgent:
 
                     for match in matches:
                         if not match.startswith("_") and len(match) > 3:
+                            if self._is_class_ignored(match):
+                                continue
                             modules.append(match)
                             if category not in category_map:
                                 category_map[category] = []

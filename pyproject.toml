@@ -235,3 +235,7 @@ strictDictionaryInference = true
 
 [tool.pyright.defineConstant]
 TESTING = true
+
+[tool.empirica.docs-assess]
+ignore_classes = ["Colors"]
+ignore_paths = ["scripts/"]
