@@ -108,6 +108,18 @@ class GitNotesStorage:
             round_num = checkpoint.get('round', 1)
             note_ref = f"empirica/session/{self.session_id}/{phase}/{round_num}"
 
+            # Check if repository has any commits before trying to add notes to HEAD
+            head_check = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                capture_output=True,
+                text=True,
+                cwd=self.git_repo_path,
+                timeout=2
+            )
+            if head_check.returncode != 0:
+                logger.debug(f"Skipping git notes - repository has no commits yet: {self.git_repo_path}")
+                return None
+
             # Add note to HEAD commit with unique ref per checkpoint
             # Use stdin (-F -) to avoid "Argument list too long" errors
             result = subprocess.run(
