@@ -39,11 +39,27 @@ Primary table tracking all registered projects.
 | `last_transaction_timestamp` | REAL | NULL | Unix timestamp of last transaction |
 | `last_sync_timestamp` | REAL | NULL | When stats were last refreshed |
 | `status` | TEXT | `'active'` | `'active'`, `'dormant'`, `'archived'` |
-| `project_type` | TEXT | `'product'` | `'product'`, `'research'`, `'outreach'` |
+| `project_type` | TEXT | `'software'` | `'software'`, `'content'`, `'research'`, `'data'`, `'design'`, `'operations'`, `'strategic'`, `'engagement'`, `'legal'` |
 | `project_tags` | TEXT | NULL | JSON array of tags |
 | `created_timestamp` | REAL | (required) | Unix timestamp of creation |
 | `updated_timestamp` | REAL | (required) | Unix timestamp of last update |
-| `metadata` | TEXT | NULL | JSON for extensibility |
+| `metadata` | TEXT | NULL | JSON — v2.0 enrichment fields (see below) |
+
+**Metadata Column (v2.0):**
+
+The `metadata` column stores v2.0 project.yaml enrichment fields as JSON, synced by `project-init` and `project-update`:
+
+```json
+{
+  "domain": "ai/measurement",
+  "classification": "open",
+  "evidence_profile": "code",
+  "languages": ["python"],
+  "contacts": [{"id": "alice", "roles": ["reviewer"]}],
+  "engagements": [{"id": "internal", "type": "internal", "status": "ongoing"}],
+  "edges": [{"entity": "project/other", "relation": "related"}]
+}
+```
 
 **Indexes:**
 - `idx_global_projects_status` — Fast filtering by status

@@ -69,12 +69,13 @@ The CLI uses `get_active_empirica_session_id()` with this priority chain:
 - **goals-mark-stale** - Mark session goals as stale (for memory compaction)
 - **goals-get-stale** - Get list of stale goals
 
-### 4. Project Management (9 commands)
-- **project-init** - Initialize new project with configuration
+### 4. Project Management (10 commands)
+- **project-init** - Initialize new project with v2.0 configuration
+- **project-update** - Update project.yaml fields (type, contacts, edges, etc.)
 - **project-create** - Create project entity in database
 - **project-list** - List all projects
 - **project-switch** - Switch active project context (by name or ID)
-- **project-bootstrap** - Bootstrap project with context and goals
+- **project-bootstrap** - Bootstrap project with context, goals, and decisions
 - **project-handoff** - Create AI-to-AI handoff report
 - **project-search** - Search across projects
 - **project-embed** - Create embeddings for project files
@@ -446,11 +447,34 @@ Part of: `pip install empirica-workspace`
 ### Project Management Commands
 
 #### `project-init`
-**Purpose:** Initialize new project with configuration
-**Usage:** `empirica project-init --name <project_name> [options]`
+**Purpose:** Initialize new project with v2.0 configuration
+**Usage:** `empirica project-init [options]`
 **Options:**
-- `--description`: Project description
-- `--repos`: Comma-separated list of repository URLs
+- `--non-interactive`: Skip interactive prompts (use flags or defaults)
+- `--force`: Reinitialize even if already initialized
+- `--type`: Project type (software, content, research, data, design, operations, strategic, engagement, legal)
+- `--domain`: Domain path (e.g., ai/measurement, bio/genomics)
+- `--classification`: Access level (open, internal, restricted)
+- `--evidence-profile`: Evidence collection mode (code, prose, hybrid, auto)
+- `--languages`: Programming languages (auto-detected if omitted)
+- `--tags`: Project tags
+- `--output`: Output format (default, json)
+**Notes:** Interactive mode prompts for type, domain, evidence profile. Languages auto-detected from build files. Repository auto-detected from git remote.
+
+#### `project-update`
+**Purpose:** Update project.yaml fields after initialization
+**Usage:** `empirica project-update [options]`
+**Options:**
+- `--type`, `--domain`, `--classification`, `--status`, `--evidence-profile`: Update identity fields
+- `--languages LANG ...`: Set languages
+- `--tags TAG ...`: Set tags; `--add-tag TAG`, `--remove-tag TAG`: Incremental
+- `--add-contact ID --roles ROLE ...`: Add/update contact reference
+- `--remove-contact ID`: Remove contact
+- `--add-edge ENTITY --relation RELATION`: Add relationship edge
+- `--remove-edge ENTITY`: Remove edge
+- `--migrate`: Upgrade v1.0 to v2.0 with auto-detected values
+- `--output`: Output format (human, json)
+**Notes:** Changes are synced to both sessions.db and workspace.db.
 
 #### `project-create`
 **Purpose:** Create project entity in database
@@ -461,11 +485,14 @@ Part of: `pip install empirica-workspace`
 **Usage:** `empirica project-list`
 
 #### `project-bootstrap`
-**Purpose:** Bootstrap project with context and goals
+**Purpose:** Bootstrap project with context, goals, and decisions
 **Usage:** `empirica project-bootstrap [options]`
 **Options:**
 - `--project-id`: Specific project ID to bootstrap
+- `--session-id`: Session for context loading
+- `--depth`: Context depth (minimal, moderate, full)
 - `--output`: Output format (json, human)
+**Notes:** Breadcrumbs include findings, unknowns, dead-ends, decisions (from Qdrant), mistakes, and reference docs. Depth controls token budget.
 
 #### `project-handoff`
 **Purpose:** Create AI-to-AI handoff report

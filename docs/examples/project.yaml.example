@@ -1,11 +1,48 @@
-# Example project.yaml - Per-Project Configuration
+# Example project.yaml - Per-Project Configuration (v2.0)
 # Location: <repo-root>/.empirica/project.yaml
 # Created by: empirica project-init
+# Updated by: empirica project-update
 
-version: '1.0'
+version: '2.0'
+
+# Identity
 name: My Project
 description: Optional project description
 project_id: uuid-generated-automatically
+type: software          # software|content|research|data|design|operations|strategic|engagement|legal
+domain: ai/measurement  # hierarchical, user-defined (e.g., bio/genomics, fintech/payments)
+classification: internal  # open|internal|restricted
+status: active          # active|dormant|archived
+
+# Evidence & Language
+evidence_profile: auto  # code|prose|hybrid|auto — controls which collectors run
+languages: [python]     # auto-detected from build files (pyproject.toml, package.json, etc.)
+tags: [ai, measurement]
+
+# Provenance
+created_at: '2025-12-19'
+created_by: david
+repository: https://github.com/example/my-project
+
+# Participants (references — full profiles managed in Empirica Workspace)
+contacts:
+  - id: alice
+    roles: [owner, architect]
+  - id: bob
+    roles: [reviewer]
+
+# Engagements (references — lifecycle managed in Empirica Workspace)
+engagements:
+  - id: internal-dogfood
+    type: internal
+    status: ongoing
+
+# Relationships (typed edges — knowledge graph primitives)
+edges:
+  - entity: project/other-project
+    relation: parent_of    # parent_of|related|owned_by|extends|depends_on
+  - entity: org/my-org
+    relation: owned_by
 
 # BEADS Integration Settings
 beads:
@@ -23,24 +60,18 @@ subjects:
       - "src/cli"
       - "commands"
     description: "Command-line interface"
-  
+
   # Example: Core framework
   core:
     paths:
       - "src/core"
       - "lib"
     description: "Core framework logic"
-  
-  # Example: Documentation
-  docs:
-    paths:
-      - "docs"
-    description: "Documentation"
-
-# Default subject when path doesn't match any subject
-default_subject: core
 
 # Auto-detection settings
 auto_detect:
   enabled: true
   method: path_match  # Detects subject based on current working directory path
+
+# Domain extension point (domain-specific config lives here)
+domain_config: {}

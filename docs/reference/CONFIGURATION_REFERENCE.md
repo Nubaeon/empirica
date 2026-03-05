@@ -97,54 +97,118 @@ env_overrides:
 ## Project Configuration
 
 **File:** `.empirica/project.yaml`
+**Schema version:** 2.0
+**Created by:** `empirica project-init`
+**Updated by:** `empirica project-update`
 
-Defines project structure, subjects/workstreams, and discovery settings.
+Defines project identity, participants, relationships, subjects, and discovery settings.
 
 ### Purpose
 
+- **Project identity** - Type, domain, classification, evidence profile
+- **Participant references** - Contacts and engagements (full profiles in Workspace)
+- **Relationship graph** - Typed edges to other projects/entities
 - **Subject mapping** - Map code directories to logical subjects
 - **Context filtering** - Scope `project-bootstrap` by subject
 - **Auto-detection** - Detect current subject from working directory
 
-### Structure
+### Structure (v2.0)
 
 ```yaml
-project_id: empirica
+version: '2.0'
+
+# Identity
 name: "Empirica Epistemic Framework"
 description: "Metacognitive framework for AI agents"
+project_id: 748a81a2-...
+type: software            # software|content|research|data|design|operations|strategic|engagement|legal
+domain: ai/measurement    # hierarchical, user-defined
+classification: open      # open|internal|restricted
+status: active            # active|dormant|archived
 
+# Evidence & Language
+evidence_profile: code    # code|prose|hybrid|auto
+languages: [python]       # auto-detected from build files
+tags: [ai, measurement, epistemic]
+
+# Provenance
+created_at: '2024-11-15'
+created_by: david
+repository: https://github.com/example/project
+
+# Participants (references)
+contacts:
+  - id: david
+    roles: [owner, architect]
+
+# Engagements (references)
+engagements:
+  - id: internal-dogfood
+    type: internal
+    status: ongoing
+
+# Relationships (typed edges)
+edges:
+  - entity: project/other-project
+    relation: parent_of
+
+# Subjects
 subjects:
   core:
-    name: "Core Framework"
-    description: "Core epistemic assessment and CASCADE workflow"
-    paths:
-      - empirica/core/
-      - empirica/data/
-  
+    paths: [empirica/core/, empirica/data/]
+    description: "Core framework logic"
   cli:
-    name: "CLI Tools"
-    description: "Command-line interface and MCP integration"
-    paths:
-      - empirica/cli/
-      - empirica-mcp/
-  
-  # ... more subjects ...
+    paths: [empirica/cli/]
+    description: "Command-line interface"
 
-default_subject: null  # null = show all subjects
 auto_detect:
   enabled: true
-  method: "path_match"
+  method: path_match
+
+# BEADS
+beads:
+  default_enabled: true
+
+# Domain extension point
+domain_config: {}
+```
+
+### Identity Fields
+
+| Field | Values | Default | Description |
+|-------|--------|---------|-------------|
+| `version` | `'1.0'`, `'2.0'` | `'2.0'` | Schema version |
+| `type` | software, content, research, data, design, operations, strategic, engagement, legal | `software` | Project type |
+| `domain` | Free-form hierarchical | `''` | Domain path (e.g., `ai/measurement`, `bio/genomics`) |
+| `classification` | open, internal, restricted | `internal` | Access classification |
+| `status` | active, dormant, archived | `active` | Project lifecycle status |
+| `evidence_profile` | code, prose, hybrid, auto | `auto` | Controls which evidence collectors run |
+| `languages` | List of strings | Auto-detected | Programming languages (detected from pyproject.toml, package.json, go.mod, etc.) |
+| `tags` | List of strings | `[]` | Freeform tags for filtering |
+
+### Participants & Relationships
+
+**Contacts** are references to people — full profiles live in Empirica Workspace:
+```yaml
+contacts:
+  - id: alice           # Reference ID
+    roles: [reviewer]   # Roles in this project
+```
+
+**Edges** are typed relationships to other entities:
+```yaml
+edges:
+  - entity: project/empirica-iris   # Entity reference
+    relation: related               # parent_of|related|owned_by|extends|depends_on
 ```
 
 ### Subject Configuration
 
 Each subject defines:
 
-**`name`:** Human-readable subject name
+**`paths`:** Directory paths included in this subject (relative to project root)
 
 **`description`:** What this subject covers
-
-**`paths`:** Directory paths included in this subject (relative to project root)
 
 ### Auto-Detection
 
@@ -153,21 +217,22 @@ When `auto_detect.enabled: true`:
 - Matches `cwd` against subject paths
 - Scopes `project-bootstrap` to relevant subject only
 
-**Method:** `path_match` - Match current directory to subject paths
+### Backward Compatibility
 
-**Default subject:** `null` (show all subjects if no match)
+v1.0 files work unchanged — all v2.0 fields have safe defaults. Use `empirica project-update --migrate` to upgrade.
 
-### Example: Creating Project Config
+### Creating & Updating
 
 ```bash
-# Copy example
-cp .empirica/project.yaml.example .empirica/project.yaml
+# Initialize (interactive or with flags)
+empirica project-init
+empirica project-init --non-interactive --type research --domain bio/genomics
 
-# Edit subjects to match your project structure
-vim .empirica/project.yaml
-
-# Test auto-detection
-empirica project-bootstrap --project-id myproject --output json
+# Update fields
+empirica project-update --type research --domain bio/genomics
+empirica project-update --add-contact alice --roles reviewer evaluator
+empirica project-update --add-edge project/other --relation extends
+empirica project-update --migrate   # Upgrade v1.0 to v2.0
 ```
 
 ---
