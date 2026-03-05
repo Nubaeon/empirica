@@ -81,9 +81,15 @@ mcp = [
     "mcp>=1.0.0",
 ]
 
+# Prose evidence grounding (non-code users)
+prose = [
+    "textstat>=0.7",
+    "proselint>=0.14",
+]
+
 # All optional features
 all = [
-    "empirica[api,vector,vision,mcp]",
+    "empirica[api,vector,vision,mcp,prose]",
 ]
 
 test = [

@@ -508,6 +508,7 @@ def _run_single_phase_verification(
     domain: Optional[str] = None,
     goal_id: Optional[str] = None,
     check_timestamp: Optional[float] = None,
+    evidence_profile: Optional[str] = None,
 ) -> Optional[Dict]:
     """Run grounded verification for a single phase (noetic, praxic, or combined)."""
     collector = PostTestCollector(
@@ -516,6 +517,7 @@ def _run_single_phase_verification(
         db=db,
         phase=phase,
         check_timestamp=check_timestamp,
+        evidence_profile=evidence_profile,
     )
     bundle = collector.collect_all()
 
@@ -570,6 +572,7 @@ def run_grounded_verification(
     domain: Optional[str] = None,
     goal_id: Optional[str] = None,
     phase_boundary: Optional[Dict] = None,
+    evidence_profile: Optional[str] = None,
 ) -> Optional[Dict]:
     """
     Full grounded verification pipeline.
@@ -607,6 +610,7 @@ def run_grounded_verification(
                     project_id=project_id,
                     domain=domain, goal_id=goal_id,
                     check_timestamp=check_ts,
+                    evidence_profile=evidence_profile,
                 )
                 if noetic_result:
                     results["noetic"] = noetic_result
@@ -619,6 +623,7 @@ def run_grounded_verification(
                     project_id=project_id,
                     domain=domain, goal_id=goal_id,
                     check_timestamp=check_ts,
+                    evidence_profile=evidence_profile,
                 )
                 if praxic_result:
                     results["praxic"] = praxic_result
@@ -629,6 +634,7 @@ def run_grounded_verification(
                 phase="combined",
                 project_id=project_id,
                 domain=domain, goal_id=goal_id,
+                evidence_profile=evidence_profile,
             )
             if combined_result:
                 results["combined"] = combined_result
