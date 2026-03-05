@@ -251,102 +251,10 @@ def handle_project_init_command(args):
         except Exception as e:
             logger.warning(f"Failed to register in workspace.db: {e}")
 
-        # CRITICAL: Update resolver context so subsequent commands (session-create) find this project
-        # This mirrors what project-switch does - updates instance_projects, TTY session, active_work
-        try:
-            import time
-            from empirica.utils.session_resolver import get_tty_key, get_tty_session
-
-            marker_dir = Path.home() / '.empirica'
-            project_path = str(git_root)
-
-            # Get TMUX pane for instance isolation
-            tmux_pane = os.environ.get('TMUX_PANE')
-            instance_id = f"tmux_{tmux_pane.lstrip('%')}" if tmux_pane else None
-
-            # Try to get Claude session ID from TTY session (if running in Claude context)
-            tty_session = get_tty_session(warn_if_stale=False)
-            claude_session_id = tty_session.get('claude_session_id') if tty_session else None
-
-            # Preserve existing claude_session_id from instance_projects if TTY doesn't have it
-            if not claude_session_id and instance_id:
-                existing_instance_file = marker_dir / 'instance_projects' / f'{instance_id}.json'
-                if existing_instance_file.exists():
-                    try:
-                        with open(existing_instance_file, 'r') as f:
-                            existing_data = json.load(f)
-                            claude_session_id = existing_data.get('claude_session_id')
-                    except Exception:
-                        pass
-
-            # Update instance_projects (works via Bash tool where TTY fails)
-            if instance_id:
-                instance_dir = marker_dir / 'instance_projects'
-                instance_dir.mkdir(parents=True, exist_ok=True)
-                instance_file = instance_dir / f'{instance_id}.json'
-                instance_data = {
-                    'project_path': project_path,
-                    'project_id': project_id,
-                    'folder_name': project_name,
-                    'claude_session_id': claude_session_id,
-                    'source': 'project-init',
-                    'timestamp': time.strftime('%Y-%m-%dT%H:%M:%S%z')
-                }
-                with open(instance_file, 'w') as f:
-                    json.dump(instance_data, f, indent=2)
-                logger.debug(f"Updated instance_projects: {instance_id} -> {project_name}")
-
-            # Update TTY session if available
-            tty_key = get_tty_key()
-            if tty_key:
-                tty_sessions_dir = marker_dir / 'tty_sessions'
-                tty_sessions_dir.mkdir(parents=True, exist_ok=True)
-                tty_session_file = tty_sessions_dir / f'{tty_key}.json'
-
-                tty_data = {}
-                if tty_session_file.exists():
-                    try:
-                        with open(tty_session_file, 'r') as f:
-                            tty_data = json.load(f)
-                    except Exception:
-                        pass
-
-                tty_data['project_path'] = project_path
-                tty_data['project_id'] = project_id
-                tty_data['tty_key'] = tty_key
-                tty_data['instance_id'] = instance_id
-                tty_data['timestamp'] = time.strftime('%Y-%m-%dT%H:%M:%S%z')
-
-                with open(tty_session_file, 'w') as f:
-                    json.dump(tty_data, f, indent=2)
-                logger.debug(f"Updated TTY session: {tty_key} -> {project_name}")
-
-            # Update active_work file if we know the Claude session ID
-            if claude_session_id:
-                active_work_file = marker_dir / f'active_work_{claude_session_id}.json'
-                active_work = {}
-                if active_work_file.exists():
-                    try:
-                        with open(active_work_file, 'r') as f:
-                            active_work = json.load(f)
-                    except Exception:
-                        pass
-
-                active_work['project_path'] = project_path
-                active_work['project_id'] = project_id
-                active_work['folder_name'] = project_name
-                active_work['source'] = 'project-init'
-                active_work['updated_at'] = time.time()
-
-                with open(active_work_file, 'w') as f:
-                    json.dump(active_work, f, indent=2)
-                logger.debug(f"Updated active_work: {claude_session_id[:8]}... -> {project_name}")
-
-            if output_format != 'json':
-                print(f"   🔗 Resolver context updated")
-
-        except Exception as e:
-            logger.warning(f"Failed to update resolver context: {e}")
+        # NOTE: project-init does NOT update resolver context (instance_projects,
+        # TTY sessions, active_work). Those files route the current terminal to a
+        # project — overwriting them here corrupts context for any existing session
+        # in this terminal. Use `empirica project-switch` to change active project.
 
         # Create SEMANTIC_INDEX.yaml template if requested
         semantic_index_path = None
