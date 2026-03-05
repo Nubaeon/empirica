@@ -63,16 +63,72 @@ class EvidenceBundle:
 UNSCOPED_ARTIFACT_WEIGHT = 0.3
 
 
+class EvidenceProfile:
+    """Evidence collection profile — determines which collectors run.
+
+    Profiles:
+    - "code": ruff, radon, pyright, pytest, git (default for repos with .py files)
+    - "prose": textstat, proselint, vale, document metrics, source quality
+    - "hybrid": all evidence sources (code + prose)
+    - "auto": detect from project content (falls back to "code")
+
+    Set via:
+    - project.yaml: evidence_profile: prose
+    - CLI flag: --evidence-profile prose
+    - Environment: EMPIRICA_EVIDENCE_PROFILE=prose
+    """
+    CODE = "code"
+    PROSE = "prose"
+    HYBRID = "hybrid"
+    AUTO = "auto"
+
+    VALID = {CODE, PROSE, HYBRID, AUTO}
+
+    @staticmethod
+    def resolve(explicit: Optional[str] = None,
+                project_path: Optional[str] = None) -> str:
+        """Resolve the evidence profile from explicit flag, config, or env."""
+        import os
+
+        # 1. Explicit flag takes priority
+        if explicit and explicit in EvidenceProfile.VALID:
+            return explicit
+
+        # 2. Environment variable
+        env_profile = os.environ.get("EMPIRICA_EVIDENCE_PROFILE", "").lower()
+        if env_profile in EvidenceProfile.VALID:
+            return env_profile
+
+        # 3. Project config
+        if project_path:
+            try:
+                import yaml
+                config_path = Path(project_path) / ".empirica" / "project.yaml"
+                if config_path.exists():
+                    with open(config_path) as f:
+                        config = yaml.safe_load(f) or {}
+                    profile = config.get("evidence_profile", "").lower()
+                    if profile in EvidenceProfile.VALID:
+                        return profile
+            except Exception:
+                pass
+
+        # 4. Auto-detect
+        return EvidenceProfile.AUTO
+
+
 class PostTestCollector:
     """Collects objective evidence from multiple sources."""
 
     def __init__(self, session_id: str, project_id: Optional[str] = None,
                  db=None, phase: str = "combined",
-                 check_timestamp: Optional[float] = None):
+                 check_timestamp: Optional[float] = None,
+                 evidence_profile: Optional[str] = None):
         self.session_id = session_id
         self.project_id = project_id
         self.phase = phase  # "noetic", "praxic", or "combined"
         self.check_timestamp = check_timestamp  # CHECK boundary timestamp
+        self.evidence_profile = evidence_profile
         self._db = db
         self._owns_db = False
         self._session_goal_ids: Optional[List[str]] = None
@@ -103,45 +159,102 @@ class PostTestCollector:
         self._session_goal_ids = [row[0] for row in cursor.fetchall()]
         return self._session_goal_ids
 
+    def _resolve_profile(self) -> str:
+        """Resolve evidence profile, auto-detecting if needed."""
+        profile = EvidenceProfile.resolve(
+            explicit=self.evidence_profile,
+            project_path=self._detect_project_path(),
+        )
+        if profile == EvidenceProfile.AUTO:
+            # Auto-detect: if session has .py file changes, use code; else prose
+            changed = self._get_session_changed_files()
+            has_code = any(f.endswith('.py') for f in changed)
+            return EvidenceProfile.CODE if has_code else EvidenceProfile.PROSE
+        return profile
+
+    def _detect_project_path(self) -> Optional[str]:
+        """Detect project path from git root."""
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+        return None
+
+    def _get_prose_collectors(self) -> List[tuple]:
+        """Get prose-specific evidence collectors."""
+        from .prose_collector import ProseEvidenceCollector
+        prose = ProseEvidenceCollector(
+            session_id=self.session_id,
+            project_id=self.project_id,
+            db=self._get_db(),
+            phase=self.phase,
+            check_timestamp=self.check_timestamp,
+        )
+        return [
+            ("prose_quality", prose._collect_prose_quality),
+            ("document_metrics", prose._collect_document_metrics),
+            ("source_quality", prose._collect_source_quality),
+            ("action_verification", prose._collect_action_verification),
+        ]
+
     def collect_all(self) -> EvidenceBundle:
         """Collect evidence from all available sources.
 
-        Phase-aware collection:
-        - "noetic": investigation evidence (artifacts, sentinel) — no git/pytest
-        - "praxic": action evidence (goals, pytest, git) — standard pipeline
-        - "combined": all sources (backward-compatible default)
+        Phase-aware and profile-aware collection:
+        - Phase: "noetic" / "praxic" / "combined"
+        - Profile: "code" / "prose" / "hybrid" / "auto"
         """
         bundle = EvidenceBundle(
             session_id=self.session_id,
             collection_timestamp=time.time(),
         )
 
-        if self.phase == "noetic":
-            collectors = [
-                ("noetic", self._collect_noetic_metrics),
-                ("artifacts", self._collect_artifact_metrics),
-                ("sentinel", self._collect_sentinel_metrics),
-                ("code_quality", self._collect_code_quality_metrics),
-            ]
-        elif self.phase == "praxic":
-            collectors = [
-                ("goals", self._collect_goal_metrics),
-                ("artifacts", self._collect_artifact_metrics),
-                ("issues", self._collect_issue_metrics),
+        profile = self._resolve_profile()
+        logger.debug(f"Evidence profile: {profile} (phase: {self.phase})")
+
+        # Universal collectors (always run regardless of profile)
+        universal = [
+            ("artifacts", self._collect_artifact_metrics),
+        ]
+
+        # Phase-specific universal collectors
+        if self.phase in ("noetic", "combined"):
+            universal.append(("noetic", self._collect_noetic_metrics))
+            universal.append(("sentinel", self._collect_sentinel_metrics))
+        if self.phase in ("praxic", "combined"):
+            universal.append(("goals", self._collect_goal_metrics))
+            universal.append(("issues", self._collect_issue_metrics))
+
+        # Profile-specific collectors
+        if profile == EvidenceProfile.CODE:
+            profile_collectors = [
                 ("pytest", self._collect_test_results),
                 ("git", self._collect_git_metrics),
                 ("code_quality", self._collect_code_quality_metrics),
             ]
+        elif profile == EvidenceProfile.PROSE:
+            profile_collectors = self._get_prose_collectors()
+        elif profile == EvidenceProfile.HYBRID:
+            profile_collectors = [
+                ("pytest", self._collect_test_results),
+                ("git", self._collect_git_metrics),
+                ("code_quality", self._collect_code_quality_metrics),
+            ] + self._get_prose_collectors()
         else:
-            collectors = [
-                ("goals", self._collect_goal_metrics),
-                ("artifacts", self._collect_artifact_metrics),
-                ("issues", self._collect_issue_metrics),
-                ("sentinel", self._collect_sentinel_metrics),
+            # Fallback to code
+            profile_collectors = [
                 ("pytest", self._collect_test_results),
                 ("git", self._collect_git_metrics),
                 ("code_quality", self._collect_code_quality_metrics),
             ]
+
+        collectors = universal + profile_collectors
 
         for source_name, collector_fn in collectors:
             try:
