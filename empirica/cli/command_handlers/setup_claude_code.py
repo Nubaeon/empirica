@@ -127,7 +127,7 @@ def handle_setup_claude_code_command(args):
     """Handle setup-claude-code command"""
     try:
         output_format = getattr(args, 'output', 'human')
-        force = getattr(args, 'force', False)
+        # --force is accepted for backward compat but is now a no-op (plugin always syncs)
         skip_mcp = getattr(args, 'skip_mcp', False)
         skip_claude_md = getattr(args, 'skip_claude_md', False)
 
@@ -189,36 +189,32 @@ def handle_setup_claude_code_command(args):
         if output_format != 'json':
             print("\n📦 Installing plugin files...")
 
-        if plugin_dir.exists() and not force:
-            if output_format != 'json':
-                print(f"   Plugin already exists at {plugin_dir}")
-                print("   Use --force to reinstall")
-        else:
-            # Copy plugin directory
-            if plugin_dir.exists():
-                shutil.rmtree(plugin_dir)
+        # Always sync plugin files — hooks and scripts must track the installed version.
+        # Previous behavior skipped this if directory existed, causing stale scripts.
+        if plugin_dir.exists():
+            shutil.rmtree(plugin_dir)
 
-            # Copy excluding __pycache__ and .git
-            def ignore_patterns(directory, files):
-                return [f for f in files if f in ('__pycache__', '.git', '.pyc')]
+        # Copy excluding __pycache__ and .git
+        def ignore_patterns(directory, files):
+            return [f for f in files if f in ('__pycache__', '.git', '.pyc')]
 
-            shutil.copytree(source_dir, plugin_dir, ignore=ignore_patterns)
+        shutil.copytree(source_dir, plugin_dir, ignore=ignore_patterns)
 
-            # Make hooks executable
-            hooks_dir = plugin_dir / "hooks"
-            if hooks_dir.exists():
-                for hook_file in hooks_dir.glob("*.py"):
-                    hook_file.chmod(0o755)
-                for hook_file in hooks_dir.glob("*.sh"):
-                    hook_file.chmod(0o755)
+        # Make hooks executable
+        hooks_dir = plugin_dir / "hooks"
+        if hooks_dir.exists():
+            for hook_file in hooks_dir.glob("*.py"):
+                hook_file.chmod(0o755)
+            for hook_file in hooks_dir.glob("*.sh"):
+                hook_file.chmod(0o755)
 
-            scripts_dir = plugin_dir / "scripts"
-            if scripts_dir.exists():
-                for script_file in scripts_dir.glob("*.py"):
-                    script_file.chmod(0o755)
+        scripts_dir = plugin_dir / "scripts"
+        if scripts_dir.exists():
+            for script_file in scripts_dir.glob("*.py"):
+                script_file.chmod(0o755)
 
-            if output_format != 'json':
-                print(f"   ✓ Plugin installed to {plugin_dir}")
+        if output_format != 'json':
+            print(f"   ✓ Plugin installed to {plugin_dir}")
 
         # ==================== INSTALL CLAUDE.md ====================
         if not skip_claude_md:
