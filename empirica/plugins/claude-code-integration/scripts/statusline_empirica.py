@@ -1261,12 +1261,13 @@ def main():
             pass  # Fall back to current session_id
 
         # Get vectors from DB (real-time) - use transaction's session_id and transaction_id
-        # transaction_id is CRITICAL to prevent cross-instance phase bleed
-        # If no open transaction exists, don't show stale data from previous transactions
+        # transaction_id is CRITICAL to prevent cross-instance phase bleed during active work
+        # When no open transaction, fall back to session-level query to show last POSTFLIGHT state
         if transaction_id:
             phase, vectors, gate_decision = get_latest_vectors(db, session_id, transaction_session_id, transaction_id)
         else:
-            phase, vectors, gate_decision = None, {}, None
+            # No open transaction — show last known state (typically POSTFLIGHT vectors)
+            phase, vectors, gate_decision = get_latest_vectors(db, session_id)
 
         # Get deltas (learning measurement) - use transaction's session for continuity
         deltas = get_vector_deltas(db, transaction_session_id or session_id)
