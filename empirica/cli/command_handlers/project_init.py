@@ -239,12 +239,24 @@ def handle_project_init_command(args):
             from .workspace_init import _register_in_workspace_db
             # Store trajectory_path with .empirica suffix for consistency with existing projects
             # project-switch expects this format: /home/user/project/.empirica
+            import json as _json_ws
+            ws_metadata = _json_ws.dumps({
+                'domain': project_config.get('domain', ''),
+                'classification': project_config.get('classification', 'internal'),
+                'evidence_profile': project_config.get('evidence_profile', 'auto'),
+                'languages': project_config.get('languages', []),
+                'contacts': project_config.get('contacts', []),
+                'engagements': project_config.get('engagements', []),
+                'edges': project_config.get('edges', []),
+            })
             _register_in_workspace_db(
                 project_id=project_id,
                 name=project_name,
                 trajectory_path=str(git_root / '.empirica'),
                 description=project_description,
-                git_remote_url=git_url
+                git_remote_url=git_url,
+                project_type=project_config.get('type', 'software'),
+                metadata=ws_metadata,
             )
             if output_format != 'json':
                 print(f"   📋 Registered in workspace")

@@ -270,13 +270,23 @@ def _sync_to_db(config: 'ProjectConfig', git_root: Path):
 
         db.close()
 
-        # Sync to workspace.db
+        # Sync to workspace.db (indexed fields + full v2.0 enrichment in metadata)
         try:
+            import json as json_mod2
             from empirica.data.repositories.workspace_db import WorkspaceDBRepository
             repo = WorkspaceDBRepository()
+            metadata = json_mod2.dumps({
+                'domain': config.domain,
+                'classification': config.classification,
+                'evidence_profile': config.evidence_profile,
+                'languages': config.languages,
+                'contacts': config.contacts,
+                'engagements': config.engagements,
+                'edges': config.edges,
+            })
             repo.conn.execute(
-                "UPDATE global_projects SET project_type = ?, project_tags = ?, status = ?, updated_timestamp = ? WHERE id = ?",
-                (config.type, json.dumps(config.tags), config.status, __import__('time').time(), config.project_id)
+                "UPDATE global_projects SET project_type = ?, project_tags = ?, status = ?, metadata = ?, updated_timestamp = ? WHERE id = ?",
+                (config.type, json_mod2.dumps(config.tags), config.status, metadata, __import__('time').time(), config.project_id)
             )
             repo.conn.commit()
             repo.close()

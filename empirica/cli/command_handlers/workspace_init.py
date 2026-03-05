@@ -651,7 +651,9 @@ def _register_in_workspace_db(
     name: str,
     trajectory_path: str,
     description: Optional[str] = None,
-    git_remote_url: Optional[str] = None
+    git_remote_url: Optional[str] = None,
+    project_type: str = 'software',
+    metadata: Optional[str] = None,
 ) -> bool:
     """
     Register a project in workspace.db's global_projects table.
@@ -701,17 +703,17 @@ def _register_in_workspace_db(
             cursor.execute("""
                 UPDATE global_projects
                 SET id = ?, name = ?, description = ?, git_remote_url = ?,
-                    updated_timestamp = ?
+                    project_type = ?, metadata = ?, updated_timestamp = ?
                 WHERE trajectory_path = ?
-            """, (project_id, name, description, git_remote_url, now, trajectory_path))
+            """, (project_id, name, description, git_remote_url, project_type, metadata, now, trajectory_path))
         else:
             # Insert new entry
             cursor.execute("""
                 INSERT INTO global_projects (
                     id, name, description, trajectory_path, git_remote_url,
-                    status, project_type, created_timestamp, updated_timestamp
-                ) VALUES (?, ?, ?, ?, ?, 'active', 'product', ?, ?)
-            """, (project_id, name, description, trajectory_path, git_remote_url, now, now))
+                    status, project_type, metadata, created_timestamp, updated_timestamp
+                ) VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
+            """, (project_id, name, description, trajectory_path, git_remote_url, project_type, metadata, now, now))
 
         conn.commit()
         conn.close()
