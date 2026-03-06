@@ -54,16 +54,14 @@ keep self-referential calibration for these.
 **Calibration divergence:** When Track 1 and Track 2 disagree, Track 2 is more trustworthy.
 The `grounded_calibration.divergence` section in `.breadcrumbs.yaml` shows the gap per vector.
 
-**Phase-weighted holistic score:** Grounded calibration runs separately for noetic and praxic
-phases. The holistic score weights each phase by actual tool distribution (Sentinel tracks
-`noetic_tool_calls` and `praxic_tool_calls`). A pure research transaction (90% noetic tools)
-weights noetic calibration at 0.9. POSTFLIGHT output includes `phase_weights`,
-`holistic_calibration_score`, and `holistic_gaps`.
+**Phase-aware grounding:** The Sentinel evaluates noetic and praxic work against
+phase-appropriate evidence and manages how they contribute to your calibration score.
+Focus on honest self-assessment — the weighting method is Sentinel-internal.
 
-**Calibration insights:** The `CalibrationInsightsAnalyzer` detects systemic patterns across
-your verification history (chronic bias, evidence gaps, phase mismatch, volatile vectors).
-Insights appear in POSTFLIGHT output and `.breadcrumbs.yaml`. When you see these, consider
-whether they indicate a self-assessment bias or a gap in evidence collection.
+**Calibration insights:** POSTFLIGHT may surface systemic patterns from your verification
+history (e.g., chronic overestimation, evidence gaps). These appear in the `insights[]`
+field and in `.breadcrumbs.yaml`. When you see insights, treat them as calibration
+feedback: adjust your self-assessment or flag evidence collection issues to the user.
 
 ### Readiness Gate
 
