@@ -1909,6 +1909,7 @@ def handle_postflight_submit_command(args):
             postflight_transaction_id = None
             postflight_tool_call_count = 0
             postflight_avg_turns = 0
+            postflight_phase_tool_counts = None
             try:
                 import time
                 from empirica.utils.session_resolver import write_active_transaction, get_active_project_path
@@ -1938,6 +1939,11 @@ def handle_postflight_submit_command(args):
                     # Capture tool_call_count before closing (for calibration history)
                     postflight_tool_call_count = tx_data.get('tool_call_count', 0)
                     postflight_avg_turns = tx_data.get('avg_turns', 0)
+                    # Phase-split counts for phase-weighted calibration
+                    postflight_phase_tool_counts = {
+                        'noetic_tool_calls': tx_data.get('noetic_tool_calls', 0),
+                        'praxic_tool_calls': tx_data.get('praxic_tool_calls', 0),
+                    }
                     # Update to closed status - preserve project_path from transaction
                     write_active_transaction(
                         transaction_id=postflight_transaction_id,
@@ -2082,6 +2088,7 @@ def handle_postflight_submit_command(args):
                     project_id=project_id,
                     phase_boundary=phase_boundary,
                     evidence_profile=evidence_profile,
+                    phase_tool_counts=postflight_phase_tool_counts,
                 )
 
                 if grounded_verification:

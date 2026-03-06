@@ -20,7 +20,7 @@ import logging
 import uuid
 from datetime import datetime
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from .collector import PostTestCollector, EvidenceBundle
 from .mapper import (
@@ -367,6 +367,10 @@ class GroundedCalibrationManager:
         self,
         ai_id: str,
         git_root: Optional[str] = None,
+        phase_weights: Optional[Dict] = None,
+        holistic_calibration_score: Optional[float] = None,
+        holistic_gaps: Optional[Dict] = None,
+        insights: Optional[List] = None,
     ) -> bool:
         """
         Export grounded calibration to .breadcrumbs.yaml as a new section.
@@ -451,6 +455,35 @@ class GroundedCalibrationManager:
             for vector, adj in sorted_adj:
                 sign = '+' if adj >= 0 else ''
                 lines.append(f"    {vector}: {sign}{adj:.2f}\n")
+
+        # Phase-weighted holistic calibration
+        if phase_weights:
+            lines.append("  phase_weights:\n")
+            lines.append(f"    noetic: {phase_weights.get('noetic', 0.5)}\n")
+            lines.append(f"    praxic: {phase_weights.get('praxic', 0.5)}\n")
+            lines.append(f"    source: {phase_weights.get('source', 'unknown')}\n")
+        if holistic_calibration_score is not None:
+            lines.append(f"  holistic_calibration_score: {holistic_calibration_score:.4f}\n")
+        if holistic_gaps:
+            lines.append("  holistic_gaps:\n")
+            sorted_hg = sorted(holistic_gaps.items(), key=lambda x: abs(x[1]), reverse=True)
+            for vector, gap in sorted_hg:
+                sign = '+' if gap >= 0 else ''
+                lines.append(f"    {vector}: {sign}{gap:.4f}\n")
+
+        # Calibration insights (feedback loop for method improvement)
+        if insights:
+            lines.append("  insights:\n")
+            for insight in insights[:5]:  # Cap at 5 most relevant
+                # Handle both CalibrationInsight objects and dicts
+                _get = (lambda k: insight.get(k, '')) if isinstance(insight, dict) else (lambda k: getattr(insight, k, ''))
+                lines.append(f"    - vector: {_get('vector')}\n")
+                lines.append(f"      phase: {_get('phase')}\n")
+                lines.append(f"      pattern: {_get('pattern')}\n")
+                sev = _get('severity')
+                lines.append(f"      severity: {sev:.2f}\n" if isinstance(sev, (int, float)) else f"      severity: {sev}\n")
+                lines.append(f"      description: \"{_get('description')}\"\n")
+                lines.append(f"      suggestion: \"{_get('suggestion')}\"\n")
 
         yaml_block = ''.join(lines)
 
@@ -564,6 +597,46 @@ def _run_single_phase_verification(
     }
 
 
+def _compute_phase_weights(
+    phase_tool_counts: Optional[Dict[str, int]],
+    phase_boundary: Optional[Dict],
+    results: Dict,
+) -> Dict:
+    """Compute noetic/praxic weights from tool classification counts.
+
+    Returns {'noetic': float, 'praxic': float, 'source': str}.
+    Weights sum to 1.0. Floor of 0.1 for any phase with evidence.
+    """
+    if not phase_tool_counts or not results:
+        return {'noetic': 0.5, 'praxic': 0.5, 'source': 'default'}
+
+    noetic_calls = phase_tool_counts.get('noetic_tool_calls', 0)
+    praxic_calls = phase_tool_counts.get('praxic_tool_calls', 0)
+    total = noetic_calls + praxic_calls
+
+    if total == 0:
+        return {'noetic': 0.5, 'praxic': 0.5, 'source': 'no_tool_data'}
+
+    if phase_boundary and phase_boundary.get('noetic_only'):
+        return {'noetic': 1.0, 'praxic': 0.0, 'source': 'noetic_only'}
+
+    noetic_w = noetic_calls / total
+    praxic_w = praxic_calls / total
+
+    # Floor: minimum 0.1 weight for any phase that has evidence
+    has_noetic_evidence = 'noetic' in results
+    has_praxic_evidence = 'praxic' in results
+
+    if has_noetic_evidence and noetic_w < 0.1:
+        noetic_w = 0.1
+        praxic_w = 0.9
+    if has_praxic_evidence and praxic_w < 0.1:
+        praxic_w = 0.1
+        noetic_w = 0.9
+
+    return {'noetic': round(noetic_w, 4), 'praxic': round(praxic_w, 4), 'source': 'tool_classification'}
+
+
 def run_grounded_verification(
     session_id: str,
     postflight_vectors: Dict[str, float],
@@ -573,6 +646,7 @@ def run_grounded_verification(
     goal_id: Optional[str] = None,
     phase_boundary: Optional[Dict] = None,
     evidence_profile: Optional[str] = None,
+    phase_tool_counts: Optional[Dict[str, int]] = None,
 ) -> Optional[Dict]:
     """
     Full grounded verification pipeline.
@@ -583,6 +657,9 @@ def run_grounded_verification(
     - Splits into noetic (PREFLIGHT→CHECK) and praxic (CHECK→POSTFLIGHT) passes
     - Each phase gets independent evidence collection and calibration
     - Falls back to combined when no CHECK boundary exists
+
+    phase_tool_counts: {'noetic_tool_calls': int, 'praxic_tool_calls': int}
+    from Sentinel's phase-split counting. Used to weight the holistic score.
 
     Returns verification summary dict, or None on failure.
     """
@@ -642,17 +719,6 @@ def run_grounded_verification(
         if not results:
             return None
 
-        # Export to .breadcrumbs.yaml
-        manager = GroundedCalibrationManager(db)
-        cursor = db.conn.cursor()
-        cursor.execute(
-            "SELECT ai_id FROM sessions WHERE session_id = ?",
-            (session_id,),
-        )
-        row = cursor.fetchone()
-        if row:
-            manager.export_grounded_calibration(row[0])
-
         # Build unified summary
         all_gaps = {}
         all_updates = {}
@@ -671,15 +737,86 @@ def run_grounded_verification(
             for v, u in phase_result['updates'].items():
                 all_updates[f"{phase_name}:{v}"] = u
 
+        # Phase-weighted holistic calibration
+        phase_weights = _compute_phase_weights(phase_tool_counts, phase_boundary, results)
+        holistic_calibration_score = None
+        holistic_gaps = {}
+
+        if len(results) >= 2 and 'noetic' in results and 'praxic' in results:
+            nw = phase_weights['noetic']
+            pw = phase_weights['praxic']
+            n_score = results['noetic'].get('calibration_score', 0)
+            p_score = results['praxic'].get('calibration_score', 0)
+            holistic_calibration_score = round(nw * n_score + pw * p_score, 4)
+
+            # Weighted gaps per vector (strip phase prefix for holistic view)
+            noetic_gaps = results['noetic'].get('gaps', {})
+            praxic_gaps = results['praxic'].get('gaps', {})
+            all_vectors = set(noetic_gaps.keys()) | set(praxic_gaps.keys())
+            for v in all_vectors:
+                n_gap = noetic_gaps.get(v, 0)
+                p_gap = praxic_gaps.get(v, 0)
+                holistic_gaps[v] = round(nw * n_gap + pw * p_gap, 4)
+        elif len(results) == 1:
+            # Single phase or combined — holistic = that phase's score
+            only_result = next(iter(results.values()))
+            holistic_calibration_score = only_result.get('calibration_score', 0)
+            holistic_gaps = only_result.get('gaps', {})
+
+        # Calibration insights: analyze recent verifications for systemic patterns
+        calibration_insights = []
+        try:
+            from empirica.core.post_test.calibration_insights import CalibrationInsightsAnalyzer
+            analyzer = CalibrationInsightsAnalyzer(db, session_id, lookback=10)
+            calibration_insights = analyzer.analyze()
+            if calibration_insights:
+                analyzer.store_insights(calibration_insights)
+                logger.debug(
+                    f"Calibration insights: {len(calibration_insights)} patterns detected"
+                )
+        except Exception as e:
+            logger.debug(f"Calibration insights analysis failed (non-fatal): {e}")
+
+        # Export to .breadcrumbs.yaml (after holistic computation so weights are included)
+        manager = GroundedCalibrationManager(db)
+        cursor = db.conn.cursor()
+        cursor.execute(
+            "SELECT ai_id FROM sessions WHERE session_id = ?",
+            (session_id,),
+        )
+        row = cursor.fetchone()
+        if row:
+            manager.export_grounded_calibration(
+                row[0],
+                phase_weights=phase_weights,
+                holistic_calibration_score=holistic_calibration_score,
+                holistic_gaps=holistic_gaps,
+                insights=calibration_insights,
+            )
+
         return {
             'verification_ids': verification_ids,
             'phase_aware': phase_boundary is not None and phase_boundary.get("has_check", False),
+            'phase_weights': phase_weights,
+            'holistic_calibration_score': holistic_calibration_score,
+            'holistic_gaps': holistic_gaps,
             'phases': results,
             'evidence_count': total_evidence,
             'sources': list(set(all_sources)),
             'sources_failed': list(set(all_failed)),
             'gaps': all_gaps,
             'updates': all_updates,
+            'insights': [
+                {
+                    'vector': i.vector,
+                    'phase': i.phase,
+                    'pattern': i.pattern,
+                    'severity': i.severity,
+                    'description': i.description,
+                    'suggestion': i.suggestion,
+                }
+                for i in calibration_insights
+            ],
         }
 
     except Exception as e:

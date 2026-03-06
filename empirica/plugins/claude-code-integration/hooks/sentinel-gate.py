@@ -371,11 +371,16 @@ def is_transition_command(command: str) -> bool:
 _autonomy_nudge = ""  # Module-level: set during increment, read by respond
 
 
-def _try_increment_tool_count(claude_session_id: str = None) -> tuple:
+def _try_increment_tool_count(claude_session_id: str = None,
+                              tool_name: str = None,
+                              tool_input: dict = None) -> tuple:
     """Increment tool_call_count in the active transaction file.
 
     Lightweight — no heavy imports. Uses project_resolver (already imported)
     and direct file I/O.
+
+    Also splits counts into noetic_tool_calls and praxic_tool_calls based on
+    tool classification. Used for phase-weighted calibration.
 
     Returns (tool_call_count, avg_turns) or (0, 0) if no transaction.
     """
@@ -428,6 +433,18 @@ def _try_increment_tool_count(claude_session_id: str = None) -> tuple:
         tx['tool_call_count'] = tx.get('tool_call_count', 0) + 1
         count = tx['tool_call_count']
         avg = tx.get('avg_turns', 0)
+
+        # Phase-split counting for phase-weighted calibration
+        if tool_name:
+            _is_noetic = (
+                tool_name in NOETIC_TOOLS
+                or (tool_name == 'Bash' and tool_input and is_safe_bash_command(tool_input))
+                or (tool_name in ('Write', 'Edit') and tool_input and is_plan_file(tool_input))
+            )
+            if _is_noetic:
+                tx['noetic_tool_calls'] = tx.get('noetic_tool_calls', 0) + 1
+            else:
+                tx['praxic_tool_calls'] = tx.get('praxic_tool_calls', 0) + 1
 
         # Atomic write-back
         fd, tmp = tempfile.mkstemp(dir=str(tx_path.parent))
@@ -818,7 +835,7 @@ def main():
         # added to parent's delegated_tool_calls — no double-counting.
         _aw_check = Path.home() / '.empirica' / f'active_work_{_claude_sid}.json'
         if _claude_sid and _aw_check.exists():
-            _count, _avg = _try_increment_tool_count(_claude_sid)
+            _count, _avg = _try_increment_tool_count(_claude_sid, tool_name, tool_input)
             _autonomy_nudge = _compute_nudge(_count, _avg)
     except Exception:
         pass  # Counter failure is non-fatal
