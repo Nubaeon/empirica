@@ -225,7 +225,7 @@ def add_checkpoint_parsers(subparsers):
     project_init_parser.add_argument('--domain', help='Domain taxonomy (e.g., ai/measurement)')
     project_init_parser.add_argument('--classification', choices=['open', 'internal', 'restricted'],
                                      default='internal', help='Access classification')
-    project_init_parser.add_argument('--evidence-profile', choices=['code', 'prose', 'hybrid', 'auto'],
+    project_init_parser.add_argument('--evidence-profile', choices=['code', 'prose', 'web', 'hybrid', 'auto'],
                                      default='auto', help='Evidence profile for grounded calibration')
     project_init_parser.add_argument('--languages', nargs='+', help='Programming languages')
     project_init_parser.add_argument('--tags', nargs='+', help='Project tags')
@@ -248,7 +248,7 @@ def add_checkpoint_parsers(subparsers):
                                        help='Access classification')
     project_update_parser.add_argument('--status', choices=['active', 'dormant', 'archived'],
                                        help='Project status')
-    project_update_parser.add_argument('--evidence-profile', choices=['code', 'prose', 'hybrid', 'auto'],
+    project_update_parser.add_argument('--evidence-profile', choices=['code', 'prose', 'web', 'hybrid', 'auto'],
                                        help='Evidence profile for grounded calibration')
     project_update_parser.add_argument('--languages', nargs='+', help='Set programming languages')
     project_update_parser.add_argument('--tags', nargs='+', help='Set project tags (replaces all)')
