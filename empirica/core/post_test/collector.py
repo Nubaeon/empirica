@@ -254,8 +254,15 @@ class PostTestCollector:
             universal.append(("goals", self._collect_goal_metrics))
             universal.append(("issues", self._collect_issue_metrics))
 
-        # Profile-specific collectors
-        if profile == EvidenceProfile.CODE:
+        # Profile-specific collectors — only run during praxic/combined phases.
+        # These measure OUTPUT quality (code quality, test results, build verification,
+        # document metrics) which is meaningless during pure noetic investigation.
+        # Noetic grounding relies on epistemic process evidence (artifacts, thoroughness,
+        # sentinel decisions) from the universal collectors above.
+        # This applies across ALL domains — not just software engineering.
+        if self.phase == "noetic":
+            profile_collectors = []
+        elif profile == EvidenceProfile.CODE:
             profile_collectors = [
                 ("pytest", self._collect_test_results),
                 ("git", self._collect_git_metrics),

@@ -524,15 +524,41 @@ def handle_preflight_submit_command(args):
                         if significant:
                             overestimates = {v: g for v, g in significant.items() if g > 0}
                             underestimates = {v: g for v, g in significant.items() if g < 0}
+
+                            # Build actionable suggested ranges from grounded posterior means
+                            suggested_ranges = {}
+                            try:
+                                from empirica.core.post_test.grounded_calibration import GroundedCalibrationManager
+                                gcm = GroundedCalibrationManager(db)
+                                beliefs = gcm.get_grounded_beliefs(ai_id)
+                                for vector in significant:
+                                    # Strip phase prefix if present (e.g., "praxic:know" → "know")
+                                    base_vector = vector.split(":")[-1] if ":" in vector else vector
+                                    belief = beliefs.get(base_vector)
+                                    if belief and belief.evidence_count >= 3:
+                                        # Suggest range: posterior mean ± 1 stddev, clamped to [0, 1]
+                                        import math
+                                        stddev = math.sqrt(belief.variance)
+                                        low = max(0.0, round(belief.mean - stddev, 2))
+                                        high = min(1.0, round(belief.mean + stddev, 2))
+                                        suggested_ranges[vector] = {
+                                            "grounded_mean": round(belief.mean, 2),
+                                            "suggest_low": low,
+                                            "suggest_high": high,
+                                        }
+                            except Exception:
+                                pass  # Non-fatal — still show gaps without suggestions
+
                             previous_transaction_feedback = {
                                 "calibration_score": round(prev[1], 3) if prev[1] else None,
                                 "grounded_coverage": round(prev[2], 3) if prev[2] else None,
                                 "significant_gaps": significant,
                                 "overestimates": {v: f"+{g}" for v, g in overestimates.items()},
                                 "underestimates": {v: str(g) for v, g in underestimates.items()},
-                                "note": "Grounded gaps from your previous transaction — adjust accordingly"
+                                "suggested_ranges": suggested_ranges if suggested_ranges else None,
+                                "note": "Grounded gaps from your previous transaction. Use suggested_ranges to calibrate your next self-assessment."
                             }
-                            logger.debug(f"Previous transaction feedback: {len(significant)} significant gaps")
+                            logger.debug(f"Previous transaction feedback: {len(significant)} significant gaps, {len(suggested_ranges)} suggested ranges")
             except Exception as e:
                 logger.debug(f"Previous transaction feedback lookup failed (non-fatal): {e}")
 
