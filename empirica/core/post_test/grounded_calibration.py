@@ -120,6 +120,27 @@ class GroundedCalibrationManager:
 
         return beliefs
 
+    def _get_disputed_vectors(self) -> Dict[str, Dict]:
+        """Get vectors with open disputes. Returns {vector: {expected, reported}}."""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT vector, expected_value, reported_value
+                FROM calibration_disputes
+                WHERE status = 'open'
+                ORDER BY created_at DESC
+            """)
+            disputed = {}
+            for row in cursor.fetchall():
+                if row[0] not in disputed:
+                    disputed[row[0]] = {
+                        'expected': row[1],
+                        'reported': row[2],
+                    }
+            return disputed
+        except Exception:
+            return {}
+
     def update_grounded_beliefs(
         self,
         session_id: str,
@@ -131,6 +152,9 @@ class GroundedCalibrationManager:
 
         For each grounded vector estimate, performs a Bayesian update using
         the objective evidence value as the observation.
+
+        Disputed vectors get 4x observation variance (less trusted evidence)
+        until the dispute is resolved.
 
         Returns dict of vector → update details.
         """
@@ -147,6 +171,7 @@ class GroundedCalibrationManager:
         ai_id = row[0]
 
         current_beliefs = self.get_grounded_beliefs(ai_id)
+        disputed_vectors = self._get_disputed_vectors()
         updates = {}
 
         for vector_name, estimate in assessment.grounded.items():
@@ -166,6 +191,15 @@ class GroundedCalibrationManager:
             # Scale observation variance by evidence confidence
             # High-confidence evidence gets lower variance (more trusted)
             obs_var = self.OBSERVATION_VARIANCE / max(estimate.confidence, 0.1)
+
+            # Disputed vectors: 4x observation variance (less weight on suspect evidence)
+            is_disputed = vector_name in disputed_vectors
+            if is_disputed:
+                obs_var *= 4.0
+                logger.debug(
+                    f"Vector '{vector_name}' has open dispute — "
+                    f"observation variance increased 4x to {obs_var:.4f}"
+                )
 
             # Bayesian update
             posterior_mean = (

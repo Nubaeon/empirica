@@ -119,6 +119,8 @@ Use --learning-trajectory to see PREFLIGHT→POSTFLIGHT deltas (learning, not ca
         help='Show learning trajectory (PREFLIGHT→POSTFLIGHT deltas) - NOT calibration')
     calibration_parser.add_argument('--trajectory', action='store_true',
         help='Show calibration trend over time (closing/widening/stable)')
+    calibration_parser.add_argument('--list-disputes', action='store_true',
+        help='Show all calibration disputes (open and resolved)')
 
     # Calibration dispute command - AI pushback on measurement artifacts
     dispute_parser = subparsers.add_parser('calibration-dispute',
