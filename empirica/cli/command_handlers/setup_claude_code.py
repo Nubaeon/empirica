@@ -426,6 +426,16 @@ def handle_setup_claude_code_command(args):
             if output_format != 'json':
                 print("   UserPromptSubmit hook already configured")
 
+        # Context-shift tracker (classifies solicited vs unsolicited prompts)
+        cs_script = f"{python_cmd} {plugin_dir}/hooks/context-shift-tracker.py"
+        if not _hook_exists(settings['hooks']['UserPromptSubmit'], 'context-shift-tracker.py'):
+            settings['hooks']['UserPromptSubmit'].append({
+                "matcher": ".*",
+                "hooks": [{"type": "command", "command": cs_script, "timeout": 5, "allowFailure": True}]
+            })
+            if output_format != 'json':
+                print("   ✓ Context-shift tracker configured")
+
         # Write settings.json
         _write_json_file(settings_file, settings)
 

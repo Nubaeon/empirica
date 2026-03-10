@@ -59,6 +59,18 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 PLUGIN_DIR/hooks/context-shift-tracker.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "matcher": ".*",

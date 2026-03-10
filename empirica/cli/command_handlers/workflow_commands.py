@@ -558,6 +558,26 @@ def handle_preflight_submit_command(args):
                                 "suggested_ranges": suggested_ranges if suggested_ranges else None,
                                 "note": "Grounded gaps from your previous transaction. Use suggested_ranges to calibrate your next self-assessment."
                             }
+                            # Check previous POSTFLIGHT for context-shift data
+                            try:
+                                cursor.execute("""
+                                    SELECT meta FROM reflexes
+                                    WHERE session_id = ? AND phase = 'POSTFLIGHT'
+                                    ORDER BY timestamp DESC LIMIT 1
+                                """, (session_id,))
+                                pf_row = cursor.fetchone()
+                                if pf_row and pf_row[0]:
+                                    pf_meta = json.loads(pf_row[0]) if isinstance(pf_row[0], str) else pf_row[0]
+                                    cs = pf_meta.get('context_shifts')
+                                    if cs and cs.get('unsolicited_prompts', 0) > 0:
+                                        previous_transaction_feedback["context_shifts"] = cs
+                                        previous_transaction_feedback["context_shift_note"] = (
+                                            f"{cs['unsolicited_prompts']} unsolicited context shift(s) detected in previous transaction. "
+                                            "Calibration divergence may be partially attributable to human-initiated redirection, not epistemic drift."
+                                        )
+                            except Exception:
+                                pass
+
                             logger.debug(f"Previous transaction feedback: {len(significant)} significant gaps, {len(suggested_ranges)} suggested ranges")
             except Exception as e:
                 logger.debug(f"Previous transaction feedback lookup failed (non-fatal): {e}")
@@ -1936,6 +1956,7 @@ def handle_postflight_submit_command(args):
             postflight_tool_call_count = 0
             postflight_avg_turns = 0
             postflight_phase_tool_counts = None
+            postflight_context_shifts = {'solicited_prompts': 0, 'unsolicited_prompts': 0}
             try:
                 import time
                 from empirica.utils.session_resolver import write_active_transaction, get_active_project_path
@@ -1970,6 +1991,11 @@ def handle_postflight_submit_command(args):
                         'noetic_tool_calls': tx_data.get('noetic_tool_calls', 0),
                         'praxic_tool_calls': tx_data.get('praxic_tool_calls', 0),
                     }
+                    # Context-shift tracking data
+                    postflight_context_shifts = {
+                        'solicited_prompts': tx_data.get('solicited_prompt_count', 0),
+                        'unsolicited_prompts': tx_data.get('unsolicited_prompt_count', 0),
+                    }
                     # Update to closed status - preserve project_path from transaction
                     write_active_transaction(
                         transaction_id=postflight_transaction_id,
@@ -1997,7 +2023,8 @@ def handle_postflight_submit_command(args):
                     "trajectory_issues": trajectory_issues,
                     "transaction_id": postflight_transaction_id,
                     "tool_call_count": postflight_tool_call_count,
-                    "avg_turns_at_start": postflight_avg_turns
+                    "avg_turns_at_start": postflight_avg_turns,
+                    "context_shifts": postflight_context_shifts if postflight_context_shifts.get('unsolicited_prompts', 0) > 0 else None
                 }
             )
 

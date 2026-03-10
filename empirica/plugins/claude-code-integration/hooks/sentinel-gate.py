@@ -446,6 +446,11 @@ def _try_increment_tool_count(claude_session_id: str = None,
             else:
                 tx['praxic_tool_calls'] = tx.get('praxic_tool_calls', 0) + 1
 
+        # Context-shift tracking: flag when AI asks user a question
+        # UserPromptSubmit hook reads this to classify solicited vs unsolicited
+        if tool_name == 'AskUserQuestion':
+            tx['pending_user_response'] = True
+
         # Atomic write-back
         fd, tmp = tempfile.mkstemp(dir=str(tx_path.parent))
         try:
