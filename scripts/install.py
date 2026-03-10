@@ -29,9 +29,9 @@ from typing import Optional
 EMPIRICA_VERSION = "1.6.2"
 MIN_PYTHON_VERSION = (3, 10)
 
-# Recommended embeddings model (small, fast, good quality)
-RECOMMENDED_EMBEDDINGS_MODEL = "nomic-embed-text"
-ALTERNATIVE_EMBEDDINGS_MODEL = "mxbai-embed-large"
+# Recommended embeddings model (1024-dim, MTEB 64.3, best quality/size ratio)
+RECOMMENDED_EMBEDDINGS_MODEL = "qwen3-embedding"
+ALTERNATIVE_EMBEDDINGS_MODEL = "nomic-embed-text"
 
 # Default Qdrant URL
 DEFAULT_QDRANT_URL = "http://localhost:6333"

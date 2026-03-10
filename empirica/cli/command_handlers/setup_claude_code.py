@@ -619,19 +619,22 @@ def handle_setup_claude_code_command(args):
                 )
                 if result.returncode == 0:
                     ollama_ok = True
-                    if "nomic-embed-text" in result.stdout:
+                    if "qwen3-embedding" in result.stdout:
                         nomic_ok = True
-                        print("✓ Ollama: installed, nomic-embed-text available")
+                        print("✓ Ollama: installed, qwen3-embedding available")
+                    elif "nomic-embed-text" in result.stdout:
+                        nomic_ok = True
+                        print("✓ Ollama: installed, nomic-embed-text available (consider upgrading to qwen3-embedding)")
                     else:
-                        print("⚠ Ollama: installed, but nomic-embed-text not pulled")
-                        print("    Fix: ollama pull nomic-embed-text")
+                        print("⚠ Ollama: installed, but no embedding model pulled")
+                        print("    Fix: ollama pull qwen3-embedding")
                 else:
                     print("⚠ Ollama: installed but not running")
                     print("    Fix: ollama serve")
             except FileNotFoundError:
                 print("✗ Ollama: not installed")
                 print("    Install: curl -fsSL https://ollama.com/install.sh | sh")
-                print("    Then: ollama pull nomic-embed-text")
+                print("    Then: ollama pull qwen3-embedding")
             except Exception:
                 print("⚠ Ollama: could not check status")
 
@@ -677,7 +680,7 @@ def handle_setup_claude_code_command(args):
                 if not ollama_ok:
                     print("   curl -fsSL https://ollama.com/install.sh | sh")
                 if ollama_ok and not nomic_ok:
-                    print("   ollama pull nomic-embed-text")
+                    print("   ollama pull qwen3-embedding")
                 if not qdrant_ok:
                     print("   docker run -d -p 6333:6333 -v ~/.qdrant:/qdrant/storage qdrant/qdrant")
             print()
