@@ -70,6 +70,65 @@ def get_instance_id() -> Optional[str]:
     return None
 
 
+def detect_environment() -> dict:
+    """
+    Detect execution environment for Sentinel context awareness.
+
+    Returns dict with:
+        hostname: str - machine hostname
+        is_remote: bool - SSH session detected
+        is_container: bool - Docker/Podman container detected
+        is_ci: bool - CI/CD environment detected
+        is_trusted: bool|None - True if in trusted_hosts, False if remote+untrusted, None if local
+        trust_source: str|None - why trusted/untrusted
+    """
+    import socket
+    import fnmatch
+
+    hostname = socket.gethostname()
+    is_remote = bool(os.environ.get('SSH_CONNECTION') or os.environ.get('SSH_CLIENT') or os.environ.get('SSH_TTY'))
+    is_container = os.path.exists('/.dockerenv') or os.path.exists('/run/.containerenv')
+    is_ci = bool(os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS') or os.environ.get('GITLAB_CI'))
+
+    # Determine trust
+    is_trusted = None
+    trust_source = None
+
+    if is_remote or is_container or is_ci:
+        # Check trusted_hosts file
+        trusted_file = Path.home() / '.empirica' / 'trusted_hosts'
+        if trusted_file.exists():
+            try:
+                lines = trusted_file.read_text().splitlines()
+                patterns = [
+                    line.strip() for line in lines
+                    if line.strip() and not line.strip().startswith('#')
+                ]
+                for pattern in patterns:
+                    if fnmatch.fnmatch(hostname, pattern):
+                        is_trusted = True
+                        trust_source = f"matched '{pattern}' in trusted_hosts"
+                        break
+                if is_trusted is None:
+                    is_trusted = False
+                    trust_source = f"hostname '{hostname}' not in trusted_hosts"
+            except Exception:
+                is_trusted = False
+                trust_source = "trusted_hosts unreadable"
+        else:
+            is_trusted = False
+            trust_source = "no trusted_hosts file"
+
+    return {
+        'hostname': hostname,
+        'is_remote': is_remote,
+        'is_container': is_container,
+        'is_ci': is_ci,
+        'is_trusted': is_trusted,
+        'trust_source': trust_source,
+    }
+
+
 def get_active_project_path(claude_session_id: str = None) -> Optional[str]:
     """
     Get the active project path for the current instance.

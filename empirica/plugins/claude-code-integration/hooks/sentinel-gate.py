@@ -40,7 +40,7 @@ _lib_path = Path(__file__).parent.parent / 'lib'
 if str(_lib_path) not in sys.path:
     sys.path.insert(0, str(_lib_path))
 
-from project_resolver import get_active_project_path, get_instance_id, get_active_session_id
+from project_resolver import get_active_project_path, get_instance_id, get_active_session_id, detect_environment
 
 # Noetic tools - read/investigate/search - always allowed (whitelist)
 NOETIC_TOOLS = {
@@ -905,6 +905,24 @@ def main():
         respond("allow", "Sentinel disabled (env var)")
         sys.exit(0)
 
+    # === ENVIRONMENT CONTEXT ===
+    # Detect remote/container/CI environments and check trusted_hosts
+    env_context = detect_environment()
+    env_annotation = ""
+    if env_context['is_remote'] or env_context['is_container'] or env_context['is_ci']:
+        env_type = (
+            "SSH" if env_context['is_remote']
+            else "container" if env_context['is_container']
+            else "CI"
+        )
+        if env_context['is_trusted']:
+            env_annotation = f" [REMOTE:{env_type}:trusted ({env_context['trust_source']})]"
+        else:
+            env_annotation = (
+                f" [REMOTE:{env_type}:UNTRUSTED — {env_context['trust_source']}. "
+                f"Add '{env_context['hostname']}' to ~/.empirica/trusted_hosts to trust this host]"
+            )
+
     # === AUTHORIZATION CHECK ===
 
     # Setup imports - find empirica package if not already installed
@@ -976,7 +994,7 @@ def main():
             pass
 
     if not session_id:
-        respond("allow", "WARNING: No session found. Run: empirica session-create --ai-id claude-code && empirica preflight-submit -")
+        respond("allow", f"WARNING: No session found. Run: empirica session-create --ai-id claude-code && empirica preflight-submit -{env_annotation}")
         sys.exit(0)
 
     # SessionDatabase uses path_resolver internally for DB location
@@ -1055,7 +1073,7 @@ def main():
                 respond("allow", f"Transition command (no PREFLIGHT yet - starting new cycle).{pre_tx_nudge}")
                 sys.exit(0)
         db.close()
-        respond("deny", f"No open transaction. Submit PREFLIGHT with your self-assessed vectors to begin measured work.{pre_tx_nudge}")
+        respond("deny", f"No open transaction. Submit PREFLIGHT with your self-assessed vectors to begin measured work.{pre_tx_nudge}{env_annotation}")
         sys.exit(0)
 
     preflight_know, preflight_uncertainty, preflight_timestamp, preflight_project_id = preflight_row
@@ -1175,7 +1193,7 @@ def main():
     # AUTO-PROCEED: If PREFLIGHT passes readiness gate, skip CHECK requirement
     if raw_know >= KNOW_THRESHOLD and raw_unc <= UNCERTAINTY_THRESHOLD:
         db.close()
-        respond("allow", "PREFLIGHT confidence sufficient - proceeding")
+        respond("allow", f"PREFLIGHT confidence sufficient - proceeding{env_annotation}")
         sys.exit(0)
 
     # PREFLIGHT confidence too low - require explicit CHECK
@@ -1280,10 +1298,10 @@ def main():
     raw_check_unc = uncertainty or 1
 
     if raw_check_know >= KNOW_THRESHOLD and raw_check_unc <= UNCERTAINTY_THRESHOLD:
-        respond("allow", "CHECK passed - proceeding")
+        respond("allow", f"CHECK passed - proceeding{env_annotation}")
         sys.exit(0)
     else:
-        respond("deny", "CHECK confidence insufficient. Continue investigation, then re-submit CHECK.")
+        respond("deny", f"CHECK confidence insufficient. Continue investigation, then re-submit CHECK.{env_annotation}")
         sys.exit(0)
 
 
