@@ -205,8 +205,8 @@ class PostTestCollector:
             try:
                 from empirica.utils.session_resolver import _resolve_via_workspace_db
                 project_info = _resolve_via_workspace_db(self.project_id)
-                if project_info and project_info.get("trajectory_path"):
-                    path = project_info["trajectory_path"]
+                if project_info and (project_info.get("project_path") or project_info.get("trajectory_path")):
+                    path = project_info.get("project_path") or project_info["trajectory_path"]
                     if Path(path).is_dir():
                         self._project_root = path
                         return self._project_root
