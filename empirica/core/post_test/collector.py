@@ -134,6 +134,7 @@ class PostTestCollector:
         self._db = db
         self._owns_db = False
         self._session_goal_ids: Optional[List[str]] = None
+        self._project_root: Optional[str] = None  # Lazy-resolved
 
     def _get_db(self):
         if self._db is None:
@@ -165,7 +166,7 @@ class PostTestCollector:
         """Resolve evidence profile, auto-detecting if needed."""
         profile = EvidenceProfile.resolve(
             explicit=self.evidence_profile,
-            project_path=self._detect_project_path(),
+            project_path=self._resolve_project_root(),
         )
         if profile == EvidenceProfile.AUTO:
             # Auto-detect from changed file extensions
@@ -183,18 +184,54 @@ class PostTestCollector:
                 return EvidenceProfile.PROSE
         return profile
 
-    def _detect_project_path(self) -> Optional[str]:
-        """Detect project path from git root."""
-        import subprocess
+    def _resolve_project_root(self) -> Optional[str]:
+        """Resolve the project root path for subprocess cwd and file lookups.
+
+        Priority chain:
+        1. project_id → workspace.db → trajectory_path (authoritative)
+        2. get_active_project_path() (instance/active_work files)
+        3. CWD-based git rev-parse (last resort fallback)
+
+        Result is cached on self._project_root after first call.
+        """
+        if self._project_root is not None:
+            return self._project_root
+
+        # Priority 1: Resolve from project_id via workspace.db
+        if self.project_id:
+            try:
+                from empirica.utils.session_resolver import _resolve_via_workspace_db
+                project_info = _resolve_via_workspace_db(self.project_id)
+                if project_info and project_info.get("trajectory_path"):
+                    path = project_info["trajectory_path"]
+                    if Path(path).is_dir():
+                        self._project_root = path
+                        return self._project_root
+            except Exception:
+                pass
+
+        # Priority 2: Active project path from instance/active_work files
+        try:
+            from empirica.utils.session_resolver import get_active_project_path
+            active_path = get_active_project_path()
+            if active_path and Path(active_path).is_dir():
+                self._project_root = active_path
+                return self._project_root
+        except Exception:
+            pass
+
+        # Priority 3: CWD-based git root (last resort)
         try:
             result = subprocess.run(
                 ["git", "rev-parse", "--show-toplevel"],
                 capture_output=True, text=True, timeout=5,
             )
             if result.returncode == 0:
-                return result.stdout.strip()
+                self._project_root = result.stdout.strip()
+                return self._project_root
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pass
+
         return None
 
     def _get_prose_collectors(self) -> List[tuple]:
@@ -794,13 +831,14 @@ class PostTestCollector:
     def _collect_test_results(self) -> List[EvidenceItem]:
         """Collect pytest results from JSON report if available."""
         items = []
+        root = Path(self._resolve_project_root() or ".")
 
         # Look for pytest JSON report in standard locations
         report_paths = [
-            Path.cwd() / ".empirica" / "pytest_report.json",
-            Path.cwd() / "pytest_report.json",
-            Path.cwd() / ".pytest_report.json",
-            Path.cwd() / "htmlcov" / "status.json",
+            root / ".empirica" / "pytest_report.json",
+            root / "pytest_report.json",
+            root / ".pytest_report.json",
+            root / "htmlcov" / "status.json",
         ]
 
         report = None
@@ -834,9 +872,9 @@ class PostTestCollector:
 
         # Coverage data (if present via pytest-cov JSON)
         coverage_paths = [
-            Path.cwd() / "coverage.json",
-            Path.cwd() / ".coverage.json",
-            Path.cwd() / "htmlcov" / "status.json",
+            root / "coverage.json",
+            root / ".coverage.json",
+            root / "htmlcov" / "status.json",
         ]
 
         for cov_path in coverage_paths:
@@ -862,6 +900,7 @@ class PostTestCollector:
     def _collect_git_metrics(self) -> List[EvidenceItem]:
         """Collect git-based metrics for this session's timeframe."""
         items = []
+        project_root = self._resolve_project_root()
 
         # Get session start time for git log filtering
         db = self._get_db()
@@ -880,6 +919,7 @@ class PostTestCollector:
                 ["git", "log", "--oneline", "--since=@" + str(int(float(str(row[0])))),
                  "--format=%H"],
                 capture_output=True, text=True, timeout=5,
+                cwd=project_root,
             )
             if result.returncode == 0:
                 commits = [c for c in result.stdout.strip().split('\n') if c]
@@ -901,6 +941,7 @@ class PostTestCollector:
             result = subprocess.run(
                 ["git", "diff", "--stat", "--shortstat", "HEAD~3..HEAD"],
                 capture_output=True, text=True, timeout=5,
+                cwd=project_root,
             )
             if result.returncode == 0 and result.stdout.strip():
                 # Parse "X files changed, Y insertions(+), Z deletions(-)"
@@ -937,6 +978,7 @@ class PostTestCollector:
         """
         items = []
         import re
+        project_root = self._resolve_project_root()
 
         # Get files changed during this session from git
         changed_files = self._get_session_changed_files()
@@ -952,6 +994,7 @@ class PostTestCollector:
             result = subprocess.run(
                 ["ruff", "check", "--output-format", "json", "--quiet"] + py_files,
                 capture_output=True, text=True, timeout=30,
+                cwd=project_root,
             )
             # ruff exits non-zero when violations found — that's expected
             if result.stdout.strip():
@@ -1021,6 +1064,7 @@ class PostTestCollector:
             result = subprocess.run(
                 ["radon", "cc", "-s", "-a", "-j"] + py_files,
                 capture_output=True, text=True, timeout=30,
+                cwd=project_root,
             )
             if result.returncode == 0 and result.stdout.strip():
                 import json as _json
@@ -1062,6 +1106,7 @@ class PostTestCollector:
             result = subprocess.run(
                 ["pyright", "--outputjson"] + py_files,
                 capture_output=True, text=True, timeout=60,
+                cwd=project_root,
             )
             if result.stdout.strip():
                 import json as _json
@@ -1104,8 +1149,12 @@ class PostTestCollector:
         1. Committed changes since session start (git log)
         2. Staged but uncommitted changes (git diff --cached)
         3. Unstaged working tree changes (git diff)
+
+        All git commands run with cwd=project_root so they query the correct repo.
+        Returned paths are relative to project_root (as git outputs them).
         """
         all_files: set = set()
+        project_root = self._resolve_project_root()
 
         db = self._get_db()
         cursor = db.conn.cursor()
@@ -1129,6 +1178,7 @@ class PostTestCollector:
                     ["git", "log", "--name-only", "--format=",
                      "--diff-filter=ACMR", "--since=" + since],
                     capture_output=True, text=True, timeout=5,
+                    cwd=project_root,
                 )
                 if result.returncode == 0:
                     all_files.update(f.strip() for f in result.stdout.strip().split('\n') if f.strip())
@@ -1137,6 +1187,7 @@ class PostTestCollector:
             result = subprocess.run(
                 ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
                 capture_output=True, text=True, timeout=5,
+                cwd=project_root,
             )
             if result.returncode == 0:
                 all_files.update(f.strip() for f in result.stdout.strip().split('\n') if f.strip())
@@ -1145,6 +1196,7 @@ class PostTestCollector:
             result = subprocess.run(
                 ["git", "diff", "--name-only", "--diff-filter=ACMR"],
                 capture_output=True, text=True, timeout=5,
+                cwd=project_root,
             )
             if result.returncode == 0:
                 all_files.update(f.strip() for f in result.stdout.strip().split('\n') if f.strip())
@@ -1154,23 +1206,25 @@ class PostTestCollector:
                 result = subprocess.run(
                     ["git", "diff", "--name-only", "--diff-filter=ACMR", "HEAD~5..HEAD"],
                     capture_output=True, text=True, timeout=5,
+                    cwd=project_root,
                 )
                 if result.returncode == 0:
                     all_files.update(f.strip() for f in result.stdout.strip().split('\n') if f.strip())
 
-            # Filter to existing files only
-            return [f for f in all_files if Path(f).exists()]
+            # Filter to existing files only (paths are relative to project root)
+            root = Path(project_root) if project_root else Path.cwd()
+            return [f for f in all_files if (root / f).exists()]
         except (subprocess.TimeoutExpired, FileNotFoundError, ValueError):
             pass
         return []
 
-    @staticmethod
-    def _count_lines(file_paths: List[str]) -> int:
-        """Count total lines across files."""
+    def _count_lines(self, file_paths: List[str]) -> int:
+        """Count total lines across files (relative to project root)."""
+        root = Path(self._resolve_project_root() or ".")
         total = 0
         for fp in file_paths:
             try:
-                total += len(Path(fp).read_text().splitlines())
+                total += len((root / fp).read_text().splitlines())
             except OSError:
                 pass
         return total
