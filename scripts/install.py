@@ -686,8 +686,11 @@ def show_ollama_instructions():
 {Colors.BOLD}2. Pull the recommended embeddings model:{Colors.ENDC}
    ollama pull {RECOMMENDED_EMBEDDINGS_MODEL}
 
-   {Colors.BLUE}Alternative (larger, higher quality):{Colors.ENDC}
-   ollama pull {ALTERNATIVE_EMBEDDINGS_MODEL}
+   {Colors.YELLOW}⚠ Use the default tag above (0.6B, 1024d). Do NOT pull qwen3-embedding:8b
+     — the :8b variant produces 4096d vectors which will cause Qdrant errors.{Colors.ENDC}
+
+   {Colors.BLUE}Alternative (legacy):{Colors.ENDC}
+   ollama pull {ALTERNATIVE_EMBEDDINGS_MODEL}  # 768d
 
 {Colors.BOLD}3. Ollama runs automatically in the background.{Colors.ENDC}
    Default URL: http://localhost:11434
@@ -906,8 +909,8 @@ Local embeddings via Ollama (recommended) or API-based.
 
         model = ask_choice(
             "Choose embeddings model:",
-            [f"{RECOMMENDED_EMBEDDINGS_MODEL} (fast, good quality)",
-             f"{ALTERNATIVE_EMBEDDINGS_MODEL} (slower, higher quality)"],
+            [f"{RECOMMENDED_EMBEDDINGS_MODEL} (1024d, recommended — use default tag, NOT :8b)",
+             f"{ALTERNATIVE_EMBEDDINGS_MODEL} (768d, legacy alternative)"],
             default=0
         )
         config["embeddings_model"] = model.split()[0]

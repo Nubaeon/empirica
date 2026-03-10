@@ -58,13 +58,19 @@ In addition to env vars, embeddings can be configured via `~/.empirica/config.ya
 ```yaml
 embeddings:
   provider: ollama
-  model: qwen3-embedding
+  model: qwen3-embedding    # Use the default tag (0.6B, 1024d) — NOT :8b
   ollama_url: http://localhost:11434
   # jina_api_key: ...
   # voyage_api_key: ...
 ```
 
 **Priority:** env vars > config.yaml > code defaults.
+
+> **Important:** When using `qwen3-embedding` with Ollama, ensure you pull the correct
+> model tag. The default tag (`ollama pull qwen3-embedding`) is 0.6B and produces 1024d
+> vectors. The `:8b` tag (`qwen3-embedding:8b`) is a different model that produces 4096d
+> vectors. Mixing tags causes Qdrant 500 errors because collection dimensions won't match.
+> If this happens, fix the model and run `empirica rebuild --qdrant`.
 
 ### Providers
 
@@ -86,11 +92,12 @@ embeddings:
 "text-embedding-ada-002": 1536
 
 # Ollama (local)
-"qwen3-embedding": 1024  # Default since v1.6.2
+"qwen3-embedding": 1024      # Default since v1.6.2 (0.6B, default tag)
+"qwen3-embedding:0.6b": 1024 # Explicit 0.6B tag — same as default
+"qwen3-embedding:8b": 4096   # 8B variant — different dimensions!
 "nomic-embed-text": 768
 "mxbai-embed-large": 1024
 "bge-m3": 1024  # Dense + sparse + colbert
-"qwen3-embedding": 1024
 
 # Jina AI
 "jina-embeddings-v3": 1024  # Matryoshka

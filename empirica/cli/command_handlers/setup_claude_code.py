@@ -28,7 +28,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 PLUGIN_NAME = "empirica-integration"
-PLUGIN_VERSION = "1.6.2"
+PLUGIN_VERSION = "1.6.3"
 
 
 def _find_python() -> str:
@@ -622,18 +622,23 @@ def handle_setup_claude_code_command(args):
 
             # Check Ollama
             ollama_ok = False
-            nomic_ok = False
+            embedding_ok = False
             try:
                 result = subprocess.run(
                     ["ollama", "list"], capture_output=True, text=True, timeout=5
                 )
                 if result.returncode == 0:
                     ollama_ok = True
-                    if "qwen3-embedding" in result.stdout:
-                        nomic_ok = True
-                        print("✓ Ollama: installed, qwen3-embedding available")
+                    if "qwen3-embedding:8b" in result.stdout:
+                        embedding_ok = True
+                        print("⚠ Ollama: qwen3-embedding:8b detected (4096d) — this may cause dimension mismatches")
+                        print("    Empirica expects 1024d. Pull the default tag instead:")
+                        print("    ollama pull qwen3-embedding")
+                    elif "qwen3-embedding" in result.stdout:
+                        embedding_ok = True
+                        print("✓ Ollama: installed, qwen3-embedding available (1024d)")
                     elif "nomic-embed-text" in result.stdout:
-                        nomic_ok = True
+                        embedding_ok = True
                         print("✓ Ollama: installed, nomic-embed-text available (consider upgrading to qwen3-embedding)")
                     else:
                         print("⚠ Ollama: installed, but no embedding model pulled")
@@ -662,7 +667,7 @@ def handle_setup_claude_code_command(args):
                 print("    Binary: https://github.com/qdrant/qdrant/releases")
 
             print()
-            if ollama_ok and nomic_ok and qdrant_ok:
+            if ollama_ok and embedding_ok and qdrant_ok:
                 print("✓ Semantic layer ready — PREFLIGHT will inject patterns,")
                 print("  findings, dead-ends, and calibration from prior sessions")
             else:
@@ -684,12 +689,12 @@ def handle_setup_claude_code_command(args):
             print()
             print("3. Connect MCP server: /mcp")
             print("   Should show: empirica connected")
-            if not (ollama_ok and nomic_ok and qdrant_ok):
+            if not (ollama_ok and embedding_ok and qdrant_ok):
                 print()
                 print("4. Set up semantic layer (recommended):")
                 if not ollama_ok:
                     print("   curl -fsSL https://ollama.com/install.sh | sh")
-                if ollama_ok and not nomic_ok:
+                if ollama_ok and not embedding_ok:
                     print("   ollama pull qwen3-embedding")
                 if not qdrant_ok:
                     print("   docker run -d -p 6333:6333 -v ~/.qdrant:/qdrant/storage qdrant/qdrant")
