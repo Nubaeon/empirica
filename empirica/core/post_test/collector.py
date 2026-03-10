@@ -966,6 +966,9 @@ class PostTestCollector:
                     # Normalize: 0 violations = 1.0, 10+ per 100 lines = 0.0
                     clarity_score = max(0.0, 1.0 - (density_per_100 / 10.0))
 
+                    # SEMI_OBJECTIVE: static analysis of in-progress code measures
+                    # snapshot quality, not delta quality. New files during active
+                    # development score lower than mature code regardless of skill.
                     items.append(EvidenceItem(
                         source="code_quality",
                         metric_name="ruff_violation_density",
@@ -976,7 +979,7 @@ class PostTestCollector:
                             "per_100_lines": round(density_per_100, 2),
                             "files_checked": len(py_files),
                         },
-                        quality=EvidenceQuality.OBJECTIVE,
+                        quality=EvidenceQuality.SEMI_OBJECTIVE,
                         supports_vectors=["clarity", "coherence"],
                     ))
 
@@ -997,7 +1000,7 @@ class PostTestCollector:
                                 "style": style_count,
                                 "total": violation_count,
                             },
-                            quality=EvidenceQuality.OBJECTIVE,
+                            quality=EvidenceQuality.SEMI_OBJECTIVE,
                             supports_vectors=["signal"],
                         ))
             elif result.returncode == 0:
@@ -1007,7 +1010,7 @@ class PostTestCollector:
                     metric_name="ruff_violation_density",
                     value=1.0,
                     raw_value={"violations": 0, "files_checked": len(py_files)},
-                    quality=EvidenceQuality.OBJECTIVE,
+                    quality=EvidenceQuality.SEMI_OBJECTIVE,
                     supports_vectors=["clarity", "coherence"],
                 ))
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -1048,7 +1051,7 @@ class PostTestCollector:
                             "functions_analyzed": len(all_complexities),
                             "high_complexity_count": high_complexity_count,
                         },
-                        quality=EvidenceQuality.OBJECTIVE,
+                        quality=EvidenceQuality.SEMI_OBJECTIVE,
                         supports_vectors=["density", "signal"],
                     ))
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -1084,7 +1087,7 @@ class PostTestCollector:
                                 "files_analyzed": files_analyzed,
                                 "errors_per_file": round(errors_per_file, 2),
                             },
-                            quality=EvidenceQuality.OBJECTIVE,
+                            quality=EvidenceQuality.SEMI_OBJECTIVE,
                             supports_vectors=["know", "do"],
                         ))
                 except (json.JSONDecodeError, KeyError):
