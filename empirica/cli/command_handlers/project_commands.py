@@ -388,6 +388,96 @@ def resolve_workspace_project(identifier: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _init_filesystem_at_path(target_path, project_id, name, description, project_type, tags, logger):
+    """Initialize .empirica/ filesystem config at a given git repo path.
+
+    Called by project-create --path to bridge workspace DB entry with filesystem config.
+    Creates config.yaml and project.yaml without duplicating the DB creation that
+    project-create already did.
+    """
+    import yaml
+    import subprocess
+    from datetime import datetime
+    from pathlib import Path
+
+    empirica_dir = target_path / '.empirica'
+    empirica_dir.mkdir(exist_ok=True)
+    sessions_dir = empirica_dir / 'sessions'
+    sessions_dir.mkdir(exist_ok=True)
+
+    # Create config.yaml if missing
+    config_path = empirica_dir / 'config.yaml'
+    if not config_path.exists():
+        from empirica.config.path_resolver import create_default_config
+        # Temporarily change cwd to target so create_default_config writes there
+        import os
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(str(target_path))
+            create_default_config()
+        finally:
+            os.chdir(old_cwd)
+
+    # Create project.yaml
+    project_yaml_path = empirica_dir / 'project.yaml'
+
+    # Auto-detect git remote
+    try:
+        result = subprocess.run(
+            ['git', '-C', str(target_path), 'remote', 'get-url', 'origin'],
+            capture_output=True, text=True, timeout=5
+        )
+        git_url = result.stdout.strip() if result.returncode == 0 else None
+    except Exception:
+        git_url = None
+
+    # Auto-detect languages
+    languages = []
+    for marker, lang in [('pyproject.toml', 'python'), ('package.json', 'javascript'),
+                         ('go.mod', 'go'), ('Cargo.toml', 'rust')]:
+        if (target_path / marker).exists():
+            languages.append(lang)
+
+    import os
+    project_config = {
+        'version': '2.0',
+        'name': name,
+        'description': description or f"{name} project",
+        'project_id': project_id,
+        'type': project_type or 'software',
+        'domain': '',
+        'classification': 'internal',
+        'status': 'active',
+        'evidence_profile': 'auto',
+        'languages': languages,
+        'tags': tags or [],
+        'created_at': datetime.now().strftime('%Y-%m-%d'),
+        'created_by': os.environ.get('USER', 'unknown'),
+    }
+    if git_url:
+        project_config['repository'] = git_url
+    project_config.update({
+        'contacts': [],
+        'engagements': [],
+        'edges': [],
+        'beads': {'default_enabled': False},
+        'subjects': {},
+        'auto_detect': {'enabled': True, 'method': 'path_match'},
+        'domain_config': {},
+    })
+
+    with open(project_yaml_path, 'w') as f:
+        yaml.dump(project_config, f, default_flow_style=False, sort_keys=False)
+
+    logger.debug(f"Initialized filesystem at {empirica_dir}")
+    return {
+        "config_yaml": str(config_path),
+        "project_yaml": str(project_yaml_path),
+        "languages_detected": languages,
+        "git_url": git_url,
+    }
+
+
 def handle_project_create_command(args):
     """Handle project-create command"""
     try:
@@ -459,6 +549,22 @@ def handle_project_create_command(args):
             logger.warning(f"Failed to register in workspace.db: {e}")
             # Non-fatal - project still created in local DB
 
+        # Bridge: if --path provided, also initialize filesystem config at that path
+        init_result = None
+        target_path = getattr(args, 'path', None)
+        if target_path:
+            from pathlib import Path
+            target = Path(target_path).resolve()
+            if not target.exists():
+                logger.warning(f"Path does not exist: {target}")
+            elif not (target / '.git').exists():
+                logger.warning(f"Not a git repository: {target} (run 'git init' first)")
+            else:
+                init_result = _init_filesystem_at_path(
+                    target, project_id, name, description,
+                    project_type, tags, logger
+                )
+
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
             result = {
@@ -471,6 +577,8 @@ def handle_project_create_command(args):
                 "parent_project_id": parent,
                 "message": "Project created successfully"
             }
+            if init_result:
+                result["filesystem_init"] = init_result
             print(json.dumps(result, indent=2))
         else:
             print(f"✅ Project created successfully")
@@ -485,6 +593,8 @@ def handle_project_create_command(args):
                 print(f"   Repos: {', '.join(repos)}")
             if parent:
                 print(f"   Parent: {parent}")
+            if init_result:
+                print(f"   📁 Filesystem initialized at: {target_path}")
 
         # Return None to avoid exit code issues and duplicate output
         return None

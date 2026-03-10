@@ -216,6 +216,7 @@ def add_checkpoint_parsers(subparsers):
     )
     project_init_parser.add_argument('--project-name', help='Project name (defaults to repo name)')
     project_init_parser.add_argument('--project-description', help='Project description')
+    project_init_parser.add_argument('--project-id', help='Link to existing workspace project ID (skip DB creation, reuse existing)')
     project_init_parser.add_argument('--enable-beads', action='store_true', help='Enable BEADS by default')
     project_init_parser.add_argument('--create-semantic-index', action='store_true', help='Create SEMANTIC_INDEX.yaml template')
     project_init_parser.add_argument('--type', choices=[
@@ -271,6 +272,7 @@ def add_checkpoint_parsers(subparsers):
     )
     project_create_parser.add_argument('--name', required=True, help='Project name')
     project_create_parser.add_argument('--description', help='Project description')
+    project_create_parser.add_argument('--path', help='Path to git repo — also initializes .empirica/ filesystem config (bridges project-create + project-init)')
     project_create_parser.add_argument('--repos', help='JSON array of repository names (e.g., \'["empirica", "empirica-dev"]\')')
     project_create_parser.add_argument('--type', choices=['product', 'application', 'feature', 'research', 'documentation', 'infrastructure', 'operations'], default='product', help='Project type for workspace categorization')
     project_create_parser.add_argument('--tags', help='Tags for categorization (comma-separated or JSON array)')

@@ -191,8 +191,16 @@ def handle_project_init_command(args):
         project_id = None
         reused_existing = False
 
+        # Bridge: if --project-id provided, use that ID directly (links to existing workspace project)
+        explicit_project_id = getattr(args, 'project_id', None)
+        if explicit_project_id:
+            project_id = explicit_project_id
+            reused_existing = True
+            if output_format != 'json':
+                print(f"   🔗 Linking to existing project: {project_id[:8]}...")
+
         # First, check if project.yaml already has a project_id (from previous init)
-        if project_config_path.exists():
+        if not project_id and project_config_path.exists():
             try:
                 with open(project_config_path, 'r') as f:
                     existing_config = yaml.safe_load(f) or {}
