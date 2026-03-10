@@ -51,13 +51,28 @@ print(f"Provider: {provider.provider}, Model: {provider.model}")
 | `JINA_API_KEY` | key | required for jina | Jina AI API key |
 | `VOYAGE_API_KEY` | key | required for voyage | Voyage AI API key |
 
+### Configuration File (v1.6.2+)
+
+In addition to env vars, embeddings can be configured via `~/.empirica/config.yaml`:
+
+```yaml
+embeddings:
+  provider: ollama
+  model: qwen3-embedding
+  ollama_url: http://localhost:11434
+  # jina_api_key: ...
+  # voyage_api_key: ...
+```
+
+**Priority:** env vars > config.yaml > code defaults.
+
 ### Providers
 
 | Provider | Models | Dimensions | Notes |
 |----------|--------|------------|-------|
 | **auto** | auto-detect | varies | Uses ollama if running, else local |
 | **openai** | text-embedding-3-small (default) | 1536 | Requires API key |
-| **ollama** | nomic-embed-text (default) | 768 | Local, no API needed |
+| **ollama** | qwen3-embedding (default) | 1024 | Local, no API needed |
 | **jina** | jina-embeddings-v3 (default) | 1024 | Multilingual, late-interaction |
 | **voyage** | voyage-3-lite (default) | 512 | Fast and cheap |
 | **local** | hash-1536 | 1536 | Hash-based fallback for testing |
@@ -71,6 +86,7 @@ print(f"Provider: {provider.provider}, Model: {provider.model}")
 "text-embedding-ada-002": 1536
 
 # Ollama (local)
+"qwen3-embedding": 1024  # Default since v1.6.2
 "nomic-embed-text": 768
 "mxbai-embed-large": 1024
 "bge-m3": 1024  # Dense + sparse + colbert
@@ -108,7 +124,7 @@ dim = get_vector_size()  # int
 
 # Get provider configuration
 info = get_provider_info()
-# {"provider": "ollama", "model": "nomic-embed-text", "vector_size": 768}
+# {"provider": "ollama", "model": "qwen3-embedding", "vector_size": 1024}
 ```
 
 ---
@@ -192,6 +208,7 @@ warnings = check_against_patterns(
 | `docs` | Documentation chunks | docs-explain |
 | `episodic` | Session narratives | postflight-submit |
 | `trajectory` | Session vector trajectories | postflight-submit |
+| `code_api` | Python API surfaces (AST-extracted) | code-embed, project-embed |
 
 ---
 
@@ -216,13 +233,44 @@ while `project-search` provides semantic access to the full Qdrant store on dema
 
 ---
 
+## Code API Embeddings (v1.6.2+)
+
+AST-based extraction of Python API surfaces, stored in the eidetic collection as `fact_type="code_api"`.
+
+```bash
+# Standalone command
+empirica code-embed --project-id <UUID> [--path <dir>]
+
+# Also runs automatically as part of:
+empirica project-embed --project-id <UUID>
+```
+
+Extracts public functions and classes via AST (no runtime imports), embeds searchable summaries
+including signatures, parameters, return types, and docstrings.
+
+```python
+from empirica.core.qdrant.code_embeddings import search_code_api
+
+# Semantic search over code API surfaces
+results = search_code_api(project_id, "how to create a session")
+for r in results:
+    print(f"{r['module_path']} (score: {r['score']:.2f})")
+    print(r['content'])
+```
+
+**Auto-sync:** At session end, `session-end-postflight.py` runs `project-embed` which
+includes code API embedding (30s timeout, best-effort).
+
+---
+
 ## Implementation Files
 
 - `empirica/core/qdrant/embeddings.py` - EmbeddingsProvider, get_embedding, get_vector_size
+- `empirica/core/qdrant/code_embeddings.py` - Code API extraction and embedding
 - `empirica/core/qdrant/vector_store.py` - init_collections, upsert_memory, search, delete_memory
 - `empirica/core/qdrant/pattern_retrieval.py` - retrieve_task_patterns, check_against_patterns
 
 ---
 
 **API Stability:** Beta
-**Last Updated:** 2026-03-04
+**Last Updated:** 2026-03-10

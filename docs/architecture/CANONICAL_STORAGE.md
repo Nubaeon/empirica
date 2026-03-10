@@ -324,7 +324,7 @@ provider = EmbeddingProvider.from_env()
 
 # Generate embeddings
 embedding = provider.embed("JWT validation security pattern")
-# Returns: [0.123, 0.456, ...] (768-dim vector)
+# Returns: [0.123, 0.456, ...] (1024-dim vector)
 
 # Batch embeddings
 embeddings = provider.embed_batch([
@@ -340,7 +340,7 @@ embeddings = provider.embed_batch([
 |----------|----------------------|-------|
 | Jina AI | `JINA_API_KEY` | `jina-embeddings-v3` |
 | Voyage AI | `VOYAGE_API_KEY` | `voyage-3` |
-| Ollama | `OLLAMA_BASE_URL` | `nomic-embed-text` |
+| Ollama | `OLLAMA_BASE_URL` | `qwen3-embedding` |
 | OpenAI | `OPENAI_API_KEY` | `text-embedding-3-small` |
 | Local | (none) | `sentence-transformers` |
 

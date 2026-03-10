@@ -42,7 +42,7 @@ The installer will:
 - Install the Empirica package if needed
 - Ask about autopilot, auto-postflight, sentinel looping preferences
 - Configure Qdrant URL (for semantic search)
-- Set up Ollama embeddings (recommends `nomic-embed-text`)
+- Set up Ollama embeddings (recommends `qwen3-embedding`)
 - Install the Claude Code plugin and skill
 - Update your shell profile with environment variables
 

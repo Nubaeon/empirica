@@ -59,7 +59,7 @@ This takes priority over the env var and is dynamically settable without restart
 | Variable | Purpose | Default | Required |
 |----------|---------|---------|----------|
 | `EMPIRICA_ENABLE_EMBEDDINGS` | Enable semantic embeddings | `false` | No |
-| `EMPIRICA_EMBEDDINGS_MODEL` | Embedding model name | `nomic-embed-text` | No |
+| `EMPIRICA_EMBEDDINGS_MODEL` | Embedding model name | `qwen3-embedding` | No |
 | `EMPIRICA_EMBEDDINGS_PROVIDER` | Embedding provider | `auto` | No |
 | `EMPIRICA_QDRANT_URL` | Qdrant vector store URL | (optional) | If remote |
 | `EMPIRICA_QDRANT_PATH` | Local Qdrant data directory | `./.qdrant_data` | No |

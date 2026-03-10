@@ -690,7 +690,7 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 - `EMPIRICA_QDRANT_PATH`: Path for file-based Qdrant storage (default: `./.qdrant_data`). Used as fallback when URL not set.
 - `EMPIRICA_ENABLE_EMBEDDINGS`: Enable/disable embedding generation (`true`, `false`)
 - `EMPIRICA_EMBEDDINGS_PROVIDER`: Embeddings provider (`openai`, `ollama`, `jina`, `voyage`, `local`, `auto`). Default: `auto` (uses Ollama if available, else local hash)
-- `EMPIRICA_EMBEDDINGS_MODEL`: Model for embeddings (varies by provider). Defaults: `text-embedding-3-small` (OpenAI), `nomic-embed-text` (Ollama), `jina-embeddings-v3` (Jina), `voyage-3-lite` (Voyage)
+- `EMPIRICA_EMBEDDINGS_MODEL`: Model for embeddings (varies by provider). Defaults: `text-embedding-3-small` (OpenAI), `qwen3-embedding` (Ollama), `jina-embeddings-v3` (Jina), `voyage-3-lite` (Voyage). Also configurable via `~/.empirica/config.yaml` (embeddings section)
 - `EMPIRICA_OLLAMA_URL`: URL for local Ollama instance (default: `http://localhost:11434`)
 - `OPENAI_API_KEY`: API key for OpenAI embeddings
 - `JINA_API_KEY`: API key for Jina AI embeddings

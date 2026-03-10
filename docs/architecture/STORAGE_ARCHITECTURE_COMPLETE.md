@@ -87,7 +87,7 @@ This guide provides a comprehensive and visual explanation of Empirica's **four-
 | **SQLite** (HOT) | `.empirica/sessions/sessions.db` | 450 tokens | Fast queries, structured | SQL |
 | **Git Notes** (WARM) | `refs/notes/empirica/session/...` | 450 tokens | Distributed, signed, compressed | Git commands |
 | **JSON Logs** (AUDIT) | `.empirica_reflex_logs/...` | 6,500 tokens | Full audit, debugging | File read |
-| **Qdrant** (SEARCH) | `localhost:6333` | 768-dim vectors | Semantic search, pattern retrieval | Vector similarity |
+| **Qdrant** (SEARCH) | `localhost:6333` | 1024-dim vectors | Semantic search, pattern retrieval | Vector similarity |
 | **MEMORY.md** (BRIDGE) | `~/.claude/projects/{key}/memory/` | ~12 items | Claude Code hot cache, swarm learning | Auto-loaded |
 
 ### Token Compression Levels
@@ -404,10 +404,10 @@ refs/notes/empirica/session/abc-123/POSTFLIGHT/1
 
 | Collection | Content | Embedding |
 |------------|---------|-----------|
-| `empirica_findings` | Learnings with impact scores | Text → 768-dim vector |
-| `empirica_unknowns` | Unresolved questions | Text → 768-dim vector |
-| `empirica_dead_ends` | Failed approaches | Text → 768-dim vector |
-| `empirica_lessons` | Cold storage procedural knowledge | Text → 768-dim vector |
+| `empirica_findings` | Learnings with impact scores | Text → 1024-dim vector |
+| `empirica_unknowns` | Unresolved questions | Text → 1024-dim vector |
+| `empirica_dead_ends` | Failed approaches | Text → 1024-dim vector |
+| `empirica_lessons` | Cold storage procedural knowledge | Text → 1024-dim vector |
 
 **Embedding Providers:**
 
@@ -421,11 +421,11 @@ export VOYAGE_API_KEY=your-key  # for Voyage
 
 | Provider | Model | Dimensions | Notes |
 |----------|-------|------------|-------|
-| **Jina AI** | jina-embeddings-v3 | 768 | Recommended for most use cases |
+| **Jina AI** | jina-embeddings-v3 | 1024 | Multilingual, late-interaction |
 | **Voyage AI** | voyage-3 | 1024 | High quality, code-aware |
-| **Ollama** | nomic-embed-text | 768 | Local, no API key |
+| **Ollama** | qwen3-embedding | 1024 | Local, no API key (default) |
 | **OpenAI** | text-embedding-3-small | 1536 | Popular, requires API key |
-| **Local** | sentence-transformers | 768 | Fully offline |
+| **Local** | hash-based | 1024 | Fallback for testing |
 
 **CLI Commands:**
 
