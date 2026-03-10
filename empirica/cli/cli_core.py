@@ -45,7 +45,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact', 'transaction-adopt'],
                     'CASCADE Workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
                     'Goals & Tasks': ['goals-create', 'goals-list', 'goals-search', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-add-dependency', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume', 'goals-mark-stale', 'goals-get-stale', 'goals-refresh'],
-                    'Project Management': ['project-init', 'project-update', 'project-create', 'project-list', 'project-switch', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
+                    'Project Management': ['project-init', 'project-update', 'project-create', 'project-list', 'project-switch', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'code-embed', 'doc-check'],
                     'Workspace': ['workspace-init', 'workspace-map', 'workspace-list', 'workspace-overview', 'ecosystem-check'],
                     'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
                     'Sync': ['sync-config', 'sync-push', 'sync-pull', 'sync-status', 'rebuild', 'artifacts-generate'],
@@ -368,6 +368,7 @@ def main(args=None):
             'ecosystem-check': handle_ecosystem_check_command,
             'project-search': handle_project_search_command,
             'project-embed': handle_project_embed_command,
+            'code-embed': handle_code_embed_command,
             'doc-check': handle_doc_check_command,
             
             # Finding/unknown/deadend/assumption/decision logging

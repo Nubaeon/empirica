@@ -415,6 +415,32 @@ def update_memory_hot_cache(session_id: str):
     memory_path.write_text(updated)
 
 
+def _auto_embed_project(session_id: str):
+    """Auto-sync epistemic artifacts + code API to Qdrant at session end.
+
+    Runs project-embed via CLI subprocess to avoid import conflicts.
+    Uses the project_id resolved from the session.
+    """
+    try:
+        db_path = Path.cwd() / '.empirica' / 'sessions' / 'sessions.db'
+        if not db_path.exists():
+            return
+
+        project_id = _resolve_project_id(session_id, db_path)
+        if not project_id:
+            return
+
+        # Run project-embed with timeout — this is incremental and fast
+        subprocess.run(
+            ['empirica', 'project-embed', '--project-id', project_id, '--output', 'json'],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except Exception:
+        pass  # Best-effort — never fail session end for embedding
+
+
 def main():
     """Main session end logic."""
     hook_input = {}
@@ -498,6 +524,12 @@ def main():
         update_memory_hot_cache(session_id)
     except Exception:
         pass  # Non-critical — don't fail session end
+
+    # Sync epistemic artifacts to Qdrant (incremental, non-blocking)
+    try:
+        _auto_embed_project(session_id)
+    except Exception:
+        pass  # Non-critical
 
     # Clean up session files AFTER POSTFLIGHT (post-test is the last consumer)
     _cleanup_session_files(claude_session_id)

@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover
 # Default models and their vector dimensions per provider
 DEFAULT_MODELS = {
     "openai": "text-embedding-3-small",
-    "ollama": "nomic-embed-text",  # 768-dim, good semantic quality
+    "ollama": "qwen3-embedding",  # 1024-dim, MTEB 64.3 (upgraded from nomic-embed-text 768d)
     "jina": "jina-embeddings-v3",  # 1024-dim, multilingual, late-interaction
     "voyage": "voyage-3-lite",  # 512-dim, fast and cheap
     "local": "hash-1536",
@@ -90,14 +90,15 @@ def _check_ollama_available(ollama_url: str = "http://localhost:11434") -> bool:
         # Quick health check
         resp = requests.get(f"{ollama_url}/api/tags", timeout=2)
         if resp.status_code == 200:
-            # Check if nomic-embed-text is available
+            # Check if configured embedding model (or any known embedding model) is available
             models = resp.json().get("models", [])
             model_names = [m.get("name", "").split(":")[0] for m in models]
-            if "nomic-embed-text" in model_names:
+            configured_model = os.getenv("EMPIRICA_EMBEDDINGS_MODEL", DEFAULT_MODELS.get("ollama", "qwen3-embedding"))
+            if configured_model in model_names:
                 _ollama_available = True
-                logger.info("Ollama detected with nomic-embed-text - using semantic embeddings")
+                logger.info(f"Ollama detected with {configured_model} - using semantic embeddings")
                 return True
-            # If nomic-embed-text not available, still use Ollama if any embedding model exists
+            # Fallback: any known embedding model
             for name in model_names:
                 if name in MODEL_DIMENSIONS:
                     _ollama_available = True
@@ -117,6 +118,53 @@ def _resolve_auto_provider(ollama_url: str) -> str:
     return "local"
 
 
+def _load_config_file() -> dict:
+    """Load embeddings config from ~/.empirica/config.yaml (embeddings section)
+    or ~/.empirica/embeddings.conf (legacy fallback).
+
+    Env vars take priority over config file values.
+
+    config.yaml example:
+        embeddings:
+          provider: ollama
+          model: qwen3-embedding
+          ollama_url: http://empirica-server:11434
+
+    Supported keys: provider, model, ollama_url, jina_api_key, voyage_api_key
+    """
+    # Primary: ~/.empirica/config.yaml (embeddings section)
+    config_yaml_path = os.path.expanduser("~/.empirica/config.yaml")
+    try:
+        import yaml
+        with open(config_yaml_path, 'r') as f:
+            full_config = yaml.safe_load(f) or {}
+        emb_config = full_config.get("embeddings", {})
+        if emb_config:
+            return emb_config
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        logger.debug(f"Could not read {config_yaml_path}: {e}")
+
+    # Fallback: ~/.empirica/embeddings.conf (simple key=value)
+    conf_path = os.path.expanduser("~/.empirica/embeddings.conf")
+    config = {}
+    try:
+        with open(conf_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' in line:
+                    key, _, value = line.partition('=')
+                    config[key.strip()] = value.strip()
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        logger.debug(f"Could not read {conf_path}: {e}")
+    return config
+
+
 class EmbeddingsProvider:
     """
     Multi-provider embeddings generator for Qdrant vector storage.
@@ -127,18 +175,30 @@ class EmbeddingsProvider:
     - Voyage AI (API, high quality)
     - Local sentence-transformers (fallback)
 
-    Provider selection: Set EMPIRICA_EMBEDDINGS_PROVIDER env var or use "auto".
+    Configuration priority: env vars > ~/.empirica/embeddings.conf > code defaults.
     """
     # Type declarations for conditional attributes
     _jina_api_key: Optional[str] = None
     _voyage_api_key: Optional[str] = None
 
     def __init__(self) -> None:
-        """Initialize embeddings provider based on environment configuration."""
-        self.ollama_url = os.getenv("EMPIRICA_OLLAMA_URL", "http://localhost:11434")
+        """Initialize embeddings provider based on environment configuration.
+
+        Resolution order per setting: env var > config file > code default.
+        Config file: ~/.empirica/embeddings.conf (key=value, one per line).
+        """
+        file_conf = _load_config_file()
+
+        self.ollama_url = os.getenv(
+            "EMPIRICA_OLLAMA_URL",
+            file_conf.get("ollama_url", "http://localhost:11434")
+        )
 
         # Get provider from env, default to "auto"
-        provider_env = os.getenv("EMPIRICA_EMBEDDINGS_PROVIDER", "auto").lower()
+        provider_env = os.getenv(
+            "EMPIRICA_EMBEDDINGS_PROVIDER",
+            file_conf.get("provider", "auto")
+        ).lower()
 
         # Resolve "auto" to actual provider, tracking if we fell back
         self._auto_fallback = False
@@ -149,7 +209,10 @@ class EmbeddingsProvider:
         else:
             self.provider = provider_env
 
-        self.model = os.getenv("EMPIRICA_EMBEDDINGS_MODEL", DEFAULT_MODELS.get(self.provider, "nomic-embed-text"))
+        self.model = os.getenv(
+            "EMPIRICA_EMBEDDINGS_MODEL",
+            file_conf.get("model", DEFAULT_MODELS.get(self.provider, "qwen3-embedding"))
+        )
         self._client = None
         self._vector_size: Optional[int] = None
 
@@ -165,16 +228,16 @@ class EmbeddingsProvider:
             self._vector_size = MODEL_DIMENSIONS.get(self.model)
         elif self.provider == "jina":
             # Jina AI uses REST API
-            self._jina_api_key = os.getenv("JINA_API_KEY")
+            self._jina_api_key = os.getenv("JINA_API_KEY", file_conf.get("jina_api_key"))
             if not self._jina_api_key:
-                raise RuntimeError("JINA_API_KEY env var required for provider=jina")
+                raise RuntimeError("JINA_API_KEY env var or jina_api_key in ~/.empirica/embeddings.conf required for provider=jina")
             self._client = None
             self._vector_size = MODEL_DIMENSIONS.get(self.model, 1024)
         elif self.provider == "voyage":
             # Voyage AI uses REST API
-            self._voyage_api_key = os.getenv("VOYAGE_API_KEY")
+            self._voyage_api_key = os.getenv("VOYAGE_API_KEY", file_conf.get("voyage_api_key"))
             if not self._voyage_api_key:
-                raise RuntimeError("VOYAGE_API_KEY env var required for provider=voyage")
+                raise RuntimeError("VOYAGE_API_KEY env var or voyage_api_key in ~/.empirica/embeddings.conf required for provider=voyage")
             self._client = None
             self._vector_size = MODEL_DIMENSIONS.get(self.model, 1024)
         elif self.provider == "local":
@@ -182,9 +245,10 @@ class EmbeddingsProvider:
             self._client = None
             if self._auto_fallback:
                 # Match Ollama dimensions so fallback vectors fit existing collections
-                self._vector_size = MODEL_DIMENSIONS.get("nomic-embed-text", 768)
+                configured_model = os.getenv("EMPIRICA_EMBEDDINGS_MODEL", DEFAULT_MODELS.get("ollama", "qwen3-embedding"))
+                self._vector_size = MODEL_DIMENSIONS.get(configured_model, 1024)
             else:
-                self._vector_size = 768  # Default to 768 for consistency
+                self._vector_size = 1024  # Default to 1024 for consistency
         else:
             raise RuntimeError(f"Unsupported provider '{self.provider}'. Set EMPIRICA_EMBEDDINGS_PROVIDER=openai|ollama|jina|voyage|local|auto")
 

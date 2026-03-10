@@ -281,6 +281,18 @@ def handle_project_embed_command(args):
                 except Exception as e:
                     logger.debug(f"Eidetic embed failed for finding {f.get('id', 'unknown')}: {e}")
 
+        # CODE API EMBEDDING: Extract and embed Python API surfaces
+        code_embedded = 0
+        try:
+            from empirica.core.qdrant.code_embeddings import embed_project_code
+            from pathlib import Path
+            code_root = Path(root)
+            if code_root.is_dir():
+                code_result = embed_project_code(project_id, code_root)
+                code_embedded = code_result.get('modules_embedded', 0)
+        except Exception as e:
+            logger.debug(f"Code embedding skipped: {e}")
+
         # Sync high-impact items to global collection if --global flag
         global_synced = 0
         if sync_global:
@@ -292,6 +304,7 @@ def handle_project_embed_command(args):
             'docs': len(docs_to_upsert),
             'memory': len(mem_items),
             'eidetic': eidetic_count,
+            'code_api': code_embedded,
             'breakdown': {
                 'findings': len(findings),
                 'unknowns': len(unknowns),

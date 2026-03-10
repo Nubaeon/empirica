@@ -110,6 +110,9 @@ from .project_search import (
 from .project_embed import (
     handle_project_embed_command,
 )
+from .code_embed import (
+    handle_code_embed_command,
+)
 from .sync_commands import (
     handle_sync_config_command,
     handle_sync_push_command,
@@ -284,6 +287,7 @@ __all__ = [
     'handle_source_add_command',
     'handle_project_search_command',
     'handle_project_embed_command',
+    'handle_code_embed_command',
 
     # Sync commands (git notes synchronization)
     'handle_sync_config_command',

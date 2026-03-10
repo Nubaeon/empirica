@@ -58,13 +58,13 @@ def _get_embedding_safe(text: str) -> Optional[List[float]]:
 
 
 def _get_vector_size() -> int:
-    """Get vector size from embeddings provider. Defaults to 768 on error (matches Ollama/nomic-embed-text)."""
+    """Get vector size from embeddings provider. Defaults to 1024 on error (matches qwen3-embedding)."""
     try:
         from .embeddings import get_vector_size
         return get_vector_size()
     except Exception as e:
-        logger.debug(f"Could not get vector size: {e}, defaulting to 768")
-        return 768
+        logger.debug(f"Could not get vector size: {e}, defaulting to 1024")
+        return 1024
 
 
 def _get_qdrant_client():

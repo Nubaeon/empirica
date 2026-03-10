@@ -408,6 +408,15 @@ def add_checkpoint_parsers(subparsers):
     project_embed_parser.add_argument('--global', dest='global_sync', action='store_true', help='Sync high-impact items to global learnings collection')
     project_embed_parser.add_argument('--min-impact', type=float, default=0.7, help='Minimum impact for global sync (default: 0.7)')
 
+    # Code embed (AST-based API surface extraction)
+    code_embed_parser = subparsers.add_parser(
+        'code-embed',
+        help='Extract and embed Python API surfaces into Qdrant for semantic search'
+    )
+    code_embed_parser.add_argument('--project-id', required=True, help='Project UUID')
+    code_embed_parser.add_argument('--path', default=None, help='Root directory to scan (default: project root from DB, or cwd)')
+    code_embed_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+
     # Documentation completeness check
     doc_check_parser = subparsers.add_parser(
         'doc-check',
