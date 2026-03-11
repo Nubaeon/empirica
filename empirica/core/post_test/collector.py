@@ -348,6 +348,7 @@ class PostTestCollector:
         if self.phase in ("praxic", "combined"):
             universal.append(("goals", self._collect_goal_metrics))
             universal.append(("issues", self._collect_issue_metrics))
+            universal.append(("triage", self._collect_triage_metrics))
 
         # Profile-specific collectors — only run during praxic/combined phases.
         # These measure OUTPUT quality (code quality, test results, build verification,
@@ -873,6 +874,133 @@ class PostTestCollector:
                     raw_value={"resolved": 0, "total": 0, "note": "no issues in mature project"},
                     quality=EvidenceQuality.INFERRED,
                     supports_vectors=["impact"],
+                ))
+
+        return items
+
+    def _collect_triage_metrics(self) -> List[EvidenceItem]:
+        """Collect evidence from epistemic triage work during this session.
+
+        Triage is praxic work that doesn't produce code artifacts:
+        - Completing goals (via goals-complete) → do, completion
+        - Resolving unknowns (via unknown-resolve) → do, know
+        - Logging findings → know
+
+        Uses timestamps to capture work done DURING this session, regardless
+        of which session originally created the artifact. A goal created in
+        session A but completed in session B should count as session B's work.
+
+        This ensures that triage sessions (cleaning unknowns, completing goals,
+        organizing artifacts) get proper `do` grounding instead of 0.0.
+        """
+        items = []
+        db = self._get_db()
+        cursor = db.conn.cursor()
+
+        # Get session start time for timeframe filtering
+        cursor.execute(
+            "SELECT start_time FROM sessions WHERE session_id = ?",
+            (self.session_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return items
+
+        # Handle both unix timestamp and ISO format
+        raw_start = str(row[0])
+        try:
+            session_start = float(raw_start)
+        except ValueError:
+            from datetime import datetime as _dt
+            try:
+                session_start = _dt.fromisoformat(raw_start).timestamp()
+            except Exception:
+                return items
+
+        # Goals completed during this session (by completed_timestamp, not session_id)
+        cursor.execute("""
+            SELECT COUNT(*) FROM goals
+            WHERE status = 'completed'
+              AND completed_timestamp >= ?
+              AND completed_timestamp IS NOT NULL
+        """, (session_start,))
+        goals_completed = cursor.fetchone()[0]
+
+        # Total active goals at session start (for ratio)
+        cursor.execute("""
+            SELECT COUNT(*) FROM goals
+            WHERE created_timestamp <= ?
+              AND (status != 'completed' OR completed_timestamp >= ?)
+        """, (session_start + 1, session_start))
+        total_goals_in_scope = max(cursor.fetchone()[0], goals_completed)
+
+        if goals_completed > 0:
+            # Goal completion → do (completing goals = doing work)
+            # Normalize: 1 = 0.4, 3 = 0.7, 5+ = 1.0
+            do_score = min(1.0, 0.4 + (goals_completed - 1) * 0.15)
+            items.append(EvidenceItem(
+                source="triage",
+                metric_name="goals_completed",
+                value=do_score,
+                raw_value={
+                    "completed": goals_completed,
+                    "in_scope": total_goals_in_scope,
+                },
+                quality=EvidenceQuality.SEMI_OBJECTIVE,
+                supports_vectors=["do", "completion"],
+                metadata={"work_type": "triage"},
+            ))
+
+            # Completion ratio (if meaningful denominator)
+            if total_goals_in_scope > 0:
+                completion_ratio = min(1.0, goals_completed / total_goals_in_scope)
+                items.append(EvidenceItem(
+                    source="triage",
+                    metric_name="goal_completion_ratio",
+                    value=completion_ratio,
+                    raw_value={
+                        "completed": goals_completed,
+                        "in_scope": total_goals_in_scope,
+                    },
+                    quality=EvidenceQuality.SEMI_OBJECTIVE,
+                    supports_vectors=["completion", "change"],
+                    metadata={"work_type": "triage"},
+                ))
+
+        # Unknowns resolved during this session (by resolved_timestamp)
+        cursor.execute("""
+            SELECT COUNT(*) FROM project_unknowns
+            WHERE is_resolved = 1
+              AND resolved_timestamp >= ?
+              AND resolved_timestamp IS NOT NULL
+        """, (session_start,))
+        unknowns_resolved = cursor.fetchone()[0]
+
+        if unknowns_resolved > 0:
+            # Resolving unknowns IS doing work — epistemic action
+            # Normalize: 5 = 0.3, 15 = 0.6, 30+ = 1.0
+            resolve_do_score = min(1.0, unknowns_resolved / 30.0)
+            items.append(EvidenceItem(
+                source="triage",
+                metric_name="unknowns_resolved",
+                value=resolve_do_score,
+                raw_value={"resolved": unknowns_resolved},
+                quality=EvidenceQuality.SEMI_OBJECTIVE,
+                supports_vectors=["do", "know"],
+                metadata={"work_type": "triage"},
+            ))
+
+            # High resolution count also signals change happened
+            if unknowns_resolved >= 5:
+                change_score = min(1.0, unknowns_resolved / 20.0)
+                items.append(EvidenceItem(
+                    source="triage",
+                    metric_name="triage_change",
+                    value=change_score,
+                    raw_value={"unknowns_resolved": unknowns_resolved},
+                    quality=EvidenceQuality.SEMI_OBJECTIVE,
+                    supports_vectors=["change"],
+                    metadata={"work_type": "triage"},
                 ))
 
         return items
