@@ -15,6 +15,81 @@ from ..cli_utils import handle_cli_error
 logger = logging.getLogger(__name__)
 
 
+def _export_from_db(db_path, project_filter, ai_filter, min_vectors,
+                    include_artifacts, include_grounded, project_name=None):
+    """Export training records from a single sessions.db. Returns (records, skipped)."""
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+    except Exception as e:
+        logger.debug(f"Cannot open {db_path}: {e}")
+        return [], 0
+
+    pairs = _find_transaction_pairs(conn, project_filter, ai_filter)
+    records = []
+    skipped = 0
+    for pair in pairs:
+        record = _build_training_record(
+            conn, pair,
+            include_artifacts=include_artifacts,
+            include_grounded=include_grounded,
+            min_vectors=min_vectors,
+        )
+        if record:
+            if project_name:
+                record['_source_project'] = project_name
+            records.append(record)
+        else:
+            skipped += 1
+
+    conn.close()
+    return records, skipped
+
+
+def _find_workspace_dbs():
+    """Find all project sessions.db files via workspace.db global_projects table."""
+    workspace_db_path = Path.home() / '.empirica' / 'workspace' / 'workspace.db'
+    if not workspace_db_path.exists():
+        return []
+
+    conn = sqlite3.connect(str(workspace_db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        rows = conn.execute(
+            "SELECT id, name, trajectory_path FROM global_projects WHERE status != 'archived'"
+        ).fetchall()
+    except Exception:
+        conn.close()
+        return []
+    conn.close()
+
+    dbs = []
+    for row in rows:
+        tpath = row['trajectory_path']
+        if not tpath:
+            continue
+        # trajectory_path may be /path/to/project/.empirica or /path/to/project
+        tpath = Path(tpath)
+        candidates = [
+            tpath / 'sessions' / 'sessions.db',
+            tpath / '.empirica' / 'sessions' / 'sessions.db',
+        ]
+        # Also check if tpath itself ends with .empirica
+        if tpath.name == '.empirica':
+            candidates.insert(0, tpath / 'sessions' / 'sessions.db')
+
+        for candidate in candidates:
+            if candidate.exists():
+                dbs.append({
+                    'project_id': row['id'],
+                    'project_name': row['name'],
+                    'db_path': candidate,
+                })
+                break
+
+    return dbs
+
+
 def handle_training_export_command(args):
     """Handle training-export command — export epistemic transactions as JSONL."""
     try:
@@ -26,64 +101,91 @@ def handle_training_export_command(args):
         min_vectors = getattr(args, 'min_vectors', 3)
         include_artifacts = not getattr(args, 'no_artifacts', False)
         include_grounded = not getattr(args, 'no_grounded', False)
+        workspace_mode = getattr(args, 'workspace', False)
         output_format = getattr(args, 'output', 'human')
 
-        # Connect to DB
-        db_path = get_session_db_path()
-        conn = sqlite3.connect(str(db_path))
-        conn.row_factory = sqlite3.Row
+        all_records = []
+        total_skipped = 0
+        db_sources = []
 
-        # Find all PREFLIGHT/POSTFLIGHT pairs via transaction_id or cascade_id
-        pairs = _find_transaction_pairs(conn, project_filter, ai_filter)
+        if workspace_mode:
+            # Export from ALL project databases in workspace
+            project_dbs = _find_workspace_dbs()
+            if not project_dbs:
+                if output_format == 'json':
+                    print(json.dumps({"ok": True, "exported": 0,
+                                      "message": "No project databases found in workspace"}))
+                else:
+                    print("No project databases found in workspace.")
+                return None
 
-        if not pairs:
+            seen_dbs = set()
+            for pdb in project_dbs:
+                db_key = str(pdb['db_path'])
+                if db_key in seen_dbs:
+                    continue
+                seen_dbs.add(db_key)
+
+                records, skipped = _export_from_db(
+                    pdb['db_path'], project_filter, ai_filter,
+                    min_vectors, include_artifacts, include_grounded,
+                    project_name=pdb['project_name'],
+                )
+                if records:
+                    all_records.extend(records)
+                    total_skipped += skipped
+                    db_sources.append({
+                        'project': pdb['project_name'],
+                        'db_path': str(pdb['db_path']),
+                        'exported': len(records),
+                    })
+        else:
+            # Single project export (current context)
+            db_path = get_session_db_path()
+            records, skipped = _export_from_db(
+                db_path, project_filter, ai_filter,
+                min_vectors, include_artifacts, include_grounded,
+            )
+            all_records = records
+            total_skipped = skipped
+            db_sources = [{'db_path': str(db_path), 'exported': len(records)}]
+
+        if not all_records:
             if output_format == 'json':
-                print(json.dumps({"ok": True, "exported": 0, "message": "No paired transactions found"}))
+                print(json.dumps({"ok": True, "exported": 0,
+                                  "message": "No paired transactions found"}))
             else:
                 print("No paired PREFLIGHT/POSTFLIGHT transactions found.")
-            conn.close()
             return None
-
-        # Build JSONL records
-        records = []
-        skipped = 0
-        for pair in pairs:
-            record = _build_training_record(
-                conn, pair,
-                include_artifacts=include_artifacts,
-                include_grounded=include_grounded,
-                min_vectors=min_vectors,
-            )
-            if record:
-                records.append(record)
-            else:
-                skipped += 1
-
-        conn.close()
 
         # Write output
         if output_path:
             out_path = Path(output_path)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             with open(out_path, 'w') as f:
-                for rec in records:
+                for rec in all_records:
                     f.write(json.dumps(rec, default=str) + '\n')
             if output_format == 'json':
                 print(json.dumps({
                     "ok": True,
-                    "exported": len(records),
-                    "skipped": skipped,
+                    "exported": len(all_records),
+                    "skipped": total_skipped,
                     "output_path": str(out_path),
-                    "db_path": str(db_path),
+                    "sources": db_sources,
                 }))
             else:
-                print(f"Exported {len(records)} transactions to {out_path}")
-                if skipped:
-                    print(f"   Skipped {skipped} (insufficient vector data)")
-                print(f"   Source: {db_path}")
+                print(f"Exported {len(all_records)} transactions to {out_path}")
+                if total_skipped:
+                    print(f"   Skipped {total_skipped} (insufficient vector data)")
+                if workspace_mode:
+                    print(f"   Sources: {len(db_sources)} project databases")
+                    for src in db_sources:
+                        print(f"     {src.get('project', 'unknown')}: {src['exported']} transactions")
+                else:
+                    print(f"   Source: {db_sources[0]['db_path']}")
         else:
             # Write to stdout
-            for rec in records:
+            for rec in all_records:
                 print(json.dumps(rec, default=str))
 
         return None

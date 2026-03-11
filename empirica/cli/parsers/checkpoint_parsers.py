@@ -588,6 +588,8 @@ def add_checkpoint_parsers(subparsers):
         help='Export epistemic transaction data as JSONL for model fine-tuning'
     )
     training_export_parser.add_argument('--output-path', help='Output JSONL file path (default: stdout)')
+    training_export_parser.add_argument('--workspace', action='store_true',
+        help='Export from ALL project databases in workspace (not just current)')
     training_export_parser.add_argument('--project-id', help='Filter by project (prefix match)')
     training_export_parser.add_argument('--ai-id', help='Filter by AI ID (e.g., claude-code)')
     training_export_parser.add_argument('--min-vectors', type=int, default=3,
