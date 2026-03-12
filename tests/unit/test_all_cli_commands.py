@@ -77,7 +77,9 @@ class TestGoalsCommands:
     
     def test_goals_discover_execution(self):
         """Goals-discover runs without args (discovers from git)"""
-        result = subprocess.run(["empirica", "goals-discover"], capture_output=True, timeout=5)
+        # Timeout 30s: discover_goals reads git notes refs (N+1 pattern),
+        # repos with many goals (800+) need more than 5s
+        result = subprocess.run(["empirica", "goals-discover"], capture_output=True, timeout=30)
         # Return 1 is OK when no context (shows help)
         assert result.returncode in [0, 1]
     
