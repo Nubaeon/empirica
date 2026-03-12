@@ -110,7 +110,7 @@ def _extract_and_store(file_path: str, session_id: str) -> dict:
         if empirica_session_id:
             cursor = db.conn.cursor()
             cursor.execute(
-                "SELECT project_id FROM sessions WHERE empirica_session_id = ?",
+                "SELECT project_id FROM sessions WHERE session_id = ?",
                 (empirica_session_id,)
             )
             row = cursor.fetchone()

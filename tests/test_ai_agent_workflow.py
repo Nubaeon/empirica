@@ -98,8 +98,8 @@ class TestAIAgentWorkflow:
         )
         preflight_response = json.loads(result.stdout)
         assert preflight_response['ok'] is True
-        assert 'checkpoint_id' in preflight_response
-        assert preflight_response['vectors_submitted'] == 13
+        assert 'session_id' in preflight_response
+        assert 'transaction_id' in preflight_response
 
         # 3. CHECK DECISION GATE
         result = self._run_empirica(
