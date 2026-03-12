@@ -53,6 +53,21 @@ NOETIC_TOOLS = {
     'KillShell',                              # Process management (cleanup)
 }
 
+# Chrome MCP tools classified by effect (noetic = read-only, praxic = mutating)
+NOETIC_MCP_CHROME = {
+    'mcp__claude-in-chrome__tabs_context_mcp',    # List open tabs
+    'mcp__claude-in-chrome__tabs_create_mcp',     # Open new tab (viewing, not mutation)
+    'mcp__claude-in-chrome__navigate',            # Navigate to URL (viewing)
+    'mcp__claude-in-chrome__read_page',           # Read page content
+    'mcp__claude-in-chrome__get_page_text',       # Get page text
+    'mcp__claude-in-chrome__find',                # Find text on page
+    'mcp__claude-in-chrome__read_console_messages',   # Read console output
+    'mcp__claude-in-chrome__read_network_requests',   # Read network activity
+    'mcp__claude-in-chrome__screenshot',          # Capture page screenshot
+    'mcp__claude-in-chrome__gif_creator',          # Record page interaction
+}
+# Praxic Chrome MCP tools (require CHECK): form_input, javascript_tool, computer
+
 # Safe Bash command prefixes - read-only operations (ACL)
 SAFE_BASH_PREFIXES = (
     # File inspection
@@ -420,6 +435,7 @@ def _try_increment_tool_count(claude_session_id: Optional[str] = None,
         if tool_name:
             _is_noetic = (
                 tool_name in NOETIC_TOOLS
+                or tool_name in NOETIC_MCP_CHROME
                 or (tool_name == 'Bash' and tool_input and is_safe_bash_command(tool_input))
                 or (tool_name in ('Write', 'Edit') and tool_input and is_plan_file(tool_input))
             )
@@ -830,7 +846,7 @@ def main():
     # === NOETIC FIREWALL: Whitelist-based access control ===
 
     # Rule 1: Noetic tools always allowed (read/investigate)
-    if tool_name in NOETIC_TOOLS:
+    if tool_name in NOETIC_TOOLS or tool_name in NOETIC_MCP_CHROME:
         respond("allow", f"Noetic tool: {tool_name}")
         sys.exit(0)
 
