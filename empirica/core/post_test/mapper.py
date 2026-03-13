@@ -5,14 +5,21 @@ Maps objective evidence items to estimated vector values.
 Only produces estimates for vectors with sufficient evidence.
 Uses weighted aggregation when multiple evidence items support the same vector.
 
+Calibration scoring uses domain-aware category weights (Tier 1) from
+confidence_weights.yaml. Per-vector weights (Tier 2) can be passed in
+from project.yaml for per-project, per-phase dynamic weighting.
+
 Ungroundable vectors (no objective signal): engagement.
 Coherence and density are now grounded via code quality metrics (ruff, radon).
 These keep self-referential calibration.
 """
 
 import logging
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import yaml
 
 from .collector import EvidenceBundle, EvidenceItem, EvidenceQuality
 
@@ -53,6 +60,98 @@ class GroundedAssessment:
     phase: str = "combined"  # "noetic", "praxic", or "combined"
 
 
+def _load_domain_weights(domain: str = "default") -> Dict[str, Any]:
+    """Load domain category weights and vector-category map from confidence_weights.yaml.
+
+    Args:
+        domain: Domain name (software, consulting, research, operations, default)
+
+    Returns:
+        Dict with 'category_weights' and 'vector_category_map'
+    """
+    config_path = Path(__file__).parent.parent.parent / "config" / "mco" / "confidence_weights.yaml"
+    defaults = {
+        "category_weights": {"foundation": 0.35, "comprehension": 0.25, "execution": 0.25, "engagement": 0.15},
+        "vector_category_map": {
+            "know": "foundation", "do": "foundation", "context": "foundation",
+            "clarity": "comprehension", "coherence": "comprehension",
+            "signal": "comprehension", "density": "comprehension",
+            "state": "execution", "change": "execution",
+            "completion": "execution", "impact": "execution",
+            "engagement": "engagement",
+            "uncertainty": "engagement",
+        },
+    }
+    if not config_path.exists():
+        return defaults
+
+    try:
+        with open(config_path) as f:
+            config = yaml.safe_load(f) or {}
+
+        domain_weights = config.get("domain_category_weights", {})
+        category_weights = domain_weights.get(domain, domain_weights.get("default", defaults["category_weights"]))
+        vector_map = config.get("vector_category_map", defaults["vector_category_map"])
+        return {"category_weights": category_weights, "vector_category_map": vector_map}
+    except Exception as e:
+        logger.warning(f"Failed to load domain weights: {e}")
+        return defaults
+
+
+def _compute_weighted_calibration(
+    calibration_gaps: Dict[str, float],
+    domain: str = "default",
+    per_vector_weights: Optional[Dict[str, float]] = None,
+) -> float:
+    """Compute category-weighted calibration score.
+
+    Tier 1: Domain category weights determine how much each category contributes.
+    Tier 2: Per-vector weights (optional) scale individual vector gaps within categories.
+
+    Args:
+        calibration_gaps: Dict of vector_name → gap (self - grounded)
+        domain: Domain for Tier 1 category weights
+        per_vector_weights: Optional Tier 2 per-vector weights (from project.yaml)
+
+    Returns:
+        Weighted calibration score (lower = better calibrated)
+    """
+    if not calibration_gaps:
+        return 0.0
+
+    config = _load_domain_weights(domain)
+    category_weights = config["category_weights"]
+    vector_map = config["vector_category_map"]
+
+    # Group gaps by category
+    category_gaps: Dict[str, List[Tuple[str, float]]] = {}
+    for vector_name, gap in calibration_gaps.items():
+        category = vector_map.get(vector_name, "foundation")
+        if category not in category_gaps:
+            category_gaps[category] = []
+
+        # Apply per-vector weight (Tier 2) if provided
+        vector_weight = 1.0
+        if per_vector_weights:
+            vector_weight = per_vector_weights.get(vector_name, 1.0)
+
+        category_gaps[category].append((vector_name, abs(gap) * vector_weight))
+
+    # Weighted mean: category weight * mean abs gap within category
+    total_score = 0.0
+    total_weight = 0.0
+    for category, gaps in category_gaps.items():
+        cat_weight = category_weights.get(category, 0.25)
+        cat_mean = sum(g for _, g in gaps) / len(gaps)
+        total_score += cat_weight * cat_mean
+        total_weight += cat_weight
+
+    # Normalize by actual weight used (not all categories may have grounded vectors)
+    if total_weight > 0:
+        return total_score / total_weight
+    return 0.0
+
+
 class EvidenceMapper:
     """Maps evidence bundles to grounded vector estimates."""
 
@@ -61,6 +160,8 @@ class EvidenceMapper:
         bundle: EvidenceBundle,
         self_assessed_vectors: Dict[str, float],
         phase: str = "combined",
+        domain: str = "default",
+        per_vector_weights: Optional[Dict[str, float]] = None,
     ) -> GroundedAssessment:
         """Map evidence to grounded vector estimates and compare to self-assessment."""
         # Group evidence by supported vector
@@ -104,13 +205,10 @@ class EvidenceMapper:
                 self_val - estimate.estimated_value, 4
             )
 
-        # Overall calibration score (mean absolute gap)
-        if calibration_gaps:
-            overall_score = sum(
-                abs(g) for g in calibration_gaps.values()
-            ) / len(calibration_gaps)
-        else:
-            overall_score = 0.0
+        # Overall calibration score — domain-weighted (Tier 1 + optional Tier 2)
+        overall_score = _compute_weighted_calibration(
+            calibration_gaps, domain=domain, per_vector_weights=per_vector_weights,
+        )
 
         return GroundedAssessment(
             session_id=bundle.session_id,

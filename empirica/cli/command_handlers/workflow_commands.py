@@ -2213,11 +2213,24 @@ def handle_postflight_submit_command(args):
                 except Exception as e:
                     logger.debug(f"Phase boundary detection failed (non-fatal): {e}")
 
+                # Resolve domain from project_type for Tier 1 calibration weights
+                domain = None
+                if session:
+                    project_type = session.get("project_type", "")
+                    _TYPE_TO_DOMAIN = {
+                        "product": "software", "application": "software",
+                        "feature": "software", "infrastructure": "operations",
+                        "operations": "operations", "research": "research",
+                        "documentation": "consulting",
+                    }
+                    domain = _TYPE_TO_DOMAIN.get(project_type, "default")
+
                 grounded_verification = run_grounded_verification(
                     session_id=session_id,
                     postflight_vectors=vectors,
                     db=db,
                     project_id=project_id,
+                    domain=domain,
                     phase_boundary=phase_boundary,
                     evidence_profile=evidence_profile,
                     phase_tool_counts=postflight_phase_tool_counts,

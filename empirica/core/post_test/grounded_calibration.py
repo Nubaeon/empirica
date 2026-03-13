@@ -597,7 +597,9 @@ def _run_single_phase_verification(
         return None
 
     mapper = EvidenceMapper()
-    assessment = mapper.map_evidence(bundle, vectors, phase=phase)
+    assessment = mapper.map_evidence(
+        bundle, vectors, phase=phase, domain=domain or "default",
+    )
 
     manager = GroundedCalibrationManager(db)
     updates = manager.update_grounded_beliefs(session_id, assessment, phase=phase)

@@ -51,6 +51,7 @@ class MCOLoader:
         'epistemic_conduct': ('epistemic_conduct.yaml', None),
         'ask_before_investigate': ('ask_before_investigate.yaml', None),
         'protocols': ('protocols.yaml', 'protocols'),
+        'confidence_weights': ('confidence_weights.yaml', None),
     }
 
     def __init__(self, config_dir: Optional[Path] = None, eager: bool = False):
@@ -142,6 +143,32 @@ class MCOLoader:
     def available_configs(self) -> list:
         """List of all available config names."""
         return list(self._CONFIG_REGISTRY.keys())
+
+    def get_domain_category_weights(self, domain: str = "default") -> Dict[str, float]:
+        """Get Tier 1 category weights for a domain.
+
+        Args:
+            domain: Domain name (software, consulting, research, operations, default)
+
+        Returns:
+            Dict of category → weight (foundation, comprehension, execution, engagement)
+        """
+        defaults = {"foundation": 0.35, "comprehension": 0.25, "execution": 0.25, "engagement": 0.15}
+        domain_weights = self.confidence_weights.get("domain_category_weights", {})
+        return domain_weights.get(domain, domain_weights.get("default", defaults))
+
+    def get_vector_category_map(self) -> Dict[str, str]:
+        """Get vector-to-category mapping from confidence_weights.yaml."""
+        defaults = {
+            "know": "foundation", "do": "foundation", "context": "foundation",
+            "clarity": "comprehension", "coherence": "comprehension",
+            "signal": "comprehension", "density": "comprehension",
+            "state": "execution", "change": "execution",
+            "completion": "execution", "impact": "execution",
+            "engagement": "engagement",
+            "uncertainty": "engagement",
+        }
+        return self.confidence_weights.get("vector_category_map", defaults)
 
     def get_model_bias(self, model_name: str) -> Dict[str, Any]:
         """

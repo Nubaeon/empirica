@@ -142,6 +142,66 @@ model_weight_adjustments:
     overall_weights: {}
 
 # =============================================================================
+# DOMAIN CATEGORY WEIGHTS (Tier 1)
+# =============================================================================
+#
+# How much each CATEGORY matters in the overall calibration score.
+# Per generalist domain. Slow-drift: updated based on evidence accumulation
+# across all projects in a domain, on a long timescale (quarterly/100+ txns).
+#
+# These weights determine the calibration score's sensitivity to each category.
+# They are orthogonal to per-model adjustments (model bias vs domain importance).
+#
+# Vector-to-category mapping:
+#   foundation:     know, do, context
+#   comprehension:  clarity, coherence, signal, density
+#   execution:      state, change, completion, impact
+#   engagement:     engagement (standalone)
+
+domain_category_weights:
+  software:
+    foundation: 0.30       # know, do, context — important but execution-heavy domain
+    comprehension: 0.20    # clarity, coherence, signal, density
+    execution: 0.35        # state, change, completion, impact — shipping code matters most
+    engagement: 0.15
+  consulting:
+    foundation: 0.40       # understanding the client matters most
+    comprehension: 0.25    # clarity of problem statement
+    execution: 0.20        # less code to ship
+    engagement: 0.15
+  research:
+    foundation: 0.35
+    comprehension: 0.30    # rigor of understanding
+    execution: 0.15        # open-ended, completion less defined
+    engagement: 0.20       # engagement = intellectual curiosity
+  operations:
+    foundation: 0.25
+    comprehension: 0.20
+    execution: 0.40        # operations = execution-heavy
+    engagement: 0.15
+  default:
+    foundation: 0.35
+    comprehension: 0.25
+    execution: 0.25
+    engagement: 0.15
+
+# Vector-to-category mapping (used by mapper to assign vectors to categories)
+vector_category_map:
+  know: foundation
+  do: foundation
+  context: foundation
+  clarity: comprehension
+  coherence: comprehension
+  signal: comprehension
+  density: comprehension
+  state: execution
+  change: execution
+  completion: execution
+  impact: execution
+  engagement: engagement
+  uncertainty: engagement    # meta vectors grouped together
+
+# =============================================================================
 # WEIGHT VALIDATION RULES
 # =============================================================================
 
