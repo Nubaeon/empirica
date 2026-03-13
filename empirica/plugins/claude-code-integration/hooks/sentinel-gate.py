@@ -983,6 +983,27 @@ def main():
                 if not _tx_closed:
                     current_transaction_id = tx_data.get('transaction_id')
                     tx_session_id = tx_candidate_session
+                else:
+                    # CLOSED TRANSACTION SHORT-CIRCUIT: Don't fall through to
+                    # stale session fallback which produces confusing errors
+                    # like "No valid CHECK found" when the real issue is
+                    # "loop closed, run new PREFLIGHT".
+                    # Allow noetic tools (Read, Grep, Glob, etc.) and safe Bash
+                    # to pass — only block praxic actions.
+                    if tool_name == 'Bash':
+                        command = tool_input.get('command', '')
+                        if is_safe_bash_command(tool_input):
+                            respond("allow", "Safe Bash (transaction closed, artifact lifecycle)")
+                            sys.exit(0)
+                        if is_transition_command(command):
+                            respond("allow", "Transition command (starting new cycle)")
+                            sys.exit(0)
+                    elif tool_name in NOETIC_TOOLS:
+                        respond("allow", "Noetic tool (transaction closed)")
+                        sys.exit(0)
+                    # Praxic tool with closed transaction → correct error message
+                    respond("deny", "Epistemic loop closed (POSTFLIGHT completed). Run new PREFLIGHT to start next goal.")
+                    sys.exit(0)
             except Exception:
                 pass
 
