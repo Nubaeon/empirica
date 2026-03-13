@@ -1,8 +1,8 @@
-# Empirica System Prompt - CLAUDE v1.6.3
+# Empirica System Prompt - CLAUDE v1.6.4
 
-**Model:** CLAUDE | **Generated:** 2026-03-09
-**Syncs with:** Empirica v1.6.3
-**Change:** Phase-weighted calibration, noetic evidence gating, statusline session fix, file permissions hardening
+**Model:** CLAUDE | **Generated:** 2026-03-13
+**Syncs with:** Empirica v1.6.4
+**Change:** Temporal entity model (codebase model), PostToolUse entity extraction, codebase-aware CHECK, 8th grounded evidence source
 **Status:** AUTHORITATIVE
 
 ---
@@ -512,13 +512,15 @@ This track measures **calibration accuracy** — does your self-assessment match
 |--------|------|---------|-----------------|
 | pytest results | Pass rate, coverage | OBJECTIVE | know, do, clarity |
 | Git metrics | Commits, files changed | OBJECTIVE | do, change, state |
+| Code quality | ruff violations, radon complexity, pyright errors | SEMI_OBJECTIVE | clarity, coherence, density, signal, know, do |
 | Goal completion | Subtask ratios, token accuracy | SEMI_OBJECTIVE | completion, do, know |
 | Artifact counts | Findings/dead-ends ratio, unknowns resolved | SEMI_OBJECTIVE | know, uncertainty, signal |
 | Issue tracking | Resolution rate, severity density | SEMI_OBJECTIVE | impact, signal |
 | Sentinel decisions | CHECK proceed/investigate ratio | SEMI_OBJECTIVE | context, uncertainty |
+| Codebase model | Entity discovery, fact creation, constraints | SEMI_OBJECTIVE | know, context, signal, density, coherence |
 
-**Ungroundable vectors:** engagement, coherence, density — no objective signal exists,
-keep self-referential calibration for these.
+**Ungroundable vectors:** engagement — no objective signal exists,
+keep self-referential calibration for this vector.
 
 **Calibration divergence:** When Track 1 and Track 2 disagree, Track 2 is more trustworthy.
 The `grounded_calibration.divergence` section in `.breadcrumbs.yaml` shows the gap per vector.
