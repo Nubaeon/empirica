@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-Empirica PreCompact Hook - Capture epistemic state before memory compacting
+Empirica PreCompact Hook - Unified context capture before memory compacting
 
 This hook runs automatically before Claude Code compacts the conversation.
 It captures:
 1. CANONICAL vectors via assess-state (fresh self-assessment)
 2. Context anchor via project-bootstrap (findings, unknowns, goals)
+3. Last human task from transcript (for continuity)
+4. Git context (branch, modified files, recent commits)
 
-This enables drift detection: compare pre-compact vectors with post-compact vectors.
+Writes a UNIFIED breadcrumbs git note combining task context + epistemic state.
+(Previously split across breadcrumbs bash scripts and empirica Python hooks.)
 """
 
 import json
@@ -21,79 +24,166 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
 from project_resolver import get_instance_id, find_project_root  # noqa: E402
 
 
-def write_git_notes(
+# Patterns that indicate a message is system-injected, not human input
+_SKIP_PATTERNS = [
+    '<command-name>',        # Skill tool injections
+    '<system-reminder>',     # System reminders
+    'Base directory for this skill:',  # Skill headers
+    '[Request interrupted by user]',
+    '[Request interrupted by user for tool use]',
+]
+
+
+def _extract_last_task(transcript_path: str, max_chars: int = 500) -> str:
+    """Extract the last human task message from the JSONL transcript.
+
+    Filters out:
+    - Tool results (content is array, not string)
+    - Skill injections (<command-name> tags)
+    - System reminders
+    - Very long messages (>2000 chars = likely injected content)
+    """
+    if not transcript_path or not Path(transcript_path).exists():
+        return ""
+
+    try:
+        lines = Path(transcript_path).read_text().strip().split('\n')
+        for line in reversed(lines):
+            if not line.strip():
+                continue
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            if entry.get('type') != 'user':
+                continue
+
+            message = entry.get('message', {})
+            content = message.get('content', '')
+
+            # Content must be a string (array = tool result)
+            if not isinstance(content, str):
+                continue
+
+            content = content.strip()
+            if not content:
+                continue
+
+            # Skip known non-human patterns
+            skip = False
+            for pattern in _SKIP_PATTERNS:
+                if pattern in content[:300]:
+                    skip = True
+                    break
+            if skip:
+                continue
+
+            # Skip very long messages (injected content, not human input)
+            if len(content) > 2000:
+                continue
+
+            return content[:max_chars]
+    except Exception:
+        pass
+
+    return ""
+
+
+def _gather_git_context(num_commits: int = 5) -> dict:
+    """Gather git context: branch, modified files, recent commits."""
+    context = {'branch': '', 'modified_files': '', 'recent_commits': ''}
+
+    try:
+        result = subprocess.run(
+            ['git', 'branch', '--show-current'],
+            capture_output=True, text=True, timeout=5, cwd=os.getcwd()
+        )
+        context['branch'] = result.stdout.strip() or 'detached'
+    except Exception:
+        pass
+
+    try:
+        result = subprocess.run(
+            ['git', 'status', '--porcelain'],
+            capture_output=True, text=True, timeout=5, cwd=os.getcwd()
+        )
+        files = result.stdout.strip()
+        if files:
+            lines = files.split('\n')[:20]
+            context['modified_files'] = '\n'.join(f'  {l}' for l in lines)
+    except Exception:
+        pass
+
+    try:
+        result = subprocess.run(
+            ['git', 'log', '--oneline', f'-{num_commits}'],
+            capture_output=True, text=True, timeout=5, cwd=os.getcwd()
+        )
+        commits = result.stdout.strip()
+        if commits:
+            context['recent_commits'] = '\n'.join(f'  {l}' for l in commits.split('\n'))
+    except Exception:
+        pass
+
+    return context
+
+
+def _write_unified_breadcrumbs_note(
     session_id: str,
     timestamp: str,
     vectors: dict,
     snapshot_filename: str,
-    breadcrumbs_summary: dict
+    breadcrumbs_summary: dict,
+    last_task: str,
+    git_context: dict
 ) -> bool:
-    """
-    Write epistemic state to git notes for post-compact reconstruction.
+    """Write unified breadcrumbs git note combining task context + epistemic state.
 
-    Contains:
-    1. Pre-compact vectors (for calibration comparison)
-    2. Timestamp linking to snapshot file
-    3. Session ID for retrieval
-    4. Retrieval hints (SQLite, Qdrant, git notes)
-    5. Self-assessment prompt (for calibration)
+    Single note on 'breadcrumbs' ref replaces the old dual-system approach
+    (separate bash breadcrumbs + empirica-precompact notes).
     """
-    # Format key vectors for display
     know = vectors.get('know', 'N/A')
     uncertainty = vectors.get('uncertainty', 'N/A')
     completion = vectors.get('completion', 'N/A')
-    context = vectors.get('context', 'N/A')
+    context_v = vectors.get('context', 'N/A')
 
-    # Build the note content
-    note = f"""🧠 EMPIRICA PRE-COMPACT STATE
+    branch = git_context.get('branch', 'unknown')
+    modified = git_context.get('modified_files', '') or '[Working tree clean]'
+    commits = git_context.get('recent_commits', '') or '[No recent commits]'
+
+    note = f"""🍞 BREADCRUMBS - {timestamp}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Timestamp: {timestamp}
+
+BRANCH: {branch}
+
+LAST_TASK:
+{last_task or '[Could not extract from transcript]'}
+
+MODIFIED_FILES:
+{modified}
+
+RECENT_COMMITS:
+{commits}
+
+🧠 EPISTEMIC STATE
 Session: {session_id}
+Vectors: know={know}, uncertainty={uncertainty}, completion={completion}, context={context_v}
 Snapshot: {snapshot_filename}
 
-PRE-COMPACT VECTORS (compare with your post-compact self-assessment):
-  know={know}, uncertainty={uncertainty}
-  completion={completion}, context={context}
-
-BREADCRUMBS AVAILABLE:
-  Findings: {breadcrumbs_summary.get('findings_count', 0)}
-  Unknowns: {breadcrumbs_summary.get('unknowns_count', 0)}
-  Goals: {breadcrumbs_summary.get('goals_count', 0)}
-  Dead-ends: {breadcrumbs_summary.get('dead_ends_count', 0)}
+Artifacts: {breadcrumbs_summary.get('findings_count', 0)} findings, {breadcrumbs_summary.get('unknowns_count', 0)} unknowns, {breadcrumbs_summary.get('goals_count', 0)} goals, {breadcrumbs_summary.get('dead_ends_count', 0)} dead-ends
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RETRIEVAL (if context feels incomplete):
-
-  # Full epistemic load
+RETRIEVAL:
   empirica project-bootstrap --session-id {session_id[:8]}...
-
-  # Semantic search (requires Qdrant)
   empirica project-search --task "<what you need>"
-
-  # This snapshot
   cat .empirica/ref-docs/{snapshot_filename}
-
-  # Recent git notes
-  git notes --ref=breadcrumbs show HEAD
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SELF-ASSESSMENT (for calibration):
-
-After reviewing the injected context, assess your epistemic state:
-- How does your current know/uncertainty compare to pre-compact?
-- What's missing that you expected to remember?
-- What retrieval would help fill gaps?
-
-This enables drift detection between pre and post compact states.
 """
 
     try:
         subprocess.run(
-            ['git', 'notes', '--ref=empirica-precompact', 'add', '-f', '-m', note, 'HEAD'],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            cwd=os.getcwd()
+            ['git', 'notes', '--ref=breadcrumbs', 'add', '-f', '-m', note, 'HEAD'],
+            capture_output=True, text=True, timeout=5, cwd=os.getcwd()
         )
         return True
     except Exception:
@@ -121,6 +211,13 @@ def main():
         }))
         sys.exit(1)
     os.chdir(project_root)
+
+    # =========================================================================
+    # STEP 0: Extract task context + git state (absorbed from breadcrumbs bash)
+    # =========================================================================
+    transcript_path = hook_input.get('transcript_path', '')
+    last_task = _extract_last_task(transcript_path)
+    git_context = _gather_git_context()
 
     # Write compact handoff file for post-compact to read (belt and suspenders)
     # This ensures post-compact resolves to the same project even if
@@ -358,19 +455,23 @@ def main():
                 },
                 "context_budget": budget_report,  # Token budget state at compaction
                 "active_transaction": active_transaction,  # Transaction state for continuity
+                "last_task": last_task,  # Extracted human task from transcript
+                "git_context": git_context,  # Branch, modified files, recent commits
             }
 
             with open(snapshot_path, 'w') as f:
                 json.dump(snapshot, f, indent=2)
 
-            # Write git notes with vectors, timestamp linkage, retrieval hints
+            # Write unified breadcrumbs git note (task context + epistemic state)
             session_id_for_notes = breadcrumbs.get('session_id') or empirica_session
-            git_notes_written = write_git_notes(
+            git_notes_written = _write_unified_breadcrumbs_note(
                 session_id=session_id_for_notes,
                 timestamp=timestamp,
                 vectors=fresh_vectors or fallback_vectors,
                 snapshot_filename=snapshot_path.name,
-                breadcrumbs_summary=snapshot['breadcrumbs_summary']
+                breadcrumbs_summary=snapshot['breadcrumbs_summary'],
+                last_task=last_task,
+                git_context=git_context
             )
 
             # Restore stashed work (working directory back to pre-snapshot state)

@@ -444,6 +444,16 @@ def _try_increment_tool_count(claude_session_id: Optional[str] = None,
             else:
                 tx['praxic_tool_calls'] = tx.get('praxic_tool_calls', 0) + 1
 
+        # Track edited file paths for non-git file change detection
+        # Used by grounded calibration to detect work outside git repos
+        if tool_name in ('Edit', 'Write') and tool_input:
+            fp = tool_input.get('file_path', '')
+            if fp:
+                edited = tx.get('edited_files', [])
+                if fp not in edited:
+                    edited.append(fp)
+                    tx['edited_files'] = edited
+
         # Context-shift tracking: flag when AI asks user a question
         # UserPromptSubmit hook reads this to classify solicited vs unsolicited
         if tool_name == 'AskUserQuestion':

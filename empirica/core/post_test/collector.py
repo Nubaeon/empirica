@@ -352,6 +352,7 @@ class PostTestCollector:
             universal.append(("issues", self._collect_issue_metrics))
             universal.append(("triage", self._collect_triage_metrics))
             universal.append(("codebase_model", self._collect_codebase_model_metrics))
+            universal.append(("non_git_files", self._collect_non_git_file_metrics))
 
         # Profile-specific collectors — only run during praxic/combined phases.
         # These measure OUTPUT quality (code quality, test results, build verification,
@@ -1098,6 +1099,146 @@ class PostTestCollector:
                 pass
 
         return items
+
+    def _collect_non_git_file_metrics(self) -> List[EvidenceItem]:
+        """Collect evidence of file changes outside the git repository.
+
+        When work happens in directories that aren't git-tracked (e.g.
+        ~/.claude/plugins/, config files outside repos), git metrics see
+        zero changes and grounded calibration penalizes state/change/do.
+
+        This collector reads:
+        1. edited_files from the active transaction file (set by Sentinel)
+        2. file_path from codebase_entities for this session
+
+        Files inside the git repo are excluded (already covered by git metrics).
+        """
+        items = []
+        project_root = self._resolve_project_root()
+
+        # Determine git root for filtering
+        git_root = None
+        if project_root:
+            try:
+                result = subprocess.run(
+                    ["git", "rev-parse", "--show-toplevel"],
+                    capture_output=True, text=True, timeout=5,
+                    cwd=project_root,
+                )
+                if result.returncode == 0:
+                    git_root = result.stdout.strip()
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
+
+        # Source 1: edited_files from transaction file
+        non_git_files: set = set()
+        tx_edited = self._get_transaction_edited_files()
+        for fp in tx_edited:
+            if self._is_outside_git(fp, git_root):
+                non_git_files.add(fp)
+
+        # Source 2: codebase_entities file_path for this session
+        try:
+            db = self._get_db()
+            cursor = db.conn.cursor()
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='codebase_entities'"
+            )
+            if cursor.fetchone():
+                cursor.execute(
+                    "SELECT DISTINCT file_path FROM codebase_entities WHERE session_id = ? AND file_path IS NOT NULL",
+                    (self.session_id,),
+                )
+                for row in cursor.fetchall():
+                    fp = row[0]
+                    if fp and self._is_outside_git(fp, git_root):
+                        non_git_files.add(fp)
+        except Exception:
+            pass
+
+        if not non_git_files:
+            return items
+
+        # Verify files actually exist and were recently modified
+        existing_files = []
+        tx_start = self.preflight_timestamp or self.check_timestamp
+        for fp in non_git_files:
+            p = Path(fp)
+            if p.exists():
+                # If we have a transaction start time, check mtime
+                if tx_start:
+                    try:
+                        mtime = p.stat().st_mtime
+                        if mtime >= tx_start:
+                            existing_files.append(fp)
+                    except OSError:
+                        pass
+                else:
+                    existing_files.append(fp)
+
+        if not existing_files:
+            return items
+
+        file_count = len(existing_files)
+
+        # Normalize: 1-2 files = 0.3, 3-5 = 0.6, 6+ = 0.8+
+        change_score = min(1.0, 0.15 * file_count + 0.15)
+
+        items.append(EvidenceItem(
+            source="non_git_files",
+            metric_name="files_edited_outside_git",
+            value=change_score,
+            raw_value={
+                "files": file_count,
+                "paths": existing_files[:20],  # Cap for storage
+                "git_root": git_root or "none",
+            },
+            quality=EvidenceQuality.SEMI_OBJECTIVE,
+            supports_vectors=["state", "change", "do"],
+            metadata={"work_type": "non_git_file_edit"},
+        ))
+
+        return items
+
+    def _get_transaction_edited_files(self) -> List[str]:
+        """Read edited_files list from the active transaction JSON.
+
+        The Sentinel's _try_increment_tool_count appends file_path for
+        every Edit/Write tool call to the transaction file.
+        """
+        from empirica.utils.session_resolver import get_instance_id
+
+        instance_id = get_instance_id()
+        suffix = f'_{instance_id}' if instance_id else ''
+
+        # Try project .empirica/ first, then global
+        search_paths = []
+        project_root = self._resolve_project_root()
+        if project_root:
+            search_paths.append(Path(project_root) / '.empirica' / f'active_transaction{suffix}.json')
+        search_paths.append(Path.home() / '.empirica' / f'active_transaction{suffix}.json')
+
+        for tx_path in search_paths:
+            if tx_path.exists():
+                try:
+                    with open(tx_path, 'r') as f:
+                        tx = json.load(f)
+                    return tx.get('edited_files', [])
+                except Exception:
+                    pass
+        return []
+
+    @staticmethod
+    def _is_outside_git(file_path: str, git_root: Optional[str]) -> bool:
+        """Check if a file path is outside the git repository."""
+        if not git_root:
+            return True  # No git root = everything is non-git
+        try:
+            resolved = str(Path(file_path).resolve())
+            git_resolved = str(Path(git_root).resolve())
+            return not resolved.startswith(git_resolved + '/')
+        except (OSError, ValueError):
+            return True
 
     def _collect_sentinel_metrics(self) -> List[EvidenceItem]:
         """Collect sentinel gate decisions for this session."""

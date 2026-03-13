@@ -137,6 +137,55 @@ def _write_active_work_for_new_conversation(
         return False
 
 
+def _load_calibration_from_breadcrumbs_yaml() -> str:
+    """Load calibration biases from .breadcrumbs.yaml for post-compact injection.
+
+    Previously handled by session-start.sh bash script.
+    Returns formatted calibration text or empty string.
+    """
+    git_root = None
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            capture_output=True, text=True, timeout=5
+        )
+        git_root = result.stdout.strip()
+    except Exception:
+        pass
+
+    config_path = None
+    if Path('.breadcrumbs.yaml').exists():
+        config_path = Path('.breadcrumbs.yaml')
+    elif git_root and Path(git_root, '.breadcrumbs.yaml').exists():
+        config_path = Path(git_root, '.breadcrumbs.yaml')
+
+    if not config_path:
+        return ""
+
+    try:
+        import yaml
+        with open(config_path) as f:
+            config = yaml.safe_load(f) or {}
+
+        calibration = config.get('calibration')
+        if not calibration:
+            return ""
+
+        # Format calibration for prompt injection
+        lines = ["### Calibration Biases (from .breadcrumbs.yaml)"]
+        if isinstance(calibration, dict):
+            for key, value in calibration.items():
+                if isinstance(value, dict):
+                    lines.append(f"**{key}:**")
+                    for k, v in value.items():
+                        lines.append(f"  {k}: {v}")
+                else:
+                    lines.append(f"  {key}: {value}")
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
 def main():
     hook_input = json.loads(sys.stdin.read())
     claude_session_id = hook_input.get('session_id')
@@ -192,6 +241,16 @@ def main():
     # Inject transaction context into dynamic_context
     if active_transaction:
         dynamic_context['active_transaction'] = active_transaction
+
+    # Inject last_task and git_context from pre-compact snapshot (unified breadcrumbs)
+    if pre_snapshot:
+        dynamic_context['last_task'] = pre_snapshot.get('last_task', '')
+        dynamic_context['git_context'] = pre_snapshot.get('git_context', {})
+
+    # Load calibration biases from .breadcrumbs.yaml (absorbed from session-start.sh)
+    calibration_text = _load_calibration_from_breadcrumbs_yaml()
+    if calibration_text:
+        dynamic_context['calibration_biases'] = calibration_text
 
     # Route based on phase state and transaction state:
     # - OPEN TRANSACTION → Just continue (no new PREFLIGHT/CHECK needed)
@@ -498,12 +557,12 @@ def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> di
                 context["pending_subtasks"].append(subtask)
             goal["subtasks"] = subtasks
 
-        # 2. Recent findings from THIS session (last session's learnings)
+        # 2. Recent findings (broader retrieval — epistemic_summarizer handles ranking)
         cursor.execute("""
             SELECT finding, impact, created_timestamp
             FROM project_findings
-            WHERE project_id = ? AND impact >= 0.6
-            ORDER BY created_timestamp DESC LIMIT 5
+            WHERE project_id = ?
+            ORDER BY created_timestamp DESC LIMIT 10
         """, (project_id,))
         for row in cursor.fetchall():
             context["recent_findings"].append({
@@ -517,7 +576,7 @@ def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> di
             SELECT unknown, impact, created_timestamp
             FROM project_unknowns
             WHERE project_id = ? AND is_resolved = 0
-            ORDER BY impact DESC, created_timestamp DESC LIMIT 5
+            ORDER BY impact DESC, created_timestamp DESC LIMIT 10
         """, (project_id,))
         for row in cursor.fetchall():
             context["open_unknowns"].append({
@@ -527,15 +586,16 @@ def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> di
 
         # 4. Critical dead ends (mistakes to avoid)
         cursor.execute("""
-            SELECT approach, why_failed
+            SELECT approach, why_failed, created_timestamp
             FROM project_dead_ends
             WHERE project_id = ?
-            ORDER BY created_timestamp DESC LIMIT 3
+            ORDER BY created_timestamp DESC LIMIT 5
         """, (project_id,))
         for row in cursor.fetchall():
             context["critical_dead_ends"].append({
                 "approach": row[0],
-                "why_failed": row[1]
+                "why_failed": row[1],
+                "created_timestamp": row[2] if len(row) > 2 else None
             })
 
         # 5. Session context (what was happening)
@@ -704,6 +764,13 @@ def _generate_new_session_prompt(pre_vectors: dict, dynamic_context: dict, old_s
 **Open Unknowns (unresolved questions):**
 {unknowns_text}"""
 
+    # Include last task and calibration if available
+    last_task = dynamic_context.get('last_task', '')
+    last_task_section = f"\n**Last task:** {last_task}\n" if last_task else ""
+
+    calibration = dynamic_context.get('calibration_biases', '')
+    calibration_section = f"\n{calibration}\n" if calibration else ""
+
     # If hook already created session and ran bootstrap, use that
     if new_session_id:
         memory_text = _format_memory_context(session_bootstrap.get('memory_context'))
@@ -718,8 +785,8 @@ Your context was just compacted. The previous session ({old_session_id[:8]}...) 
 **✅ Project context loaded via bootstrap**
 
 **Pre-compact vectors (NOW INVALID):** know={pre_know}, uncertainty={pre_unc}
-
-{epistemic_focus}
+{last_task_section}
+{epistemic_focus}{calibration_section}
 
 ### Memory Context (Auto-Retrieved):
 {memory_text}
@@ -756,8 +823,8 @@ Your context was just compacted. The previous session ({old_session_id[:8]}...) 
 (had POSTFLIGHT), so you need a NEW session with fresh PREFLIGHT baseline.
 
 **Pre-compact vectors (NOW INVALID):** know={pre_know}, uncertainty={pre_unc}
-
-{epistemic_focus}
+{last_task_section}
+{epistemic_focus}{calibration_section}
 
 ### Step 1: Create New Session
 
@@ -924,6 +991,13 @@ def _generate_transaction_continue_prompt(pre_vectors: dict, dynamic_context: di
     else:
         epistemic_focus = "*No breadcrumbs loaded.*"
 
+    # Include last task and calibration if available
+    last_task = dynamic_context.get('last_task', '')
+    last_task_section = f"\n**Last task:** {last_task}\n" if last_task else ""
+
+    calibration = dynamic_context.get('calibration_biases', '')
+    calibration_section = f"\n{calibration}\n" if calibration else ""
+
     return f"""## TRANSACTION CONTINUES
 
 Your context was compacted but your **transaction is still open**.
@@ -932,11 +1006,11 @@ No new PREFLIGHT or CHECK needed - just continue where you left off.
 **⚡ ACTIVE TRANSACTION:**
    Transaction: {tx_id}... | Session: {tx_session}... | Project: {tx_project}
    Pre-compact vectors: know={pre_know}, uncertainty={pre_unc}
-
+{last_task_section}
 ## EPISTEMIC FOCUS
 
 {epistemic_focus}
-
+{calibration_section}
 **Continue your work.** When done with the current task, close with POSTFLIGHT.
 """
 
@@ -1003,6 +1077,13 @@ def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_contex
 **Dead Ends (approaches that failed):**
 {dead_ends_text}"""
 
+    # Include last task and calibration if available
+    last_task = dynamic_context.get('last_task', '')
+    last_task_section = f"\n**Last task:** {last_task}\n" if last_task else ""
+
+    calibration = dynamic_context.get('calibration_biases', '')
+    calibration_section = f"\n{calibration}\n" if calibration else ""
+
     prompt = f"""
 ## POST-COMPACT CHECK GATE
 
@@ -1010,8 +1091,8 @@ Your context was just compacted. Your previous vectors (know={pre_know}, uncerta
 are NO LONGER VALID - they reflected knowledge you had in full context.
 
 **You now have only a summary. Run CHECK to validate readiness before proceeding.**
-{tx_context}
-{epistemic_focus}
+{tx_context}{last_task_section}
+{epistemic_focus}{calibration_section}
 
 ### Step 1: Load Context (Recommended)
 
