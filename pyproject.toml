@@ -49,7 +49,7 @@ dependencies = [
     # Optional but commonly used
     "anthropic>=0.39.0",        # Anthropic SDK for adapters
     "tiktoken>=0.5.0",          # Token counting utilities
-    "rich>=13.0",                # REQUIRED: The TUI/Visuals won't work without this
+    "rich>=14.0",                # REQUIRED: The TUI/Visuals won't work without this
     "google-generativeai>=0.5",  # REQUIRED: For Gemini 3 / Pro access
     "typer>=0.9",                # REQUIRED: If your CLI uses Typer (highly likely)
 ]

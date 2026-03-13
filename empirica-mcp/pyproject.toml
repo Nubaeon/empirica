@@ -23,8 +23,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "empirica>=1.5.0",  # Main package
-    "mcp>=1.0.0",       # MCP SDK
+    "empirica>=1.6.4",  # Main package
+    "mcp>=1.25.0",      # MCP SDK (python-multipart CVE-2026-24486 fix in 1.25+)
 ]
 
 [project.urls]
