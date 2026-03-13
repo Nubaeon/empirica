@@ -684,6 +684,70 @@ projects (1) ──> (N) auto_captured_issues
 
 ---
 
+### Codebase Model Tables (v1.6.4)
+
+*Temporal entity tracking adapted from [world-model-mcp](https://github.com/nicholascpark/world-model-mcp). Migration 033.*
+
+#### `codebase_entities`
+**11 columns** — Functions, classes, APIs, imports with temporal validity
+- `id` TEXT PRIMARY KEY
+- `entity_type` TEXT NOT NULL — function, class, api, import, file, constant, type_alias
+- `name` TEXT NOT NULL
+- `file_path` TEXT
+- `signature` TEXT — function signature, class bases, import path
+- `first_seen` REAL NOT NULL — timestamp when entity was first extracted
+- `last_seen` REAL — NULL while active, set when entity disappears from file
+- `project_id` TEXT (FK: projects.id)
+- `session_id` TEXT (FK: sessions.session_id)
+- `metadata` TEXT — JSON blob for language-specific details
+- Indexes: entity_type, file_path, name, project_id
+
+#### `codebase_facts`
+**11 columns** — Temporal assertions about the codebase
+- `id` TEXT PRIMARY KEY
+- `fact_text` TEXT NOT NULL
+- `valid_at` REAL NOT NULL — when the fact became true
+- `invalid_at` REAL — NULL while valid, set when invalidated
+- `status` TEXT NOT NULL DEFAULT 'canonical' — canonical, retracted, superseded
+- `entity_ids` TEXT — JSON array of related entity IDs
+- `evidence_type` TEXT — code_analysis, test_result, user_assertion
+- `evidence_path` TEXT — file path or test name
+- `confidence` REAL DEFAULT 1.0
+- `project_id` TEXT (FK: projects.id)
+- `session_id` TEXT (FK: sessions.session_id)
+- Indexes: status, valid_at+invalid_at, project_id, session_id
+
+#### `codebase_relationships`
+**9 columns** — Directional links between entities
+- `id` TEXT PRIMARY KEY
+- `source_entity_id` TEXT NOT NULL (FK: codebase_entities.id)
+- `target_entity_id` TEXT NOT NULL (FK: codebase_entities.id)
+- `relationship_type` TEXT NOT NULL — calls, imports, depends_on, inherits
+- `weight` REAL DEFAULT 1.0
+- `first_seen` REAL NOT NULL
+- `last_seen` REAL NOT NULL
+- `evidence_count` INTEGER DEFAULT 1
+- `project_id` TEXT (FK: projects.id)
+- Indexes: source_entity_id, target_entity_id, relationship_type, project_id
+
+#### `codebase_constraints`
+**12 columns** — Learned patterns from corrections (extends lessons)
+- `id` TEXT PRIMARY KEY
+- `constraint_type` TEXT NOT NULL — naming, import_order, pattern, convention
+- `rule_name` TEXT NOT NULL
+- `file_pattern` TEXT — glob pattern for affected files
+- `description` TEXT
+- `violation_count` INTEGER DEFAULT 0
+- `last_violated` REAL
+- `examples` TEXT — JSON array of violation examples
+- `severity` TEXT DEFAULT 'warning' — info, warning, error
+- `project_id` TEXT (FK: projects.id)
+- `session_id` TEXT (FK: sessions.session_id)
+- `created_at` REAL NOT NULL
+- Indexes: constraint_type, rule_name, project_id, violation_count DESC
+
+---
+
 ## Key Foreign Key Relationships
 
 ```
