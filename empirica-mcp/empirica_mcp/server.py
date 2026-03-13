@@ -1036,7 +1036,7 @@ async def list_tools() -> list[types.Tool]:
             }
         ),
 
-        # ========== Tier 1 Tools (v1.6.3 additions) ==========
+        # ========== Tier 1 Tools (v1.6.4 additions) ==========
 
         types.Tool(
             name="goals_complete",
@@ -2631,7 +2631,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> list[str]:
         "workspace_map": ["workspace-map"],
         "unknown_resolve": ["unknown-resolve"],
 
-        # Tier 1 additions (v1.6.3)
+        # Tier 1 additions (v1.6.4)
         "goals_complete": ["goals-complete"],
         "project_search": ["project-search"],
         "source_add": ["source-add"],

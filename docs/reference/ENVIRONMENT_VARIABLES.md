@@ -1,6 +1,6 @@
 # Empirica Environment Variables Reference
 
-**Version:** 1.6.3
+**Version:** 1.6.4
 **Total Variables:** 35+
 **Status:** Production
 
@@ -100,7 +100,7 @@ Controls PREFLIGHT enrichment (grounded gaps, calibration warnings), CHECK enric
 | Variable | Purpose | Default | Required |
 |----------|---------|---------|----------|
 | `EMPIRICA_AUTOPILOT_MODE` | Autonomous operation mode | `false` | No |
-| `EMPIRICA_AUTO_POSTFLIGHT` | **REMOVED** — Auto-POSTFLIGHT from CHECK removed in 1.6.3 | N/A | No |
+| `EMPIRICA_AUTO_POSTFLIGHT` | **REMOVED** — Auto-POSTFLIGHT from CHECK removed in 1.6.4 | N/A | No |
 | `EMPIRICA_ENABLE_MODALITY_SWITCHER` | Enable adaptive model routing | `false` | No |
 
 ---

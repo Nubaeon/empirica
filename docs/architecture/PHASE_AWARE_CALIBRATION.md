@@ -168,14 +168,14 @@ Auto-tighten:          Calibration accuracy drops -> gates tighten automatically
 
 ## Implementation Status
 
-### Phase 1: Split Evidence Collection -- COMPLETE (v1.5.1, updated v1.6.3)
+### Phase 1: Split Evidence Collection -- COMPLETE (v1.5.1, updated v1.6.4)
 
 - `detect_phase_boundary()` finds CHECK proceed timestamp
 - `PostTestCollector(phase="noetic"|"praxic")` filters evidence by `check_timestamp`
 - `EvidenceMapper.map_evidence(phase=...)` returns phase-tagged `GroundedAssessment`
 - `grounded_beliefs` and `grounded_verifications` tables have `phase` column
 - `run_grounded_verification()` runs separate noetic + praxic passes
-- **Profile-specific collectors excluded from noetic phase** (v1.6.3): Code quality (ruff,
+- **Profile-specific collectors excluded from noetic phase** (v1.6.4): Code quality (ruff,
   radon, pyright), test results (pytest), git metrics, prose metrics, and web metrics only
   run during praxic or combined phases. Noetic grounding uses only epistemic process evidence
   (artifact counts, investigation thoroughness, sentinel decisions). This prevents
@@ -238,7 +238,7 @@ Insights are:
 This creates a feedback loop: each calibration cycle identifies where evidence
 collection is weak, which informs improvements to the collection methods themselves.
 
-### Phase 2.8: Actionable PREFLIGHT Feedback -- COMPLETE (v1.6.3)
+### Phase 2.8: Actionable PREFLIGHT Feedback -- COMPLETE (v1.6.4)
 
 PREFLIGHT now includes `suggested_ranges` in `previous_transaction_feedback`. For each
 vector with a significant gap (|gap| > 0.1), the system computes a suggested range

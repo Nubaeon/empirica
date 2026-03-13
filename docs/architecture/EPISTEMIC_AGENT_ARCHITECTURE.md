@@ -272,7 +272,7 @@ reputation = reputation_seed + (Σ import_successes / Σ imports) × 0.5
 | Multi-persona orchestration | ✅ Done | investigate-multi |
 | Winner→Extract→Embed flow | ❌ Not wired | `emerged_personas.py` exists but not connected to agent workflow |
 
-### Tier 4: Sentinel Autonomy (Implemented v1.6.3)
+### Tier 4: Sentinel Autonomy (Implemented v1.6.4)
 
 | Item | Status | Implementation |
 |------|--------|----------------|

@@ -1,7 +1,7 @@
 # Workspace Database Schema Reference
 
 **Location:** `~/.empirica/workspace/workspace.db`
-**Version:** 1.6.3
+**Version:** 1.6.4
 **Purpose:** Cross-project portfolio management and trajectory tracking
 
 ---

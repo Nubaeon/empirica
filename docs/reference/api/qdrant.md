@@ -51,7 +51,7 @@ print(f"Provider: {provider.provider}, Model: {provider.model}")
 | `JINA_API_KEY` | key | required for jina | Jina AI API key |
 | `VOYAGE_API_KEY` | key | required for voyage | Voyage AI API key |
 
-### Configuration File (v1.6.3+)
+### Configuration File (v1.6.4+)
 
 In addition to env vars, embeddings can be configured via `~/.empirica/config.yaml`:
 
@@ -92,7 +92,7 @@ embeddings:
 "text-embedding-ada-002": 1536
 
 # Ollama (local)
-"qwen3-embedding": 1024      # Default since v1.6.3 (0.6B, default tag)
+"qwen3-embedding": 1024      # Default since v1.6.4 (0.6B, default tag)
 "qwen3-embedding:0.6b": 1024 # Explicit 0.6B tag — same as default
 "qwen3-embedding:8b": 4096   # 8B variant — different dimensions!
 "nomic-embed-text": 768
@@ -240,7 +240,7 @@ while `project-search` provides semantic access to the full Qdrant store on dema
 
 ---
 
-## Code API Embeddings (v1.6.3+)
+## Code API Embeddings (v1.6.4+)
 
 AST-based extraction of Python API surfaces, stored in the eidetic collection as `fact_type="code_api"`.
 

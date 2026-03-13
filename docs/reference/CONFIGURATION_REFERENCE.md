@@ -720,7 +720,7 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 - `EMPIRICA_AUTO_CHECKPOINT`: Enable/disable auto checkpoints (`true`, `false`)
 - `EMPIRICA_GIT_INTEGRATION`: Enable/disable git integration
 - `EMPIRICA_ENABLE_MODALITY_SWITCHER`: Enable/disable modality switching (`true`, `false`, default: `false`) - DEPRECATED
-- `EMPIRICA_AUTO_POSTFLIGHT`: **REMOVED in 1.6.3.** Auto-POSTFLIGHT from CHECK was removed because CHECK is a noetic→praxic gate, not a completion event. POSTFLIGHT should only be triggered by the AI or session-end hook after actual work is done
+- `EMPIRICA_AUTO_POSTFLIGHT`: **REMOVED in 1.6.4.** Auto-POSTFLIGHT from CHECK was removed because CHECK is a noetic→praxic gate, not a completion event. POSTFLIGHT should only be triggered by the AI or session-end hook after actual work is done
 
 ---
 

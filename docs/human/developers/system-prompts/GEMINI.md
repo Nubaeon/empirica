@@ -1,7 +1,7 @@
-# Empirica System Prompt - GEMINI v1.6.3
+# Empirica System Prompt - GEMINI v1.6.4
 
 **Model:** GEMINI | **Generated:** 2026-02-25
-**Syncs with:** Empirica v1.6.3
+**Syncs with:** Empirica v1.6.4
 **Change:** Qdrant hardening, schema migration fix, instance isolation anchors
 **Status:** AUTHORITATIVE
 
@@ -467,7 +467,7 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 
 ## GEMINI-SPECIFIC
 
-# Gemini Model Delta - v1.6.3
+# Gemini Model Delta - v1.6.4
 
 **Applies to:** Gemini (all versions)
 **Last Updated:** 2026-02-21

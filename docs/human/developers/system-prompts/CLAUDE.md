@@ -467,7 +467,7 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 
 ## CLAUDE-SPECIFIC
 
-# Claude Model Delta - v1.6.3
+# Claude Model Delta - v1.6.4
 
 **Applies to:** Claude (all versions)
 **Last Updated:** 2026-02-21

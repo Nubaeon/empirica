@@ -14,13 +14,13 @@ Teaching AI to know what it knows—and what it doesn't.
 
 ```bash
 # Recommended: Security-hardened Alpine
-docker pull nubaeon/empirica:1.6.3-alpine
+docker pull nubaeon/empirica:1.6.4-alpine
 
 # Alternative: Debian slim (bash/glibc compatibility)
-docker pull nubaeon/empirica:1.6.3
+docker pull nubaeon/empirica:1.6.4
 
 # Run with persistent data
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.6.3-alpine /bin/sh
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.6.4-alpine /bin/sh
 ```
 
 ---
@@ -119,19 +119,19 @@ Data in `.empirica/` directory, gitignored by default.
 
 ```bash
 # CLI help
-docker run --rm nubaeon/empirica:1.6.3-alpine empirica --help
+docker run --rm nubaeon/empirica:1.6.4-alpine empirica --help
 
 # Interactive shell
-docker run -it --rm nubaeon/empirica:1.6.3-alpine /bin/sh
+docker run -it --rm nubaeon/empirica:1.6.4-alpine /bin/sh
 
 # With persistent data volume
 docker run -it \
   -v $(pwd)/.empirica:/data/.empirica \
-  nubaeon/empirica:1.6.3-alpine \
+  nubaeon/empirica:1.6.4-alpine \
   empirica session-create --ai-id docker-agent
 
 # Check version
-docker run --rm nubaeon/empirica:1.6.3-alpine empirica --version
+docker run --rm nubaeon/empirica:1.6.4-alpine empirica --version
 ```
 
 ## Environment Variables
@@ -146,12 +146,12 @@ docker run --rm nubaeon/empirica:1.6.3-alpine empirica --version
 
 | Tag | Base | Size | Use Case |
 |-----|------|------|----------|
-| `1.6.3-alpine` | Alpine 3.23 | ~85MB | Production, security-hardened |
-| `1.6.3` | Debian Bookworm | ~150MB | Development, glibc compatibility |
+| `1.6.4-alpine` | Alpine 3.23 | ~85MB | Production, security-hardened |
+| `1.6.4` | Debian Bookworm | ~150MB | Development, glibc compatibility |
 
 ---
 
-## Key Features in 1.6.3
+## Key Features in 1.6.4
 
 - **Dynamic Sentinel Control** — File-based flag for runtime enable/disable without restart
 - **Epistemic Transaction Planning** — Interactive plan-transactions mode for structured task decomposition

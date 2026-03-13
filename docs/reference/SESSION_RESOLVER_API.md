@@ -1,7 +1,7 @@
 # Session Resolver API Reference
 
 **Module:** `empirica.utils.session_resolver`
-**Version:** 1.6.3
+**Version:** 1.6.4
 **Purpose:** Session ID resolution, multi-instance isolation, and context management
 
 ---

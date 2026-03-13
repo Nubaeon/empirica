@@ -456,7 +456,7 @@ def handle_monitor_cost_command(args):
 
 
 # NOTE: handle_pre_summary_snapshot, handle_post_summary_drift_check, and
-# handle_check_drift_command were removed in v1.6.3. MirrorDriftMonitor was
+# handle_check_drift_command were removed in v1.6.4. MirrorDriftMonitor was
 # superseded by the grounded calibration pipeline (postflight → post-test →
 # bayesian updates) which detects drift through objective evidence rather
 # than vector-to-vector temporal comparison.
