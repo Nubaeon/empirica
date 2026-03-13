@@ -193,6 +193,7 @@ def handle_project_init_command(args):
                 'method': 'path_match'
             },
             'domain_config': {},
+            'calibration_weights': _seed_calibration_weights(project_type),
         })
         
         import yaml
@@ -384,6 +385,60 @@ def handle_project_init_command(args):
         from ..cli_utils import handle_cli_error
         handle_cli_error(e, "Project init", getattr(args, 'verbose', False))
         return None
+
+
+def _seed_calibration_weights(project_type: str) -> dict:
+    """Generate default per-phase per-vector calibration weights for a project type.
+
+    These are Tier 2 static defaults seeded at project-init. They provide
+    sensible starting weights based on domain and phase until the dynamic
+    EMA adaptation (empirica-extended) refines them from actual calibration gaps.
+
+    Based on evidence from 478 grounded verifications showing:
+    - Noetic phase: generally well-calibrated, execution vectors irrelevant
+    - Praxic phase: systematically overestimates know/context/completion,
+      underestimates uncertainty/impact
+    """
+    # Map project_type to calibration domain
+    _TYPE_TO_DOMAIN = {
+        'software': 'software', 'content': 'consulting',
+        'research': 'research', 'data': 'research',
+        'design': 'consulting', 'operations': 'operations',
+        'strategic': 'consulting', 'engagement': 'consulting',
+        'legal': 'operations',
+    }
+    domain = _TYPE_TO_DOMAIN.get(project_type, 'default')
+
+    # Base noetic weights: investigation phase — execution vectors low
+    noetic_base = {
+        'know': 1.0, 'context': 0.8, 'signal': 0.9, 'uncertainty': 1.0,
+        'do': 0.3, 'change': 0.2, 'state': 0.3, 'completion': 0.5,
+        'impact': 0.3, 'clarity': 0.7, 'coherence': 0.6, 'density': 0.4,
+    }
+
+    # Base praxic weights: from calibration gap evidence
+    praxic_base = {
+        'know': 1.0, 'completion': 1.0, 'context': 1.0,
+        'impact': 0.9, 'uncertainty': 0.8, 'change': 0.8,
+        'do': 0.7, 'clarity': 0.7, 'coherence': 0.7,
+        'signal': 0.4, 'density': 0.4, 'state': 0.6,
+    }
+
+    # Domain-specific adjustments
+    if domain == 'software':
+        praxic_base['change'] = 0.9  # code changes matter more
+        praxic_base['state'] = 0.7   # environment awareness
+    elif domain == 'consulting':
+        praxic_base['clarity'] = 0.9  # communication clarity critical
+        noetic_base['context'] = 1.0  # client context essential
+    elif domain == 'research':
+        noetic_base['signal'] = 1.0   # signal detection critical
+        praxic_base['completion'] = 0.6  # open-ended work
+    elif domain == 'operations':
+        praxic_base['state'] = 0.9   # system state awareness
+        praxic_base['change'] = 0.9  # change tracking critical
+
+    return {'noetic': noetic_base, 'praxic': praxic_base}
 
 
 def _auto_detect_languages(git_root: Path) -> list:
