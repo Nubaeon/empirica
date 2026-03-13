@@ -82,21 +82,18 @@ Acts as **circuit breaker** for privacy leaks.
 
 ---
 
-## CLI Commands
+## CLI Commands — *Not yet implemented*
+
+> **Note (v1.5.0+):** `privacy-check` and `privacy-install-hook` have been removed.
+> Privacy enforcement is now handled by the Sentinel's tiered permission system.
+> The `privacy-scan` command below is **proposed but not yet built**.
 
 ```bash
-# Scan current repo
-empirica privacy-scan
-
-# Show detailed analysis
-empirica privacy-scan --verbose
-
-# Auto-fix issues
-empirica privacy-scan --auto-fix
+# Proposed commands (not yet built):
+# empirica privacy-scan
+# empirica privacy-scan --verbose
+# empirica privacy-scan --auto-fix
 ```
-
-> **Note (v1.5.0):** `privacy-check` and `privacy-install-hook` have been removed.
-> Privacy enforcement is now handled by the Sentinel's tiered permission system.
 
 ---
 

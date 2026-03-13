@@ -54,7 +54,6 @@ The CLI uses `get_active_empirica_session_id()` with this priority chain:
 ### 3. Goals & Tasks (16 commands)
 - **goals-create** - Create new goal with objective and scope
 - **goals-list** - List all goals for a session or project
-- **goals-list-all** - List all goals across all sessions
 - **goals-complete** - Mark a goal as completed
 - **goals-claim** - Claim a goal for work
 - **goals-add-subtask** - Add subtask to an existing goal
@@ -398,14 +397,6 @@ Part of: `pip install empirica-workspace`
 #### `goals-resume`
 **Purpose:** Resume work on a paused goal
 **Usage:** `empirica goals-resume --goal-id <goal_id>`
-
-#### `goals-list-all`
-**Purpose:** List all goals across all sessions (project-wide view)
-**Usage:** `empirica goals-list-all [options]`
-**Options:**
-- `--status`: Filter by status (active, completed, all) - default: active
-- `--limit`: Maximum goals to show (default: 20)
-- `--output`: Output format (json, human)
 
 #### `goals-search`
 **Purpose:** Semantic search across goals and subtasks using Qdrant

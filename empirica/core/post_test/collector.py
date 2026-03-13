@@ -2,12 +2,20 @@
 Post-Test Evidence Collector
 
 Gathers objective, non-self-referential evidence from available sources:
+
+Universal (all phases):
+- Artifact metrics: findings, unknowns, dead-ends, mistakes (SQLite)
+- Noetic quality: investigation depth, breadcrumb density (SQLite)
+- Sentinel gate decisions: CHECK proceed/investigate ratio (SQLite)
+
+Praxic phase (after CHECK):
 - Goal/subtask completion metrics (SQLite)
-- Noetic artifact counts: findings, unknowns, dead-ends, mistakes (SQLite)
-- Auto-captured issues (SQLite)
-- Sentinel gate decisions (SQLite)
+- Issue and triage metrics (SQLite)
+- Codebase model: entities discovered, facts created, constraints (SQLite)
+- Non-git file changes: files edited outside git repos (transaction file + mtime)
+- Git metrics: commits, file change density (subprocess, optional)
+- Code quality: ruff, radon, pyright on changed files (subprocess, optional)
 - Test results from pytest JSON report (file-based, optional)
-- Git metrics: commits, lines changed (subprocess, optional)
 
 Each evidence source is independent and failure-tolerant. The collector
 returns whatever evidence it can gather.
@@ -1169,7 +1177,8 @@ class PostTestCollector:
                 if tx_start:
                     try:
                         mtime = p.stat().st_mtime
-                        if mtime >= tx_start:
+                        # 1s buffer for float precision loss in JSON serialization
+                        if mtime >= (tx_start - 1.0):
                             existing_files.append(fp)
                     except OSError:
                         pass
@@ -1236,7 +1245,7 @@ class PostTestCollector:
         try:
             resolved = str(Path(file_path).resolve())
             git_resolved = str(Path(git_root).resolve())
-            return not resolved.startswith(git_resolved + '/')
+            return not (resolved == git_resolved or resolved.startswith(git_resolved + '/'))
         except (OSError, ValueError):
             return True
 

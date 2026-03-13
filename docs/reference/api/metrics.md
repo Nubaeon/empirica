@@ -92,11 +92,12 @@ metrics = TokenEfficiencyMetrics(
 ## CLI Commands
 
 ```bash
-# Flow state for a session
-empirica checkpoint-metrics --session-id <ID>
-
-# Token efficiency report
-empirica token-report --session-id <ID>
+# Metrics are now collected automatically via grounded calibration post-tests.
+# See: empirica calibration-report --grounded
+#
+# Removed commands (v1.5.0+):
+#   checkpoint-metrics — replaced by post-test evidence collection
+#   token-report — replaced by grounded calibration pipeline
 ```
 
 ---

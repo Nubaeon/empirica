@@ -458,26 +458,26 @@ empirica/core/persona/signing_persona.py
 refs/notes/empirica/security-stamps/<commit-sha>
 ```
 
-### Phase 3: CLI Integration (Week 2)
+### Phase 3: CLI Integration (Week 2) — *Not yet implemented*
 ```bash
-# New commands
-empirica security-stamp-create --session-id <id>
-empirica security-stamp-verify --commit <sha>
-empirica security-gate-check --session-id <id>
+# Proposed commands (not yet built):
+# empirica security-stamp-create --session-id <id>
+# empirica security-stamp-verify --commit <sha>
+# empirica security-gate-check --session-id <id>
 
-# Enhanced CASCADE
-empirica preflight-submit --domain security
-empirica check --domain security --require-stamp
-empirica postflight-submit --domain security --generate-stamp
+# Enhanced CASCADE (proposed)
+# empirica preflight-submit --domain security
+# empirica check --domain security --require-stamp
+# empirica postflight-submit --domain security --generate-stamp
 ```
 
-### Phase 4: Compliance Reports (Week 3)
+### Phase 4: Compliance Reports (Week 3) — *Not yet implemented*
 ```bash
-# Generate audit-ready reports
-empirica security-audit-report --since <date>
-  - List all security stamps
-  - Show gate pass/fail history
-  - Export to PDF/JSON for compliance
+# Proposed commands (not yet built):
+# empirica security-audit-report --since <date>
+#   - List all security stamps
+#   - Show gate pass/fail history
+#   - Export to PDF/JSON for compliance
 ```
 
 ---

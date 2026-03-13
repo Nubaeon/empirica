@@ -225,8 +225,8 @@ empirica project-handoff --session-id <ID> --output json
 # Load handoff for new session
 empirica project-bootstrap --session-id <ID>
 
-# List recent handoffs
-empirica query-handoff-reports --ai-id claude-code --limit 5
+# List recent handoffs (use project-search for semantic queries)
+empirica project-search --task "recent handoffs" --limit 5
 ```
 
 ---

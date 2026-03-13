@@ -436,6 +436,58 @@ def handle_setup_claude_code_command(args):
             if output_format != 'json':
                 print("   ✓ Context-shift tracker configured")
 
+        # Configure PostToolUse hook (entity extraction on Edit/Write)
+        if 'PostToolUse' not in settings['hooks']:
+            settings['hooks']['PostToolUse'] = []
+
+        entity_script = f"{python_cmd} {plugin_dir}/hooks/entity-extractor.py"
+        if not _hook_exists(settings['hooks']['PostToolUse'], 'entity-extractor.py'):
+            settings['hooks']['PostToolUse'].append({
+                "matcher": "Edit|Write",
+                "hooks": [{"type": "command", "command": entity_script, "timeout": 5, "allowFailure": True}]
+            })
+            if output_format != 'json':
+                print("   ✓ PostToolUse (entity extraction) hook configured")
+
+        # Configure TaskCompleted hook (goal-commit bridge)
+        if 'TaskCompleted' not in settings['hooks']:
+            settings['hooks']['TaskCompleted'] = []
+
+        task_script = f"{python_cmd} {plugin_dir}/hooks/task-completed.py"
+        if not _hook_exists(settings['hooks']['TaskCompleted'], 'task-completed.py'):
+            settings['hooks']['TaskCompleted'].append({
+                "matcher": ".*",
+                "hooks": [{"type": "command", "command": task_script, "timeout": 10, "allowFailure": True}]
+            })
+            if output_format != 'json':
+                print("   ✓ TaskCompleted hook configured")
+
+        # Configure PostToolUseFailure hook (tool failure tracking)
+        if 'PostToolUseFailure' not in settings['hooks']:
+            settings['hooks']['PostToolUseFailure'] = []
+
+        failure_script = f"{python_cmd} {plugin_dir}/hooks/tool-failure.py"
+        if not _hook_exists(settings['hooks']['PostToolUseFailure'], 'tool-failure.py'):
+            settings['hooks']['PostToolUseFailure'].append({
+                "matcher": ".*",
+                "hooks": [{"type": "command", "command": failure_script, "timeout": 5, "allowFailure": True}]
+            })
+            if output_format != 'json':
+                print("   ✓ PostToolUseFailure hook configured")
+
+        # Configure Stop hook (transaction enforcement)
+        if 'Stop' not in settings['hooks']:
+            settings['hooks']['Stop'] = []
+
+        stop_script = f"{python_cmd} {plugin_dir}/hooks/transaction-enforcer.py"
+        if not _hook_exists(settings['hooks']['Stop'], 'transaction-enforcer.py'):
+            settings['hooks']['Stop'].append({
+                "matcher": ".*",
+                "hooks": [{"type": "command", "command": stop_script, "timeout": 5, "allowFailure": True}]
+            })
+            if output_format != 'json':
+                print("   ✓ Stop (transaction enforcer) hook configured")
+
         # Write settings.json
         _write_json_file(settings_file, settings)
 
