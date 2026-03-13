@@ -1343,7 +1343,7 @@ class PostTestCollector:
                 value=pass_rate,
                 raw_value={"passed": passed, "failed": failed, "total": total},
                 quality=EvidenceQuality.OBJECTIVE,
-                supports_vectors=["know", "do"],
+                supports_vectors=["know", "do", "state"],
             ))
 
         # Coverage data (if present via pytest-cov JSON)
@@ -1495,6 +1495,93 @@ class PostTestCollector:
                         quality=EvidenceQuality.OBJECTIVE,
                         supports_vectors=["state", "change"],
                     ))
+
+            # LOC delta: insertions + deletions for richer change signal
+            # Use git log --stat (not git diff, which doesn't support --since)
+            result = subprocess.run(
+                ["git", "log", "--shortstat", "--format=", "--since=" + since],
+                capture_output=True, text=True, timeout=5,
+                cwd=project_root,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                import re
+                # Aggregate across all commits in the period
+                insertions = sum(int(m.group(1)) for m in
+                                 re.finditer(r'(\d+) insertion', result.stdout))
+                deletions = sum(int(m.group(1)) for m in
+                                re.finditer(r'(\d+) deletion', result.stdout))
+                total_loc = insertions + deletions
+                if total_loc > 0:
+                    # Normalize: 50 LOC = 0.3, 200 = 0.6, 500+ = 1.0
+                    loc_score = min(1.0, total_loc / 500.0)
+                    items.append(EvidenceItem(
+                        source="git",
+                        metric_name="loc_delta",
+                        value=loc_score,
+                        raw_value={
+                            "insertions": insertions,
+                            "deletions": deletions,
+                            "total": total_loc,
+                        },
+                        quality=EvidenceQuality.OBJECTIVE,
+                        supports_vectors=["change", "do"],
+                    ))
+
+            # A/M/D file ratio: character of changes
+            # Use git log (not git diff, which doesn't support --since)
+            amd_counts = {}
+            for filter_code, label in [("A", "added"), ("M", "modified"), ("D", "deleted")]:
+                result = subprocess.run(
+                    ["git", "log", "--name-only", "--format=",
+                     f"--diff-filter={filter_code}", "--since=" + since],
+                    capture_output=True, text=True, timeout=5,
+                    cwd=project_root,
+                )
+                if result.returncode == 0:
+                    amd_counts[label] = len({
+                        f.strip() for f in result.stdout.strip().split('\n')
+                        if f.strip()
+                    })
+                else:
+                    amd_counts[label] = 0
+
+            total_amd = sum(amd_counts.values())
+            if total_amd > 0:
+                # State awareness: knowing what was added vs modified vs removed
+                # Weighted: new files = high state change, modify = medium, delete = lower
+                weighted = (amd_counts["added"] * 1.0 +
+                            amd_counts["modified"] * 0.5 +
+                            amd_counts["deleted"] * 0.3)
+                amd_score = min(1.0, weighted / max(total_amd, 1))
+                items.append(EvidenceItem(
+                    source="git",
+                    metric_name="amd_file_ratio",
+                    value=amd_score,
+                    raw_value=amd_counts,
+                    quality=EvidenceQuality.OBJECTIVE,
+                    supports_vectors=["state", "change"],
+                ))
+
+            # Working tree cleanliness: committed everything = state awareness
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True, text=True, timeout=5,
+                cwd=project_root,
+            )
+            if result.returncode == 0:
+                uncommitted = len([
+                    l for l in result.stdout.strip().split('\n') if l.strip()
+                ])
+                # Clean tree = 1.0, progressively lower with more uncommitted files
+                clean_score = max(0.0, 1.0 - min(1.0, uncommitted / 10.0))
+                items.append(EvidenceItem(
+                    source="git",
+                    metric_name="working_tree_cleanliness",
+                    value=clean_score,
+                    raw_value={"uncommitted_files": uncommitted},
+                    quality=EvidenceQuality.OBJECTIVE,
+                    supports_vectors=["state"],
+                ))
 
         except (subprocess.TimeoutExpired, FileNotFoundError, ValueError):
             pass
