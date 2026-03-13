@@ -244,6 +244,7 @@ def handle_preflight_submit_command(args):
             reasoning = validated.reasoning or ''
             task_context = validated.task_context or ''
             work_context = getattr(validated, 'work_context', None)
+            work_type = getattr(validated, 'work_type', None)
             output_format = 'json'  # AI-first always uses JSON output
         else:
             # LEGACY MODE: Use CLI flags
@@ -252,6 +253,7 @@ def handle_preflight_submit_command(args):
             reasoning = args.reasoning
             task_context = getattr(args, 'task_context', '') or ''  # For pattern retrieval
             work_context = None  # Legacy mode doesn't support work_context
+            work_type = None  # Legacy mode doesn't support work_type
             output_format = getattr(args, 'output', 'json')  # Default to JSON
 
             # Validate required fields for legacy mode
@@ -361,8 +363,8 @@ def handle_preflight_submit_command(args):
                         project_path=resolved_project_path
                     )
 
-                    # Inject work_context into transaction file if provided
-                    if work_context:
+                    # Inject work_context and work_type into transaction file if provided
+                    if work_context or work_type:
                         try:
                             from empirica.utils.session_resolver import read_active_transaction_full, _get_instance_suffix
                             suffix = _get_instance_suffix()
@@ -370,7 +372,10 @@ def handle_preflight_submit_command(args):
                             if tx_file.exists():
                                 with open(tx_file, 'r') as f:
                                     tx_d = _json.load(f)
-                                tx_d['work_context'] = work_context
+                                if work_context:
+                                    tx_d['work_context'] = work_context
+                                if work_type:
+                                    tx_d['work_type'] = work_type
                                 with open(tx_file, 'w') as f:
                                     _json.dump(tx_d, f, indent=2)
                         except Exception:
@@ -2052,6 +2057,8 @@ def handle_postflight_submit_command(args):
                     }
                     # Work context for maturity-aware normalization
                     postflight_work_context = tx_data.get('work_context')
+                    # Work type for evidence weight profiling
+                    postflight_work_type = tx_data.get('work_type')
                     # Update to closed status - preserve project_path from transaction
                     write_active_transaction(
                         transaction_id=postflight_transaction_id,
@@ -2253,6 +2260,7 @@ def handle_postflight_submit_command(args):
                     evidence_profile=evidence_profile,
                     phase_tool_counts=postflight_phase_tool_counts,
                     work_context=postflight_work_context,
+                    work_type=postflight_work_type,
                     per_vector_weights=tier2_weights,
                 )
 

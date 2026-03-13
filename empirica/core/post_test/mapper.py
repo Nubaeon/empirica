@@ -36,6 +36,54 @@ QUALITY_WEIGHTS = {
 # provide grounding for coherence and density, leaving only engagement.
 UNGROUNDABLE_VECTORS = {"engagement"}
 
+# Evidence source relevance by work type.
+# Keys = work_type, values = dict of evidence_source → relevance multiplier.
+# Missing sources default to 1.0 (neutral). Values < 1.0 down-weight irrelevant evidence.
+# Values > 1.0 up-weight primary evidence for that work type.
+WORK_TYPE_RELEVANCE: Dict[str, Dict[str, float]] = {
+    "code": {},  # default weights — code is the baseline
+    "infra": {
+        "git_metrics": 0.3, "test_results": 0.3, "code_quality": 0.3,
+        "goal_completion": 1.2, "artifact_counts": 1.0,
+    },
+    "research": {
+        "git_metrics": 0.2, "test_results": 0.2, "code_quality": 0.2,
+        "artifact_counts": 1.5, "goal_completion": 1.0,
+    },
+    "release": {
+        "git_metrics": 0.5, "code_quality": 0.3,
+        "goal_completion": 1.3, "test_results": 1.2,
+    },
+    "debug": {
+        "git_metrics": 0.4, "test_results": 1.4,
+        "artifact_counts": 1.3, "code_quality": 0.5,
+    },
+    "config": {
+        "git_metrics": 0.4, "test_results": 0.5, "code_quality": 0.4,
+        "goal_completion": 1.2,
+    },
+    "docs": {
+        "test_results": 0.2, "code_quality": 0.3,
+        "git_metrics": 0.8, "goal_completion": 1.2,
+    },
+    "data": {
+        "git_metrics": 0.4, "code_quality": 0.3,
+        "test_results": 0.8, "goal_completion": 1.2,
+    },
+    "comms": {
+        "git_metrics": 0.1, "test_results": 0.1, "code_quality": 0.1,
+        "goal_completion": 1.5, "artifact_counts": 1.0,
+    },
+    "design": {
+        "git_metrics": 0.2, "test_results": 0.2, "code_quality": 0.2,
+        "artifact_counts": 1.4, "goal_completion": 1.2,
+    },
+    "audit": {
+        "git_metrics": 0.1, "test_results": 0.3,
+        "artifact_counts": 1.5, "goal_completion": 1.2, "code_quality": 0.5,
+    },
+}
+
 
 @dataclass
 class GroundedVectorEstimate:
@@ -162,12 +210,19 @@ class EvidenceMapper:
         phase: str = "combined",
         domain: str = "default",
         per_vector_weights: Optional[Dict[str, float]] = None,
+        work_type: Optional[str] = None,
     ) -> GroundedAssessment:
         """Map evidence to grounded vector estimates and compare to self-assessment."""
+        # Work-type relevance profile (scales evidence weights by source relevance)
+        relevance = WORK_TYPE_RELEVANCE.get(work_type, {}) if work_type else {}
+
         # Group evidence by supported vector
         vector_evidence: Dict[str, List[Tuple[EvidenceItem, float]]] = {}
         for item in bundle.items:
-            weight = QUALITY_WEIGHTS.get(item.quality, 0.5)
+            quality_weight = QUALITY_WEIGHTS.get(item.quality, 0.5)
+            # Apply work-type relevance scaling to evidence source
+            source_relevance = relevance.get(item.source, 1.0)
+            weight = quality_weight * source_relevance
             for vector in item.supports_vectors:
                 if vector not in vector_evidence:
                     vector_evidence[vector] = []

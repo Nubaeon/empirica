@@ -50,6 +50,11 @@ class PreflightInput(BaseModel):
         default=None, description="Work context for maturity-aware calibration normalization",
         pattern="^(greenfield|iteration|investigation|refactor)$",
     )
+    work_type: Optional[str] = Field(
+        default=None,
+        description="Type of work being done — determines which evidence sources are relevant for grounded calibration",
+        pattern="^(code|infra|research|release|debug|config|docs|data|comms|design|audit)$",
+    )
 
     @field_validator('session_id')
     @classmethod

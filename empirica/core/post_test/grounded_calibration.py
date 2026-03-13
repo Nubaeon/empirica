@@ -577,6 +577,7 @@ def _run_single_phase_verification(
     check_timestamp: Optional[float] = None,
     evidence_profile: Optional[str] = None,
     work_context: Optional[str] = None,
+    work_type: Optional[str] = None,
     preflight_timestamp: Optional[float] = None,
     per_vector_weights: Optional[Dict[str, float]] = None,
 ) -> Optional[Dict]:
@@ -601,6 +602,7 @@ def _run_single_phase_verification(
     assessment = mapper.map_evidence(
         bundle, vectors, phase=phase, domain=domain or "default",
         per_vector_weights=per_vector_weights,
+        work_type=work_type,
     )
 
     manager = GroundedCalibrationManager(db)
@@ -690,6 +692,7 @@ def run_grounded_verification(
     evidence_profile: Optional[str] = None,
     phase_tool_counts: Optional[Dict[str, int]] = None,
     work_context: Optional[str] = None,
+    work_type: Optional[str] = None,
     per_vector_weights: Optional[Dict[str, Dict[str, float]]] = None,
 ) -> Optional[Dict]:
     """
@@ -738,6 +741,7 @@ def run_grounded_verification(
                     check_timestamp=check_ts,
                     evidence_profile=evidence_profile,
                     work_context=work_context,
+                    work_type=work_type,
                     preflight_timestamp=preflight_ts,
                     per_vector_weights=noetic_weights,
                 )
@@ -754,6 +758,7 @@ def run_grounded_verification(
                     check_timestamp=check_ts,
                     evidence_profile=evidence_profile,
                     work_context=work_context,
+                    work_type=work_type,
                     preflight_timestamp=preflight_ts,
                     per_vector_weights=praxic_weights,
                 )
@@ -770,6 +775,7 @@ def run_grounded_verification(
                 domain=domain, goal_id=goal_id,
                 evidence_profile=evidence_profile,
                 work_context=work_context,
+                work_type=work_type,
                 per_vector_weights=combined_weights,
             )
             if combined_result:
