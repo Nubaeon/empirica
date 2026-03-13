@@ -366,6 +366,7 @@ def is_transition_command(command: str) -> bool:
 # information completeness, not forced thresholds.
 
 _autonomy_nudge = ""  # Module-level: set during increment, read by respond
+_goalless_nudge = ""  # Module-level: set when no goals detected, read by respond
 
 
 def _try_increment_tool_count(claude_session_id: Optional[str] = None,
@@ -506,12 +507,13 @@ def _compute_nudge(count: int, avg: int) -> str:
 
 
 def respond(decision: str, reason: str = "") -> None:
-    """Output in Claude Code's expected format. Appends autonomy nudge on allow."""
-    global _autonomy_nudge
+    """Output in Claude Code's expected format. Appends nudges on allow."""
+    global _autonomy_nudge, _goalless_nudge
     full_reason = reason
     show_nudge = False
-    if decision == "allow" and _autonomy_nudge:
-        full_reason = f"{reason} | {_autonomy_nudge}"
+    if decision == "allow" and (_autonomy_nudge or _goalless_nudge):
+        nudges = " | ".join(n for n in [_autonomy_nudge, _goalless_nudge] if n)
+        full_reason = f"{reason} | {nudges}"
         show_nudge = True
 
     output: dict = {
@@ -1106,6 +1108,56 @@ def main():
         sys.exit(0)
 
     preflight_know, preflight_uncertainty, preflight_timestamp, preflight_project_id = preflight_row
+
+    # === GOALLESS-WORK DETECTION ===
+    # Advisory nudge when transaction is open but no goals exist for the project.
+    # Only activates after a threshold of tool calls to avoid noise on first few actions.
+    # Nudge is appended to permissionDecisionReason on allow — not a deny.
+    global _goalless_nudge
+    try:
+        # Read tool_call_count from transaction file (already loaded above)
+        _gl_count = 0
+        if empirica_root:
+            _gl_instance_id = get_instance_id()
+            _gl_suffix = f'_{_gl_instance_id}' if _gl_instance_id else ''
+            _gl_tx_file = empirica_root / f'active_transaction{_gl_suffix}.json'
+            if _gl_tx_file.exists():
+                with open(_gl_tx_file, 'r') as _gl_f:
+                    _gl_tx = json.load(_gl_f)
+                _gl_count = _gl_tx.get('tool_call_count', 0)
+
+        GOALLESS_NUDGE_THRESHOLD = 5  # Start nudging after 5 tool calls
+        if _gl_count >= GOALLESS_NUDGE_THRESHOLD:
+            _gl_project_id = preflight_project_id
+            if not _gl_project_id:
+                cursor.execute(
+                    "SELECT project_id FROM sessions WHERE session_id = ?",
+                    (session_id,))
+                _gl_row = cursor.fetchone()
+                _gl_project_id = _gl_row[0] if _gl_row else None
+
+            if _gl_project_id:
+                cursor.execute("""
+                    SELECT COUNT(*) FROM goals
+                    WHERE project_id = ? AND is_completed = 0 AND status != 'completed'
+                """, (_gl_project_id,))
+                _gl_goal_count = cursor.fetchone()[0]
+
+                if _gl_goal_count == 0:
+                    if _gl_count >= 10:
+                        _goalless_nudge = (
+                            f"DISCIPLINE: {_gl_count} tool calls with NO GOALS. "
+                            f"Create goals now: empirica goals-create --objective '...'. "
+                            f"Tell the user: 'We should create goals before continuing — "
+                            f"work without goals produces unmeasurable transactions.'"
+                        )
+                    else:
+                        _goalless_nudge = (
+                            f"DISCIPLINE: {_gl_count} tool calls with no goals for this project. "
+                            f"Consider creating goals: empirica goals-create --objective '...'"
+                        )
+    except Exception:
+        pass  # Goalless detection failure is non-fatal
 
     # PROJECT CONTEXT CHECK: Require new PREFLIGHT if project changed
     # This implicitly closes the previous project's epistemic loop

@@ -426,6 +426,25 @@ EOF
     session_id = result["session_id"]
     context_text = format_context(result.get("project_context"))
 
+    # Discipline checklist: remind both AI and human to decompose into goals
+    has_goals = bool((result.get("project_context") or {}).get("goals"))
+    discipline_block = ""
+    if not has_goals:
+        discipline_block = """
+### Discipline Checklist (No Active Goals)
+
+Before running PREFLIGHT, decompose your task into goals:
+
+```bash
+empirica goals-create --objective "Your first goal"
+empirica goals-create --objective "Your second goal"
+```
+
+**Why:** Work without goals produces unmeasurable transactions. The Sentinel
+will nudge you if it detects goalless work after several tool calls.
+Goals drive transactions — create them before acting.
+"""
+
     prompt = f"""
 ## New Session Initialized
 
@@ -434,7 +453,7 @@ EOF
 
 ### Project Context:
 {context_text}
-
+{discipline_block}
 ### REQUIRED: Run PREFLIGHT (Baseline)
 
 Assess your epistemic state after reviewing the context above:
