@@ -1,6 +1,6 @@
 # Empirica MCP Server - Installation & Setup Guide
 
-**Last Updated:** December 2025  
+**Last Updated:** March 2026
 **MCP Spec Version:** 2025-11-25
 
 ---
@@ -61,7 +61,7 @@ pip install empirica-mcp
 ### Option 2: Docker Container
 
 ```bash
-docker pull empirica/mcp:latest
+docker pull nubaeon/empirica:latest
 docker run -p 3000:3000 empirica/mcp
 ```
 
@@ -220,7 +220,7 @@ Edit `~/.continue/config.json`:
 ### 6. Cursor IDE
 
 **Platform:** Standalone IDE  
-**MCP Support:** ⚠️ Coming Soon (Q1 2025)  
+**MCP Support:** ⚠️ Experimental
 **Best For:** Cursor-specific workflows
 
 **Setup:** Not yet available. Use Empirica CLI directly:
@@ -319,7 +319,7 @@ The Empirica MCP server exposes **all CLI commands** as MCP tools:
 - `session_snapshot` - Get session state
 - `session_list` - List sessions
 
-**Total:** 60+ MCP tools available
+**Total:** 100+ MCP tools available
 
 ---
 
@@ -436,7 +436,7 @@ docker run -d \
   --name empirica-mcp \
   -p 3000:3000 \
   -v $(pwd)/.empirica:/root/.empirica \
-  empirica/mcp:latest
+  nubaeon/empirica:latest
 
 # Client connects to http://localhost:3000
 ```

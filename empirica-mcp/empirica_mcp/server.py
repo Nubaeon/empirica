@@ -21,17 +21,16 @@ CASCADE Philosophy:
 - Scope is vectorial (self-assessed): {"breadth": 0-1, "duration": 0-1, "coordination": 0-1}
 - Trust AI reasoning: Let agents assess epistemic state → scope vectors
 
-Version: 1.6.3
+Version: 1.6.4
 """
 
 import asyncio
-import subprocess
 import json
-import sys
 import logging
 import shutil
+import subprocess
+import sys
 from pathlib import Path
-from typing import List
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -39,21 +38,21 @@ logger = logging.getLogger(__name__)
 # Add paths for proper imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from empirica.data.session_database import SessionDatabase
 from empirica.config.path_resolver import get_session_db_path
+from empirica.data.session_database import SessionDatabase
 from empirica.utils.session_resolver import resolve_session_id
 
 # Auto-capture for error tracking
 try:
-    from empirica.core.issue_capture import get_auto_capture, IssueSeverity, IssueCategory
+    from empirica.core.issue_capture import IssueCategory, IssueSeverity, get_auto_capture
 except ImportError:
     get_auto_capture = None
     IssueSeverity = None
     IssueCategory = None
 
+from mcp import types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp import types
 
 # Empirica CLI configuration - use PATH for portability
 EMPIRICA_CLI = shutil.which("empirica")
@@ -133,6 +132,7 @@ app = Server("empirica-v2")
 
 # Enable epistemic mode via environment variable
 import os
+
 ENABLE_EPISTEMIC = os.getenv("EMPIRICA_EPISTEMIC_MODE", "false").lower() == "true"
 EPISTEMIC_PERSONALITY = os.getenv("EMPIRICA_PERSONALITY", "balanced_architect")
 
@@ -149,7 +149,7 @@ else:
 # ============================================================================
 
 @app.list_tools()
-async def list_tools() -> List[types.Tool]:
+async def list_tools() -> list[types.Tool]:
     """List all available Empirica tools"""
 
     tools = [
@@ -1703,17 +1703,17 @@ async def list_tools() -> List[types.Tool]:
 # ============================================================================
 
 @app.call_tool(validate_input=False)  # CASCADE = guidance, not enforcement
-async def call_tool(name: str, arguments: dict) -> List[types.TextContent]:
+async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     """Route tool calls to appropriate handler
-    
+
     Note: validate_input=False allows flexible AI self-assessment.
     Schemas provide guidance, but don't enforce rigid validation.
     Handlers parse parameters flexibly (strings, objects, etc.)
-    
+
     Epistemic Middleware: If enabled (EMPIRICA_EPISTEMIC_MODE=true),
     wraps all calls with vector-driven self-awareness.
     """
-    
+
     # If epistemic middleware enabled, route through it
     if epistemic_middleware:
         return await epistemic_middleware.handle_request(
@@ -1725,7 +1725,7 @@ async def call_tool(name: str, arguments: dict) -> List[types.TextContent]:
         return await _call_tool_impl(name, arguments)
 
 
-async def _call_tool_impl(name: str, arguments: dict) -> List[types.TextContent]:
+async def _call_tool_impl(name: str, arguments: dict) -> list[types.TextContent]:
     """Internal tool call implementation (wrapped by middleware if enabled)"""
 
     try:
@@ -1776,7 +1776,7 @@ async def _call_tool_impl(name: str, arguments: dict) -> List[types.TextContent]
                     )
             except Exception:
                 pass  # Don't let auto-capture errors break the response
-        
+
         # Return structured error
         return [types.TextContent(
             type="text",
@@ -1792,7 +1792,7 @@ async def _call_tool_impl(name: str, arguments: dict) -> List[types.TextContent]
 # Direct Python Handlers (AI-Centric)
 # ============================================================================
 
-async def handle_blindspot_scan_direct(arguments: dict) -> List[types.TextContent]:
+async def handle_blindspot_scan_direct(arguments: dict) -> list[types.TextContent]:
     """Scan for epistemic blindspots using the prediction plugin.
 
     Direct Python handler - imports empirica-prediction at runtime.
@@ -1815,8 +1815,8 @@ async def handle_blindspot_scan_direct(arguments: dict) -> List[types.TextConten
 
         # Auto-detect project from DB if not provided
         if not project_id:
-            from pathlib import Path
             import sqlite3
+            from pathlib import Path
             db_path = Path.cwd() / ".empirica" / "sessions" / "sessions.db"
             if db_path.exists():
                 conn = sqlite3.connect(db_path)
@@ -1871,7 +1871,7 @@ async def handle_blindspot_scan_direct(arguments: dict) -> List[types.TextConten
         )]
 
 
-async def handle_skill_suggest_direct(arguments: dict) -> List[types.TextContent]:
+async def handle_skill_suggest_direct(arguments: dict) -> list[types.TextContent]:
     """Vector-aware skill/tool suggestion using ToolRouter.
 
     Combines epistemic vector routing (mode + tool recommendations) with
@@ -1924,8 +1924,9 @@ async def handle_skill_suggest_direct(arguments: dict) -> List[types.TextContent
 
         # Local skill discovery (existing behavior)
         try:
-            import yaml  # type: ignore
             from pathlib import Path
+
+            import yaml  # type: ignore
             skills_dir = Path.cwd() / "project_skills"
             local_skills = []
             if skills_dir.exists():
@@ -1955,25 +1956,25 @@ async def handle_skill_suggest_direct(arguments: dict) -> List[types.TextContent
         )]
 
 
-async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
+async def handle_create_goal_direct(arguments: dict) -> list[types.TextContent]:
     """Handle create_goal directly in Python (no CLI conversion)
-    
+
     AI-centric design: accepts scope as object, no schema conversion needed.
     """
     try:
+        import uuid
+
+        from empirica.core.canonical.empirica_git import GitGoalStore
         from empirica.core.goals.repository import GoalRepository
         from empirica.core.goals.types import Goal, ScopeVector, SuccessCriterion
-        from empirica.core.canonical.empirica_git import GitGoalStore
-        import uuid
-        import time
-        
+
         # Extract arguments
         session_id = arguments["session_id"]
         objective = arguments["objective"]
-        
+
         # Parse scope: AI self-assesses vectors (no semantic presets - that's heuristics!)
         scope_arg = arguments.get("scope", {"breadth": 0.3, "duration": 0.2, "coordination": 0.1})
-        
+
         # If somehow a string comes in, convert to default and let AI know to use vectors
         if isinstance(scope_arg, str):
             # Don't try to interpret semantic names - that's adding heuristics back!
@@ -1982,13 +1983,13 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
             scope_dict = {"breadth": 0.3, "duration": 0.2, "coordination": 0.1}
         else:
             scope_dict = scope_arg
-        
+
         scope = ScopeVector(
             breadth=scope_dict.get("breadth", 0.3),
             duration=scope_dict.get("duration", 0.2),
             coordination=scope_dict.get("coordination", 0.1)
         )
-        
+
         # Parse success criteria
         success_criteria_list = arguments.get("success_criteria", [])
         success_criteria_objects = []
@@ -2000,12 +2001,12 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
                 is_required=True,
                 is_met=False
             ))
-        
+
         # Optional parameters
         estimated_complexity = arguments.get("estimated_complexity")
         constraints = arguments.get("constraints")
         metadata = arguments.get("metadata", {})
-        
+
         # Create Goal object
         goal = Goal.create(
             objective=objective,
@@ -2015,13 +2016,13 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
             constraints=constraints,
             metadata=metadata
         )
-        
+
         # Save to database
         # Fix: Use path_resolver to get correct database location (repo-local, not home)
         goal_repo = GoalRepository(db_path=str(get_session_db_path()))
         success = goal_repo.save_goal(goal, session_id)
         goal_repo.close()
-        
+
         if not success:
             return [types.TextContent(
                 type="text",
@@ -2032,7 +2033,7 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
                     "session_id": session_id
                 }, indent=2)
             )]
-        
+
         # Store in git notes for cross-AI discovery (safe degradation)
         try:
             ai_id = arguments.get("ai_id", "empirica_mcp")
@@ -2045,14 +2046,14 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
                 "constraints": constraints,
                 "metadata": metadata
             }
-            
+
             goal_store.store_goal(
                 goal_id=goal.id,
                 session_id=session_id,
                 ai_id=ai_id,
                 goal_data=goal_data
             )
-        except Exception as e:
+        except Exception:
             # Safe degradation - don't fail goal creation if git storage fails
             pass
 
@@ -2098,9 +2099,9 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
             "timestamp": goal.created_timestamp,
             "qdrant_embedded": qdrant_embedded
         }
-        
+
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
-        
+
     except Exception as e:
         return [types.TextContent(
             type="text",
@@ -2112,9 +2113,9 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
             }, indent=2)
         )]
 
-async def handle_get_calibration_report(arguments: dict) -> List[types.TextContent]:
+async def handle_get_calibration_report(arguments: dict) -> list[types.TextContent]:
     """Handle get_calibration_report by querying SQLite reflexes directly
-    
+
     Note: CLI 'empirica calibration' is deprecated (used heuristics).
     This handler queries session reflexes for genuine calibration data.
     """
@@ -2132,7 +2133,7 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
         # Query reflexes for PREFLIGHT and POSTFLIGHT
         db = SessionDatabase(db_path=str(get_session_db_path()))
         cursor = db.conn.cursor()
-        
+
         # Get PREFLIGHT assessment
         cursor.execute("""
             SELECT engagement, know, do, context, clarity, coherence, signal, density,
@@ -2142,7 +2143,7 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
             ORDER BY timestamp DESC LIMIT 1
         """, (session_id,))
         preflight = cursor.fetchone()
-        
+
         # Get POSTFLIGHT assessment
         cursor.execute("""
             SELECT engagement, know, do, context, clarity, coherence, signal, density,
@@ -2152,9 +2153,9 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
             ORDER BY timestamp DESC LIMIT 1
         """, (session_id,))
         postflight = cursor.fetchone()
-        
+
         db.close()
-        
+
         if not preflight:
             return [types.TextContent(
                 type="text",
@@ -2165,14 +2166,14 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
                     "suggestion": "Execute PREFLIGHT first using submit_preflight_assessment"
                 }, indent=2)
             )]
-        
+
         # Build calibration report
-        vector_names = ["engagement", "know", "do", "context", "clarity", "coherence", 
+        vector_names = ["engagement", "know", "do", "context", "clarity", "coherence",
                        "signal", "density", "state", "change", "completion", "impact", "uncertainty"]
-        
+
         preflight_vectors = {name: preflight[i] for i, name in enumerate(vector_names)}
         preflight_reasoning = preflight[13]
-        
+
         result = {
             "ok": True,
             "session_id": session_id,
@@ -2182,18 +2183,18 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
                 "overall_confidence": sum([v for k, v in preflight_vectors.items() if k != 'uncertainty']) / 12
             }
         }
-        
+
         # Add POSTFLIGHT if available
         if postflight:
             postflight_vectors = {name: postflight[i] for i, name in enumerate(vector_names)}
             postflight_reasoning = postflight[13]
-            
+
             # Calculate deltas
             deltas = {
                 name: round(postflight_vectors[name] - preflight_vectors[name], 3)
                 for name in vector_names
             }
-            
+
             result["postflight"] = {
                 "vectors": postflight_vectors,
                 "reasoning": postflight_reasoning,
@@ -2205,12 +2206,12 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
                 "do_growth": deltas["do"],
                 "uncertainty_reduction": -deltas["uncertainty"]  # Negative means reduced uncertainty (good!)
             }
-            
+
             # Calibration assessment
             know_improved = deltas["know"] > 0
             do_improved = deltas["do"] > 0
             uncertainty_reduced = deltas["uncertainty"] < 0
-            
+
             if know_improved and do_improved and uncertainty_reduced:
                 result["calibration"] = "well_calibrated"
             elif deltas["know"] < -0.1 or deltas["do"] < -0.1:
@@ -2222,7 +2223,7 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
         else:
             result["postflight"] = None
             result["message"] = "POSTFLIGHT not yet completed - run submit_postflight_assessment to enable calibration"
-        
+
         # Add grounded verification data if available
         try:
             gdb = SessionDatabase(db_path=str(get_session_db_path()))
@@ -2261,25 +2262,25 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
             }, indent=2)
         )]
 
-async def handle_edit_with_confidence(arguments: dict) -> List[types.TextContent]:
+async def handle_edit_with_confidence(arguments: dict) -> list[types.TextContent]:
     """
     Handle edit_with_confidence - metacognitive edit verification.
-    
+
     Assesses epistemic confidence BEFORE attempting edit, then executes
     using optimal strategy: atomic_edit, bash_fallback, or re_read_first.
-    
+
     Returns success status, strategy used, confidence score, and reasoning.
     """
     try:
         from empirica.components.edit_verification import EditConfidenceAssessor, EditStrategyExecutor
-        
+
         # Extract arguments
         file_path = arguments.get("file_path")
         old_str = arguments.get("old_str")
         new_str = arguments.get("new_str")
         context_source = arguments.get("context_source", "memory")
         session_id = arguments.get("session_id")
-        
+
         # Validate required arguments
         if not all([file_path, old_str is not None, new_str is not None]):
             return [types.TextContent(
@@ -2290,21 +2291,21 @@ async def handle_edit_with_confidence(arguments: dict) -> List[types.TextContent
                     "received": {k: v for k, v in arguments.items() if k in ["file_path", "old_str", "new_str"]}
                 }, indent=2)
             )]
-        
+
         # Initialize components
         assessor = EditConfidenceAssessor()
         executor = EditStrategyExecutor()
-        
+
         # Step 1: Assess epistemic confidence
         assessment = assessor.assess(
             file_path=file_path,
             old_str=old_str,
             context_source=context_source
         )
-        
+
         # Step 2: Get recommended strategy
         strategy, reasoning = assessor.recommend_strategy(assessment)
-        
+
         # Step 3: Execute with chosen strategy
         result = await executor.execute_strategy(
             strategy=strategy,
@@ -2313,15 +2314,15 @@ async def handle_edit_with_confidence(arguments: dict) -> List[types.TextContent
             new_str=new_str,
             assessment=assessment
         )
-        
+
         # Step 4: Log for calibration tracking (if session_id provided)
         if session_id and result.get("success"):
             try:
-                from empirica.data.session_database import SessionDatabase
                 from empirica.config.path_resolver import get_session_db_path
+                from empirica.data.session_database import SessionDatabase
                 # Fix: Use path_resolver to get correct database location (repo-local, not home)
                 db = SessionDatabase(db_path=str(get_session_db_path()))
-                
+
                 # Log to reflexes for calibration tracking
                 db.log_reflex(
                     session_id=session_id,
@@ -2334,7 +2335,7 @@ async def handle_edit_with_confidence(arguments: dict) -> List[types.TextContent
             except Exception as log_error:
                 # Don't fail edit if logging fails
                 logger.warning(f"Failed to log edit verification to reflexes: {log_error}")
-        
+
         # Return structured result
         return [types.TextContent(
             type="text",
@@ -2354,7 +2355,7 @@ async def handle_edit_with_confidence(arguments: dict) -> List[types.TextContent
                 "file_path": file_path
             }, indent=2)
         )]
-        
+
     except Exception as e:
         import traceback
         return [types.TextContent(
@@ -2371,7 +2372,7 @@ async def handle_edit_with_confidence(arguments: dict) -> List[types.TextContent
 # CLI Router
 # ============================================================================
 
-async def route_to_cli(tool_name: str, arguments: dict) -> List[types.TextContent]:
+async def route_to_cli(tool_name: str, arguments: dict) -> list[types.TextContent]:
     """Route MCP tool call to Empirica CLI command"""
 
     # Build CLI command
@@ -2462,8 +2463,8 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
         ai_id = arguments.get('ai_id', ai_id_from_output or 'unknown')
 
         try:
-            from empirica.data.session_database import SessionDatabase
             from empirica.config.path_resolver import get_session_db_path
+            from empirica.data.session_database import SessionDatabase
 
             # If we didn't get the session_id from output, create it in the database
             if not session_id:
@@ -2541,7 +2542,7 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
         "note": "Text output - CLI command doesn't support --output json yet"
     }, indent=2)
 
-def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
+def build_cli_command(tool_name: str, arguments: dict) -> list[str]:
     """Build CLI command from MCP tool name and arguments"""
 
     # Map MCP tool name → CLI command
@@ -2689,7 +2690,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "memory_value": ["memory-value"],
         "memory_report": ["memory-report"],
     }
-    
+
     # Commands that take positional arguments (not flags)
     # Format: command_name: arg_name (string) or [arg1, arg2] (list for multiple positionals)
     positional_args = {
@@ -2781,7 +2782,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "steps_completed": "steps-completed",
         "ai_id": "ai-id",
     }
-    
+
     # Arguments to skip per command (not supported by CLI)
     skip_args = {
         "check-submit": ["confidence_to_proceed"],  # check-submit doesn't use confidence_to_proceed
@@ -2791,9 +2792,9 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     }
 
     cmd = [EMPIRICA_CLI] + tool_map.get(tool_name, [tool_name])
-    
+
     cli_command = tool_map.get(tool_name, [tool_name])[0]
-    
+
     # Handle positional argument(s) first if command requires them
     if cli_command in positional_args:
         positional_config = positional_args[cli_command]
@@ -2818,11 +2819,11 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
                         continue
                 elif key == positional_config:
                     continue
-                
+
             # Skip arguments not supported by CLI
             if key == "session_type":
                 continue
-            
+
             # Skip command-specific unsupported arguments
             if cli_command in skip_args and key in skip_args[cli_command]:
                 continue
@@ -2842,22 +2843,35 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     # Commands that support --output json
     # Note: preflight/postflight with --prompt-only already return JSON
     json_supported = {
-        "preflight-submit", "check", "check-submit", "postflight-submit",
-        "goals-create", "goals-add-subtask", "goals-complete-subtask",
-        "goals-progress", "goals-list", "sessions-resume",
+        # CASCADE workflow
+        "preflight-submit", "check-submit", "postflight-submit",
+        # Session management
+        "session-create", "sessions-show", "sessions-resume",
+        "session-snapshot", "session-rollup",
+        # Goals
+        "goals-create", "goals-complete", "goals-list", "goals-progress",
+        "goals-add-subtask", "goals-complete-subtask", "goals-search",
+        "goals-add-dependency", "goals-ready", "goals-claim",
+        "goals-get-subtasks", "goals-discover", "goals-resume",
+        # Noetic artifacts
+        "finding-log", "unknown-log", "deadend-log", "assumption-log",
+        "decision-log", "mistake-log", "act-log", "source-add", "refdoc-add",
+        "unknown-list", "unknown-resolve", "mistake-query",
+        # Epistemics
+        "epistemics-list", "epistemics-show", "calibration-report",
+        # Project
+        "project-bootstrap", "project-search", "memory-compact",
+        # Handoffs & Checkpoints
         "handoff-create", "handoff-query",
-        "project-bootstrap", "finding-log", "unknown-log", "deadend-log",
-        "assumption-log", "decision-log", "mistake-log", "refdoc-add",
-        "memory-compact",
-        "epistemics-list", "epistemics-show",
+        "checkpoint-create", "checkpoint-load",
         # Human copilot tools
-        "issue-list", "issue-handoff",
-        "workspace-overview", "efficiency-report", "skill-suggest",
-        "workspace-map", "unknown-resolve",
-        # Tier 1 additions
-        "goals-complete", "project-search", "source-add", "unknown-list",
-        "goals-search", "goals-add-dependency", "issue-show", "issue-resolve",
-        "issue-stats", "session-rollup", "act-log", "calibration-report",
+        "issue-list", "issue-show", "issue-resolve", "issue-stats",
+        "issue-handoff", "workspace-overview", "workspace-map",
+        "efficiency-report",
+        # Identity (Phase 2)
+        "identity-create", "identity-list", "identity-export", "identity-verify",
+        # System
+        "monitor", "system-status",
         # Tier 2: Lesson subsystem
         "lesson-create", "lesson-load", "lesson-list", "lesson-search",
         "lesson-recommend", "lesson-path", "lesson-replay-start",
@@ -2891,7 +2905,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
 # Stateless Tool Handlers
 # ============================================================================
 
-def handle_introduction() -> List[types.TextContent]:
+def handle_introduction() -> list[types.TextContent]:
     """Return Empirica introduction (stateless)"""
 
     intro = """# Empirica Framework - Epistemic Self-Assessment for AI Agents
@@ -2912,7 +2926,7 @@ def handle_introduction() -> List[types.TextContent]:
 ## 13 Epistemic Vectors (0-1 scale)
 
 **Foundation (4):** engagement, know, do, context
-**Comprehension (4):** clarity, coherence, signal, density  
+**Comprehension (4):** clarity, coherence, signal, density
 **Execution (4):** state, change, completion, impact
 **Meta (1):** uncertainty (high >0.6 → must investigate)
 
@@ -2937,7 +2951,7 @@ def handle_introduction() -> List[types.TextContent]:
 
 It's better to:
 - Know what you don't know ✅
-- Investigate systematically ✅  
+- Investigate systematically ✅
 - Admit uncertainty ✅
 - Measure learning ✅
 
@@ -2952,7 +2966,7 @@ Than to:
 
     return [types.TextContent(type="text", text=intro)]
 
-def handle_guidance(arguments: dict) -> List[types.TextContent]:
+def handle_guidance(arguments: dict) -> list[types.TextContent]:
     """Return workflow guidance (stateless)"""
 
     phase = arguments.get("phase", "overview")
@@ -3027,7 +3041,7 @@ Mechanistic self-assessment: record current knowledge state after task completio
 **Critical:** Measure what's in context now. System handles calibration calculation.""",
 
         "cascade": "**CASCADE Workflow:** BOOTSTRAP → PREFLIGHT → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT",
-        
+
         "overview": """**CASCADE Workflow Overview**
 
 BOOTSTRAP → PREFLIGHT → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT
@@ -3054,7 +3068,7 @@ BOOTSTRAP → PREFLIGHT → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT
 
     return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
 
-def handle_cli_help() -> List[types.TextContent]:
+def handle_cli_help() -> list[types.TextContent]:
     """Return CLI help (stateless)"""
 
     help_text = """# Empirica CLI Commands

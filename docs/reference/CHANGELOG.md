@@ -17,7 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - CHECK enrichment: `codebase_context` field with active entity count and constraints
   - Grounded calibration: `codebase_model` evidence source (entities_discovered, facts_created, convention_constraints)
 
+- **MCP Server: 102 tools** — Added 45 new tools (12 Tier 1 + 33 Tier 2) covering lessons, investigations, assessments, agents, personas, and memory subsystems. Enriched 6 logging tools with entity linking params. Fixed stdin inheritance bug that caused postflight-submit to hang in stdio mode.
+
 ### Fixed
+- **MCP stdin hang** — `subprocess.run()` without `stdin=subprocess.DEVNULL` caused CLI commands to block on MCP's protocol stdin stream. Fixes postflight/preflight hanging indefinitely.
+- **MCP `mistake_log` routing** — Enriched tool was missing from `tool_map`, generating invalid CLI command
+- **MCP `arg_map` duplicate** — Shadowed `goal_id` key removed
+- **MCP `json_supported` gaps** — Added 23 missing CLI commands, removed 2 orphan entries
 - **handoff-create variable scope bug** — `next_session_context` was unbound in legacy CLI mode
 - **handoff-create JSON parse error** — `json.loads()` on empty strings; now uses `parse_json_safely()`
 - **project-bootstrap NoneType comparison** — Delta values from missing vectors now guarded against None
