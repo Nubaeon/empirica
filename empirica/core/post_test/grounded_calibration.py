@@ -578,6 +578,7 @@ def _run_single_phase_verification(
     evidence_profile: Optional[str] = None,
     work_context: Optional[str] = None,
     preflight_timestamp: Optional[float] = None,
+    per_vector_weights: Optional[Dict[str, float]] = None,
 ) -> Optional[Dict]:
     """Run grounded verification for a single phase (noetic, praxic, or combined)."""
     collector = PostTestCollector(
@@ -599,6 +600,7 @@ def _run_single_phase_verification(
     mapper = EvidenceMapper()
     assessment = mapper.map_evidence(
         bundle, vectors, phase=phase, domain=domain or "default",
+        per_vector_weights=per_vector_weights,
     )
 
     manager = GroundedCalibrationManager(db)
@@ -688,6 +690,7 @@ def run_grounded_verification(
     evidence_profile: Optional[str] = None,
     phase_tool_counts: Optional[Dict[str, int]] = None,
     work_context: Optional[str] = None,
+    per_vector_weights: Optional[Dict[str, Dict[str, float]]] = None,
 ) -> Optional[Dict]:
     """
     Full grounded verification pipeline.
@@ -722,6 +725,10 @@ def run_grounded_verification(
                 if v is not None:
                     noetic_self[k] = v
 
+            # Extract phase-specific Tier 2 weights
+            noetic_weights = (per_vector_weights or {}).get('noetic')
+            praxic_weights = (per_vector_weights or {}).get('praxic')
+
             if noetic_self:
                 noetic_result = _run_single_phase_verification(
                     session_id, noetic_self, db,
@@ -732,6 +739,7 @@ def run_grounded_verification(
                     evidence_profile=evidence_profile,
                     work_context=work_context,
                     preflight_timestamp=preflight_ts,
+                    per_vector_weights=noetic_weights,
                 )
                 if noetic_result:
                     results["noetic"] = noetic_result
@@ -747,11 +755,14 @@ def run_grounded_verification(
                     evidence_profile=evidence_profile,
                     work_context=work_context,
                     preflight_timestamp=preflight_ts,
+                    per_vector_weights=praxic_weights,
                 )
                 if praxic_result:
                     results["praxic"] = praxic_result
         else:
             # No phase boundary — combined mode (backward-compatible)
+            # Use praxic weights as best default for combined mode
+            combined_weights = (per_vector_weights or {}).get('praxic')
             combined_result = _run_single_phase_verification(
                 session_id, postflight_vectors, db,
                 phase="combined",
@@ -759,6 +770,7 @@ def run_grounded_verification(
                 domain=domain, goal_id=goal_id,
                 evidence_profile=evidence_profile,
                 work_context=work_context,
+                per_vector_weights=combined_weights,
             )
             if combined_result:
                 results["combined"] = combined_result

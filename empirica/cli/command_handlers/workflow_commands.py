@@ -2215,6 +2215,7 @@ def handle_postflight_submit_command(args):
 
                 # Resolve domain from project_type for Tier 1 calibration weights
                 domain = None
+                project_type = ""
                 if session:
                     project_type = session.get("project_type", "")
                     _TYPE_TO_DOMAIN = {
@@ -2224,6 +2225,23 @@ def handle_postflight_submit_command(args):
                         "documentation": "consulting",
                     }
                     domain = _TYPE_TO_DOMAIN.get(project_type, "default")
+
+                # Load Tier 2 per-vector calibration weights from project.yaml
+                tier2_weights = None
+                try:
+                    from pathlib import Path as _Path
+                    proj_yaml = _Path.cwd() / ".empirica" / "project.yaml"
+                    if proj_yaml.exists():
+                        import yaml
+                        with open(proj_yaml) as _f:
+                            proj_cfg = yaml.safe_load(_f) or {}
+                        tier2_weights = proj_cfg.get("calibration_weights")
+                    # Generate defaults if not seeded (pre-existing projects)
+                    if not tier2_weights:
+                        from .project_init import _seed_calibration_weights
+                        tier2_weights = _seed_calibration_weights(project_type or "software")
+                except Exception as e:
+                    logger.debug(f"Tier 2 weight loading failed (non-fatal): {e}")
 
                 grounded_verification = run_grounded_verification(
                     session_id=session_id,
@@ -2235,6 +2253,7 @@ def handle_postflight_submit_command(args):
                     evidence_profile=evidence_profile,
                     phase_tool_counts=postflight_phase_tool_counts,
                     work_context=postflight_work_context,
+                    per_vector_weights=tier2_weights,
                 )
 
                 if grounded_verification:
