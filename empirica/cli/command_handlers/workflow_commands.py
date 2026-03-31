@@ -1451,9 +1451,12 @@ def handle_check_submit_command(args):
                                 db2 = _get_db_for_session(session_id)
                                 db2.conn.execute("""
                                     UPDATE reflexes SET reflex_data = json_set(reflex_data, '$.decision', ?)
-                                    WHERE session_id = ? AND phase = 'CHECK'
-                                    AND transaction_id = ?
-                                    ORDER BY timestamp DESC LIMIT 1
+                                    WHERE id = (
+                                        SELECT id FROM reflexes
+                                        WHERE session_id = ? AND phase = 'CHECK'
+                                        AND transaction_id = ?
+                                        ORDER BY timestamp DESC LIMIT 1
+                                    )
                                 """, (new_decision, session_id, check_transaction_id2))
                                 db2.conn.commit()
                                 db2.close()
