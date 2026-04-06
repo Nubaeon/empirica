@@ -133,7 +133,6 @@ def _configure_settings(settings, settings_file, plugin_dir, python_cmd, force, 
     if output_format != 'json':
         print("\n⚙️  Configuring settings.json...")
 
-    settings_file = claude_dir / "settings.json"
     settings = _ensure_json_file(settings_file, {})
 
     # Ensure enabledPlugins exists
