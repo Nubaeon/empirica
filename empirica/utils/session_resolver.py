@@ -881,7 +881,8 @@ def get_active_project_path(claude_session_id: str | None = None) -> 'str | None
     CANONICAL function for project resolution. All components should use this
     instead of implementing their own priority chain.
 
-    Priority chain (NO CWD FALLBACK):
+    Priority chain:
+    -1. CWD when EMPIRICA_CWD_RELIABLE=true (caller verified CWD is the project root)
     0. instance_projects/{instance_id}.json - AUTHORITATIVE (updated by hooks AND project-switch CLI)
     1. active_work_{claude_session_id}.json - fallback (only hooks can update, not CLI)
     2. active_work.json - generic fallback (written by project-switch and session-init)
@@ -890,6 +891,10 @@ def get_active_project_path(claude_session_id: str | None = None) -> 'str | None
     AND the project-switch CLI command. active_work is ONLY updated by hooks (which
     have claude_session_id from stdin). project-switch CLI can't update active_work
     because it doesn't know claude_session_id. Therefore instance_projects is more current.
+
+    The CWD override (priority -1) exists because session-init.py chdir's to the
+    resolved project root BEFORE spawning session-create. Without it, session-create
+    reads stale instance_projects data from the previous session.
 
     Args:
         claude_session_id: Optional Claude Code conversation UUID (from hook input)
@@ -906,6 +911,13 @@ def get_active_project_path(claude_session_id: str | None = None) -> 'str | None
         project_path = get_active_project_path()
     """
     from pathlib import Path
+
+    # Priority -1: CWD when caller has verified it (session-init sets this after chdir)
+    if os.environ.get('EMPIRICA_CWD_RELIABLE', '').lower() == 'true':
+        cwd = str(Path.cwd())
+        if (Path(cwd) / '.empirica' / 'project.yaml').exists():
+            logger.debug(f"get_active_project_path: from CWD (EMPIRICA_CWD_RELIABLE): {cwd}")
+            return cwd
 
     active_work_path = None
     instance_path = None

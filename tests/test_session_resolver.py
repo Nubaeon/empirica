@@ -129,5 +129,79 @@ def test_resolve_invalid_alias():
         resolve_session_id("latest:nonexistent-ai-xyz-12345")
 
 
+class TestGetActiveProjectPath:
+    """Tests for get_active_project_path CWD-reliable override (issue #90)."""
+
+    def test_cwd_reliable_with_project_yaml(self, tmp_path, monkeypatch):
+        """When EMPIRICA_CWD_RELIABLE=true and CWD has .empirica/project.yaml, return CWD."""
+        from empirica.utils.session_resolver import get_active_project_path
+
+        empirica_dir = tmp_path / '.empirica'
+        empirica_dir.mkdir()
+        (empirica_dir / 'project.yaml').write_text('project_id: test-123\n')
+
+        monkeypatch.setenv('EMPIRICA_CWD_RELIABLE', 'true')
+        monkeypatch.chdir(tmp_path)
+
+        result = get_active_project_path()
+        assert result == str(tmp_path)
+
+    def test_cwd_reliable_without_project_yaml(self, tmp_path, monkeypatch):
+        """When EMPIRICA_CWD_RELIABLE=true but no project.yaml, fall through to other sources."""
+        from empirica.utils.session_resolver import get_active_project_path
+
+        monkeypatch.setenv('EMPIRICA_CWD_RELIABLE', 'true')
+        monkeypatch.chdir(tmp_path)
+
+        # Should NOT return tmp_path (no .empirica/project.yaml guard)
+        result = get_active_project_path()
+        assert result != str(tmp_path) or result is None
+
+    def test_no_cwd_reliable_flag(self, tmp_path, monkeypatch):
+        """Without EMPIRICA_CWD_RELIABLE, CWD is never used even with project.yaml."""
+        from empirica.utils.session_resolver import get_active_project_path
+
+        empirica_dir = tmp_path / '.empirica'
+        empirica_dir.mkdir()
+        (empirica_dir / 'project.yaml').write_text('project_id: test-123\n')
+
+        monkeypatch.delenv('EMPIRICA_CWD_RELIABLE', raising=False)
+        monkeypatch.chdir(tmp_path)
+
+        result = get_active_project_path()
+        # Should NOT return CWD — falls through to instance_projects/active_work
+        assert result != str(tmp_path) or result is None
+
+    def test_cwd_reliable_beats_stale_instance_projects(self, tmp_path, monkeypatch):
+        """CWD override takes priority over stale instance_projects data."""
+        from empirica.utils.session_resolver import get_active_project_path
+
+        # Set up CWD project
+        cwd_project = tmp_path / 'current_project'
+        cwd_project.mkdir()
+        empirica_dir = cwd_project / '.empirica'
+        empirica_dir.mkdir()
+        (empirica_dir / 'project.yaml').write_text('project_id: current\n')
+
+        # Set up stale instance_projects pointing to a different project
+        stale_project = tmp_path / 'stale_project'
+        stale_project.mkdir()
+        instance_dir = tmp_path / 'home' / '.empirica' / 'instance_projects'
+        instance_dir.mkdir(parents=True)
+        import json
+        (instance_dir / 'win-default.json').write_text(json.dumps({
+            'project_path': str(stale_project)
+        }))
+
+        monkeypatch.setenv('EMPIRICA_CWD_RELIABLE', 'true')
+        monkeypatch.setenv('EMPIRICA_INSTANCE_ID', 'win-default')
+        monkeypatch.setenv('HOME', str(tmp_path / 'home'))
+        monkeypatch.setenv('USERPROFILE', str(tmp_path / 'home'))
+        monkeypatch.chdir(cwd_project)
+
+        result = get_active_project_path()
+        assert result == str(cwd_project)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
