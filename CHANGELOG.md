@@ -5,6 +5,29 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Session-create race on concurrent Claude Code sessions** (#90, #91 by
+  @kars85) — `session-init.py` called `create_session_and_bootstrap()` before
+  `_write_instance_projects()`, so the subprocess's `session-create` read stale
+  `instance_projects/{instance_id}.json` from a previous session. On Windows
+  without tmux, all terminals share `instance_id=win-default`, making the race
+  reliably reproducible with two concurrent VS Code windows in different
+  projects. `active_session_{instance_id}` ended up stamped with the wrong
+  `project_path`, failing epistemic gates with "project not found". Fix extends
+  the existing `EMPIRICA_CWD_RELIABLE` env-var contract (already consumed by
+  `path_resolver.py` for cross-project bleed detection) to
+  `session_resolver.get_active_project_path()` — CWD wins at priority -1 when
+  the flag is set and `.empirica/project.yaml` exists in CWD.
+
+### Tests
+- Tightened `TestGetActiveProjectPath` fallthrough tests to isolate `HOME` and
+  pin an unused `EMPIRICA_INSTANCE_ID`, so `get_instance_id()` can't read the
+  developer's real `~/.empirica/instance_projects/` during test runs. Weak
+  `result != str(tmp_path) or result is None` assertions replaced with strict
+  `result is None`.
+
 ## [1.8.10] - 2026-04-23
 
 ### Added

@@ -132,48 +132,68 @@ def test_resolve_invalid_alias():
 class TestGetActiveProjectPath:
     """Tests for get_active_project_path CWD-reliable override (issue #90)."""
 
+    @staticmethod
+    def _isolate_home(tmp_path, monkeypatch):
+        """Redirect HOME/USERPROFILE to tmp_path so get_instance_id() can't
+        read the developer's real ~/.empirica/instance_projects/. Pins an
+        isolated instance_id that points at a non-existent file so the
+        fallthrough paths return None rather than opportunistic matches."""
+        fake_home = tmp_path / 'home'
+        fake_home.mkdir(exist_ok=True)
+        monkeypatch.setenv('HOME', str(fake_home))
+        monkeypatch.setenv('USERPROFILE', str(fake_home))
+        monkeypatch.setenv('EMPIRICA_INSTANCE_ID', 'test-isolated')
+
     def test_cwd_reliable_with_project_yaml(self, tmp_path, monkeypatch):
         """When EMPIRICA_CWD_RELIABLE=true and CWD has .empirica/project.yaml, return CWD."""
         from empirica.utils.session_resolver import get_active_project_path
 
-        empirica_dir = tmp_path / '.empirica'
-        empirica_dir.mkdir()
+        self._isolate_home(tmp_path, monkeypatch)
+        project_dir = tmp_path / 'project'
+        empirica_dir = project_dir / '.empirica'
+        empirica_dir.mkdir(parents=True)
         (empirica_dir / 'project.yaml').write_text('project_id: test-123\n')
 
         monkeypatch.setenv('EMPIRICA_CWD_RELIABLE', 'true')
-        monkeypatch.chdir(tmp_path)
+        monkeypatch.chdir(project_dir)
 
         result = get_active_project_path()
-        assert result == str(tmp_path)
+        assert result == str(project_dir)
 
     def test_cwd_reliable_without_project_yaml(self, tmp_path, monkeypatch):
         """When EMPIRICA_CWD_RELIABLE=true but no project.yaml, fall through to other sources."""
         from empirica.utils.session_resolver import get_active_project_path
 
+        self._isolate_home(tmp_path, monkeypatch)
         monkeypatch.setenv('EMPIRICA_CWD_RELIABLE', 'true')
         monkeypatch.chdir(tmp_path)
 
-        # Should NOT return tmp_path (no .empirica/project.yaml guard)
+        # No project.yaml guard, no instance_projects file, no active_work — must be None
         result = get_active_project_path()
-        assert result != str(tmp_path) or result is None
+        assert result is None
 
     def test_no_cwd_reliable_flag(self, tmp_path, monkeypatch):
         """Without EMPIRICA_CWD_RELIABLE, CWD is never used even with project.yaml."""
         from empirica.utils.session_resolver import get_active_project_path
 
-        empirica_dir = tmp_path / '.empirica'
-        empirica_dir.mkdir()
+        self._isolate_home(tmp_path, monkeypatch)
+        project_dir = tmp_path / 'project'
+        empirica_dir = project_dir / '.empirica'
+        empirica_dir.mkdir(parents=True)
         (empirica_dir / 'project.yaml').write_text('project_id: test-123\n')
 
         monkeypatch.delenv('EMPIRICA_CWD_RELIABLE', raising=False)
-        monkeypatch.chdir(tmp_path)
+        monkeypatch.chdir(project_dir)
 
+        # No flag means CWD check never fires; with isolated HOME the fallthrough
+        # finds nothing either, so the result must be None.
         result = get_active_project_path()
-        # Should NOT return CWD — falls through to instance_projects/active_work
-        assert result != str(tmp_path) or result is None
+        assert result is None
 
     def test_cwd_reliable_beats_stale_instance_projects(self, tmp_path, monkeypatch):
         """CWD override takes priority over stale instance_projects data."""
+        import json
+
         from empirica.utils.session_resolver import get_active_project_path
 
         # Set up CWD project
@@ -188,7 +208,6 @@ class TestGetActiveProjectPath:
         stale_project.mkdir()
         instance_dir = tmp_path / 'home' / '.empirica' / 'instance_projects'
         instance_dir.mkdir(parents=True)
-        import json
         (instance_dir / 'win-default.json').write_text(json.dumps({
             'project_path': str(stale_project)
         }))
