@@ -163,6 +163,67 @@ DANGEROUS_SHELL_OPERATORS = (
     # NOTE: Redirection (>, >>, <) checked separately to allow safe patterns
 )
 
+
+def _split_outside_quotes(command: str, separator: str) -> list[str]:
+    """Split `command` on `separator`, ignoring occurrences inside single
+    or double quotes (handles backslash-escaping).
+
+    Solves the false-positive where a quoted regex like grep "A\\|B" gets
+    its inner pipe treated as a shell pipe, breaking is_safe_pipe_chain
+    classification.
+
+    For multi-char separators (`&&`, `||`), matches the whole sequence.
+    """
+    if not separator:
+        return [command]
+    sep_len = len(separator)
+    segments: list[str] = []
+    current: list[str] = []
+    in_single = False
+    in_double = False
+    escape = False
+    i = 0
+    while i < len(command):
+        c = command[i]
+        if escape:
+            current.append(c)
+            escape = False
+            i += 1
+            continue
+        if c == '\\':
+            current.append(c)
+            escape = True
+            i += 1
+            continue
+        if c == "'" and not in_double:
+            in_single = not in_single
+            current.append(c)
+            i += 1
+            continue
+        if c == '"' and not in_single:
+            in_double = not in_double
+            current.append(c)
+            i += 1
+            continue
+        if (
+            not in_single
+            and not in_double
+            and command[i:i + sep_len] == separator
+        ):
+            segments.append(''.join(current))
+            current = []
+            i += sep_len
+            continue
+        current.append(c)
+        i += 1
+    segments.append(''.join(current))
+    return segments
+
+
+def _contains_outside_quotes(command: str, needle: str) -> bool:
+    """True iff `needle` appears in `command` outside any quoted region."""
+    return len(_split_outside_quotes(command, needle)) > 1
+
 # Safe redirection patterns (stderr suppression, etc.)
 import re  # noqa: E402 — grouped with related patterns below
 
@@ -961,11 +1022,15 @@ def _is_segment_safe(segment: str) -> bool:
 
 
 def _has_dangerous_operators(command: str) -> bool:
-    """Check for dangerous shell operators (excluding &&, ||, ; handled in chain check)."""
+    """Check for dangerous shell operators (excluding &&, ||, ; handled in chain check).
+
+    Quoted occurrences are ignored — a backtick or `$(` inside a string
+    literal is just text, not command substitution.
+    """
     for operator in DANGEROUS_SHELL_OPERATORS:
         if operator in ('&&', '||', ';'):
             continue
-        if operator in command:
+        if _contains_outside_quotes(command, operator):
             return True
     return False
 
@@ -1013,12 +1078,15 @@ def is_safe_bash_command(tool_input: dict) -> bool:
         if any(cmd.startswith(prefix) for prefix in INFRA_SAFE_PREFIXES):
             return True
 
-    # Chain commands (&&, ||, ;): safe only if ALL segments are safe
+    # Chain commands (&&, ||, ;): safe ONLY if ALL segments are safe.
+    # Quoted occurrences (e.g., echo 'a;b') don't count as chain operators.
+    # When a chain op is detected we commit to the chain decision — falling
+    # through to single-prefix matching would let `ls; rm -rf /` slip past
+    # because the whole command starts with `ls`.
     for chain_op in ('&&', '||', ';'):
-        if chain_op in command:
-            segments = [s.strip() for s in command.split(chain_op)]
-            if all(_is_segment_safe(s) for s in segments):
-                return True
+        if _contains_outside_quotes(command, chain_op):
+            segments = [s.strip() for s in _split_outside_quotes(command, chain_op)]
+            return all(_is_segment_safe(s) for s in segments)
 
     if _has_dangerous_operators(command):
         return False
@@ -1026,7 +1094,7 @@ def is_safe_bash_command(tool_input: dict) -> bool:
     if _has_dangerous_redirects(command):
         return False
 
-    if '|' in command:
+    if _contains_outside_quotes(command, '|'):
         return is_safe_pipe_chain(command)
 
     cmd = command.lstrip()
@@ -1292,14 +1360,15 @@ def _is_remote_cmd_safe(remote_cmd: str) -> bool:
         return True
 
     # Handle chains within the remote command: cmd1 && cmd2 && cmd3
+    # (split outside quotes — `;` etc. inside a quoted string is not a chain op)
     for chain_op in ('&&', '||', ';'):
-        if chain_op in remote_cmd:
-            segments = [s.strip() for s in remote_cmd.split(chain_op)]
+        if _contains_outside_quotes(remote_cmd, chain_op):
+            segments = [s.strip() for s in _split_outside_quotes(remote_cmd, chain_op)]
             return all(_is_single_remote_cmd_safe(seg) for seg in segments if seg)
 
     # Handle pipes within the remote command
-    if '|' in remote_cmd:
-        segments = [s.strip() for s in remote_cmd.split('|')]
+    if _contains_outside_quotes(remote_cmd, '|'):
+        segments = [s.strip() for s in _split_outside_quotes(remote_cmd, '|')]
         if not segments:
             return False
         # First segment must be safe, rest must be safe pipe targets
@@ -1465,9 +1534,13 @@ def is_safe_pipe_chain(command: str) -> bool:
 
     Allows: grep pattern file | head -20 | wc -l
     Allows: echo '...' | empirica preflight-submit -  (empirica CLI)
+    Allows: grep "A\\|B\\|C" file | head      (quoted | inside regex)
     Blocks: grep pattern | xargs rm, cat file | bash
+
+    Splits on `|` *outside* quoted regions — a `|` inside a quoted regex
+    alternation is data, not a shell pipe.
     """
-    segments = [s.strip() for s in command.split('|')]
+    segments = [s.strip() for s in _split_outside_quotes(command, '|')]
 
     if not segments:
         return False
