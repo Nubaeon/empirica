@@ -142,6 +142,7 @@ from .monitor_commands import (
     handle_trajectory_project_command,
     handle_workflow_patterns_command,
 )
+from .noetic_batch_commands import handle_noetic_batch_command
 from .onboard import handle_onboard_command
 from .performance_commands import handle_benchmark_command, handle_performance_command
 from .profile_commands import (
@@ -354,6 +355,7 @@ __all__ = [
     'handle_release_command',
     'handle_resolve_artifacts_command',
     'handle_save_command',
+    'handle_noetic_batch_command',
     'handle_security_audit_command',
     'handle_sentinel_check_command',
     'handle_sentinel_load_profile_command',

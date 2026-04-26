@@ -283,6 +283,22 @@ TOOL_REGISTRY: dict[str, dict] = {
         "desc": "Create a reusable lesson (use --input or --json for full data)",
         "stdin_json": True,  # lesson-create accepts JSON via stdin with -
     },
+
+    # --- Noetic batch (multi-op investigation in one tool call) ---
+    "noetic_batch": {
+        "cli": "noetic-batch",
+        "params": {},
+        "required": ["intent"],
+        "desc": (
+            "Batched investigation: reads + greps + globs + investigate in one call. "
+            "Replaces N round-trip noetic operations with a single tool call. "
+            "Sentinel sees one noetic intent, no per-call gating overhead. "
+            "JSON schema: {intent, reads:[{path,lines?}], greps:[{pattern,glob?,context?,case_sensitive?,max_matches?}], "
+            "globs:[pattern OR {pattern,root?}], investigate:[{query,scope?,limit?}]}. "
+            "See docs/architecture/NOETIC_BATCH_SPEC.md."
+        ),
+        "stdin_json": True,
+    },
     "lesson_list": {
         "cli": "lesson-list",
         "params": {"domain": "--domain"},

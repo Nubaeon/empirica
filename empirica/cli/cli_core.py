@@ -477,6 +477,7 @@ def main(args=None):
             'calibration-dispute': handle_calibration_dispute_command,
             'compliance-report': handle_compliance_report_command,
             'security-audit': handle_security_audit_command,
+            'noetic-batch': handle_noetic_batch_command,
 
             # Checkpoint commands
             'checkpoint-create': handle_checkpoint_create_command,

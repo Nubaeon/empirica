@@ -209,3 +209,42 @@ Maps to: EU AI Act Art. 15(4), ISO 42001 8.4, GDPR Art. 32.
         help='Force re-download of CISA KEV feed (otherwise cached for 24h)')
     security_audit_parser.add_argument('--output', choices=['text', 'json'], default='text',
         help='Output format (default: text)')
+
+    # Noetic batch — single-call investigation primitive
+    nb_parser = subparsers.add_parser('noetic-batch',
+        help='Batched investigation: reads + greps + globs + investigate in one call',
+        description="""
+Run a batched investigation. Sentinel sees one noetic intent instead of N
+individual reads/greps/globs — eliminates per-call gating overhead.
+
+JSON input via stdin (AI-first):
+    empirica noetic-batch - <<EOF
+    {
+      "intent": "understand auth surface",
+      "reads": [{"path": "src/auth.py"}],
+      "greps": [{"pattern": "decorator", "glob": "src/**/*.py", "context": 2}],
+      "globs": ["src/**/*auth*"],
+      "investigate": [{"query": "auth flow", "scope": "project"}]
+    }
+    EOF
+
+Or use --schema to print the full input schema. --dry-run to validate
+without executing. See docs/architecture/NOETIC_BATCH_SPEC.md.
+        """)
+    nb_parser.add_argument('config', nargs='?',
+        help='JSON config file path, or "-" for stdin (AI-first mode)')
+    nb_parser.add_argument('--intent', help='One-line investigation goal (alternative to JSON config)')
+    nb_parser.add_argument('--read', action='append', help='File path to read (repeatable)')
+    nb_parser.add_argument('--grep', action='append',
+        help='Grep spec: "pattern" or "pattern:glob" or "pattern:glob:context=N" (repeatable)')
+    nb_parser.add_argument('--glob', action='append', help='Glob pattern (repeatable)')
+    nb_parser.add_argument('--investigate', action='append',
+        help='project-search query (repeatable)')
+    nb_parser.add_argument('--project-root', default='.',
+        help='Project root for relative paths (default: cwd)')
+    nb_parser.add_argument('--schema', action='store_true',
+        help='Print the input JSON schema and exit')
+    nb_parser.add_argument('--dry-run', action='store_true',
+        help='Validate input without executing operations')
+    nb_parser.add_argument('--output', choices=['json', 'text'], default='json',
+        help='Output format (default: json)')
