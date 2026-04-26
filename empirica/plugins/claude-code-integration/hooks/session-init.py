@@ -359,7 +359,12 @@ def _write_instance_projects(project_path: str, claude_session_id: str, empirica
             'claude_session_id': claude_session_id,
             'empirica_session_id': empirica_session_id,
             'instance_id': instance_id,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            # PIDs captured here so `empirica instance kill <id>` can reach
+            # non-tmux instances by signal. ppid is the Claude Code parent;
+            # pid is this hook process (short-lived, usually dead by query time).
+            'pid': os.getpid(),
+            'ppid': os.getppid(),
         }
         with open(instance_file, 'w') as f:
             json.dump(instance_data, f, indent=2)

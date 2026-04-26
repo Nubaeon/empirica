@@ -258,8 +258,26 @@ def _render_overview(
         f'{summary.get("active_tx", 0)} active tx'
     )
     lines.append(_c(sentence, _DIM, color))
+    lines.append('')
+    lines.extend(_render_overview_hints(color))
 
     return '\n'.join(lines)
+
+
+def _render_overview_hints(color: bool) -> list[str]:
+    """Footer with the action verbs — turns the read-only overview into a
+    discoverable control plane without yet building a TUI."""
+    hints = [
+        ('pause sentinel ', 'empirica sentinel pause --instance <ID>'),
+        ('pause loop     ', 'empirica loop pause <NAME> --instance <ID>'),
+        ('kill instance  ', 'empirica instance kill <ID>  (--force for SIGKILL)'),
+        ('forget instance', 'empirica instance forget <ID>  (cleanup state files)'),
+        ('label          ', 'empirica instance label <ID> "<name>"'),
+    ]
+    out = [_c('Controls:', _DIM, color)]
+    for label, cmd in hints:
+        out.append(_c(f'  {label}  →  {cmd}', _DIM, color))
+    return out
 
 
 def _render_single(inst: dict[str, Any], timestamp: str, color: bool) -> str:
@@ -318,6 +336,19 @@ def _render_single(inst: dict[str, Any], timestamp: str, color: bool) -> str:
                 status_glyph = _c(' ok', _GREEN, color)
             paused_label = _c('PAUSED', _RED, color) if paused else ''
             lines.append(f'  {glyph} {name:<22}{schedule_str}{last_str}{status_glyph}  {paused_label}'.rstrip())
+
+    lines.append('')
+    instance_id = inst.get('instance_id', '?')
+    hints = [
+        ('toggle sentinel', f'empirica sentinel pause --instance {instance_id}'),
+        ('toggle loop    ', f'empirica loop pause <NAME> --instance {instance_id}'),
+        ('kill           ', f'empirica instance kill {instance_id}  (--force for SIGKILL)'),
+        ('forget         ', f'empirica instance forget {instance_id}'),
+        ('label          ', f'empirica instance label {instance_id} "<name>"'),
+    ]
+    lines.append(_c('Controls:', _DIM, color))
+    for label, cmd in hints:
+        lines.append(_c(f'  {label}  →  {cmd}', _DIM, color))
 
     return '\n'.join(lines)
 

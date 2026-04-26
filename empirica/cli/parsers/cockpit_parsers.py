@@ -31,10 +31,52 @@ def _add_instance(parser):
 
 
 def add_cockpit_parsers(subparsers):
-    """Register sentinel/loop/status subcommand groups + top-level status."""
+    """Register sentinel/loop/instance subcommand groups + top-level status."""
     _add_sentinel_group(subparsers)
     _add_loop_group(subparsers)
+    _add_instance_group(subparsers)
     _add_status_command(subparsers)
+
+
+def _add_instance_group(subparsers):
+    instance_root = subparsers.add_parser(
+        'instance',
+        help='Instance lifecycle: kill, forget, label (the destructive control plane)',
+    )
+    instance_subs = instance_root.add_subparsers(
+        dest='instance_action', metavar='action'
+    )
+
+    kill = instance_subs.add_parser(
+        'kill',
+        help='Terminate an instance (tmux kill-pane for tmux_*, SIGTERM for others)',
+    )
+    kill.add_argument('instance_id', help='Target instance_id')
+    kill.add_argument('--force', action='store_true',
+                      help='Use SIGKILL instead of SIGTERM (non-tmux only)')
+    kill.add_argument('--yes', '-y', action='store_true',
+                      help='Bypass safety check when targeting current instance')
+    _add_output(kill)
+
+    forget = instance_subs.add_parser(
+        'forget',
+        help='Remove all per-instance state files from ~/.empirica/ (cleanup for dead instances)',
+    )
+    forget.add_argument('instance_id', help='Target instance_id')
+    forget.add_argument('--yes', '-y', action='store_true',
+                        help='Bypass safety check when targeting current instance')
+    _add_output(forget)
+
+    label = instance_subs.add_parser(
+        'label',
+        help='Set/show/clear the human-readable label for an instance',
+    )
+    label.add_argument('instance_id', help='Target instance_id')
+    label.add_argument('label', nargs='?',
+                       help='New label (omit to show current value)')
+    label.add_argument('--clear', action='store_true',
+                       help='Clear the manual label (revert to project basename)')
+    _add_output(label)
 
 
 def _add_sentinel_group(subparsers):

@@ -15,6 +15,14 @@ This module is the core for the `empirica sentinel`, `empirica loop`, and
 State-file discovery, no process scanning, no tmux dependency.
 """
 
+from empirica.core.cockpit.instance_actions import (
+    ForgetResult,
+    KillResult,
+    forget_instance,
+    get_label,
+    kill_instance,
+    set_label,
+)
 from empirica.core.cockpit.instance_state import (
     aggregate_all,
     aggregate_instance_state,
@@ -34,16 +42,22 @@ from empirica.core.cockpit.sentinel_pause import (
 )
 
 __all__ = [
+    'ForgetResult',
+    'KillResult',
     'LoopRegistry',
     'SentinelPauseStatus',
     'aggregate_all',
     'aggregate_instance_state',
     'discover_instances',
+    'forget_instance',
+    'get_label',
     'is_loop_paused',
+    'kill_instance',
     'pause_sentinel',
     'render_json',
     'render_pretty',
     'resume_sentinel',
     'sentinel_status',
+    'set_label',
     'set_loop_paused',
 ]

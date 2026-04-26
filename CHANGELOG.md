@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Cockpit v1.1 — control plane completion)
+- **`empirica instance <kill|forget|label>`** — destructive control-plane
+  verbs. `kill` does `tmux kill-pane` for tmux instances, falls back to
+  SIGTERM (or SIGKILL with `--force`) using the PID captured by
+  session-init for non-tmux. `forget` removes every per-instance state file
+  under `~/.empirica/`, idempotent — for cleaning up dead/abandoned
+  instances. `label` sets/shows/clears the human-readable label override.
+  Both `kill` and `forget` refuse to target the current instance unless
+  `--yes` is passed.
+- **Auto-naming from project basename** — instance labels now default to
+  `Path(project_path).name` (matches what the statusline shows) instead of
+  the raw `instance_id`. Manual `instance label` override still wins.
+- **Footer hints in `--pretty` status output** — both `--all` and
+  single-instance views now show a "Controls:" section listing the action
+  verbs (`empirica sentinel pause --instance <ID>`, `empirica instance
+  kill <ID>`, etc.). Turns the read-only overview into a discoverable
+  control plane without a TUI.
+- **PID/PPID capture in `instance_projects/{id}.json`** — session-init now
+  records both so non-tmux instance kill can find a process to signal.
+  PPID (the long-lived Claude Code parent) is preferred over PID (the
+  short-lived hook).
+- **17 new unit tests** — `tests/test_cockpit_instance_actions.py` covers
+  kill resolution (tmux pane vs PPID signal vs unreachable), forget
+  cleanup including loop-pause sidecar globbing, and label CRUD.
+
 ### Added
 - **Empirica Cockpit** — three new CLI surfaces for multi-instance state
   visibility and per-instance controls (per `PROPOSAL_SENTINEL_LOOP_TUI.md`):

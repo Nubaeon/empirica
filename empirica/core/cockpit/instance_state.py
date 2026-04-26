@@ -87,8 +87,14 @@ def _instance_id_from_filename(filename: str) -> str | None:
     return name
 
 
-def _instance_label(instance_id: str) -> str:
-    """Read the optional human-readable label, falling back to instance_id."""
+def _instance_label(instance_id: str, project_path: str | None = None) -> str:
+    """Resolve the human-readable label.
+
+    Priority:
+    1. ~/.empirica/instance_label_{id}    (manual override)
+    2. basename of project_path           (matches what statusline shows)
+    3. instance_id                        (last-resort fallback)
+    """
     label_file = EMPIRICA_DIR / f'instance_label_{instance_id}'
     if label_file.exists():
         try:
@@ -97,6 +103,10 @@ def _instance_label(instance_id: str) -> str:
                 return text.splitlines()[0].strip()
         except OSError:
             pass
+    if project_path:
+        name = Path(project_path).name
+        if name:
+            return name
     return instance_id
 
 
@@ -280,7 +290,7 @@ def aggregate_instance_state(instance_id: str) -> dict[str, Any]:
     partial state — missing pieces become null fields, not exceptions.
     """
     project_path = _instance_project_path(instance_id)
-    label = _instance_label(instance_id)
+    label = _instance_label(instance_id, project_path)
 
     if project_path:
         tx_state = _read_transaction_state(project_path, instance_id)

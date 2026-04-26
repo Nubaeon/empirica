@@ -182,9 +182,17 @@ def test_state_symbol_no_claude_when_abandoned(env):
     assert state['state'] == 'no-claude'
 
 
-def test_instance_label_falls_back_to_id(env):
+def test_instance_label_falls_back_to_project_basename(env):
+    """No manual label + bound to project → label is project basename
+    (matches what statusline shows)."""
     home, project = env
     _bind_instance(home, project, 'tmux_5')
+    state = ist.aggregate_instance_state('tmux_5')
+    assert state['label'] == project.name  # 'project' (basename of tmp_path/project)
+
+
+def test_instance_label_falls_back_to_id_when_no_project(env):
+    """No project binding + no manual label → fall through to instance_id."""
     state = ist.aggregate_instance_state('tmux_5')
     assert state['label'] == 'tmux_5'
 
@@ -195,3 +203,12 @@ def test_instance_label_read_from_file(env):
     (home / 'instance_label_tmux_5').write_text('outreach\nignored\n')
     state = ist.aggregate_instance_state('tmux_5')
     assert state['label'] == 'outreach'
+
+
+def test_instance_label_manual_overrides_project_basename(env):
+    """Manual label > project basename — explicit user override wins."""
+    home, project = env
+    _bind_instance(home, project, 'tmux_5')
+    (home / 'instance_label_tmux_5').write_text('custom-name\n')
+    state = ist.aggregate_instance_state('tmux_5')
+    assert state['label'] == 'custom-name'

@@ -443,8 +443,9 @@ EMPIRICA_TIER1_PREFIXES = (
     'empirica version',
     'empirica profile-status',  # Profile status - read-only
     'empirica noetic-batch',  # Batched noetic primitive — IS a noetic operation
-    'empirica sentinel ',  # New sentinel subcommand: pause/resume/status (gating allowed)
+    'empirica sentinel ',  # Sentinel subcommand: pause/resume/status
     'empirica loop ',  # Loop registry CRUD — instance-local control plane
+    'empirica instance ',  # Instance lifecycle: kill/forget/label
     'empirica status',  # Multi-instance status overview
 )
 

@@ -22,12 +22,16 @@ from empirica.core.cockpit import (
     LoopRegistry,
     aggregate_all,
     aggregate_instance_state,
+    forget_instance,
+    get_label,
     is_loop_paused,
+    kill_instance,
     pause_sentinel,
     render_json,
     render_pretty,
     resume_sentinel,
     sentinel_status,
+    set_label,
     set_loop_paused,
 )
 from empirica.core.cockpit.loop_registry import VALID_KIND, VALID_STATUS
@@ -358,6 +362,110 @@ def handle_status_command(args) -> int:
     return 0
 
 
+# ─── empirica instance ─────────────────────────────────────────────────────
+
+def handle_instance_kill_command(args) -> int:
+    instance_id = args.instance_id
+    force = bool(getattr(args, 'force', False))
+    yes = bool(getattr(args, 'yes', False))
+
+    # Defensive: don't let a stray command kill the very Claude that runs it.
+    current = get_instance_id()
+    if instance_id == current and not yes:
+        payload = {
+            'ok': False,
+            'error': 'refusing to kill the current instance — pass --yes to override',
+            'instance_id': instance_id,
+        }
+        return _emit(args, payload, payload['error'])
+
+    result = kill_instance(instance_id, force=force)
+    payload = {
+        'ok': result.success,
+        'instance_id': result.instance_id,
+        'method': result.method,
+        'pid': result.pid,
+        'detail': result.detail,
+    }
+    summary = (
+        f'Killed {instance_id} ({result.method}): {result.detail}'
+        if result.success
+        else f'Kill failed for {instance_id}: {result.detail}'
+    )
+    return _emit(args, payload, summary)
+
+
+def handle_instance_forget_command(args) -> int:
+    instance_id = args.instance_id
+    yes = bool(getattr(args, 'yes', False))
+
+    current = get_instance_id()
+    if instance_id == current and not yes:
+        payload = {
+            'ok': False,
+            'error': 'refusing to forget the current instance — pass --yes to override',
+            'instance_id': instance_id,
+        }
+        return _emit(args, payload, payload['error'])
+
+    result = forget_instance(instance_id)
+    payload = {
+        'ok': True,
+        'instance_id': result.instance_id,
+        'removed': result.removed,
+        'skipped': result.skipped,
+        'count': len(result.removed),
+    }
+    if not result.removed and not result.skipped:
+        summary = f'Nothing to forget for {instance_id} — no state files found'
+    else:
+        summary = f'Forgot {instance_id}: removed {len(result.removed)} files'
+        if result.skipped:
+            summary += f' ({len(result.skipped)} skipped)'
+    return _emit(args, payload, summary)
+
+
+def handle_instance_label_command(args) -> int:
+    instance_id = args.instance_id
+    label = getattr(args, 'label', None)
+    clear = bool(getattr(args, 'clear', False))
+
+    if clear:
+        set_label(instance_id, None)
+        payload = {'ok': True, 'instance_id': instance_id, 'label': None, 'cleared': True}
+        return _emit(args, payload, f'Label cleared for {instance_id}')
+
+    if label is None:
+        existing = get_label(instance_id)
+        payload = {'ok': True, 'instance_id': instance_id, 'label': existing}
+        return _emit(args, payload, f'{instance_id}: {existing or "(no manual label)"}')
+
+    new_label = set_label(instance_id, label)
+    payload = {'ok': True, 'instance_id': instance_id, 'label': new_label, 'cleared': False}
+    return _emit(args, payload, f'Label set for {instance_id}: {new_label}')
+
+
+_INSTANCE_DISPATCH = {
+    'kill': handle_instance_kill_command,
+    'forget': handle_instance_forget_command,
+    'label': handle_instance_label_command,
+}
+
+
+def handle_instance_group_command(args) -> int:
+    action = getattr(args, 'instance_action', None)
+    if not action:
+        sys.stdout.write(
+            'usage: empirica instance <kill|forget|label> <instance_id> [args...]\n'
+        )
+        return 2
+    handler = _INSTANCE_DISPATCH.get(action)
+    if handler is None:
+        sys.stdout.write(f'error: unknown instance action: {action}\n')
+        return 2
+    return handler(args) or 0
+
+
 # ─── group dispatchers (mapped from cli_core 'sentinel'/'loop' commands) ────
 
 _SENTINEL_DISPATCH = {
@@ -411,6 +519,10 @@ def handle_loop_group_command(args) -> int:
 __all__ = [
     'VALID_KIND',
     'VALID_STATUS',
+    'handle_instance_forget_command',
+    'handle_instance_group_command',
+    'handle_instance_kill_command',
+    'handle_instance_label_command',
     'handle_loop_group_command',
     'handle_loop_heartbeat_command',
     'handle_loop_list_command',

@@ -14,6 +14,7 @@ Three CLI surfaces on top of one core module:
 |---|---|---|
 | `empirica sentinel <pause\|resume\|status>` | `empirica.core.cockpit.sentinel_pause` | Per-instance noetic firewall toggle |
 | `empirica loop <register\|heartbeat\|pause\|...>` | `empirica.core.cockpit.loop_registry` | Per-instance loop registry CRUD |
+| `empirica instance <kill\|forget\|label>` | `empirica.core.cockpit.instance_actions` | Destructive lifecycle: terminate / scrub state / rename |
 | `empirica status [--all\|--instance ID] [--pretty\|--json]` | `empirica.core.cockpit.instance_state` | Cockpit overview, all renderers consume the same JSON |
 
 The bespoke TUI is **not** part of v1. The intended dashboard is:
@@ -162,17 +163,36 @@ them to the cockpit on impulse — write a separate proposal first.
 - `empirica/core/cockpit/sentinel_pause.py` — wraps the existing pause file
 - `empirica/core/cockpit/loop_registry.py` — registry CRUD with atomic writes
 - `empirica/core/cockpit/instance_state.py` — discovery + aggregation
-- `empirica/core/cockpit/render.py` — ANSI-aware pretty + JSON renderers
+- `empirica/core/cockpit/instance_actions.py` — kill / forget / label
+- `empirica/core/cockpit/render.py` — ANSI-aware pretty + JSON renderers, footer hints
 - `empirica/cli/command_handlers/cockpit_commands.py` — handler wrappers
 - `empirica/cli/parsers/cockpit_parsers.py` — argparse subcommand groups
 - `empirica/plugins/claude-code-integration/skills/loop-cron/SKILL.md` — `/loop` integration template
+- `empirica/plugins/claude-code-integration/hooks/session-init.py` — PID/PPID capture for kill
 
 Sentinel whitelist additions in `sentinel-gate.py:EMPIRICA_TIER1_PREFIXES`:
 
 - `empirica noetic-batch` (was the open bug — IS a noetic operation)
 - `empirica sentinel ` (subcommand group)
 - `empirica loop ` (subcommand group)
+- `empirica instance ` (subcommand group)
 - `empirica status` (cockpit overview)
+
+## Kill semantics
+
+| Instance shape | Method | Notes |
+|---|---|---|
+| `tmux_N` | `tmux kill-pane -t %N` | Closes the pane, kills the CC process inside |
+| anything else, PPID alive | `kill -TERM <ppid>` (or `-KILL` with `--force`) | PPID is the long-lived CC parent, captured by session-init |
+| anything else, no PID | error: "no tracked PID" | User must close the terminal manually, then `instance forget` |
+
+`kill` and `forget` refuse to target the current instance unless `--yes`
+is passed — the cockpit shouldn't be the way you accidentally kill the
+shell you're typing into.
+
+`forget` only touches `~/.empirica/*_{id}*` files. Project-tree state
+(`<project>/.empirica/active_transaction_*.json`) is the project's record,
+not the instance's, and is left alone.
 
 The previous `status` alias on `system-status` was removed — the new
 top-level `status` command takes that name; `system-status` keeps its
