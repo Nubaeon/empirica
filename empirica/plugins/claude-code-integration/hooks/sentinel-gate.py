@@ -448,6 +448,7 @@ EMPIRICA_TIER1_PREFIXES = (
     'empirica instance ',  # Instance lifecycle: kill/forget/label
     'empirica status',  # Multi-instance status overview
     'empirica tui',  # Interactive cockpit (Textual app — destructive ops are modal-confirmed)
+    'empirica notify ',  # Notification primitive — loops/hooks call this in any phase
 )
 
 # Tier 2: State-changing commands - allowed (these ARE the epistemic workflow)

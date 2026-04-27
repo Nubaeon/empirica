@@ -209,6 +209,7 @@ from .parsers import (
     add_memory_parsers,
     add_message_parsers,
     add_monitor_parsers,
+    add_notify_parsers,
     add_onboarding_parsers,
     add_performance_parsers,
     add_persona_parsers,
@@ -293,6 +294,7 @@ def create_argument_parser():
     add_message_parsers(subparsers)
     add_bus_parsers(subparsers)
     add_cockpit_parsers(subparsers)
+    add_notify_parsers(subparsers)
 
     # Built-in help command (handled in main(), not via handler)
     subparsers.add_parser('help', help='Show all commands by category')
@@ -495,6 +497,9 @@ def main(args=None):
             'instance': handle_instance_group_command,
             'status': handle_cockpit_status_command,
             'tui': handle_tui_command,
+
+            # Notify dispatcher (proposal: PROPOSAL_NOTIFY_DISPATCHER.md)
+            'notify': handle_notify_group_command,
 
             # Checkpoint commands
             'checkpoint-create': handle_checkpoint_create_command,

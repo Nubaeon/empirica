@@ -221,3 +221,12 @@ not the instance's, and is left alone.
 The previous `status` alias on `system-status` was removed — the new
 top-level `status` command takes that name; `system-status` keeps its
 distinct kernel-style diagnostic role.
+
+## Notification primitive
+
+Cockpit views surface state. To push state to external channels (ntfy,
+log files, stdout) loops and hooks call `empirica notify emit ...` —
+the dispatcher resolves which backend to use from
+`~/.empirica/notify.yaml` (or built-in defaults). Loops never need to
+know about ntfy specifically; backends can be swapped without touching
+call sites. See [`NOTIFY.md`](NOTIFY.md) for the full spec.
