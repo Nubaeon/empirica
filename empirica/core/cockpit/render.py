@@ -195,6 +195,111 @@ def _tx_cell(transaction: dict[str, Any] | None, color: bool) -> str:
     return f'{_short_id(transaction.get("id"))} {age_part}'
 
 
+def _humanize_seconds_short(seconds: int | None) -> str:
+    """Compact age string for banner ('14m', '2h'). None → '?'."""
+    if seconds is None:
+        return '?'
+    if seconds < 60:
+        return f'{seconds}s'
+    if seconds < 3600:
+        return f'{seconds // 60}m'
+    return f'{seconds // 3600}h'
+
+
+def _failure_banner(notify_dispatcher: dict[str, Any], color: bool) -> str | None:
+    """Return the cockpit-header failure banner string, or None.
+
+    Renders only when banner_failure is present (failure within last hour).
+    """
+    if not notify_dispatcher:
+        return None
+    bf = notify_dispatcher.get('banner_failure')
+    if not bf:
+        return None
+    backend = bf.get('resolved_backend') or '?'
+    age = _humanize_seconds_short(bf.get('age_seconds'))
+    detail = (bf.get('detail') or '').split('\n', 1)[0][:80]
+    msg = f'⚠ notify backend {backend} failed {age} ago — {detail}'
+    return _c(msg, _YELLOW, color)
+
+
+def _notify_dispatcher_block(
+    notify_dispatcher: dict[str, Any], color: bool,
+) -> list[str]:
+    """Render the notify dispatcher detail block (single-instance view)."""
+    if not notify_dispatcher or not notify_dispatcher.get('default_backend'):
+        return []
+
+    out: list[str] = []
+    default_backend = notify_dispatcher.get('default_backend') or '?'
+    emit_24h = notify_dispatcher.get('emit_count_24h', 0)
+    fb_24h = notify_dispatcher.get('fell_back_count_24h', 0)
+    header_summary = (
+        f'default: {default_backend}   24h: {emit_24h} emits, {fb_24h} fallback'
+    )
+    out.append(f'Notify dispatcher  {_c(header_summary, _DIM, color)}')
+
+    backend_cells: list[str] = []
+    for b in notify_dispatcher.get('backends', []):
+        glyph = _c('●', _GREEN, color) if b.get('configured') else _c('○', _RED, color)
+        name = b.get('name', '?')
+        bits = [name]
+        if b.get('is_default'):
+            bits.append('(default)')
+        if b.get('name') == 'ntfy':
+            auth = b.get('auth_method') or 'none'
+            srv = b.get('server')
+            if srv:
+                # Trim scheme for compact display.
+                trimmed = srv.replace('https://', '').replace('http://', '')
+                bits.append(f'{auth} @{trimmed}')
+            else:
+                bits.append(auth)
+        backend_cells.append(f'{glyph} {" ".join(bits)}')
+    if backend_cells:
+        out.append(f'  Backends   {"   ".join(backend_cells)}')
+
+    recent = notify_dispatcher.get('recent') or []
+    if recent:
+        out.append('  Recent')
+        for r in recent:
+            ts_raw = r.get('ts', '')
+            # Trim ISO ts to HH:MM:SS for compact rows.
+            ts_short = ts_raw.split('T')[-1].split('+')[0].split('.')[0][:8]
+            source = (r.get('source') or 'manual')[:22].ljust(22)
+            arrow = _c('↻', _YELLOW, color) if r.get('fell_back') else _c('→', _DIM, color)
+            backend = r.get('resolved_backend') or '?'
+            topic = r.get('topic') or ''
+            dest = f'{backend}/{topic}' if topic else backend
+            dest = dest.ljust(28)[:28]
+            ok_glyph = (
+                _c('ok', _GREEN, color) if r.get('ok') else _c('FAIL', _RED, color)
+            )
+            rc = r.get('response_code')
+            rc_str = f' ({rc})' if rc else ''
+            out.append(
+                f'    {_c(ts_short, _DIM, color)}  {source}{arrow} {dest}{ok_glyph}{rc_str}'
+            )
+    else:
+        out.append(f'  Recent     {_c("(no activity)", _DIM, color)}')
+    return out
+
+
+def _loop_notify_annotation(loop: dict[str, Any], color: bool) -> str:
+    """Compact ↗ glyph showing a loop's last notify destination, or empty."""
+    ln = loop.get('last_notify')
+    if not ln:
+        return ''
+    backend = ln.get('resolved_backend') or '?'
+    topic = ln.get('topic') or ''
+    dest = f'{backend}/{topic}' if topic else backend
+    if ln.get('fell_back'):
+        return _c(f'  ↻{dest}', _YELLOW, color)
+    if not ln.get('ok'):
+        return _c(f'  ↗{dest} FAIL', _RED, color)
+    return _c(f'  ↗{dest}', _CYAN, color)
+
+
 def render_pretty(payload: dict[str, Any], all_instances: bool = True) -> str:
     """Render the cockpit overview as ANSI-colored text.
 
@@ -209,7 +314,7 @@ def render_pretty(payload: dict[str, Any], all_instances: bool = True) -> str:
     timestamp = now_local.strftime('%H:%M:%S %z')
 
     if not all_instances and len(instances) == 1:
-        return _render_single(instances[0], timestamp, color)
+        return _render_single(instances[0], summary, timestamp, color)
 
     return _render_overview(instances, summary, timestamp, color)
 
@@ -224,6 +329,10 @@ def _render_overview(
     title = _c('empirica cockpit', _BOLD, color)
     pad = max(20, 60 - len('empirica cockpit'))
     lines.append(f'{title}{" " * pad}{timestamp}')
+
+    banner = _failure_banner(summary.get('notify_dispatcher') or {}, color)
+    if banner:
+        lines.append(banner)
     lines.append('')
 
     if not instances:
@@ -280,13 +389,22 @@ def _render_overview_hints(color: bool) -> list[str]:
     return out
 
 
-def _render_single(inst: dict[str, Any], timestamp: str, color: bool) -> str:
+def _render_single(
+    inst: dict[str, Any],
+    summary: dict[str, Any],
+    timestamp: str,
+    color: bool,
+) -> str:
     lines: list[str] = []
     label = inst.get('label') or inst.get('instance_id', '?')
     instance_id = inst.get('instance_id', '?')
     title = _c(f'empirica ◆ {label} ({instance_id})', _BOLD, color)
     pad = max(2, 60 - len(f'empirica ◆ {label} ({instance_id})'))
     lines.append(f'{title}{" " * pad}{timestamp}')
+
+    banner = _failure_banner(summary.get('notify_dispatcher') or {}, color)
+    if banner:
+        lines.append(banner)
     lines.append('')
 
     state_phase_tx_parts = [_state_cell(inst['state'], color), _phase_cell(inst['phase'], color)]
@@ -335,7 +453,18 @@ def _render_single(inst: dict[str, Any], timestamp: str, color: bool) -> str:
             elif status == 'ok':
                 status_glyph = _c(' ok', _GREEN, color)
             paused_label = _c('PAUSED', _RED, color) if paused else ''
-            lines.append(f'  {glyph} {name:<22}{schedule_str}{last_str}{status_glyph}  {paused_label}'.rstrip())
+            notify_glyph = _loop_notify_annotation(loop, color)
+            lines.append(
+                f'  {glyph} {name:<22}{schedule_str}{last_str}{status_glyph}  {paused_label}{notify_glyph}'.rstrip()
+            )
+
+    # Notify dispatcher block (per outreach Claude spec).
+    notify_block = _notify_dispatcher_block(
+        summary.get('notify_dispatcher') or {}, color,
+    )
+    if notify_block:
+        lines.append('')
+        lines.extend(notify_block)
 
     lines.append('')
     instance_id = inst.get('instance_id', '?')

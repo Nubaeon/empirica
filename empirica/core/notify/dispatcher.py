@@ -17,6 +17,7 @@ import fnmatch
 import sys
 from dataclasses import dataclass
 
+from empirica.core.notify.audit import append_audit
 from empirica.core.notify.backends import get_backend
 from empirica.core.notify.config import NotifyConfig, RoutingRule
 from empirica.core.notify.event import EmitResult, NotifyEvent
@@ -88,17 +89,44 @@ def _resolve(
     return config.default_backend, topic_override
 
 
+def _audit(
+    event: NotifyEvent,
+    resolved_backend: str,
+    resolved_topic: str | None,
+    fell_back: bool,
+    fallback_reason: str | None,
+    emit_result: EmitResult,
+    project_id: str | None,
+) -> None:
+    """Best-effort audit append. Telemetry never blocks emit."""
+    append_audit(
+        source=event.source,
+        severity=event.severity,
+        topic=resolved_topic,
+        resolved_backend=resolved_backend,
+        fell_back=fell_back,
+        fallback_reason=fallback_reason,
+        ok=emit_result.ok,
+        response_code=emit_result.response_code,
+        detail=emit_result.detail,
+        project_id=project_id,
+    )
+
+
 def dispatch(
     event: NotifyEvent,
     config: NotifyConfig,
     backend_override: str | None = None,
     topic_override: str | None = None,
     dry_run: bool = False,
+    project_id: str | None = None,
 ) -> DispatchResult:
     """Send `event` through the configured backend, falling back to stdout
     when the resolved backend isn't configured.
 
-    `dry_run`: don't emit, just return the resolved decision.
+    `dry_run`: don't emit, just return the resolved decision (no audit row).
+    `project_id`: optional caller-supplied identifier recorded in the audit
+    log so cockpit views can render cross-project routing.
     """
     backend_name, topic = _resolve(event, config, backend_override, topic_override)
 
@@ -130,11 +158,13 @@ def dispatch(
         result = fb.emit(event) if fb is not None else EmitResult(
             backend='stdout', ok=False, detail='no backends available',
         )
+        fallback_reason = f'unknown backend "{backend_name}"'
+        _audit(event, backend_name, topic, True, fallback_reason, result, project_id)
         return DispatchResult(
             resolved_backend=backend_name,
             resolved_topic=topic,
             fell_back=True,
-            fallback_reason=f'unknown backend "{backend_name}"',
+            fallback_reason=fallback_reason,
             emit_result=result,
         )
 
@@ -149,20 +179,24 @@ def dispatch(
         result = fb.emit(event) if fb is not None else EmitResult(
             backend='stdout', ok=False, detail='no backends available',
         )
+        fallback_reason = f'{backend_name} not configured'
+        _audit(event, backend_name, topic, True, fallback_reason, result, project_id)
         return DispatchResult(
             resolved_backend=backend_name,
             resolved_topic=topic,
             fell_back=True,
-            fallback_reason=f'{backend_name} not configured',
+            fallback_reason=fallback_reason,
             emit_result=result,
         )
 
+    emit_result = backend.emit(event)
+    _audit(event, backend_name, topic, False, None, emit_result, project_id)
     return DispatchResult(
         resolved_backend=backend_name,
         resolved_topic=topic,
         fell_back=False,
         fallback_reason=None,
-        emit_result=backend.emit(event),
+        emit_result=emit_result,
     )
 
 

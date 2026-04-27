@@ -35,6 +35,10 @@ from empirica.core.cockpit.enrichment import (
 )
 from empirica.core.cockpit.liveness import _live_tmux_panes, is_alive
 from empirica.core.cockpit.loop_registry import LoopRegistry, is_loop_paused
+from empirica.core.cockpit.notify_dispatcher_view import (
+    annotate_loops_with_last_notify,
+    build_notify_dispatcher_block,
+)
 from empirica.core.cockpit.sentinel_pause import sentinel_status
 
 EMPIRICA_DIR = Path.home() / '.empirica'
@@ -335,6 +339,9 @@ def aggregate_instance_state(
         d['paused'] = is_loop_paused(instance_id, entry.name)
         loops_dict[entry.name] = d
 
+    # Per-loop last-notify annotation (audit log → loops by `loop:{name}` source).
+    annotate_loops_with_last_notify(loops_dict, instance_label=label)
+
     transaction: dict[str, Any] | None
     if tx_state['transaction_id']:
         transaction = {
@@ -386,6 +393,8 @@ def aggregate_instance_state(
     }
 
 
+
+
 def aggregate_all(include_dead: bool = False) -> dict[str, Any]:
     """Scan and aggregate every discoverable instance.
 
@@ -434,6 +443,7 @@ def aggregate_all(include_dead: bool = False) -> dict[str, Any]:
             'active_tx': active_tx,
             'open_notifications': notifications_total(),
         },
+        'notify_dispatcher': build_notify_dispatcher_block(),
     }
 
 

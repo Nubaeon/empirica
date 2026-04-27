@@ -36,6 +36,7 @@ from empirica.core.cockpit import (
     set_loop_paused,
 )
 from empirica.core.cockpit.loop_registry import VALID_KIND, VALID_STATUS
+from empirica.core.cockpit.notify_dispatcher_view import build_notify_dispatcher_block
 from empirica.utils.session_resolver import get_instance_id
 
 logger = logging.getLogger(__name__)
@@ -383,6 +384,7 @@ def handle_status_command(args) -> int:
                 'loops_registered': 0,
                 'loops_paused': 0,
                 'active_tx': 0,
+                'notify_dispatcher': build_notify_dispatcher_block(),
             },
         }
         # Refresh summary from the single instance.
@@ -409,6 +411,7 @@ def handle_status_command(args) -> int:
                     'loops_registered': 0,
                     'loops_paused': 0,
                     'active_tx': 0,
+                    'notify_dispatcher': build_notify_dispatcher_block(),
                 },
             }
             loops = payload['instances'][0].get('loops', {})

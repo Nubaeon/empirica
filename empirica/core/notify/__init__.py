@@ -14,6 +14,15 @@ Three sharp edges:
   3. Auth via env var, never YAML (config names the env var, not the secret)
 """
 
+from empirica.core.notify.audit import (
+    AUDIT_PATH,
+    append_audit,
+    emit_count,
+    fell_back_count,
+    last_emit_by_source,
+    last_failure,
+    read_recent,
+)
 from empirica.core.notify.config import (
     NotifyConfig,
     load_config,
@@ -31,13 +40,20 @@ from empirica.core.notify.event import (
 )
 
 __all__ = [
+    'AUDIT_PATH',
     'DispatchResult',
     'EmitResult',
     'NotifyConfig',
     'NotifyEvent',
+    'append_audit',
     'dispatch',
+    'emit_count',
+    'fell_back_count',
+    'last_emit_by_source',
+    'last_failure',
     'load_config',
     'parse_actions',
     'parse_tags',
+    'read_recent',
     'redact_config',
 ]
