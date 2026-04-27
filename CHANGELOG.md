@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (resolve-artifacts goal path)
+- **`resolve-artifacts` for `type: goal` was hitting a non-existent table.**
+  The handler queried `UPDATE project_goals SET ... WHERE goal_id = ?`,
+  but the actual table is `goals` with PK `id`. Goal resolutions raised
+  `no such table: project_goals`, surfacing as `resolved: 0` with the
+  error in the response. Caught while dogfooding the CLI to close a
+  shipped-but-still-open goal during the end-of-session sweep.
+  Fix: query `goals` table, set both `is_completed = 1` and
+  `status = 'completed'`, write `completed_timestamp`, store
+  `completed_reason` inside the `goal_data` JSON column. Same fix
+  applied to the `_ARTIFACT_TABLES` lookup used by `delete-artifacts`.
+
 ### Added (Sources discipline — explicit guidance for source-linked artifacts)
 - **CHECK gate adds a `sources` praxic reminder** alongside the existing
   `commit`, `artifacts`, and `completion` reminders. Text: "When findings/

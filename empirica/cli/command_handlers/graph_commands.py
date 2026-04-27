@@ -602,15 +602,32 @@ def handle_resolve_artifacts_command(args):
                 elif artifact_type == 'goal':
                     reason = item.get('reason', resolution)
                     cursor = db.conn.cursor()
+                    # Goals table: 'goals' with primary key 'id'.
+                    # Set both is_completed (canonical) and status (text), and
+                    # record completed_timestamp + completion reason in goal_data.
+                    import time as _time
                     cursor.execute(
-                        "UPDATE project_goals SET is_completed = 1, status = 'completed', "
-                        "completed_reason = ? WHERE goal_id LIKE ?",
-                        (reason, f"{artifact_id}%"),
+                        "SELECT goal_data FROM goals WHERE id LIKE ?",
+                        (f"{artifact_id}%",),
                     )
-                    if cursor.rowcount > 0:
-                        resolved_count += 1
-                    else:
+                    row = cursor.fetchone()
+                    if not row:
                         resolution_errors.append(f"Goal '{artifact_id}' not found")
+                    else:
+                        try:
+                            gd = json.loads(row[0]) if row[0] else {}
+                        except (json.JSONDecodeError, TypeError):
+                            gd = {}
+                        gd['completed_reason'] = reason
+                        cursor.execute(
+                            "UPDATE goals SET is_completed = 1, status = 'completed', "
+                            "completed_timestamp = ?, goal_data = ? WHERE id LIKE ?",
+                            (_time.time(), json.dumps(gd), f"{artifact_id}%"),
+                        )
+                        if cursor.rowcount > 0:
+                            resolved_count += 1
+                        else:
+                            resolution_errors.append(f"Goal '{artifact_id}' update failed")
 
                 else:
                     resolution_errors.append(f"Unsupported resolution type: '{artifact_type}'")
@@ -643,7 +660,7 @@ _ARTIFACT_TABLES = {
     'mistake': ('mistakes_made', 'id', 'mistake_data'),
     'assumption': ('assumptions', 'id', None),
     'decision': ('decisions', 'id', None),
-    'goal': ('project_goals', 'goal_id', None),
+    'goal': ('goals', 'id', 'goal_data'),
 }
 
 
