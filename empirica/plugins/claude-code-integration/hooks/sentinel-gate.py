@@ -481,6 +481,7 @@ EMPIRICA_TIER2_PREFIXES = (
     'empirica sentinel-orchestrate', 'empirica sentinel-load-profile',  # Sentinel management
     'empirica artifacts-generate',  # Artifact generation
     'empirica goals-mark-stale', 'empirica goals-refresh',  # Goal staleness management
+    'empirica goals-prune',  # Bulk close stale/duplicate/planned goals (dry-run default)
     'empirica profile-sync', 'empirica profile-prune',  # Profile management - state-changing
     'empirica release',  # Release pipeline — mechanical, no PREFLIGHT needed
 )

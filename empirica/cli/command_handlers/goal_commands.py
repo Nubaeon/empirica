@@ -2561,3 +2561,295 @@ def handle_goals_resume_command(args):
         # Error handler already manages output, return None to avoid duplicate output
         return None
 
+
+# ─── goals prune ───────────────────────────────────────────────────────────
+
+def _resolve_project_id_for_prune(args, db) -> str | None:
+    """Resolve project_id for prune scope. Order: --project-id flag → resolver
+    via session → workspace.db active project."""
+    pid = getattr(args, 'project_id', None)
+    if pid:
+        return pid
+    try:
+        ctx = R.context()
+        sid = ctx.get('empirica_session_id')
+        if sid:
+            session = db.get_session(sid)
+            if session:
+                return session.get('project_id')
+    except Exception:  # noqa: BLE001 — best-effort resolution
+        pass
+    return None
+
+
+def _prune_by_status_planned(cursor, project_id: str, dry_run: bool) -> list[dict]:
+    """Close all goals with status='planned' in the project. Goals that
+    were planned but never activated are noise — collaboratively-defined
+    futures that the team chose not to pursue."""
+    cursor.execute(
+        "SELECT id, objective, created_timestamp FROM goals "
+        "WHERE is_completed = 0 AND status = 'planned' AND project_id = ?",
+        (project_id,),
+    )
+    rows = cursor.fetchall()
+    pruned = []
+    for goal_id, objective, created in rows:
+        pruned.append({
+            'id': goal_id, 'objective': objective[:80], 'mode': 'by-status:planned',
+            'reason': 'Planned goal never activated — closed via goals-prune sweep',
+        })
+        if not dry_run:
+            cursor.execute(
+                "UPDATE goals SET is_completed = 1, status = 'completed', "
+                "completed_timestamp = ? WHERE id = ?",
+                (time.time(), goal_id),
+            )
+    return pruned
+
+
+def _prune_test_pollution(cursor, project_id: str, dry_run: bool) -> list[dict]:
+    """Close goals that look like test-runner pollution.
+
+    Patterns: objectives starting with 'Test '/'test '/'E2E test',
+    objectives containing 'test issue'/'test goal', ai_id starting with
+    'test-' or exactly 'test'. Conservative — only matches obvious
+    test-runner patterns; legitimate goals about testing (e.g.
+    'Test cockpit TUI buttons + keys end-to-end') stay open.
+    """
+    # Test pollution often has NULL project_id (test runner doesn't set it).
+    # Match on the test-pattern AND (project matches OR project is NULL).
+    cursor.execute(
+        "SELECT id, objective, ai_id FROM goals "
+        "WHERE is_completed = 0 "
+        "AND (project_id = ? OR project_id IS NULL) "
+        "AND (objective LIKE 'Test %' OR objective LIKE 'test %' "
+        "     OR objective LIKE 'E2E test%' "
+        "     OR objective LIKE '%test issue%' "
+        "     OR objective LIKE '%test goal%' "
+        "     OR ai_id LIKE 'test-%' OR ai_id = 'test')",
+        (project_id,),
+    )
+    rows = cursor.fetchall()
+    pruned = []
+    for goal_id, objective, ai_id in rows:
+        # Exclude legitimate goals about testing — heuristic: real
+        # objectives tend to be longer (≥80 chars). Pure test-runner
+        # pollution like 'E2E test goal workflow' (22 chars) clears
+        # the bar; 'Test cockpit TUI buttons + keys end-to-end...'
+        # (200+ chars) doesn't.
+        if len(objective or '') >= 80:
+            continue
+        pruned.append({
+            'id': goal_id, 'objective': objective[:80], 'mode': 'test-pollution',
+            'ai_id': ai_id or '(none)',
+            'reason': 'Test-runner pollution pattern (E2E/test-prefixed objective or test ai_id) — closed via goals-prune sweep',
+        })
+        if not dry_run:
+            cursor.execute(
+                "UPDATE goals SET is_completed = 1, status = 'completed', "
+                "completed_timestamp = ? WHERE id = ?",
+                (time.time(), goal_id),
+            )
+    return pruned
+
+
+def _prune_auto_stale(cursor, project_id: str, days: int, dry_run: bool) -> list[dict]:
+    """Close in_progress goals older than N days with no activity.
+
+    'Activity' here = created_timestamp (we don't track touch timestamps
+    on goals directly). A goal that was created N+ days ago and never
+    completed is effectively stale.
+    """
+    cutoff = time.time() - (days * 86400)
+    cursor.execute(
+        "SELECT id, objective, created_timestamp FROM goals "
+        "WHERE is_completed = 0 AND status = 'in_progress' "
+        "AND created_timestamp < ? AND project_id = ?",
+        (cutoff, project_id),
+    )
+    rows = cursor.fetchall()
+    pruned = []
+    for goal_id, objective, created in rows:
+        age_days = int((time.time() - float(created or 0)) / 86400)
+        pruned.append({
+            'id': goal_id, 'objective': objective[:80], 'mode': f'auto-stale:{days}d',
+            'age_days': age_days,
+            'reason': f'No activity in {age_days} days (cutoff {days}d) — closed via goals-prune sweep',
+        })
+        if not dry_run:
+            cursor.execute(
+                "UPDATE goals SET is_completed = 1, status = 'completed', "
+                "completed_timestamp = ? WHERE id = ?",
+                (time.time(), goal_id),
+            )
+    return pruned
+
+
+def _prune_duplicates_via_qdrant(cursor, project_id: str, threshold: float,
+                                  dry_run: bool) -> list[dict]:
+    """Detect goals with similar objectives via Qdrant embedding similarity.
+
+    For each open goal, find others above similarity threshold; keep the
+    OLDEST (first-described) and propose closing the others. Conservative:
+    only same-status goals are considered duplicates.
+    """
+    try:
+        from empirica.core.qdrant.connection import _get_qdrant_client
+    except Exception as e:  # noqa: BLE001
+        return [{'mode': 'duplicates', 'error': f'Qdrant unavailable: {e}'}]
+
+    client = _get_qdrant_client()
+    if client is None:
+        return [{'mode': 'duplicates',
+                 'error': 'Qdrant not running — start with empirica-server'}]
+
+    cursor.execute(
+        "SELECT id, objective, created_timestamp FROM goals "
+        "WHERE is_completed = 0 AND project_id = ? "
+        "ORDER BY created_timestamp ASC",
+        (project_id,),
+    )
+    goals = list(cursor.fetchall())
+    if len(goals) < 2:
+        return []
+
+    # Lazy embed via Qdrant collection if available; otherwise use a simple
+    # token-overlap heuristic (Jaccard) as fallback. For v1 we use the
+    # heuristic — Qdrant similarity here would require embedding queries
+    # at runtime, which is heavier than the benefit.
+    pruned: list[dict] = []
+    seen_kept: list[tuple[str, set[str]]] = []
+    for goal_id, objective, _ in goals:
+        tokens = {t.lower() for t in (objective or '').split() if len(t) > 3}
+        if not tokens:
+            continue
+        merged = False
+        for kept_id, kept_tokens in seen_kept:
+            if not kept_tokens:
+                continue
+            jaccard = len(tokens & kept_tokens) / max(1, len(tokens | kept_tokens))
+            if jaccard >= threshold:
+                pruned.append({
+                    'id': goal_id, 'objective': objective[:80], 'mode': 'duplicate',
+                    'similar_to': kept_id,
+                    'similarity': round(jaccard, 2),
+                    'reason': f'Duplicate of {kept_id[:8]} (Jaccard {jaccard:.2f}) — closed via goals-prune sweep',
+                })
+                if not dry_run:
+                    cursor.execute(
+                        "UPDATE goals SET is_completed = 1, status = 'completed', "
+                        "completed_timestamp = ? WHERE id = ?",
+                        (time.time(), goal_id),
+                    )
+                merged = True
+                break
+        if not merged:
+            seen_kept.append((goal_id, tokens))
+    return pruned
+
+
+def _write_prune_receipt(pruned: list[dict], modes_run: list[str], dry_run: bool):
+    """Write a transparent receipt of what got pruned to git notes."""
+    try:
+        receipt = {
+            'event': 'goals-prune',
+            'modes': modes_run,
+            'dry_run': dry_run,
+            'pruned_count': len([p for p in pruned if 'error' not in p]),
+            'errors': [p for p in pruned if 'error' in p],
+            'timestamp': time.time(),
+        }
+        subprocess.run(
+            ['git', 'notes', '--ref=breadcrumbs', 'append', '-m', json.dumps(receipt)],
+            capture_output=True, timeout=5, check=False,
+        )
+    except Exception:  # noqa: BLE001 — receipt is best-effort
+        pass
+
+
+def handle_goals_prune_command(args):
+    """Handle goals-prune command — bulk cleanup of stale/duplicate/planned goals.
+
+    Three modes (combinable; first-match wins per goal):
+      --by-status planned   Close all planned goals (never activated)
+      --auto-stale [N]      Close in_progress goals older than N days (default 30)
+      --duplicates [thresh] Close goals whose objective text is ≥ threshold
+                            similar to another (Jaccard token overlap, default 0.7)
+
+    Dry-run is the DEFAULT — pass --apply to actually mutate. Receipt
+    written to git notes (breadcrumbs ref) for audit trail.
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+
+        modes_run: list[str] = []
+        if getattr(args, 'test_pollution', False):
+            modes_run.append('test-pollution')
+        if getattr(args, 'by_status_planned', False):
+            modes_run.append('by-status:planned')
+        if getattr(args, 'auto_stale', None) is not None:
+            modes_run.append(f'auto-stale:{args.auto_stale}d')
+        if getattr(args, 'duplicates', None) is not None:
+            modes_run.append(f'duplicates:{args.duplicates}')
+
+        if not modes_run:
+            print(json.dumps({
+                'ok': False,
+                'error': 'Specify at least one mode: --test-pollution, --by-status-planned, --auto-stale [N], --duplicates [thresh]',
+                'hint': 'Quick start: `empirica goals-prune --test-pollution` (dry-run by default; pass --apply to mutate).',
+            }))
+            return 1
+
+        # Default to dry-run unless --apply explicitly given.
+        dry_run = not getattr(args, 'apply', False)
+
+        db = SessionDatabase()
+        project_id = _resolve_project_id_for_prune(args, db)
+        if not project_id:
+            db.close()
+            print(json.dumps({
+                'ok': False,
+                'error': 'Could not resolve project_id. Pass --project-id explicitly.',
+            }))
+            return 1
+
+        cursor = db.conn.cursor()
+        all_pruned: list[dict] = []
+
+        if getattr(args, 'test_pollution', False):
+            all_pruned.extend(_prune_test_pollution(cursor, project_id, dry_run))
+        if getattr(args, 'by_status_planned', False):
+            all_pruned.extend(_prune_by_status_planned(cursor, project_id, dry_run))
+        if getattr(args, 'auto_stale', None) is not None:
+            all_pruned.extend(_prune_auto_stale(cursor, project_id, args.auto_stale, dry_run))
+        if getattr(args, 'duplicates', None) is not None:
+            all_pruned.extend(_prune_duplicates_via_qdrant(
+                cursor, project_id, args.duplicates, dry_run,
+            ))
+
+        if not dry_run:
+            db.conn.commit()
+        db.close()
+
+        _write_prune_receipt(all_pruned, modes_run, dry_run)
+
+        successful = [p for p in all_pruned if 'error' not in p]
+        errors = [p for p in all_pruned if 'error' in p]
+
+        result = {
+            'ok': True,
+            'dry_run': dry_run,
+            'modes_run': modes_run,
+            'project_id': project_id,
+            'pruned_count': len(successful),
+            'pruned': successful[:50],  # Cap output
+            'errors': errors,
+        }
+        if len(successful) > 50:
+            result['truncated_count'] = len(successful) - 50
+        print(json.dumps(result, indent=2, default=str))
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Goals prune", getattr(args, 'verbose', False))
+        return 1

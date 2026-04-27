@@ -922,6 +922,40 @@ Example:
     goals_complete_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     goals_complete_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
+    # Goals prune — bulk close stale/duplicate/planned goals
+    goals_prune_parser = subparsers.add_parser('goals-prune',
+        help='Bulk close stale, duplicate, or planned-never-activated goals (dry-run by default)',
+        description="""
+Bulk cleanup verb for the long tail of stale open goals that accumulate
+on long-running projects (the 996→18 noise gap). Three modes, combinable:
+
+  --by-status-planned       Close all planned goals (collaboratively-defined
+                            futures the team chose not to pursue)
+  --auto-stale [N]          Close in_progress goals with no activity in N days
+                            (default 30)
+  --duplicates [thresh]     Close goals whose objective text overlaps another's
+                            by ≥ thresh (Jaccard token overlap, default 0.7).
+                            Keeps the OLDEST; closes the duplicates.
+
+Dry-run is the DEFAULT — pass --apply to actually mutate. Receipt
+written to git notes (breadcrumbs ref) for audit trail.
+        """)
+    goals_prune_parser.add_argument('--test-pollution', action='store_true',
+        help="Close goals matching test-runner patterns (objective starts with 'Test '/'E2E test', ai_id starts with 'test-')")
+    goals_prune_parser.add_argument('--by-status-planned', action='store_true',
+        help='Close all goals with status=planned')
+    goals_prune_parser.add_argument('--auto-stale', type=int, nargs='?', const=30,
+        metavar='DAYS',
+        help='Close in_progress goals older than N days with no activity (default: 30)')
+    goals_prune_parser.add_argument('--duplicates', type=float, nargs='?', const=0.7,
+        metavar='THRESH',
+        help='Close goals whose objective text is ≥ thresh similar to another (default: 0.7)')
+    goals_prune_parser.add_argument('--apply', action='store_true',
+        help='Actually mutate (omit for dry-run)')
+    goals_prune_parser.add_argument('--project-id', help='Override project_id (auto-resolved if omitted)')
+    goals_prune_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format')
+    goals_prune_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+
     # Goals mark-stale command (used by pre-compact hooks)
     goals_mark_stale_parser = subparsers.add_parser('goals-mark-stale',
         help='Mark in_progress goals as stale during memory compaction')

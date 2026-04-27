@@ -573,6 +573,7 @@ def main(args=None):
             'goals-list': handle_goals_list_command,
             'goals-search': handle_goals_search_command,
             'goals-complete': handle_goals_complete_command,
+            'goals-prune': handle_goals_prune_command,
             'goals-claim': handle_goals_claim_command,
             'goals-add-subtask': handle_goals_add_subtask_command,
             'goals-add-dependency': handle_goals_add_dependency_command,

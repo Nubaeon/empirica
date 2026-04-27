@@ -89,6 +89,7 @@ from .goal_commands import (
     handle_goals_list_command,
     handle_goals_mark_stale_command,
     handle_goals_progress_command,
+    handle_goals_prune_command,
     handle_goals_ready_command,
     handle_goals_refresh_command,
     handle_goals_resume_command,
@@ -286,6 +287,7 @@ __all__ = [
     'handle_goals_list_command',
     'handle_goals_mark_stale_command',  # Pre-compact hook - mark goals stale
     'handle_goals_progress_command',
+    'handle_goals_prune_command',
     'handle_goals_ready_command',  # BEADS integration
     'handle_goals_refresh_command',     # Refresh stale goal back to in_progress
     'handle_goals_resume_command',
