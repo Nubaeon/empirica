@@ -619,6 +619,83 @@ Methods typically raise:
 
 ---
 
+## Batch Artifact Verbs (Graph API)
+
+Three CLI verbs for connected-artifact operations. Each accepts JSON on
+stdin (or from a file via positional arg) and supports `--schema` to
+print the input shape without touching the DB.
+
+### `empirica log-artifacts -`
+
+Batch-create connected artifacts in one call. Nodes are typed artifacts
+(`finding`, `unknown`, `dead_end`, `mistake`, `assumption`, `decision`,
+`source`); edges are typed relationships (`evidence`, `raised_by`,
+`grounded_by`, `resolves`, `invalidates`, `sourced_from`, `caused_by`,
+`prevents`, `attached_to`).
+
+```bash
+empirica log-artifacts --schema     # print full input shape + valid types
+
+echo '{
+  "nodes": [
+    {"ref": "f1", "type": "finding",
+     "data": {"finding": "X is Y", "impact": 0.7}},
+    {"ref": "d1", "type": "decision",
+     "data": {"choice": "use Y", "rationale": "because X"}}
+  ],
+  "edges": [
+    {"from": "f1", "to": "d1", "relation": "evidence"}
+  ]
+}' | empirica log-artifacts -
+```
+
+**Forgiving aliases** (since v1.8.13): `id` and `node_id` are accepted as
+aliases for `ref` on nodes; `type` and `kind` are accepted as aliases for
+`relation` on edges. Aliases are normalized before validation; canonical
+names are surfaced in `alias_warnings` on success.
+
+**Validation errors** include a `hint` field pointing at `--schema` and
+naming the common pitfalls (nodes need `ref` not `id`, edges need
+`relation` not `type`).
+
+### `empirica resolve-artifacts -`
+
+Batch-resolve open artifacts (unknowns, assumptions, goals).
+
+```bash
+empirica resolve-artifacts --schema
+
+echo '{
+  "resolutions": [
+    {"type": "unknown", "id": "abc-123",
+     "resolution": "answered: see finding f1"},
+    {"type": "assumption", "id": "def-456",
+     "verified": true, "resolution": "confirmed by experiment"}
+  ]
+}' | empirica resolve-artifacts -
+```
+
+### `empirica delete-artifacts -`
+
+Batch-delete stale artifacts. Supports `--dry-run` to preview.
+
+```bash
+empirica delete-artifacts --schema
+
+echo '{
+  "deletions": [
+    {"type": "finding", "id": "abc-123"}
+  ],
+  "reason": "Stale test data"
+}' | empirica delete-artifacts -
+```
+
+Deletions are logged as a `decision` artifact for audit trail, and
+removed from both SQLite and Qdrant.
+
+---
+
 **Module Location:** `empirica/data/repositories/breadcrumbs.py`
+**Batch verbs:** `empirica/cli/command_handlers/graph_commands.py`
 **API Stability:** Beta (BreadcrumbRepository stable; other classes planned)
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-04-27

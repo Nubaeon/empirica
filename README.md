@@ -2,7 +2,7 @@
 
 > **We Gave AI a Mirror. Now It Measures What It Believes.**
 
-[![Version](https://img.shields.io/badge/version-1.8.12-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.8.12)
+[![Version](https://img.shields.io/badge/version-1.8.13-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.8.13)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -100,13 +100,13 @@ empirica setup-claude-code
 
 ```bash
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.8.12-alpine
+docker pull nubaeon/empirica:1.8.13-alpine
 
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.8.12
+docker pull nubaeon/empirica:1.8.13
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.8.12 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.8.13 /bin/bash
 ```
 </details>
 
@@ -266,15 +266,37 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ---
 
-## What's New in 1.8.12
+## What's New in 1.8.13
 
-- **`empirica security-audit` command** — supply-chain security audit
-- **Empirica-vs-user scope split in security-audit** — `pip-audit` scans
-- **`docs/reference/STATUSLINE_REFERENCE.md`** — first user-facing
-- **TTY staleness false-positive** — `validate_tty_session()` warned
-- **lxml CVE-2026-41066** (XXE in default parser config) — pinned
-- **python-dotenv CVE-2026-28684** (`set_key`/`unset_key` symlink follow)
-- **pip CVE-2026-3219** — pip 26.0.1 handles concatenated tar+ZIP files
+- **Empirica Cockpit** — multi-instance state visibility + per-instance
+  controls. `empirica status [--all]` overview, `empirica tui`
+  interactive Textual app (portrait, phone-friendly), `empirica
+  sentinel|loop|instance` subcommand groups. Live tmux pane
+  introspection distinguishes "Claude is running here" from "this is a
+  bash shell" so the cockpit only lists actually-running Claudes. See
+  [`docs/architecture/COCKPIT.md`](docs/architecture/COCKPIT.md).
+- **Loop exponential backoff** — empty fires lengthen the gap, found/
+  fail snap back to base (15m → 30m → 1h → 2h → 4h cap by default).
+  New `--backoff exponential`, `--base-interval`, `--max-interval` on
+  `loop register`; new `--result found|empty|fail` on `loop heartbeat`;
+  new verbs `loop should-fire <NAME>` (gate) and `loop poke <NAME>`
+  (manual escape hatch). Backwards-compat — existing loops default to
+  `policy: none`.
+- **`noetic-batch` CLI primitive** — single-tool-call investigation that
+  bundles N reads/greps/globs/`investigate` into one Sentinel-noetic
+  intent. Replaces N round-trips on common AI investigation patterns.
+- **Schema discoverability for batch artifact verbs** —
+  `log-artifacts`/`resolve-artifacts`/`delete-artifacts` all accept
+  `--schema` to print the input shape without DB. `log-artifacts` now
+  tolerates `id` as alias for `ref` and `type` as alias for `relation`
+  (with deprecation warnings in the response so AIs learn the canonical
+  names). Validation errors include a hint pointing at `--schema`.
+- **Live cockpit statusline strip** — reads vectors from
+  `epistemic_snapshots` directly (was reading stale cache files).
+  Format: `k:X c:Y conf:Z% goals:N (— ctx:M%)` mirroring the live CC
+  statusline. Open-goals strip + notifications strip below. ENP
+  notification integration is a placeholder until empirica-extension
+  Claude wires the cross-process schema.
 
 ### Sentinel Reframe (1.8.0)
 
@@ -328,6 +350,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.8.12
+**Version:** 1.8.13
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*
