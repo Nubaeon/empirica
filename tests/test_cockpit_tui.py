@@ -41,6 +41,9 @@ def cockpit_env(tmp_path, monkeypatch):
     monkeypatch.setattr(instance_actions, 'TTY_SESSIONS_DIR', fake_home / 'tty_sessions')
     monkeypatch.setattr(loop_registry, 'EMPIRICA_DIR', fake_home)
     monkeypatch.setattr(enrichment, 'EMPIRICA_DIR', fake_home)
+    monkeypatch.setattr(
+        enrichment, 'ENP_PENDING_PATH', fake_home / 'enp' / 'pending.json',
+    )
     return fake_home, project
 
 
@@ -232,13 +235,34 @@ async def test_stop_calls_stop_instance(cockpit_env, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_n_clears_notifications(cockpit_env):
+    """`n` keybinding marks the project's pending notifications as acked.
+
+    New scope (post per-project refactor): notifications live in
+    ~/.empirica/enp/pending.json keyed by repo path. Clear acks the
+    entries whose repo matches the selected instance's project_path.
+    """
     from empirica.cli.tui import CockpitApp
 
     home, project = cockpit_env
     _bind_instance(home, project, 'tmux_42')
+    # Open transaction so the instance has a project_path resolved.
+    import time
+    suffix = '_tmux_42'
+    tx = {
+        'transaction_id': 'tx-1', 'session_id': 's-1',
+        'preflight_timestamp': time.time(),
+        'status': 'open', 'project_path': str(project),
+    }
+    (project / '.empirica').mkdir(exist_ok=True)
+    (project / '.empirica' / f'active_transaction{suffix}.json').write_text(json.dumps(tx))
+
     enp_dir = home / 'enp'
     enp_dir.mkdir()
-    (enp_dir / 'open_tmux_42.json').write_text(json.dumps({'open_count': 3}))
+    pending_path = enp_dir / 'pending.json'
+    pending_path.write_text(json.dumps([
+        {'id': 'a', 'repo': str(project), 'title': 'open', 'acknowledged': False},
+        {'id': 'b', 'repo': '/other', 'title': 'other', 'acknowledged': False},
+    ]))
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
@@ -246,7 +270,12 @@ async def test_n_clears_notifications(cockpit_env):
         await pilot.press('n')
         await pilot.pause()
 
-        assert not (enp_dir / 'open_tmux_42.json').exists()
+        result = json.loads(pending_path.read_text())
+        for n in result:
+            if n['repo'] == str(project):
+                assert n['acknowledged'] is True
+            else:
+                assert n['acknowledged'] is False
 
 
 # ─── ask state phase ──────────────────────────────────────────────────────

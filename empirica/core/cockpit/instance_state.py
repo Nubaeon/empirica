@@ -364,7 +364,7 @@ def aggregate_instance_state(
     asking = is_asking(instance_id)
     phase = 'ask' if asking and tx_state['phase'] in ('noetic', 'praxic') else tx_state['phase']
 
-    notif = notification_summary(instance_id)
+    notif = notification_summary(instance_id, project_path=project_path)
 
     return {
         'instance_id': instance_id,

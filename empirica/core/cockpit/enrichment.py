@@ -8,7 +8,7 @@ All four are bounded I/O — single file read or single SQL query — so
 they're safe to call on every refresh tick. Sources:
 
   asking_state    : ~/.empirica/asking_{instance_id}     (placeholder file)
-  notif_count     : ~/.empirica/enp/open_{instance_id}.json  (placeholder)
+  notifications   : ~/.empirica/enp/pending.json   (written by enp-watcher)
   statusline      : ~/.empirica/statusline_cache/{instance_id}_*.json
   recent_actions  : <project>/.empirica/sessions.db   epistemic_events table
 """
@@ -40,75 +40,103 @@ def is_asking(instance_id: str) -> bool:
     return (EMPIRICA_DIR / f'asking_{safe_id}').exists()
 
 
-# ─── notifications (placeholder) ───────────────────────────────────────────
+# ─── notifications (project-scoped from enp-watcher pending.json) ─────────
+
+ENP_PENDING_PATH = EMPIRICA_DIR / 'enp' / 'pending.json'
+
+
+def _load_pending() -> list[dict[str, Any]]:
+    """Read the global ENP pending list. Tolerant to missing/malformed."""
+    if not ENP_PENDING_PATH.exists():
+        return []
+    try:
+        with open(ENP_PENDING_PATH, encoding='utf-8') as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(data, list):
+        return []
+    return [n for n in data if isinstance(n, dict)]
+
+
+def _normalize_path(p: str | None) -> str:
+    """Normalize a project/repo path for cross-comparison.
+
+    Strip trailing slashes + resolve symlinks where cheap. enp-watcher
+    writes the configured `repo` path verbatim; cockpit instance state
+    captures the project_path from the active transaction. They might
+    differ by trailing slash or `~` expansion.
+    """
+    if not p:
+        return ''
+    s = str(Path(p).expanduser())
+    return s.rstrip('/')
+
 
 @dataclass
 class NotificationSummary:
-    """Per-instance notification count.
+    """Per-project notification count.
 
-    PLACEHOLDER — reads ~/.empirica/enp/open_{id}.json if it exists,
-    returns zero counts otherwise. ENP→cockpit integration spec is owned
-    by the empirica-extension Claude (see goal logged in this transaction).
+    `instance_id` retained for backward-compat with the existing per-row
+    notif glyph; the project_path is the actual scope key.
     """
     instance_id: str
     open_count: int
     has_attention: bool
 
 
-def notification_summary(instance_id: str) -> NotificationSummary:
-    safe_id = instance_id.replace('/', '-').replace('%', '')
-    path = EMPIRICA_DIR / 'enp' / f'open_{safe_id}.json'
-    if not path.exists():
+def notification_summary(
+    instance_id: str, project_path: str | None = None,
+) -> NotificationSummary:
+    """Count unacked notifications scoped to this instance's project.
+
+    `project_path` is optional for callers that don't have it cached.
+    When omitted, returns zero — there's no instance→project lookup
+    inside this function (callers in instance_state already resolve it).
+    """
+    if not project_path:
         return NotificationSummary(instance_id=instance_id, open_count=0, has_attention=False)
-    try:
-        with open(path, encoding='utf-8') as f:
-            data = json.load(f)
-        open_count = int(data.get('open_count', 0) or 0)
-        has_attention = bool(data.get('has_attention', open_count > 0))
-        return NotificationSummary(
-            instance_id=instance_id, open_count=open_count, has_attention=has_attention,
-        )
-    except (OSError, json.JSONDecodeError, TypeError, ValueError):
-        return NotificationSummary(instance_id=instance_id, open_count=0, has_attention=False)
+    target = _normalize_path(project_path)
+    pending = _load_pending()
+    count = sum(
+        1 for n in pending
+        if not n.get('acknowledged') and _normalize_path(n.get('repo')) == target
+    )
+    return NotificationSummary(
+        instance_id=instance_id, open_count=count, has_attention=count > 0,
+    )
 
 
 def notifications_total() -> int:
-    """Sum across all per-instance enp files. Cheap when the dir is small."""
-    enp_dir = EMPIRICA_DIR / 'enp'
-    if not enp_dir.exists():
-        return 0
-    total = 0
-    for path in enp_dir.glob('open_*.json'):
-        try:
-            with open(path, encoding='utf-8') as f:
-                data = json.load(f)
-            total += int(data.get('open_count', 0) or 0)
-        except (OSError, json.JSONDecodeError, TypeError, ValueError):
-            continue
-    return total
+    """Total unacked notifications across all projects (top-bar N count)."""
+    return sum(1 for n in _load_pending() if not n.get('acknowledged'))
 
 
-def clear_notifications(instance_id: str) -> int:
-    """Mark all per-instance notifications as cleared. Returns count cleared.
+def clear_notifications(instance_id: str, project_path: str | None = None) -> int:
+    """Mark all unacked notifications for the instance's project as
+    acknowledged. Local-only: doesn't call ntfy archive or empirica-
+    extension API yet — those are downstream integrations.
 
-    PLACEHOLDER — currently just unlinks the open_{id}.json file. Real
-    implementation will need to call out to ntfy archive endpoint and the
-    empirica-extension API (see goal). Until then, clear is local-only.
+    Returns count cleared.
     """
-    safe_id = instance_id.replace('/', '-').replace('%', '')
-    path = EMPIRICA_DIR / 'enp' / f'open_{safe_id}.json'
-    if not path.exists():
+    if not project_path:
         return 0
-    try:
-        with open(path, encoding='utf-8') as f:
-            data = json.load(f)
-        cleared = int(data.get('open_count', 0) or 0)
-    except (OSError, json.JSONDecodeError, TypeError, ValueError):
-        cleared = 0
-    try:
-        path.unlink()
-    except OSError:
-        pass
+    target = _normalize_path(project_path)
+    pending = _load_pending()
+    cleared = 0
+    for n in pending:
+        if n.get('acknowledged'):
+            continue
+        if _normalize_path(n.get('repo')) != target:
+            continue
+        n['acknowledged'] = True
+        cleared += 1
+    if cleared:
+        try:
+            with open(ENP_PENDING_PATH, 'w', encoding='utf-8') as f:
+                json.dump(pending, f, indent=2)
+        except OSError:
+            pass
     return cleared
 
 
@@ -419,30 +447,32 @@ class NotificationItem:
     source: str  # 'enp' | 'unknown'
 
 
-def notifications_list(instance_id: str, limit: int = 5) -> list[NotificationItem]:
-    """Return per-instance open notifications.
+def notifications_for_project(
+    project_path: str | None, limit: int = 5,
+) -> list[NotificationItem]:
+    """Return the `limit` most recent unacked notifications for this project.
 
-    PLACEHOLDER — reads ~/.empirica/enp/items_{id}.json if present (an
-    expected schema laid out for future ENP→cockpit integration). Returns
-    empty list otherwise. Ships an ergonomic empty-state in the TUI.
+    Reads ~/.empirica/enp/pending.json (written by enp-watcher), filters
+    by `repo` field matching `project_path` after normalization, sorted
+    most-recent-first by `received` timestamp.
+
+    Returns an empty list when no project_path is provided or no matches
+    are found — TUI renders the ergonomic empty-state caption.
     """
-    safe_id = instance_id.replace('/', '-').replace('%', '')
-    path = EMPIRICA_DIR / 'enp' / f'items_{safe_id}.json'
-    if not path.exists():
+    if not project_path:
         return []
-    try:
-        with open(path, encoding='utf-8') as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return []
-    items_raw = data.get('items', []) if isinstance(data, dict) else []
-    if not isinstance(items_raw, list):
-        return []
+    target = _normalize_path(project_path)
+    pending = _load_pending()
+
+    matched = [
+        n for n in pending
+        if not n.get('acknowledged') and _normalize_path(n.get('repo')) == target
+    ]
+    # Sort by received timestamp descending; missing ts goes last.
+    matched.sort(key=lambda n: n.get('received') or '', reverse=True)
 
     out: list[NotificationItem] = []
-    for raw in items_raw[:limit]:
-        if not isinstance(raw, dict):
-            continue
+    for raw in matched[:limit]:
         out.append(NotificationItem(
             title=str(raw.get('title', '(untitled)')),
             body=raw.get('body'),
@@ -450,6 +480,12 @@ def notifications_list(instance_id: str, limit: int = 5) -> list[NotificationIte
             source=str(raw.get('source', 'enp')),
         ))
     return out
+
+
+def notifications_list(instance_id: str, limit: int = 5) -> list[NotificationItem]:
+    """Backwards-compat alias that always returns []. Project-scoped
+    callers should use notifications_for_project(project_path, limit)."""
+    return []
 
 
 # ─── context window usage (CC writes the file; cockpit reads it) ──────────

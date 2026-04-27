@@ -266,6 +266,30 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ---
 
+## What's New in 1.8.14
+
+- **Notify dispatcher** — single CLI verb (`empirica notify emit/config/
+  backends/test`) every loop and hook calls. Three v1 backends (stdout,
+  rotating JSONL log, ntfy) with first-match-wins routing rules and
+  fail-loud fallback to stdout when the resolved backend isn't
+  configured. Three sharp edges enforced in code: ntfy uses JSON
+  publish format only (header-stuffing breaks on emoji), `--actions`
+  mirrors ntfy's `Label|URL` format, auth via env var named in config
+  (the secret never lives in YAML). Always-on audit at
+  `~/.empirica/notify-dispatcher.jsonl`. Cockpit + TUI surface 5 most
+  recent emits, backend status (`●/○`), 24h fallback count, and a
+  failure banner when something broke in the last hour. Per-loop
+  `↗backend/topic` annotation matched by `source: "loop:{name}"`. See
+  [`docs/architecture/NOTIFY.md`](docs/architecture/NOTIFY.md).
+- **Project-scoped TUI notifications** — the per-instance notifications
+  strip now reads `~/.empirica/enp/pending.json` (the file the ENP
+  watcher actually writes), filtered by the instance's `project_path`.
+  Was an always-empty placeholder. Top-bar `⊕N` counter shows total
+  unacked across all projects.
+- **`empirica goals-prune`** — bulk goal cleanup with four modes
+  (test-pollution, planned, auto-stale, duplicates). Dry-run by default;
+  `--apply` mutates and writes a receipt to git notes.
+
 ## What's New in 1.8.13
 
 - **Empirica Cockpit** — multi-instance state visibility + per-instance

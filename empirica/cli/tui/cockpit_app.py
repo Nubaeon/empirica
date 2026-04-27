@@ -47,7 +47,7 @@ from empirica.core.cockpit import (
     clear_notifications,
     context_usage,
     is_loop_paused,
-    notifications_list,
+    notifications_for_project,
     open_goals_list,
     pause_sentinel,
     resume_sentinel,
@@ -301,9 +301,9 @@ class CockpitApp(App):
         )
 
     def _format_notifications(self, inst: dict[str, Any]) -> str:
-        items = notifications_list(inst['instance_id'], limit=5)
+        items = notifications_for_project(inst.get('project_path'), limit=5)
         if not items:
-            return '(none — ENP integration pending)'
+            return '(none for this project)'
         return '\n'.join(_wrap_item('•', n.title) for n in items)
 
     def _render_dispatcher(self) -> None:
@@ -429,11 +429,13 @@ class CockpitApp(App):
         inst = self._require_selected()
         if inst is None:
             return
-        cleared = clear_notifications(inst['instance_id'])
+        project_path = inst.get('project_path')
+        cleared = clear_notifications(inst['instance_id'], project_path=project_path)
+        scope = project_path or inst['instance_id']
         if cleared:
-            self._log_status(f'cleared {cleared} notif(s) for {inst["instance_id"]}')
+            self._log_status(f'cleared {cleared} notif(s) for {scope}')
         else:
-            self._log_status(f'no notifications to clear for {inst["instance_id"]}')
+            self._log_status(f'no notifications to clear for {scope}')
         self.refresh_payload()
 
     # ─── button events (mouse / touch) ────────────────────────────────────

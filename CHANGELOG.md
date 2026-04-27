@@ -7,6 +7,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Notify dispatcher — pluggable notification primitive)
+- **`empirica notify` CLI subcommand group** with four verbs: `emit`,
+  `config`, `backends`, `test`. Single dispatch primitive every loop
+  body and hook calls; the dispatcher decides where the event goes based
+  on `~/.empirica/notify.yaml` (or built-in defaults — empirica works
+  out of the box without external services). Three v1 backends: `stdout`
+  (default), `log` (rotating JSONL at `~/.empirica/notify.log`), and
+  `ntfy` (JSON publish format with basic/bearer auth via env var).
+  First-match-wins routing rules over `severity`, `source` (glob),
+  `topic` (glob), and `tag` (glob). Fail-loud fallback to stdout +
+  stderr warning when the resolved backend isn't configured — never
+  silently drops. Three sharp edges enforced in code: ntfy uses JSON
+  publish format only (header-stuffing breaks on emoji), `--actions`
+  mirrors ntfy's `Label|URL` format exactly, auth is always via env var
+  named in config (the secret never lives in YAML). Sentinel-gate
+  whitelists `empirica notify ` as TIER1 (instance-local control plane,
+  always allowed). See
+  [`docs/architecture/NOTIFY.md`](docs/architecture/NOTIFY.md).
+
+### Added (Cockpit notify-dispatcher wiring)
+- **`~/.empirica/notify-dispatcher.jsonl`** — always-on metadata-only
+  audit log written by the dispatcher itself (not by any backend) so
+  the cockpit can render dispatcher activity faithfully regardless of
+  which backend events were routed to. Rotation 10MB / 5 files
+  (matching the log backend convention). Schema is metadata only:
+  `ts, source, severity, topic, resolved_backend, fell_back,
+  fallback_reason, ok, response_code, detail, project_id` — no
+  title/message/rationale/tags so the file stays small and notification
+  content never leaks into a debug file. No opt-out flag: cockpit
+  visibility is a discipline guarantee.
+- **`summary.notify_dispatcher` block in cockpit status JSON** —
+  `default_backend`, `backends` (with ntfy `auth_method`/`server`/
+  `default_topic` when set, secret never), `recent` (5 most recent
+  audit rows), `last_failure`, `banner_failure` (failure within last
+  hour), `fell_back_count_24h`, `emit_count_24h`. Single source of
+  truth via `backends_status_snapshot()` so `empirica notify backends`
+  and the cockpit view can never disagree about whether a backend is
+  configured.
+- **TUI dispatcher widget** (`empirica tui`) — banner above when
+  `banner_failure` is active, header line with default backend + 24h
+  emit/fallback counts, body with backend status (`●/○` glyphs +
+  `bearer`/`basic`/`none` for ntfy) and 5 most recent emits as
+  `HH:MM:SS source ↗ backend/topic ok` (`↻` when fell back).
+- **Per-loop notify annotation** — each loop's most recent dispatcher
+  emit is matched by `source: "loop:{name}"` and surfaced as `↗backend/
+  topic` next to the loop row in both the ANSI single-instance render
+  and the TUI's loops table.
+
+### Changed (Cockpit notifications — project-scoped)
+- **`notifications_for_project(project_path)`** replaces the per-
+  instance `notifications_list(instance_id)` placeholder. Reads
+  `~/.empirica/enp/pending.json` (the file the ENP watcher actually
+  writes), filters by `repo` field matching the instance's
+  `project_path` after path normalization, returns the 5 most recent
+  unacked entries newest-first. The TUI's notifications strip now
+  shows project-scoped items per selected instance instead of an
+  always-empty placeholder. Top-bar `⊕N` counter reads
+  `summary.open_notifications` which now counts unacked entries
+  across all projects via `pending.json`.
+- **`clear_notifications(instance_id, project_path=...)`** marks the
+  pending entries for the project as `acknowledged` (in-place rewrite
+  of `pending.json`). The `n` keybinding clears the selected
+  instance's project. Calls to ntfy archive / empirica-extension API
+  remain downstream integration work.
+
+### Added (`empirica goals-prune`)
+- **Bulk goal cleanup verb** with four modes: `--test-pollution`
+  (drop short test-only objectives left by E2E runs, NULL or current
+  project_id), `--by-status-planned` (close all planned goals),
+  `--auto-stale [days]` (close in_progress goals that haven't been
+  touched), `--duplicates [threshold]` (token-overlap dedupe via
+  Jaccard; Qdrant similarity wiring deferred). Dry-run by default;
+  `--apply` mutates and writes a receipt to git notes (`breadcrumbs`
+  ref). Sentinel-gate whitelists `empirica goals-prune` as TIER2.
+
 ### Fixed (resolve-artifacts goal path)
 - **`resolve-artifacts` for `type: goal` was hitting a non-existent table.**
   The handler queried `UPDATE project_goals SET ... WHERE goal_id = ?`,
