@@ -168,6 +168,62 @@ TOOL_REGISTRY: dict[str, dict] = {
         "desc": "Add an epistemic source reference",
     },
 
+    # --- Batch artifact graph (parity with Cortex MCP cortex_log_artifacts/resolve/delete) ---
+    "log_artifacts": {
+        "cli": "log-artifacts",
+        "params": {"session_id": "--session-id", "project_id": "--project-id"},
+        "required": [],
+        "desc": (
+            "Log a connected set of epistemic artifacts in one call. JSON body on stdin: "
+            "{nodes:[{ref, type, data}], edges:[{from, to, relation}]}. Node types: "
+            "finding, unknown, dead_end, mistake, assumption, decision, source. Edge relations: "
+            "evidence, raised_by, grounded_by, resolves, invalidates, sourced_from, "
+            "caused_by, prevents, attached_to. Creates in dependency order, resolves $-refs to UUIDs."
+        ),
+        "stdin_json": True,
+    },
+    "resolve_artifacts": {
+        "cli": "resolve-artifacts",
+        "params": {},
+        "required": [],
+        "desc": (
+            "Batch resolve open artifacts in one call. JSON body on stdin: "
+            "{resolutions:[{type, id, resolution}]}. Closes unknowns, marks assumptions "
+            "verified/falsified, completes goals. One call replaces N individual resolutions."
+        ),
+        "stdin_json": True,
+    },
+    "delete_artifacts": {
+        "cli": "delete-artifacts",
+        "params": {"dry_run": "--dry-run"},
+        "required": [],
+        "desc": (
+            "Batch delete stale/non-pertinent artifacts. JSON body on stdin: "
+            "{deletions:[{type, id}], reason: '...'}. Deletes from SQLite + Qdrant, "
+            "logs deletion as a decision for audit. Use dry_run=true to preview."
+        ),
+        "stdin_json": True,
+    },
+
+    # --- Sync (local → cloud propagation via git remote → Cortex git_watcher) ---
+    "sync_push": {
+        "cli": "sync-push",
+        "params": {"remote": "--remote", "dry_run": "--dry-run", "force": "--force"},
+        "required": [],
+        "desc": (
+            "Push local .empirica/ state to git remote. Cortex's git_watcher consumes the "
+            "push and ingests artifacts into the project's Qdrant collection. Use after a "
+            "coherent unit of work (or on a cadence) to propagate local writes to cloud. "
+            "Lag budget: 10-15s end-to-end. Idempotent — Cortex dedups on artifact hash."
+        ),
+    },
+    "sync_status": {
+        "cli": "sync-status",
+        "params": {"remote": "--remote"},
+        "required": [],
+        "desc": "Show sync state — remote configured, last push/pull timestamp, pending local changes.",
+    },
+
     # --- Goals ---
     "goals_create": {
         "cli": "goals-create",
@@ -459,7 +515,7 @@ TOOL_REGISTRY: dict[str, dict] = {
 _NUMERIC_PARAMS = {"impact", "confidence", "estimated_complexity", "limit", "weeks", "count",
                    "max_age", "deadline", "wait_timeout", "ttl"}
 _BOOLEAN_PARAMS = {"grounded", "trajectory", "completed", "resolved", "all", "planning_only",
-                   "turtle", "cost", "health", "wait"}
+                   "turtle", "cost", "health", "wait", "dry_run", "force"}
 _ENUM_PARAMS = {
     "reversibility": ["exploratory", "committal", "forced"],
     "scope": ["session", "project", "both"],
