@@ -1233,18 +1233,59 @@ def format_tmux_statusline(confidence: float, phase: str) -> str:
 
 
 def _check_off_record() -> bool:
-    """Check if Empirica is paused (off-record). Prints status and returns True to exit."""
-    pause_file = Path.home() / '.empirica' / 'sentinel_paused'
-    if not pause_file.exists():
+    """Check if Empirica is paused (off-record). Prints status and returns True to exit.
+
+    Resolves the per-instance pause file FIRST (matches sentinel-gate.py
+    semantics): TUI / `empirica sentinel pause --instance <ID>` writes
+    `~/.empirica/sentinel_paused_{instance_id}`. The global file is the
+    fallback for "all instances paused" scope.
+    """
+    base_dir = Path.home() / '.empirica'
+    instance_pause_file: Path | None = None
+    try:
+        from empirica.utils.session_resolver import InstanceResolver as R
+        inst_id = R.instance_id()
+        if inst_id:
+            safe_id = inst_id.replace('/', '-').replace('%', '')
+            instance_pause_file = base_dir / f'sentinel_paused_{safe_id}'
+    except Exception:
+        instance_pause_file = None
+
+    pause_file: Path | None = None
+    if instance_pause_file is not None and instance_pause_file.exists():
+        pause_file = instance_pause_file
+    else:
+        global_file = base_dir / 'sentinel_paused'
+        if global_file.exists():
+            pause_file = global_file
+
+    if pause_file is None:
         return False
+
     try:
         import json as _json
         import time as _time
-        pause_data = _json.loads(pause_file.read_text())
-        paused_at = pause_data.get('paused_at', 0)
-        gap_minutes = int((_time.time() - paused_at) / 60) if paused_at else 0
-        gap_str = f"{gap_minutes}m" if gap_minutes < 60 else f"{gap_minutes // 60}h{gap_minutes % 60}m"
-        print(f"{Colors.GRAY}[empirica]{Colors.RESET} {Colors.YELLOW}OFF-RECORD{Colors.RESET} {Colors.GRAY}({gap_str}){Colors.RESET}")
+        text = pause_file.read_text().strip()
+        gap_str = ''
+        # TUI / CLI write a plain reason string; the legacy global file
+        # used a JSON blob with paused_at. Render age from mtime when no
+        # JSON is parseable, falling back to no age string.
+        try:
+            pause_data = _json.loads(text) if text else {}
+            paused_at = pause_data.get('paused_at', 0)
+        except (ValueError, _json.JSONDecodeError):
+            paused_at = pause_file.stat().st_mtime
+        if paused_at:
+            gap_minutes = int((_time.time() - paused_at) / 60)
+            if gap_minutes < 60:
+                gap_amount = f'{gap_minutes}m'
+            else:
+                gap_amount = f'{gap_minutes // 60}h{gap_minutes % 60}m'
+            gap_str = f" {Colors.GRAY}({gap_amount}){Colors.RESET}"
+        print(
+            f"{Colors.GRAY}[empirica]{Colors.RESET} "
+            f"{Colors.YELLOW}OFF-RECORD{Colors.RESET}{gap_str}"
+        )
     except Exception:
         print(f"{Colors.GRAY}[empirica]{Colors.RESET} {Colors.YELLOW}OFF-RECORD{Colors.RESET}")
     return True

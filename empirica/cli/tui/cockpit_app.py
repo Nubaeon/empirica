@@ -92,11 +92,9 @@ class CockpitApp(App):
 
     #goals-header   { height: 1; padding: 0 1; color: $text-muted; }
     #goals { height: auto; min-height: 3; max-height: 14; padding: 0 1; }
-    #notif-header   { height: 1; padding: 0 1; color: $text-muted; }
-    #notif { height: auto; min-height: 1; padding: 0 1; color: $text-muted; }
     #dispatch-banner { height: auto; max-height: 2; padding: 0 1; color: $warning; }
-    #dispatch-header { height: 1; padding: 0 1; color: $text-muted; }
-    #dispatch { height: auto; min-height: 1; max-height: 7; padding: 0 1; }
+    #notif-header   { height: 1; padding: 0 1; color: $text-muted; }
+    #notif { height: auto; min-height: 1; max-height: 7; padding: 0 1; }
     """
 
     BINDINGS = [
@@ -119,6 +117,9 @@ class CockpitApp(App):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
+        # Failure banner sits directly under the header so it's the first
+        # thing the eye lands on when ntfy or another backend is broken.
+        yield Static('', id='dispatch-banner')
         yield Static('', id='summary')
 
         table = DataTable(id='inst-table', cursor_type='row', zebra_stripes=True)
@@ -134,11 +135,10 @@ class CockpitApp(App):
         yield Static('', id='statusline')
         yield Static('open goals', id='goals-header')
         yield Static('(none selected)', id='goals')
+        # Notifications-per-project is the bottom widget — what David asks
+        # for when checking each project's inbox at a glance.
         yield Static('notifications', id='notif-header')
         yield Static('', id='notif')
-        yield Static('', id='dispatch-banner')
-        yield Static('notify dispatcher · recent', id='dispatch-header')
-        yield Static('', id='dispatch')
         yield Footer()
 
     def on_mount(self) -> None:
@@ -168,7 +168,34 @@ class CockpitApp(App):
         notif_total = s.get('open_notifications', 0)
         ts = self.payload.get('generated_at', '').split('T')[-1].split('+')[0][:5]
         notif_part = f' · ⊕{notif_total}' if notif_total else ''
-        text = f"empirica · {s.get('instances', 0)} inst{notif_part} · {ts}"
+
+        # Compact dispatcher status — backend dots + 24h emit count.
+        # ●/○ glyphs make it immediately scannable. Default backend wins
+        # the brackets so the eye knows where things go by default.
+        nd = s.get('notify_dispatcher') or {}
+        dispatch_part = ''
+        backends = nd.get('backends') or []
+        if backends:
+            cells: list[str] = []
+            default = nd.get('default_backend') or ''
+            for b in backends:
+                glyph = '●' if b.get('configured') else '○'
+                name = b.get('name', '?')
+                if name == default:
+                    cells.append(f'{glyph}[{name}]')
+                else:
+                    cells.append(f'{glyph}{name}')
+            emit_24h = nd.get('emit_count_24h', 0)
+            fb_24h = nd.get('fell_back_count_24h', 0)
+            stats = f'24h:{emit_24h}'
+            if fb_24h:
+                stats += f' fb:{fb_24h}'
+            dispatch_part = f' · {" ".join(cells)} {stats}'
+
+        text = (
+            f"empirica · {s.get('instances', 0)} inst{notif_part}"
+            f"{dispatch_part} · {ts}"
+        )
         self.query_one('#summary', Static).update(text)
 
     def _render_table(self) -> None:
@@ -262,7 +289,11 @@ class CockpitApp(App):
         notif_widget.update(self._format_notifications(inst))
 
     def _format_statusline(self, inst: dict[str, Any]) -> str:
-        """k:X c:Y conf:Z% goals:N — ctx:M% (omit ctx when not available)."""
+        """k:X c:Y conf:Z% goals:N — ctx:M% [PAUSED]
+
+        Sentinel pause state is prepended when active so the operator
+        sees off-record status without having to scan the table column.
+        """
         ss = statusline_summary(
             inst['instance_id'],
             label_fallback=inst.get('label'),
@@ -270,6 +301,10 @@ class CockpitApp(App):
             session_id=inst.get('session_id'),
         )
         parts: list[str] = []
+        sent = inst.get('sentinel') or {}
+        if sent.get('paused'):
+            scope = sent.get('scope') or 'instance'
+            parts.append(f'PAUSED({scope})')
         if ss.know is not None:
             parts.append(f'k:{ss.know:.2f}')
         if ss.context is not None:
@@ -307,67 +342,22 @@ class CockpitApp(App):
         return '\n'.join(_wrap_item('•', n.title) for n in items)
 
     def _render_dispatcher(self) -> None:
-        """Render the notify-dispatcher block: banner, recent emits, backends.
-
-        Reads summary.notify_dispatcher (built by the dispatcher view module).
-        Always present in payload — fall through to hidden state when empty
-        rather than crashing.
-        """
+        """Render the failure banner only — backends + 24h counts now live
+        inline in the summary line, recent emits live in `empirica status
+        --pretty` (CLI single-instance view) so the TUI's bottom widget
+        stays focused on per-project notifications."""
         nd = (self.payload.get('summary', {}) or {}).get('notify_dispatcher') or {}
         banner_widget = self.query_one('#dispatch-banner', Static)
-        header_widget = self.query_one('#dispatch-header', Static)
-        body_widget = self.query_one('#dispatch', Static)
-
         banner = nd.get('banner_failure')
         if banner:
             backend = banner.get('resolved_backend') or '?'
             age = self._age_short(banner.get('age_seconds'))
             detail = (banner.get('detail') or '').split('\n', 1)[0][:60]
             banner_widget.update(
-                f'[red]⚠ notify backend {backend} failed {age} ago — {detail}[/red]'
+                f'⚠ notify backend {backend} failed {age} ago — {detail}'
             )
         else:
             banner_widget.update('')
-
-        default = nd.get('default_backend') or '?'
-        emit_24h = nd.get('emit_count_24h', 0)
-        fb_24h = nd.get('fell_back_count_24h', 0)
-        backends = nd.get('backends') or []
-        backend_glyphs: list[str] = []
-        for b in backends:
-            glyph = '●' if b.get('configured') else '○'
-            name = b.get('name', '?')
-            tag = ''
-            if name == 'ntfy':
-                tag = f' {b.get("auth_method") or "none"}'
-            backend_glyphs.append(f'{glyph}{name}{tag}')
-        header_widget.update(
-            f'notify dispatcher · default:{default} · 24h:{emit_24h} emits, {fb_24h} fb'
-        )
-
-        recent = nd.get('recent') or []
-        if not recent and not backends:
-            body_widget.update('(no activity — set ~/.empirica/notify.yaml)')
-            return
-
-        lines: list[str] = []
-        if backend_glyphs:
-            lines.append('  '.join(backend_glyphs))
-        if not recent:
-            lines.append('(no recent emits)')
-        else:
-            for r in recent:
-                ts_short = (r.get('ts') or '').split('T')[-1].split('+')[0].split('.')[0][:8]
-                source = (r.get('source') or 'manual')[:18].ljust(18)
-                arrow = '↻' if r.get('fell_back') else '↗'
-                backend = r.get('resolved_backend') or '?'
-                topic = r.get('topic') or ''
-                dest = f'{backend}/{topic}' if topic else backend
-                ok = 'ok' if r.get('ok') else 'FAIL'
-                rc = r.get('response_code')
-                rc_str = f' ({rc})' if rc else ''
-                lines.append(f'{ts_short} {source}{arrow} {dest} {ok}{rc_str}')
-        body_widget.update('\n'.join(lines))
 
     @staticmethod
     def _age_short(seconds: int | None) -> str:

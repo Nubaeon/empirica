@@ -23,26 +23,27 @@ LOG_PATH = ENP_DIR / 'watcher.log'
 
 
 def push_notify(config: dict, notifications: list):
-    """Send push notification via configured provider."""
+    """Send push notification via the empirica notify dispatcher.
+
+    Migrated 2026-04-28: was direct urllib request with ntfy header-
+    stuffing, which crashes on emoji (latin-1 codec error). The empirica
+    dispatcher uses ntfy's JSON publish format (UTF-8 native) and routes
+    through ~/.empirica/notify.yaml so backend/auth changes don't
+    require touching this script. Falls through silently when push is
+    disabled in config.
+    """
     push_cfg = config.get('push', {})
     if not push_cfg.get('enabled'):
         return
 
-    provider = push_cfg.get('provider', 'ntfy')
-    if provider != 'ntfy':
-        log(f'PUSH: unknown provider {provider}')
-        return
-
-    url = push_cfg.get('ntfy_url', 'https://ntfy.sh')
-    # Support both single topic (legacy) and multiple topics
+    # Topic precedence: explicit ntfy_topics list (config) overrides any
+    # routing rules. Pass topic_override per emit so the dispatcher
+    # respects what enp-config asked for.
     topics = push_cfg.get('ntfy_topics', [])
     if not topics:
         single = push_cfg.get('ntfy_topic')
         if single:
             topics = [single]
-    if not topics:
-        log('PUSH: no ntfy topics configured')
-        return
 
     for n in notifications:
         authors = ', '.join(n.get('authors', ['Unknown']))
@@ -57,23 +58,33 @@ def push_notify(config: dict, notifications: list):
         body_parts.append(f'{len(files)} file(s) changed')
         body = ' — '.join(body_parts)
 
-        for topic in topics:
+        repo = n.get('repo', '')
+        source = f'enp-watcher:{Path(repo).name}' if repo else 'enp-watcher'
+        targets = topics or [None]
+        for topic in targets:
+            cmd = [
+                'empirica', 'notify', 'emit',
+                '--severity', 'info',
+                '--title', title,
+                '--message', body,
+                '--source', source,
+                '--tags', 'git,empirica,enp',
+                '--output', 'json',
+            ]
+            if topic:
+                cmd += ['--topic-override', topic]
             try:
-                import urllib.request
-                req = urllib.request.Request(
-                    f'{url}/{topic}',
-                    data=body.encode('utf-8'),
-                    headers={
-                        'Title': title,
-                        'Priority': 'default',
-                        'Tags': 'git,empirica',
-                    },
-                    method='POST'
+                result = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=15,
                 )
-                urllib.request.urlopen(req, timeout=10)
-                log(f'PUSH: sent to {topic} — {title}')
-            except Exception as e:
-                log(f'PUSH: failed ({topic}) — {e}')
+                if result.returncode == 0:
+                    label_ts = topic or '(routed)'
+                    log(f'PUSH: dispatched {label_ts} — {title}')
+                else:
+                    detail = (result.stderr or result.stdout or '').strip()[:200]
+                    log(f'PUSH: dispatcher rc={result.returncode} ({topic}) — {detail}')
+            except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+                log(f'PUSH: dispatcher failed ({topic}) — {e}')
 
 
 def log(msg: str):
