@@ -1,9 +1,17 @@
-"""Batched investigation primitive — single tool call replaces N round-trips.
+"""Batched investigation primitive — bundles ≥3 investigation operations into
+one call that returns a single merged structured response.
 
-The Sentinel sees one noetic intent instead of N individual reads/greps/globs,
-eliminating gating overhead and keeping the TUI signal-to-noise high. Same
-architectural pattern as `cortex_log_artifacts`: a graph schema replacing
-N individual logging calls.
+Use when you have multiple reads/greps/globs/investigate queries that belong
+to the same investigation intent. Individual Read/Grep/Glob/investigate are
+already noetic in any phase — they don't need batching for gating reasons.
+The value of noetic-batch is operational: fewer round-trips, one merged
+result in your conversation, ergonomic for cross-cutting investigations.
+
+NOT a Sentinel bypass. Calling it once for a single read is misuse —
+just use the underlying tool directly.
+
+Same architectural pattern as `cortex_log_artifacts`: a graph schema
+replacing N individual logging calls.
 
 Public API:
     run_batch(payload: dict) -> dict

@@ -190,6 +190,10 @@ class NoeticBatchResult(BaseModel):
     investigate: list[InvestigateResult] = Field(default_factory=list)
     summary: BatchSummary = Field(default_factory=BatchSummary)
     error: str | None = None  # populated only on top-level fatal failure
+    # Soft signal for misuse patterns (e.g. single-op batch). Doesn't
+    # affect ok/error — caller still gets the operation results — but
+    # surfaces "you're using this wrong" so the pattern is visible.
+    warning: str | None = None
 
 
 __all__ = [

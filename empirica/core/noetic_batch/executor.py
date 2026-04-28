@@ -12,6 +12,7 @@ import logging
 import re
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -67,6 +68,38 @@ def run_batch(
         result.investigate.append(_execute_investigate(op, project_root, budgets))
 
     result.summary = _build_summary(result, started)
+
+    # Misuse signal — calling noetic-batch with a single op is the
+    # tell-tale "I'm using this as a Sentinel bypass" pattern. Don't
+    # reject (might be legit edge case), but surface a warning so
+    # downstream tooling and the operator can see it.
+    op_count = parsed.operation_count()
+    if op_count < 2:
+        result.warning = (
+            "noetic-batch called with a single operation — this is misuse. "
+            "Individual Read/Grep/Glob/investigate are noetic in any phase "
+            "and don't need batching. The batch tool exists for grouping "
+            "≥3 investigation operations into one merged response."
+        )
+
+    # Visibility breadcrumb on stderr — observers (humans, logs) can see
+    # what the batch returned without parsing the full JSON. Stays out
+    # of stdout so JSON consumers aren't affected.
+    summary = result.summary
+    if summary is not None:
+        try:
+            sys.stderr.write(
+                f"[noetic-batch] intent={parsed.intent!r:.80s} "
+                f"reads={summary.total_files_read} "
+                f"grep_matches={summary.total_grep_matches} "
+                f"globs={summary.total_globs_resolved} "
+                f"investigate={summary.total_investigate_results} "
+                f"~tokens={summary.approx_tokens} "
+                f"duration={summary.duration_ms}ms\n"
+            )
+        except Exception:  # noqa: BLE001 — stderr formatting must never break the batch
+            pass
+
     return result
 
 

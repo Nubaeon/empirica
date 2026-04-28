@@ -214,8 +214,11 @@ Maps to: EU AI Act Art. 15(4), ISO 42001 8.4, GDPR Art. 32.
     nb_parser = subparsers.add_parser('noetic-batch',
         help='Batched investigation: reads + greps + globs + investigate in one call',
         description="""
-Run a batched investigation. Sentinel sees one noetic intent instead of N
-individual reads/greps/globs — eliminates per-call gating overhead.
+Run a batched investigation — reads, greps, globs, investigate queries
+returned as one merged structured response. Use when batching ≥3
+investigation operations; individual Read/Grep/Glob/investigate calls
+are noetic anywhere and don't need batching. NOT a Sentinel bypass —
+calling it once for a single read is misuse.
 
 JSON input via stdin (AI-first):
     empirica noetic-batch - <<EOF

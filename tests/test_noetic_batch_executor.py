@@ -289,3 +289,53 @@ def test_per_op_errors_dont_fail_batch(project):
     assert result.ok
     assert result.reads[0].error is None
     assert result.reads[1].error is not None
+
+
+# Misuse signals — a single-op batch is the tell-tale "I'm using this as a
+# Sentinel bypass" pattern. Surface a warning so the misuse is visible in
+# tooling and logs.
+
+
+def test_single_op_batch_emits_warning(project):
+    result = run_batch(
+        {"intent": "single-read", "reads": [{"path": "src/auth.py"}]},
+        project_root=project,
+    )
+    assert result.ok
+    assert result.warning is not None
+    assert 'misuse' in result.warning.lower()
+
+
+def test_zero_op_batch_emits_warning(project):
+    # No ops at all — degenerate case but still worth flagging.
+    result = run_batch({"intent": "empty"}, project_root=project)
+    assert result.warning is not None
+
+
+def test_multi_op_batch_no_warning(project):
+    result = run_batch(
+        {
+            "intent": "real investigation",
+            "reads": [{"path": "src/auth.py"}],
+            "greps": [{"pattern": "decorator", "glob": "src/**/*.py"}],
+        },
+        project_root=project,
+    )
+    assert result.warning is None
+
+
+def test_stderr_breadcrumb_emitted(project, capsys):
+    """Visibility breadcrumb on stderr summarizes what came back so
+    observers can see misuse patterns without parsing the JSON payload."""
+    run_batch(
+        {
+            "intent": "breadcrumb-test",
+            "reads": [{"path": "src/auth.py"}],
+            "greps": [{"pattern": "decorator", "glob": "src/**/*.py"}],
+        },
+        project_root=project,
+    )
+    captured = capsys.readouterr()
+    assert '[noetic-batch]' in captured.err
+    assert "intent='breadcrumb-test'" in captured.err
+    assert 'reads=1' in captured.err
