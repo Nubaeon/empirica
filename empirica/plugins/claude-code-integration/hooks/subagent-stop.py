@@ -474,6 +474,28 @@ def _check_regulation(parent_session_id: str, logged: dict) -> dict:
     return regulation
 
 
+def _cleanup_subagent_active_work(subagent_claude_session_id: str | None) -> None:
+    """Delete the active_work file written for this subagent at SubagentStart.
+
+    Counterpart to _write_subagent_active_work in subagent-start.py. Leaves
+    stale active_work files behind would otherwise pollute the resolver
+    chain for new subagents that happen to get the same claude_session_id
+    (rare but cheap to prevent).
+
+    Non-fatal — errors are silenced; the file is small and overwritten on
+    next SubagentStart in the worst case.
+    """
+    if not subagent_claude_session_id:
+        return
+    try:
+        from pathlib import Path as _P
+        aw_file = _P.home() / '.empirica' / f'active_work_{subagent_claude_session_id}.json'
+        if aw_file.exists():
+            aw_file.unlink()
+    except Exception:
+        pass
+
+
 def main():
     try:
         input_data = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
@@ -482,6 +504,7 @@ def main():
 
     agent_name = input_data.get("agent_name", input_data.get("agent_type", "unknown-agent"))
     transcript_path = input_data.get("agent_transcript_path", "")
+    subagent_claude_session_id = input_data.get("session_id")
 
     # Find the subagent session
     subagent_data = find_subagent_session(agent_name)
@@ -531,6 +554,11 @@ def main():
             db.close()
         except Exception:
             pass
+
+    # Clean up the active_work file written for this subagent at SubagentStart.
+    # Without this, stale files accumulate; future subagents could resolve
+    # to old child_session_ids if claude_session_ids ever recur.
+    _cleanup_subagent_active_work(subagent_claude_session_id)
 
     # Mark session completed
     if subagent_data.get("_file_path"):

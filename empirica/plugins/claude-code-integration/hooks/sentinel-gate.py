@@ -1723,25 +1723,36 @@ def _detect_subagent(claude_session_id: str) -> bool:
     authorized the spawn. Subagents have a different Claude session_id
     than the parent (who owns the active_work file).
 
-    Detection: Check if active_work_{claude_session_id}.json exists.
-    session-init hook writes this file for the PARENT session only.
-    Subagents (spawned via Agent tool) get a different claude_session_id
-    from Claude Code, so they won't have a matching active_work file.
+    Detection priority (post-fix for #95 Issue 1):
+      1. active_work_{claude_session_id}.json exists with `is_subagent: true`
+         → confirmed subagent (flag-based, written by SubagentStart hook).
+      2. active_work missing → fallback to absence-detection via active_session
+         match (back-compat for in-flight subagents pre-dating the fix, and
+         for the broken-session-init failure mode).
 
-    Previous approach (active_session + instance_suffix) was broken because
-    subprocesses inherit env vars (WINDOWID, TMUX_PANE) from the parent,
-    making subagents appear as the parent session.
-
-    Edge case: if session-init failed, parent also lacks active_work file.
-    In that case, both parent and subagent fall through to normal gating
-    (fail-safe). The autonomy counter (line ~851) uses the same check,
-    so the signals are consistent.
+    Why the flag exists: subagent-start.py now writes active_work for the
+    subagent so its empirica CLI calls resolve to child_session_id (not
+    parent's via TTY fallback). That means active_work is no longer
+    reliably absent for subagents. The flag carries the signal explicitly.
 
     Returns True if this is a confirmed subagent invocation.
     """
     try:
         _aw_file = Path.home() / '.empirica' / f'active_work_{claude_session_id}.json'
-        if not _aw_file.exists():
+        if _aw_file.exists():
+            # Path 1: flag-based detection (post-fix subagents)
+            try:
+                with open(_aw_file) as _awf:
+                    _aw_data = json.load(_awf)
+                if _aw_data.get('is_subagent') is True:
+                    return True
+            except Exception:
+                pass  # corrupt file → fall through to absence path
+            # File exists but no is_subagent flag → parent session
+            return False
+
+        # Path 2: absence-based fallback (pre-fix subagents, broken session-init)
+        if True:
             # No active_work file for this claude_session_id — likely a subagent
             # (or session-init failed / project initialized mid-session)
             #

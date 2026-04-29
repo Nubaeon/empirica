@@ -20,6 +20,7 @@ Side effects:
 """
 
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -223,6 +224,56 @@ def store_subagent_session(agent_name: str, child_session_id: str, parent_sessio
     return str(session_file)
 
 
+def _write_subagent_active_work(
+    subagent_claude_session_id: str,
+    child_session_id: str,
+    parent_claude_session_id: str | None,
+    parent_session_id: str,
+    agent_name: str,
+) -> bool:
+    """Write active_work_<subagent_claude_session_id>.json so the subagent's
+    empirica CLI calls resolve to their own child_session_id.
+
+    Without this file, subagent CLI invocations fall through the resolver
+    chain to TTY-based session resolution, which returns the *parent's*
+    empirica_session_id (since TTY is shared). Reflexes from the subagent
+    then get tagged with the parent's session_id, contaminating the
+    parent's loop and tripping the gate at sentinel-gate.py:1788-1843
+    on subsequent edits.
+
+    Carries `is_subagent: true` so sentinel-gate's _detect_subagent can
+    flag-detect rather than absence-detect (the existing fallback path
+    still works for in-flight subagents that pre-date this fix).
+
+    Returns True if the file was written, False on error (non-fatal).
+    """
+    if not subagent_claude_session_id:
+        return False
+    try:
+        active_work_file = (
+            Path.home() / '.empirica' /
+            f'active_work_{subagent_claude_session_id}.json'
+        )
+        Path.home().joinpath('.empirica').mkdir(parents=True, exist_ok=True)
+        data = {
+            'claude_session_id': subagent_claude_session_id,
+            'empirica_session_id': child_session_id,
+            'is_subagent': True,
+            'parent_claude_session_id': parent_claude_session_id,
+            'parent_empirica_session_id': parent_session_id,
+            'agent_name': agent_name,
+            'source': 'subagent-start',
+            'timestamp': datetime.now().isoformat(),
+            'timestamp_epoch': datetime.now().timestamp(),
+        }
+        with open(active_work_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        os.chmod(active_work_file, 0o600)
+        return True
+    except Exception:
+        return False
+
+
 def main():
     try:
         # Read hook input from stdin
@@ -231,6 +282,9 @@ def main():
         input_data = {}
 
     agent_name = input_data.get("agent_name", input_data.get("agent_type", "unknown-agent"))
+    # SUBAGENT's claude_session_id (not parent's) — used to write the
+    # active_work file the subagent's CLI calls will resolve from.
+    subagent_claude_session_id = input_data.get("session_id")
 
     # Get parent session
     parent_session_id = get_parent_session_id()
@@ -268,9 +322,21 @@ def main():
         # Store mapping for SubagentStop rollup
         store_subagent_session(agent_name, child_session_id, parent_session_id)
 
+        # Write active_work_<subagent_uuid>.json so the subagent's empirica
+        # CLI calls resolve to child_session_id, not the parent's session
+        # (the parent-bleed pattern from #95 Issue 1).
+        aw_written = _write_subagent_active_work(
+            subagent_claude_session_id=subagent_claude_session_id,
+            child_session_id=child_session_id,
+            parent_claude_session_id=None,  # not in input; lineage via parent_session_id
+            parent_session_id=parent_session_id,
+            agent_name=agent_name,
+        )
+        aw_msg = " active_work written." if aw_written else ""
+
         result = {
             "continue": True,
-            "message": f"SubagentStart: Created child session {child_session_id[:8]} for '{agent_name}' (parent: {parent_session_id[:8]}){budget_warning}"
+            "message": f"SubagentStart: Created child session {child_session_id[:8]} for '{agent_name}' (parent: {parent_session_id[:8]}){aw_msg}{budget_warning}"
         }
     else:
         # Creation failed — allow agent to proceed anyway (fail-open)
