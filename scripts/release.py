@@ -254,9 +254,16 @@ class ReleaseManager:
 
     def build_and_push_chocolatey(self):
         """Build Chocolatey .nupkg and push to chocolatey.org"""
+        import os
+        import shutil
+
         log("\n" + "=" * 60)
         log("🍫 Building and pushing Chocolatey package")
         log("=" * 60)
+
+        if not shutil.which("choco"):
+            info("choco CLI not found — skipping Chocolatey publish (run from Windows or a Choco-enabled CI runner)")
+            return
 
         choco_dir = self.repo_root / "packaging/chocolatey"
         nuspec = choco_dir / "empirica.nuspec"
@@ -272,9 +279,15 @@ class ReleaseManager:
         if not nupkg.exists() and not self.dry_run:
             error(f"Expected .nupkg not found: {nupkg}")
 
+        api_key = os.environ.get("CHOCOLATEY_API_KEY")
+        if not api_key:
+            warning("CHOCOLATEY_API_KEY not set — built .nupkg but skipping push (set the env var or run 'choco apikey set')")
+            return
+
         self.run_command([
             "choco", "push", str(nupkg),
             "--source", "https://push.chocolatey.org/",
+            "--api-key", api_key,
         ], cwd=str(choco_dir))
         success(f"Pushed to chocolatey.org: empirica {self.version}")
 
