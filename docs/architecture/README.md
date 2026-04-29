@@ -1,7 +1,7 @@
 # Empirica System Architecture
 
-**Version:** 1.6.6
-**Updated:** 2026-03-16
+**Version:** 1.8.16
+**Updated:** 2026-04-29
 
 ---
 
@@ -79,6 +79,7 @@ Empirica is a **measurement-first epistemic framework** for AI agents. It provid
 | Document | Description |
 |----------|-------------|
 | [NOETIC_PRAXIC_FRAMEWORK.md](NOETIC_PRAXIC_FRAMEWORK.md) | Investigation vs action phases, CHECK gate |
+| [NOETIC_BATCH_SPEC.md](NOETIC_BATCH_SPEC.md) | Bundled noetic operations (reads + greps + globs + investigate) |
 | [COMPLETION_TRACKING.md](COMPLETION_TRACKING.md) | Phase-aware completion semantics |
 | [ASSESSMENT_AND_SIGNALING.md](ASSESSMENT_AND_SIGNALING.md) | Vector assessment and signaling |
 | [AI_WORKFLOW_AUTOMATION.md](AI_WORKFLOW_AUTOMATION.md) | Automated workflow patterns |
@@ -89,6 +90,7 @@ Empirica is a **measurement-first epistemic framework** for AI agents. It provid
 |----------|-------------|
 | [SENTINEL_ARCHITECTURE.md](SENTINEL_ARCHITECTURE.md) | Gate controller, decision logic, earned autonomy |
 | [SENTINEL_CONSTITUTION.md](SENTINEL_CONSTITUTION.md) | Governance principles for measurement |
+| [EPP_ARCHITECTURE.md](EPP_ARCHITECTURE.md) | Epistemic Persistence Protocol — calibrated backbone under user pushback |
 | [PHASE_AWARE_CALIBRATION.md](PHASE_AWARE_CALIBRATION.md) | Dual-track calibration, evidence sources, Brier scores |
 | [SELF_MONITORING.md](SELF_MONITORING.md) | Self-monitoring patterns |
 
@@ -100,6 +102,7 @@ Empirica is a **measurement-first epistemic framework** for AI agents. It provid
 | [CANONICAL_STORAGE.md](CANONICAL_STORAGE.md) | Canonical storage patterns |
 | [QDRANT_EPISTEMIC_INTEGRATION.md](QDRANT_EPISTEMIC_INTEGRATION.md) | 14+ Qdrant collection types |
 | [MULTI_PROJECT_STORAGE.md](MULTI_PROJECT_STORAGE.md) | Cross-project data management |
+| [MEMORY_ARCHITECTURE.md](MEMORY_ARCHITECTURE.md) | Hot/warm/cold memory layers, eidetic + episodic + prosodic |
 | [EPISTEMIC_STATE_COMPLETE_CAPTURE.md](EPISTEMIC_STATE_COMPLETE_CAPTURE.md) | Full state capture |
 | [noetic-rag-architecture.md](noetic-rag-architecture.md) | RAG with epistemic awareness |
 
@@ -120,13 +123,16 @@ Empirica is a **measurement-first epistemic framework** for AI agents. It provid
 | [instance_isolation/ARCHITECTURE.md](instance_isolation/ARCHITECTURE.md) | File taxonomy, resolution priority |
 | [instance_isolation/CLAUDE_CODE.md](instance_isolation/CLAUDE_CODE.md) | Claude Code specific patterns |
 | [instance_isolation/MCP_AND_CLI.md](instance_isolation/MCP_AND_CLI.md) | MCP and CLI integration |
-| [instance_isolation/KNOWN_ISSUES.md](instance_isolation/KNOWN_ISSUES.md) | Bug history (11.1-11.20) |
+| [instance_isolation/KNOWN_ISSUES.md](instance_isolation/KNOWN_ISSUES.md) | Bug history (11.1-11.30) |
 
 ### Integration
 
 | Document | Description |
 |----------|-------------|
 | [claude-code-symbiosis.md](claude-code-symbiosis.md) | Claude Code hook integration |
+| [COCKPIT.md](COCKPIT.md) | Cockpit UI — sentinel status, loops, instances, notify dispatcher |
+| [DISPATCH_BUS.md](DISPATCH_BUS.md) | Typed cross-instance protocol (terminal/cowork/desktop/cortex) |
+| [NOTIFY.md](NOTIFY.md) | Notification dispatcher — pluggable backends (stdout, log, ntfy) |
 | [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md) | Sync architecture |
 | [SUPPORTING_COMPONENTS.md](SUPPORTING_COMPONENTS.md) | Supporting subsystems |
 | [separation-of-concerns.md](separation-of-concerns.md) | What goes where |

@@ -100,13 +100,13 @@ empirica setup-claude-code
 
 ```bash
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.8.14-alpine
+docker pull nubaeon/empirica:1.8.16-alpine
 
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.8.14
+docker pull nubaeon/empirica:1.8.16
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.8.14 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.8.16 /bin/bash
 ```
 </details>
 
@@ -265,6 +265,62 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 **Building something with Empirica?** [Open an issue](https://github.com/Nubaeon/empirica/issues) to get listed.
 
 ---
+
+## What's New in 1.8.16
+
+- **Cortex sync architectural fix (#95 follow-up)** — `_cortex_resolve_project_id`
+  now reads project_id from the session row (DB-of-record) instead of
+  reading `Path.cwd()/.empirica/project.yaml`. Eliminates the multi-`.empirica`
+  CWD-misroute pattern @pschwinger reproduced and removes the `sys.exit(1)`
+  propagation path that escaped every `except Exception` wrapper.
+- **`resolve_project_id` raises `ProjectNotFoundError` instead of `sys.exit(1)`** —
+  library functions raise; only CLIs call sys.exit. Closes the
+  SystemExit-walks-through-Exception hazard at the source. All ~10
+  callers' existing `except Exception` paths catch the new exception
+  cleanly.
+- **`_run_grounded_verification` accepts `project_path`** — drops two
+  CWD-fallbacks adjacent to the cortex sync fix. Caller passes
+  `resolved_project_path` from the open transaction.
+- **POSTFLIGHT `_soft_run` catches SystemExit** (defense-in-depth).
+  KeyboardInterrupt still propagates.
+- **KNOWN_ISSUES 11.29 + 11.30** — added entries documenting the
+  subagent CLI bleed fix (T4, shipped in 1.8.15) and the
+  SystemExit-from-library propagation chain (T5/T7/T8, shipped across
+  1.8.15 + 1.8.16). Audit-trail completeness for the
+  instance_isolation lineage.
+- **Architecture index refresh** — `docs/architecture/README.md` now
+  indexes COCKPIT, DISPATCH_BUS, EPP_ARCHITECTURE, MEMORY_ARCHITECTURE,
+  NOETIC_BATCH_SPEC, NOTIFY (six docs that existed but weren't linked).
+  Version + Updated bumped, KNOWN_ISSUES range claim corrected.
+
+## What's New in 1.8.15
+
+- **Validate-and-heal `session.project_id` at session boundaries** —
+  catches the ghost-project_id pattern (cross-project `--resume`,
+  ambiguous folder_name match, tmux pane reuse). Heals at post-compact
+  CONTINUE_TRANSACTION + NEW_SESSION_PREFLIGHT and at session-init
+  resume. Workspace.db `trajectory_path` is the canonical lookup —
+  never folder_name (no 11.10/11.27 regression).
+- **Voice CLI** — `empirica voice list / show / apply` loads prosodic
+  profiles for outreach drafting. Profiles in `~/.empirica/voice/*.yaml`
+  with project-local override at `.empirica/voice/`. Voice samples
+  themselves stay in Cortex/Qdrant; this CLI is the calling surface.
+- **PREFLIGHT `voice_guidance` block** — when `work_type=comms` or
+  the new `voice` field/`--voice` flag is set, response includes
+  voice tendencies + anti-patterns scoped to platform register
+  (mirrors the `noetic_guidance` pattern).
+- **Subagent CLI bleed fix (#95 Issue 1)** — `subagent-start` now
+  writes `~/.empirica/active_work_<subagent_uuid>.json` with
+  `is_subagent: true` so the subagent's CLI calls resolve to their
+  own `child_session_id` instead of falling through to the parent's
+  via TTY. `sentinel-gate._detect_subagent` reads the flag.
+  `subagent-stop` cleans up.
+- **POSTFLIGHT pipeline restructure (#95 Issue 3)** — Stage 0
+  pre-validates session row + project_id BEFORE any state mutation;
+  failure → early return with `loop_state: "open"`. Stages 5-7
+  wrapped in `_soft_run` — failures accumulate into
+  `result["warnings"]` without erasing the closed-loop reflex.
+  No more half-success.
 
 ## What's New in 1.8.14
 

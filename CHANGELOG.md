@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.16] - 2026-04-29
+
+### Fixed (#95 follow-up — root-cause closure)
+
+- **Cortex sync reads project_id from session row** — `_cortex_resolve_project_id`
+  no longer reads `Path.cwd()/.empirica/project.yaml`. By the time
+  POSTFLIGHT runs, the session row already has a canonical `project_id`
+  (T5's pre-validation guarantees it). Eliminates the multi-`.empirica`
+  CWD-misroute pattern AND removes the `resolve_project_id` →
+  `sys.exit(1)` propagation path. Failure mode is now structurally
+  impossible, not just caught.
+- **`_cortex_read_calibration_summary` accepts `project_path`** —
+  caller passes `resolved_project_path` from the open transaction.
+  Falls back to `Path.cwd()` only when unset.
+- **`_run_grounded_verification` accepts `project_path`** — drops two
+  CWD-fallbacks (workflow_commands.py:2566 EvidenceProfile and 2584
+  proj_yaml). Same shape as the cortex fix; both surfaced by the T8
+  audit.
+- **`_soft_run` catches `SystemExit`** (defense-in-depth). Other
+  library helpers may follow the same `sys.exit-on-miss` pattern.
+  KeyboardInterrupt still propagates — user signals aren't swallowed.
+- **`resolve_project_id` raises `ProjectNotFoundError` instead of
+  `sys.exit(1)`** (cli/utils/project_resolver.py). Library functions
+  raise; CLIs call sys.exit. Closes the SystemExit-walks-through-
+  Exception hazard at the source. ~10 callers' existing
+  `except Exception` paths catch the new exception cleanly via
+  `handle_cli_error`. Same UX, no kernel-style propagation.
+
+### Documentation
+
+- **KNOWN_ISSUES 11.29 + 11.30** — entries for the subagent CLI bleed
+  fix (T4 shipped in 1.8.15) and the SystemExit-from-library
+  propagation chain (T5/T7/T8 shipped across 1.8.15 + 1.8.16).
+  Completes the instance_isolation audit trail.
+- **`docs/architecture/README.md` index refresh** — adds 6 missing
+  entries (COCKPIT, DISPATCH_BUS, EPP_ARCHITECTURE, MEMORY_ARCHITECTURE,
+  NOETIC_BATCH_SPEC, NOTIFY). Version + Updated bumped. KNOWN_ISSUES
+  range claim corrected from 11.1-11.20 to 11.1-11.30.
+- **`SUBAGENT_EPISTEMIC_ASSESSMENT.md`** — new "Subagent CLI
+  Resolution (v1.8.15+)" subsection documenting the active_work file
+  mechanism. Corrected stale "kernel limitation" claim about
+  process-level session_id sharing — hooks DO see distinct
+  claude_session_ids per subagent.
+- **Version label sweep** — bumps 1.6.6/1.8.14 → 1.8.16 across
+  docs/README.md, docs/architecture/README.md,
+  docs/architecture/MULTI_PROJECT_STORAGE.md,
+  docs/human/developers/MCP_SERVER_REFERENCE.md,
+  docs/human/developers/system-prompts/CLAUDE.md,
+  docs/human/end-users/02_INSTALLATION.md (pip + docker tags),
+  README.md (docker tags + What's New).
+- **NOETIC_BATCH_SPEC.md** — converted speculative "ship in v1.8.14
+  (or 1.9.0)" planning markers to past tense (it shipped in 1.8.14).
+
+### Tests
+
+- 27 new tests across the cortex/resolver/grounded-verify fixes
+  (T7: 19 in test_postflight_pipeline_restructure; T8a: 8 in
+  test_project_resolver_raise). Total release-gate suite remains
+  green.
+
 ## [1.8.15] - 2026-04-29
 
 ### Added (Voice integration)

@@ -770,6 +770,134 @@ Tracked separately.
 
 ---
 
+### 11.29 Subagent CLI Calls Bleed to Parent Session via TTY Resolution (2026-04-29)
+
+**Symptom:** Parallel general-purpose subagents running `empirica
+preflight-submit` / `postflight-submit` per file produced reflex rows
+tagged with the *parent's* `session_id` instead of their own. The
+parent's loop then appeared "closed" mid-batch — every subsequent edit
+in the parent (or another subagent) tripped the gate at
+`sentinel-gate.py:1788-1843` with "Epistemic loop closed (POSTFLIGHT
+completed)". Reported by @pschwinger as #95 Issue 1; he confirmed it
+empirically by showing zero `subagent_sessions/*.json` files were
+written during the bug window.
+
+**Root cause:** `subagent-start.py` created a `child_session_id` in
+the `subagent_sessions` table and a per-spawn file under
+`.empirica/subagent_sessions/`, but it did NOT write
+`~/.empirica/active_work_<subagent_uuid>.json`. When the subagent's
+inline `empirica` CLI ran, the resolver chain found no active_work for
+the subagent's `claude_session_id`, fell through to TTY-based
+fallback, and resolved to the *parent's* `empirica_session_id`
+(subagents inherit TTY from the parent). Reflexes from the subagent
+got tagged with the parent's session, contaminating the parent's
+PREFLIGHT/POSTFLIGHT pair.
+
+This is the project_id-grain analog of 11.21 + 11.24 — the same
+pattern (subagent-vs-parent identity) leaking through a different
+mechanism (CLI session resolution rather than detection or session
+existence).
+
+**Fix:**
+
+- `subagent-start.py` now writes
+  `~/.empirica/active_work_<subagent_claude_session_id>.json` with
+  `is_subagent: true` and the subagent's `child_session_id`. The
+  subagent's CLI calls now resolve to their own session.
+- `sentinel-gate.py:_detect_subagent` updated to flag-based detection
+  (read `is_subagent` from active_work). Falls back to existing
+  absence-detection for in-flight subagents predating the fix and for
+  the broken-session-init failure mode.
+- `subagent-stop.py` deletes the active_work file at SubagentStop —
+  prevents stale-file pollution if `claude_session_id`s ever recur.
+
+**Note:** Complementary prompt-level optimization (telling subagents
+not to run measurement cycles since they're sentinel-exempt) belongs
+in the empirica system prompt template and is queued as a follow-up.
+
+**Commit:** `0d2970b64` (T4 in the 1.8.15 work). Tests in
+`tests/test_subagent_active_work.py` (7 cases).
+
+---
+
+### 11.30 SystemExit-from-Library Walks Through Soft-Stage Wrappers (2026-04-29)
+
+**Symptom:** POSTFLIGHT exits with code 1 and `persisted: false` even
+though the loop has actually closed (transaction file written, reflex
+row in DB). User can't tell whether the loop is open or closed; loop
+correctness diverges from CLI exit code. Reported by @pschwinger as
+#95 Issues 2+3 (he traced both to the same propagation path).
+
+**Reproduction (his):** ran `_cortex_resolve_project_id()` directly
+with `cwd=~/empirica/` (a sibling-folder project on his macOS multi-
+`.empirica` setup). Function read `Path.cwd() / '.empirica' /
+'project.yaml'`, called `cli/utils/project_resolver.py:resolve_project_id`,
+which called `sys.exit(1)` because the project_id wasn't in the local
+DB. SystemExit walked through every `except Exception: pass` wrapper
+above (cortex_sync, postflight handler) and killed the command — but
+stages 3-4 had already written the reflex.
+
+**Root cause:**
+
+1. `cli/utils/project_resolver.py:resolve_project_id` was a library
+   helper that called `sys.exit(1)` on miss. Library functions should
+   raise; only CLIs should call sys.exit.
+2. `SystemExit` derives from `BaseException`, not `Exception`. Every
+   `except Exception` wrapper (cortex_sync's `except Exception: pass`,
+   the POSTFLIGHT pipeline's wrappers) silently failed to catch it.
+3. `_cortex_resolve_project_id` read `project.yaml` from `Path.cwd()`
+   even though the session row already had a canonical `project_id`.
+   The CWD read introduced the multi-`.empirica` misroute hazard.
+4. POSTFLIGHT stages 3-4 (close transaction + write reflex) ran
+   unconditionally before stages 5-7 (storage, compliance, cortex
+   sync) had any chance to fail. Half-success: reflex written, exit 1.
+
+**Fix (multi-part, landed across 1.8.15 + 1.8.16):**
+
+- POSTFLIGHT pipeline restructured (workflow_commands.py:3452+):
+  - **Stage 0 (NEW)** pre-validates session row + project_id BEFORE
+    any state mutation. Failure → early return with
+    `{ok: false, persisted: false, loop_state: "open"}`. No mutation.
+  - **Stages 3-4** hard-mutate (close transaction + reflex) only
+    after pre-validation passes.
+  - **Stages 5-7** soft-mutate, wrapped in `_soft_run` which
+    accumulates failures into `result["warnings"]` without erasing
+    the reflex. `_soft_run` catches SystemExit explicitly (defense in
+    depth) — KeyboardInterrupt still propagates.
+- `_cortex_resolve_project_id(session_id)` reads project_id from the
+  session row directly. No more `project.yaml`/`Path.cwd()` involved
+  in cortex sync. Eliminates the misroute pattern structurally.
+- `_cortex_read_calibration_summary(project_path)` accepts the path
+  from the caller (POSTFLIGHT's `resolved_project_path`); falls back
+  to `Path.cwd()` only when unset.
+- `_run_grounded_verification(..., project_path)` accepts the path
+  too — same shape, drops two adjacent CWD-fallbacks
+  (workflow_commands.py:2566, 2584).
+- `cli/utils/project_resolver.py:resolve_project_id` now raises
+  `ProjectNotFoundError` (a normal `Exception` subclass) instead of
+  `sys.exit(1)`. Library callers can catch and recover; top-level CLI
+  handlers' existing `except Exception` paths print the error via
+  `handle_cli_error` and exit cleanly. Same UX, no SystemExit.
+
+**End-state contract:** POSTFLIGHT is either *rejected pre-mutation*
+(loop open, retry after fix) or *succeeded with optional warnings*
+(loop closed, warnings visible in result). Never half-success.
+
+**Out of scope:** the user's specific phantom UUID (`5f2f7a4d-...`)
+came from a sibling `~/empirica/.empirica/` folder on his machine.
+Multi-`.empirica` setups for the same logical project aren't
+supported configurations. The fix above means the resolver leak that
+exposed his setup is closed; it doesn't add multi-`.empirica` support.
+
+**Commits:** `101a06c17` (POSTFLIGHT pipeline restructure — 1.8.15),
+`c389f6a06` (cortex sync from session row — 1.8.16), `27d76bc13`
+(resolve_project_id raises — 1.8.16), `ec94dca1f` (grounded
+verification CWD fix — 1.8.16). Tests in
+`tests/test_postflight_pipeline_restructure.py` (19 cases) and
+`tests/test_project_resolver_raise.py` (8 cases).
+
+---
+
 ## By Design (Not Bugs)
 
 ### Orphaned Transaction After Terminal Restart

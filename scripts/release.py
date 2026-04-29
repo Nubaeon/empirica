@@ -286,6 +286,36 @@ class ReleaseManager:
                 r'badge/version-[0-9]+\.[0-9]+\.[0-9]+-blue\)\]\(https://github\.com/Nubaeon/empirica/releases/tag/v[0-9]+\.[0-9]+\.[0-9]+\)',
                 f'badge/version-{self.version}-blue)](https://github.com/Nubaeon/empirica/releases/tag/v{self.version})',
             ),
+            # README.md docker tag references (standalone — added 1.8.16 to plug the
+            # gap that left "nubaeon/empirica:1.8.14" lying around after the 1.8.15
+            # release_check sweep)
+            (
+                self.repo_root / "README.md",
+                r'nubaeon/empirica:[0-9]+\.[0-9]+\.[0-9]+(-alpine)?',
+                lambda m: f'nubaeon/empirica:{self.version}{m.group(1) or ""}',
+            ),
+            # docs/human/end-users/02_INSTALLATION.md — pip pin + docker tags
+            (
+                self.repo_root / "docs" / "human" / "end-users" / "02_INSTALLATION.md",
+                r'pip install empirica==[0-9]+\.[0-9]+\.[0-9]+',
+                f'pip install empirica=={self.version}',
+            ),
+            (
+                self.repo_root / "docs" / "human" / "end-users" / "02_INSTALLATION.md",
+                r'nubaeon/empirica:[0-9]+\.[0-9]+\.[0-9]+(-alpine)?',
+                lambda m: f'nubaeon/empirica:{self.version}{m.group(1) or ""}',
+            ),
+            # MCP server reference + system-prompt CLAUDE.md "Syncs with" label
+            (
+                self.repo_root / "docs" / "human" / "developers" / "MCP_SERVER_REFERENCE.md",
+                r'\*\*Version:\*\*\s+[0-9]+\.[0-9]+\.[0-9]+',
+                f'**Version:** {self.version}',
+            ),
+            (
+                self.repo_root / "docs" / "human" / "developers" / "system-prompts" / "CLAUDE.md",
+                r'\*\*Syncs with:\*\*\s+Empirica\s+v[0-9]+\.[0-9]+\.[0-9]+',
+                f'**Syncs with:** Empirica v{self.version}',
+            ),
             # Chocolatey install script version
             (
                 self.repo_root / "packaging" / "chocolatey" / "tools" / "chocolateyinstall.ps1",

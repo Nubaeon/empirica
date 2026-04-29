@@ -63,13 +63,37 @@ Rollup at `subagent-stop` still logs findings to the **parent** session
 in the main `sessions` table — the child's purpose is lifecycle
 tracking and lineage, not artifact storage.
 
-**Note on Claude Code session_id sharing:** All subagents inherit the
-parent's Claude Code process-level `session_id` (kernel limitation —
-they're spawned in-process). The Empirica `child_session_id` we create
-is a separate UUID used for our own lineage tracking and budget
-allocation. Hooks that gate on Claude Code's session_id therefore
-cannot distinguish parent from child traffic; gating must happen at
-the agent_name layer instead.
+### Subagent CLI Resolution (v1.8.15+)
+
+When a subagent runs an inline `empirica` CLI command (e.g.
+`empirica preflight-submit`), the CLI needs to resolve a session_id.
+Pre-1.8.15, subagents had no `active_work_<claude_session_id>.json`
+file of their own, so the resolver fell through to TTY-based fallback
+and returned the *parent's* `empirica_session_id` — every subagent
+CLI call ended up tagging artifacts with the parent's session,
+contaminating the parent's PREFLIGHT/POSTFLIGHT pair.
+
+KNOWN_ISSUES 11.29 closes this:
+
+- `subagent-start` writes
+  `~/.empirica/active_work_<subagent_claude_session_id>.json` with
+  `is_subagent: true` and the subagent's `child_session_id`. The
+  subagent's CLI calls now resolve to their own session.
+- `sentinel-gate._detect_subagent` flag-detects via `is_subagent`
+  with absence-detection fallback for pre-1.8.15 in-flight subagents.
+- `subagent-stop` deletes the active_work file at SubagentStop.
+
+**Hook-layer identity (corrected):** Each Task spawn does receive a
+distinct `claude_session_id` from Claude Code via the hook input.
+Hooks CAN distinguish parent from child traffic via that field — the
+post-1.8.15 `_detect_subagent` reads `is_subagent` from the
+subagent-specific active_work file written at SubagentStart. Earlier
+documentation suggested process-level sharing forced agent_name-based
+gating; that was inaccurate. The Empirica `child_session_id` we
+create in `subagent_sessions` remains a separate UUID used for
+lineage tracking and budget allocation; the `claude_session_id`
+identifies the Claude Code session, the `child_session_id` identifies
+the Empirica session bound to it.
 
 See [`docs/reference/api/core_session_management.md`](../reference/api/core_session_management.md#subagent-sessions-v1712) for full method signatures and the `subagent_sessions` schema.
 
