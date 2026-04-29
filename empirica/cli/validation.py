@@ -127,6 +127,18 @@ class PreflightInput(BaseModel):
             "of check-outcome predictions (B4)."
         ),
     )
+    voice: str | None = Field(
+        default=None,
+        description=(
+            "Optional voice profile name to load for outreach drafting. "
+            "When set (or when work_type=comms with no override), PREFLIGHT "
+            "response includes a voice_guidance block with tendencies + "
+            "anti-patterns scoped to the platform register. Profile is "
+            "resolved via the empirica voice loader (project-local "
+            ".empirica/voice/ overrides ~/.empirica/voice/)."
+        ),
+        pattern="^[a-z][a-z0-9_-]*$",
+    )
 
     @field_validator('session_id')
     @classmethod

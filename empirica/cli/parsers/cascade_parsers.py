@@ -31,6 +31,7 @@ def add_cascade_parsers(subparsers):
     preflight_submit_parser.add_argument('--session-id', help='Session ID (legacy)')
     preflight_submit_parser.add_argument('--vectors', help='Epistemic vectors as JSON string or dict (legacy)')
     preflight_submit_parser.add_argument('--reasoning', help='Reasoning for assessment scores (legacy)')
+    preflight_submit_parser.add_argument('--voice', help='Voice profile name to load for outreach drafting (e.g. --voice david). Profile is resolved via the empirica voice loader.')
     preflight_submit_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for AI)')
     preflight_submit_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 

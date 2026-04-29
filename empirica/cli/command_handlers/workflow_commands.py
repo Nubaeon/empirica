@@ -248,6 +248,7 @@ def _preflight_parse_and_validate(args):
         domain = getattr(validated, 'domain', None)
         criticality = getattr(validated, 'criticality', None)
         predicted_check_outcomes = getattr(validated, 'predicted_check_outcomes', None)
+        voice = getattr(validated, 'voice', None)
     else:
         session_id = args.session_id
         vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
@@ -258,6 +259,7 @@ def _preflight_parse_and_validate(args):
         domain = None
         criticality = None
         predicted_check_outcomes = None
+        voice = getattr(args, 'voice', None)
 
         if not session_id or not vectors:
             print(json.dumps({
@@ -291,6 +293,7 @@ def _preflight_parse_and_validate(args):
         "domain": domain,
         "criticality": criticality,
         "predicted_check_outcomes": predicted_check_outcomes,
+        "voice": voice,
         "output_format": output_format,
     }
 
@@ -844,10 +847,84 @@ def _build_noetic_guidance(work_type: str | None) -> dict | None:
     }
 
 
+def _build_voice_guidance(work_type: str | None, voice: str | None) -> dict | None:
+    """Surface the voice profile when work_type=comms or --voice was set.
+
+    Loads the profile via the same resolver as `empirica voice apply` —
+    project-local .empirica/voice/ overrides ~/.empirica/voice/. Output
+    block mirrors voice_commands.handle_voice_apply's payload shape so
+    the AI can treat it as if it had run `voice apply` directly.
+
+    Resolution policy:
+      • voice='<name>' explicit  → load that profile (any work_type)
+      • work_type='comms' alone  → no auto-load (no opinionated default)
+      • neither                  → return None
+
+    Choosing not to auto-pick a profile when work_type=comms is set
+    without --voice keeps the surface explicit and avoids the wrong-voice
+    bug at scale (multi-user sessions, project-shared voice profiles).
+    The voice_guidance block in that case nudges the AI toward
+    `empirica voice list` so the right profile gets named.
+    """
+    if not voice:
+        # work_type=comms without explicit voice → nudge, don't auto-pick
+        if work_type == "comms":
+            return {
+                "hint": (
+                    "work_type=comms — consider naming a voice profile via "
+                    "the 'voice' field in PREFLIGHT (or --voice flag). Run "
+                    "'empirica voice list' to see available profiles."
+                ),
+                "profile": None,
+            }
+        return None
+
+    # Resolve and load the profile
+    try:
+        from empirica.cli.command_handlers.voice_commands import _resolve_profile_path
+        import yaml
+        path = _resolve_profile_path(voice)
+        if path is None:
+            return {
+                "hint": f"voice profile {voice!r} not found (no .yaml in project or global voice dirs).",
+                "profile": None,
+                "error": "profile_not_found",
+            }
+        data = yaml.safe_load(path.read_text()) or {}
+    except Exception as e:
+        return {
+            "hint": f"voice profile load failed: {type(e).__name__}: {e}",
+            "profile": None,
+            "error": "load_failed",
+        }
+
+    # Default register: if work_type=comms, prefer email register; otherwise natural
+    natural = data.get("natural_register", "unspecified")
+    register_key = "email" if work_type == "comms" else None
+    platform_conf = (data.get("platforms") or {}).get(register_key or "") or {}
+    effective_register = platform_conf.get("register") or natural
+
+    return {
+        "profile": data.get("name", voice),
+        "profile_path": str(path),
+        "register_effective": effective_register,
+        "depth": platform_conf.get("depth", "medium"),
+        "framing": platform_conf.get("framing", "unspecified"),
+        "tendencies_foreground": data.get("tendencies") or [],
+        "anti_patterns_suppress": data.get("anti_patterns") or [],
+        "natural_register_fallback": natural,
+        "hint": (
+            "Apply these tendencies and avoid the anti-patterns when drafting "
+            "in this register. The guidance is descriptive of the source "
+            "voice, not aspirational — match what the person actually does."
+        ),
+    }
+
+
 def _preflight_build_result(session_id, transaction_id, calibration_adjustments,
                             calibration_report, previous_transaction_feedback,
                             sentinel_decision, patterns, unclosed_transaction_warning,
-                            work_type=None):
+                            work_type=None, voice=None):
     """Assemble the final PREFLIGHT result dict."""
     result: dict = {
         "ok": True,
@@ -869,6 +946,9 @@ def _preflight_build_result(session_id, transaction_id, calibration_adjustments,
     noetic_guidance = _build_noetic_guidance(work_type)
     if noetic_guidance is not None:
         result["noetic_guidance"] = noetic_guidance
+    voice_guidance = _build_voice_guidance(work_type, voice)
+    if voice_guidance is not None:
+        result["voice_guidance"] = voice_guidance
     return result
 
 
@@ -956,6 +1036,7 @@ def handle_preflight_submit_command(args):
                 previous_transaction_feedback, sentinel_decision,
                 patterns, unclosed_transaction_warning,
                 work_type=parsed.get("work_type"),
+                voice=parsed.get("voice"),
             )
 
             # NOTE: Statusline cache was removed (2026-02-06). Statusline reads directly from DB.
