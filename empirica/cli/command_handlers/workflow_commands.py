@@ -3258,22 +3258,39 @@ def _build_postflight_result(
     return result
 
 
-def _cortex_resolve_project_id():
-    """Resolve project UUID from project.yaml for Cortex sync. Returns string."""
-    from pathlib import Path
+def _cortex_resolve_project_id(session_id: str) -> str:
+    """Resolve project UUID from the session row for Cortex sync.
 
+    The session row's project_id is the canonical source — set at session
+    creation, validated and healed at session boundaries (post-compact +
+    session-init), and pre-validated at POSTFLIGHT Stage 0 before this
+    function ever runs. The DB-of-record is authoritative.
+
+    Previous implementation read project.yaml from Path.cwd() and routed
+    the UUID through resolve_project_id() (a CLI helper that calls
+    sys.exit(1) on miss). That introduced (a) a CWD-dependent leak that
+    misrouted to sibling-folder project.yaml files and (b) a SystemExit
+    propagation path that escaped every `except Exception` wrapper above
+    it. Both were exercised by #95 (pschwinger). Reading from the session
+    row eliminates both failure modes.
+    """
+    if not session_id:
+        return ""
     try:
-        from empirica.cli.utils.project_resolver import resolve_project_id as _rpi
-        _pyaml = Path.cwd() / '.empirica' / 'project.yaml'
-        if _pyaml.exists():
-            with open(_pyaml) as _pf:
-                for _ln in _pf:
-                    if _ln.startswith('project_id:'):
-                        _pn = _ln.split(':', 1)[1].strip()
-                        return _rpi(_pn) or _pn
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        try:
+            cursor = db.conn.cursor()
+            cursor.execute(
+                "SELECT project_id FROM sessions WHERE session_id = ?",
+                (session_id,),
+            )
+            row = cursor.fetchone()
+            return row[0] if row and row[0] else ""
+        finally:
+            db.close()
     except Exception:
-        pass
-    return ""
+        return ""
 
 
 def _cortex_format_rows(rows, table, key):
@@ -3311,13 +3328,20 @@ def _cortex_extract_transaction_delta(session_id):
     return _tx_delta
 
 
-def _cortex_read_calibration_summary():
-    """Read calibration summary from .breadcrumbs.yaml. Returns dict."""
+def _cortex_read_calibration_summary(project_path: str | None = None) -> dict:
+    """Read calibration summary from .breadcrumbs.yaml. Returns dict.
+
+    Reads from project_path/.breadcrumbs.yaml when provided, falling back
+    to Path.cwd() only when project_path is unset (last-resort path,
+    matches the resolved_project_path that POSTFLIGHT itself uses).
+    Avoids the CWD-dependence that caused the multi-.empirica misroute.
+    """
     from pathlib import Path
 
     try:
         import yaml as _yaml
-        _bcf = Path.cwd() / ".breadcrumbs.yaml"
+        _root = Path(project_path) if project_path else Path.cwd()
+        _bcf = _root / ".breadcrumbs.yaml"
         if _bcf.exists():
             with open(_bcf) as _bf:
                 _bcd = _yaml.safe_load(_bf) or {}
@@ -3349,9 +3373,9 @@ def _run_postflight_cortex_sync(session_id, reasoning, resolved_project_path):
 
         import urllib.request
 
-        _sync_pid = _cortex_resolve_project_id()
+        _sync_pid = _cortex_resolve_project_id(session_id)
         _tx_delta = _cortex_extract_transaction_delta(session_id)
-        _cal = _cortex_read_calibration_summary()
+        _cal = _cortex_read_calibration_summary(resolved_project_path)
 
         _payload = json.dumps({
             "project_id": _sync_pid,
@@ -3496,11 +3520,31 @@ def _soft_run(stage_name: str, warnings: list, fn, *args, **kwargs):
     exception in any of them surfaced as exit-code-1 with persisted=false
     even though the loop had actually closed (ghost-success bug).
 
-    Post-fix: catch, log, accumulate into warnings[]. Caller decides what
-    to do with the list (typically: include in result for AI visibility).
+    Post-fix: catch, log, accumulate into warnings[].
+
+    SystemExit is caught explicitly. Some library helpers (like
+    `cli.utils.project_resolver.resolve_project_id`) call `sys.exit(1)`
+    on miss instead of raising — and SystemExit derives from
+    BaseException, not Exception. Without explicit handling, those
+    sys.exit calls would walk straight through every `except Exception`
+    above us and kill POSTFLIGHT, defeating the soft-stage contract.
+    See #95 (pschwinger) for the repro.
+
+    KeyboardInterrupt is intentionally NOT caught — it's a user signal
+    to stop, and we should let it propagate through the whole call stack.
     """
     try:
         return fn(*args, **kwargs)
+    except SystemExit as e:
+        # Library code that called sys.exit(N) — treat as a soft failure
+        # equivalent to a normal exception. Do NOT exit the process.
+        warnings.append({
+            "stage": stage_name,
+            "error_type": "SystemExit",
+            "error": f"library called sys.exit({e.code!r})",
+        })
+        logger.warning(f"POSTFLIGHT {stage_name} soft-failed: SystemExit({e.code!r})")
+        return None
     except Exception as e:
         warnings.append({
             "stage": stage_name,

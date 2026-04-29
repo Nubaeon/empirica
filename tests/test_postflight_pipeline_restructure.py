@@ -134,15 +134,45 @@ class TestSoftRun:
         assert warnings[1]["error_type"] == "ValueError"
 
     def test_handles_keyboard_interrupt_does_not_swallow(self):
-        # KeyboardInterrupt and SystemExit are special — the broad
-        # 'except Exception' here is correct (those derive from
-        # BaseException, not Exception). Verify they propagate.
+        # KeyboardInterrupt is a user signal — must propagate, not be
+        # absorbed as a warning. SystemExit IS caught (separate test
+        # below) because library functions sometimes use sys.exit; KI
+        # comes from the user.
         warnings = []
         def raises_ki():
             raise KeyboardInterrupt
         with pytest.raises(KeyboardInterrupt):
             _soft_run("bus_publish", warnings, raises_ki)
         assert warnings == []  # no warning recorded — exception escaped
+
+    def test_catches_system_exit_from_library(self):
+        # Some helpers in cli.utils.project_resolver and elsewhere call
+        # sys.exit(1) on miss. SystemExit derives from BaseException
+        # (not Exception), so without explicit handling it would walk
+        # straight through every `except Exception` above and kill
+        # POSTFLIGHT. See #95 (pschwinger) for the repro.
+        warnings = []
+        def lib_calls_sys_exit():
+            import sys
+            sys.exit(1)
+        result = _soft_run("cortex_sync", warnings, lib_calls_sys_exit)
+        assert result is None
+        assert len(warnings) == 1
+        w = warnings[0]
+        assert w["stage"] == "cortex_sync"
+        assert w["error_type"] == "SystemExit"
+        assert "sys.exit" in w["error"]
+
+    def test_catches_system_exit_with_string_code(self):
+        # sys.exit("error message") is also valid Python. Must capture
+        # the code in the warning regardless of type.
+        warnings = []
+        def lib_exit_string():
+            import sys
+            sys.exit("project not found")
+        result = _soft_run("cortex_sync", warnings, lib_exit_string)
+        assert result is None
+        assert "project not found" in warnings[0]["error"]
 
     def test_warning_dict_shape_is_serializable(self):
         # Warnings end up in result['warnings'] which is JSON-serialized.
@@ -152,3 +182,93 @@ class TestSoftRun:
         _soft_run("bus_publish", warnings, lambda: (_ for _ in ()).throw(RuntimeError("bad")))
         # Should serialize cleanly
         json.dumps(warnings)
+
+
+# ─── _cortex_resolve_project_id (architectural fix) ─────────────────────────
+
+
+class TestCortexResolveProjectId:
+    """Cortex sync now reads project_id from session row, not project.yaml.
+
+    Before: read Path.cwd()/.empirica/project.yaml, routed through
+    resolve_project_id() which sys.exit(1)'s on miss → SystemExit walked
+    through every wrapper, killed POSTFLIGHT (#95 root cause).
+
+    After: SELECT project_id FROM sessions WHERE session_id = ?. DB is
+    canonical, T5's pre-validation guarantees the row + project_id exist
+    by the time this runs.
+    """
+
+    def test_returns_project_id_from_session_row(self):
+        from unittest.mock import patch
+        from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
+
+        with patch('empirica.data.session_database.SessionDatabase') as mock_db_cls:
+            mock_db = mock_db_cls.return_value
+            cursor = mock_db.conn.cursor.return_value
+            cursor.fetchone.return_value = ('eea1ca87-real-project-uuid',)
+
+            result = _cortex_resolve_project_id('session-001')
+            assert result == 'eea1ca87-real-project-uuid'
+
+    def test_returns_empty_string_on_missing_session(self):
+        from unittest.mock import patch
+        from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
+
+        with patch('empirica.data.session_database.SessionDatabase') as mock_db_cls:
+            mock_db = mock_db_cls.return_value
+            cursor = mock_db.conn.cursor.return_value
+            cursor.fetchone.return_value = None
+
+            result = _cortex_resolve_project_id('missing-session')
+            assert result == ""
+
+    def test_returns_empty_string_on_null_project_id(self):
+        from unittest.mock import patch
+        from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
+
+        with patch('empirica.data.session_database.SessionDatabase') as mock_db_cls:
+            mock_db = mock_db_cls.return_value
+            cursor = mock_db.conn.cursor.return_value
+            cursor.fetchone.return_value = (None,)
+
+            result = _cortex_resolve_project_id('session-002')
+            assert result == ""
+
+    def test_returns_empty_string_on_empty_session_id(self):
+        from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
+        # No DB query attempted — short-circuit on empty input.
+        assert _cortex_resolve_project_id("") == ""
+        assert _cortex_resolve_project_id(None) == ""  # type: ignore[arg-type]
+
+    def test_does_not_read_project_yaml_or_call_resolve_project_id(self):
+        # Architectural test: the function must NOT touch the YAML file
+        # or the resolve_project_id helper. If a future refactor accidentally
+        # reintroduces either, this test fails.
+        from unittest.mock import patch
+        from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
+
+        with patch('empirica.data.session_database.SessionDatabase') as mock_db_cls, \
+             patch('builtins.open') as mock_open, \
+             patch('empirica.cli.utils.project_resolver.resolve_project_id') as mock_rpi:
+            mock_db = mock_db_cls.return_value
+            cursor = mock_db.conn.cursor.return_value
+            cursor.fetchone.return_value = ('canonical-uuid',)
+
+            result = _cortex_resolve_project_id('session-003')
+            assert result == 'canonical-uuid'
+            # No YAML read, no resolve_project_id call — the failure modes
+            # from #95 are structurally impossible.
+            mock_open.assert_not_called()
+            mock_rpi.assert_not_called()
+
+    def test_db_failure_returns_empty_string_not_raises(self):
+        # Cortex sync is non-fatal — if DB is unavailable, return empty
+        # string and let the caller skip. Never raise to caller.
+        from unittest.mock import patch
+        from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
+
+        with patch('empirica.data.session_database.SessionDatabase') as mock_db_cls:
+            mock_db_cls.side_effect = OSError("DB locked")
+            result = _cortex_resolve_project_id('session-004')
+            assert result == ""
