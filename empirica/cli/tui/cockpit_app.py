@@ -17,7 +17,8 @@ Vertical layout (single column):
 
 Actions (mouse OR keyboard):
   p  toggle Sentinel pause/resume
-  l  toggle all loops on/off
+  l  toggle all loops on/off (cron — periodic work)
+  e  toggle all listeners on/off (event-driven work)
   s  stop = remote interrupt (tmux send-keys Escape)
   n  clear all notifications for selected instance
   D  toggle live-only / include-dead view
@@ -28,6 +29,7 @@ Actions (mouse OR keyboard):
 from __future__ import annotations
 
 import textwrap
+from argparse import Namespace
 from typing import Any
 
 from textual.app import App, ComposeResult
@@ -41,6 +43,12 @@ from textual.widgets import (
     Static,
 )
 
+from empirica.cli.command_handlers.cockpit_commands import (
+    handle_listener_pause_command,
+    handle_listener_resume_command,
+    handle_loop_pause_command,
+    handle_loop_resume_command,
+)
 from empirica.core.cockpit import (
     LoopRegistry,
     aggregate_all,
@@ -51,7 +59,6 @@ from empirica.core.cockpit import (
     open_goals_list,
     pause_sentinel,
     resume_sentinel,
-    set_loop_paused,
     statusline_summary,
     stop_instance,
 )
@@ -102,6 +109,7 @@ class CockpitApp(App):
         Binding('r', 'refresh_now', 'Refresh'),
         Binding('p', 'toggle_sentinel', 'Sent.'),
         Binding('l', 'toggle_loops', 'Loops'),
+        Binding('e', 'toggle_listeners', 'Listen'),
         Binding('s', 'stop', 'Stop'),
         Binding('n', 'clear_notifications', 'Notif'),
         Binding('D', 'toggle_dead', 'Show dead'),
@@ -123,12 +131,13 @@ class CockpitApp(App):
         yield Static('', id='summary')
 
         table = DataTable(id='inst-table', cursor_type='row', zebra_stripes=True)
-        table.add_columns('s', 'name', 'ph', 'S', 'L', 'N')
+        table.add_columns('s', 'name', 'ph', 'S', 'L', 'E', 'N')
         yield table
 
         with Horizontal(id='action-bar'):
             yield Button('P sent', id='btn-sent', variant='warning')
             yield Button('L loops', id='btn-loops', variant='warning')
+            yield Button('E listen', id='btn-listen', variant='warning')
             yield Button('S stop', id='btn-stop', variant='error')
             yield Button('N notif', id='btn-notif', variant='primary')
 
@@ -210,8 +219,9 @@ class CockpitApp(App):
             phase = self._phase_short(inst.get('phase'), inst.get('asking', False))
             sentinel = '○' if inst['sentinel']['paused'] else '●'
             loops = self._loops_glyph(inst.get('loops') or {})
+            listeners = self._listeners_glyph(inst.get('listeners') or {})
             notif = self._notif_glyph(inst.get('notifications') or {})
-            table.add_row(stat, name, phase, sentinel, loops, notif, key=iid)
+            table.add_row(stat, name, phase, sentinel, loops, listeners, notif, key=iid)
 
         if rows:
             target = previously_selected or rows[0]['instance_id']
@@ -253,6 +263,20 @@ class CockpitApp(App):
         if paused == 0:
             return '●'
         if paused == len(loops):
+            return '○'
+        return '◐'
+
+    @staticmethod
+    def _listeners_glyph(listeners: dict[str, Any]) -> str:
+        """Same shape as _loops_glyph — listeners are sister concept,
+        event-driven instead of cron. ●=all armed, ○=all paused, ◐=mixed,
+        –=none registered."""
+        if not listeners:
+            return '–'
+        paused = sum(1 for v in listeners.values() if v.get('paused'))
+        if paused == 0:
+            return '●'
+        if paused == len(listeners):
             return '○'
         return '◐'
 
@@ -392,19 +416,85 @@ class CockpitApp(App):
         self.refresh_payload()
 
     def action_toggle_loops(self) -> None:
+        """Toggle all loops via the proper command handlers.
+
+        Calls handle_loop_pause_command / handle_loop_resume_command so the
+        new mechanical pause-cancels-cron mechanism (1.8.17) fires:
+          - pause writes loop_uninstall_pending_*.json containing the
+            recorded job_id when scheduler_kind=cron-create
+          - the loop-uninstall-pickup hook surfaces it as system-reminder
+            on the owning Claude's next prompt asking it to CronDelete
+          - body's pause-check at next fire is the backstop
+
+        When no loops are registered, surface a hint pointing at the
+        install-request CLI (Phase 2 of TUI work will auto-install from
+        a project.yaml canonical-loop config).
+        """
         inst = self._require_selected()
         if inst is None:
             return
         loops = inst.get('loops') or {}
         if not loops:
-            self._log_status(f'{inst["instance_id"]}: no loops registered')
+            self._log_status(
+                f'{inst["instance_id"]}: no loops — '
+                'use `empirica loop install-request --instance ID --name N --interval ...`'
+            )
             return
         any_unpaused = any(not v.get('paused') for v in loops.values())
-        target_state = bool(any_unpaused)
+        target_paused = bool(any_unpaused)
+        handler = handle_loop_pause_command if target_paused else handle_loop_resume_command
         for name in loops:
-            set_loop_paused(inst['instance_id'], name, target_state)
-        verb = 'paused' if target_state else 'resumed'
+            args = Namespace(
+                name=name,
+                instance=inst['instance_id'],
+                output='json',
+            )
+            try:
+                handler(args)
+            except Exception as e:
+                self._log_status(f'{inst["instance_id"]} {name}: {e}')
+                return
+        verb = 'paused' if target_paused else 'resumed'
         self._log_status(f'{verb} {len(loops)} loop(s) on {inst["instance_id"]}')
+        self.refresh_payload()
+
+    def action_toggle_listeners(self) -> None:
+        """Toggle all listeners via the proper command handlers.
+
+        Mirror of action_toggle_loops for event-driven listeners. Calls
+        handle_listener_pause_command / handle_listener_resume_command so
+        the mechanical Monitor-kill flow fires (writes pending uninstall
+        with monitor_task_id; listener-uninstall-pickup hook surfaces it).
+        """
+        inst = self._require_selected()
+        if inst is None:
+            return
+        listeners = inst.get('listeners') or {}
+        if not listeners:
+            self._log_status(
+                f'{inst["instance_id"]}: no listeners — '
+                'use `empirica listener install-request --instance ID --name N --topic ntfy:...`'
+            )
+            return
+        any_unpaused = any(not v.get('paused') for v in listeners.values())
+        target_paused = bool(any_unpaused)
+        handler = (
+            handle_listener_pause_command if target_paused
+            else handle_listener_resume_command
+        )
+        for name in listeners:
+            args = Namespace(
+                name=name,
+                instance=inst['instance_id'],
+                output='json',
+            )
+            try:
+                handler(args)
+            except Exception as e:
+                self._log_status(f'{inst["instance_id"]} {name}: {e}')
+                return
+        verb = 'paused' if target_paused else 'resumed'
+        self._log_status(f'{verb} {len(listeners)} listener(s) on {inst["instance_id"]}')
         self.refresh_payload()
 
     def action_stop(self) -> None:
@@ -434,6 +524,7 @@ class CockpitApp(App):
         actions = {
             'btn-sent': self.action_toggle_sentinel,
             'btn-loops': self.action_toggle_loops,
+            'btn-listen': self.action_toggle_listeners,
             'btn-stop': self.action_stop,
             'btn-notif': self.action_clear_notifications,
         }

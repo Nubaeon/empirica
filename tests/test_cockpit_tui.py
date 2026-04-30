@@ -30,7 +30,9 @@ def cockpit_env(tmp_path, monkeypatch):
         enrichment,
         instance_actions,
         instance_state,
+        listener_registry,
         loop_registry,
+        loop_uninstall_request,
         sentinel_pause,
     )
 
@@ -40,6 +42,8 @@ def cockpit_env(tmp_path, monkeypatch):
     monkeypatch.setattr(instance_actions, 'EMPIRICA_DIR', fake_home)
     monkeypatch.setattr(instance_actions, 'TTY_SESSIONS_DIR', fake_home / 'tty_sessions')
     monkeypatch.setattr(loop_registry, 'EMPIRICA_DIR', fake_home)
+    monkeypatch.setattr(loop_uninstall_request, 'EMPIRICA_DIR', fake_home)
+    monkeypatch.setattr(listener_registry, 'EMPIRICA_DIR', fake_home)
     monkeypatch.setattr(enrichment, 'EMPIRICA_DIR', fake_home)
     monkeypatch.setattr(
         enrichment, 'ENP_PENDING_PATH', fake_home / 'enp' / 'pending.json',
@@ -57,8 +61,9 @@ def _bind_instance(home: Path, project: Path, instance_id: str) -> None:
 
 @pytest.mark.asyncio
 async def test_tui_mounts_compact_widgets(cockpit_env):
-    from empirica.cli.tui import CockpitApp
     from textual.widgets import Button, DataTable, Static
+
+    from empirica.cli.tui import CockpitApp
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
@@ -77,8 +82,9 @@ async def test_tui_mounts_compact_widgets(cockpit_env):
 @pytest.mark.asyncio
 async def test_tui_has_no_kill_button(cockpit_env):
     """Kill is CLI-only by design; the TUI should not expose it."""
-    from empirica.cli.tui import CockpitApp
     from textual.css.query import NoMatches
+
+    from empirica.cli.tui import CockpitApp
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
@@ -88,17 +94,18 @@ async def test_tui_has_no_kill_button(cockpit_env):
 
 
 @pytest.mark.asyncio
-async def test_table_has_six_columns(cockpit_env):
-    from empirica.cli.tui import CockpitApp
+async def test_table_has_seven_columns(cockpit_env):
     from textual.widgets import DataTable
+
+    from empirica.cli.tui import CockpitApp
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
         await pilot.pause(); await pilot.pause()
         table = app.query_one('#inst-table', DataTable)
         col_labels = [c.label.plain for c in table.columns.values()]
-        # v1.6: shortened headers for portrait fit (s/ph/S/L/N)
-        assert col_labels == ['s', 'name', 'ph', 'S', 'L', 'N']
+        # v1.7: added E (event listener) column between L (loops) and N (notif).
+        assert col_labels == ['s', 'name', 'ph', 'S', 'L', 'E', 'N']
 
 
 # ─── data loading ─────────────────────────────────────────────────────────
@@ -283,8 +290,9 @@ async def test_n_clears_notifications(cockpit_env):
 @pytest.mark.asyncio
 async def test_phase_ask_when_asking_flag_present(cockpit_env):
     """Phase shows 'ask ⚠' when ~/.empirica/asking_{id} flag exists."""
-    from empirica.cli.tui import CockpitApp
     from textual.widgets import DataTable
+
+    from empirica.cli.tui import CockpitApp
 
     home, project = cockpit_env
     _bind_instance(home, project, 'tmux_42')
@@ -319,11 +327,13 @@ async def test_phase_ask_when_asking_flag_present(cockpit_env):
 @pytest.mark.asyncio
 async def test_statusline_format_includes_conf_and_goals(cockpit_env):
     """Statusline format: k:X c:Y conf:Z% goals:N (when vectors available)."""
-    from empirica.cli.tui import CockpitApp
-    from textual.widgets import Static
-    from rich.console import Console
     import sqlite3
     import time
+
+    from rich.console import Console
+    from textual.widgets import Static
+
+    from empirica.cli.tui import CockpitApp
 
     home, project = cockpit_env
     _bind_instance(home, project, 'tmux_42')
@@ -394,10 +404,13 @@ async def test_statusline_format_includes_conf_and_goals(cockpit_env):
 @pytest.mark.asyncio
 async def test_open_goals_widget_shows_goals(cockpit_env):
     """Open goals widget lists open goals, not phase events."""
-    from empirica.cli.tui import CockpitApp
-    from textual.widgets import Static
+    import sqlite3
+    import time
+
     from rich.console import Console
-    import sqlite3, time
+    from textual.widgets import Static
+
+    from empirica.cli.tui import CockpitApp
 
     home, project = cockpit_env
     _bind_instance(home, project, 'tmux_42')
@@ -450,11 +463,145 @@ async def test_open_goals_widget_shows_goals(cockpit_env):
 @pytest.mark.asyncio
 async def test_no_recent_widget(cockpit_env):
     """v1.6 dropped the recent-events widget — confirm it's gone."""
-    from empirica.cli.tui import CockpitApp
     from textual.css.query import NoMatches
+
+    from empirica.cli.tui import CockpitApp
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
         await pilot.pause(); await pilot.pause()
         with pytest.raises(NoMatches):
             app.query_one('#recent')
+
+
+# ─── L button mechanical-kill regression (1.8.17 + this commit) ────────────
+
+
+@pytest.mark.asyncio
+async def test_l_button_writes_pending_uninstall_when_armed(cockpit_env):
+    """The TUI's L (toggle loops) button used to call set_loop_paused
+    directly, bypassing the pause-cancels-cron mechanism. After this
+    commit it calls handle_loop_pause_command, which writes the pending
+    uninstall file when scheduler_kind=cron-create + job_id is recorded.
+    """
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+
+    from empirica.cli.tui import CockpitApp
+    from empirica.core.cockpit.loop_registry import LoopRegistry
+
+    # Register a loop with a recorded job_id (mimics what a healthy
+    # loop body's heartbeat call writes after CronCreate).
+    reg = LoopRegistry('tmux_test')
+    reg.register(name='foo', kind='cron', cron='*/15 * * * *', description='t')
+    reg.heartbeat(
+        name='foo', status='ok', result='empty',
+        next_scheduled_job_id='cron-job-xyz',
+        scheduler_kind='cron-create',
+    )
+
+    app = CockpitApp(include_dead=True)
+    async with app.run_test(headless=True, size=(40, 24)) as pilot:
+        await pilot.pause(); await pilot.pause()
+        # Press L — should toggle to paused, which now writes pending uninstall
+        await pilot.press('l')
+        await pilot.pause(); await pilot.pause()
+
+    # The pending uninstall file should now exist.
+    pending = list(home.glob('loop_uninstall_pending_*.json'))
+    assert len(pending) == 1, (
+        f'Expected pending uninstall file after L press; found {pending}. '
+        'TUI L button must call handle_loop_pause_command, not set_loop_paused.'
+    )
+    data = json.loads(pending[0].read_text())
+    assert data['name'] == 'foo'
+    assert data['job_id'] == 'cron-job-xyz'
+
+
+# ─── E binding (listener) ──────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_e_button_toggles_listener_pause(cockpit_env):
+    """E binding should toggle listener pause via handle_listener_pause_command."""
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+
+    from empirica.cli.tui import CockpitApp
+    from empirica.core.cockpit.listener_registry import (
+        ListenerRegistry,
+        is_listener_paused,
+    )
+
+    reg = ListenerRegistry('tmux_test')
+    reg.register(name='inbox', topic='ntfy:t', description='cortex')
+
+    assert not is_listener_paused('tmux_test', 'inbox')
+
+    app = CockpitApp(include_dead=True)
+    async with app.run_test(headless=True, size=(40, 24)) as pilot:
+        await pilot.pause(); await pilot.pause()
+        await pilot.press('e')
+        await pilot.pause(); await pilot.pause()
+
+    assert is_listener_paused('tmux_test', 'inbox'), (
+        'E press should have paused the listener via the proper handler.'
+    )
+
+
+@pytest.mark.asyncio
+async def test_e_button_no_listeners_message(cockpit_env):
+    """E with no registered listeners should surface an install-request hint."""
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+
+    from textual.widgets import Static
+
+    from empirica.cli.tui import CockpitApp
+
+    app = CockpitApp(include_dead=True)
+    async with app.run_test(headless=True, size=(40, 24)) as pilot:
+        await pilot.pause(); await pilot.pause()
+        await pilot.press('e')
+        await pilot.pause()
+        # _log_status writes to the #notif widget
+        notif = app.query_one('#notif', Static)
+        from rich.console import Console
+        c = Console(width=120, file=open('/dev/null', 'w'))
+        with c.capture() as cap:
+            c.print(notif.render())
+        text = cap.get()
+        assert 'no listeners' in text or 'install-request' in text
+
+
+# ─── E column in instance table ────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_listeners_surface_in_aggregate(cockpit_env):
+    """aggregate_all should include a 'listeners' dict per instance + a
+    listeners_registered/listeners_paused summary."""
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+
+    from empirica.core.cockpit import aggregate_all
+    from empirica.core.cockpit.listener_registry import (
+        ListenerRegistry,
+        set_listener_paused,
+    )
+
+    reg = ListenerRegistry('tmux_test')
+    reg.register(name='a', topic='ntfy:1')
+    reg.register(name='b', topic='ntfy:2')
+    set_listener_paused('tmux_test', 'a', True)
+
+    payload = aggregate_all(include_dead=True)
+    [inst] = [i for i in payload['instances'] if i['instance_id'] == 'tmux_test']
+    assert 'listeners' in inst
+    assert set(inst['listeners'].keys()) == {'a', 'b'}
+    assert inst['listeners']['a']['paused'] is True
+    assert inst['listeners']['b']['paused'] is False
+
+    summary = payload['summary']
+    assert summary['listeners_registered'] >= 2
+    assert summary['listeners_paused'] >= 1
