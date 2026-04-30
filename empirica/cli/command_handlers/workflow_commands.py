@@ -881,8 +881,9 @@ def _build_voice_guidance(work_type: str | None, voice: str | None) -> dict | No
 
     # Resolve and load the profile
     try:
-        from empirica.cli.command_handlers.voice_commands import _resolve_profile_path
         import yaml
+
+        from empirica.cli.command_handlers.voice_commands import _resolve_profile_path
         path = _resolve_profile_path(voice)
         if path is None:
             return {

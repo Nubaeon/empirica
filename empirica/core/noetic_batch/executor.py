@@ -97,7 +97,7 @@ def run_batch(
                 f"~tokens={summary.approx_tokens} "
                 f"duration={summary.duration_ms}ms\n"
             )
-        except Exception:  # noqa: BLE001 — stderr formatting must never break the batch
+        except Exception:  # noqa: S110 — telemetry breadcrumb, must not fail the batch
             pass
 
     return result

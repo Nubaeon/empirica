@@ -229,7 +229,7 @@ def test_should_fire_allows_when_past_threshold(fake_home):
 
 def test_should_fire_unknown_loop_treated_as_fire(fake_home):
     reg = lr.LoopRegistry('tmux_42')
-    should, reason = reg.should_fire('does-not-exist')
+    should, _reason = reg.should_fire('does-not-exist')
     assert should is True
 
 

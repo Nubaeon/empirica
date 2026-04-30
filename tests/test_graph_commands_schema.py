@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from empirica.cli.command_handlers import graph_commands as gc
 
-
 # ─── _normalize_graph ─────────────────────────────────────────────────────
 
 def test_normalize_passes_canonical_unchanged():

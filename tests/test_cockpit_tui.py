@@ -71,7 +71,8 @@ async def test_tui_mounts_compact_widgets(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
 
         assert app.query_one('#inst-table', DataTable) is not None
         assert app.query_one('#summary', Static) is not None
@@ -92,7 +93,8 @@ async def test_tui_has_no_kill_button(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         with pytest.raises(NoMatches):
             app.query_one('#btn-kill')
 
@@ -105,7 +107,8 @@ async def test_table_has_seven_columns(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         table = app.query_one('#inst-table', DataTable)
         col_labels = [c.label.plain for c in table.columns.values()]
         # v1.7: added E (event listener) column between L (loops) and N (notif).
@@ -124,7 +127,8 @@ async def test_tui_loads_instances(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         ids = sorted(i['instance_id'] for i in app.payload['instances'])
         assert ids == ['tmux_42', 'tmux_99']
 
@@ -141,7 +145,8 @@ async def test_p_toggles_sentinel(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
 
         # First press: pauses
         await pilot.press('p')
@@ -163,7 +168,8 @@ async def test_btn_sent_toggles_sentinel(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         await pilot.click('#btn-sent')
         await pilot.pause()
         assert (home / 'sentinel_paused_tmux_42').exists()
@@ -184,7 +190,8 @@ async def test_l_pauses_all_loops_when_any_unpaused(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         await pilot.press('l')
         await pilot.pause()
 
@@ -208,7 +215,8 @@ async def test_l_resumes_all_loops_when_all_paused(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         await pilot.press('l')
         await pilot.pause()
 
@@ -235,7 +243,8 @@ async def test_stop_calls_stop_instance(cockpit_env, monkeypatch):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         await pilot.press('s')
         await pilot.pause()
 
@@ -277,7 +286,8 @@ async def test_n_clears_notifications(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         await pilot.press('n')
         await pilot.pause()
 
@@ -314,7 +324,8 @@ async def test_phase_ask_when_asking_flag_present(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(54, 20)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         table = app.query_one('#inst-table', DataTable)
         for row_key in table.rows:
             if str(row_key.value) == 'tmux_42':
@@ -393,7 +404,8 @@ async def test_statusline_format_includes_conf_and_goals(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         sl = app.query_one('#statusline', Static)
         c = Console(width=40, file=open('/dev/null', 'w'))
         with c.capture() as cap:
@@ -455,7 +467,8 @@ async def test_open_goals_widget_shows_goals(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         goals_w = app.query_one('#goals', Static)
         c = Console(width=40, file=open('/dev/null', 'w'))
         with c.capture() as cap:
@@ -473,7 +486,8 @@ async def test_no_recent_widget(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         with pytest.raises(NoMatches):
             app.query_one('#recent')
 
@@ -506,10 +520,12 @@ async def test_l_button_writes_pending_uninstall_when_armed(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         # Press L — should toggle to paused, which now writes pending uninstall
         await pilot.press('l')
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
 
     # The pending uninstall file should now exist.
     pending = list(home.glob('loop_uninstall_pending_*.json'))
@@ -544,9 +560,11 @@ async def test_e_button_toggles_listener_pause(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         await pilot.press('e')
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
 
     assert is_listener_paused('tmux_test', 'inbox'), (
         'E press should have paused the listener via the proper handler.'
@@ -565,7 +583,8 @@ async def test_e_button_no_listeners_message(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         await pilot.press('e')
         await pilot.pause()
         # _log_status writes to the #notif widget
@@ -642,9 +661,11 @@ async def test_l_click_empty_registry_installs_from_project_yaml(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         await pilot.press('l')
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
 
     # Loop should now be in the registry (install-request registers).
     reg = LoopRegistry('tmux_test')
@@ -671,7 +692,8 @@ async def test_l_click_empty_registry_no_yaml_falls_back_to_hint(cockpit_env):
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         await pilot.press('l')
         await pilot.pause()
         notif = app.query_one('#notif', Static)
@@ -709,9 +731,11 @@ async def test_e_click_empty_registry_installs_listener_from_project_yaml(cockpi
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
         await pilot.press('e')
-        await pilot.pause(); await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
 
     reg = ListenerRegistry('tmux_test')
     entry = reg.get('auto-inbox')

@@ -66,7 +66,7 @@ def handle_notify_emit_command(args) -> int:
 
     try:
         config = load_config()
-    except Exception as e:  # noqa: BLE001 — config errors shouldn't crash emit
+    except Exception as e:
         return _emit_output(args, {
             'ok': False, 'detail': f'config load failed: {e}',
         }, 1)
@@ -119,7 +119,7 @@ def handle_notify_config_command(args) -> int:
     """`empirica notify config` — print effective config with secrets redacted."""
     try:
         config = load_config()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return _emit_output(args, {
             'ok': False, 'detail': f'config load failed: {e}',
         }, 1)
@@ -134,7 +134,7 @@ def handle_notify_backends_command(args) -> int:
     """`empirica notify backends` — list registered backends + configured status."""
     try:
         config = load_config()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return _emit_output(args, {
             'ok': False, 'detail': f'config load failed: {e}',
         }, 1)
@@ -162,7 +162,7 @@ def handle_notify_test_command(args) -> int:
 
     try:
         config = load_config()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return _emit_output(args, {
             'ok': False, 'detail': f'config load failed: {e}',
         }, 1)

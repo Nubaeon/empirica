@@ -185,7 +185,7 @@ def statusline_summary(
     label_fallback: str | None = None,
     project_path: str | None = None,
     session_id: str | None = None,
-) -> StatuslineSummary:  # noqa: D401
+) -> StatuslineSummary:
     """(see body) — the open_goals count is project-scoped to match the
     open_goals_list widget below it."""
     """Resolve the live statusline summary for an instance.

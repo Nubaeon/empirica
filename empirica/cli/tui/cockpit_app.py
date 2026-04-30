@@ -575,7 +575,7 @@ class CockpitApp(App):
         try:
             notif = self.query_one('#notif', Static)
             notif.update(f'• {message}')
-        except Exception:
+        except Exception:  # noqa: S110 — TUI status nudge is best-effort; failure must not crash the app
             pass
 
     def _install_loops_from_project(self, inst: dict[str, Any]) -> int:
@@ -665,7 +665,7 @@ def run_tui(include_dead: bool = False) -> int:
     try:
         LoopRegistry.__name__  # noqa: B018
         is_loop_paused  # noqa: B018
-    except Exception:
+    except Exception:  # noqa: S110 — import-warming presence check; deliberately silent
         pass
 
     try:

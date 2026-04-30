@@ -1125,9 +1125,7 @@ def _is_inert_shape(stripped: str) -> bool:
         return True
     # VAR=value assignment — the value here is the *placeholder* if it
     # had a substitution (which was already validated), or a literal.
-    if re.match(r'^[A-Za-z_][A-Za-z0-9_]*=\S*$', stripped):
-        return True
-    return False
+    return bool(re.match(r'^[A-Za-z_][A-Za-z0-9_]*=\S*$', stripped))
 
 
 def _is_segment_safe(segment: str) -> bool:

@@ -36,13 +36,15 @@ from .checkpoint_signing_commands import (
     handle_checkpoint_signatures_command,
     handle_checkpoint_verify_command,
 )
-from .code_embed import (
-    handle_code_embed_command,
-)
 from .cockpit_commands import (
     handle_loop_group_command,
     handle_sentinel_group_command,
+)
+from .cockpit_commands import (
     handle_status_command as handle_cockpit_status_command,
+)
+from .code_embed import (
+    handle_code_embed_command,
 )
 from .compact_analysis import handle_compact_analysis
 from .compliance_report_commands import (
@@ -57,11 +59,11 @@ from .config_commands import (
     handle_config_validate_command,
 )
 from .diagnose import handle_diagnose_command
-from .doctor import handle_doctor_command
 from .doc_commands import (
     handle_doc_check_command,
     handle_doc_plan_suggest_command,
 )
+from .doctor import handle_doctor_command
 from .ecosystem_commands import (
     handle_ecosystem_check_command,
 )
@@ -273,9 +275,9 @@ __all__ = [
     'handle_decision_log_command',
     'handle_delete_artifacts_command',
     'handle_diagnose_command',
-    'handle_doctor_command',
     'handle_doc_check_command',
     'handle_doc_plan_suggest_command',
+    'handle_doctor_command',
     'handle_ecosystem_check_command',
     'handle_efficiency_report_command',
     'handle_engagement_focus_command',
@@ -351,6 +353,13 @@ __all__ = [
     'handle_monitor_cost_command',
     'handle_monitor_export_command',
     'handle_monitor_reset_command',
+    'handle_noetic_batch_command',
+    # Notify dispatcher commands
+    'handle_notify_backends_command',
+    'handle_notify_config_command',
+    'handle_notify_emit_command',
+    'handle_notify_group_command',
+    'handle_notify_test_command',
     # Onboarding commands
     'handle_onboard_command',
     'handle_performance_command',
@@ -377,13 +386,6 @@ __all__ = [
     'handle_release_command',
     'handle_resolve_artifacts_command',
     'handle_save_command',
-    'handle_noetic_batch_command',
-    # Notify dispatcher commands
-    'handle_notify_backends_command',
-    'handle_notify_config_command',
-    'handle_notify_emit_command',
-    'handle_notify_group_command',
-    'handle_notify_test_command',
     'handle_security_audit_command',
     'handle_sentinel_check_command',
     'handle_sentinel_load_profile_command',
@@ -425,7 +427,6 @@ __all__ = [
     # Vision commands
     'handle_vision_analyze',
     'handle_vision_log',
-
     # Voice profile commands
     'handle_voice_apply_command',
     'handle_voice_group_command',

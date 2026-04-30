@@ -128,7 +128,7 @@ def check_cortex_reachability() -> Check:
     health_url = f"{cortex_url.rstrip('/')}/cortex/health"
     try:
         import urllib.request
-        with urllib.request.urlopen(health_url, timeout=5) as resp:  # noqa: S310
+        with urllib.request.urlopen(health_url, timeout=5) as resp:
             ok = resp.status == 200
             return Check("Cortex reachability", PASS if ok else WARN,
                          f"{health_url} → {resp.status}",

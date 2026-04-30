@@ -2577,7 +2577,7 @@ def _resolve_project_id_for_prune(args, db) -> str | None:
             session = db.get_session(sid)
             if session:
                 return session.get('project_id')
-    except Exception:  # noqa: BLE001 — best-effort resolution
+    except Exception:
         pass
     return None
 
@@ -2593,7 +2593,7 @@ def _prune_by_status_planned(cursor, project_id: str, dry_run: bool) -> list[dic
     )
     rows = cursor.fetchall()
     pruned = []
-    for goal_id, objective, created in rows:
+    for goal_id, objective, _created in rows:
         pruned.append({
             'id': goal_id, 'objective': objective[:80], 'mode': 'by-status:planned',
             'reason': 'Planned goal never activated — closed via goals-prune sweep',
@@ -2695,7 +2695,7 @@ def _prune_duplicates_via_qdrant(cursor, project_id: str, threshold: float,
     """
     try:
         from empirica.core.qdrant.connection import _get_qdrant_client
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return [{'mode': 'duplicates', 'error': f'Qdrant unavailable: {e}'}]
 
     client = _get_qdrant_client()
@@ -2763,7 +2763,7 @@ def _write_prune_receipt(pruned: list[dict], modes_run: list[str], dry_run: bool
             ['git', 'notes', '--ref=breadcrumbs', 'append', '-m', json.dumps(receipt)],
             capture_output=True, timeout=5, check=False,
         )
-    except Exception:  # noqa: BLE001 — receipt is best-effort
+    except Exception:
         pass
 
 

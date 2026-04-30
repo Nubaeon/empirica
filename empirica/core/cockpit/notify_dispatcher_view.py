@@ -103,7 +103,7 @@ def build_notify_dispatcher_block(
             'fell_back_count_24h': fell_back_count(window_hours=24.0),
             'emit_count_24h': emit_count(window_hours=24.0),
         }
-    except Exception:  # noqa: BLE001 — never break cockpit on telemetry
+    except Exception:
         return dict(_EMPTY_BLOCK)
 
 

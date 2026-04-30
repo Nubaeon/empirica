@@ -24,7 +24,6 @@ from typing import Any
 
 import yaml
 
-
 # ─── profile resolution ─────────────────────────────────────────────────────
 
 

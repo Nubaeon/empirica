@@ -28,7 +28,6 @@ from empirica.cli.command_handlers.workflow_commands import (
     _validate_postflight_preconditions,
 )
 
-
 # ─── _validate_postflight_preconditions ─────────────────────────────────────
 
 
@@ -201,6 +200,7 @@ class TestCortexResolveProjectId:
 
     def test_returns_project_id_from_session_row(self):
         from unittest.mock import patch
+
         from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
 
         with patch('empirica.data.session_database.SessionDatabase') as mock_db_cls:
@@ -213,6 +213,7 @@ class TestCortexResolveProjectId:
 
     def test_returns_empty_string_on_missing_session(self):
         from unittest.mock import patch
+
         from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
 
         with patch('empirica.data.session_database.SessionDatabase') as mock_db_cls:
@@ -225,6 +226,7 @@ class TestCortexResolveProjectId:
 
     def test_returns_empty_string_on_null_project_id(self):
         from unittest.mock import patch
+
         from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
 
         with patch('empirica.data.session_database.SessionDatabase') as mock_db_cls:
@@ -246,6 +248,7 @@ class TestCortexResolveProjectId:
         # or the resolve_project_id helper. If a future refactor accidentally
         # reintroduces either, this test fails.
         from unittest.mock import patch
+
         from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
 
         with patch('empirica.data.session_database.SessionDatabase') as mock_db_cls, \
@@ -266,6 +269,7 @@ class TestCortexResolveProjectId:
         # Cortex sync is non-fatal — if DB is unavailable, return empty
         # string and let the caller skip. Never raise to caller.
         from unittest.mock import patch
+
         from empirica.cli.command_handlers.workflow_commands import _cortex_resolve_project_id
 
         with patch('empirica.data.session_database.SessionDatabase') as mock_db_cls:

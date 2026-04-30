@@ -32,7 +32,6 @@ from empirica.core.notify.backends import (
 )
 from empirica.core.notify.config import NotifyConfig, RoutingRule
 
-
 # ─── parse_tags ─────────────────────────────────────────────────────────────
 
 
@@ -129,7 +128,7 @@ class TestRedactConfig:
             backends={'ntfy': {'token': 'super-secret', 'auth': 'pw'}},
         )
         out = redact_config(cfg)
-        assert out['backends']['ntfy']['token'] == '<redacted>'
+        assert out['backends']['ntfy']['token'] == '<redacted>'  # noqa: S105
         assert out['backends']['ntfy']['auth'] == '<redacted>'
 
     def test_auth_env_resolution_indicated(self):

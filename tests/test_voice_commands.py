@@ -8,7 +8,6 @@ from types import SimpleNamespace
 
 import pytest
 
-
 # ─── fixtures ───────────────────────────────────────────────────────────────
 
 

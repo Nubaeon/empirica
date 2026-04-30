@@ -218,7 +218,7 @@ class NtfyBackend:
                 backend=self.name, ok=False,
                 detail=f'network error: {e.reason}',
             )
-        except Exception as e:  # noqa: BLE001 — last-ditch safety
+        except Exception as e:
             return EmitResult(backend=self.name, ok=False, detail=f'unexpected: {e}')
 
 

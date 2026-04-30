@@ -10,8 +10,6 @@ Covers the four signal paths:
 from __future__ import annotations
 
 import json
-import signal
-from pathlib import Path
 
 import pytest
 
