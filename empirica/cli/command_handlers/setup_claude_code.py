@@ -293,6 +293,20 @@ def _register_all_hooks(settings, plugin_dir, python_cmd, output_format):
         if output_format != 'json':
             print("   ✓ Loop install pickup configured")
 
+    # Loop uninstall pickup — symmetric inverse. When `empirica loop pause`
+    # writes a pending uninstall request, this hook surfaces it so the
+    # owning Claude can call CronDelete from inside that CC session. The
+    # body pause-check at next fire is the backstop if Claude doesn't run
+    # CronDelete in time.
+    uninstall_script = f"{python_cmd} {plugin_dir}/hooks/loop-uninstall-pickup.py"
+    if not _hook_exists(settings['hooks'].get('UserPromptSubmit', []), 'loop-uninstall-pickup.py'):
+        settings['hooks'].setdefault('UserPromptSubmit', []).append({
+            "matcher": ".*",
+            "hooks": [{"type": "command", "command": uninstall_script, "timeout": 5, "allowFailure": True}]
+        })
+        if output_format != 'json':
+            print("   ✓ Loop uninstall pickup configured")
+
     entity_script = f"{python_cmd} {plugin_dir}/hooks/entity-extractor.py"
     _register_hook(settings, 'PostToolUse', 'entity-extractor.py', [
         {"matcher": "Edit|Write", "hooks": [{"type": "command", "command": entity_script, "timeout": 5, "allowFailure": True}]},

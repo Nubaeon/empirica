@@ -39,6 +39,9 @@ from empirica.core.cockpit.loop_install_request import (
     DEFAULT_SCHEDULER_KIND,
     write_pending,
 )
+from empirica.core.cockpit.loop_uninstall_request import (
+    write_pending as write_uninstall_pending,
+)
 from empirica.core.cockpit.loop_registry import VALID_KIND, VALID_STATUS
 from empirica.core.cockpit.notify_dispatcher_view import build_notify_dispatcher_block
 from empirica.utils.session_resolver import get_instance_id
@@ -216,6 +219,7 @@ def handle_loop_pause_command(args) -> int:
     entry = registry.get(args.name)
     cancelled_job_id: str | None = None
     scheduler_kind: str | None = None
+    uninstall_pending_path: str | None = None
     if entry is not None:
         cancelled_job_id = entry.scheduling.next_scheduled_job_id
         scheduler_kind = entry.scheduling.scheduler_kind
@@ -229,6 +233,20 @@ def handle_loop_pause_command(args) -> int:
                 message=entry.last_message,
                 next_scheduled_job_id='',
             )
+            # CronCreate-mode: surface a pending uninstall request so the
+            # owning Claude instance picks it up via UserPromptSubmit hook
+            # and calls CronDelete from inside that CC session. The empirica
+            # CLI can't call CronDelete itself.
+            if scheduler_kind == 'cron-create':
+                pending = write_uninstall_pending(
+                    instance_id=instance_id,
+                    name=args.name,
+                    job_id=cancelled_job_id,
+                    scheduler_kind=scheduler_kind,
+                    requested_by=get_instance_id(),
+                    reason='manual pause',
+                )
+                uninstall_pending_path = str(pending)
 
     payload = {
         'ok': True,
@@ -237,15 +255,22 @@ def handle_loop_pause_command(args) -> int:
         'paused': paused,
         'cancelled_job_id': cancelled_job_id,
         'scheduler_kind': scheduler_kind,
+        'uninstall_pending_path': uninstall_pending_path,
     }
     summary = f'Loop paused: {args.name}'
     if cancelled_job_id:
         summary += f' · cleared next_job={cancelled_job_id}'
         if scheduler_kind == 'cron-create':
-            summary += (
-                ' (CronCreate: body pause-check is the backstop; '
-                'next fire will exit silently)'
-            )
+            if uninstall_pending_path:
+                summary += (
+                    ' · queued CronDelete request for owning instance '
+                    '(picked up via UserPromptSubmit; body pause-check is the backstop)'
+                )
+            else:
+                summary += (
+                    ' (CronCreate: body pause-check is the backstop; '
+                    'next fire will exit silently)'
+                )
     return _emit(args, payload, summary)
 
 

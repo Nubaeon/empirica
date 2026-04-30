@@ -51,6 +51,9 @@ from empirica.core.cockpit.loop_install_request import (
     render_loop_cron_prompt,
     write_pending,
 )
+from empirica.core.cockpit.loop_uninstall_request import (
+    LoopUninstallRequest,
+)
 from empirica.core.cockpit.instance_state import (
     aggregate_all,
     aggregate_instance_state,
@@ -77,6 +80,7 @@ __all__ = [
     'LivenessResult',
     'LoopRegistry',
     'LoopInstallRequest',
+    'LoopUninstallRequest',
     'NotificationItem',
     'NotificationSummary',
     'OpenGoal',
