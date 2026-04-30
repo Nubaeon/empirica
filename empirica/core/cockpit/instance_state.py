@@ -28,6 +28,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from empirica.core.cockpit.compliance_view import read_compliance_summary
 from empirica.core.cockpit.enrichment import (
     is_asking,
     notification_summary,
@@ -179,6 +180,7 @@ def _read_transaction_state(project_path: str, instance_id: str) -> dict[str, An
             'last_activity_seconds': float | None,
             'work_type': str | None,
             'domain': str | None,
+            'criticality': str | None,
         }
     """
     suffix = f'_{instance_id}'
@@ -195,6 +197,7 @@ def _read_transaction_state(project_path: str, instance_id: str) -> dict[str, An
         'last_activity_seconds': None,
         'work_type': None,
         'domain': None,
+        'criticality': None,
     }
 
     if not tx_file.exists():
@@ -210,6 +213,7 @@ def _read_transaction_state(project_path: str, instance_id: str) -> dict[str, An
     result['session_id'] = tx.get('session_id')
     result['work_type'] = tx.get('work_type')
     result['domain'] = tx.get('domain')
+    result['criticality'] = tx.get('criticality')
 
     preflight_ts = tx.get('preflight_timestamp')
     now = datetime.now(tz=UTC).timestamp()
@@ -364,6 +368,7 @@ def aggregate_instance_state(
             'age_seconds': tx_state['transaction_age_seconds'],
             'work_type': tx_state['work_type'],
             'domain': tx_state['domain'],
+            'criticality': tx_state['criticality'],
         }
     else:
         transaction = None
@@ -380,6 +385,13 @@ def aggregate_instance_state(
     phase = 'ask' if asking and tx_state['phase'] in ('noetic', 'praxic') else tx_state['phase']
 
     notif = notification_summary(instance_id, project_path=project_path)
+
+    # Compliance is project-scoped (audits the source tree, not the
+    # instance's transaction state), so multiple instances of the same
+    # project share the same compliance result. Embedding it per-instance
+    # keeps the cockpit row self-contained — the TUI doesn't have to
+    # cross-reference a separate project map.
+    compliance = read_compliance_summary(project_path)
 
     return {
         'instance_id': instance_id,
@@ -406,6 +418,7 @@ def aggregate_instance_state(
             'open_count': notif.open_count,
             'has_attention': notif.has_attention,
         },
+        'compliance': compliance,
     }
 
 

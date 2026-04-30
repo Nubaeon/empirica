@@ -957,6 +957,22 @@ def handle_compliance_report_command(args) -> None:
         include_security=include_security,
     )
 
+    # Persist the latest report for cockpit consumption — the cockpit
+    # surfaces this per-instance below the notifications widget so users
+    # can see compliance state at a glance and click to expand failures.
+    # Lookup project_id via the same project.yaml the cockpit aggregator
+    # reads, so the file landing path is stable.
+    try:
+        from empirica.core.cockpit.compliance_view import (
+            _project_id_from_path,
+            write_last_compliance,
+        )
+        project_id = _project_id_from_path(report.get("project_root"))
+        if project_id:
+            write_last_compliance(project_id, report)
+    except Exception:
+        pass
+
     if output_format == "json":
         print(json.dumps(report, indent=2))
     else:

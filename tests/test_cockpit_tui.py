@@ -100,19 +100,20 @@ async def test_tui_has_no_kill_button(cockpit_env):
 
 
 @pytest.mark.asyncio
-async def test_table_has_seven_columns(cockpit_env):
+async def test_table_has_eight_columns(cockpit_env):
     from textual.widgets import DataTable
 
     from empirica.cli.tui import CockpitApp
 
     app = CockpitApp(include_dead=True)
-    async with app.run_test(headless=True, size=(54, 20)) as pilot:
+    async with app.run_test(headless=True, size=(60, 20)) as pilot:
         await pilot.pause()
         await pilot.pause()
         table = app.query_one('#inst-table', DataTable)
         col_labels = [c.label.plain for c in table.columns.values()]
-        # v1.7: added E (event listener) column between L (loops) and N (notif).
-        assert col_labels == ['s', 'name', 'ph', 'S', 'L', 'E', 'N']
+        # v1.8: added 'dom' column between ph and S — shows open
+        # transaction's domain · criticality glyph (e.g. 'def·M').
+        assert col_labels == ['s', 'name', 'ph', 'dom', 'S', 'L', 'E', 'N']
 
 
 # ─── data loading ─────────────────────────────────────────────────────────
@@ -744,3 +745,235 @@ async def test_e_click_empty_registry_installs_listener_from_project_yaml(cockpi
 
     pending = list(home.glob('listener_install_pending_tmux_test_*.json'))
     assert len(pending) == 1
+
+
+# ─── Compliance panel + domain chip (1.8.18) ───────────────────────────────
+
+
+def _write_project_id(project: Path, project_id: str) -> None:
+    """Add project_id to .empirica/project.yaml so compliance_view can
+    resolve project_path → project_id."""
+    import yaml
+    p = project / '.empirica' / 'project.yaml'
+    data = {}
+    if p.exists():
+        data = yaml.safe_load(p.read_text()) or {}
+    data['project_id'] = project_id
+    p.write_text(yaml.safe_dump(data))
+
+
+def _write_active_transaction(
+    home: Path,
+    project: Path,
+    instance_id: str,
+    domain: str = 'default',
+    criticality: str = 'medium',
+) -> None:
+    """Simulate an open transaction with domain + criticality fields so
+    instance_state surfaces them in the transaction block."""
+    import json
+    tx_path = project / '.empirica' / f'active_transaction_{instance_id}.json'
+    tx_path.parent.mkdir(parents=True, exist_ok=True)
+    tx_path.write_text(json.dumps({
+        'transaction_id': 'test-tx-id',
+        'session_id': 'test-session',
+        'preflight_timestamp': 1775380000.0,
+        'status': 'open',
+        'project_path': str(project),
+        'work_type': 'code',
+        'domain': domain,
+        'criticality': criticality,
+    }))
+
+
+@pytest.mark.asyncio
+async def test_compliance_widget_shows_passing_collapsed(cockpit_env, monkeypatch):
+    """When all checks pass, the compliance widget collapses to a single line."""
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+    _write_project_id(project, 'test-project')
+
+    # Persist a passing compliance result
+    from empirica.core.cockpit import compliance_view
+    monkeypatch.setattr(compliance_view, 'EMPIRICA_DIR', home)
+    compliance_view.write_last_compliance('test-project', {
+        'overall': {
+            'status': 'compliant', 'score': 1.0,
+            'checks_passed': 11, 'checks_total': 11,
+        },
+        'checks': [
+            {'check': 'lint', 'passed': True},
+            {'check': 'complexity', 'passed': True},
+        ],
+    })
+
+    from textual.widgets import Static
+
+    from empirica.cli.tui import CockpitApp
+
+    app = CockpitApp(include_dead=True)
+    async with app.run_test(headless=True, size=(60, 30)) as pilot:
+        await pilot.pause()
+        await pilot.pause()
+        widget = app.query_one('#compliance', Static)
+        from rich.console import Console
+        c = Console(width=120, file=open('/dev/null', 'w'))
+        with c.capture() as cap:
+            c.print(widget.render())
+        text = cap.get()
+        assert '🛡' in text
+        assert '11/11' in text
+        # Collapsed: should NOT contain a "press `c`" hint
+        assert '✗' not in text
+
+
+@pytest.mark.asyncio
+async def test_compliance_widget_shows_failures_expanded_by_default(
+    cockpit_env, monkeypatch,
+):
+    """Failing checks default-expand so the operator sees what's broken."""
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+    _write_project_id(project, 'test-project')
+
+    from empirica.core.cockpit import compliance_view
+    monkeypatch.setattr(compliance_view, 'EMPIRICA_DIR', home)
+    compliance_view.write_last_compliance('test-project', {
+        'overall': {
+            'status': 'non_compliant', 'score': 0.7273,
+            'checks_passed': 8, 'checks_total': 11,
+        },
+        'checks': [
+            {'check': 'lint', 'passed': False},
+            {'check': 'complexity', 'passed': False},
+            {'check': 'type_safety', 'passed': False},
+            {'check': 'tests', 'passed': True},
+        ],
+    })
+
+    from textual.widgets import Static
+
+    from empirica.cli.tui import CockpitApp
+
+    app = CockpitApp(include_dead=True)
+    async with app.run_test(headless=True, size=(60, 30)) as pilot:
+        await pilot.pause()
+        await pilot.pause()
+        widget = app.query_one('#compliance', Static)
+        from rich.console import Console
+        c = Console(width=120, file=open('/dev/null', 'w'))
+        with c.capture() as cap:
+            c.print(widget.render())
+        text = cap.get()
+        assert '8/11' in text
+        # Default-expanded: failure labels visible
+        assert 'lint' in text
+        assert 'complexity' in text
+        assert 'type_safety' in text
+
+
+@pytest.mark.asyncio
+async def test_compliance_widget_no_data_message(cockpit_env):
+    """When compliance hasn't been run, the widget shows a guidance hint."""
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+    # No project_id, no last_compliance file
+
+    from textual.widgets import Static
+
+    from empirica.cli.tui import CockpitApp
+
+    app = CockpitApp(include_dead=True)
+    async with app.run_test(headless=True, size=(60, 30)) as pilot:
+        await pilot.pause()
+        await pilot.pause()
+        widget = app.query_one('#compliance', Static)
+        from rich.console import Console
+        c = Console(width=120, file=open('/dev/null', 'w'))
+        with c.capture() as cap:
+            c.print(widget.render())
+        text = cap.get()
+        assert 'compliance-report' in text
+
+
+@pytest.mark.asyncio
+async def test_c_key_toggles_compliance_expansion(cockpit_env, monkeypatch):
+    """Pressing `c` flips collapse/expand from whatever the default was."""
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+    _write_project_id(project, 'test-project')
+
+    from empirica.core.cockpit import compliance_view
+    monkeypatch.setattr(compliance_view, 'EMPIRICA_DIR', home)
+    compliance_view.write_last_compliance('test-project', {
+        'overall': {
+            'status': 'compliant', 'score': 1.0,
+            'checks_passed': 11, 'checks_total': 11,
+        },
+        'checks': [{'check': 'lint', 'passed': True}],
+    })
+
+    from empirica.cli.tui import CockpitApp
+
+    app = CockpitApp(include_dead=True)
+    async with app.run_test(headless=True, size=(60, 30)) as pilot:
+        await pilot.pause()
+        await pilot.pause()
+        # Default for passing = collapsed
+        assert app.compliance_expanded is False
+        await pilot.press('c')
+        await pilot.pause()
+        assert app.compliance_user_overridden is True
+        assert app.compliance_expanded is True
+
+
+@pytest.mark.asyncio
+async def test_domain_chip_in_table_when_transaction_open(cockpit_env):
+    """When an instance has an open transaction with domain + criticality,
+    the table renders a 'dom·crit' chip in the dom column."""
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+    _write_active_transaction(
+        home, project, 'tmux_test',
+        domain='legal', criticality='high',
+    )
+
+    from textual.widgets import DataTable
+
+    from empirica.cli.tui import CockpitApp
+
+    app = CockpitApp(include_dead=True)
+    async with app.run_test(headless=True, size=(60, 20)) as pilot:
+        await pilot.pause()
+        await pilot.pause()
+        table = app.query_one('#inst-table', DataTable)
+        # Read the 'dom' cell directly via table API (column index 3,
+        # zero-indexed: s, name, ph, dom, ...). The table renders as a
+        # widget — we go via get_cell which works in headless tests.
+        row_keys = list(table.rows.keys())
+        assert row_keys, 'expected at least one row'
+        # First row, dom column
+        dom_value = table.get_cell_at((0, 3))
+        # 'leg·H' = legal/high domain chip
+        assert dom_value == 'leg·H', f'expected leg·H, got {dom_value!r}'
+
+
+@pytest.mark.asyncio
+async def test_domain_chip_dash_when_no_transaction(cockpit_env):
+    """No open transaction → '—' in dom column."""
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+
+    from textual.widgets import DataTable
+
+    from empirica.cli.tui import CockpitApp
+
+    app = CockpitApp(include_dead=True)
+    async with app.run_test(headless=True, size=(60, 20)) as pilot:
+        await pilot.pause()
+        await pilot.pause()
+        table = app.query_one('#inst-table', DataTable)
+        row_keys = list(table.rows.keys())
+        assert row_keys, 'expected at least one row'
+        dom_value = table.get_cell_at((0, 3))
+        assert dom_value == '—', f'expected —, got {dom_value!r}'

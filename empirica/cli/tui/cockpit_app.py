@@ -108,6 +108,8 @@ class CockpitApp(App):
     #dispatch-banner { height: auto; max-height: 2; padding: 0 1; color: $warning; }
     #notif-header   { height: 1; padding: 0 1; color: $text-muted; }
     #notif { height: auto; min-height: 1; max-height: 7; padding: 0 1; }
+    #compliance-header { height: 1; padding: 0 1; color: $text-muted; }
+    #compliance { height: auto; min-height: 1; max-height: 8; padding: 0 1; }
     """
 
     BINDINGS = [
@@ -118,6 +120,7 @@ class CockpitApp(App):
         Binding('e', 'toggle_listeners', 'Listen'),
         Binding('s', 'stop', 'Stop'),
         Binding('n', 'clear_notifications', 'Notif'),
+        Binding('c', 'toggle_compliance', 'Compl.'),
         Binding('D', 'toggle_dead', 'Show dead'),
     ]
 
@@ -126,6 +129,11 @@ class CockpitApp(App):
         self.payload: dict[str, Any] = {'instances': [], 'summary': {}, 'generated_at': ''}
         self.selected_instance_id: str | None = None
         self.include_dead = include_dead
+        # Compliance widget expansion state. Failures default-expanded
+        # (visible by default); passing default-collapsed (just the
+        # one-line glyph). User can toggle with `c` key.
+        self.compliance_expanded: bool = False
+        self.compliance_user_overridden: bool = False
 
     # ─── lifecycle ────────────────────────────────────────────────────────
 
@@ -137,7 +145,11 @@ class CockpitApp(App):
         yield Static('', id='summary')
 
         table = DataTable(id='inst-table', cursor_type='row', zebra_stripes=True)
-        table.add_columns('s', 'name', 'ph', 'S', 'L', 'E', 'N')
+        # 'dom' shows the open transaction's domain + criticality glyph
+        # (e.g. 'def·M' for default/medium, 'leg·H' for legal/high). Helps
+        # readers see which threshold profile each instance is operating
+        # under — a writing project differs from a research/legal one.
+        table.add_columns('s', 'name', 'ph', 'dom', 'S', 'L', 'E', 'N')
         yield table
 
         with Horizontal(id='action-bar'):
@@ -150,10 +162,16 @@ class CockpitApp(App):
         yield Static('', id='statusline')
         yield Static('open goals', id='goals-header')
         yield Static('(none selected)', id='goals')
-        # Notifications-per-project is the bottom widget — what David asks
-        # for when checking each project's inbox at a glance.
+        # Notifications-per-project is mid-stack — what David asks for
+        # when checking each project's inbox at a glance.
         yield Static('notifications', id='notif-header')
         yield Static('', id='notif')
+        # Compliance panel (1.8.18): last `empirica compliance-report`
+        # result for the selected instance's project. Green collapsed
+        # to one line; yellow/red default-expanded showing failures.
+        # Press `c` to toggle expansion.
+        yield Static('compliance', id='compliance-header')
+        yield Static('', id='compliance')
         yield Footer()
 
     def on_mount(self) -> None:
@@ -223,11 +241,12 @@ class CockpitApp(App):
             stat = self._state_glyph(inst['state'])
             name = (inst.get('label') or iid)[:16]
             phase = self._phase_short(inst.get('phase'), inst.get('asking', False))
+            dom = self._domain_chip(inst.get('transaction'))
             sentinel = '○' if inst['sentinel']['paused'] else '●'
             loops = self._loops_glyph(inst.get('loops') or {})
             listeners = self._listeners_glyph(inst.get('listeners') or {})
             notif = self._notif_glyph(inst.get('notifications') or {})
-            table.add_row(stat, name, phase, sentinel, loops, listeners, notif, key=iid)
+            table.add_row(stat, name, phase, dom, sentinel, loops, listeners, notif, key=iid)
 
         if rows:
             target = previously_selected or rows[0]['instance_id']
@@ -241,6 +260,26 @@ class CockpitApp(App):
                 self.selected_instance_id = rows[0]['instance_id']
         else:
             self.selected_instance_id = None
+
+    @staticmethod
+    def _domain_chip(transaction: dict[str, Any] | None) -> str:
+        """Compact domain + criticality chip — 5 chars max for the narrow column.
+
+        Shape: '<dom3>·<crit1>' where dom3 is first three letters of domain
+        and crit1 is L/M/H. Closed/missing transactions render as '—'.
+        Different domains imply different CHECK thresholds — making that
+        legible at a glance is the point of this column.
+        """
+        if not transaction:
+            return '—'
+        domain = (transaction.get('domain') or '').strip()
+        criticality = (transaction.get('criticality') or '').strip()
+        if not domain:
+            return '—'
+        crit_short = {'low': 'L', 'medium': 'M', 'high': 'H'}.get(
+            criticality.lower(), '?',
+        )
+        return f'{domain[:3]}·{crit_short}'
 
     @staticmethod
     def _state_glyph(state: str) -> str:
@@ -302,21 +341,25 @@ class CockpitApp(App):
         return None
 
     def _render_selected_widgets(self) -> None:
-        """Statusline + open-goals + notifications for the selected instance."""
+        """Statusline + open-goals + notifications + compliance for the
+        selected instance."""
         inst = self._selected_instance()
         statusline_widget = self.query_one('#statusline', Static)
         goals_widget = self.query_one('#goals', Static)
         notif_widget = self.query_one('#notif', Static)
+        compliance_widget = self.query_one('#compliance', Static)
 
         if inst is None:
             statusline_widget.update('')
             goals_widget.update('(no instance selected)')
             notif_widget.update('')
+            compliance_widget.update('')
             return
 
         statusline_widget.update(self._format_statusline(inst))
         goals_widget.update(self._format_goals(inst))
         notif_widget.update(self._format_notifications(inst))
+        compliance_widget.update(self._format_compliance(inst))
 
     def _format_statusline(self, inst: dict[str, Any]) -> str:
         """k:X c:Y conf:Z% goals:N — ctx:M% [PAUSED]
@@ -370,6 +413,76 @@ class CockpitApp(App):
         if not items:
             return '(none for this project)'
         return '\n'.join(_wrap_item('•', n.title) for n in items)
+
+    def _format_compliance(self, inst: dict[str, Any]) -> str:
+        """One-line glyph when passing or compact; expanded view (header +
+        per-failure rows) when failing or `c` was pressed.
+
+        Decision tree (David's UX call):
+          - No data → quiet placeholder (compliance not run for this project)
+          - All passing + not user-overridden → collapsed (just glyph + score)
+          - Any failing + not user-overridden → expanded (failures listed)
+          - User pressed `c` → flip whatever the default would have been
+        """
+        c = inst.get('compliance')
+        if not c:
+            return '(no compliance-report run for this project — `empirica compliance-report`)'
+
+        score = c.get('score', 0.0) or 0.0
+        passed = c.get('checks_passed', 0)
+        total = c.get('checks_total', 0)
+        failed = c.get('failed_checks') or []
+        fresh = c.get('fresh', False)
+        age = c.get('age_seconds')
+
+        # Glyph: 🛡 green (all pass) | 🛡 yellow (≥80%) | 🛡 red (<80%)
+        if not failed:
+            glyph = '🛡 ✓'
+        elif score >= 0.8:
+            glyph = '🛡 ⚠'
+        else:
+            glyph = '🛡 ✗'
+
+        if not fresh and age is not None:
+            staleness = f' (stale {self._format_age(age)})'
+        elif age is not None:
+            staleness = f' ({self._format_age(age)} ago)'
+        else:
+            staleness = ''
+
+        head = f'{glyph} {passed}/{total}{staleness}'
+        if failed:
+            head += f' · failing: {", ".join(failed)}'
+
+        # Default-expanded for failures; default-collapsed for clean.
+        # User-toggled via `c` flips the default.
+        wants_expand = bool(failed)
+        if self.compliance_user_overridden:
+            wants_expand = self.compliance_expanded
+
+        if not wants_expand:
+            return head
+
+        # Expanded: head + each failed check on its own indented line
+        if not failed:
+            return head  # nothing to expand if all passing
+        lines = [head, '']
+        for label in failed:
+            lines.append(_wrap_item('  ✗', f'{label}'))
+        lines.append('  (press `c` to collapse)')
+        return '\n'.join(lines)
+
+    @staticmethod
+    def _format_age(seconds: float) -> str:
+        """Compact age render: 5m, 2h, 3d. Falls back to seconds for short."""
+        s = int(seconds)
+        if s < 60:
+            return f'{s}s'
+        if s < 3600:
+            return f'{s // 60}m'
+        if s < 86400:
+            return f'{s // 3600}h'
+        return f'{s // 86400}d'
 
     def _render_dispatcher(self) -> None:
         """Render the failure banner only — backends + 24h counts now live
@@ -534,6 +647,17 @@ class CockpitApp(App):
         result = stop_instance(inst['instance_id'])
         self._log_status(f'stop {inst["instance_id"]}: {result.detail}')
         self.refresh_payload()
+
+    def action_toggle_compliance(self) -> None:
+        """Flip compliance widget between collapsed and expanded.
+
+        Pre-toggle, the widget defaults to expanded for failures and
+        collapsed for passes. The first `c` press flips that default;
+        subsequent presses toggle from there.
+        """
+        self.compliance_user_overridden = True
+        self.compliance_expanded = not self.compliance_expanded
+        self._render_selected_widgets()
 
     def action_clear_notifications(self) -> None:
         inst = self._require_selected()
