@@ -33,6 +33,10 @@ from empirica.core.cockpit.enrichment import (
     notification_summary,
     notifications_total,
 )
+from empirica.core.cockpit.listener_registry import (
+    ListenerRegistry,
+    is_listener_paused,
+)
 from empirica.core.cockpit.liveness import _live_tmux_panes, is_alive
 from empirica.core.cockpit.loop_registry import LoopRegistry, is_loop_paused
 from empirica.core.cockpit.notify_dispatcher_view import (
@@ -53,6 +57,7 @@ INSTANCE_GLOBS = (
     'instance_projects/*.json',
     'sentinel_paused_*',
     'loops_*.json',
+    'listeners_*.json',
     'active_session_*',
     'hook_counters_*.json',
     'context_usage_*.json',
@@ -82,6 +87,7 @@ def _instance_id_from_filename(filename: str) -> str | None:
     prefixes = (
         'sentinel_paused_',
         'loops_',
+        'listeners_',
         'active_session_',
         'active_transaction_',
         'hook_counters_',
@@ -288,6 +294,7 @@ def _newest_instance_file_mtime(instance_id: str) -> float | None:
         EMPIRICA_DIR / 'instance_projects' / f'{instance_id}.json',
         EMPIRICA_DIR / f'sentinel_paused_{instance_id}',
         EMPIRICA_DIR / f'loops_{instance_id}.json',
+        EMPIRICA_DIR / f'listeners_{instance_id}.json',
         EMPIRICA_DIR / f'active_session_{instance_id}',
         EMPIRICA_DIR / f'hook_counters_{instance_id}.json',
         EMPIRICA_DIR / f'context_usage_{instance_id}.json',
@@ -342,6 +349,14 @@ def aggregate_instance_state(
     # Per-loop last-notify annotation (audit log → loops by `loop:{name}` source).
     annotate_loops_with_last_notify(loops_dict, instance_label=label)
 
+    # Listener registry — sister to loops but event-driven.
+    listener_registry = ListenerRegistry(instance_id, label=label)
+    listeners_dict: dict[str, Any] = {}
+    for entry in listener_registry.list_listeners():
+        d = entry.to_dict()
+        d['paused'] = is_listener_paused(instance_id, entry.name)
+        listeners_dict[entry.name] = d
+
     transaction: dict[str, Any] | None
     if tx_state['transaction_id']:
         transaction = {
@@ -386,6 +401,7 @@ def aggregate_instance_state(
             'reason': sentinel.reason,
         },
         'loops': loops_dict,
+        'listeners': listeners_dict,
         'notifications': {
             'open_count': notif.open_count,
             'has_attention': notif.has_attention,
@@ -429,6 +445,12 @@ def aggregate_all(include_dead: bool = False) -> dict[str, Any]:
     loops_paused = sum(
         1 for i in instances for loop in i['loops'].values() if loop.get('paused')
     )
+    listeners_registered = sum(len(i.get('listeners') or {}) for i in instances)
+    listeners_paused = sum(
+        1 for i in instances
+        for listener in (i.get('listeners') or {}).values()
+        if listener.get('paused')
+    )
     active_tx = sum(
         1 for i in instances if i['phase'] in ('noetic', 'praxic')
     )
@@ -440,6 +462,8 @@ def aggregate_all(include_dead: bool = False) -> dict[str, Any]:
             'instances': len(instances),
             'loops_registered': loops_registered,
             'loops_paused': loops_paused,
+            'listeners_registered': listeners_registered,
+            'listeners_paused': listeners_paused,
             'active_tx': active_tx,
             'open_notifications': notifications_total(),
             'notify_dispatcher': build_notify_dispatcher_block(),

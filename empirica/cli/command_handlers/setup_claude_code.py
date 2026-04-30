@@ -293,6 +293,45 @@ def _register_all_hooks(settings, plugin_dir, python_cmd, output_format):
         if output_format != 'json':
             print("   ✓ Loop install pickup configured")
 
+    # Loop uninstall pickup — symmetric inverse. When `empirica loop pause`
+    # writes a pending uninstall request, this hook surfaces it so the
+    # owning Claude can call CronDelete from inside that CC session. The
+    # body pause-check at next fire is the backstop if Claude doesn't run
+    # CronDelete in time.
+    uninstall_script = f"{python_cmd} {plugin_dir}/hooks/loop-uninstall-pickup.py"
+    if not _hook_exists(settings['hooks'].get('UserPromptSubmit', []), 'loop-uninstall-pickup.py'):
+        settings['hooks'].setdefault('UserPromptSubmit', []).append({
+            "matcher": ".*",
+            "hooks": [{"type": "command", "command": uninstall_script, "timeout": 5, "allowFailure": True}]
+        })
+        if output_format != 'json':
+            print("   ✓ Loop uninstall pickup configured")
+
+    # Listener install pickup — surfaces pending listener install requests
+    # from cockpit so the running Claude can arm the listener (curl + Monitor)
+    # via the /inbox-listener skill.
+    listener_install_script = f"{python_cmd} {plugin_dir}/hooks/listener-install-pickup.py"
+    if not _hook_exists(settings['hooks'].get('UserPromptSubmit', []), 'listener-install-pickup.py'):
+        settings['hooks'].setdefault('UserPromptSubmit', []).append({
+            "matcher": ".*",
+            "hooks": [{"type": "command", "command": listener_install_script, "timeout": 5, "allowFailure": True}]
+        })
+        if output_format != 'json':
+            print("   ✓ Listener install pickup configured")
+
+    # Listener uninstall pickup — symmetric inverse. When `empirica listener
+    # pause` writes a pending uninstall request (Monitor task id + curl pid),
+    # this hook surfaces it so the owning Claude can TaskStop the Monitor and
+    # kill the held curl. Body pause-check at next wake is the backstop.
+    listener_uninstall_script = f"{python_cmd} {plugin_dir}/hooks/listener-uninstall-pickup.py"
+    if not _hook_exists(settings['hooks'].get('UserPromptSubmit', []), 'listener-uninstall-pickup.py'):
+        settings['hooks'].setdefault('UserPromptSubmit', []).append({
+            "matcher": ".*",
+            "hooks": [{"type": "command", "command": listener_uninstall_script, "timeout": 5, "allowFailure": True}]
+        })
+        if output_format != 'json':
+            print("   ✓ Listener uninstall pickup configured")
+
     entity_script = f"{python_cmd} {plugin_dir}/hooks/entity-extractor.py"
     _register_hook(settings, 'PostToolUse', 'entity-extractor.py', [
         {"matcher": "Edit|Write", "hooks": [{"type": "command", "command": entity_script, "timeout": 5, "allowFailure": True}]},

@@ -1,7 +1,7 @@
 ---
 name: loop-cron
 description: "Use when scheduling cron-mode loops with Claude Code's /loop, when registering periodic background work, when the user says 'cron loop', 'periodic loop', 'register a cron', 'schedule recurring work', or when configuring a loop that needs to be visible in `empirica status`. This skill provides the prompt template that wires CC's /loop into Empirica's loop registry — register at start, check pause flag each fire, heartbeat at end. Without this wiring, a /loop cron is invisible to the cockpit and uncontrollable from any other terminal."
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Loop-Cron Wiring
@@ -172,14 +172,19 @@ empirica loop list                  # all loops on this instance
 empirica loop unregister inbox-poll # remove from registry entirely
 ```
 
-`pause` clears the recorded `next_scheduled_job_id` and surfaces a
-hint about scheduler-specific cancellation. For CronCreate loops the
-body's pause check at the next fire is the backstop — it sees the
-flag and exits without scheduling the next fire, so the loop dies
-cleanly after at most one more silent fire. `CronDelete` itself is a
-CC tool; if you want to cancel the already-installed job immediately
-you can call it from the running CC session, or just let the body's
-pause check end it.
+`pause` clears the recorded `next_scheduled_job_id` and — for
+CronCreate-mode loops — writes a pending uninstall request file at
+`~/.empirica/loop_uninstall_pending_{instance}_{name}.json` containing
+the job_id. The owning Claude instance's `UserPromptSubmit` hook
+(`loop-uninstall-pickup.py`) surfaces this on the next prompt as a
+system-reminder asking Claude to run `CronDelete(job_id)` from inside
+that CC session. The cron is then genuinely off — no more fires.
+
+If the owning Claude doesn't run `CronDelete` in time, the body's
+pause check at the next fire is the backstop: it sees the pause flag
+and exits without scheduling the next fire, so the loop dies cleanly
+after at most one more silent fire. `CronDelete` makes that one extra
+fire go away too.
 
 `resume` clears the pause flag. The next prompt in the target instance
 will pick up any pending install request and the body will re-arm

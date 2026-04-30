@@ -35,11 +35,26 @@ from empirica.core.cockpit import (
     set_label,
     set_loop_paused,
 )
+from empirica.core.cockpit.listener_install_request import (
+    write_pending as write_listener_install_pending,
+)
+from empirica.core.cockpit.listener_registry import (
+    ListenerRegistry,
+    is_listener_paused,
+    listener_active_path,
+    set_listener_paused,
+)
+from empirica.core.cockpit.listener_uninstall_request import (
+    write_pending as write_listener_uninstall_pending,
+)
 from empirica.core.cockpit.loop_install_request import (
     DEFAULT_SCHEDULER_KIND,
     write_pending,
 )
 from empirica.core.cockpit.loop_registry import VALID_KIND, VALID_STATUS
+from empirica.core.cockpit.loop_uninstall_request import (
+    write_pending as write_uninstall_pending,
+)
 from empirica.core.cockpit.notify_dispatcher_view import build_notify_dispatcher_block
 from empirica.utils.session_resolver import get_instance_id
 
@@ -138,10 +153,23 @@ def handle_sentinel_status_command_cockpit(args) -> int:
 
 # ─── empirica loop ──────────────────────────────────────────────────────────
 
+
+class InstanceIdRequiredError(ValueError):
+    """Raised when an `empirica loop`/`listener` verb requires an instance_id
+    but none was resolvable (no --instance flag, no current-process detection).
+
+    Inherits from ValueError (not BaseException like SystemExit) so callers
+    using `except Exception` — including the TUI and background loops —
+    catch it cleanly without crashing the host process. Same hazard pattern
+    that motivated the resolve_project_id → ProjectNotFoundError migration
+    (1.8.16).
+    """
+
+
 def _require_instance_id(args) -> str:
     instance_id = _resolve_instance_id(args, fallback_to_current=True)
     if not instance_id:
-        raise SystemExit(
+        raise InstanceIdRequiredError(
             'error: no instance_id available. Set EMPIRICA_INSTANCE_ID '
             'or pass --instance ID explicitly.'
         )
@@ -216,6 +244,7 @@ def handle_loop_pause_command(args) -> int:
     entry = registry.get(args.name)
     cancelled_job_id: str | None = None
     scheduler_kind: str | None = None
+    uninstall_pending_path: str | None = None
     if entry is not None:
         cancelled_job_id = entry.scheduling.next_scheduled_job_id
         scheduler_kind = entry.scheduling.scheduler_kind
@@ -229,6 +258,20 @@ def handle_loop_pause_command(args) -> int:
                 message=entry.last_message,
                 next_scheduled_job_id='',
             )
+            # CronCreate-mode: surface a pending uninstall request so the
+            # owning Claude instance picks it up via UserPromptSubmit hook
+            # and calls CronDelete from inside that CC session. The empirica
+            # CLI can't call CronDelete itself.
+            if scheduler_kind == 'cron-create':
+                pending = write_uninstall_pending(
+                    instance_id=instance_id,
+                    name=args.name,
+                    job_id=cancelled_job_id,
+                    scheduler_kind=scheduler_kind,
+                    requested_by=get_instance_id(),
+                    reason='manual pause',
+                )
+                uninstall_pending_path = str(pending)
 
     payload = {
         'ok': True,
@@ -237,15 +280,22 @@ def handle_loop_pause_command(args) -> int:
         'paused': paused,
         'cancelled_job_id': cancelled_job_id,
         'scheduler_kind': scheduler_kind,
+        'uninstall_pending_path': uninstall_pending_path,
     }
     summary = f'Loop paused: {args.name}'
     if cancelled_job_id:
         summary += f' · cleared next_job={cancelled_job_id}'
         if scheduler_kind == 'cron-create':
-            summary += (
-                ' (CronCreate: body pause-check is the backstop; '
-                'next fire will exit silently)'
-            )
+            if uninstall_pending_path:
+                summary += (
+                    ' · queued CronDelete request for owning instance '
+                    '(picked up via UserPromptSubmit; body pause-check is the backstop)'
+                )
+            else:
+                summary += (
+                    ' (CronCreate: body pause-check is the backstop; '
+                    'next fire will exit silently)'
+                )
     return _emit(args, payload, summary)
 
 
@@ -371,8 +421,19 @@ def handle_loop_install_request_command(args) -> int:
     name = args.name
     interval = args.interval
     description = getattr(args, 'description', '') or ''
-    base_interval = getattr(args, 'base_interval', None) or interval
+    # Fallback chain: explicit --base-interval > --interval > '15m' default.
+    # Same fallback applies to interval itself when absent: project.yaml
+    # entries with `kind: cron` + `cron: "..."` legitimately omit interval
+    # (the cron expression is the schedule), but the loop-cron prompt
+    # template substitutes interval into backoff config — a None there
+    # writes the literal string 'None' into the prompt and produces a
+    # malformed `--interval "None"` flag in the body's register call.
+    base_interval = getattr(args, 'base_interval', None) or interval or '15m'
     max_interval = getattr(args, 'max_interval', None) or '4h'
+    # If interval wasn't supplied (cron-only loop), use the resolved
+    # base_interval so the rendered prompt template is well-formed.
+    if not interval:
+        interval = base_interval
 
     # Register in the target's registry first so the loop is visible in the
     # cockpit immediately — even before the target Claude installs CronCreate.
@@ -405,7 +466,7 @@ def handle_loop_install_request_command(args) -> int:
     try:
         from empirica.utils.session_resolver import get_instance_id
         requested_by = get_instance_id()
-    except Exception:  # noqa: BLE001
+    except Exception:
         requested_by = None
 
     pending = write_pending(
@@ -579,6 +640,307 @@ def handle_loop_status_command(args) -> int:
     summary = (
         f'{entry.name}: kind={entry.kind} paused={paused} '
         f'last_run={entry.last_run} last_status={entry.last_status}'
+    )
+    return _emit(args, payload, summary)
+
+
+# ─── empirica listener ──────────────────────────────────────────────────────
+#
+# Sister concept to `empirica loop` but event-driven (PROPOSAL_EVENT_LISTENER).
+# Listeners hold an open subscription (ntfy/SSE/WebSocket) and wake when an
+# event arrives — no periodic firing. The registry surface mirrors loop's
+# (register/pause/resume/list/status/unregister) plus listener-specific
+# verbs (record-wake, fire). Mechanical Monitor-kill on pause is deferred
+# to item 4 (the install-request analog with runtime metadata).
+
+
+def handle_listener_register_command(args) -> int:
+    instance_id = _require_instance_id(args)
+    registry = ListenerRegistry(instance_id)
+    try:
+        entry = registry.register(
+            name=args.name,
+            topic=args.topic,
+            description=getattr(args, 'description', '') or '',
+            on_wake_template=getattr(args, 'on_wake', '') or '',
+        )
+    except ValueError as e:
+        return _emit(args, {'ok': False, 'error': str(e)}, f'error: {e}')
+
+    payload = {
+        'ok': True,
+        'instance_id': instance_id,
+        'listener': {'name': entry.name, **entry.to_dict()},
+    }
+    summary = f'Listener registered: {entry.name} (topic={entry.topic})'
+    return _emit(args, payload, summary)
+
+
+def handle_listener_unregister_command(args) -> int:
+    instance_id = _require_instance_id(args)
+    registry = ListenerRegistry(instance_id)
+    removed = registry.unregister(args.name)
+    payload = {
+        'ok': True, 'instance_id': instance_id,
+        'removed': removed, 'name': args.name,
+    }
+    summary = (
+        f'Listener unregistered: {args.name}'
+        if removed
+        else f'Listener {args.name} was not registered (no-op)'
+    )
+    return _emit(args, payload, summary)
+
+
+def handle_listener_pause_command(args) -> int:
+    """Pause a listener — mechanical-via-pickup-hook.
+
+    Writes the pause sidecar (advisory layer for body short-circuit at
+    next wake) AND, when the listener is armed (active runtime file
+    present with monitor_task_id + curl_pid), writes a pending uninstall
+    request that the owning instance's UserPromptSubmit hook surfaces
+    on next prompt asking Claude to TaskStop the Monitor and kill the
+    held curl.
+
+    The body's pause check at next wake is the backstop if Claude
+    doesn't run TaskStop/kill in time.
+    """
+    instance_id = _require_instance_id(args)
+    paused = set_listener_paused(instance_id, args.name, paused=True)
+
+    uninstall_pending_path: str | None = None
+    monitor_task_id: str | None = None
+    curl_pid: int | None = None
+
+    active_path = listener_active_path(instance_id, args.name)
+    if active_path.exists():
+        try:
+            with open(active_path, encoding='utf-8') as f:
+                active_data = _json.load(f)
+            monitor_task_id = active_data.get('monitor_task_id') or None
+            raw_pid = active_data.get('curl_pid')
+            curl_pid = int(raw_pid) if raw_pid is not None else None
+        except (OSError, ValueError, _json.JSONDecodeError):
+            # Corrupt active file — pause flag is set; the body backstop
+            # still works. Skip the pending-uninstall write.
+            pass
+
+    if monitor_task_id:
+        pending = write_listener_uninstall_pending(
+            instance_id=instance_id,
+            name=args.name,
+            monitor_task_id=monitor_task_id,
+            curl_pid=curl_pid,
+            requested_by=get_instance_id(),
+            reason='manual pause',
+        )
+        uninstall_pending_path = str(pending)
+
+    payload = {
+        'ok': True,
+        'instance_id': instance_id,
+        'name': args.name,
+        'paused': paused,
+        'monitor_task_id': monitor_task_id,
+        'curl_pid': curl_pid,
+        'uninstall_pending_path': uninstall_pending_path,
+    }
+
+    summary = f'Listener paused: {args.name}'
+    if uninstall_pending_path:
+        summary += (
+            f' · queued TaskStop request for Monitor {monitor_task_id} '
+            '(picked up via UserPromptSubmit; body pause-check is the backstop)'
+        )
+    elif active_path.exists():
+        summary += (
+            ' (active file present but missing monitor_task_id — '
+            'body pause-check is the only backstop)'
+        )
+    else:
+        summary += ' (no active runtime — listener was already disarmed)'
+
+    return _emit(args, payload, summary)
+
+
+def handle_listener_resume_command(args) -> int:
+    instance_id = _require_instance_id(args)
+    paused = set_listener_paused(instance_id, args.name, paused=False)
+    payload = {
+        'ok': True,
+        'instance_id': instance_id,
+        'name': args.name,
+        'paused': paused,
+    }
+    summary = (
+        f'Listener resumed: {args.name} '
+        '(re-arm via the inbox-listener skill or run `empirica listener fire`)'
+    )
+    return _emit(args, payload, summary)
+
+
+def handle_listener_record_wake_command(args) -> int:
+    instance_id = _require_instance_id(args)
+    registry = ListenerRegistry(instance_id)
+    try:
+        entry = registry.record_wake(
+            name=args.name,
+            message=getattr(args, 'message', None),
+        )
+    except KeyError as e:
+        return _emit(args, {'ok': False, 'error': str(e)}, f'error: {e}')
+    payload = {
+        'ok': True,
+        'instance_id': instance_id,
+        'listener': {'name': entry.name, **entry.to_dict()},
+        'paused': is_listener_paused(instance_id, entry.name),
+    }
+    summary = (
+        f'Listener wake: {entry.name} → count={entry.wake_count} '
+        f'last_at={entry.last_wake_at}'
+    )
+    if entry.last_message:
+        summary += f' ({entry.last_message})'
+    return _emit(args, payload, summary)
+
+
+def handle_listener_fire_command(args) -> int:
+    """Manually trigger a wake — V1 just records-wake, doesn't actually
+    inject a wake into the listener body. The actual wake injection
+    happens in item 4 (the install-request analog) where the listener
+    body knows how to be poked. This verb is a placeholder for that
+    flow plus a working "I want to count one fire" affordance for tests.
+    """
+    instance_id = _require_instance_id(args)
+    registry = ListenerRegistry(instance_id)
+    if registry.get(args.name) is None:
+        return _emit(
+            args,
+            {'ok': False, 'error': f'listener not registered: {args.name}'},
+            f'error: listener not registered: {args.name}',
+        )
+    entry = registry.record_wake(args.name, message='manual fire')
+    payload = {
+        'ok': True,
+        'instance_id': instance_id,
+        'listener': {'name': entry.name, **entry.to_dict()},
+    }
+    summary = (
+        f'Listener fired: {entry.name} (V1: counted only — wake injection lands in item 4)'
+    )
+    return _emit(args, payload, summary)
+
+
+def handle_listener_list_command(args) -> int:
+    instance_id = _require_instance_id(args)
+    registry = ListenerRegistry(instance_id)
+    listeners = registry.list_listeners()
+
+    payload_listeners = []
+    for entry in listeners:
+        d = entry.to_dict()
+        d['name'] = entry.name
+        d['paused'] = is_listener_paused(instance_id, entry.name)
+        payload_listeners.append(d)
+
+    payload = {
+        'ok': True,
+        'instance_id': instance_id,
+        'count': len(listeners),
+        'listeners': payload_listeners,
+    }
+
+    if not listeners:
+        summary = f'No listeners registered for {instance_id}'
+    else:
+        rows = [
+            f'  {item["name"]:<20} {item["topic"]:<35} paused={item["paused"]} '
+            f'wakes={item["wake_count"]}'
+            for item in payload_listeners
+        ]
+        summary = f'Listeners registered for {instance_id}:\n' + '\n'.join(rows)
+
+    return _emit(args, payload, summary)
+
+
+def handle_listener_status_command(args) -> int:
+    instance_id = _require_instance_id(args)
+    registry = ListenerRegistry(instance_id)
+    entry = registry.get(args.name)
+    if entry is None:
+        payload = {
+            'ok': False, 'error': f'listener not registered: {args.name}',
+            'instance_id': instance_id, 'name': args.name, 'paused': False,
+        }
+        return _emit(args, payload, payload['error'])
+
+    paused = is_listener_paused(instance_id, args.name)
+    payload = {
+        'ok': True,
+        'instance_id': instance_id,
+        'listener': {'name': entry.name, **entry.to_dict()},
+        'paused': paused,
+    }
+    summary = (
+        f'{entry.name}: topic={entry.topic} paused={paused} '
+        f'wakes={entry.wake_count} last_wake_at={entry.last_wake_at}'
+    )
+    return _emit(args, payload, summary)
+
+
+def handle_listener_install_request_command(args) -> int:
+    """Cockpit→Claude install path for listeners. Symmetric to
+    handle_loop_install_request_command. Registers the listener in the
+    target's registry and drops a pending install request that the
+    target instance's UserPromptSubmit hook surfaces as a system-reminder.
+    The target Claude sees the reminder, runs `/inbox-listener` with
+    the embedded prompt template, arms the curl + Monitor, and writes
+    the listener_active_*.json runtime metadata.
+    """
+    target_instance = getattr(args, 'instance', None)
+    if not target_instance:
+        return _emit(
+            args,
+            {'ok': False, 'error': '--instance required (target instance to install in)'},
+            'error: --instance required',
+        )
+
+    name = args.name
+    topic = args.topic
+    description = getattr(args, 'description', '') or ''
+    on_wake = getattr(args, 'on_wake', '') or ''
+
+    # Register first so the listener is visible in the cockpit immediately
+    # — even before the target Claude arms the curl + Monitor.
+    registry = ListenerRegistry(target_instance)
+    try:
+        entry = registry.register(
+            name=name,
+            topic=topic,
+            description=description,
+            on_wake_template=on_wake,
+        )
+    except ValueError as e:
+        return _emit(args, {'ok': False, 'error': str(e)}, f'error: {e}')
+
+    pending_path_obj = write_listener_install_pending(
+        instance_id=target_instance,
+        name=name,
+        topic=topic,
+        description=description,
+        on_wake_template=on_wake,
+        requested_by=get_instance_id(),
+    )
+
+    payload = {
+        'ok': True,
+        'instance_id': target_instance,
+        'listener': {'name': entry.name, **entry.to_dict()},
+        'pending_path': str(pending_path_obj),
+    }
+    summary = (
+        f'Listener install requested: {name} (topic={topic}) → {target_instance} '
+        '· pending file written; owning Claude will pick it up via UserPromptSubmit'
     )
     return _emit(args, payload, summary)
 
@@ -844,6 +1206,19 @@ _LOOP_DISPATCH = {
 }
 
 
+_LISTENER_DISPATCH = {
+    'register': handle_listener_register_command,
+    'unregister': handle_listener_unregister_command,
+    'pause': handle_listener_pause_command,
+    'resume': handle_listener_resume_command,
+    'record-wake': handle_listener_record_wake_command,
+    'fire': handle_listener_fire_command,
+    'install-request': handle_listener_install_request_command,
+    'list': handle_listener_list_command,
+    'status': handle_listener_status_command,
+}
+
+
 def handle_sentinel_group_command(args) -> int:
     action = getattr(args, 'sentinel_action', None)
     if not action:
@@ -870,7 +1245,30 @@ def handle_loop_group_command(args) -> int:
     if handler is None:
         sys.stdout.write(f'error: unknown loop action: {action}\n')
         return 2
-    return handler(args) or 0
+    try:
+        return handler(args) or 0
+    except InstanceIdRequiredError as e:
+        sys.stdout.write(f'{e}\n')
+        return 2
+
+
+def handle_listener_group_command(args) -> int:
+    action = getattr(args, 'listener_action', None)
+    if not action:
+        sys.stdout.write(
+            'usage: empirica listener <register|unregister|pause|resume|'
+            'record-wake|fire|install-request|list|status> [args...]\n'
+        )
+        return 2
+    handler = _LISTENER_DISPATCH.get(action)
+    if handler is None:
+        sys.stdout.write(f'error: unknown listener action: {action}\n')
+        return 2
+    try:
+        return handler(args) or 0
+    except InstanceIdRequiredError as e:
+        sys.stdout.write(f'{e}\n')
+        return 2
 
 
 # Keep loaders happy — these names are the canonical export surface.
@@ -881,6 +1279,16 @@ __all__ = [
     'handle_instance_group_command',
     'handle_instance_kill_command',
     'handle_instance_label_command',
+    'handle_listener_fire_command',
+    'handle_listener_group_command',
+    'handle_listener_install_request_command',
+    'handle_listener_list_command',
+    'handle_listener_pause_command',
+    'handle_listener_record_wake_command',
+    'handle_listener_register_command',
+    'handle_listener_resume_command',
+    'handle_listener_status_command',
+    'handle_listener_unregister_command',
     'handle_loop_group_command',
     'handle_loop_heartbeat_command',
     'handle_loop_list_command',

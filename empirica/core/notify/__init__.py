@@ -1,6 +1,6 @@
 """Empirica notify dispatcher — pluggable notification primitive.
 
-Per `OutreachShared/empirica-final-docs/PROPOSAL_NOTIFY_DISPATCHER.md`.
+Per `docs/specs/PROPOSAL_NOTIFY_DISPATCHER.md`.
 
 The dispatcher is a primitive, not a behavior:
   - Callers describe an event (severity / title / message / actions / ...)

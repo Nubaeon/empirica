@@ -474,7 +474,10 @@ class LoopRegistry:
     def unregister(self, name: str) -> bool:
         """Remove a loop from the registry. Returns True if removed, False if absent.
 
-        Also clears the pause sidecar so resurrection of the same name starts clean.
+        Also clears the pause sidecar and any pending install/uninstall
+        request files so resurrection of the same name starts clean —
+        closes the orphan-install gap where unregister could leave a
+        pending file that re-arms the loop on the next prompt.
         """
         _validate_name(name)
         data = self._read()
@@ -483,6 +486,19 @@ class LoopRegistry:
         del data['loops'][name]
         self._write(data)
         set_loop_paused(self.instance_id, name, False)
+        # Lazy import — install/uninstall request modules import from us.
+        from empirica.core.cockpit import (
+            loop_install_request,
+            loop_uninstall_request,
+        )
+        for path in (
+            loop_install_request.pending_path(self.instance_id, name),
+            loop_uninstall_request.pending_path(self.instance_id, name),
+        ):
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
         return True
 
     def set_interval(self, name: str, interval: str) -> LoopEntry:

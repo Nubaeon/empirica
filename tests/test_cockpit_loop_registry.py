@@ -81,6 +81,37 @@ def test_unregister_unknown_returns_false(fake_home):
     assert reg.unregister('never-existed') is False
 
 
+def test_unregister_clears_pending_install_and_uninstall(fake_home, monkeypatch):
+    """Regression: orphan-install gap. If pending install/uninstall files
+    exist when unregister fires, they must be cleaned — otherwise the
+    next prompt re-arms a loop that's no longer registered. Mirrors the
+    listener registry test for symmetric coverage."""
+    from empirica.core.cockpit import (
+        loop_install_request as inst,
+    )
+    from empirica.core.cockpit import (
+        loop_uninstall_request as uninst,
+    )
+    monkeypatch.setattr(inst, 'EMPIRICA_DIR', fake_home)
+    monkeypatch.setattr(uninst, 'EMPIRICA_DIR', fake_home)
+
+    reg = lr.LoopRegistry('tmux_42')
+    reg.register(name='poll', kind='cron', cron='*/15 * * * *')
+
+    install_path = inst.write_pending(
+        'tmux_42', 'poll', interval='15m',
+    )
+    uninstall_path = uninst.write_pending(
+        'tmux_42', 'poll', job_id='cron-job-xyz',
+    )
+    assert install_path.exists()
+    assert uninstall_path.exists()
+
+    reg.unregister('poll')
+    assert not install_path.exists(), 'install pending must be cleaned'
+    assert not uninstall_path.exists(), 'uninstall pending must be cleaned'
+
+
 def test_heartbeat_auto_registers_when_missing(fake_home):
     reg = lr.LoopRegistry('tmux_42')
     entry = reg.heartbeat('orphan-loop', status='ok', message='auto-create')
