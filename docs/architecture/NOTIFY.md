@@ -5,7 +5,7 @@ The dispatcher decides where the event goes based on user config
 (`~/.empirica/notify.yaml`). Loops never need to know about ntfy
 specifically — backends can be swapped without touching call sites.
 
-**Spec:** `OutreachShared/empirica-final-docs/PROPOSAL_NOTIFY_DISPATCHER.md`
+**Spec:** `../specs/PROPOSAL_NOTIFY_DISPATCHER.md`
 
 ---
 

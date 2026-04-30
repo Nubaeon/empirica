@@ -2,7 +2,7 @@
 
 > Multi-instance state visibility and per-instance controls.
 >
-> Spec: `OutreachShared/empirica-final-docs/PROPOSAL_SENTINEL_LOOP_TUI.md`
+> Spec: `../specs/PROPOSAL_SENTINEL_LOOP_TUI.md`
 
 ---
 
@@ -272,5 +272,4 @@ NAME` is for manual one-shot fires; for resuming a paused loop, the
 operator re-issues the install-request and the next prompt in the
 target instance bootstraps the cron.
 
-Spec: `OutreachShared/empirica-final-docs/PROPOSAL_LOOP_SELF_SCHEDULING.md`.
 Skill template: `loop-cron`.

@@ -186,14 +186,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`COCKPIT.md`** gains a "Loop self-scheduling" section pointing at
   the skill + spec.
 
-Spec: `OutreachShared/empirica-final-docs/PROPOSAL_LOOP_SELF_SCHEDULING.md`.
-Corrects two real gaps in `PROPOSAL_LOOP_BACKOFF.md` — the previous
-spec advanced an internal threshold but the cron tick stayed fixed, so
-the prompt still arrived every base interval; pause filtered fires but
-the scheduler kept firing. Self-scheduling is the only mode (no
-recurring fallback — nothing in production to be backwards-compatible
-with). 14 new tests covering plan math, paused-freeze, persistence
-round-trip, backoff cap.
+Self-scheduling corrected two gaps in the prior backoff design (see
+`docs/specs/PROPOSAL_LOOP_BACKOFF.md`): the internal threshold
+advanced but the cron tick stayed fixed, so the prompt still arrived
+every base interval; pause filtered fires but the scheduler kept
+firing. Self-scheduling is the only mode (no recurring fallback —
+nothing in production to be backwards-compatible with). 14 new tests
+covering plan math, paused-freeze, persistence round-trip, backoff
+cap.
 
 ### Added (Notify dispatcher — pluggable notification primitive)
 - **`empirica notify` CLI subcommand group** with four verbs: `emit`,
