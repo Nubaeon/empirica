@@ -2,7 +2,7 @@
 
 > **We Gave AI a Mirror. Now It Measures What It Believes.**
 
-[![Version](https://img.shields.io/badge/version-1.8.16-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.8.16)
+[![Version](https://img.shields.io/badge/version-1.8.17-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.8.17)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -100,13 +100,13 @@ empirica setup-claude-code
 
 ```bash
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.8.16-alpine
+docker pull nubaeon/empirica:1.8.17-alpine
 
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.8.16
+docker pull nubaeon/empirica:1.8.17
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.8.16 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.8.17 /bin/bash
 ```
 </details>
 
@@ -266,33 +266,16 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ---
 
-## What's New in 1.8.16
+## What's New in 1.8.17
 
-- **Cortex sync architectural fix (#95 follow-up)** — `_cortex_resolve_project_id`
-  now reads project_id from the session row (DB-of-record) instead of
-  reading `Path.cwd()/.empirica/project.yaml`. Eliminates the multi-`.empirica`
-  CWD-misroute pattern @pschwinger reproduced and removes the `sys.exit(1)`
-  propagation path that escaped every `except Exception` wrapper.
-- **`resolve_project_id` raises `ProjectNotFoundError` instead of `sys.exit(1)`** —
-  library functions raise; only CLIs call sys.exit. Closes the
-  SystemExit-walks-through-Exception hazard at the source. All ~10
-  callers' existing `except Exception` paths catch the new exception
-  cleanly.
-- **`_run_grounded_verification` accepts `project_path`** — drops two
-  CWD-fallbacks adjacent to the cortex sync fix. Caller passes
-  `resolved_project_path` from the open transaction.
-- **POSTFLIGHT `_soft_run` catches SystemExit** (defense-in-depth).
-  KeyboardInterrupt still propagates.
-- **KNOWN_ISSUES 11.29 + 11.30** — added entries documenting the
-  subagent CLI bleed fix (T4, shipped in 1.8.15) and the
-  SystemExit-from-library propagation chain (T5/T7/T8, shipped across
-  1.8.15 + 1.8.16). Audit-trail completeness for the
-  instance_isolation lineage.
-- **Architecture index refresh** — `docs/architecture/README.md` now
-  indexes COCKPIT, DISPATCH_BUS, EPP_ARCHITECTURE, MEMORY_ARCHITECTURE,
-  NOETIC_BATCH_SPEC, NOTIFY (six docs that existed but weren't linked).
-  Version + Updated bumped, KNOWN_ISSUES range claim corrected.
-
+- **`empirica listener` CLI + registry** — sister concept to
+- **`inbox-listener` skill** — prompt template the listener body
+- **Listener install/uninstall request bridge** — symmetric to the
+- **`loop_uninstall_request` module + `loop-uninstall-pickup.py`
+- **L button mechanical kill** — `cockpit_app.py:action_toggle_loops`
+- **E binding for listeners** — symmetric to L. Calls
+- **Listeners surface in `aggregate_all`** — `instance_state.py` reads
+- **L/E click installs from `project.yaml` when registry empty** —
 ## What's New in 1.8.15
 
 - **Validate-and-heal `session.project_id` at session boundaries** —
@@ -399,6 +382,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.8.16
+**Version:** 1.8.17
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*
