@@ -248,6 +248,20 @@ class PostflightInput(BaseModel):
             "and grounded_vectors. Documents why the AI adjusted (or didn't)."
         ),
     )
+    # Phase 2 T3: agent self-coverage block (paper section 4.1).
+    # Informative, NOT gating — the AI sees its own coverage echoed
+    # back so it can self-correct on subsequent transactions ("95%
+    # confidence with 8% file coverage" is now visible, not hidden).
+    coverage: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Optional agent self-coverage report. Documented dimensions: "
+            "files_inspected/files_relevant, artifacts_inspected/artifacts_relevant, "
+            "citations_made/citations_available, subagents_dispatched/subagents_relevant, "
+            "tools_invoked/tools_available, scalar (0.0-1.0), notes. "
+            "Free-form keys are preserved for forward compatibility."
+        ),
+    )
 
     @field_validator('session_id')
     @classmethod

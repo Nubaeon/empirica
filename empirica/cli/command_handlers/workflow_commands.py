@@ -2717,8 +2717,11 @@ def _build_retrospective(session_id: str, transaction_id: str | None) -> dict:
 def _postflight_parse_config_or_legacy(args):
     """Parse postflight input from config data or legacy CLI flags.
 
-    Returns (session_id, vectors, reasoning, grounded_vectors, grounded_rationale, output_format).
-    Exits on validation failure.
+    Returns (session_id, vectors, reasoning, grounded_vectors,
+    grounded_rationale, coverage, output_format). Exits on validation
+    failure. ``coverage`` is the optional agent self-coverage block
+    (paper section 4.1), only available via the JSON-input path because
+    legacy CLI flags don't carry structured nested data.
     """
     import sys
 
@@ -2730,6 +2733,7 @@ def _postflight_parse_config_or_legacy(args):
         reasoning = config_data.get('reasoning', '')
         grounded_vectors = config_data.get('grounded_vectors')
         grounded_rationale = config_data.get('grounded_rationale')
+        coverage = config_data.get('coverage')
 
         if not session_id or not vectors:
             print(json.dumps({
@@ -2748,6 +2752,7 @@ def _postflight_parse_config_or_legacy(args):
         output_format = getattr(args, 'output', 'json')
         grounded_vectors = None
         grounded_rationale = None
+        coverage = None
 
         if not session_id:
             try:
@@ -2763,7 +2768,7 @@ def _postflight_parse_config_or_legacy(args):
             }))
             sys.exit(1)
 
-    return session_id, vectors, reasoning, grounded_vectors, grounded_rationale, output_format
+    return session_id, vectors, reasoning, grounded_vectors, grounded_rationale, coverage, output_format
 
 
 def _postflight_resolve_preflight_session(session_id):
@@ -2805,9 +2810,9 @@ def _parse_postflight_input(args) -> dict[str, Any]:
     """Parse and validate postflight input from config file or CLI args.
 
     Returns dict with keys: session_id, vectors, reasoning, preflight_session_id,
-    grounded_vectors, grounded_rationale, output_format.
+    grounded_vectors, grounded_rationale, coverage, output_format.
     """
-    session_id, vectors, reasoning, grounded_vectors, grounded_rationale, output_format = (
+    session_id, vectors, reasoning, grounded_vectors, grounded_rationale, coverage, output_format = (
         _postflight_parse_config_or_legacy(args)
     )
 
@@ -2837,6 +2842,7 @@ def _parse_postflight_input(args) -> dict[str, Any]:
         "preflight_session_id": preflight_session_id,
         "grounded_vectors": grounded_vectors,
         "grounded_rationale": grounded_rationale,
+        "coverage": coverage,
         "output_format": output_format,
     }
 
@@ -3226,6 +3232,7 @@ def _build_postflight_result(
     trajectory_issues, grounded_verification, sentinel_decision,
     compliance_result, compliance_error, postflight_grounded_vectors,
     postflight_grounded_rationale, vectors, resolved_project_path,
+    postflight_coverage=None,
 ):
     """Build the postflight result dict including compliance, three-vector, memory hot-cache.
 
@@ -3267,6 +3274,12 @@ def _build_postflight_result(
             "grounded": postflight_grounded_vectors,
             "rationale_present": bool(postflight_grounded_rationale),
         }
+
+    # Phase 2 T3: echo claimed agent self-coverage back to the AI.
+    # Informative, not gating — the AI can see "95% confidence with 8%
+    # file coverage" plainly so subsequent transactions self-correct.
+    if postflight_coverage:
+        result["coverage"] = postflight_coverage
 
     _postflight_update_memory_hot_cache(session_id, resolved_project_path)
 
@@ -3632,6 +3645,7 @@ def handle_postflight_submit_command(args):
 
             # Stage 4: Checkpoint
             retrospective = _build_retrospective(session_id, tx_info["transaction_id"])
+            postflight_coverage = parsed.get("coverage")
             checkpoint_id = logger_instance.add_checkpoint(
                 phase="POSTFLIGHT", vectors=vectors,
                 metadata={
@@ -3646,6 +3660,10 @@ def handle_postflight_submit_command(args):
                     "entity_context": tx_info["entity_context"] or None,
                     "tool_trace": tx_info["tool_trace"] if tx_info["tool_trace"] else None,
                     "retrospective": retrospective if retrospective else None,
+                    # Phase 2 T3 — agent self-coverage (paper section 4.1).
+                    # Informative; not gating. Persisted alongside the
+                    # retrospective so future PREFLIGHTs can recall it.
+                    "coverage": postflight_coverage if postflight_coverage else None,
                 }
             )
 
@@ -3702,6 +3720,7 @@ def handle_postflight_submit_command(args):
                 compliance_error=compliance_error,
                 postflight_grounded_vectors=parsed["grounded_vectors"],
                 postflight_grounded_rationale=parsed["grounded_rationale"],
+                postflight_coverage=parsed.get("coverage"),
                 vectors=vectors, resolved_project_path=resolved_project_path,
             )
             if retrospective:

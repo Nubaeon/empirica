@@ -26,6 +26,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`empirica visibility show <prefix>`** — single-artifact tier
   lookup by UUID prefix across all 7 tables.
 
+### Added — POSTFLIGHT coverage block (Phase 2 T3, paper section 4.1)
+
+- **`coverage` is now a first-class POSTFLIGHT field** — every empirica
+  transaction can opt in to reporting agent self-coverage (file /
+  artifact / citation / subagent / tool dimensions per
+  `docs/research/COVERAGE_VECTORS_PAPER_OUTLINE.md` section 4.1).
+  Validated by `PostflightInput.coverage` in `cli/validation.py` —
+  documented dimensions plus free-form keys for forward compatibility.
+- **Persisted** in the POSTFLIGHT reflex's `reflex_data` JSON alongside
+  `retrospective` — zero schema migration, rides in the existing
+  checkpoint metadata column.
+- **Echoed back** in the postflight response as `result["coverage"]`
+  so the AI sees its own claimed coverage immediately and the next
+  PREFLIGHT can surface it via `previous_transaction_feedback`.
+- **Informative, not gating.** A 95% confidence claim with 7% file
+  coverage is honest when surfaced — no empirica command fails on low
+  coverage; no command fails if coverage is absent (full backward
+  compatibility). The metric is a self-correction signal, not a
+  threshold.
+- **Generalizes beyond the scanner.** The services-auditor skill was
+  the first concrete user (T1), but the coverage block now travels
+  with every postflight — paper validation work and any other
+  domain-specific use case can carry it without further plumbing.
+- **8 new tests** in `tests/test_postflight_coverage.py` covering
+  validation shape, parser tuple, response echo, falsy-omission, and
+  free-form key forward-compat. 75 workflow/validation/postflight
+  tests still green.
+
 ### Added — AI service scanner Phase 2 T2 (cockpit panel)
 
 - **`empirica/core/cockpit/services_view.py`** — mirrors

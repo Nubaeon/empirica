@@ -5,8 +5,8 @@
 - **1 (shipped):** deterministic data collection, read-surface YAML, Markdown report, bundled corpus stubs
 - **2 T1 (shipped):** `services-auditor` skill + `empirica scan --explain` hand-off
 - **2 T2 (shipped):** cockpit `#services` panel
+- **2 T3 (shipped):** POSTFLIGHT coverage block (paper section 4.1)
 - **2 T2.5 (next):** ntfy hook for high-confidence audit findings
-- **2 T3:** POSTFLIGHT coverage block (paper section 4.1)
 - **3:** biweekly loop + history/diff verbs + corpus-refresh
 - **4:** RAG over corpus, dynamic CVE feed, fleet view
 
@@ -364,3 +364,105 @@ will gain `findings_count` / `assumptions_count` / `unknowns_count`.
 - [x] Tests: 10 covering path resolution, missing files, full shape,
       stale window, missing keys, corrupt JSON
 - [x] SERVICES_SCANNER.md updated
+
+---
+
+## Phase 2 T3 — POSTFLIGHT coverage block (shipped)
+
+The agent self-coverage metric is now a first-class field on every
+empirica POSTFLIGHT — generalized beyond the scanner. This is the
+paper's central observability artifact: confidence × coverage > confidence
+alone is meaningful precisely because every transaction can carry a
+coverage report the human can read.
+
+### How to use it
+
+`postflight-submit` accepts an optional `coverage` dict alongside
+`vectors` / `reasoning` / `grounded_vectors`:
+
+```bash
+empirica postflight-submit - <<'EOF'
+{
+  "vectors": {"know": 0.95, "completion": 1.0, "do": 0.9, ...},
+  "reasoning": "Audit complete. 12 of 24 AI-touching processes judged.",
+  "coverage": {
+    "files_inspected": 12,
+    "files_relevant": 491,
+    "artifacts_inspected": 5,
+    "artifacts_relevant": 50,
+    "citations_made": 3,
+    "citations_available": 52,
+    "subagents_dispatched": 0,
+    "subagents_relevant": 0,
+    "tools_invoked": 7,
+    "tools_available": 12,
+    "scalar": 0.07,
+    "notes": "auditor over scanner snapshot"
+  }
+}
+EOF
+```
+
+### What happens to it
+
+1. **Validated** at `cli/validation.py:PostflightInput.coverage` —
+   accepts free-form keys for forward compatibility.
+2. **Persisted** into the POSTFLIGHT reflex's `reflex_data` JSON
+   alongside `retrospective` (zero schema migration — rides in the
+   existing checkpoint metadata column).
+3. **Echoed back** in the postflight response as `result["coverage"]`
+   so the AI sees its own claimed coverage immediately:
+
+   ```jsonc
+   {
+     "ok": true,
+     "postflight_confidence": 0.95,
+     "internal_consistency": "good",
+     "coverage": {                          // <-- echoed here
+       "files_inspected": 12,
+       "files_relevant": 491,
+       "scalar": 0.07,
+       "...": "..."
+     },
+     "retrospective": {...},
+     "...": "..."
+   }
+   ```
+
+### Informative, not gating
+
+Per paper section 4.1: this is a **self-correction signal**, not a
+threshold. A 95% confidence claim with 7% file coverage is honest
+when surfaced; the next PREFLIGHT can see it via `previous_transaction_feedback`
+and the AI can self-correct ("I claimed high confidence on thin
+inspection — should look at more this time"). No empirica command
+fails if coverage is low. No empirica command fails if coverage is
+absent — backward compatibility is preserved for every transaction
+that doesn't opt in.
+
+### Documented dimensions
+
+| Dimension | What it counts |
+|---|---|
+| `files_inspected` / `files_relevant` | Files the agent read vs files matching task scope |
+| `artifacts_inspected` / `artifacts_relevant` | Knowledge artifacts referenced vs surfaced in PREFLIGHT recall |
+| `citations_made` / `citations_available` | Ground-truth sources cited vs sources available in domain corpus |
+| `subagents_dispatched` / `subagents_relevant` | Delegated investigations vs decomposable subtasks |
+| `tools_invoked` / `tools_available` | Tools the agent invoked vs tools available for task type |
+| `scalar` | Optional aggregate coverage 0.0–1.0 (typically derived) |
+| `notes` | Free-form prose; what the AI wants the human to know |
+
+Free-form keys beyond this list pass through untouched — the schema
+is intentionally permissive so coverage definitions can evolve in
+specific work types without churning the validator.
+
+### Acceptance criteria — Phase 2 T3
+
+- [x] `coverage` field on `PostflightInput` validation
+- [x] `_postflight_parse_config_or_legacy` returns coverage as 6th tuple element
+- [x] `_build_postflight_result` echoes coverage (omits when absent or empty)
+- [x] Coverage persists to checkpoint metadata in `reflexes.reflex_data`
+- [x] Backward-compat verified: transactions without coverage behave identically
+- [x] 8 unit tests covering validation shape + parser + echo + omission + persistence
+- [x] CHANGELOG entry under `[Unreleased]`
+- [x] SERVICES_SCANNER.md updated (this section)
