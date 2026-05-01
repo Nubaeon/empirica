@@ -318,6 +318,11 @@ Stop and `c` is bound to Compliance, so `i` was the next sensible
 mnemonic. Pressing `i` flips the panel between collapsed (one-line
 summary) and expanded (per-category breakdown).
 
+**Failures are always shown.** Collector errors render expanded
+unconditionally; the toggle only affects the clean / stale case. This
+mirrors the compliance panel's UX rule — the operator can drill into
+quiet states with a key, but cannot use a key to hide a problem.
+
 ### Glyphs
 
 | Status | Glyph | Trigger |

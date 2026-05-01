@@ -132,15 +132,11 @@ class CockpitApp(App):
         self.payload: dict[str, Any] = {'instances': [], 'summary': {}, 'generated_at': ''}
         self.selected_instance_id: str | None = None
         self.include_dead = include_dead
-        # Compliance widget expansion state. Failures default-expanded
-        # (visible by default); passing default-collapsed (just the
-        # one-line glyph). User can toggle with `c` key.
+        # Compliance + services panel expansion state. Failures /
+        # collector errors are ALWAYS shown expanded; the toggle keys
+        # (`c` / `i`) only flip the clean / passing case so the operator
+        # can drill in but never hide problems.
         self.compliance_expanded: bool = False
-        self.compliance_user_overridden: bool = False
-        # Services panel expansion mirrors compliance — collapsed by
-        # default (one-line summary), `i` (Inventory) toggles full view.
-        # `s` is reserved for Stop and `c` for Compliance, so the new
-        # binding takes the next sensible mnemonic.
         self.services_expanded: bool = False
 
     # ─── lifecycle ────────────────────────────────────────────────────────
@@ -470,21 +466,22 @@ class CockpitApp(App):
         if failed:
             head += f' · failing: {", ".join(failed)}'
 
-        # Default-expanded for failures; default-collapsed for clean.
-        # User-toggled via `c` flips the default.
-        wants_expand = bool(failed)
-        if self.compliance_user_overridden:
-            wants_expand = self.compliance_expanded
+        # Failures are ALWAYS shown expanded — `c` cannot hide them.
+        # The toggle only affects the clean / passing case so the operator
+        # can drill in when curious without surrendering visibility on
+        # things that need attention.
+        if failed:
+            lines = [head, '']
+            for label in failed:
+                lines.append(_wrap_item('  ✗', f'{label}'))
+            lines.append('  (failures always shown — `c` toggles passing checks only)')
+            return '\n'.join(lines)
 
-        if not wants_expand:
+        # Passing case: collapsed by default, `c` expands.
+        if not self.compliance_expanded:
             return head
-
-        # Expanded: head + each failed check on its own indented line
-        if not failed:
-            return head  # nothing to expand if all passing
         lines = [head, '']
-        for label in failed:
-            lines.append(_wrap_item('  ✗', f'{label}'))
+        lines.append(_wrap_item('  ✓', f'all {passed} checks passing'))
         lines.append('  (press `c` to collapse)')
         return '\n'.join(lines)
 
@@ -540,6 +537,21 @@ class CockpitApp(App):
         )
         if errors:
             head += f' · {errors} collector errors'
+
+        # Errors (collector failures) are ALWAYS shown expanded — `i`
+        # cannot hide them. Mirrors compliance's "failures always shown"
+        # rule. Stale/clean states honor the toggle.
+        if errors > 0:
+            lines = [head, '']
+            lines.append(_wrap_item('  ✗', f'{errors} collector error(s) during scan'))
+            lines.append(_wrap_item('  ·', f'MCP servers: {s.get("mcp_servers_count", 0)}'))
+            lines.append(_wrap_item('  ·', f'Plugin manifests: {s.get("plugin_manifests_count", 0)}'))
+            lines.append(_wrap_item('  ·', f'Cron entries: {s.get("cron_entries_count", 0)}'))
+            lines.append(_wrap_item('  ·', f'Interesting env-var names: {s.get("env_var_names_count", 0)}'))
+            host = s.get('host') or '?'
+            lines.append(_wrap_item('  ·', f'Host: {host}'))
+            lines.append('  (errors always shown — `i` toggles non-error breakdown only)')
+            return '\n'.join(lines)
 
         if not self.services_expanded:
             return head
@@ -721,8 +733,9 @@ class CockpitApp(App):
     def action_toggle_services(self) -> None:
         """Flip the services panel between one-line and expanded views.
 
-        Mirrors `c` for compliance — `i` (scanner Inventory) was chosen
-        because `s` is bound to Stop. Pure UX flip; no state change.
+        Mirrors `c` for compliance: collector errors are always shown
+        expanded; this toggle only affects the clean / stale case. `i`
+        (scanner Inventory) was chosen because `s` is bound to Stop.
         """
         self.services_expanded = not self.services_expanded
         self._render_selected_widgets()
@@ -730,11 +743,10 @@ class CockpitApp(App):
     def action_toggle_compliance(self) -> None:
         """Flip compliance widget between collapsed and expanded.
 
-        Pre-toggle, the widget defaults to expanded for failures and
-        collapsed for passes. The first `c` press flips that default;
-        subsequent presses toggle from there.
+        Failures are always shown expanded — this toggle only affects the
+        clean / passing case. The operator can drill into "all checks
+        passing" with `c` but cannot use `c` to hide a failure.
         """
-        self.compliance_user_overridden = True
         self.compliance_expanded = not self.compliance_expanded
         self._render_selected_widgets()
 

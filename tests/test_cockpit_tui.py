@@ -923,7 +923,8 @@ async def test_c_key_toggles_compliance_expansion(cockpit_env, monkeypatch):
         assert app.compliance_expanded is False
         await pilot.press('c')
         await pilot.pause()
-        assert app.compliance_user_overridden is True
+        # `c` only toggles the passing case (failures are always shown);
+        # the user_overridden flag was retired in the UX correction.
         assert app.compliance_expanded is True
 
 
