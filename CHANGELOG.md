@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Scanner Phase 3 history verbs
+
+- **`empirica scan-history`** — list past scan snapshots for the project
+  (newest first, `--limit N`, `--output json|human`). Reads
+  `~/.empirica/scan_history_<project_id>.jsonl`, the audit trail every
+  `--save` run appends to. Surfaces scan_id, timestamp, host, process
+  coverage ratio, error count.
+- **`empirica scan-show <scan_id>`** — re-render a saved snapshot from
+  `~/.empirica/scans/<id>.json`. Accepts UUID prefix (≥8 chars) so
+  operators don't have to paste full IDs. Markdown by default, JSON
+  for piping.
+- **`empirica scan-diff <a> <b>`** — compare two saved snapshots.
+  Reports added/removed processes (by name), per-name count changes,
+  added/removed listening ports, and coverage delta. Both args accept
+  UUID prefixes.
+- These three verbs are the foundation for Phase 3's biweekly cron
+  loop and ntfy integration — the cron fires `scan --save`, then
+  optionally compares the new history tail against the previous run
+  via `scan-diff` and pings on novel additions.
+
 ### Added — Secret-scan compliance check (trufflehog)
 
 - **New `secret_scan` check** in `compliance-report --security` —

@@ -517,8 +517,12 @@ def main(args=None):
             # Visibility tiers (proposal: PROPOSAL_VISIBILITY_TIERS.md, Phase 0)
             'visibility': handle_visibility_group_command,
 
-            # AI service scanner (proposal: PROPOSAL_AI_SERVICE_SCANNER.md, Phase 1)
+            # AI service scanner (proposal: PROPOSAL_AI_SERVICE_SCANNER.md)
+            # Phase 1: scan (one-shot). Phase 3: scan-history/show/diff verbs.
             'scan': handle_scan_command,
+            'scan-history': handle_scan_history_command,
+            'scan-show': handle_scan_show_command,
+            'scan-diff': handle_scan_diff_command,
 
             # Checkpoint commands
             'checkpoint-create': handle_checkpoint_create_command,

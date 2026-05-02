@@ -114,6 +114,288 @@ def _render_explain_hand_off(snapshot_dict: dict, saved_paths: dict[str, str],
     return '\n'.join(lines) + '\n'
 
 
+def _read_history(project_id: str) -> list[dict]:
+    """Read scan_history_<project_id>.jsonl. Returns oldest→newest."""
+    home = _empirica_home()
+    history_path = home / f"scan_history_{project_id}.jsonl"
+    if not history_path.exists():
+        return []
+    entries: list[dict] = []
+    try:
+        with history_path.open(encoding='utf-8') as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    # A malformed line shouldn't kill the audit trail —
+                    # skip and keep walking.
+                    continue
+    except OSError:
+        return []
+    return entries
+
+
+def _read_snapshot(scan_id: str) -> dict | None:
+    """Load a full snapshot from ~/.empirica/scans/<scan_id>.json."""
+    home = _empirica_home()
+    path = home / 'scans' / f"{scan_id}.json"
+    if not path.exists():
+        return None
+    try:
+        with path.open(encoding='utf-8') as fh:
+            return json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _resolve_scan_id_prefix(prefix: str, project_id: str | None) -> str | None:
+    """Match a scan_id by prefix against history entries OR scans/ files.
+
+    Helps the operator paste the first 8 chars instead of the full UUID.
+    Falls back to scanning the scans/ directory when project_id is missing.
+    """
+    if not prefix:
+        return None
+    # Try the project history first — bounded read, ordered.
+    if project_id:
+        for entry in _read_history(project_id):
+            sid = entry.get('scan_id') or ''
+            if sid.startswith(prefix):
+                return sid
+    # Directory walk fallback — covers scans run without project_id binding.
+    home = _empirica_home()
+    scans_dir = home / 'scans'
+    if scans_dir.exists():
+        for path in scans_dir.glob(f'{prefix}*.json'):
+            return path.stem
+    return None
+
+
+def _summarize_processes(snapshot: dict) -> dict[str, int]:
+    """Reduce a snapshot's process list to a per-name count for diffing."""
+    procs = snapshot.get('snapshot', {}).get('processes') or []
+    counts: dict[str, int] = {}
+    for proc in procs:
+        if not isinstance(proc, dict):
+            continue
+        name = proc.get('name') or proc.get('comm') or '?'
+        counts[name] = counts.get(name, 0) + 1
+    return counts
+
+
+def _summarize_listeners(snapshot: dict) -> set[str]:
+    """Listening-port set in 'host:port' form for set-diff."""
+    listeners = snapshot.get('snapshot', {}).get('network', {}).get('listening_ports') or []
+    out: set[str] = set()
+    for entry in listeners:
+        if not isinstance(entry, dict):
+            continue
+        host = entry.get('host') or entry.get('addr') or '?'
+        port = entry.get('port') or '?'
+        out.add(f'{host}:{port}')
+    return out
+
+
+def handle_scan_history_command(args) -> int:
+    """`empirica scan-history` — list past scan snapshots for the project.
+
+    Reads ~/.empirica/scan_history_<project_id>.jsonl and returns the
+    audit trail (newest first, capped by --limit). Each row has scan_id,
+    timestamp, host, coverage, error count.
+    """
+    project_id = _resolve_project_id(args)
+    output_format = getattr(args, 'output', 'human')
+    limit = int(getattr(args, 'limit', 20) or 20)
+
+    if not project_id:
+        msg = "no project_id resolved — pass --project-id or run inside a bound project"
+        if output_format == 'json':
+            print(json.dumps({'ok': False, 'error': msg}))
+        else:
+            print(f'❌ {msg}')
+        return 1
+
+    entries = _read_history(project_id)
+    # Newest first
+    entries.reverse()
+    if limit > 0:
+        entries = entries[:limit]
+
+    if output_format == 'json':
+        print(json.dumps({
+            'ok': True,
+            'project_id': project_id,
+            'count': len(entries),
+            'entries': entries,
+        }, indent=2, default=str))
+        return 0
+
+    if not entries:
+        print('(no scan history for this project — run `empirica scan --save`)')
+        return 0
+    print(f'🔍 scan history — project {project_id[:8]}... ({len(entries)} shown)')
+    for entry in entries:
+        sid = (entry.get('scan_id') or '?')[:8]
+        ts = entry.get('finished_at') or entry.get('started_at') or '?'
+        host = entry.get('host', '?')
+        cov = entry.get('coverage', {}) or {}
+        proc_cov = cov.get('processes', {}) or {}
+        ratio = proc_cov.get('ratio', 0) or 0
+        errs = entry.get('errors', 0)
+        err_part = f' ⚠ {errs} errors' if errs else ''
+        print(f'  {sid}  {ts}  {host}  proc-cov {ratio*100:.0f}%{err_part}')
+    return 0
+
+
+def handle_scan_show_command(args) -> int:
+    """`empirica scan-show <scan_id>` — print a saved snapshot.
+
+    Accepts a UUID prefix (≥8 chars). Output format defaults to markdown
+    (re-renders via report.render_markdown), or json for the raw payload.
+    """
+    scan_id = getattr(args, 'scan_id', None)
+    output_format = getattr(args, 'output', 'markdown')
+    if not scan_id:
+        print(json.dumps({'ok': False, 'error': 'scan_id required'}))
+        return 2
+
+    project_id = _resolve_project_id(args)
+    resolved = _resolve_scan_id_prefix(scan_id, project_id) or scan_id
+    snapshot = _read_snapshot(resolved)
+    if snapshot is None:
+        msg = f'no snapshot found for scan_id prefix {scan_id!r}'
+        if output_format == 'json':
+            print(json.dumps({'ok': False, 'error': msg}))
+        else:
+            print(f'❌ {msg}')
+        return 1
+
+    if output_format == 'json':
+        print(json.dumps({'ok': True, 'snapshot': snapshot}, indent=2, default=str))
+        return 0
+
+    # Markdown — reconstruct via report renderer. The renderer expects a
+    # Snapshot object, but we have the dict form on disk. Rebuild a
+    # minimal renderable view.
+    from empirica.core.scanner.snapshot import Snapshot  # local import — keeps cli module light
+    try:
+        snap_obj = Snapshot.from_dict(snapshot) if hasattr(Snapshot, 'from_dict') else None
+    except Exception:
+        snap_obj = None
+    if snap_obj is not None:
+        print(render_markdown(snap_obj))
+    else:
+        # Renderer can't round-trip — fall back to a compact summary.
+        cov = snapshot.get('snapshot', {}).get('coverage', {})
+        print(f"# Scan {resolved[:8]}")
+        print(f"started: {snapshot.get('started_at')}")
+        print(f"host: {snapshot.get('host')}")
+        print(f"processes: {len(snapshot.get('snapshot', {}).get('processes') or [])}")
+        print(f"coverage: {cov}")
+        print("\n_(use `--output json` for the full snapshot)_")
+    return 0
+
+
+def _compute_scan_diff(snap_a: dict, snap_b: dict) -> dict:
+    """Pure-data diff: process + listener deltas plus coverage. Caller
+    decides how to render."""
+    proc_a = _summarize_processes(snap_a)
+    proc_b = _summarize_processes(snap_b)
+    proc_changed = [
+        {'name': name, 'before': proc_a[name], 'after': proc_b[name]}
+        for name in sorted(set(proc_a) & set(proc_b))
+        if proc_a[name] != proc_b[name]
+    ]
+    listen_a = _summarize_listeners(snap_a)
+    listen_b = _summarize_listeners(snap_b)
+    return {
+        'processes': {
+            'added': sorted(set(proc_b) - set(proc_a)),
+            'removed': sorted(set(proc_a) - set(proc_b)),
+            'changed': proc_changed,
+        },
+        'listeners': {
+            'added': sorted(listen_b - listen_a),
+            'removed': sorted(listen_a - listen_b),
+        },
+        'coverage': {
+            'a': snap_a.get('snapshot', {}).get('coverage', {}),
+            'b': snap_b.get('snapshot', {}).get('coverage', {}),
+        },
+    }
+
+
+def _print_scan_diff_human(a_resolved: str, b_resolved: str, diff: dict) -> None:
+    """Render _compute_scan_diff output as the human-friendly summary."""
+    print(f'🔍 scan diff: {a_resolved[:8]} → {b_resolved[:8]}')
+    procs = diff['processes']
+    if procs['added'] or procs['removed'] or procs['changed']:
+        print('   processes:')
+        for n in procs['added']:
+            print(f'     + {n}')
+        for n in procs['removed']:
+            print(f'     - {n}')
+        for c in procs['changed']:
+            print(f'     ~ {c["name"]} ({c["before"]} → {c["after"]})')
+    else:
+        print('   processes: no changes')
+    listeners = diff['listeners']
+    if listeners['added'] or listeners['removed']:
+        print('   listening ports:')
+        for n in listeners['added']:
+            print(f'     + {n}')
+        for n in listeners['removed']:
+            print(f'     - {n}')
+    else:
+        print('   listening ports: no changes')
+
+
+def handle_scan_diff_command(args) -> int:
+    """`empirica scan-diff <a> <b>` — compare two snapshots.
+
+    Reports added/removed processes (by name) and added/removed
+    listening ports. Coverage delta on the way too. Both args accept
+    UUID prefixes.
+    """
+    scan_a = getattr(args, 'scan_id_a', None)
+    scan_b = getattr(args, 'scan_id_b', None)
+    output_format = getattr(args, 'output', 'human')
+    if not (scan_a and scan_b):
+        print(json.dumps({'ok': False, 'error': 'both scan_id_a and scan_id_b required'}))
+        return 2
+
+    project_id = _resolve_project_id(args)
+    a_resolved = _resolve_scan_id_prefix(scan_a, project_id) or scan_a
+    b_resolved = _resolve_scan_id_prefix(scan_b, project_id) or scan_b
+    snap_a = _read_snapshot(a_resolved)
+    snap_b = _read_snapshot(b_resolved)
+    if snap_a is None or snap_b is None:
+        missing = [s for s, snap in ((scan_a, snap_a), (scan_b, snap_b)) if snap is None]
+        msg = f'snapshot not found: {", ".join(missing)}'
+        if output_format == 'json':
+            print(json.dumps({'ok': False, 'error': msg}))
+        else:
+            print(f'❌ {msg}')
+        return 1
+
+    diff = _compute_scan_diff(snap_a, snap_b)
+    payload = {
+        'ok': True,
+        'a': {'scan_id': a_resolved, 'started_at': snap_a.get('started_at')},
+        'b': {'scan_id': b_resolved, 'started_at': snap_b.get('started_at')},
+        **diff,
+    }
+
+    if output_format == 'json':
+        print(json.dumps(payload, indent=2, default=str))
+    else:
+        _print_scan_diff_human(a_resolved, b_resolved, diff)
+    return 0
+
+
 def handle_scan_command(args) -> int:
     """`empirica scan` — emit a deterministic inventory snapshot.
 
