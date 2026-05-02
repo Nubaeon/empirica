@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.8.18] — 2026-05-02
 
+### Added — `empirica chat` (Phase 1 demo mode)
+
+- **New verb `empirica chat`** — single-instance focused workspace
+  scaffolding (sister to the multi-instance cockpit). Per
+  `docs/specs/CHAT.md`. Phase 1 ships the Textual app + session module +
+  feed-replay demo mode (`--feed PATH --feed-delay SECONDS`) so the
+  shape can be experienced without an app-server. Resume via
+  `--session-id`. Bookkeeping for follow-on phases lives in
+  `empirica/core/chat/`.
+
 ### Added — Security corpus populated (was Phase 1 stubs)
 
 - **5 corpus files now ship with summary-grade canonical bodies**
