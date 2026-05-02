@@ -61,3 +61,21 @@ def add_chat_parsers(subparsers) -> None:
               "(ollama, qwopus, llcpp, llcpp-alt). Switch at runtime with "
               "/provider NAME and /model NAME.",
     )
+    chat.add_argument(
+        "--autonomy",
+        choices=("assistant", "copilot", "autonomous"),
+        default="assistant",
+        help="Autonomy mode for the AI in this session (default: assistant). "
+              "assistant = waits for confirmation; copilot = takes obvious "
+              "next steps; autonomous = pursues stated objective with "
+              "checkpoints at coherent boundaries.",
+    )
+    chat.add_argument(
+        "--no-system-prompt",
+        dest="enable_system_prompt",
+        action="store_false",
+        default=True,
+        help="Disable the empirica chat system prompt. The model will not be "
+              "told it's in empirica chat or made aware of slash commands. "
+              "Use --system to supply your own prompt instead.",
+    )

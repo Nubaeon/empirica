@@ -44,6 +44,12 @@ from empirica.core.chat.providers import (
     builtin_empirica_server_providers,
 )
 from empirica.core.chat.session import ChatSession, Turn, TurnKind, load_turns
+from empirica.core.chat.system_prompt import (
+    AUTONOMY_DEFAULT,
+    MODE_BADGES,
+    preview_lines,
+    render_system_prompt,
+)
 from empirica.core.chat.translator_client import (
     TranslatorError,
     build_request_body,
@@ -76,7 +82,7 @@ class ChatApp(App):
     ]
 
     TITLE = "empirica chat"
-    SUB_TITLE = "🤖 conversational"  # Phase 6: dynamic from autonomy mode
+    SUB_TITLE = MODE_BADGES[AUTONOMY_DEFAULT]  # overwritten in _refresh_subtitle
 
     def __init__(
         self,
@@ -87,12 +93,20 @@ class ChatApp(App):
         model: str = "deepseek-chat",
         instructions: str | None = None,
         providers: list[Provider] | None = None,
+        autonomy_mode: str = AUTONOMY_DEFAULT,
+        enable_system_prompt: bool = True,
     ) -> None:
         super().__init__()
         self.feed_path = feed_path
         self.session_id_to_resume = session_id
         self.feed_delay = feed_delay
-        self.instructions = instructions
+        # User-supplied --system text; combined with the empirica system
+        # prompt at on_mount time. Stored separately so we can rebuild on
+        # /provider or /model switches.
+        self.user_instructions = instructions
+        self.instructions: str | None = None
+        self.autonomy_mode = autonomy_mode
+        self.enable_system_prompt = enable_system_prompt
         self._session: ChatSession | None = None
 
         # Build provider registry. Priority: explicit --provider flags →
@@ -129,7 +143,22 @@ class ChatApp(App):
         else:
             self._session = ChatSession.create()
 
-        # Reflect active provider:model in the header subtitle
+        # Compose the system prompt and append it as turn 0 so the user
+        # can see what the AI was told. The full text is what gets sent
+        # as LLM instructions; the rendered turn shows a short preview.
+        # Resumed sessions skip this — the original turn 0 is already in
+        # the session's turn list and instructions persist from prior run.
+        if (
+            self.enable_system_prompt
+            and self.session_id_to_resume is None
+        ):
+            self._install_system_prompt()
+        elif self.user_instructions:
+            # System prompt disabled but user supplied --system: pass
+            # their text straight through as instructions.
+            self.instructions = self.user_instructions
+
+        # Reflect active provider:model + autonomy mode in the subtitle
         self._refresh_subtitle()
 
         # Tick the statusline panel so it stays current as the project's
@@ -443,11 +472,37 @@ class ChatApp(App):
             self.call_from_thread(self._convo().append_turn, turn)
 
     def _refresh_subtitle(self) -> None:
-        """Reflect active provider:model in the header subtitle."""
+        """Reflect active provider:model + autonomy mode in the subtitle."""
         try:
-            self.sub_title = self.registry.display_status()
+            badge = MODE_BADGES.get(self.autonomy_mode, self.autonomy_mode)
+            self.sub_title = f"{badge}  ·  {self.registry.display_status()}"
         except Exception:  # noqa: BLE001 — pre-mount or test context
             pass
+
+    def _install_system_prompt(self) -> None:
+        """Render system prompt → set self.instructions → append turn 0."""
+        assert self._session is not None  # noqa: S101 — type narrowing
+        provider = self.registry.active()
+        provider_name = provider.name if provider else "(none)"
+        model = self.registry.active_model or "(none)"
+        prompt = render_system_prompt(
+            provider=provider_name,
+            model=model,
+            autonomy_mode=self.autonomy_mode,
+            user_instructions=self.user_instructions,
+        )
+        self.instructions = prompt
+        # Visual turn 0 — short preview, full prompt available via /help debug
+        # (Phase 16). Stored as SYSTEM so the LLM history filter naturally
+        # excludes it from the per-request context.
+        preview = preview_lines(prompt, max_lines=3)
+        turn = Turn.new(
+            TurnKind.SYSTEM,
+            f"system prompt installed ({MODE_BADGES.get(self.autonomy_mode, self.autonomy_mode)})\n{preview}",
+            metadata={"system_prompt": True, "autonomy_mode": self.autonomy_mode},
+        )
+        self._session.append(turn)
+        self._convo().append_turn(turn)
 
     def _list_models_action(self) -> None:
         """Worker: query the active provider's /v1/models endpoint, render a system note."""
@@ -515,6 +570,8 @@ def run_chat(
     model: str = "deepseek-chat",
     instructions: str | None = None,
     providers: list[Provider] | None = None,
+    autonomy_mode: str = AUTONOMY_DEFAULT,
+    enable_system_prompt: bool = True,
 ) -> int:
     app = ChatApp(
         feed_path=feed_path,
@@ -524,6 +581,8 @@ def run_chat(
         model=model,
         instructions=instructions,
         providers=providers,
+        autonomy_mode=autonomy_mode,
+        enable_system_prompt=enable_system_prompt,
     )
     app.run()
     return 0

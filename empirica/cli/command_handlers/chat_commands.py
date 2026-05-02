@@ -39,4 +39,6 @@ def handle_chat_command(args: Any) -> int:
         model=getattr(args, "model", "deepseek-chat") or "deepseek-chat",
         instructions=getattr(args, "system", None),
         providers=providers,
+        autonomy_mode=getattr(args, "autonomy", "assistant") or "assistant",
+        enable_system_prompt=getattr(args, "enable_system_prompt", True),
     )
