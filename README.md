@@ -276,6 +276,33 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 - **E binding for listeners** — symmetric to L. Calls
 - **Listeners surface in `aggregate_all`** — `instance_state.py` reads
 - **L/E click installs from `project.yaml` when registry empty** —
+
+## What's New in 1.8.17
+
+- **Listener subsystem** — sister to cron loops, event-driven not
+  scheduled. `empirica listener register/heartbeat/list` + cockpit
+  E binding + project.yaml install hook.
+- **Mechanical pause for loops** — pause now cancels the next-fire
+  CronCreate token so paused really means silent (no token bleed).
+- **Cockpit sweep** — domain·criticality chip per row, compliance
+  panel with green/yellow/red glyph, services panel for scanner
+  snapshots.
+
+## What's New in 1.8.16
+
+- **#95 root-cause cluster closed** — Cortex sync reads project_id
+  from session row (no CWD); `_run_grounded_verification` accepts
+  `project_path`; `resolve_project_id` raises `ProjectNotFoundError`
+  instead of `sys.exit(1)`. SystemExit-walks-through-Exception hazard
+  closed at the source.
+- **Per-project compliance.yaml** — projects can `skip_checks`,
+  declare `extra_checks` with regulatory mapping, override
+  `repo_hygiene` sub-checks. Non-CLI/server projects no longer
+  fail tech_docs.
+- **KNOWN_ISSUES 11.29 + 11.30** — instance_isolation audit-trail
+  entries for the subagent CLI bleed fix and the SystemExit
+  propagation chain.
+
 ## What's New in 1.8.15
 
 - **Validate-and-heal `session.project_id` at session boundaries** —
