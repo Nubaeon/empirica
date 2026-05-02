@@ -24,6 +24,13 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Footer, Header
 
+from empirica.core.chat.actions import (
+    ActionError,
+    extract_artifact_id,
+    log_decision,
+    log_finding,
+    log_unknown,
+)
 from empirica.core.chat.session import ChatSession, Turn, TurnKind, load_turns
 from empirica.core.chat.translator_client import (
     TranslatorError,
@@ -31,6 +38,7 @@ from empirica.core.chat.translator_client import (
     stream_responses,
 )
 
+from .chat.artifact_card import ArtifactCard
 from .chat.conversation import ConversationScroll
 from .chat.input import ChatInput
 
@@ -111,7 +119,15 @@ class ChatApp(App):
     def on_chat_input_submitted(self, event: ChatInput.Submitted) -> None:
         """User pressed Enter on a non-empty input."""
         assert self._session is not None  # noqa: S101 — type narrowing
-        turn = Turn.new(TurnKind.USER, event.text)
+        text = event.text
+
+        # Phase 4: slash commands route to artifact creation rather than
+        # the LLM. /finding, /decision, /unknown, /help — see _handle_slash.
+        if text.startswith("/"):
+            self._handle_slash(text)
+            return
+
+        turn = Turn.new(TurnKind.USER, text)
         self._session.append(turn)
         self._convo().append_turn(turn)
 
@@ -195,7 +211,113 @@ class ChatApp(App):
         except Exception:  # noqa: BLE001 — widget may have been removed
             return
         # Re-render via Static.update with the agent-style label
-        widget.update(f"[b]agent:[/b] {text}")
+        widget.update(f"[b]agent:[/b] {text}")  # type: ignore[attr-defined]
+
+    # ─── Phase 4: slash commands → artifact cards ─────────────────────
+
+    def _handle_slash(self, text: str) -> None:
+        """Parse and execute /finding, /decision, /unknown, /help."""
+        assert self._session is not None  # noqa: S101 — type narrowing
+        cmd, _, rest = text[1:].partition(" ")
+        cmd = cmd.strip().lower()
+        rest = rest.strip()
+
+        if cmd in ("help", "?"):
+            self._emit_system(
+                "slash commands:\n"
+                "  /finding TEXT       create a finding (renders as inline card)\n"
+                "  /decision TEXT      create a decision\n"
+                "  /unknown TEXT       create an unknown question\n"
+                "  /help               this list\n"
+                "Anything else goes to the agent (when --translator-url is set)."
+            )
+            return
+
+        if not rest:
+            self._emit_system(f"/{cmd}: missing text — usage: /{cmd} <description>")
+            return
+
+        if cmd == "finding":
+            self.run_worker(
+                lambda: self._create_artifact("finding", rest),
+                thread=True, exclusive=False, group="artifact-create",
+            )
+            return
+        if cmd == "decision":
+            self.run_worker(
+                lambda: self._create_artifact("decision", rest),
+                thread=True, exclusive=False, group="artifact-create",
+            )
+            return
+        if cmd == "unknown":
+            self.run_worker(
+                lambda: self._create_artifact("unknown", rest),
+                thread=True, exclusive=False, group="artifact-create",
+            )
+            return
+
+        self._emit_system(f"unknown slash command: /{cmd} — try /help")
+
+    def _create_artifact(self, artifact_type: str, text: str) -> None:
+        """Worker thread: invoke empirica CLI, render the artifact card."""
+        assert self._session is not None  # noqa: S101 — type narrowing
+        try:
+            if artifact_type == "finding":
+                resp = log_finding(text)
+            elif artifact_type == "decision":
+                resp = log_decision(text)
+            elif artifact_type == "unknown":
+                resp = log_unknown(text)
+            else:
+                self.call_from_thread(
+                    self._emit_system, f"artifact type not yet supported: {artifact_type}"
+                )
+                return
+        except ActionError as e:
+            self.call_from_thread(self._emit_system, f"artifact creation failed: {e}")
+            return
+
+        artifact_id = extract_artifact_id(resp)
+        meta: dict[str, object] = {
+            "artifact_type": artifact_type,
+            "artifact_id": artifact_id,
+        }
+        if artifact_type in ("finding", "unknown"):
+            meta["impact"] = 0.5  # default; finer impact via slash flags is Phase 4b
+        if artifact_type == "decision":
+            meta["reversibility"] = "exploratory"
+
+        turn = Turn.new(TurnKind.EPISTEMIC_ACTION, text, metadata=meta)
+        self._session.append(turn)
+        self.call_from_thread(self._convo().append_turn, turn)
+
+    def _emit_system(self, text: str) -> None:
+        """Append a SystemTurn from any thread (uses call_from_thread if needed)."""
+        assert self._session is not None  # noqa: S101 — type narrowing
+        turn = Turn.new(TurnKind.SYSTEM, text)
+        self._session.append(turn)
+        # If we're already on the main thread, append directly; otherwise
+        # call_from_thread. Textual's threading model makes both safe enough.
+        try:
+            self._convo().append_turn(turn)
+        except Exception:  # noqa: BLE001 — thread context unclear
+            self.call_from_thread(self._convo().append_turn, turn)
+
+    def on_artifact_card_action_invoked(self, event: ArtifactCard.ActionInvoked) -> None:
+        """Bubble from per-card buttons. Phase 4 v1: emit a system note as ack.
+
+        Phase 5+ wires this to real action invocations:
+          - finding.confirm → empirica finding-log (with link to original)
+          - unknown.resolve → empirica unknown-resolve
+          - *.discuss → inject into next agent turn as system message
+          - *.pin → write to chat_pinned_{session_id}.json
+        """
+        msg = (
+            f"action: {event.artifact_type}.{event.action} "
+            f"on artifact {(event.artifact_id or 'unknown')[:8]} "
+            f"(turn {event.turn_id[:8]}) — wiring is Phase 5+"
+        )
+        self._emit_system(msg)
 
     def action_clear_input(self) -> None:
         try:

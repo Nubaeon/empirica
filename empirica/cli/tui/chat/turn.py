@@ -12,7 +12,7 @@ from textual.widgets import Static
 from empirica.core.chat.session import Turn, TurnKind
 
 
-def render_turn(turn: Turn) -> Static:
+def render_turn(turn: Turn):  # noqa: ANN201 — multi-widget return is fine
     """Factory: pick the right widget class for a turn kind."""
     if turn.kind == TurnKind.USER:
         return UserTurn(turn)
@@ -20,7 +20,12 @@ def render_turn(turn: Turn) -> Static:
         return AgentTurn(turn)
     if turn.kind == TurnKind.SYSTEM:
         return SystemTurn(turn)
-    # Phase 2+ kinds — render as plain text for now with kind label
+    if turn.kind == TurnKind.EPISTEMIC_ACTION:
+        # Lazy import to avoid Textual-circular issues at module load
+        from .artifact_card import ArtifactCard
+        return ArtifactCard(turn)
+    # Phase 2+ kinds (tool_call, agent_reasoning, tool_result) — render
+    # as plain labeled text until their dedicated widgets land.
     return UnknownTurn(turn)
 
 
