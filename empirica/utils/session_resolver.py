@@ -2059,7 +2059,7 @@ def resolve_project_identifier(identifier: str) -> dict | None:
     Accepts:
         - UUID: e.g., "748a81a2-ac14-45b8-a185-994997b76828"
         - Folder name: e.g., "empirica", "my-project"
-        - Path: e.g., "/home/user/projects/empirica"
+        - Path: e.g., "/path/to/projects/empirica"
 
     Resolution priority:
         1. If UUID format: validate in workspace.db or local sessions.db
@@ -2080,11 +2080,11 @@ def resolve_project_identifier(identifier: str) -> dict | None:
     Example:
         >>> resolve_project_identifier("empirica")
         {'project_id': '748a81a2-...', 'folder_name': 'empirica',
-         'project_path': '/home/user/empirica', 'source': 'workspace'}
+         'project_path': '/path/to/empirica', 'source': 'workspace'}
 
         >>> resolve_project_identifier("748a81a2-ac14-45b8-a185-994997b76828")
         {'project_id': '748a81a2-...', 'folder_name': 'empirica',
-         'project_path': '/home/user/empirica', 'source': 'workspace'}
+         'project_path': '/path/to/empirica', 'source': 'workspace'}
     """
     from pathlib import Path as P
 

@@ -38,7 +38,7 @@ def normalize_git_url(url: str) -> str:
     Examples:
         git@github.com:owner/repo.git -> github.com/owner/repo
         https://github.com/owner/repo.git -> github.com/owner/repo
-        /home/user/repos/myrepo -> local/myrepo
+        /path/to/repos/myrepo -> local/myrepo
     """
     if not url:
         return ""

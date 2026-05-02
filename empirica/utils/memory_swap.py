@@ -49,7 +49,7 @@ def _claude_memory_dir(project_path: Path) -> Path:
     """Compute the Claude Code auto-memory directory for a project path.
 
     Claude Code maps absolute paths to memory dirs by replacing `/` with `-`:
-        /home/user/repo  →  ~/.claude/projects/-home-user-repo/memory/
+        /path/to/repo  →  ~/.claude/projects/-path-to-repo/memory/
     """
     project_key = str(project_path.resolve()).replace("/", "-")
     return Path.home() / ".claude" / "projects" / project_key / "memory"

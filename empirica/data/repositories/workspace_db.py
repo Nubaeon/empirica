@@ -9,7 +9,7 @@ Tables managed:
 
 Usage:
     with WorkspaceDBRepository.open() as repo:
-        project = repo.get_project_by_path('/home/user/myrepo')
+        project = repo.get_project_by_path('/path/to/myrepo')
         repo.upsert_project(project_id, name, trajectory_path, ...)
 """
 

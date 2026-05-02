@@ -12,7 +12,7 @@
       "model": "Claude Haiku 4.5",
       "role": "Implementation Lead",
       "description": "Generalist metacognitive agent specializing in code implementation, execution, and git operations",
-      "system_prompt_path": "/home/yogapad/.claude/CLAUDE.md",
+      "system_prompt_path": "~/.claude/CLAUDE.md",
       "mco_configuration": {
         "model_profile": "claude_haiku",
         "persona": "implementer",
@@ -39,7 +39,7 @@
       "model": "Claude Sonnet 3.5",
       "role": "High-Reasoning Architect",
       "description": "High-reasoning specialist for design validation, architecture exploration, and research",
-      "system_prompt_path": "/home/yogapad/.sonnet/SONNET.md",
+      "system_prompt_path": "~/.sonnet/SONNET.md",
       "mco_configuration": {
         "model_profile": "claude_sonnet",
         "persona": "researcher",
@@ -66,7 +66,7 @@
       "model": "Qwen",
       "role": "Testing & Quality Specialist",
       "description": "Code-specialized agent for testing, validation, integration testing, and quality assurance",
-      "system_prompt_path": "/home/yogapad/.qwen/QWEN.md",
+      "system_prompt_path": "~/.qwen/QWEN.md",
       "mco_configuration": {
         "model_profile": "code_specialist",
         "persona": "reviewer",

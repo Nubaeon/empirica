@@ -167,7 +167,7 @@ def get_workspace_projects() -> list[dict[str, Any]]:
         for row in cursor.fetchall():
             project = dict(row)
             # Derive folder name from trajectory_path
-            # e.g., /home/user/empirical-ai/empirica-platform/.empirica -> empirica-platform
+            # e.g., /path/to/empirical-ai/empirica-platform/.empirica -> empirica-platform
             traj_path = project.get('trajectory_path', '')
             if traj_path:
                 folder_name = Path(traj_path).parent.name
@@ -837,8 +837,8 @@ def _resolve_project_path(trajectory_path):
     """Derive project root from trajectory path.
 
     Two formats exist:
-    1. Old format: /home/user/project/.empirica -> project_path = /home/user/project
-    2. New format: /home/user/project (no .empirica suffix) -> use as-is
+    1. Old format: /path/to/project/.empirica -> project_path = /path/to/project
+    2. New format: /path/to/project (no .empirica suffix) -> use as-is
 
     Returns Path or None.
     """
