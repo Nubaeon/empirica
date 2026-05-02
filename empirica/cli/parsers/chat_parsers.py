@@ -49,3 +49,15 @@ def add_chat_parsers(subparsers) -> None:
         metavar="TEXT",
         help="System instructions injected as the leading message",
     )
+    chat.add_argument(
+        "--provider",
+        action="append",
+        metavar="NAME=URL[,model=M][,wire=W][,key_env=ENV]",
+        help="Register a provider. Repeatable. Examples: "
+              "ollama=http://192.168.1.68:11434/v1,model=qwen3.5:latest  · "
+              "deepseek=https://api.deepseek.com/v1,model=deepseek-chat,key_env=DEEPSEEK_API_KEY  · "
+              "translator=http://127.0.0.1:18080/v1,wire=responses. "
+              "When omitted: builtin empirica-server defaults are loaded "
+              "(ollama, qwopus, llcpp, llcpp-alt). Switch at runtime with "
+              "/provider NAME and /model NAME.",
+    )

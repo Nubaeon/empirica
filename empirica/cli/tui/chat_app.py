@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -30,6 +30,18 @@ from empirica.core.chat.actions import (
     log_decision,
     log_finding,
     log_unknown,
+)
+from empirica.core.chat.openai_compat_client import (
+    ProviderError,
+    build_chat_request,
+    list_models,
+    resolve_api_key,
+    stream_chat_completions,
+)
+from empirica.core.chat.providers import (
+    Provider,
+    ProviderRegistry,
+    builtin_empirica_server_providers,
 )
 from empirica.core.chat.session import ChatSession, Turn, TurnKind, load_turns
 from empirica.core.chat.translator_client import (
@@ -70,15 +82,32 @@ class ChatApp(App):
         translator_url: str | None = None,
         model: str = "deepseek-chat",
         instructions: str | None = None,
+        providers: list[Provider] | None = None,
     ) -> None:
         super().__init__()
         self.feed_path = feed_path
         self.session_id_to_resume = session_id
         self.feed_delay = feed_delay
-        self.translator_url = translator_url
-        self.model = model
         self.instructions = instructions
         self._session: ChatSession | None = None
+
+        # Build provider registry. Priority: explicit --provider flags →
+        # backwards-compat (--translator-url + --model) → builtin defaults
+        # (empirica-server LAN). User can /provider NAME to switch at runtime.
+        self.registry = ProviderRegistry()
+        if providers:
+            for p in providers:
+                self.registry.add(p)
+        if translator_url:
+            self.registry.add(Provider(
+                name="translator",
+                base_url=translator_url,
+                default_model=model,
+                wire="responses",
+            ))
+        if not self.registry.providers:
+            for p in builtin_empirica_server_providers():
+                self.registry.add(p)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -94,6 +123,9 @@ class ChatApp(App):
             self._convo().render_existing(self._session.turns)
         else:
             self._session = ChatSession.create()
+
+        # Reflect active provider:model in the header subtitle
+        self._refresh_subtitle()
 
         # Optional: replay a sample feed (no app-server dep — useful for
         # reviewing the rendering UX before wiring upstream).
@@ -131,20 +163,16 @@ class ChatApp(App):
         self._session.append(turn)
         self._convo().append_turn(turn)
 
-        if not self.translator_url:
-            # Phase 1 fallback — no upstream wired
-            echo = Turn.new(
-                TurnKind.SYSTEM,
-                "(no --translator-url set — pass one to enable agent flow)",
-            )
-            self._session.append(echo)
-            self._convo().append_turn(echo)
+        active = self.registry.active()
+        if active is None:
+            self._emit_system("no provider configured — pass --provider NAME=URL or use builtin empirica-server defaults")
+            return
+        if not self.registry.active_model:
+            self._emit_system(f"provider '{active.name}' has no active model — use /model NAME to set one")
             return
 
-        # Phase 2a: dispatch to translator, stream agent response as a
-        # single growing AgentTurn. Run in a thread worker so the UI
-        # stays responsive during the streaming HTTP call.
-        user_text = event.text
+        # Dispatch to active provider in a worker thread (UI stays responsive).
+        user_text = text
         self.run_worker(
             lambda: self._stream_agent_response(user_text),
             thread=True,
@@ -153,35 +181,30 @@ class ChatApp(App):
         )
 
     def _stream_agent_response(self, user_text: str) -> None:
-        """Worker thread: hit translator, stream deltas into a new agent turn."""
+        """Worker thread: dispatch to active provider, stream deltas in."""
         assert self._session is not None  # noqa: S101 — type narrowing
-        assert self.translator_url is not None  # noqa: S101 — gated by caller
+        provider = self.registry.active()
+        model = self.registry.active_model
+        assert provider is not None and model is not None  # noqa: S101 — gated
 
-        # Build request from prior history (excluding the just-appended user
-        # turn — translator will see it explicitly via `user_text`).
+        # Build request from prior history (exclude the just-appended user turn).
         history = [
             {"role": _to_translator_role(t.kind), "text": t.text}
-            for t in self._session.turns[:-1]  # exclude the new user turn
+            for t in self._session.turns[:-1]
             if t.kind in (TurnKind.USER, TurnKind.AGENT_TEXT)
         ]
-        body = build_request_body(
-            user_text=user_text,
-            model=self.model,
-            instructions=self.instructions,
-            history=history,
-        )
 
         # Allocate a single AgentTurn we mutate as deltas arrive.
         agent_turn = Turn.new(TurnKind.AGENT_TEXT, "")
-        # Schedule mount on the main thread.
         self.call_from_thread(self._convo().append_turn, agent_turn)
 
         accumulated: list[str] = []
         try:
-            for event in stream_responses(self.translator_url, body):
-                t = event.get("type", "")
-                if t == "response.output_text.delta":
-                    delta = event.get("delta", "")
+            event_stream = self._dispatch(provider, model, user_text, history)
+            for ev in event_stream:
+                etype = ev.get("type", "")
+                if etype == "text_delta":
+                    delta = ev.get("delta", "")
                     if delta:
                         accumulated.append(delta)
                         self.call_from_thread(
@@ -189,20 +212,60 @@ class ChatApp(App):
                             agent_turn.turn_id,
                             "".join(accumulated),
                         )
-                elif t == "response.completed":
-                    # Final assembled text is in response.output[0].content[0].text;
-                    # we already accumulated identical text from deltas. Persist.
-                    final_text = "".join(accumulated)
-                    agent_turn.text = final_text
+                elif etype == "completed":
+                    agent_turn.text = "".join(accumulated)
                     self._session.append(agent_turn)
-        except TranslatorError as e:
-            err = Turn.new(TurnKind.SYSTEM, f"translator error: {e}")
+        except (TranslatorError, ProviderError) as e:
+            err = Turn.new(TurnKind.SYSTEM, f"{provider.name} error: {e}")
             self._session.append(err)
             self.call_from_thread(self._convo().append_turn, err)
         except Exception as e:  # noqa: BLE001 — surface any failure to chat
             err = Turn.new(TurnKind.SYSTEM, f"agent stream error: {type(e).__name__}: {e}")
             self._session.append(err)
             self.call_from_thread(self._convo().append_turn, err)
+
+    def _dispatch(
+        self,
+        provider: Provider,
+        model: str,
+        user_text: str,
+        history: list[dict[str, Any]],
+    ):
+        """Pick the right client based on provider.wire and yield normalized events."""
+        if provider.wire == "responses":
+            # Translator path: build Responses-format request, parse Responses-
+            # format SSE, normalize to {text_delta, completed} dicts so the
+            # streaming loop above can stay shape-agnostic.
+            body = build_request_body(
+                user_text=user_text,
+                model=model,
+                instructions=self.instructions,
+                history=history,
+            )
+            for ev in stream_responses(provider.base_url, body):
+                t = ev.get("type", "")
+                if t == "response.output_text.delta":
+                    yield {"type": "text_delta", "delta": ev.get("delta", "")}
+                elif t == "response.completed":
+                    # response.output[0].content[0].text holds the assembled text
+                    text = ""
+                    output = (ev.get("response") or {}).get("output") or []
+                    for item in output:
+                        for c in (item.get("content") or []):
+                            if c.get("type") in ("output_text", "text"):
+                                text += c.get("text", "")
+                    yield {"type": "completed", "text": text}
+            return
+
+        # Default: direct chat-completions path (Ollama, llama.cpp, vLLM, …)
+        body = build_chat_request(
+            user_text=user_text,
+            model=model,
+            instructions=self.instructions,
+            history=history,
+        )
+        api_key = resolve_api_key(provider.api_key_env)
+        yield from stream_chat_completions(provider.base_url, body, api_key=api_key)
 
     def _update_agent_turn(self, turn_id: str, text: str) -> None:
         """Main-thread: update an existing agent turn widget's body in place."""
@@ -225,12 +288,57 @@ class ChatApp(App):
         if cmd in ("help", "?"):
             self._emit_system(
                 "slash commands:\n"
-                "  /finding TEXT       create a finding (renders as inline card)\n"
-                "  /decision TEXT      create a decision\n"
-                "  /unknown TEXT       create an unknown question\n"
-                "  /help               this list\n"
-                "Anything else goes to the agent (when --translator-url is set)."
+                "  /providers             list configured providers\n"
+                "  /provider NAME         switch active provider\n"
+                "  /models                list models on active provider\n"
+                "  /model NAME            set active model\n"
+                "  /finding TEXT          create a finding (renders as inline card)\n"
+                "  /decision TEXT         create a decision\n"
+                "  /unknown TEXT          create an unknown question\n"
+                "  /help                  this list\n"
+                "Anything else goes to the agent (current provider:model shown in header)."
             )
+            return
+
+        if cmd == "providers":
+            lines = ["configured providers:"]
+            active_name = self.registry.active_provider_name
+            for name in self.registry.names():
+                p = self.registry.get(name)
+                marker = "▶" if name == active_name else " "
+                lines.append(f"  {marker} {p.display() if p else name}")
+            lines.append(f"\nactive: {self.registry.display_status()}")
+            self._emit_system("\n".join(lines))
+            return
+
+        if cmd == "provider":
+            if not rest:
+                self._emit_system(f"/provider: missing NAME — current: {self.registry.display_status()}")
+                return
+            new = self.registry.set_active_provider(rest)
+            if new is None:
+                self._emit_system(f"unknown provider: {rest!r} (try /providers)")
+                return
+            self._refresh_subtitle()
+            self._emit_system(f"switched to {self.registry.display_status()}")
+            return
+
+        if cmd == "models":
+            self.run_worker(
+                lambda: self._list_models_action(),
+                thread=True, exclusive=False, group="provider-meta",
+            )
+            return
+
+        if cmd == "model":
+            if not rest:
+                self._emit_system(f"/model: missing NAME — current: {self.registry.display_status()}")
+                return
+            if self.registry.set_active_model(rest):
+                self._refresh_subtitle()
+                self._emit_system(f"model set to {rest} on provider {self.registry.active_provider_name}")
+            else:
+                self._emit_system("/model: no active provider — use /provider NAME first")
             return
 
         if not rest:
@@ -303,6 +411,39 @@ class ChatApp(App):
         except Exception:  # noqa: BLE001 — thread context unclear
             self.call_from_thread(self._convo().append_turn, turn)
 
+    def _refresh_subtitle(self) -> None:
+        """Reflect active provider:model in the header subtitle."""
+        try:
+            self.sub_title = self.registry.display_status()
+        except Exception:  # noqa: BLE001 — pre-mount or test context
+            pass
+
+    def _list_models_action(self) -> None:
+        """Worker: query the active provider's /v1/models endpoint, render a system note."""
+        provider = self.registry.active()
+        if provider is None:
+            self.call_from_thread(self._emit_system, "/models: no active provider")
+            return
+        try:
+            api_key = resolve_api_key(provider.api_key_env)
+            models = list_models(provider.base_url, api_key=api_key)
+        except Exception as e:  # noqa: BLE001 — surface to chat
+            self.call_from_thread(
+                self._emit_system,
+                f"/models: error fetching from {provider.name}: {type(e).__name__}: {e}",
+            )
+            return
+        if not models:
+            msg = f"/models: provider {provider.name} returned no models"
+        else:
+            current = self.registry.active_model
+            lines = [f"models on {provider.name}:"]
+            for m in models:
+                marker = "▶" if m == current else " "
+                lines.append(f"  {marker} {m}")
+            msg = "\n".join(lines)
+        self.call_from_thread(self._emit_system, msg)
+
     def on_artifact_card_action_invoked(self, event: ArtifactCard.ActionInvoked) -> None:
         """Bubble from per-card buttons. Phase 4 v1: emit a system note as ack.
 
@@ -342,6 +483,7 @@ def run_chat(
     translator_url: str | None = None,
     model: str = "deepseek-chat",
     instructions: str | None = None,
+    providers: list[Provider] | None = None,
 ) -> int:
     app = ChatApp(
         feed_path=feed_path,
@@ -350,6 +492,7 @@ def run_chat(
         translator_url=translator_url,
         model=model,
         instructions=instructions,
+        providers=providers,
     )
     app.run()
     return 0

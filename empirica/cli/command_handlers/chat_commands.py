@@ -20,6 +20,17 @@ def handle_chat_command(args: Any) -> int:
         print(f"empirica chat: --feed file not found: {feed_path}")
         return 2
 
+    # Parse --provider flags (repeatable) into Provider objects
+    from empirica.core.chat.providers import parse_provider_spec
+    raw_providers = getattr(args, "provider", None) or []
+    providers = []
+    for spec in raw_providers:
+        try:
+            providers.append(parse_provider_spec(spec))
+        except ValueError as e:
+            print(f"empirica chat: --provider parse error: {e}")
+            return 2
+
     return run_chat(
         feed_path=feed_path,
         session_id=getattr(args, "session_id", None),
@@ -27,4 +38,5 @@ def handle_chat_command(args: Any) -> int:
         translator_url=getattr(args, "translator_url", None),
         model=getattr(args, "model", "deepseek-chat") or "deepseek-chat",
         instructions=getattr(args, "system", None),
+        providers=providers,
     )
