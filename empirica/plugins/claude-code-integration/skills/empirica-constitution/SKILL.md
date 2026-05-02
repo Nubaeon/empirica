@@ -281,6 +281,7 @@ Don't wait for explicit commands. Infer the right mechanism from conversation:
 | Error made | `mistake-log` (with prevention) |
 | Unverified belief | `assumption-log` |
 | Choice point | `decision-log` |
+| Intentional stub / placeholder created (corpus stub, "Phase N" deferred body, "TODO: implement later" file) | `goals-create --status planned` at the same time — names what fills it and when. Without this, stubs disappear into file bodies and fall through the cracks. |
 | Low confidence | Stay NOETIC, investigate more |
 | Ready to act | CHECK gate → PRAXIC |
 | Work chunk complete | POSTFLIGHT + commit |

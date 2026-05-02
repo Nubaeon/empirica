@@ -247,6 +247,7 @@ Infer epistemic actions from conversation naturally:
 | Error made | `mistake-log` |
 | Choice point | `decision-log` |
 | External material cited (URL, doc, paper, transcript) | `source-add` then link via `sourced_from` in `log-artifacts` |
+| Intentional stub / placeholder created | `goals-create --status planned` at the same time — names what fills it and when, so stubs don't fall through the cracks |
 | Low confidence | Stay noetic, investigate |
 | Ready to act | CHECK → praxic |
 

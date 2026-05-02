@@ -554,6 +554,7 @@ Empirica is **cognitive infrastructure**, not just a CLI. In practice:
 - Error made -> mistake-log (with prevention)
 - Unverified belief -> assumption-log
 - Choice point -> decision-log
+- Intentional stub / placeholder created -> goals-create --status planned (at the same time, so stubs don't fall through the cracks)
 - Low confidence -> stay NOETIC
 - Ready to act -> CHECK gate, PRAXIC
 
