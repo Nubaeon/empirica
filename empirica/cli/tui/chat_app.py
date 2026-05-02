@@ -240,7 +240,11 @@ class ChatApp(App):
         ]
 
         # Allocate a single AgentTurn we mutate as deltas arrive.
-        agent_turn = Turn.new(TurnKind.AGENT_TEXT, "")
+        # Phase 14: default source='intuition'; Phase 2b will flip to
+        # 'search' when tool-call activity is observed mid-stream.
+        agent_turn = Turn.new(
+            TurnKind.AGENT_TEXT, "", metadata={"source": "intuition"},
+        )
         self.call_from_thread(self._convo().append_turn, agent_turn)
 
         accumulated: list[str] = []
@@ -313,13 +317,22 @@ class ChatApp(App):
         yield from stream_chat_completions(provider.base_url, body, api_key=api_key)
 
     def _update_agent_turn(self, turn_id: str, text: str) -> None:
-        """Main-thread: update an existing agent turn widget's body in place."""
+        """Main-thread: update an existing agent turn widget's body in place.
+
+        Phase 14: re-render through AgentTurn._format_body when the
+        widget is one — preserves the source badge across streaming
+        deltas. Falls back to plain prefix for non-AgentTurn widgets.
+        """
         try:
             widget = self.query_one(f"#turn-{turn_id[:8]}")
-        except Exception:
+        except Exception:  # noqa: BLE001 — widget may have been removed
             return
-        # Re-render via Static.update with the agent-style label
-        widget.update(f"[b]agent:[/b] {text}")  # type: ignore[attr-defined]
+        from empirica.cli.tui.chat.turn import AgentTurn
+        if isinstance(widget, AgentTurn):
+            widget.turn.text = text
+            widget.update(widget._format_body())  # noqa: SLF001 — own subclass
+        else:
+            widget.update(f"[b]agent:[/b] {text}")  # type: ignore[attr-defined]
 
     # ─── Phase 16: slash commands ─────────────────────────────────────
 

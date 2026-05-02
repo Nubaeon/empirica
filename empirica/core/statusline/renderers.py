@@ -226,6 +226,29 @@ def format_work_phase_badge(work_phase: str | None, *, backend: Backend) -> str:
     return ""
 
 
+def format_source_badge(source: str | None, *, backend: Backend) -> str:
+    """`💡 intuition` or `🔎 search` — Phase 14 per-turn signal source.
+
+    Distinguishes how the agent's response was produced:
+      - 'intuition' — from model training data (the default; what every
+        chatbot does without retrieval)
+      - 'search' — from external retrieval (web fetch, MCP tool call,
+        file read, knowledge graph lookup) — i.e., the agent actually
+        looked something up rather than confabulating from training
+
+    Surfaces a signal users currently can't see in any LLM chat. The
+    badge is per-turn, not per-session.
+
+    Returns empty string for None or unknown values so callers can
+    omit the prefix cleanly.
+    """
+    if source == "intuition":
+        return f"💡 {backend.wrap('intuition', 'yellow')}"
+    if source == "search":
+        return f"🔎 {backend.wrap('search', 'cyan')}"
+    return ""
+
+
 def format_deltas(deltas: dict | None, *, backend: Backend) -> str:
     """Single-symbol summary of net vector deltas.
 

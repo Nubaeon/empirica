@@ -3,6 +3,9 @@
 Phase 1 covers user / agent_text / system. Future phases add
 agent_reasoning (collapsed thinking block), tool_call (collapsed strip),
 epistemic_action (rich artifact card).
+
+Phase 14: AgentTurn header includes a per-turn source badge
+(💡 intuition / 🔎 search) when turn.metadata['source'] is set.
 """
 
 from __future__ import annotations
@@ -10,9 +13,12 @@ from __future__ import annotations
 from textual.widgets import Static
 
 from empirica.core.chat.session import Turn, TurnKind
+from empirica.core.statusline import RichBackend, format_source_badge
+
+_BADGE_BACKEND = RichBackend()
 
 
-def render_turn(turn: Turn):  # noqa: ANN201 — multi-widget return is fine
+def render_turn(turn: Turn):
     """Factory: pick the right widget class for a turn kind."""
     if turn.kind == TurnKind.USER:
         return UserTurn(turn)
@@ -63,7 +69,12 @@ class UserTurn(_BaseTurn):
 
 
 class AgentTurn(_BaseTurn):
-    """Agent text response — left-aligned style."""
+    """Agent text response — left-aligned style.
+
+    Header includes Phase 14 per-turn source badge when set:
+      💡 intuition (yellow) — model training data
+      🔎 search (cyan)      — external retrieval (tool calls, file reads, etc.)
+    """
 
     DEFAULT_CSS = """
     AgentTurn {
@@ -73,7 +84,10 @@ class AgentTurn(_BaseTurn):
     """
 
     def _format_body(self) -> str:
-        return f"[b]agent:[/b] {self.turn.text}"
+        source = self.turn.metadata.get("source") if self.turn.metadata else None
+        badge = format_source_badge(source, backend=_BADGE_BACKEND)
+        prefix = f"[b]agent:[/b] {badge} " if badge else "[b]agent:[/b] "
+        return f"{prefix}{self.turn.text}"
 
 
 class SystemTurn(_BaseTurn):

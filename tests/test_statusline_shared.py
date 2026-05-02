@@ -15,6 +15,7 @@ from empirica.core.statusline import (
     format_open_counts,
     format_phase_state,
     format_progress_bar,
+    format_source_badge,
     format_vector_colored,
     format_work_phase_badge,
 )
@@ -268,6 +269,30 @@ class TestFormatWorkPhaseBadge:
     def test_praxic_uses_bright_green_in_ansi(self):
         s = format_work_phase_badge("praxic", backend=AnsiBackend())
         assert "\033[92m" in s  # bright_green ANSI code
+
+
+class TestFormatSourceBadge:
+    def test_intuition_returns_lightbulb_badge(self, backend):
+        s = format_source_badge("intuition", backend=backend)
+        assert "intuition" in s
+        assert "💡" in s
+
+    def test_search_returns_magnifier_badge(self, backend):
+        s = format_source_badge("search", backend=backend)
+        assert "search" in s
+        assert "🔎" in s
+
+    @pytest.mark.parametrize("src", [None, "", "unknown", "made-up"])
+    def test_unknown_source_returns_empty(self, src, backend):
+        assert format_source_badge(src, backend=backend) == ""
+
+    def test_intuition_uses_yellow_in_ansi(self):
+        s = format_source_badge("intuition", backend=AnsiBackend())
+        assert "\033[33m" in s  # yellow
+
+    def test_search_uses_cyan_in_ansi(self):
+        s = format_source_badge("search", backend=AnsiBackend())
+        assert "\033[36m" in s  # cyan
 
 
 class TestRenderDefaultLine:
