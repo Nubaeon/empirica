@@ -43,6 +43,15 @@ from .cockpit_commands import (
 from .cockpit_commands import (
     handle_status_command as handle_cockpit_status_command,
 )
+from .cockpit_launcher_commands import (
+    handle_cockpit_detach_command,
+    handle_cockpit_group_command,
+    handle_cockpit_kill_command,
+    handle_cockpit_launch_command,
+)
+from .cockpit_launcher_commands import (
+    handle_cockpit_status_command as handle_cockpit_launcher_status_command,
+)
 from .code_embed import (
     handle_code_embed_command,
 )
@@ -273,6 +282,11 @@ __all__ = [
     'handle_checkpoint_sign_command',
     'handle_checkpoint_signatures_command',
     'handle_checkpoint_verify_command',
+    'handle_cockpit_detach_command',
+    'handle_cockpit_group_command',
+    'handle_cockpit_kill_command',
+    'handle_cockpit_launch_command',
+    'handle_cockpit_launcher_status_command',
     'handle_code_embed_command',
     'handle_compact_analysis',
     'handle_compliance_report_command',

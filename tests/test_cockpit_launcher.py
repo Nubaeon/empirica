@@ -1,0 +1,230 @@
+"""Tests for the cockpit launcher (v1).
+
+Per docs/specs/PROPOSAL_COCKPIT_LAUNCHER.md. Covers config parsing,
+state-file mtime semantics, and abnormal-exit detection. Tmux
+integration is exercised via the existing integration suites — these
+tests focus on the launcher's own logic.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import time
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from empirica.core.cockpit.launcher import (
+    config as launcher_config,
+)
+from empirica.core.cockpit.launcher import (
+    detection,
+    state,
+)
+
+
+@pytest.fixture
+def tmp_cockpit_dir(tmp_path, monkeypatch):
+    """Redirect ~/.empirica/cockpit/ to a tmp dir + reload module path constants."""
+    cockpit_dir = tmp_path / 'cockpit'
+    cockpit_dir.mkdir()
+    monkeypatch.setattr(state, 'COCKPIT_DIR', cockpit_dir)
+    monkeypatch.setattr(state, 'LAST_SESSION_START_PATH', cockpit_dir / 'last_session_start')
+    monkeypatch.setattr(state, 'LAST_CLEAN_SHUTDOWN_PATH', cockpit_dir / 'last_clean_shutdown')
+    monkeypatch.setattr(state, 'LOCK_PATH', cockpit_dir / 'active.lock')
+    return cockpit_dir
+
+
+# ─── State helpers ───────────────────────────────────────────────────────
+
+
+def test_write_session_start_creates_file(tmp_cockpit_dir):
+    path = state.write_session_start()
+    assert path.exists()
+    assert int(path.read_text()) > 0
+
+
+def test_write_clean_shutdown_clears_lock(tmp_cockpit_dir):
+    state.write_lock(pid=12345)
+    assert state.LOCK_PATH.exists()
+    state.write_clean_shutdown()
+    assert state.LAST_CLEAN_SHUTDOWN_PATH.exists()
+    assert not state.LOCK_PATH.exists()
+
+
+def test_pid_alive_for_self():
+    assert state.pid_alive(os.getpid()) is True
+
+
+def test_pid_alive_for_dead_pid():
+    assert state.pid_alive(99999999) is False
+
+
+def test_pid_alive_rejects_init():
+    assert state.pid_alive(1) is False
+
+
+def test_cockpit_status_snapshot(tmp_cockpit_dir):
+    state.write_session_start()
+    snap = state.cockpit_status()
+    assert snap.last_session_start is not None
+    assert snap.last_clean_shutdown is None
+    assert snap.lock_pid is None
+    assert snap.lock_alive is False
+
+
+# ─── Abnormal-exit detection ─────────────────────────────────────────────
+
+
+def test_no_session_history_returns_none(tmp_cockpit_dir):
+    """Fresh install — never launched."""
+    assert detection.detect_abnormal_exit() is None
+
+
+def test_clean_shutdown_returns_none(tmp_cockpit_dir):
+    """Last shutdown was clean (clean ≥ start)."""
+    state.write_session_start()
+    time.sleep(0.05)
+    state.write_clean_shutdown()
+    assert detection.detect_abnormal_exit() is None
+
+
+def test_running_session_returns_already_running(tmp_cockpit_dir):
+    """Start > clean AND lock PID alive → SessionAlreadyRunning."""
+    state.write_session_start()
+    state.write_lock(pid=os.getpid())  # current pid is alive
+    result = detection.detect_abnormal_exit()
+    assert isinstance(result, detection.SessionAlreadyRunning)
+    assert result.pid == os.getpid()
+
+
+def test_abnormal_exit_when_lock_pid_dead(tmp_cockpit_dir):
+    """Start > clean AND lock PID dead → AbnormalExit."""
+    state.write_session_start()
+    state.write_lock(pid=99999999)  # dead pid
+    result = detection.detect_abnormal_exit()
+    assert isinstance(result, detection.AbnormalExit)
+    assert result.started_at is not None
+    assert result.likely_cause in ('reboot', 'unknown')
+
+
+def test_abnormal_exit_when_no_lock(tmp_cockpit_dir):
+    """Start > clean AND no lock file at all → AbnormalExit (process died
+    before writing the lock, or after the lock was cleared by a partial
+    cleanup)."""
+    state.write_session_start()
+    # No write_lock call
+    result = detection.detect_abnormal_exit()
+    assert isinstance(result, detection.AbnormalExit)
+
+
+# ─── Config parsing ──────────────────────────────────────────────────────
+
+
+def test_load_config_returns_defaults_when_missing(tmp_path):
+    config = launcher_config.load_config(path=tmp_path / 'nope.yaml')
+    assert config.session_name == 'cockpit'
+    assert config.attach_on_launch is True
+    assert config.projects == []
+
+
+def test_load_config_parses_full_yaml(tmp_path):
+    yaml_path = tmp_path / 'config.yaml'
+    yaml_path.write_text("""
+session_name: my-cockpit
+attach_on_launch: false
+projects:
+  - name: alpha
+    path: /tmp/alpha
+    launch: claude
+  - name: beta
+    path: /tmp/beta
+    launch: claude --dangerously-skip-permissions
+status_windows:
+  - name: monitor
+    command: watch empirica status
+on_abnormal_exit:
+  warn: false
+  auto_prune_dead: true
+  notify: false
+""")
+    config = launcher_config.load_config(path=yaml_path)
+    assert config.session_name == 'my-cockpit'
+    assert config.attach_on_launch is False
+    assert len(config.projects) == 2
+    assert config.projects[0].name == 'alpha'
+    assert config.projects[1].launch == 'claude --dangerously-skip-permissions'
+    assert len(config.status_windows) == 1
+    assert config.status_windows[0].name == 'monitor'
+    assert config.warn_on_abnormal_exit is False
+    assert config.auto_prune_dead is True
+
+
+def test_detect_projects_finds_empirica_dirs(tmp_path):
+    """A directory qualifies if it has a .empirica/ subdir."""
+    root = tmp_path / 'projects'
+    root.mkdir()
+    (root / 'has-empirica').mkdir()
+    (root / 'has-empirica' / '.empirica').mkdir()
+    (root / 'no-empirica').mkdir()
+    (root / 'also-empirica').mkdir()
+    (root / 'also-empirica' / '.empirica').mkdir()
+
+    found = launcher_config.detect_projects(projects_root=root)
+    names = sorted(p.name for p in found)
+    assert names == ['also-empirica', 'has-empirica']
+
+
+def test_detect_projects_handles_missing_root():
+    found = launcher_config.detect_projects(projects_root=Path('/nonexistent/path'))
+    assert found == []
+
+
+def test_write_default_config_round_trips(tmp_path):
+    config_path = tmp_path / 'cockpit' / 'config.yaml'
+    written = launcher_config.write_default_config(
+        path=config_path,
+        projects_root=Path('/nonexistent'),  # no projects detected
+    )
+    assert written == config_path
+    assert config_path.exists()
+    # Should re-load cleanly
+    reloaded = launcher_config.load_config(path=config_path)
+    assert reloaded.session_name == 'cockpit'
+    assert reloaded.status_windows  # has the default monitor window
+
+
+# ─── CLI handlers (no-tmux paths) ────────────────────────────────────────
+
+
+def test_status_handler_returns_clean_state(tmp_cockpit_dir, capsys, monkeypatch):
+    """`empirica cockpit status` works on a fresh machine (no state files,
+    no tmux session)."""
+    from empirica.core.cockpit.launcher import config as cfg_mod
+    monkeypatch.setattr(cfg_mod, 'DEFAULT_CONFIG_PATH', tmp_cockpit_dir / 'config.yaml')
+
+    from empirica.cli.command_handlers.cockpit_launcher_commands import (
+        handle_cockpit_status_command,
+    )
+    args = SimpleNamespace(config=None, output='json')
+    rc = handle_cockpit_status_command(args)
+    assert rc == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out['ok'] is True
+    assert out['session_live'] is False
+    assert out['last_session_start'] == 'never'
+
+
+def test_detach_handler_writes_clean_marker(tmp_cockpit_dir, capsys):
+    from empirica.cli.command_handlers.cockpit_launcher_commands import (
+        handle_cockpit_detach_command,
+    )
+    args = SimpleNamespace(output='json')
+    rc = handle_cockpit_detach_command(args)
+    assert rc == 0
+    assert state.LAST_CLEAN_SHUTDOWN_PATH.exists()
+    out = json.loads(capsys.readouterr().out)
+    assert out['ok'] is True
+    assert out['detached'] is True

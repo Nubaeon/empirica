@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Cockpit launcher v1 (`empirica cockpit launch/status/detach/kill`)
+
+Per `docs/specs/PROPOSAL_COCKPIT_LAUNCHER.md`. Single command brings up
+the canonical multi-Claude tmux layout (one window per project) with
+abnormal-exit detection. Layout-only — Claude conversations regenerate
+on each launch by design (that's `/compact` + Empirica artifacts'
+job).
+
+- **`empirica cockpit launch`** — idempotent: attaches if a session
+  with the configured name already exists; otherwise creates the
+  layout from `~/.empirica/cockpit/config.yaml`. Auto-generates a
+  default config on first run (detects projects under
+  `~/empirical-ai/` with a `.empirica/` folder). Hands off to
+  `tmux attach-session` unless `--no-attach`.
+- **`empirica cockpit status`** — read-only state snapshot. Reports
+  session liveness, last clean shutdown, abnormal-exit state,
+  configured project list. JSON or human output.
+- **`empirica cockpit detach`** — writes the clean-shutdown marker +
+  best-effort `tmux detach-client`. Useful as a hotkey wrapper.
+- **`empirica cockpit kill [--prune]`** — destroys the tmux session
+  and writes the clean-shutdown marker. With `--prune`, also removes
+  dead per-instance state files (sister to `empirica instance prune`).
+- **Abnormal-exit detection** — compares mtime of
+  `~/.empirica/cockpit/last_session_start` vs `last_clean_shutdown` +
+  checks the active.lock PID. Three outcomes: clean (start ≤ clean),
+  already-running (lock PID alive), or abnormal (lock PID dead /
+  missing). Likely cause inferred from `/proc/uptime` (reboot
+  vs unknown — richer detection in v1.1).
+- **State files** under `~/.empirica/cockpit/`: `config.yaml`,
+  `last_session_start`, `last_clean_shutdown`, `active.lock`. Layout
+  + state are deliberately separate.
+
+Deferred to v1.1 (planned, follow-on): `cockpit save / restore`
+snapshot support, ENP watcher heartbeat integration, interactive
+first-launch config confirmation prompt.
+
+18 new tests cover state-file mtime semantics, abnormal-exit decision
+tree, config parsing, project detection, no-tmux paths.
+
 ### Added — Scanner Phase 3 cron-loop skill (closes the loop end-to-end)
 
 - **New skill `/services-audit-cron`** — canonical biweekly cron loop

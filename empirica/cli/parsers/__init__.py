@@ -48,6 +48,7 @@ from .bus_parsers import add_bus_parsers
 from .cascade_parsers import add_cascade_parsers
 from .chat_parsers import add_chat_parsers
 from .checkpoint_parsers import add_checkpoint_parsers
+from .cockpit_launcher_parsers import add_cockpit_launcher_parsers
 from .cockpit_parsers import add_cockpit_parsers
 from .concept_graph_parsers import add_concept_graph_parsers
 from .config_parsers import add_config_parsers
@@ -88,6 +89,7 @@ __all__ = [
     'add_cascade_parsers',
     'add_chat_parsers',
     'add_checkpoint_parsers',
+    'add_cockpit_launcher_parsers',
     'add_cockpit_parsers',
     'add_concept_graph_parsers',
     'add_config_parsers',

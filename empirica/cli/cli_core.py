@@ -201,6 +201,7 @@ from .parsers import (
     add_cascade_parsers,
     add_chat_parsers,
     add_checkpoint_parsers,
+    add_cockpit_launcher_parsers,
     add_cockpit_parsers,
     add_concept_graph_parsers,
     add_config_parsers,
@@ -302,6 +303,7 @@ def create_argument_parser():
     add_message_parsers(subparsers)
     add_bus_parsers(subparsers)
     add_cockpit_parsers(subparsers)
+    add_cockpit_launcher_parsers(subparsers)
     add_chat_parsers(subparsers)
     add_notify_parsers(subparsers)
     add_voice_parsers(subparsers)
@@ -523,6 +525,9 @@ def main(args=None):
 
             # Visibility tiers (proposal: PROPOSAL_VISIBILITY_TIERS.md, Phase 0)
             'visibility': handle_visibility_group_command,
+
+            # Cockpit launcher (proposal: PROPOSAL_COCKPIT_LAUNCHER.md, v1)
+            'cockpit': handle_cockpit_group_command,
 
             # AI service scanner (proposal: PROPOSAL_AI_SERVICE_SCANNER.md)
             # Phase 1: scan (one-shot). Phase 3: scan-history/show/diff verbs.
