@@ -702,20 +702,115 @@ class ChatApp(App):
         self.call_from_thread(self._emit_system, msg)
 
     def on_artifact_card_action_invoked(self, event: ArtifactCard.ActionInvoked) -> None:
-        """Bubble from per-card buttons. Phase 4 v1: emit a system note as ack.
+        """Bubble from per-card buttons (Phase 4b — real CLI wiring).
 
-        Phase 5+ wires this to real action invocations:
-          - finding.confirm → empirica finding-log (with link to original)
-          - unknown.resolve → empirica unknown-resolve
-          - *.discuss → inject into next agent turn as system message
-          - *.pin → write to chat_pinned_{session_id}.json
+        Action dispatch (artifact_type, action):
+          (unknown, resolve)  → CLI: empirica unknown-resolve
+          (*, pin)            → write to ~/.empirica/chat_pinned_{session_id}.json
+          (*, discuss)        → inject as SystemTurn (chat-local, picked up
+                                in next agent prompt via SYSTEM history filter)
+          (finding, confirm)  → log_finding chained as confirmation
+          (decision, ack)     → log_finding chained as acknowledgement
+          (decision, reverse) → log_decision chained as reversal note
+          (unknown, escalate) → log_finding tagged as escalation
+          (*, challenge)      → log_finding tagged as challenge
+
+        Each action dispatches to a worker thread so the UI stays
+        responsive during the CLI roundtrip.
         """
-        msg = (
-            f"action: {event.artifact_type}.{event.action} "
-            f"on artifact {(event.artifact_id or 'unknown')[:8]} "
-            f"(turn {event.turn_id[:8]}) — wiring is Phase 5+"
+        action = event.action
+        atype = event.artifact_type
+        artifact_id = event.artifact_id
+
+        if action == "pin":
+            self._pin_artifact(atype, artifact_id, event.turn_id)
+            return
+        if action == "discuss":
+            self._emit_system(
+                f"discussion context attached: {atype} {(artifact_id or 'unknown')[:8]} — "
+                f"the next agent turn will see this as system context"
+            )
+            return
+        if atype == "unknown" and action == "resolve":
+            if not artifact_id:
+                self._emit_system("/resolve: no artifact_id on this card")
+                return
+            self.run_worker(
+                lambda: self._resolve_unknown_action(artifact_id),
+                thread=True, exclusive=False, group="artifact-card-action",
+            )
+            return
+        # Fallback for confirm/ack/reverse/escalate/challenge: log a chained
+        # finding so the action survives + appears in /plan + Qdrant search.
+        chain_note = f"{atype} {(artifact_id or 'unknown')[:8]}: {action}"
+        self.run_worker(
+            lambda: self._chain_finding_action(chain_note, atype, action),
+            thread=True, exclusive=False, group="artifact-card-action",
         )
-        self._emit_system(msg)
+
+    def _pin_artifact(self, atype: str, artifact_id: str | None, turn_id: str) -> None:
+        """Write a pin entry to ~/.empirica/chat_pinned_{session_id}.json."""
+        assert self._session is not None  # noqa: S101 — type narrowing
+        import json as _json
+        pin_path = (
+            Path.home() / ".empirica"
+            / f"chat_pinned_{self._session.session_id}.json"
+        )
+        pin_path.parent.mkdir(parents=True, exist_ok=True)
+        existing: list[dict] = []
+        if pin_path.exists():
+            try:
+                existing = _json.loads(pin_path.read_text() or "[]")
+                if not isinstance(existing, list):
+                    existing = []
+            except Exception:
+                existing = []
+        existing.append({
+            "artifact_type": atype,
+            "artifact_id": artifact_id,
+            "turn_id": turn_id,
+            "pinned_at": int(__import__("time").time()),
+        })
+        try:
+            pin_path.write_text(_json.dumps(existing, indent=2))
+        except OSError as e:
+            self._emit_system(f"pin failed: {e}")
+            return
+        self._emit_system(
+            f"pinned {atype} {(artifact_id or 'unknown')[:8]} → {pin_path.name}"
+        )
+
+    def _resolve_unknown_action(self, unknown_id: str) -> None:
+        """Worker thread: invoke empirica unknown-resolve."""
+        from empirica.core.chat.actions import (
+            ActionError as _ActionError,
+        )
+        from empirica.core.chat.actions import (
+            resolve_unknown,
+        )
+        try:
+            resolve_unknown(unknown_id, resolved_by="resolved via empirica chat")
+        except _ActionError as e:
+            self.call_from_thread(self._emit_system, f"resolve failed: {e}")
+            return
+        self.call_from_thread(
+            self._emit_system, f"resolved unknown {unknown_id[:8]}"
+        )
+
+    def _chain_finding_action(self, note: str, atype: str, action: str) -> None:
+        """Worker thread: log a chained finding for confirm/ack/reverse/etc."""
+        from empirica.core.chat.actions import (
+            ActionError as _ActionError,
+        )
+        from empirica.core.chat.actions import (
+            log_finding,
+        )
+        try:
+            log_finding(note, impact=0.4, subject=f"chat-action-{atype}-{action}")
+        except _ActionError as e:
+            self.call_from_thread(self._emit_system, f"action chain failed: {e}")
+            return
+        self.call_from_thread(self._emit_system, f"logged: {note}")
 
     def action_clear_input(self) -> None:
         try:

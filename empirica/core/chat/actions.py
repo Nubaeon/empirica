@@ -72,6 +72,19 @@ def log_unknown(text: str, subject: str | None = None) -> dict[str, Any]:
     return _run_cli(args)
 
 
+def resolve_unknown(unknown_id: str, resolved_by: str | None = None) -> dict[str, Any]:
+    """Resolve a single unknown via `empirica unknown-resolve`.
+
+    Phase 4b — wired into ArtifactCard's resolve button so users can
+    close unknowns directly from the chat conversation. `resolved_by`
+    is an optional human-readable note about how it was resolved.
+    """
+    args = ["unknown-resolve", "--unknown-id", unknown_id]
+    if resolved_by:
+        args.extend(["--resolved-by", resolved_by])
+    return _run_cli(args)
+
+
 def log_artifacts_from_file(path: str) -> dict[str, Any]:
     """Run `empirica log-artifacts -` with payload piped from a JSON file.
 
