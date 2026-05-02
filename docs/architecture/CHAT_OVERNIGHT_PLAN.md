@@ -194,6 +194,31 @@ David's input.
 
 ---
 
+## Source repos for porting (read this BEFORE each phase)
+
+Most phases lift code or patterns from existing places. Don't rediscover.
+
+| Phase | Source pattern | Source location |
+|---|---|---|
+| 8 (system prompt) | `empirica-system-prompt.md` for CC | `~/.claude/empirica-system-prompt.md` |
+| 6b (full statusline) | `statusline_empirica.py` (225 LOC) | `~/.claude/plugins/local/empirica/scripts/statusline_empirica.py` |
+| 10 (compact hooks) | pre-compact + post-compact hook patterns | `~/.claude/plugins/local/empirica/hooks/pre-compact.py` + `post-compact.py` |
+| 5 (KG side panel) | Candence prediction-triage card pattern + IntelligencePanel | `/home/yogapad/empirical-ai/empirica-workspace/empirica_workspace/dashboard/widgets.py` (line 7958 + line 8761) |
+| 11 (batch artifacts) | `log_artifacts -` / `resolve_artifacts -` / `delete_artifacts -` CLI shapes | `empirica` CLI (wrap, don't reimplement) |
+| 13/14 (signals) | event signaling helpers | `empirica/empirica/core/signaling.py` |
+| 15 (narration) | event tap JSONL + empirica session DB | translator `--event-log` + `empirica.data.session_database` |
+| 9 (tokenizers) | tiktoken + transformers AutoTokenizer | external pip packages, lazy-import |
+| 2b (app-server WS) | JSON-RPC schemas | `/home/yogapad/empirical-ai/ecodex/codex-rs/app-server-protocol/schema/json/` |
+| Cockpit integration | existing `cockpit_app.py` (884 LOC) | `/home/yogapad/empirical-ai/empirica/empirica/cli/tui/cockpit_app.py` |
+
+Key project paths:
+- `/home/yogapad/empirical-ai/empirica/` — empirica package (branch `develop`)
+- `/home/yogapad/empirical-ai/empirica-workspace/` — Candence (patterns only)
+- `/home/yogapad/empirical-ai/ecodex/` — translator + ecodex (branch `build/v1-plugin`)
+- `~/.claude/plugins/local/empirica/` — CC plugin (statusline + hooks)
+
+---
+
 ## What I WON'T do (explicit out of scope)
 
 - Anything requiring David's input (architectural forks, scope changes)
