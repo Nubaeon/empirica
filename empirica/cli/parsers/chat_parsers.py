@@ -30,3 +30,22 @@ def add_chat_parsers(subparsers) -> None:
         metavar="UUID",
         help="Resume an existing chat session from ~/.empirica/chat_sessions/",
     )
+    chat.add_argument(
+        "--translator-url",
+        metavar="URL",
+        help="ecodex translator base URL (e.g. http://127.0.0.1:18080/v1). "
+              "When set, user messages are dispatched to the translator and "
+              "agent responses stream back as AgentTurns. When unset, chat "
+              "runs in render-only mode (Phase 1 fallback).",
+    )
+    chat.add_argument(
+        "--model",
+        metavar="MODEL",
+        default="deepseek-chat",
+        help="Model id passed to the translator (default: deepseek-chat)",
+    )
+    chat.add_argument(
+        "--system",
+        metavar="TEXT",
+        help="System instructions injected as the leading message",
+    )

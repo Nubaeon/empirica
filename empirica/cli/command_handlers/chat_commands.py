@@ -24,4 +24,7 @@ def handle_chat_command(args: Any) -> int:
         feed_path=feed_path,
         session_id=getattr(args, "session_id", None),
         feed_delay=getattr(args, "feed_delay", 0.0) or 0.0,
+        translator_url=getattr(args, "translator_url", None),
+        model=getattr(args, "model", "deepseek-chat") or "deepseek-chat",
+        instructions=getattr(args, "system", None),
     )

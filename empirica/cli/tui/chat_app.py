@@ -25,6 +25,11 @@ from textual.containers import Vertical
 from textual.widgets import Footer, Header
 
 from empirica.core.chat.session import ChatSession, Turn, TurnKind, load_turns
+from empirica.core.chat.translator_client import (
+    TranslatorError,
+    build_request_body,
+    stream_responses,
+)
 
 from .chat.conversation import ConversationScroll
 from .chat.input import ChatInput
@@ -54,11 +59,17 @@ class ChatApp(App):
         feed_path: Path | None = None,
         session_id: str | None = None,
         feed_delay: float = 0.0,
+        translator_url: str | None = None,
+        model: str = "deepseek-chat",
+        instructions: str | None = None,
     ) -> None:
         super().__init__()
         self.feed_path = feed_path
         self.session_id_to_resume = session_id
         self.feed_delay = feed_delay
+        self.translator_url = translator_url
+        self.model = model
+        self.instructions = instructions
         self._session: ChatSession | None = None
 
     def compose(self) -> ComposeResult:
@@ -104,15 +115,87 @@ class ChatApp(App):
         self._session.append(turn)
         self._convo().append_turn(turn)
 
-        # Phase 1: no app-server, so we just echo a placeholder agent
-        # response so the round-trip is visible. Phase 2 replaces this with
-        # a real WebSocket send.
-        echo = Turn.new(
-            TurnKind.SYSTEM,
-            "(no agent connected — wire app-server in Phase 2 to get real responses)",
+        if not self.translator_url:
+            # Phase 1 fallback — no upstream wired
+            echo = Turn.new(
+                TurnKind.SYSTEM,
+                "(no --translator-url set — pass one to enable agent flow)",
+            )
+            self._session.append(echo)
+            self._convo().append_turn(echo)
+            return
+
+        # Phase 2a: dispatch to translator, stream agent response as a
+        # single growing AgentTurn. Run in a thread worker so the UI
+        # stays responsive during the streaming HTTP call.
+        user_text = event.text
+        self.run_worker(
+            lambda: self._stream_agent_response(user_text),
+            thread=True,
+            exclusive=True,
+            group="agent-stream",
         )
-        self._session.append(echo)
-        self._convo().append_turn(echo)
+
+    def _stream_agent_response(self, user_text: str) -> None:
+        """Worker thread: hit translator, stream deltas into a new agent turn."""
+        assert self._session is not None  # noqa: S101 — type narrowing
+        assert self.translator_url is not None  # noqa: S101 — gated by caller
+
+        # Build request from prior history (excluding the just-appended user
+        # turn — translator will see it explicitly via `user_text`).
+        history = [
+            {"role": _to_translator_role(t.kind), "text": t.text}
+            for t in self._session.turns[:-1]  # exclude the new user turn
+            if t.kind in (TurnKind.USER, TurnKind.AGENT_TEXT)
+        ]
+        body = build_request_body(
+            user_text=user_text,
+            model=self.model,
+            instructions=self.instructions,
+            history=history,
+        )
+
+        # Allocate a single AgentTurn we mutate as deltas arrive.
+        agent_turn = Turn.new(TurnKind.AGENT_TEXT, "")
+        # Schedule mount on the main thread.
+        self.call_from_thread(self._convo().append_turn, agent_turn)
+
+        accumulated: list[str] = []
+        try:
+            for event in stream_responses(self.translator_url, body):
+                t = event.get("type", "")
+                if t == "response.output_text.delta":
+                    delta = event.get("delta", "")
+                    if delta:
+                        accumulated.append(delta)
+                        self.call_from_thread(
+                            self._update_agent_turn,
+                            agent_turn.turn_id,
+                            "".join(accumulated),
+                        )
+                elif t == "response.completed":
+                    # Final assembled text is in response.output[0].content[0].text;
+                    # we already accumulated identical text from deltas. Persist.
+                    final_text = "".join(accumulated)
+                    agent_turn.text = final_text
+                    self._session.append(agent_turn)
+        except TranslatorError as e:
+            err = Turn.new(TurnKind.SYSTEM, f"translator error: {e}")
+            self._session.append(err)
+            self.call_from_thread(self._convo().append_turn, err)
+        except Exception as e:  # noqa: BLE001 — surface any failure to chat
+            err = Turn.new(TurnKind.SYSTEM, f"agent stream error: {type(e).__name__}: {e}")
+            self._session.append(err)
+            self.call_from_thread(self._convo().append_turn, err)
+
+    def _update_agent_turn(self, turn_id: str, text: str) -> None:
+        """Main-thread: update an existing agent turn widget's body in place."""
+        try:
+            widget = self.query_one(f"#turn-{turn_id[:8]}")
+        except Exception:  # noqa: BLE001 — widget may have been removed
+            return
+        # Re-render via Static.update with the agent-style label
+        widget.update(f"[b]agent:[/b] {text}")
 
     def action_clear_input(self) -> None:
         try:
@@ -121,11 +204,30 @@ class ChatApp(App):
             pass
 
 
+def _to_translator_role(kind: TurnKind) -> str:
+    """Map a CIF turn kind to the role string the translator expects."""
+    if kind == TurnKind.USER:
+        return "user"
+    if kind == TurnKind.AGENT_TEXT:
+        return "assistant"
+    return "user"  # safe fallback
+
+
 def run_chat(
     feed_path: Path | None = None,
     session_id: str | None = None,
     feed_delay: float = 0.0,
+    translator_url: str | None = None,
+    model: str = "deepseek-chat",
+    instructions: str | None = None,
 ) -> int:
-    app = ChatApp(feed_path=feed_path, session_id=session_id, feed_delay=feed_delay)
+    app = ChatApp(
+        feed_path=feed_path,
+        session_id=session_id,
+        feed_delay=feed_delay,
+        translator_url=translator_url,
+        model=model,
+        instructions=instructions,
+    )
     app.run()
     return 0
