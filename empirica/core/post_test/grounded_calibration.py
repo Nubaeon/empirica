@@ -920,6 +920,79 @@ def _merge_phase_evidence_summaries(
     return merged_evidence, merged_signals
 
 
+def _compute_epistemic_provenance(db, transaction_id: str | None) -> dict[str, Any]:
+    """Aggregate per-transaction artifact source counts (source-aware Sentinel substrate).
+
+    Counts artifacts in the current transaction by their epistemic_source tag
+    (intuition / search / mixed / NULL). Returns a ratio classification used
+    by the AI to spot the rubber-stamp CHECK pattern: high vectors asserted
+    while every artifact is intuition-tagged means there's no external
+    grounding for the claim.
+
+    v0 is visibility-only — no routing rule. The AI sees the ratio in
+    calibration_reflection and is expected to self-correct on next PREFLIGHT.
+
+    Returns:
+        {
+            'intuition_artifacts': int,
+            'search_artifacts': int,
+            'mixed_artifacts': int,
+            'untagged_artifacts': int,
+            'total_artifacts': int,
+            'ratio': 'all_intuition' | 'all_search' | 'mixed' | 'untagged' | 'no_data',
+        }
+    """
+    counts = {'intuition': 0, 'search': 0, 'mixed': 0, 'untagged': 0}
+    if not transaction_id or not db or not getattr(db, 'conn', None):
+        return {
+            'intuition_artifacts': 0, 'search_artifacts': 0,
+            'mixed_artifacts': 0, 'untagged_artifacts': 0,
+            'total_artifacts': 0, 'ratio': 'no_data',
+        }
+
+    artifact_tables = (
+        'project_findings', 'project_unknowns', 'project_dead_ends',
+        'mistakes_made', 'assumptions', 'decisions',
+    )
+    cursor = db.conn.cursor()
+    for table in artifact_tables:
+        try:
+            cursor.execute(
+                f"SELECT epistemic_source, COUNT(*) FROM {table} "
+                f"WHERE transaction_id = ? GROUP BY epistemic_source",
+                (transaction_id,),
+            )
+            for src, n in cursor.fetchall():
+                key = src if src in ('intuition', 'search', 'mixed') else 'untagged'
+                counts[key] += n
+        except Exception:
+            # Table may lack the epistemic_source column on pre-040 DBs;
+            # skip rather than fail the whole calibration pipeline.
+            continue
+
+    total = sum(counts.values())
+    if total == 0:
+        ratio = 'no_data'
+    elif counts['untagged'] == total:
+        ratio = 'untagged'
+    elif counts['intuition'] == total - counts['untagged'] and counts['intuition'] > 0:
+        # All tagged artifacts are intuition (untagged ones don't count as evidence)
+        ratio = 'all_intuition'
+    elif counts['search'] == total - counts['untagged'] and counts['search'] > 0:
+        ratio = 'all_search'
+    else:
+        ratio = 'mixed'
+
+    return {
+        'intuition_artifacts': counts['intuition'],
+        'search_artifacts': counts['search'],
+        'mixed_artifacts': counts['mixed'],
+        'untagged_artifacts': counts['untagged'],
+        'total_artifacts': total,
+        'ratio': ratio,
+    }
+
+
 def _build_calibration_reflection(
     phase_results: dict,
     signals: list[str],
@@ -927,12 +1000,14 @@ def _build_calibration_reflection(
     sources_failed: list[str],
     evidence_count: int,
     insights: list,
+    epistemic_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build narrative calibration reflection for the AI.
 
     Instead of per-vector scores to optimize, this produces:
     - discipline_notes: what to improve in work habits (artifact logging, commits)
     - assessment_notes: where self-assessment and evidence diverge, with context
+    - epistemic_provenance: per-transaction intuition/search ratio (visibility only)
     - trend: improving/stable/widening over recent transactions
 
     The AI reads this, contemplates, and adjusts next PREFLIGHT.
@@ -983,9 +1058,32 @@ def _build_calibration_reflection(
         if suggestion:
             assessment_notes.append(suggestion)
 
+    # Source-aware Sentinel substrate: surface intuition/search ratio
+    # as a discipline note when the pattern is informative. v0 is
+    # visibility-only — no routing rule.
+    prov = epistemic_provenance or {}
+    if prov.get('total_artifacts', 0) > 0:
+        ratio = prov.get('ratio', 'no_data')
+        intuit = prov.get('intuition_artifacts', 0)
+        untag = prov.get('untagged_artifacts', 0)
+        if ratio == 'all_intuition' and intuit >= 2:
+            assessment_notes.append(
+                f"epistemic provenance: {intuit} intuition-tagged artifact(s), "
+                f"0 search-tagged — vectors asserted from training/loaded context, "
+                "no external retrieval since the goal opened. If claims are high, "
+                "consider noetic work to ground them."
+            )
+        elif ratio == 'untagged' and untag >= 3:
+            discipline_notes.append(
+                f"epistemic provenance: {untag} artifact(s) untagged — "
+                "use --epistemic-source {intuition|search|mixed} so the "
+                "Sentinel can ground vector claims against retrieval evidence."
+            )
+
     return {
         "discipline_notes": discipline_notes or ["No discipline issues detected"],
         "assessment_notes": assessment_notes or ["Evidence aligns with self-assessment"],
+        "epistemic_provenance": prov,
         "evidence_sources_used": len(set(sources)),
         "evidence_items_collected": evidence_count,
     }
@@ -997,6 +1095,7 @@ def _build_verification_summary(
     db,
     phase_boundary: dict | None = None,
     phase_tool_counts: dict[str, int] | None = None,
+    transaction_id: str | None = None,
 ) -> dict:
     """Build unified verification summary from per-phase results.
 
@@ -1046,10 +1145,14 @@ def _build_verification_summary(
             insights=calibration_insights,
         )
 
+    # Source-aware Sentinel substrate: per-transaction provenance counts
+    epistemic_provenance = _compute_epistemic_provenance(db, transaction_id)
+
     # Build calibration reflection — narrative for the AI to learn from
     reflection = _build_calibration_reflection(
         results, merged_signals, all_sources, all_failed,
         total_evidence, calibration_insights,
+        epistemic_provenance=epistemic_provenance,
     )
 
     return {
@@ -1207,6 +1310,7 @@ def run_grounded_verification(
             results, session_id, db,
             phase_boundary=phase_boundary,
             phase_tool_counts=phase_tool_counts,
+            transaction_id=transaction_id,
         )
 
     except Exception as e:
