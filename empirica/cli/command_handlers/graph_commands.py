@@ -233,6 +233,7 @@ def _create_node(db, node: dict, context: dict) -> str | None:
     goal_id = data.get('goal_id') or context.get('goal_id')
     transaction_id = context.get('transaction_id')
     visibility = data.get('visibility')
+    epistemic_source = data.get('epistemic_source')
 
     try:
         if ntype == 'finding':
@@ -242,6 +243,7 @@ def _create_node(db, node: dict, context: dict) -> str | None:
                 goal_id=goal_id, subject=data.get('subject'),
                 transaction_id=transaction_id,
                 visibility=visibility,
+                epistemic_source=epistemic_source,
             )
         elif ntype == 'unknown':
             return db.log_unknown(
@@ -250,6 +252,7 @@ def _create_node(db, node: dict, context: dict) -> str | None:
                 goal_id=goal_id, subject=data.get('subject'),
                 transaction_id=transaction_id,
                 visibility=visibility,
+                epistemic_source=epistemic_source,
             )
         elif ntype == 'dead_end':
             return db.log_dead_end(
@@ -259,6 +262,7 @@ def _create_node(db, node: dict, context: dict) -> str | None:
                 goal_id=goal_id, subject=data.get('subject'),
                 transaction_id=transaction_id,
                 visibility=visibility,
+                epistemic_source=epistemic_source,
             )
         elif ntype == 'mistake':
             return db.log_mistake(
@@ -271,6 +275,7 @@ def _create_node(db, node: dict, context: dict) -> str | None:
                 project_id=project_id,
                 transaction_id=transaction_id,
                 visibility=visibility,
+                epistemic_source=epistemic_source,
             )
         elif ntype == 'assumption':
             return db.log_assumption(
@@ -281,6 +286,7 @@ def _create_node(db, node: dict, context: dict) -> str | None:
                 goal_id=goal_id,
                 transaction_id=transaction_id,
                 visibility=visibility,
+                epistemic_source=epistemic_source,
             )
         elif ntype == 'decision':
             return db.log_decision(
@@ -292,6 +298,7 @@ def _create_node(db, node: dict, context: dict) -> str | None:
                 goal_id=goal_id,
                 transaction_id=transaction_id,
                 visibility=visibility,
+                epistemic_source=epistemic_source,
             )
         elif ntype == 'source':
             return db.add_reference_doc(

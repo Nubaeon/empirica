@@ -589,6 +589,8 @@ def handle_finding_log_command(args):
 
         # Extract source IDs (from --source flags or config)
         source_ids = (config_data or {}).get('source_ids') or getattr(args, 'source_ids', None)
+        # Source-aware Sentinel substrate: optional intuition|search|mixed tag
+        epistemic_source = (config_data or {}).get('epistemic_source') or getattr(args, 'epistemic_source', None)
 
         # Store to SQLite (durable)
         finding_id = db.log_finding(
@@ -604,6 +606,7 @@ def handle_finding_log_command(args):
             entity_id=ctx['entity_id'],
             source_ids=source_ids,
             visibility=ctx['visibility'],
+            epistemic_source=epistemic_source,
         )
 
         # Entity cross-link
@@ -695,6 +698,7 @@ def handle_unknown_log_command(args):
 
         # Extract unknown-specific fields
         unknown = (config_data or {}).get('unknown') or getattr(args, 'unknown', None)
+        epistemic_source = (config_data or {}).get('epistemic_source') or getattr(args, 'epistemic_source', None)
 
         # Show project context (quiet mode)
         if ctx['output_format'] != 'json':
@@ -714,6 +718,7 @@ def handle_unknown_log_command(args):
             entity_type=ctx['entity_type'],
             entity_id=ctx['entity_id'],
             visibility=ctx['visibility'],
+            epistemic_source=epistemic_source,
         )
 
         # Entity cross-link
@@ -1010,6 +1015,7 @@ def handle_deadend_log_command(args):
         # Extract deadend-specific fields
         approach = (config_data or {}).get('approach') or getattr(args, 'approach', None)
         why_failed = (config_data or {}).get('why_failed') or getattr(args, 'why_failed', None)
+        epistemic_source = (config_data or {}).get('epistemic_source') or getattr(args, 'epistemic_source', None)
 
         # Store to SQLite (durable)
         dead_end_id = db.log_dead_end(
@@ -1025,6 +1031,7 @@ def handle_deadend_log_command(args):
             entity_type=ctx['entity_type'],
             entity_id=ctx['entity_id'],
             visibility=ctx['visibility'],
+            epistemic_source=epistemic_source,
         )
 
         # Entity cross-link
@@ -1141,6 +1148,7 @@ def handle_assumption_log_command(args):
         assumption = (config_data or {}).get('assumption') or getattr(args, 'assumption', None)
         confidence = (config_data or {}).get('confidence', 0.5) or getattr(args, 'confidence', 0.5)
         domain = (config_data or {}).get('domain') or getattr(args, 'domain', None)
+        epistemic_source = (config_data or {}).get('epistemic_source') or getattr(args, 'epistemic_source', None)
 
         # Store to SQLite (durable)
         assumption_id = db.log_assumption(
@@ -1154,6 +1162,7 @@ def handle_assumption_log_command(args):
             entity_type=ctx['entity_type'],
             entity_id=ctx['entity_id'],
             visibility=ctx['visibility'],
+            epistemic_source=epistemic_source,
         )
 
         # GIT NOTES: Store in git notes for sync
@@ -1265,6 +1274,7 @@ def handle_decision_log_command(args):
 
         # Extract evidence refs (from --evidence flags or config)
         evidence_refs = (config_data or {}).get('evidence_refs') or getattr(args, 'evidence_refs', None)
+        epistemic_source = (config_data or {}).get('epistemic_source') or getattr(args, 'epistemic_source', None)
 
         # Store to SQLite (durable)
         decision_id = db.log_decision(
@@ -1281,6 +1291,7 @@ def handle_decision_log_command(args):
             entity_id=ctx['entity_id'],
             evidence_refs=evidence_refs,
             visibility=ctx['visibility'],
+            epistemic_source=epistemic_source,
         )
 
         # GIT NOTES
@@ -1755,6 +1766,7 @@ def handle_mistake_log_command(args):
         entity_id = getattr(args, 'entity_id', None)
         via = getattr(args, 'via', None)
         visibility = getattr(args, 'visibility', None)
+        epistemic_source = getattr(args, 'epistemic_source', None)
 
         if not session_id:
             session_id = R.session_id()
@@ -1781,7 +1793,7 @@ def handle_mistake_log_command(args):
             cost_estimate=cost_estimate, root_cause_vector=root_cause_vector,
             prevention=prevention, goal_id=goal_id, project_id=project_id,
             transaction_id=transaction_id, entity_type=entity_type, entity_id=entity_id,
-            visibility=visibility,
+            visibility=visibility, epistemic_source=epistemic_source,
         )
 
         if entity_type and entity_type != 'project' and entity_id:
