@@ -64,6 +64,10 @@ class GrepOperation(BaseModel):
 
     pattern: str = Field(..., min_length=1, description="Regex pattern (POSIX extended)")
     glob: str = Field("**/*", description="Path glob (default: all files under project root)")
+    root: str | None = Field(
+        None,
+        description="Optional root dir; defaults to project root. Use for cross-project greps from a different project's CWD.",
+    )
     context: int = Field(0, ge=0, le=5, description="Lines of context before/after each match")
     case_sensitive: bool = Field(False, description="Case-sensitive matching")
     max_matches: int = Field(

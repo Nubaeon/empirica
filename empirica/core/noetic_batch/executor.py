@@ -38,6 +38,20 @@ GREP_TIMEOUT_SECONDS = 30
 INVESTIGATE_TIMEOUT_SECONDS = 30
 
 
+def _resolve_project_root(explicit: Path | None) -> Path:
+    """Resolve the batch project root. See ``run_batch`` for priority chain."""
+    if explicit is not None:
+        return explicit.resolve()
+    try:
+        from empirica.utils.session_resolver import InstanceResolver
+        resolved = InstanceResolver.project_path()
+        if resolved:
+            return Path(resolved).resolve()
+    except Exception:  # noqa: S110 — resolver failure is recoverable, fall back to cwd
+        pass
+    return Path.cwd().resolve()
+
+
 def run_batch(
     payload: dict,
     *,
@@ -49,10 +63,18 @@ def run_batch(
     Schema-validation errors raise pydantic ValidationError to the caller
     (the CLI wrapper renders them as `ok: false`). Per-op errors are
     captured in each result.
+
+    Project-root resolution priority:
+        1. Explicit ``project_root`` arg (CLI passes one already resolved)
+        2. ``InstanceResolver.project_path()`` — canonical Empirica resolver
+        3. ``Path.cwd()`` — last-resort fallback
+    Step 2 is the substrate fix for the cross-project investigation bug:
+    when invoked from a CWD that isn't the empirica project, grep ops
+    were silently scoped to the wrong tree.
     """
     started = time.time()
     parsed = NoeticBatchInput(**payload)
-    project_root = (project_root or Path.cwd()).resolve()
+    project_root = _resolve_project_root(project_root)
     budgets = budgets or BatchBudgets()
 
     result = NoeticBatchResult(intent=parsed.intent)
@@ -167,14 +189,17 @@ def _execute_grep(op: GrepOperation, project_root: Path, budgets: BatchBudgets) 
     """Run grep across files matching the glob. Prefers ripgrep, falls back to Python."""
     started = time.time()
     cap = min(op.max_matches, budgets.max_grep_matches)
+    grep_root = Path(op.root).resolve() if op.root else project_root
+    if not grep_root.exists():
+        return GrepResult(pattern=op.pattern, glob=op.glob, error=f"root does not exist: {grep_root}")
     rg = shutil.which("rg")
     if rg:
-        return _execute_grep_rg(op, project_root, rg, cap, started)
-    return _execute_grep_python(op, project_root, cap, started)
+        return _execute_grep_rg(op, grep_root, rg, cap, started)
+    return _execute_grep_python(op, grep_root, cap, started)
 
 
 def _execute_grep_rg(
-    op: GrepOperation, project_root: Path, rg_path: str, cap: int, started: float,
+    op: GrepOperation, grep_root: Path, rg_path: str, cap: int, started: float,
 ) -> GrepResult:
     """ripgrep-backed grep — fast path."""
     cmd = [rg_path, "--json", "--max-count", str(cap)]
@@ -182,7 +207,7 @@ def _execute_grep_rg(
         cmd.append("--ignore-case")
     if op.context > 0:
         cmd += ["--context", str(op.context)]
-    cmd += ["--glob", op.glob, op.pattern, str(project_root)]
+    cmd += ["--glob", op.glob, op.pattern, str(grep_root)]
 
     try:
         proc = subprocess.run(
@@ -223,7 +248,7 @@ def _execute_grep_rg(
             text = _extract_text(data)
             matches.append(
                 GrepMatch(
-                    file=str(Path(file_path).relative_to(project_root)) if file_path else "",
+                    file=_relative_or_abs(file_path, grep_root) if file_path else "",
                     line=line_num,
                     text=text.rstrip("\n"),
                     context_before=list(pending_before) if op.context > 0 else [],
@@ -257,7 +282,15 @@ def _extract_path(data: dict) -> str:
     return str(path) if path else ""
 
 
-def _execute_grep_python(op: GrepOperation, project_root: Path, cap: int, started: float) -> GrepResult:
+def _relative_or_abs(file_path: str, root: Path) -> str:
+    """Return path relative to root, or the absolute path if outside root."""
+    try:
+        return str(Path(file_path).relative_to(root))
+    except ValueError:
+        return str(Path(file_path).resolve())
+
+
+def _execute_grep_python(op: GrepOperation, grep_root: Path, cap: int, started: float) -> GrepResult:
     """Pure-Python grep — fallback when rg isn't available."""
     flags = 0 if op.case_sensitive else re.IGNORECASE
     try:
@@ -269,7 +302,7 @@ def _execute_grep_python(op: GrepOperation, project_root: Path, cap: int, starte
     files_scanned = 0
     truncated = False
 
-    for file_path in _resolve_glob(project_root, op.glob, max_files=10000):
+    for file_path in _resolve_glob(grep_root, op.glob, max_files=10000):
         files_scanned += 1
         try:
             text = file_path.read_text(encoding="utf-8", errors="replace")
@@ -285,7 +318,7 @@ def _execute_grep_python(op: GrepOperation, project_root: Path, cap: int, starte
                 ctx_after = lines[i + 1:i + 1 + op.context] if op.context else []
                 matches.append(
                     GrepMatch(
-                        file=str(file_path.relative_to(project_root)),
+                        file=_relative_or_abs(str(file_path), grep_root),
                         line=i + 1,
                         text=line,
                         context_before=ctx_before,

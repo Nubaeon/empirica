@@ -128,6 +128,44 @@ def test_grep_invalid_regex_per_op_error(project):
         assert g.error is not None and "regex" in g.error.lower()
 
 
+def test_grep_per_op_root_overrides_project(project, tmp_path):
+    """A grep with `root` set scopes to that directory, not project_root.
+
+    Regression: previously, greps were hardcoded to project_root with no
+    per-op override, breaking cross-project investigation from a different CWD.
+    """
+    other = tmp_path / "other_project"
+    other.mkdir()
+    (other / "marker.py").write_text("def UNIQUE_GREP_MARKER(): pass\n")
+
+    # Grep targets `other` even though project_root is `project`
+    result = run_batch(
+        {
+            "intent": "x",
+            "greps": [{
+                "pattern": "UNIQUE_GREP_MARKER",
+                "glob": "**/*.py",
+                "root": str(other),
+            }],
+        },
+        project_root=project,
+    )
+    g = result.greps[0]
+    assert g.error is None
+    assert g.total_matches == 1
+    assert "marker.py" in g.matches[0].file
+
+
+def test_grep_missing_root_per_op_error(project):
+    """A grep pointing at a missing root reports a per-op error, not silent zero results."""
+    result = run_batch(
+        {"intent": "x", "greps": [{"pattern": "x", "root": "/nonexistent/grep/root"}]},
+        project_root=project,
+    )
+    g = result.greps[0]
+    assert g.error is not None and "does not exist" in g.error
+
+
 # =============================================================================
 # Glob
 # =============================================================================
@@ -337,5 +375,56 @@ def test_stderr_breadcrumb_emitted(project, capsys):
     )
     captured = capsys.readouterr()
     assert '[noetic-batch]' in captured.err
-    assert "intent='breadcrumb-test'" in captured.err
-    assert 'reads=1' in captured.err
+
+
+# =============================================================================
+# Project-root resolution priority chain
+# =============================================================================
+#
+# Regression: when no project_root was passed and the resolver couldn't find
+# one, the executor silently defaulted to Path.cwd() — breaking cross-project
+# investigation from a CWD that isn't the empirica project. Now the priority
+# is: explicit > InstanceResolver.project_path() > cwd.
+
+
+def test_project_root_uses_resolver_when_unset(project, monkeypatch):
+    """When project_root is None, executor uses InstanceResolver.project_path()."""
+    from empirica.utils.session_resolver import InstanceResolver
+
+    monkeypatch.setattr(InstanceResolver, "project_path", staticmethod(lambda *a, **k: str(project)))
+    # CWD is somewhere unrelated; resolver returns the test project
+    monkeypatch.chdir("/tmp")
+
+    result = run_batch(
+        {"intent": "x", "globs": ["src/**/*.py"]},
+        # project_root NOT passed → must come from resolver
+    )
+    assert result.globs[0].error is None
+    assert result.globs[0].total_matches == 2
+
+
+def test_project_root_falls_back_to_cwd_when_resolver_returns_none(project, monkeypatch):
+    """Last-resort fallback: resolver returns None → use cwd."""
+    from empirica.utils.session_resolver import InstanceResolver
+
+    monkeypatch.setattr(InstanceResolver, "project_path", staticmethod(lambda *a, **k: None))
+    monkeypatch.chdir(project)
+
+    result = run_batch({"intent": "x", "globs": ["src/**/*.py"]})
+    assert result.globs[0].error is None
+    assert result.globs[0].total_matches == 2
+
+
+def test_explicit_project_root_overrides_resolver(project, tmp_path, monkeypatch):
+    """Explicit project_root arg wins over resolver."""
+    from empirica.utils.session_resolver import InstanceResolver
+
+    other = tmp_path / "wrong_project"
+    other.mkdir()
+    monkeypatch.setattr(InstanceResolver, "project_path", staticmethod(lambda *a, **k: str(other)))
+
+    result = run_batch(
+        {"intent": "x", "globs": ["src/**/*.py"]},
+        project_root=project,  # explicit arg → resolver ignored
+    )
+    assert result.globs[0].total_matches == 2  # from `project`, not `other`

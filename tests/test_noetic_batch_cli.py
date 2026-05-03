@@ -35,7 +35,7 @@ def test_cli_stdin_json(project: Path):
         "reads": [{"path": "src/auth.py"}],
     }
     proc = _run_cli(
-        ["noetic-batch", "-", "--output", "json"],
+        ["noetic-batch", "-", "--output", "json", "--project-root", str(project)],
         stdin=json.dumps(payload),
         cwd=project,
     )
@@ -50,7 +50,7 @@ def test_cli_stdin_json(project: Path):
 def test_cli_text_output(project: Path):
     payload = {"intent": "smoke", "reads": [{"path": "src/auth.py"}]}
     proc = _run_cli(
-        ["noetic-batch", "-", "--output", "text"],
+        ["noetic-batch", "-", "--output", "text", "--project-root", str(project)],
         stdin=json.dumps(payload),
         cwd=project,
     )
@@ -128,6 +128,7 @@ def test_cli_flag_form(project: Path):
             "--intent", "via flags",
             "--read", "src/auth.py",
             "--glob", "*.md",
+            "--project-root", str(project),
         ],
         cwd=project,
     )
@@ -168,3 +169,24 @@ def test_cli_flag_grep_with_context(project: Path):
 def test_cli_no_input_exits_2(project: Path):
     proc = _run_cli(["noetic-batch"], cwd=project)
     assert proc.returncode == 2
+
+
+def test_cli_explicit_project_root_overrides_cwd(project: Path, tmp_path: Path):
+    """--project-root scopes the batch even when invoked from a different cwd.
+
+    Regression: ensures the CLI honors an explicit project-root over both the
+    InstanceResolver and cwd. Tests the "I'm in another project, want to grep
+    the empirica project" workflow.
+    """
+    foreign = tmp_path / "foreign_cwd"
+    foreign.mkdir()
+    payload = {"intent": "x", "globs": ["src/**/*.py"]}
+    proc = _run_cli(
+        ["noetic-batch", "-", "--output", "json", "--project-root", str(project)],
+        stdin=json.dumps(payload),
+        cwd=foreign,  # cwd is unrelated; --project-root must win
+    )
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["globs"][0]["total_matches"] == 1
+    assert "auth.py" in out["globs"][0]["matches"][0]

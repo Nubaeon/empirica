@@ -243,8 +243,8 @@ without executing. See docs/architecture/NOETIC_BATCH_SPEC.md.
     nb_parser.add_argument('--glob', action='append', help='Glob pattern (repeatable)')
     nb_parser.add_argument('--investigate', action='append',
         help='project-search query (repeatable)')
-    nb_parser.add_argument('--project-root', default='.',
-        help='Project root for relative paths (default: cwd)')
+    nb_parser.add_argument('--project-root', default=None,
+        help='Project root for relative paths. Default: InstanceResolver.project_path() (the active Empirica project), falling back to cwd if unresolvable. Pass explicitly to override.')
     nb_parser.add_argument('--schema', action='store_true',
         help='Print the input JSON schema and exit')
     nb_parser.add_argument('--dry-run', action='store_true',

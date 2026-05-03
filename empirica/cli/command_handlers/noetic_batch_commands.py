@@ -50,7 +50,11 @@ def handle_noetic_batch_command(args) -> None:
             sys.exit(2)
 
     from empirica.core.noetic_batch import run_batch
-    project_root = Path(getattr(args, "project_root", ".") or ".").resolve()
+    # Project-root resolution: explicit --project-root wins, otherwise let
+    # run_batch fall through to InstanceResolver → cwd. Defaulting to "."
+    # here would mask cross-project investigation by silently using cwd.
+    explicit_root = getattr(args, "project_root", None)
+    project_root = Path(explicit_root).resolve() if explicit_root else None
 
     try:
         result = run_batch(payload, project_root=project_root)
