@@ -1,132 +1,175 @@
+"""Tests for the session resolver — alias support and partial-UUID lookup.
+
+These tests use a fixture-seeded tmp SQLite DB so they run deterministically
+on any machine (CI, fresh clone, container) rather than skipping when the
+dev's live ~/.empirica/sessions.db is empty.
 """
-Tests for session resolver (alias support for session IDs)
-"""
+
+from __future__ import annotations
+
+import time
+import uuid
 
 import pytest
 
-from empirica.utils.session_resolver import get_latest_session_id, is_session_alias, resolve_session_id
+from empirica.utils.session_resolver import (
+    get_latest_session_id,
+    is_session_alias,
+    resolve_session_id,
+)
+
+# Fixed UUIDs — partial-UUID tests can assert exact prefixes
+SID_ACTIVE_CLAUDE = '88dbf132-cc7c-4a4b-9b59-77df3b13dbd2'
+SID_ACTIVE_GPT = '99eef241-aabb-4ccc-8ddd-eef0a1b2c3d4'
+SID_DONE_CLAUDE = 'aabbccdd-1111-2222-3333-444455556666'
+
+
+@pytest.fixture
+def seeded_db(tmp_path, monkeypatch):
+    """Tmp DB seeded with three sessions for deterministic resolver tests.
+
+    - SID_ACTIVE_CLAUDE: active claude-code, most recent
+    - SID_ACTIVE_GPT:    active gpt-5, second-most recent
+    - SID_DONE_CLAUDE:   completed claude-code, oldest
+
+    instance_id is left NULL on all seeded rows. The resolver's instance-
+    isolation filter accepts NULL as a legacy match, so this DB is visible
+    regardless of what EMPIRICA_INSTANCE_ID resolves to in the test env.
+    """
+    db_path = tmp_path / 'sessions.db'
+    monkeypatch.setenv('EMPIRICA_SESSION_DB', str(db_path))
+    # Ensure no cached SessionDatabase singleton points at the live DB
+    monkeypatch.setenv('EMPIRICA_INSTANCE_ID', 'test-isolated-resolver')
+
+    from empirica.data.session_database import SessionDatabase
+    db = SessionDatabase()
+
+    project_id = str(uuid.uuid4())
+    now = time.time()
+    rows = [
+        # (session_id, ai_id, end_time, start_time)
+        (SID_DONE_CLAUDE, 'claude-code', now - 50, now - 300),
+        (SID_ACTIVE_GPT, 'gpt-5', None, now - 200),
+        (SID_ACTIVE_CLAUDE, 'claude-code', None, now - 100),
+    ]
+    for sid, ai_id, end_t, start_t in rows:
+        db.conn.execute(
+            'INSERT INTO sessions (session_id, project_id, ai_id, '
+            'start_time, end_time, components_loaded) VALUES (?, ?, ?, ?, ?, ?)',
+            (sid, project_id, ai_id, start_t, end_t, '[]'),
+        )
+    db.conn.commit()
+    db.close()
+
+    yield db_path
+
+
+# ─── Pure functions (no DB) ──────────────────────────────────────────────
 
 
 def test_is_session_alias():
-    """Test alias detection"""
     assert is_session_alias("latest")
     assert is_session_alias("last")
     assert is_session_alias("latest:active")
     assert is_session_alias("latest:claude-code")
     assert is_session_alias("latest:active:claude-code")
-
-    # UUIDs are not aliases
     assert not is_session_alias("88dbf132-cc7c-4a4b-9b59-77df3b13dbd2")
     assert not is_session_alias("88dbf132")
 
 
 def test_resolve_full_uuid():
-    """Test that full UUIDs pass through unchanged"""
+    """Full UUIDs pass through unchanged without DB lookup."""
     full_uuid = "88dbf132-cc7c-4a4b-9b59-77df3b13dbd2"
-    result = resolve_session_id(full_uuid)
-    assert result == full_uuid
+    assert resolve_session_id(full_uuid) == full_uuid
 
 
-def test_resolve_partial_uuid():
-    """Test partial UUID resolution (requires database with sessions)"""
-    # This test requires at least one session in database
-    try:
-        result = resolve_session_id("88dbf132")
-        # Should return full UUID
-        assert len(result) == 36
-        assert result.startswith("88dbf132")
-        assert "-" in result
-    except ValueError:
-        # No session found - skip test
-        pytest.skip("No sessions in database for partial UUID test")
+# ─── Resolver against seeded DB ──────────────────────────────────────────
 
 
-def test_resolve_latest_alias():
-    """Test 'latest' alias resolution (requires database with sessions)"""
-    try:
-        result = resolve_session_id("latest")
-        # Should return full UUID
-        assert len(result) == 36
-        assert "-" in result
-    except ValueError:
-        # No sessions found
-        pytest.skip("No sessions in database for latest alias test")
+def test_resolve_partial_uuid(seeded_db):
+    """Partial UUID (8 chars) resolves to the matching full UUID."""
+    result = resolve_session_id("88dbf132")
+    assert result == SID_ACTIVE_CLAUDE
 
 
-def test_resolve_last_alias():
-    """Test 'last' alias (synonym for latest)"""
-    try:
-        latest_result = resolve_session_id("latest")
-        last_result = resolve_session_id("last")
-        # Should resolve to same session
-        assert latest_result == last_result
-    except ValueError:
-        pytest.skip("No sessions in database")
+def test_resolve_partial_uuid_unknown_raises(seeded_db):
+    """A partial UUID that matches nothing raises ValueError."""
+    with pytest.raises(ValueError, match="No session found matching"):
+        resolve_session_id("deadbeef")
 
 
-def test_resolve_latest_active():
-    """Test 'latest:active' alias"""
-    try:
-        result = resolve_session_id("latest:active")
-        # Should return full UUID of active session
-        assert len(result) == 36
-        assert "-" in result
-    except ValueError:
-        # No active sessions found
-        pytest.skip("No active sessions in database")
+def test_resolve_latest_alias(seeded_db):
+    """'latest' returns the most recently started session."""
+    result = resolve_session_id("latest")
+    assert result == SID_ACTIVE_CLAUDE
 
 
-def test_resolve_latest_with_ai_id():
-    """Test 'latest:<ai_id>' alias"""
-    try:
-        result = resolve_session_id("latest:claude-code")
-        # Should return full UUID
-        assert len(result) == 36
-        assert "-" in result
-    except ValueError:
-        # No sessions for this AI found
-        pytest.skip("No claude-code sessions in database")
+def test_resolve_last_alias(seeded_db):
+    """'last' is a synonym for 'latest'."""
+    assert resolve_session_id("last") == resolve_session_id("latest")
 
 
-def test_resolve_compound_alias():
-    """Test compound alias 'latest:active:<ai_id>'"""
-    try:
-        result = resolve_session_id("latest:active:claude-code")
-        # Should return full UUID
-        assert len(result) == 36
-        assert "-" in result
-    except ValueError:
-        # No active sessions for this AI found
-        pytest.skip("No active claude-code sessions in database")
+def test_resolve_auto_alias(seeded_db):
+    """'auto' is also normalized to 'latest'."""
+    assert resolve_session_id("auto") == resolve_session_id("latest")
 
 
-def test_get_latest_session_id():
-    """Test convenience function"""
-    try:
-        result = get_latest_session_id()
-        # Should return full UUID
-        assert len(result) == 36
-        assert "-" in result
-    except ValueError:
-        pytest.skip("No sessions in database")
+def test_resolve_latest_active(seeded_db):
+    """'latest:active' filters out the completed session."""
+    result = resolve_session_id("latest:active")
+    # Both active sessions exist; the more recent (claude-code) wins.
+    assert result == SID_ACTIVE_CLAUDE
 
 
-def test_get_latest_session_id_with_filters():
-    """Test convenience function with filters"""
-    try:
-        result = get_latest_session_id(ai_id="claude-code", active_only=True)
-        # Should return full UUID
-        assert len(result) == 36
-        assert "-" in result
-    except ValueError:
-        pytest.skip("No matching sessions in database")
+def test_resolve_latest_with_ai_id(seeded_db):
+    """'latest:<ai_id>' filters by AI."""
+    assert resolve_session_id("latest:claude-code") == SID_ACTIVE_CLAUDE
+    assert resolve_session_id("latest:gpt-5") == SID_ACTIVE_GPT
 
 
-def test_resolve_invalid_alias():
-    """Test that invalid aliases raise ValueError"""
+def test_resolve_compound_alias(seeded_db):
+    """'latest:active:<ai_id>' combines both filters.
+
+    SID_DONE_CLAUDE is claude-code but completed — must be skipped in favor
+    of SID_ACTIVE_CLAUDE which is active.
+    """
+    assert resolve_session_id("latest:active:claude-code") == SID_ACTIVE_CLAUDE
+
+
+def test_resolve_compound_alias_no_match(seeded_db):
+    """Compound alias with no matching session raises ValueError."""
     with pytest.raises(ValueError, match="No session found"):
-        # Use an AI ID that definitely doesn't exist
+        resolve_session_id("latest:active:gpt-4-turbo")
+
+
+def test_get_latest_session_id(seeded_db):
+    """Convenience function returns the most recent session."""
+    assert get_latest_session_id() == SID_ACTIVE_CLAUDE
+
+
+def test_get_latest_session_id_with_ai_filter(seeded_db):
+    """ai_id filter restricts to that AI's sessions."""
+    assert get_latest_session_id(ai_id="gpt-5") == SID_ACTIVE_GPT
+
+
+def test_get_latest_session_id_active_only(seeded_db):
+    """active_only=True excludes completed sessions."""
+    # SID_DONE_CLAUDE is excluded; SID_ACTIVE_CLAUDE wins by recency.
+    assert get_latest_session_id(active_only=True) == SID_ACTIVE_CLAUDE
+
+
+def test_get_latest_session_id_combined_filters(seeded_db):
+    """ai_id + active_only filter together."""
+    assert get_latest_session_id(ai_id="claude-code", active_only=True) == SID_ACTIVE_CLAUDE
+
+
+def test_resolve_invalid_alias(seeded_db):
+    """Unknown AI in alias raises ValueError."""
+    with pytest.raises(ValueError, match="No session found"):
         resolve_session_id("latest:nonexistent-ai-xyz-12345")
+
+
+# ─── get_active_project_path CWD override (issue #90) ────────────────────
 
 
 class TestGetActiveProjectPath:
