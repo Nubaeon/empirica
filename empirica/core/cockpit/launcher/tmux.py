@@ -227,7 +227,8 @@ class GroupLaunchResult:
     tmux_session: str
     created: bool                 # True = new tmux session created; False = adopted existing
     panes_created: int            # 1 (initial) + N splits = total pane count actually in session
-    alacritty_pid: int | None     # PID of the spawned alacritty, or None if spawn failed
+    alacritty_pid: int | None     # PID of the spawned alacritty, or None if spawn failed/skipped
+    alacritty_skipped: bool = False  # True when an existing client was found and we skipped spawning a duplicate
     error: str | None = None
 
 
@@ -249,6 +250,22 @@ def alacritty_available() -> bool:
 def _group_session_name(group_name: str) -> str:
     """Tmux session name for a group. Prefixed to namespace from ad-hoc sessions."""
     return f'empirica-{group_name}'
+
+
+def _session_has_attached_client(session_name: str) -> bool:
+    """True iff the given tmux session has at least one client attached.
+
+    Used by ``launch_groups`` to skip spawning a duplicate alacritty
+    window when a previous launch's window is still alive. The check is
+    pure tmux state — no wmctrl/Wayland window enumeration needed (which
+    is unreliable on KDE Wayland anyway).
+    """
+    if not tmux_available():
+        return False
+    result = _tmux('list-clients', '-t', session_name, '-F', '#{client_pid}')
+    if result.returncode != 0:
+        return False
+    return any(line.strip() for line in result.stdout.splitlines())
 
 
 def _resolve_pane(pane: PaneSpec, config: LauncherConfig) -> tuple[str | None, str]:
@@ -409,6 +426,21 @@ def launch_groups(config: LauncherConfig) -> GroupsLaunchResult:
                 panes_created=0,
                 alacritty_pid=None,
                 error=err,
+            ))
+            continue
+
+        # Dedup: if the session already has a client attached (= an
+        # alacritty window from a prior launch is still alive), don't
+        # spawn a duplicate. Re-launching becomes idempotent at the
+        # window level, not just the session level.
+        if _session_has_attached_client(session_name):
+            results.append(GroupLaunchResult(
+                group_name=group.name,
+                tmux_session=session_name,
+                created=created,
+                panes_created=pane_count,
+                alacritty_pid=None,
+                alacritty_skipped=True,
             ))
             continue
 

@@ -202,6 +202,7 @@ def _handle_groups_launch(config, output: str, quiet: bool) -> int:
                 'created': g.created,
                 'panes': g.panes_created,
                 'alacritty_pid': g.alacritty_pid,
+                'alacritty_skipped': g.alacritty_skipped,
                 'wm_class': f'empirica-{g.group_name}',
                 'error': g.error,
             }
@@ -218,8 +219,14 @@ def _handle_groups_launch(config, output: str, quiet: bool) -> int:
     for i, g in enumerate(result.groups, 1):
         verb = 'created' if g.created else 'adopted existing'
         marker = '✗' if g.error else '·'
+        if g.alacritty_skipped:
+            window_state = 'window already attached, skipped spawn'
+        elif g.alacritty_pid:
+            window_state = f'alacritty pid {g.alacritty_pid}'
+        else:
+            window_state = 'alacritty pid n/a'
         line = (f'  {marker} {i}. empirica-{g.group_name:12s} '
-                f'({verb}, {g.panes_created} panes, alacritty pid {g.alacritty_pid or "n/a"})')
+                f'({verb}, {g.panes_created} panes, {window_state})')
         if g.error:
             line += f'  ⚠ {g.error}'
         print(line)
