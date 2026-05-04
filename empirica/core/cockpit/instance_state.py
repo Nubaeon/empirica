@@ -380,7 +380,7 @@ def aggregate_instance_state(
         loops_dict[entry.name] = d
 
     # Per-loop last-notify annotation (audit log → loops by `loop:{name}` source).
-    annotate_loops_with_last_notify(loops_dict, instance_label=label)
+    annotate_loops_with_last_notify(loops_dict)
 
     # Listener registry — sister to loops but event-driven.
     listener_registry = ListenerRegistry(instance_id, label=label)
