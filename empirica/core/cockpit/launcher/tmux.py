@@ -272,22 +272,45 @@ def _create_group_session(group: GroupSpec, config: LauncherConfig) -> tuple[boo
     """Create a tmux session for a group with all its panes.
 
     Returns ``(created, panes_created, error)``. Idempotent — if the
-    session already exists, returns ``(False, <existing pane count>, None)``
-    so the caller can still spawn alacritty for the existing session
-    (the abnormal-exit recovery path).
+    session already exists, augments to the configured pane count by
+    splitting in the missing panes (preserving any live processes in
+    existing panes). This is the abnormal-exit / re-launch path.
+
+    Window targeting uses just the session name (no ``:N`` index) so
+    we work correctly whether the user has tmux ``base-index 0`` (default)
+    or ``base-index 1`` (very common in user configs).
     """
     session_name = _group_session_name(group.name)
+    split_flag = '-h' if group.split == 'horizontal' else '-v'
 
     if cockpit_session_exists(session_name):
-        # Adopt mode: count panes in the first window so the result is honest.
-        result = _tmux('list-panes', '-t', f'{session_name}:0', '-F', '#{pane_id}')
+        # Adopt path: count existing panes in the active window.
+        # Use just the session name — tmux defaults to its active window,
+        # which is base-index-agnostic.
+        result = _tmux('list-panes', '-t', session_name, '-F', '#{pane_id}')
         existing = len([line for line in result.stdout.splitlines() if line.strip()])
+        # Augment: if the session has fewer panes than the config wants,
+        # split in the missing ones (running fresh commands per the config).
+        # Live panes are untouched. This handles re-launch after partial failure.
+        configured = len(group.panes)
+        if existing < configured:
+            for pane in group.panes[existing:]:
+                cwd, cmd = _resolve_pane(pane, config)
+                split_args = ['split-window', '-t', session_name, split_flag]
+                if cwd:
+                    split_args += ['-c', cwd]
+                split_args.append(cmd)
+                sresult = _tmux(*split_args)
+                if sresult.returncode == 0:
+                    existing += 1
+            _tmux('select-layout', '-t', session_name,
+                  'even-horizontal' if group.split == 'horizontal' else 'even-vertical')
         return False, existing, None
 
     if not group.panes:
         return False, 0, f'group {group.name!r} has no panes'
 
-    # First pane = initial window
+    # Fresh path: create session with first pane, then split in the rest.
     first = group.panes[0]
     cwd, cmd = _resolve_pane(first, config)
     args = ['new-session', '-d', '-s', session_name, '-n', group.name]
@@ -300,11 +323,10 @@ def _create_group_session(group: GroupSpec, config: LauncherConfig) -> tuple[boo
 
     panes_created = 1
 
-    # Subsequent panes = splits
-    split_flag = '-h' if group.split == 'horizontal' else '-v'
     for pane in group.panes[1:]:
         cwd, cmd = _resolve_pane(pane, config)
-        split_args = ['split-window', '-t', f'{session_name}:0', split_flag]
+        # Target by session name only — base-index-agnostic.
+        split_args = ['split-window', '-t', session_name, split_flag]
         if cwd:
             split_args += ['-c', cwd]
         split_args.append(cmd)
@@ -312,8 +334,8 @@ def _create_group_session(group: GroupSpec, config: LauncherConfig) -> tuple[boo
         if sresult.returncode == 0:
             panes_created += 1
 
-    # Even out pane sizes so a 2-pane horizontal split is 50/50
-    _tmux('select-layout', '-t', f'{session_name}:0',
+    # Even out pane sizes so a 2-pane horizontal split is 50/50.
+    _tmux('select-layout', '-t', session_name,
           'even-horizontal' if group.split == 'horizontal' else 'even-vertical')
 
     return True, panes_created, None
