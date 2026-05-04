@@ -583,6 +583,8 @@ def _feedback_extract_retrospective(cursor, session_id):
         feedback["breadth_warning"] = retro['breadth_note']
     if retro.get('edge_density_note'):
         feedback["edge_density_warning"] = retro['edge_density_note']
+    if retro.get('sources_discipline_note'):
+        feedback["sources_discipline_warning"] = retro['sources_discipline_note']
     if retro.get('commit_warning'):
         feedback["commit_discipline"] = retro['commit_warning']
 
@@ -2022,6 +2024,15 @@ def _check_build_praxic_reminders(session_id, check_transaction_id):
                     "--edge ID:RELATION for typed (supports/contradicts/derives/...). "
                     "Without edges, artifacts are unreachable from the commit-context walker."
                 )
+
+            # Sources discipline nudge: same pattern, different dimension.
+            if total_artifacts >= 2 and retro.get("artifacts_with_sources") == 0:
+                reminders["sources_discipline_nudge"] = (
+                    f"\u26a0 {total_artifacts} artifacts in this transaction declare 0 source_refs. "
+                    "Where did this evidence come from? Use --source <id> to anchor in "
+                    "external material, or `empirica source-add` to register a source first. "
+                    "Compliance audits and provenance trails depend on sourced evidence."
+                )
     except Exception as e:
         logger.debug(f"Calibration nudge computation failed (non-fatal): {e}")
 
@@ -2669,6 +2680,35 @@ def _retro_count_artifacts(cursor, session_id, transaction_id):
     return artifact_counts
 
 
+def _retro_count_sources(cursor, session_id: str, transaction_id: str | None) -> int:
+    """Count artifacts in this transaction that declare at least one source_ref.
+
+    Sources are tracked via source_refs column (JSON list of source IDs from
+    source-add). 0% adoption today (per goal d290bc3c) — this helper drives
+    the nudge that surfaces when artifacts skip --source.
+    """
+    by_table = ("project_findings", "project_unknowns", "project_dead_ends",
+                "mistakes_made", "assumptions", "decisions")
+    total = 0
+    for table in by_table:
+        try:
+            sql = (
+                f"SELECT COUNT(*) FROM {table} "
+                f"WHERE session_id = ? "
+                f"AND COALESCE(source_refs, '') NOT IN ('', '[]', 'null')"
+            )
+            params: tuple = (session_id,)
+            if transaction_id:
+                sql += " AND transaction_id = ?"
+                params = (session_id, transaction_id)
+            cursor.execute(sql, params)
+            total += cursor.fetchone()[0]
+        except Exception:
+            # Column missing on some tables; ignore silently.
+            pass
+    return total
+
+
 def _retro_count_edges(cursor, session_id: str, transaction_id: str | None) -> int:
     """Count artifacts in this transaction that have at least one declared edge.
 
@@ -2741,6 +2781,21 @@ def _build_retrospective(session_id: str, transaction_id: str | None) -> dict:
                         "Anchor them in the graph: --related-to <id> on any *-log command, "
                         "or --edge ID:RELATION for typed links. Unlinked artifacts are "
                         "invisible to the commit-context walker."
+                    )
+            except Exception:
+                pass
+
+        # Sources discipline nudge — surfaces when artifacts exist but no source_refs declared.
+        if total_artifacts >= 2:
+            try:
+                sources_count = _retro_count_sources(cursor, session_id, transaction_id)
+                retro["artifacts_with_sources"] = sources_count
+                if sources_count == 0:
+                    retro["sources_discipline_note"] = (
+                        f"{total_artifacts} artifacts logged with 0 source_refs. "
+                        "Where did the evidence come from? Use --source <id> on any *-log "
+                        "command, or `empirica source-add` to register the source first. "
+                        "Sourced artifacts get full provenance trail in audit + compliance."
                     )
             except Exception:
                 pass

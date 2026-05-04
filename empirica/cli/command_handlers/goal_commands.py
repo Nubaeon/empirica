@@ -1022,27 +1022,32 @@ def handle_goals_progress_command(args):
 
 
 def _handle_goals_list_command_helper(cursor, project_id, session_id):
-    """Extracted from handle_goals_list_command to reduce complexity."""
-    if not project_id:
-        # Priority 1: From session_id if provided
-        if session_id:
-            cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+    """Auto-derive project_id from session/context when not explicitly supplied.
+
+    Returns the resolved project_id (caller must assign — strings don't pass by reference).
+    Priority: explicit --project-id → --session-id → unified context resolver.
+    """
+    if project_id:
+        return project_id
+    # Priority 1: From session_id if provided
+    if session_id:
+        cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+        row = cursor.fetchone()
+        if row and row[0]:
+            return row[0]
+
+    # Priority 2: From unified context resolver (transaction → active_work)
+    try:
+        context = R.context()
+        ctx_session = context.get('empirica_session_id')
+        if ctx_session:
+            cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (ctx_session,))
             row = cursor.fetchone()
             if row and row[0]:
-                project_id = row[0]
-
-        # Priority 2: From unified context resolver (transaction → active_work)
-        if not project_id:
-            try:
-                context = R.context()
-                ctx_session = context.get('empirica_session_id')
-                if ctx_session:
-                    cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (ctx_session,))
-                    row = cursor.fetchone()
-                    if row and row[0]:
-                        project_id = row[0]
-            except Exception:
-                pass
+                return row[0]
+    except Exception:
+        pass
+    return None
 
 def handle_goals_list_command(args):
     """Handle goals-list command - list goals with optional filters
@@ -1065,6 +1070,7 @@ def handle_goals_list_command(args):
         transaction_id = getattr(args, 'transaction_id', None)
         ai_id = getattr(args, 'ai_id', None)
         show_completed = getattr(args, 'completed', False)
+        status_filter = getattr(args, 'status', None)  # planned|in_progress|completed|all
         output_format = getattr(args, 'output', 'human')
         limit = getattr(args, 'limit', 20) if hasattr(args, 'limit') else 20
 
@@ -1072,7 +1078,7 @@ def handle_goals_list_command(args):
         cursor = db.conn.cursor()
 
         # GOALS ARE PROJECT-SCOPED: Auto-derive project_id from context if not provided
-        _handle_goals_list_command_helper(cursor, project_id, session_id)
+        project_id = _handle_goals_list_command_helper(cursor, project_id, session_id)
 
         # Build query based on filters
         base_query = """
@@ -1099,8 +1105,17 @@ def handle_goals_list_command(args):
             base_query += " AND s.ai_id = ?"
             params.append(ai_id)
 
-        # Filter by completion status
-        if show_completed:
+        # Filter by completion status — --status takes precedence over --completed
+        if status_filter and status_filter != 'all':
+            if status_filter == 'completed':
+                base_query += " AND (g.is_completed = 1 OR g.status = 'completed')"
+            else:
+                # planned or in_progress
+                base_query += " AND g.status = ? AND g.is_completed = 0"
+                params.append(status_filter)
+        elif status_filter == 'all':
+            pass  # no filter
+        elif show_completed:
             base_query += " AND (g.is_completed = 1 OR g.status = 'completed')"
         else:
             base_query += " AND (g.is_completed = 0 AND g.status != 'completed')"

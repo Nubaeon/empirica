@@ -888,7 +888,10 @@ Example:
     goals_list_parser.add_argument('--scope-duration-max', type=float, help='Filter by maximum duration (0.0-1.0)')
     goals_list_parser.add_argument('--scope-coordination-min', type=float, help='Filter by minimum coordination (0.0-1.0)')
     goals_list_parser.add_argument('--scope-coordination-max', type=float, help='Filter by maximum coordination (0.0-1.0)')
-    goals_list_parser.add_argument('--completed', action='store_true', help='Show completed goals (default: active)')
+    goals_list_parser.add_argument('--completed', action='store_true', help='Show completed goals (default: active). Use --status for finer filtering.')
+    goals_list_parser.add_argument('--status',
+        choices=['planned', 'in_progress', 'completed', 'all'],
+        help='Filter by lifecycle status. Takes precedence over --completed.')
     goals_list_parser.add_argument('--limit', type=int, default=20, help='Max results (default: 20)')
     goals_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     goals_list_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
