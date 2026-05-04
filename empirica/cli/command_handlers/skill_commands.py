@@ -73,15 +73,102 @@ def handle_skill_suggest_command(args):
         return None
 
 
+_SKILL_CANDIDATE_NAMES = (
+    'skill.yaml', 'skill.yml', 'skill.json',
+    'skill.md', 'README.md', 'readme.md',
+)
+
+
+def _normalize_skill_meta(meta: dict, name: str, tags: list) -> dict:
+    """Build a skill object from a raw meta dict with sane defaults."""
+    return {
+        'id': meta.get('id') or name.lower().replace(' ', '-'),
+        'title': meta.get('title') or name,
+        'tags': meta.get('tags') or tags,
+        'preconditions': meta.get('preconditions') or [],
+        'steps': meta.get('steps') or [],
+        'gotchas': meta.get('gotchas') or [],
+        'references': meta.get('references') or [],
+        'summary': meta.get('summary') or '',
+    }
+
+
+def _save_skill_yaml(skill_obj: dict, base_path: str) -> dict:
+    """Save skill object to project_skills directory as YAML."""
+    import yaml  # type: ignore
+    slug = skill_obj['id']
+    out_dir = os.path.join(base_path, 'project_skills')
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, f"{slug}.yaml")
+    with open(out_path, 'w', encoding='utf-8') as f:
+        yaml.safe_dump(skill_obj, f, sort_keys=False)
+    return {'ok': True, 'saved': out_path, 'skill': skill_obj}
+
+
+def _pick_archive_candidate(members: list) -> str | None:
+    """Return the preferred member from a skill archive, or None."""
+    for cand in _SKILL_CANDIDATE_NAMES:
+        for m in members:
+            if m.lower().endswith(cand):
+                return m
+    return None
+
+
+def _parse_archive_member(zf, candidate: str, name: str, tags: list) -> dict:
+    """Parse one archive member into a normalized skill object."""
+    import yaml  # type: ignore
+
+    from empirica.core.skills.parser import parse_markdown_to_skill
+    with zf.open(candidate) as fh:
+        data = fh.read()
+    if candidate.lower().endswith(('.yaml', '.yml')):
+        meta = yaml.safe_load(data) or {}
+        return _normalize_skill_meta(meta, name, tags)
+    if candidate.lower().endswith('.json'):
+        import json as _json
+        meta = _json.loads(data.decode('utf-8', errors='ignore'))
+        return _normalize_skill_meta(meta, name, tags)
+    md_text = data.decode('utf-8', errors='ignore')
+    return parse_markdown_to_skill(md_text, name=name, tags=tags)
+
+
+def _archive_fallback_concat(zf, members: list, name: str, tags: list) -> dict:
+    """Fallback when no preferred candidate exists: concat .md/.txt members."""
+    from empirica.core.skills.parser import parse_markdown_to_skill
+    md_text = ''
+    for m in members:
+        if m.lower().endswith(('.md', '.txt')):
+            with zf.open(m) as fh:
+                md_text += fh.read().decode('utf-8', errors='ignore') + "\n\n"
+    return parse_markdown_to_skill(md_text, name=name, tags=tags)
+
+
+def _extract_skill_from_archive(file_path: str, name: str, tags: list) -> dict:
+    """Open a .skill zip archive and return the parsed skill object."""
+    import zipfile
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(file_path)
+    with zipfile.ZipFile(file_path, 'r') as zf:
+        members = zf.namelist()
+        candidate = _pick_archive_candidate(members)
+        if not candidate:
+            return _archive_fallback_concat(zf, members, name, tags)
+        return _parse_archive_member(zf, candidate, name, tags)
+
+
+def _fetch_skill_from_url(url: str, name: str, tags: list) -> dict:
+    """Fetch a skill definition from a URL (markdown)."""
+    import requests  # type: ignore
+
+    from empirica.core.skills.parser import parse_markdown_to_skill
+    resp = requests.get(url, timeout=15)
+    resp.raise_for_status()
+    return parse_markdown_to_skill(resp.text, name=name, tags=tags)
+
+
 def handle_skill_fetch_command(args):
     """Handle skill-fetch command to download and save a skill definition."""
     try:
-        import zipfile
-
-        import requests  # type: ignore
-        import yaml  # type: ignore
-
-        from empirica.core.skills.parser import parse_markdown_to_skill
         from empirica.utils.session_resolver import InstanceResolver as R
 
         name = args.name
@@ -89,100 +176,19 @@ def handle_skill_fetch_command(args):
         file_path = getattr(args, 'file', None)
         tags = [t.strip() for t in (getattr(args, 'tags', '') or '').split(',') if t.strip()]
 
-        # Capture project context for nested function
         context_project = R.project_path()
         base_path = context_project if context_project else os.getcwd()
 
-        def _save_skill(skill_obj: dict) -> dict:
-            """Save skill object to project_skills directory as YAML."""
-            slug = skill_obj['id']
-            out_dir = os.path.join(base_path, 'project_skills')
-            os.makedirs(out_dir, exist_ok=True)
-            out_path = os.path.join(out_dir, f"{slug}.yaml")
-            with open(out_path, 'w', encoding='utf-8') as f:
-                yaml.safe_dump(skill_obj, f, sort_keys=False)
-            return {'ok': True, 'saved': out_path, 'skill': skill_obj}
-
-        # Case 1: local file (.skill archive)
         if file_path:
-            if not os.path.exists(file_path):
-                raise FileNotFoundError(file_path)
-            # Try to open as zip archive
-            with zipfile.ZipFile(file_path, 'r') as zf:
-                # Preference order: skill.yaml, skill.json, skill.md, README.md
-                members = zf.namelist()
-                candidate = None
-                for cand in ['skill.yaml', 'skill.yml', 'skill.json', 'skill.md', 'README.md', 'readme.md']:
-                    for m in members:
-                        if m.lower().endswith(cand):
-                            candidate = m
-                            break
-                    if candidate:
-                        break
-                if not candidate:
-                    # Fallback: concatenate text files
-                    md_text = ''
-                    for m in members:
-                        if m.lower().endswith(('.md', '.txt')):
-                            with zf.open(m) as fh:
-                                md_text += fh.read().decode('utf-8', errors='ignore') + "\n\n"
-                    skill_obj = parse_markdown_to_skill(md_text, name=name, tags=tags)
-                    result = _save_skill(skill_obj)
-                    print(json.dumps(result, indent=2))
-                    return None  # Success - output already printed
-                # Parse candidate
-                with zf.open(candidate) as fh:
-                    data = fh.read()
-                    if candidate.lower().endswith(('.yaml', '.yml')):
-                        meta = yaml.safe_load(data) or {}
-                        # Normalize keys
-                        skill_obj = {
-                            'id': meta.get('id') or name.lower().replace(' ', '-'),
-                            'title': meta.get('title') or name,
-                            'tags': meta.get('tags') or tags,
-                            'preconditions': meta.get('preconditions') or [],
-                            'steps': meta.get('steps') or [],
-                            'gotchas': meta.get('gotchas') or [],
-                            'references': meta.get('references') or [],
-                            'summary': meta.get('summary') or ''
-                        }
-                        result = _save_skill(skill_obj)
-                        print(json.dumps(result, indent=2))
-                        return None  # Success - output already printed
-                    elif candidate.lower().endswith('.json'):
-                        import json as _json
-                        meta = _json.loads(data.decode('utf-8', errors='ignore'))
-                        skill_obj = {
-                            'id': meta.get('id') or name.lower().replace(' ', '-'),
-                            'title': meta.get('title') or name,
-                            'tags': meta.get('tags') or tags,
-                            'preconditions': meta.get('preconditions') or [],
-                            'steps': meta.get('steps') or [],
-                            'gotchas': meta.get('gotchas') or [],
-                            'references': meta.get('references') or [],
-                            'summary': meta.get('summary') or ''
-                        }
-                        result = _save_skill(skill_obj)
-                        print(json.dumps(result, indent=2))
-                        return None  # Success - output already printed
-                    else:
-                        # Markdown
-                        md_text = data.decode('utf-8', errors='ignore')
-                        skill_obj = parse_markdown_to_skill(md_text, name=name, tags=tags)
-                        result = _save_skill(skill_obj)
-                        print(json.dumps(result, indent=2))
-                        return None  # Success - output already printed
-
-        # Case 2: URL fetch (markdown)
-        if not url:
+            skill_obj = _extract_skill_from_archive(file_path, name, tags)
+        elif url:
+            skill_obj = _fetch_skill_from_url(url, name, tags)
+        else:
             raise ValueError("--url or --file is required for skill-fetch")
-        resp = requests.get(url, timeout=15)
-        resp.raise_for_status()
-        md_text = resp.text
-        skill_obj = parse_markdown_to_skill(md_text, name=name, tags=tags)
-        result = _save_skill(skill_obj)
+
+        result = _save_skill_yaml(skill_obj, base_path)
         print(json.dumps(result, indent=2))
-        return None  # Success - output already printed
+        return None  # Success — output already printed
     except Exception as e:
         handle_cli_error(e, "Skill fetch", getattr(args, 'verbose', False))
         return None

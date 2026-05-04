@@ -1403,97 +1403,98 @@ def handle_assumption_log_command(args):
             db.close()
 
 
+def _parse_decision_alternatives(value) -> list:
+    """Parse the --alternatives flag (JSON list, comma-string, or pre-parsed list)."""
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            return [a.strip() for a in value.split(',') if a.strip()]
+    return []
+
+
+def _decision_persist_git(decision_id, ctx, choice, rationale, alternatives_json,
+                          confidence, reversibility) -> bool:
+    """Store decision in git notes for sync. Non-fatal on failure."""
+    try:
+        from empirica.core.canonical.empirica_git.decision_store import GitDecisionStore
+        return GitDecisionStore().store_decision(
+            decision_id=decision_id, project_id=ctx['project_id'],
+            session_id=ctx['session_id'], ai_id=ctx['ai_id'],
+            choice=choice, rationale=rationale,
+            alternatives=alternatives_json, confidence=confidence,
+            reversibility=reversibility, goal_id=ctx['goal_id'],
+        )
+    except Exception as e:
+        logger.debug(f"Git notes storage failed (non-fatal): {e}")
+        return False
+
+
+def _decision_persist_qdrant(decision_id, ctx, choice, rationale, alternatives_list,
+                              confidence, reversibility) -> bool:
+    """Embed decision in Qdrant for semantic search. Non-fatal on failure."""
+    import time
+    try:
+        from empirica.core.qdrant.vector_store import _check_qdrant_available, embed_decision
+        if not _check_qdrant_available():
+            return False
+        embed_decision(
+            project_id=ctx['project_id'], decision_id=decision_id,
+            choice=choice, alternatives=json.dumps(alternatives_list),
+            rationale=rationale, confidence_at_decision=confidence,
+            reversibility=reversibility, entity_type=ctx['entity_type'],
+            entity_id=ctx['entity_id'], session_id=ctx['session_id'],
+            transaction_id=ctx['transaction_id'], timestamp=time.time(),
+        )
+        return True
+    except Exception as e:
+        logger.debug(f"Qdrant embed failed (non-fatal): {e}")
+        return False
+
+
 def handle_decision_log_command(args):
     """Handle decision-log command — log decisions with alternatives."""
     db = None
     try:
-        import time
-
         config_data = _parse_config_input(args)
         ctx = _resolve_artifact_context(config_data, args, required_fields=['choice'])
         db = ctx['db']
 
         # Extract decision-specific fields
-        choice = (config_data or {}).get('choice') or getattr(args, 'choice', None)
-        rationale = (config_data or {}).get('rationale', '') or getattr(args, 'rationale', '')
-        alternatives = (config_data or {}).get('alternatives', '') or getattr(args, 'alternatives', '')
-        confidence = (config_data or {}).get('confidence', 0.7) if config_data else getattr(args, 'confidence', 0.7)
-        reversibility = (config_data or {}).get('reversibility', 'exploratory') or getattr(args, 'reversibility', 'exploratory')
-
-        # Parse alternatives (comma-separated or JSON list)
-        if isinstance(alternatives, str) and alternatives:
-            try:
-                alternatives_list = json.loads(alternatives)
-            except (json.JSONDecodeError, ValueError):
-                alternatives_list = [a.strip() for a in alternatives.split(',') if a.strip()]
-        elif isinstance(alternatives, list):
-            alternatives_list = alternatives
-        else:
-            alternatives_list = []
-
-        # Extract evidence refs (from --evidence flags or config)
-        evidence_refs = (config_data or {}).get('evidence_refs') or getattr(args, 'evidence_refs', None)
-        epistemic_source = (config_data or {}).get('epistemic_source') or getattr(args, 'epistemic_source', None)
+        cfg = config_data or {}
+        choice = cfg.get('choice') or getattr(args, 'choice', None)
+        rationale = cfg.get('rationale', '') or getattr(args, 'rationale', '')
+        alternatives_list = _parse_decision_alternatives(
+            cfg.get('alternatives', '') or getattr(args, 'alternatives', '')
+        )
+        confidence = cfg.get('confidence', 0.7) if config_data else getattr(args, 'confidence', 0.7)
+        reversibility = cfg.get('reversibility', 'exploratory') or getattr(args, 'reversibility', 'exploratory')
+        evidence_refs = cfg.get('evidence_refs') or getattr(args, 'evidence_refs', None)
+        epistemic_source = cfg.get('epistemic_source') or getattr(args, 'epistemic_source', None)
+        alternatives_json = json.dumps(alternatives_list) if alternatives_list else None
 
         # Store to SQLite (durable)
         decision_id = db.log_decision(
-            project_id=ctx['project_id'],
-            session_id=ctx['session_id'],
-            choice=choice,
-            rationale=rationale,
-            alternatives=json.dumps(alternatives_list) if alternatives_list else None,
-            confidence=confidence,
-            reversibility=reversibility,
-            goal_id=ctx['goal_id'],
+            project_id=ctx['project_id'], session_id=ctx['session_id'],
+            choice=choice, rationale=rationale,
+            alternatives=alternatives_json, confidence=confidence,
+            reversibility=reversibility, goal_id=ctx['goal_id'],
             transaction_id=ctx['transaction_id'],
-            entity_type=ctx['entity_type'],
-            entity_id=ctx['entity_id'],
-            evidence_refs=evidence_refs,
-            visibility=ctx['visibility'],
+            entity_type=ctx['entity_type'], entity_id=ctx['entity_id'],
+            evidence_refs=evidence_refs, visibility=ctx['visibility'],
             epistemic_source=epistemic_source,
         )
 
-        # GIT NOTES
-        git_stored = False
-        try:
-            from empirica.core.canonical.empirica_git.decision_store import GitDecisionStore
-            git_stored = GitDecisionStore().store_decision(
-                decision_id=decision_id,
-                project_id=ctx['project_id'],
-                session_id=ctx['session_id'],
-                ai_id=ctx['ai_id'],
-                choice=choice,
-                rationale=rationale,
-                alternatives=json.dumps(alternatives_list) if alternatives_list else None,
-                confidence=confidence,
-                reversibility=reversibility,
-                goal_id=ctx['goal_id'],
-            )
-        except Exception as e:
-            logger.debug(f"Git notes storage failed (non-fatal): {e}")
-
-        # Qdrant (semantic search)
-        embedded = False
-        try:
-            from empirica.core.qdrant.vector_store import _check_qdrant_available, embed_decision
-            if _check_qdrant_available():
-                embed_decision(
-                    project_id=ctx['project_id'],
-                    decision_id=decision_id,
-                    choice=choice,
-                    alternatives=json.dumps(alternatives_list),
-                    rationale=rationale,
-                    confidence_at_decision=confidence,
-                    reversibility=reversibility,
-                    entity_type=ctx['entity_type'],
-                    entity_id=ctx['entity_id'],
-                    session_id=ctx['session_id'],
-                    transaction_id=ctx['transaction_id'],
-                    timestamp=time.time(),
-                )
-                embedded = True
-        except Exception as e:
-            logger.debug(f"Qdrant embed failed (non-fatal): {e}")
+        git_stored = _decision_persist_git(
+            decision_id, ctx, choice, rationale, alternatives_json,
+            confidence, reversibility,
+        )
+        embedded = _decision_persist_qdrant(
+            decision_id, ctx, choice, rationale, alternatives_list,
+            confidence, reversibility,
+        )
 
         # Entity cross-link
         if ctx['via'] and ctx['entity_type'] != 'project' and ctx['entity_id']:
