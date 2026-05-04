@@ -2,7 +2,7 @@
 
 > **We Gave AI a Mirror. Now It Measures What It Believes.**
 
-[![Version](https://img.shields.io/badge/version-1.8.19-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.8.19)
+[![Version](https://img.shields.io/badge/version-1.8.20-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.8.20)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -100,13 +100,13 @@ empirica setup-claude-code
 
 ```bash
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.8.19-alpine
+docker pull nubaeon/empirica:1.8.20-alpine
 
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.8.19
+docker pull nubaeon/empirica:1.8.20
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.8.19 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.8.20 /bin/bash
 ```
 </details>
 
@@ -266,17 +266,16 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ---
 
-## What's New in 1.8.19
+## What's New in 1.8.20
 
-- **`empirica listener` CLI + registry** — sister concept to
-- **`inbox-listener` skill** — prompt template the listener body
-- **Listener install/uninstall request bridge** — symmetric to the
-- **`loop_uninstall_request` module + `loop-uninstall-pickup.py`
-- **L button mechanical kill** — `cockpit_app.py:action_toggle_loops`
-- **E binding for listeners** — symmetric to L. Calls
-- **Listeners surface in `aggregate_all`** — `instance_state.py` reads
-- **L/E click installs from `project.yaml` when registry empty** —
-
+- **`empirica commit-context <sha>`** (new CLI). Aggregates artifacts
+- **`--depth N` recursive walker.** Walks edges from each artifact's
+- **Inline edge declaration on individual `*-log` commands.** All six
+- **`edge_density_nudge`** — POSTFLIGHT retrospective +
+- **`sources_discipline_nudge`** — same shape, counts artifacts
+- **`--status {planned|in_progress|completed|all|drift}`** flag
+- **`drift` mode** surfaces rows where the `status` text and
+- **Default open count** now uses `is_completed = 0` as the canonical
 ## What's New in 1.8.17
 
 - **Listener subsystem** — sister to cron loops, event-driven not
@@ -409,6 +408,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.8.19
+**Version:** 1.8.20
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*

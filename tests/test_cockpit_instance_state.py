@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from empirica.core.cockpit import instance_state as ist
+from empirica.core.cockpit import liveness as lv
 from empirica.core.cockpit import loop_registry as lr
 from empirica.core.cockpit import sentinel_pause as sp
 
@@ -34,8 +35,14 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(sp, 'GLOBAL_PAUSE_FILE', fake_home / 'sentinel_paused')
     # Isolate from the host tmux server — discovery now scans live panes
     # to surface pre-empirica Claude sessions, but tests should see only
-    # what they wrote.
+    # what they wrote. Patch BOTH instance_state (used in discovery) and
+    # liveness (used inside is_alive) so synthetic instances aren't probed
+    # against the host's real tmux server.
     monkeypatch.setattr(ist, '_live_tmux_panes', lambda: None)
+    monkeypatch.setattr(lv, '_live_tmux_panes', lambda: None)
+    monkeypatch.setattr(lv, '_all_tmux_panes', lambda: None)
+    # Recent activity makes the synthetic transaction look 'active' once
+    # the tmux signal is silenced.
     return fake_home, project
 
 
