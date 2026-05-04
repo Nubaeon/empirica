@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -116,7 +116,7 @@ def write_pending(
         name=name,
         monitor_task_id=monitor_task_id,
         curl_pid=curl_pid,
-        requested_at=datetime.now(tz=UTC).isoformat(),
+        requested_at=datetime.now(tz=timezone.utc).isoformat(),
         requested_by=requested_by,
         reason=reason,
     )

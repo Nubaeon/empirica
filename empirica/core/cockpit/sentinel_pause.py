@@ -9,7 +9,7 @@ consistent with hook-driven gating.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 EMPIRICA_DIR = Path.home() / '.empirica'
@@ -52,7 +52,7 @@ def _read_pause_file(path: Path) -> tuple[str | None, str | None]:
     """
     try:
         mtime = path.stat().st_mtime
-        since = datetime.fromtimestamp(mtime, tz=UTC).isoformat()
+        since = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
     except OSError:
         since = None
 

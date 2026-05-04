@@ -27,7 +27,7 @@ import subprocess
 # Import GitPython - handle naming conflict with empirica.core.git package
 # We import git commands but need to be careful of the package name conflict
 import sys
-from datetime import UTC, datetime  # type: ignore[reportAttributeAccessIssue]
+from datetime import datetime, timezone  # type: ignore[reportAttributeAccessIssue]
 from pathlib import Path
 from typing import Any
 
@@ -403,7 +403,7 @@ class SignedGitOperations:
         # Create report
         report = {
             "title": "Empirica CASCADE Verification Report",
-            "generated_at": datetime.now(UTC).isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "start_commit": start_commit,
             "end_commit": end_commit,
             "repository": str(self.repo.working_dir),

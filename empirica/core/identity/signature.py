@@ -25,7 +25,7 @@ The payload is canonicalized (deterministic JSON) and signed with Ed25519.
 import hashlib
 import json
 import logging
-from datetime import UTC, datetime  # type: ignore[reportAttributeAccessIssue]
+from datetime import datetime, timezone  # type: ignore[reportAttributeAccessIssue]
 from typing import Any
 
 from .ai_identity import AIIdentity
@@ -64,7 +64,7 @@ def create_eep1_payload(
     payload = {
         'content_hash': content_hash,
         'creator_id': ai_id,  # Will be replaced with public key when signing
-        'timestamp': datetime.now(UTC).isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'epistemic_state_final': epistemic_state,
         'cascade_trace_hash': cascade_trace_hash or '',
         'metadata_sources': metadata_sources or [],
@@ -165,7 +165,7 @@ def sign_assessment(
     signed_package = {
         'payload': payload,
         'signature': signature.hex(),
-        'signed_at': datetime.now(UTC).isoformat(),
+        'signed_at': datetime.now(timezone.utc).isoformat(),
         'ai_id': identity.ai_id,  # For convenience (not part of signed data)
         'eep_version': '1.0'
     }
@@ -298,7 +298,7 @@ def verify_eep1_payload(
     # 4. Verify timestamp
     try:
         timestamp = datetime.fromisoformat(payload.get('timestamp', ''))
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
 
         # Check not in future
         if timestamp > now:

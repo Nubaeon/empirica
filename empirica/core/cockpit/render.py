@@ -10,7 +10,7 @@ import json
 import os
 import re
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 _ANSI_RE = re.compile(r'\033\[[0-9;]*m')
@@ -119,8 +119,8 @@ def _loop_age_seconds(loop: dict[str, Any]) -> float | None:
     try:
         dt = datetime.fromisoformat(last_run.replace('Z', '+00:00'))
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=UTC)
-        return (datetime.now(tz=UTC) - dt).total_seconds()
+            dt = dt.replace(tzinfo=timezone.utc)
+        return (datetime.now(tz=timezone.utc) - dt).total_seconds()
     except (ValueError, TypeError):
         return None
 

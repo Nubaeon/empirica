@@ -68,16 +68,9 @@ def cockpit_session_exists(session_name: str) -> bool:
     return result.returncode == 0
 
 
-def launch_cockpit(
-    config: LauncherConfig,
-    attach: bool | None = None,
-) -> LaunchResult:
+def launch_cockpit(config: LauncherConfig) -> LaunchResult:
     """Bring up the canonical layout per ``config``. Idempotent —
     attaches to an existing session if one already exists.
-
-    Args:
-        config: Loaded launcher config.
-        attach: Override config.attach_on_launch when set.
 
     Returns:
         ``LaunchResult`` with what was created and an optional error.

@@ -17,7 +17,7 @@ import os
 import re
 import tempfile
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -87,7 +87,7 @@ def loop_pause_path(instance_id: str, name: str) -> Path:
 
 
 def _now_iso() -> str:
-    return datetime.now(tz=UTC).isoformat()
+    return datetime.now(tz=timezone.utc).isoformat()
 
 
 def _validate_name(name: str) -> None:
@@ -560,7 +560,7 @@ class LoopRegistry:
             data = self._read()
 
         entry = LoopEntry.from_dict(name, data['loops'][name])
-        now = datetime.now(tz=UTC)
+        now = datetime.now(tz=timezone.utc)
         entry.last_run = now.isoformat()
         entry.last_status = status
         entry.last_message = message
@@ -581,7 +581,7 @@ class LoopRegistry:
             interval_s = entry.backoff.current_interval_seconds() or entry.backoff.base_interval_seconds
             threshold = now.timestamp() + interval_s
             entry.backoff.next_fire_threshold = (
-                datetime.fromtimestamp(threshold, tz=UTC).isoformat()
+                datetime.fromtimestamp(threshold, tz=timezone.utc).isoformat()
             )
 
         # Scheduling bookkeeping — only mutate when the caller provided
@@ -622,10 +622,10 @@ class LoopRegistry:
         try:
             threshold = datetime.fromisoformat(threshold_iso.replace('Z', '+00:00'))
             if threshold.tzinfo is None:
-                threshold = threshold.replace(tzinfo=UTC)
+                threshold = threshold.replace(tzinfo=timezone.utc)
         except (ValueError, TypeError):
             return True, 'invalid threshold'
-        if datetime.now(tz=UTC) >= threshold:
+        if datetime.now(tz=timezone.utc) >= threshold:
             return True, 'past threshold'
         return False, 'before threshold'
 
@@ -668,7 +668,7 @@ class LoopRegistry:
             return None
 
         entry = LoopEntry.from_dict(name, data['loops'][name])
-        now = datetime.now(tz=UTC)
+        now = datetime.now(tz=timezone.utc)
 
         base_s = (
             entry.backoff.base_interval_seconds

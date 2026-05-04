@@ -17,7 +17,7 @@ legible.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from empirica.core.notify.audit import (
@@ -90,7 +90,7 @@ def build_notify_dispatcher_block(
     """
     try:
         cfg = config if config is not None else load_config()
-        now = datetime.now(tz=UTC)
+        now = datetime.now(tz=timezone.utc)
         failure = last_failure()
         return {
             'default_backend': cfg.default_backend,
@@ -109,16 +109,12 @@ def build_notify_dispatcher_block(
 
 def annotate_loops_with_last_notify(
     loops_dict: dict[str, dict[str, Any]],
-    instance_label: str | None = None,
     audit_path: Any = None,
 ) -> None:
     """Mutate `loops_dict` in place, adding a `last_notify` field per loop.
 
     Match key: source == "loop:{name}". Loops without a matching audit
     row get last_notify=None.
-
-    `instance_label` is currently unused (audit log doesn't include
-    instance scope) but reserved for future per-instance audit.
 
     `audit_path`: optional override for tests.
     """

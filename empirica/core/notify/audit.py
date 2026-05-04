@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import json
 from collections import deque
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -81,7 +81,7 @@ def append_audit(
         p.parent.mkdir(parents=True, exist_ok=True)
         _maybe_rotate(p)
         row = {
-            'ts': datetime.now(tz=UTC).isoformat(),
+            'ts': datetime.now(tz=timezone.utc).isoformat(),
             'source': source,
             'severity': severity,
             'topic': topic,
@@ -153,7 +153,7 @@ def fell_back_count(window_hours: float = 24.0, path: Path | None = None) -> int
     p = path or AUDIT_PATH
     if not p.exists():
         return 0
-    cutoff = datetime.now(tz=UTC) - timedelta(hours=window_hours)
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=window_hours)
     count = 0
     try:
         with open(p, encoding='utf-8') as f:
@@ -186,7 +186,7 @@ def emit_count(window_hours: float = 24.0, path: Path | None = None) -> int:
     p = path or AUDIT_PATH
     if not p.exists():
         return 0
-    cutoff = datetime.now(tz=UTC) - timedelta(hours=window_hours)
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=window_hours)
     count = 0
     try:
         with open(p, encoding='utf-8') as f:

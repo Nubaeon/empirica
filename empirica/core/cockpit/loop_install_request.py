@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -175,7 +175,7 @@ def write_pending(
         interval=interval,
         description=description,
         scheduler_kind=scheduler_kind,
-        requested_at=datetime.now(tz=UTC).isoformat(),
+        requested_at=datetime.now(tz=timezone.utc).isoformat(),
         requested_by=requested_by,
         prompt_template=render_loop_cron_prompt(
             name=name, interval=interval, description=description,

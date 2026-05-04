@@ -34,7 +34,7 @@ import os
 import re
 import tempfile
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -66,7 +66,7 @@ def listener_active_path(instance_id: str, name: str) -> Path:
 
 
 def _now_iso() -> str:
-    return datetime.now(tz=UTC).isoformat()
+    return datetime.now(tz=timezone.utc).isoformat()
 
 
 def _validate_name(name: str) -> None:

@@ -27,7 +27,7 @@ import base64
 import json
 import logging
 import os
-from datetime import UTC, datetime  # type: ignore[reportAttributeAccessIssue]
+from datetime import datetime, timezone  # type: ignore[reportAttributeAccessIssue]
 from pathlib import Path
 from typing import Any
 
@@ -108,7 +108,7 @@ class AIIdentity:
         # Generate Ed25519 keypair
         self.private_key = Ed25519PrivateKey.generate()
         self.public_key = self.private_key.public_key()
-        self.created_at = datetime.now(UTC).isoformat()
+        self.created_at = datetime.now(timezone.utc).isoformat()
 
         logger.info(f"✓ Generated Ed25519 keypair for {self.ai_id}")
 

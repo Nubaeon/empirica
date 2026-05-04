@@ -32,7 +32,7 @@ Usage:
 import json
 import logging
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime  # type: ignore[reportAttributeAccessIssue]
+from datetime import datetime, timezone  # type: ignore[reportAttributeAccessIssue]
 from pathlib import Path
 from typing import Any
 
@@ -119,7 +119,7 @@ class TokenEfficiencyMetrics:
             phase=phase,
             method=method,
             tokens=token_count,
-            timestamp=datetime.now(UTC).isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             content_type=content_type,
             metadata=metadata or {}
         )
@@ -233,7 +233,7 @@ class TokenEfficiencyMetrics:
         report = {
             "session_id": self.session_id,
             "baseline_session_id": baseline_session_id or "theoretical",
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "phases": {},
             "total": {}
         }
@@ -388,7 +388,7 @@ class TokenEfficiencyMetrics:
         data = {
             "session_id": self.session_id,
             "measurements": [asdict(m) for m in self.measurements],
-            "saved_at": datetime.now(UTC).isoformat()
+            "saved_at": datetime.now(timezone.utc).isoformat()
         }
 
         with open(filepath, 'w') as f:

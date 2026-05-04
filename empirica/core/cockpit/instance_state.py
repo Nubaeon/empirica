@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -217,14 +217,14 @@ def _read_transaction_state(project_path: str, instance_id: str) -> dict[str, An
     result['criticality'] = tx.get('criticality')
 
     preflight_ts = tx.get('preflight_timestamp')
-    now = datetime.now(tz=UTC).timestamp()
+    now = datetime.now(tz=timezone.utc).timestamp()
     if isinstance(preflight_ts, (int, float)):
         result['transaction_age_seconds'] = max(0.0, now - preflight_ts)
 
     # Last activity = newest mtime across tx + counters file
     last_mtime = _newest_mtime([tx_file, counters_file])
     if last_mtime is not None:
-        result['last_activity_iso'] = datetime.fromtimestamp(last_mtime, tz=UTC).isoformat()
+        result['last_activity_iso'] = datetime.fromtimestamp(last_mtime, tz=timezone.utc).isoformat()
         result['last_activity_seconds'] = max(0.0, now - last_mtime)
 
     status = tx.get('status', 'open')
@@ -265,7 +265,7 @@ def _derive_state_symbol(
         if tx_state['phase'] == 'closed':
             return 'closed'
         if tx_state['phase'] == 'no-transaction' and instance_files_mtime is not None:
-            age = datetime.now(tz=UTC).timestamp() - instance_files_mtime
+            age = datetime.now(tz=timezone.utc).timestamp() - instance_files_mtime
             if age <= ABANDONED_WINDOW_S:
                 return 'closed'
         return 'no-claude'
@@ -499,7 +499,7 @@ def aggregate_all(include_dead: bool = False) -> dict[str, Any]:
     )
 
     return {
-        'generated_at': datetime.now(tz=UTC).isoformat(),
+        'generated_at': datetime.now(tz=timezone.utc).isoformat(),
         'instances': instances,
         'summary': {
             'instances': len(instances),

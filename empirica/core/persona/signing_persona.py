@@ -27,7 +27,7 @@ Design:
 import json
 import logging
 from dataclasses import asdict
-from datetime import UTC, datetime  # type: ignore[reportAttributeAccessIssue]
+from datetime import datetime, timezone  # type: ignore[reportAttributeAccessIssue]
 from typing import Any
 
 from empirica.core.identity.ai_identity import AIIdentity
@@ -139,7 +139,7 @@ class SigningPersona:
             "persona_id": self.persona.persona_id,
             "persona_version": self.persona.version,
             "phase": phase,
-            "timestamp": timestamp or datetime.now(UTC).isoformat(),
+            "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
             "vectors": {
                 k: epistemic_vectors[k]
                 for k in sorted(required_vectors)

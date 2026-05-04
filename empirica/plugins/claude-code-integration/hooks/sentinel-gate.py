@@ -1947,46 +1947,45 @@ def _detect_subagent(claude_session_id: str) -> bool:
             # File exists but no is_subagent flag → parent session
             return False
 
-        # Path 2: absence-based fallback (pre-fix subagents, broken session-init)
-        if True:
-            # No active_work file for this claude_session_id — likely a subagent
-            # (or session-init failed / project initialized mid-session)
-            #
-            # TIGHTENED CHECK (fixes #68): Don't just check if active_session exists —
-            # verify its session matches the current transaction. Stale active_session
-            # files from other projects/sessions cause false positive subagent detection.
-            from empirica.utils.session_resolver import InstanceResolver as R
-            _as_suffix = R.instance_suffix()
-            _as_file = Path.home() / '.empirica' / f'active_session{_as_suffix}'
-            if _as_file.exists():
-                # Read the active_session to get its empirica_session_id
-                try:
-                    with open(_as_file) as _asf:
-                        _as_data = json.load(_asf)
-                    _as_session_id = _as_data.get('empirica_session_id')
+        # Path 2: absence-based fallback (pre-fix subagents, broken session-init).
+        # No active_work file for this claude_session_id — likely a subagent
+        # (or session-init failed / project initialized mid-session).
+        #
+        # TIGHTENED CHECK (fixes #68): Don't just check if active_session exists —
+        # verify its session matches the current transaction. Stale active_session
+        # files from other projects/sessions cause false positive subagent detection.
+        from empirica.utils.session_resolver import InstanceResolver as R
+        _as_suffix = R.instance_suffix()
+        _as_file = Path.home() / '.empirica' / f'active_session{_as_suffix}'
+        if _as_file.exists():
+            # Read the active_session to get its empirica_session_id
+            try:
+                with open(_as_file) as _asf:
+                    _as_data = json.load(_asf)
+                _as_session_id = _as_data.get('empirica_session_id')
 
-                    # Find the current transaction to compare session IDs
-                    _tx_session_match = False
-                    if _as_session_id:
-                        # Check if any active_work file has this session
-                        for _aw_candidate in Path.home().glob('.empirica/active_work_*.json'):
-                            try:
-                                with open(_aw_candidate) as _awf:
-                                    _aw_data = json.load(_awf)
-                                if _aw_data.get('empirica_session_id') == _as_session_id:
-                                    _tx_session_match = True
-                                    break
-                            except Exception:
-                                continue
+                # Find the current transaction to compare session IDs
+                _tx_session_match = False
+                if _as_session_id:
+                    # Check if any active_work file has this session
+                    for _aw_candidate in Path.home().glob('.empirica/active_work_*.json'):
+                        try:
+                            with open(_aw_candidate) as _awf:
+                                _aw_data = json.load(_awf)
+                            if _aw_data.get('empirica_session_id') == _as_session_id:
+                                _tx_session_match = True
+                                break
+                        except Exception:
+                            continue
 
-                    if _tx_session_match:
-                        # Parent session is active AND has a matching active_work file
-                        # This session doesn't → confirmed subagent
-                        return True
-                except Exception:
-                    pass  # Can't read active_session → not confident it's a subagent
-            # Not a confirmed subagent → fall through to normal gating
-            # (covers: broken session-init, mid-session project init, stale files)
+                if _tx_session_match:
+                    # Parent session is active AND has a matching active_work file
+                    # This session doesn't → confirmed subagent
+                    return True
+            except Exception:
+                pass  # Can't read active_session → not confident it's a subagent
+        # Not a confirmed subagent → fall through to normal gating
+        # (covers: broken session-init, mid-session project init, stale files)
     except Exception:
         pass  # Detection failure → continue with normal sentinel logic
     return False

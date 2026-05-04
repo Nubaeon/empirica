@@ -38,7 +38,7 @@ Usage:
 import json
 import logging
 import subprocess
-from datetime import UTC, datetime  # type: ignore[reportAttributeAccessIssue]
+from datetime import datetime, timezone  # type: ignore[reportAttributeAccessIssue]
 from pathlib import Path
 from typing import Any
 
@@ -151,7 +151,7 @@ class CheckpointSigner:
             "signature": signature_hex,
             "ai_id": self.ai_id,
             "public_key": self.identity.public_key_hex(),
-            "signed_at": datetime.now(UTC).isoformat(),
+            "signed_at": datetime.now(timezone.utc).isoformat(),
             "version": "1.0"
         }
 

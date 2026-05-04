@@ -17,7 +17,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -94,7 +94,7 @@ class LogBackend:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self._maybe_rotate()
             entry = {
-                'ts': datetime.now(tz=UTC).isoformat(),
+                'ts': datetime.now(tz=timezone.utc).isoformat(),
                 **event.to_dict(),
             }
             with open(self.path, 'a', encoding='utf-8') as f:

@@ -11,7 +11,7 @@ Defines the structure of an AI persona with:
 """
 
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime  # type: ignore[reportAttributeAccessIssue]
+from datetime import datetime, timezone  # type: ignore[reportAttributeAccessIssue]
 
 
 @dataclass
@@ -135,7 +135,7 @@ class PersonaMetadata:
     def __post_init__(self):
         """Set timestamps if not provided"""
         if self.created_at is None:
-            self.created_at = datetime.now(UTC).isoformat()
+            self.created_at = datetime.now(timezone.utc).isoformat()
         if self.modified_at is None:
             self.modified_at = self.created_at
 

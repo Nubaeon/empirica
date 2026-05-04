@@ -15,7 +15,7 @@ on write; read-only here.
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -68,7 +68,7 @@ def write_last_compliance(project_id: str, report: dict[str, Any]) -> Path | Non
         return None
     EMPIRICA_DIR.mkdir(parents=True, exist_ok=True)
     payload = {
-        '_persisted_at': datetime.now(tz=UTC).isoformat(),
+        '_persisted_at': datetime.now(tz=timezone.utc).isoformat(),
         '_project_id': project_id,
         **report,
     }
@@ -117,7 +117,7 @@ def read_compliance_summary(project_path: str | None) -> dict[str, Any] | None:
             )
             age_seconds = max(
                 0.0,
-                datetime.now(tz=UTC).timestamp() - persisted.timestamp(),
+                datetime.now(tz=timezone.utc).timestamp() - persisted.timestamp(),
             )
             fresh = age_seconds < FRESH_WINDOW_S
     except (ValueError, TypeError):

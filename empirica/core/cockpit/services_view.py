@@ -19,7 +19,7 @@ Compliance + Services with consistent ergonomics.
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -110,11 +110,11 @@ def read_services_summary(project_path: str | None) -> dict[str, Any] | None:
     if isinstance(started_at, (int, float)):
         try:
             started_at_iso = datetime.fromtimestamp(
-                started_at, tz=UTC,
+                started_at, tz=timezone.utc,
             ).isoformat(timespec='seconds')
             age_seconds = max(
                 0.0,
-                datetime.now(tz=UTC).timestamp() - float(started_at),
+                datetime.now(tz=timezone.utc).timestamp() - float(started_at),
             )
             fresh = age_seconds < FRESH_WINDOW_S
         except (ValueError, OSError):

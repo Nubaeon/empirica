@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -182,7 +182,7 @@ def write_pending(
         topic=topic,
         description=description,
         on_wake_template=on_wake_template,
-        requested_at=datetime.now(tz=UTC).isoformat(),
+        requested_at=datetime.now(tz=timezone.utc).isoformat(),
         requested_by=requested_by,
         prompt_template=render_inbox_listener_prompt(
             name=name, topic=topic,

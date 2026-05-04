@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -387,7 +387,7 @@ def open_goals_list(
                 "ORDER BY created_timestamp DESC LIMIT ?",
                 (limit,),
             )
-        now = datetime.now(tz=UTC).timestamp()
+        now = datetime.now(tz=timezone.utc).timestamp()
         for objective, status, created in cur.fetchall():
             try:
                 age = max(0.0, now - float(created)) if created is not None else None
@@ -581,7 +581,7 @@ def recent_actions(
 def _format_event_action(ts: float | None, kind: str, raw: str | None) -> RecentAction:
     if not isinstance(ts, (int, float)):
         ts = 0.0
-    iso = datetime.fromtimestamp(float(ts), tz=UTC).astimezone().strftime('%H:%M')
+    iso = datetime.fromtimestamp(float(ts), tz=timezone.utc).astimezone().strftime('%H:%M')
     summary = kind.replace('_complete', '').replace('_', ' ')
     if raw:
         try:
