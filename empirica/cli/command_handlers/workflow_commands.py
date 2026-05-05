@@ -3506,7 +3506,25 @@ def _cortex_read_calibration_summary(project_path: str | None = None) -> dict:
     return {}
 
 
-def _run_postflight_goal_criteria(session_id, transaction_id):
+def _extract_evidence_bundle(grounded_verification):
+    """Pull a real EvidenceBundle out of the grounded_verification result.
+
+    The bundle lives at grounded_verification['_internal_phases'][phase]
+    ['_internal_bundle']. Prefers praxic > combined > noetic since praxic
+    has the broadest evidence (code_quality, git, etc). Returns None if
+    no bundle is available — caller falls back to empty bundle.
+    """
+    if not grounded_verification:
+        return None
+    phases = grounded_verification.get('_internal_phases', {})
+    for phase_name in ('praxic', 'combined', 'noetic'):
+        phase = phases.get(phase_name)
+        if phase and phase.get('_internal_bundle') is not None:
+            return phase['_internal_bundle']
+    return None
+
+
+def _run_postflight_goal_criteria(session_id, transaction_id, evidence_bundle=None):
     """Evaluate active goals' success_criteria against POSTFLIGHT state.
 
     Bridge from goal-declared criteria → live POSTFLIGHT signal. Loads
@@ -3514,19 +3532,21 @@ def _run_postflight_goal_criteria(session_id, transaction_id):
     evaluator (keyed on validation_method), persists is_met. Returns
     the goal_criteria response block, or None if nothing was evaluated.
 
-    Empty EvidenceBundle is passed for G1 — SubtaskCompletionEvaluator
-    queries the goal/task DB directly and doesn't need bundle items.
-    G2's EvidenceMetricEvaluator will need bundle plumbing from the
-    grounded-verification pipeline.
+    `evidence_bundle` should be the bundle collected during grounded
+    verification (extracted via _extract_evidence_bundle). When None or
+    when grounded_verification failed, an empty bundle is used —
+    quality_gate evaluators that need named metrics will skip cleanly.
     """
     try:
         from empirica.core.post_test.collector import EvidenceBundle
         from empirica.core.post_test.criterion_evaluators import evaluate_goal_criteria
 
-        empty_bundle = EvidenceBundle(session_id=session_id)
+        bundle = evidence_bundle if evidence_bundle is not None else EvidenceBundle(
+            session_id=session_id
+        )
         block = evaluate_goal_criteria(
             session_id=session_id,
-            evidence=empty_bundle,
+            evidence=bundle,
             transaction_id=transaction_id,
         )
         return block if block.get("evaluated", 0) > 0 else None
@@ -3847,6 +3867,7 @@ def handle_postflight_submit_command(args):
             goal_criteria_block = _soft_run("goal_criteria", warnings,
                 _run_postflight_goal_criteria,
                 session_id, tx_info["transaction_id"],
+                _extract_evidence_bundle(grounded_verification),
             )
             _soft_run("storage_pipeline", warnings,
                 _run_postflight_storage_pipeline,

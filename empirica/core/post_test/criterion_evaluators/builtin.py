@@ -4,7 +4,7 @@ Auto-registered on package import (see __init__.py). Adding a new built-in:
 1. Define class with `validation_method` class attribute, `applies()`, `evaluate()`
 2. Append a `register(MyEvaluator())` call at the bottom
 
-G1 ships SubtaskCompletionEvaluator. G2 will add EvidenceMetricEvaluator.
+G1 ships SubtaskCompletionEvaluator. G2 ships EvidenceMetricEvaluator.
 G3 (deferred) will add VectorThresholdEvaluator.
 """
 
@@ -76,5 +76,80 @@ class SubtaskCompletionEvaluator:
         )
 
 
+class EvidenceMetricEvaluator:
+    """Evaluate `quality_gate` criteria against a named metric in EvidenceBundle.
+
+    The criterion's `description` field carries the metric name to look up
+    (e.g. "prose_stylometry_adherence", "ruff_violation_density"). The
+    evaluator reads it from the bundle, applies the metric's declared
+    direction, and compares against the criterion's threshold.
+
+    Threshold semantics:
+      - higher_is_better: passes when value >= threshold
+      - lower_is_better: passes when value <= threshold
+
+    Skips with a clear summary if:
+      - The metric isn't present in the bundle (collector didn't run, or
+        bundle is empty — common for goal_criteria evaluation when the
+        quality_gate metric needs a collector that wasn't profile-active)
+      - threshold is None (criterion declared without a numeric target)
+    """
+
+    validation_method = "quality_gate"
+
+    def applies(self, ctx: CriterionContext) -> bool:
+        # Skip if no metric name to look up
+        if not ctx.criterion.description:
+            return False
+        return ctx.evidence.has(ctx.criterion.description)
+
+    def evaluate(self, ctx: CriterionContext) -> CriterionResult:
+        metric = ctx.criterion.description
+        threshold = ctx.criterion.threshold
+
+        if threshold is None:
+            return CriterionResult(
+                criterion_id=ctx.criterion.id,
+                goal_id=ctx.goal.id,
+                validation_method=self.validation_method,
+                passed=False,
+                skipped=True,
+                summary=f"quality_gate criterion {metric!r} declared without threshold",
+            )
+
+        value = ctx.evidence.get(metric)
+        if value is None:
+            return CriterionResult(
+                criterion_id=ctx.criterion.id,
+                goal_id=ctx.goal.id,
+                validation_method=self.validation_method,
+                passed=False,
+                skipped=True,
+                threshold=threshold,
+                summary=f"metric {metric!r} not present in evidence bundle",
+            )
+
+        direction = ctx.evidence.direction(metric)
+        if direction == "lower_is_better":
+            passed = value <= threshold
+            op_repr = "<="
+        else:
+            passed = value >= threshold
+            op_repr = ">="
+
+        return CriterionResult(
+            criterion_id=ctx.criterion.id,
+            goal_id=ctx.goal.id,
+            validation_method=self.validation_method,
+            passed=passed,
+            value=value,
+            threshold=threshold,
+            summary=f"{metric}={value:.3f} {op_repr} {threshold:.3f} ({direction})",
+            iteration_needed=(not passed and ctx.criterion.is_required),
+            next_transaction=f"Address {metric} regression" if not passed else None,
+        )
+
+
 # Auto-register on import. New built-ins: append register() calls below.
 register(SubtaskCompletionEvaluator())
+register(EvidenceMetricEvaluator())

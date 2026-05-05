@@ -48,7 +48,15 @@ class EvidenceQuality(Enum):
 
 @dataclass
 class EvidenceItem:
-    """A single piece of objective evidence."""
+    """A single piece of objective evidence.
+
+    `direction` indicates whether higher or lower values are preferred for this
+    metric. Defaults to "higher_is_better" — most calibration metrics are
+    normalized 0-1 scores where more is better. Collectors emitting raw error
+    counts, violation densities, etc. should explicitly set "lower_is_better".
+    Used by goal-criterion EvidenceMetricEvaluator to pick the correct
+    comparison operator against a declared threshold.
+    """
     source: str
     metric_name: str
     value: float
@@ -56,6 +64,7 @@ class EvidenceItem:
     quality: EvidenceQuality
     supports_vectors: list[str]
     metadata: dict[str, Any] = field(default_factory=dict)
+    direction: str = "higher_is_better"
 
 
 @dataclass
@@ -71,6 +80,10 @@ class EvidenceBundle:
     every failed collector. Captured at DEBUG log level by default; surfaced
     in POSTFLIGHT response when sources_failed is non-empty so failures
     can be debugged from the output alone.
+
+    Helpers `has`, `get`, `direction` provide named-metric lookup for consumers
+    like the goal-criterion EvidenceMetricEvaluator. They search items by
+    metric_name and return the first match.
     """
     session_id: str
     items: list[EvidenceItem] = field(default_factory=list)
@@ -80,6 +93,35 @@ class EvidenceBundle:
     sources_empty: list[str] = field(default_factory=list)
     source_errors: dict[str, str] = field(default_factory=dict)
     coverage: float = 0.0
+
+    def _find(self, metric_name: str) -> EvidenceItem | None:
+        for item in self.items:
+            if item.metric_name == metric_name:
+                return item
+        return None
+
+    def has(self, metric_name: str) -> bool:
+        """True if any item carries this metric_name."""
+        return self._find(metric_name) is not None
+
+    def get(self, metric_name: str) -> float | None:
+        """Numeric value for a named metric, preferring raw_value when scalar.
+
+        Returns the raw_value if it's int/float, else falls back to the
+        normalized `value` field. None if metric absent.
+        """
+        item = self._find(metric_name)
+        if item is None:
+            return None
+        raw = item.raw_value
+        if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+            return float(raw)
+        return float(item.value)
+
+    def direction(self, metric_name: str) -> str:
+        """Direction declared by the metric's collector. Defaults to higher_is_better."""
+        item = self._find(metric_name)
+        return item.direction if item else "higher_is_better"
 
 
 

@@ -821,6 +821,7 @@ def _run_single_phase_verification(
         # but prefixed with underscore to signal they're not the primary
         # calibration output the AI should attend to. The AI sees
         # evidence_summary (structured raw evidence + signals) instead.
+        '_internal_bundle': bundle,
         '_internal_gaps': assessment.calibration_gaps,
         '_internal_updates': {
             v: {

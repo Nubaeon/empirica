@@ -19,7 +19,7 @@ from empirica.core.goals.types import (
     ScopeVector,
     SuccessCriterion,
 )
-from empirica.core.post_test.collector import EvidenceBundle
+from empirica.core.post_test.collector import EvidenceBundle, EvidenceItem, EvidenceQuality
 from empirica.core.post_test.criterion_evaluators import (
     CriterionContext,
     CriterionResult,
@@ -27,7 +27,10 @@ from empirica.core.post_test.criterion_evaluators import (
     register,
 )
 from empirica.core.post_test.criterion_evaluators._types import CriterionEvaluator
-from empirica.core.post_test.criterion_evaluators.builtin import SubtaskCompletionEvaluator
+from empirica.core.post_test.criterion_evaluators.builtin import (
+    EvidenceMetricEvaluator,
+    SubtaskCompletionEvaluator,
+)
 from empirica.core.post_test.criterion_evaluators.registry import (
     _EVALUATORS,
     reset_for_tests,
@@ -304,6 +307,163 @@ def test_evaluate_goal_criteria_persists_is_met():
     assert block["evaluated"] == 1
     assert block["passed"] == 1
     assert block["failed"] == 0
+
+
+# ---------------------------------------------------------------------------
+# EvidenceMetricEvaluator (G2)
+# ---------------------------------------------------------------------------
+
+
+def _make_bundle_with_metric(
+    metric_name: str, value: float, *, direction: str = "higher_is_better"
+) -> EvidenceBundle:
+    bundle = EvidenceBundle(session_id="test")
+    bundle.items.append(EvidenceItem(
+        source="test",
+        metric_name=metric_name,
+        value=value,
+        raw_value=value,
+        quality=EvidenceQuality.OBJECTIVE,
+        supports_vectors=[],
+        direction=direction,
+    ))
+    return bundle
+
+
+def _make_quality_gate_ctx(
+    bundle: EvidenceBundle, metric_name: str, threshold: float | None = 0.5,
+    is_required: bool = True,
+) -> CriterionContext:
+    goal = _make_goal(total_subtasks=0, completed=0)
+    crit = SuccessCriterion(
+        id="qg-crit",
+        description=metric_name,
+        validation_method="quality_gate",
+        threshold=threshold,
+        is_required=is_required,
+    )
+    return CriterionContext(
+        criterion=crit, goal=goal, evidence=bundle,
+        session_id="test",
+    )
+
+
+def test_quality_gate_higher_is_better_passes_when_value_at_or_above_threshold():
+    bundle = _make_bundle_with_metric("test_metric", value=0.8, direction="higher_is_better")
+    ctx = _make_quality_gate_ctx(bundle, "test_metric", threshold=0.5)
+    result = EvidenceMetricEvaluator().evaluate(ctx)
+    assert result.passed is True
+    assert result.value == 0.8
+    assert "higher_is_better" in result.summary
+
+
+def test_quality_gate_higher_is_better_fails_when_value_below_threshold():
+    bundle = _make_bundle_with_metric("test_metric", value=0.3, direction="higher_is_better")
+    ctx = _make_quality_gate_ctx(bundle, "test_metric", threshold=0.5)
+    result = EvidenceMetricEvaluator().evaluate(ctx)
+    assert result.passed is False
+    assert result.iteration_needed is True
+
+
+def test_quality_gate_lower_is_better_passes_when_value_at_or_below_threshold():
+    bundle = _make_bundle_with_metric("violations_per_100", value=0.2, direction="lower_is_better")
+    ctx = _make_quality_gate_ctx(bundle, "violations_per_100", threshold=0.25)
+    result = EvidenceMetricEvaluator().evaluate(ctx)
+    assert result.passed is True
+    assert "lower_is_better" in result.summary
+
+
+def test_quality_gate_lower_is_better_fails_when_value_above_threshold():
+    bundle = _make_bundle_with_metric("violations_per_100", value=0.4, direction="lower_is_better")
+    ctx = _make_quality_gate_ctx(bundle, "violations_per_100", threshold=0.25)
+    result = EvidenceMetricEvaluator().evaluate(ctx)
+    assert result.passed is False
+    assert result.iteration_needed is True
+
+
+def test_quality_gate_skips_when_metric_missing_from_bundle():
+    bundle = EvidenceBundle(session_id="test")  # empty
+    ctx = _make_quality_gate_ctx(bundle, "absent_metric", threshold=0.5)
+    # applies() should return False since metric is missing
+    assert EvidenceMetricEvaluator().applies(ctx) is False
+
+
+def test_quality_gate_evaluate_returns_skipped_when_threshold_none():
+    bundle = _make_bundle_with_metric("test_metric", value=0.5)
+    ctx = _make_quality_gate_ctx(bundle, "test_metric", threshold=None)
+    result = EvidenceMetricEvaluator().evaluate(ctx)
+    assert result.skipped is True
+    assert "without threshold" in result.summary
+
+
+def test_quality_gate_iteration_skipped_for_non_required_failing():
+    bundle = _make_bundle_with_metric("test_metric", value=0.1, direction="higher_is_better")
+    ctx = _make_quality_gate_ctx(bundle, "test_metric", threshold=0.5, is_required=False)
+    result = EvidenceMetricEvaluator().evaluate(ctx)
+    assert result.passed is False
+    assert result.iteration_needed is False
+
+
+def test_quality_gate_evaluator_is_registered():
+    """EvidenceMetricEvaluator should be registered on package import."""
+    from empirica.core.post_test.criterion_evaluators.registry import _EVALUATORS
+    quality_evaluators = _EVALUATORS.get("quality_gate", [])
+    assert any(
+        type(e).__name__ == "EvidenceMetricEvaluator" for e in quality_evaluators
+    )
+
+
+# ---------------------------------------------------------------------------
+# EvidenceBundle helpers (has, get, direction)
+# ---------------------------------------------------------------------------
+
+
+def test_evidence_bundle_has_returns_false_for_missing_metric():
+    bundle = EvidenceBundle(session_id="test")
+    assert bundle.has("anything") is False
+
+
+def test_evidence_bundle_has_returns_true_for_present_metric():
+    bundle = _make_bundle_with_metric("foo", 0.5)
+    assert bundle.has("foo") is True
+
+
+def test_evidence_bundle_get_returns_raw_value_when_scalar():
+    bundle = _make_bundle_with_metric("foo", 0.42)
+    assert bundle.get("foo") == 0.42
+
+
+def test_evidence_bundle_get_falls_back_to_normalized_when_raw_non_scalar():
+    bundle = EvidenceBundle(session_id="test")
+    bundle.items.append(EvidenceItem(
+        source="test", metric_name="bar", value=0.7,
+        raw_value={"complex": "dict"},  # not scalar
+        quality=EvidenceQuality.OBJECTIVE, supports_vectors=[],
+    ))
+    assert bundle.get("bar") == 0.7
+
+
+def test_evidence_bundle_get_returns_none_for_missing():
+    bundle = EvidenceBundle(session_id="test")
+    assert bundle.get("missing") is None
+
+
+def test_evidence_bundle_direction_returns_declared_value():
+    bundle = _make_bundle_with_metric("err_count", 5.0, direction="lower_is_better")
+    assert bundle.direction("err_count") == "lower_is_better"
+
+
+def test_evidence_bundle_direction_defaults_to_higher_is_better_for_missing():
+    bundle = EvidenceBundle(session_id="test")
+    assert bundle.direction("missing") == "higher_is_better"
+
+
+def test_evidence_item_default_direction_is_higher_is_better():
+    item = EvidenceItem(
+        source="x", metric_name="y", value=0.5, raw_value=0.5,
+        quality=EvidenceQuality.OBJECTIVE, supports_vectors=[],
+    )
+    assert item.direction == "higher_is_better"
 
 
 def test_evaluate_goal_criteria_iteration_needed_propagates():
