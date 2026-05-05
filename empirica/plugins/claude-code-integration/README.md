@@ -229,4 +229,4 @@ You: "Fix the auth bug"
 - [CLI Reference](docs/human/developers/CLI_COMMANDS_UNIFIED.md)
 - [Architecture](docs/architecture/)
 - [Training & Guides](https://getempirica.com)
-- [Upgrade Guide](docs/guides/UPGRADE_TO_1.7.md)
+- [Upgrade Guide](docs/guides/UPGRADE_TO_1.9.md)

@@ -202,8 +202,69 @@ export EMPIRICA_INSTANCE_ID=manual_1
 
 ---
 
+## Cockpit — Orchestrating Multiple Panes
+
+Manually splitting tmux and assigning projects per pane works, but for the
+common case (one tmux session with N project panes + a status pane) the
+**cockpit** is the higher-level orchestrator.
+
+### Single-command launch
+
+```bash
+empirica cockpit launch              # Bring up the configured layout
+empirica cockpit status              # Show all live instances + states
+empirica cockpit detach              # Detach without killing
+empirica cockpit kill                # Tear down all panes
+empirica cockpit save / restore      # Persist + restore layouts
+```
+
+The launcher reads `~/.empirica/cockpit/config.yaml` for the per-pane layout
+(project, working directory, optional pre-launch commands). One command
+spins up the whole multi-pane environment with each pane already
+project-switched and ready.
+
+### Cockpit groups (1.8.18+)
+
+Groups partition the cockpit into logical sets — e.g., a `core` group with
+4 panes for development plus a `research` group with 2 panes for
+investigation. Switch the active group without losing the others' state:
+
+```bash
+empirica cockpit launch --group core         # Start the core group
+empirica cockpit launch --group research     # Start research alongside
+empirica cockpit status --all                # See all groups
+```
+
+Useful for separating concerns (development vs. outreach vs. research) on
+the same machine without juggling multiple tmux sessions manually.
+
+### Cockpit TUI
+
+`empirica cockpit` (no subcommand) opens a compact TUI showing:
+- Per-instance state symbol (🟢 alive, 🟡 idle, ⊘ closed, 💤 dead)
+- Phase (noetic / praxic / asking / closed)
+- Sentinel/loop toggles
+- Recent notify-dispatcher events
+- Quick actions (stop, send keystroke, toggle sentinel)
+
+### Notify dispatcher
+
+Long-running panes emit notifications to `notify-dispatcher` — a per-instance
+event stream the cockpit subscribes to. Notifications include:
+- Hook-triggered events (compaction, post-edit fanout)
+- Loop heartbeats (cron loops, watchdog timers)
+- Manual `empirica loop heartbeat` calls
+
+The dispatcher is what powers the cockpit's "recent activity" surface and
+the `notif` column in the cockpit table. See [NOTIFY.md](../architecture/NOTIFY.md)
+for the protocol.
+
+---
+
 ## Related Documentation
 
-- [Multi-Instance Isolation](../architecture/instance_isolation/ARCHITECTURE.md) — Technical architecture
+- [Instance Isolation](../architecture/instance_isolation/README.md) — Architecture entry point (covers ARCHITECTURE, CLAUDE_CODE, MCP_AND_CLI, KNOWN_ISSUES)
+- [Cockpit Architecture](../architecture/COCKPIT.md) — Multi-pane orchestrator design
+- [Notify Dispatcher](../architecture/NOTIFY.md) — Event stream + cockpit integration
 - [Project Switching](./PROJECT_SWITCHING_FOR_AIS.md) — Project context management
 - [Session Management](../human/end-users/SESSION_GOAL_WORKFLOW.md) — Session and goal workflows
