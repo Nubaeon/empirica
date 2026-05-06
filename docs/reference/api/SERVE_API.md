@@ -56,13 +56,18 @@ pip install 'empirica[api]'
 
 ### GET /api/v1/health
 
-Health check endpoint. Reports daemon status and availability of optional integrations
-(Ollama for embeddings, Qdrant for vector search).
+Health check endpoint. Reports daemon status, availability of optional integrations
+(Ollama, Qdrant), and the daemon's bound active project (v0.5+).
 
 **Response:** `HealthResponse` (200 OK)
 
 The endpoint probes `localhost:11434` (Ollama) and `localhost:6333` (Qdrant) with a
 2-second timeout to determine availability.
+
+The active-project fields (`project_id`, `project_path`, `project_name`,
+`project_slug`, `repo_url`) are populated from the daemon's project resolution at
+startup (see [Active Project Resolution](#active-project-resolution)). All five are
+`null` when the daemon was launched outside any project tree.
 
 #### Example
 
@@ -77,7 +82,12 @@ curl http://localhost:8000/api/v1/health
   "api_version": "v1",
   "ollama": false,
   "claude_mem": false,
-  "qdrant": true
+  "qdrant": true,
+  "project_id": "748a81a2-ac14-45b8-a185-994997b76828",
+  "project_path": "/home/user/code/empirica",
+  "project_name": "Empirica",
+  "project_slug": "empirica",
+  "repo_url": "https://github.com/Nubaeon/empirica"
 }
 ```
 
@@ -233,6 +243,250 @@ curl -X POST http://localhost:8000/api/v1/profile/sync
 
 ---
 
+## Active Project Resolution
+
+(v0.5+) The daemon resolves a single active project at startup and serves data
+scoped to it. Resolution is layered:
+
+1. **`InstanceResolver.project_path()`** — the canonical chain (instance_projects
+   from tmux/X11 isolation → `active_work_{claude_session_id}.json` → headless
+   `active_work.json`). Picks up the active CC instance's project automatically
+   when the daemon is launched in a tmux pane sibling to a Claude Code session.
+2. **CWD walk-up** — if canonical returns nothing, walks up from CWD looking for
+   `.empirica/project.yaml`. Handles the case where the daemon is launched in a
+   project tree without an active CC instance (fresh terminal, headless launch).
+3. **Fail-soft** — if neither resolves, the daemon still starts and serves
+   `/health` + `/profile/*`, but every per-project endpoint returns 503 with a
+   hint to `cd` into a project tree before running `empirica serve`.
+
+The active project is held for the daemon's process lifetime. To switch projects,
+restart the daemon.
+
+**Project ID resolution:** `.empirica/project.yaml.project_id` is often a
+human-readable slug (e.g. `empirica`) that maps to `projects.name` in the local
+sqlite. The daemon performs a slug→UUID lookup against the `projects` table so
+the canonical UUID is what surfaces on `/health.project_id` and what filters
+artifact rows internally. If the yaml's `project_id` is already UUID-shaped, it
+passes through directly.
+
+---
+
+## Per-type Artifact Lists (v0.5+)
+
+Eight read endpoints — one per artifact type plus goals — sharing a common
+project-scoping guard and `related_to[]` edge attachment. All scoped to the
+daemon's active project.
+
+| Endpoint | Returns | Filters |
+|----------|---------|---------|
+| `GET /api/v1/findings` | `{findings: [...], project_id}` | `?limit=N` (default 50, max 500) |
+| `GET /api/v1/unknowns` | `{unknowns: [...], project_id}` | `?status=open\|resolved\|all` (default `open`), `?limit=N` |
+| `GET /api/v1/dead-ends` | `{dead_ends: [...], project_id}` | `?limit=N` |
+| `GET /api/v1/mistakes` | `{mistakes: [...], project_id}` | `?limit=N` |
+| `GET /api/v1/assumptions` | `{assumptions: [...], project_id}` | `?confidence_min=N`, `?limit=N` |
+| `GET /api/v1/decisions` | `{decisions: [...], project_id}` | `?limit=N` |
+| `GET /api/v1/sources` | `{sources: [...], project_id}` | `?limit=N` |
+| `GET /api/v1/goals` | `{goals: [...], project_id}` | `?status=active\|completed\|planned\|all`, `?limit=N` |
+
+**Common row shape (varies per type):**
+
+```json
+{
+  "id": "<uuid>",
+  "type": "finding",
+  "title": "first 100 chars of finding/objective/choice/...",
+  "body": "...",
+  "impact": 0.7,
+  "epistemic_source": "search | intuition | mixed | null",
+  "session_id": "<uuid>",
+  "goal_id": "<uuid> | null",
+  "transaction_id": "<uuid> | null",
+  "created_at": "2026-05-06T14:23:00Z",
+  "related_to": [
+    {"id": "<other-id>", "type": "decision", "relation": "evidence"}
+  ]
+}
+```
+
+Type-specific fields layer on top: `confidence`/`status`/`resolution_finding_id`
+on assumptions; `choice`/`rationale`/`alternatives`/`reversibility`/`outcome`/`regret_score`
+on decisions; `approach`/`why_failed` on dead_ends; `why_wrong`/`prevention` on
+mistakes; `objective`/`subtasks[]`/`is_completed` on goals; `url`/`source_type`/`description`
+on sources.
+
+**503 contract:** Every per-type endpoint returns 503 with a hint when the daemon
+isn't bound to a project. Empty list (200) when project resolves but `project_id`
+is null (local-only project, not registered on Cortex).
+
+#### Example
+
+```bash
+curl 'http://localhost:8000/api/v1/findings?limit=5'
+curl 'http://localhost:8000/api/v1/unknowns?status=open&limit=10'
+curl 'http://localhost:8000/api/v1/assumptions?confidence_min=0.7'
+```
+
+---
+
+## Single-Artifact CRUD (v0.5+)
+
+Four endpoints for one-at-a-time UI actions. Polymorphic ID resolution — the
+daemon scans all artifact tables to find which one holds `{id}`.
+
+### GET /api/v1/artifacts/{id}
+
+Fetch one artifact + its full edge neighborhood.
+
+**Response:** 200 OK with `{artifact: {...with related_to populated...}}`,
+404 if the id isn't in any artifact table.
+
+### PATCH /api/v1/artifacts/{id}/resolve
+
+Mark an artifact as resolved. Per-type semantics:
+
+| Type | Effect |
+|------|--------|
+| `unknown` | `is_resolved=1`, `resolved_by=<body.resolved_by>`, `resolved_timestamp=now` |
+| `assumption` | `status='verified'`, `resolved_timestamp=now` |
+| `goal` | `is_completed=1`, `status='completed'`, `completed_timestamp=now` |
+| Other types | 422 — no resolve semantics |
+
+**Body:** `{"resolved_by": "..."}` (optional)
+
+### PATCH /api/v1/artifacts/{id}
+
+Partial update. Each artifact type has a whitelist of editable fields:
+
+| Type | Whitelist |
+|------|-----------|
+| `finding` | `impact`, `subject`, `epistemic_source` |
+| `unknown` | `impact`, `subject`, `epistemic_source` |
+| `dead_end` | `impact`, `subject`, `epistemic_source` |
+| `mistake` | `prevention`, `epistemic_source` |
+| `assumption` | `confidence`, `status`, `epistemic_source` |
+| `decision` | `outcome`, `regret_score`, `epistemic_source` |
+| `source` | `confidence`, `description` |
+| `goal` | `objective`, `status` |
+
+Non-whitelisted fields in the body are silently dropped (defensive against
+accidental schema mutation). 422 if no whitelisted fields remain after filtering.
+
+### DELETE /api/v1/artifacts/{id}
+
+Three-layer cleanup: sqlite row + dangling edges in `artifact_edges` + Qdrant
+vector point + git note ref at `refs/notes/empirica/{type}/{id}`. The CLI's
+`empirica delete-artifacts` was extended in the same v0.5 work to do the same
+three-layer cleanup, closing a documented gap.
+
+**Response:** 200 with `{ok, type, id, action: "deleted", edges_removed, git_notes_cleaned}`.
+
+#### Example
+
+```bash
+# Get one finding by id
+curl http://localhost:8000/api/v1/artifacts/abc-123-...
+
+# Mark a goal as completed
+curl -X PATCH http://localhost:8000/api/v1/artifacts/goal-id-here/resolve \
+  -H "Content-Type: application/json" \
+  -d '{"resolved_by": "shipped"}'
+
+# Update a finding's impact
+curl -X PATCH http://localhost:8000/api/v1/artifacts/finding-id-here \
+  -H "Content-Type: application/json" \
+  -d '{"impact": 0.9}'
+
+# Delete a stale unknown
+curl -X DELETE http://localhost:8000/api/v1/artifacts/unknown-id-here
+```
+
+---
+
+## Graph Endpoint (v0.5+)
+
+### GET /api/v1/artifacts/graph
+
+Bidirectional BFS over the `artifact_edges` table. Returns a connected component
+as nodes + edges.
+
+**Query params:**
+
+| Param | Default | Description |
+|-------|---------|-------------|
+| `seed_id` | none | Start from this artifact and expand outward |
+| `session_id` | none | Seed from all artifacts created in this session |
+| `depth` | `2` | BFS depth (0–10) |
+| `types` | all | Comma-separated type filter, e.g. `finding,decision` |
+| `max_nodes` | `500` | Cap (1–2000) |
+
+If neither `seed_id` nor `session_id` is given, returns a project-wide graph
+capped at `max_nodes`.
+
+**Response:**
+
+```json
+{
+  "nodes": [{"id": "<uuid>", "type": "finding", "title": "..."}, ...],
+  "edges": [{"from": "<id>", "to": "<id>", "relation": "evidence"}, ...],
+  "project_id": "<uuid>"
+}
+```
+
+Edges are filtered to only those whose endpoints survive the type filter.
+
+#### Example
+
+```bash
+# Project-wide graph (capped 500)
+curl 'http://localhost:8000/api/v1/artifacts/graph'
+
+# 2-hop neighborhood from a finding, only findings and decisions
+curl 'http://localhost:8000/api/v1/artifacts/graph?seed_id=abc-123&depth=2&types=finding,decision'
+
+# Whole session graph
+curl 'http://localhost:8000/api/v1/artifacts/graph?session_id=session-uuid-here'
+```
+
+---
+
+## Batch Endpoints (v0.5+)
+
+CLI-parity endpoints for batch artifact operations. Useful when emitting a graph
+chunk from the extension or from a content script.
+
+### POST /api/v1/artifacts/log
+
+Batch log nodes + edges in one call. Body matches `empirica log-artifacts` CLI
+shape: `{nodes: [...], edges: [...]}`.
+
+**Response:** `{ok, created: {ref: id}, nodes_created, edges_wired, errors: []}`
+
+### POST /api/v1/artifacts/resolve
+
+Batch resolve. Body: `{ids: [...], resolved_by?: "..."}` or `{items: [{id, type}, ...]}`.
+Per-type semantics match the single resolve endpoint. Types without resolve
+semantics are counted as `skipped` rather than errors.
+
+**Response:** `{ok, resolved, skipped, not_found, results: [...]}`
+
+### POST /api/v1/artifacts/delete
+
+Batch delete. Body: `{ids: [...]}` or `{items: [{id, type}, ...]}`.
+Each delete fans out to the three-layer cleanup (sqlite + Qdrant + git notes).
+
+**Response:** `{ok, deleted, not_found, failed, results: [...]}`
+
+#### Example
+
+```bash
+# Batch resolve unknowns
+curl -X POST http://localhost:8000/api/v1/artifacts/resolve \
+  -H "Content-Type: application/json" \
+  -d '{"ids": ["uuid-1", "uuid-2", "uuid-3"], "resolved_by": "investigation"}'
+```
+
+---
+
 ## Models
 
 ### HealthResponse
@@ -247,6 +501,11 @@ Response from the health check endpoint.
 | `ollama` | `bool` | No | `false` | Whether Ollama is reachable at `localhost:11434` |
 | `claude_mem` | `bool` | No | `false` | Whether Claude memory integration is available |
 | `qdrant` | `bool` | No | `false` | Whether Qdrant is reachable at `localhost:6333` |
+| `project_id` | `str` or `null` | No | `null` | (v0.5+) Canonical project UUID resolved from `projects.id`. `null` if no `projects` row matches and yaml had no UUID-shape value (true local-only project) |
+| `project_path` | `str` or `null` | No | `null` | (v0.5+) Absolute path to the project root the daemon is bound to |
+| `project_name` | `str` or `null` | No | `null` | (v0.5+) Display name (yaml `display_name` → yaml `name` → folder name) |
+| `project_slug` | `str` or `null` | No | `null` | (v0.5+) Wire identifier — slugified yaml `project_id` if non-UUID, otherwise slugified project name |
+| `repo_url` | `str` or `null` | No | `null` | (v0.5+) `git remote get-url origin` normalized to https form. `null` if no git remote |
 
 ---
 
@@ -336,10 +595,16 @@ a 500 response.
 
 ## CORS Configuration
 
-The daemon uses permissive CORS settings since security is enforced at the network layer:
+The daemon enforces security at the network layer (localhost-only by default)
+and uses regex-matched origin allowance:
 
 | Setting | Value |
 |---------|-------|
-| Allowed origins | `*` (all) |
-| Allowed methods | `GET`, `POST`, `OPTIONS` |
+| Allowed origin regex | `^(chrome-extension://.*\|http://localhost(:\d+)?\|http://127\.0\.0\.1(:\d+)?)$` |
+| Allowed methods | `GET`, `POST`, `PATCH`, `DELETE`, `OPTIONS` |
 | Allowed headers | `*` (all) |
+
+(v0.5+ change: previously `allow_origins=["chrome-extension://*", ...]` used
+literal-string match — Starlette's `allow_origins` does not glob-expand, so the
+intended matching never worked. Now uses `allow_origin_regex` so chrome-extension
+preflights actually pass.)

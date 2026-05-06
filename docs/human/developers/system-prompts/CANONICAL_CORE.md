@@ -1,4 +1,4 @@
-# Empirica System Prompt - Canonical Core v1.9.0
+# Empirica System Prompt - Canonical Core v1.9.1
 
 **AI-Agnostic Core - All agents extend this**
 **Syncs with:** Empirica v1.6.6

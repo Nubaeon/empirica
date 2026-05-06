@@ -2,7 +2,7 @@
 
 > **We Gave AI a Mirror. Now It Measures What It Believes.**
 
-[![Version](https://img.shields.io/badge/version-1.9.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.9.0)
+[![Version](https://img.shields.io/badge/version-1.9.1-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.9.1)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -100,13 +100,13 @@ empirica setup-claude-code
 
 ```bash
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.9.0-alpine
+docker pull nubaeon/empirica:1.9.1-alpine
 
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.9.0
+docker pull nubaeon/empirica:1.9.1
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.9.0 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.9.1 /bin/bash
 ```
 </details>
 
@@ -266,6 +266,57 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ---
 
+## What's New in 1.9.1
+
+**v0.5 LOCAL-ARTIFACTS daemon** — 16 new endpoints unlock the chrome extension's
+full Artifacts pane evolution. Empirica-only users (no Cortex account) can see
+their artifacts in the extension for the first time.
+
+- **`/api/v1/health` extension** — `project_id` (canonical UUID),
+  `project_path`, `project_name`, `project_slug`, `repo_url` so the extension
+  can match its dropdown's active project against the daemon's bound project
+  and populate the dropdown for users without Cortex.
+- **8 per-type list endpoints** — `/goals`, `/findings`, `/decisions`,
+  `/unknowns`, `/dead-ends`, `/mistakes`, `/assumptions`, `/sources`. Each row
+  carries `related_to[]` from the new `artifact_edges` table.
+- **4 single-artifact CRUD endpoints** — `GET /artifacts/{id}`,
+  `PATCH /artifacts/{id}/resolve`, `PATCH /artifacts/{id}` (whitelisted partial
+  update), `DELETE /artifacts/{id}` (three-layer cleanup: sqlite + edges +
+  Qdrant + git notes).
+- **Graph endpoint** `GET /artifacts/graph` — bidirectional BFS over
+  `artifact_edges` with `seed_id` / `session_id` / `types` / `depth` filters.
+- **3 batch endpoints** — `POST /artifacts/log`, `POST /artifacts/resolve`,
+  `POST /artifacts/delete`.
+
+**Bug fixes**
+
+- **`/api/v1/dead-ends` 500 on real-world DBs** — migration 042 adds the
+  missing `impact` column on `project_dead_ends` and `mistakes_made` (long-
+  lived DBs missed migrations 007/012 for these two tables).
+- **CORS preflight 400 from chrome-extension origins** — the daemon's
+  `allow_origins=["chrome-extension://*", ...]` literal globs never matched
+  real origins (Starlette doesn't glob-expand). Switched to
+  `allow_origin_regex` so chrome-extension preflights actually pass now.
+- **Project_id slug-vs-UUID resolution** — yaml's `project_id` is often a
+  slug (e.g. `"empirica"`) matching `projects.name`, not the canonical UUID
+  used in artifact tables. Daemon now does the slug→UUID lookup.
+- **`empirica delete-artifacts` git-notes gap** — CLI delete now also runs
+  `git update-ref -d` on `refs/notes/empirica/{type}/{id}`, matching the new
+  daemon `DELETE /artifacts/{id}` three-layer cleanup.
+
+**Database**
+
+- **Migration 041** — `artifact_edges` table (PRIMARY KEY on from_id+to_id+
+  relation, `(to_id, relation)` inverse-query index, `metadata` JSON for
+  forward-compat). Backfills existing edges from `data.edges` JSON. Fixes
+  silent edge-drop bug for assumptions and decisions.
+- **Migration 042** — `impact REAL DEFAULT 0.5` on `project_dead_ends` and
+  `mistakes_made`.
+
+96 new tests (37+15+15+14+15 across T1-T5), full suite **2194 passed**.
+See [SERVE_API.md](docs/reference/api/SERVE_API.md) for the full daemon API
+reference.
+
 ## What's New in 1.9.0
 
 **Goal-criterion bridge — quality gates that auto-evaluate**
@@ -275,91 +326,35 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
   routes to the right evaluator at POSTFLIGHT.
 - **`EvidenceMetricEvaluator`** — auto-evaluates any criterion whose
   metric matches an evidence bundle key (test pass-rate, ruff violations,
-  stylometry drift, etc.). No per-criterion glue code needed.
+  stylometry drift, etc.).
 - **Typed criterion parser** — `goals-create --success-criteria
   "quality_gate:test_pass_rate@>=:0.95"` parses to typed
-  `CriterionDeclaration` with method, metric, op, threshold.
-- **Goal repository extensions** — `list_active_criteria_for_session`,
-  `update_is_met`, `add_success_criterion` for the bridge.
+  `CriterionDeclaration`.
 
 **Stylometric drift collector — voice consistency for outreach work**
 
-- **12 prosodic markers** — contractions, first-person, function-word
-  ratio, MTLD, sentence-length stdev, avg word length, punctuation
-  distribution, question/exclamation/em-dash rates, sentence-initial
-  diversity, paragraph rhythm.
-- **Voice fingerprints** — `~/.empirica/voice/<name>.fingerprint.json`
-  with target/tolerance/n shape. Project-local override at
-  `.empirica/voice/`.
-- **Drift direction inference** — `formal_pull` / `informal_pull` /
-  `mixed` / `within_tolerance` / `no_signal`. Composite drift score
-  surfaces in PREFLIGHT/POSTFLIGHT evidence bundle.
+- 12 prosodic markers (contractions, MTLD, sentence-length stdev, etc.)
+- Voice fingerprints at `~/.empirica/voice/<name>.fingerprint.json`
+- Drift direction inference (formal_pull / informal_pull / mixed / within_tolerance)
 
-**Content-aware source provenance nudge**
+**Content-aware source provenance nudge** — fires at moment of artifact
+creation when text shows citation but no `--source`. Closes 0% adoption gap.
 
-- **Adoption gap closed** — prior generic nudges (CHECK, POSTFLIGHT,
-  system prompt) measured 0% `source-add` adoption. New nudge fires AT
-  the moment of artifact creation (`finding-log`, `decision-log`, etc.)
-  when the artifact text shows external citation but no `--source`.
-- **Three escape hatches** — `--source <url>`, `--epistemic-source
-  search` (acknowledges retrieval), or `EMPIRICA_SUPPRESS_SOURCE_NUDGE=1`
-  env var.
+**Bulk project-link CLI** — `projects-discover` / `projects-list` /
+`projects-bulk-register` (Cortex-dependent).
 
-**Bulk project-link CLI — Cortex registration at scale**
+**Live-scan semantic index** — `semantic_index.json` regenerates when source
+docs are newer than the cache.
 
-- **`empirica projects-discover`** — filesystem walk discovers
-  `.empirica/project.yaml` markers across a parent directory. Skips
-  into nested project roots without missing siblings.
-- **`empirica projects-list`** — lists discovered projects with metadata
-  (path, project_id, last activity).
-- **`empirica projects-bulk-register`** — registers all discovered
-  projects with Empirica Cortex via /v1/projects/register, with
-  /v1/admin/projects fallback on 404/405. Idempotent on 409. **Cortex-
-  dependent** — requires running Cortex instance.
+**Sentinel quote-aware shell parsing** — false-positive `>` in quoted code
+fixed (`_has_dangerous_redirects` now uses `_contains_outside_quotes`).
 
-**Live-scan semantic index — staleness invalidation**
+**Template version parameterization (Philipp #100)** — `CLAUDE.md` and
+`empirica-system-prompt-lean.md` use `{{ empirica_version }}` and
+`{{ generated_date }}` placeholders. Drift cannot recur.
 
-- **mtime-based cache** — `semantic_index.json` regenerates when source
-  docs are newer than the cache. Live consumers (`project_embed` at
-  session-end, `doc_planner` for noetic guidance) get fresh data without
-  manual `generate_semantic_index.py` runs.
-
-**Sentinel quote-aware shell parsing**
-
-- **False-positive `>` in quoted code** fixed — `_has_dangerous_redirects`
-  now uses `_contains_outside_quotes`, matching the existing pipe/chain
-  detection. Code containing `>` inside string literals no longer trips
-  the redirect guard.
-
-**Template version parameterization (Philipp #100)**
-
-- **System prompts no longer hardcode versions** — `CLAUDE.md` and
-  `empirica-system-prompt-lean.md` use `{{ empirica_version }}` and
-  `{{ generated_date }}` placeholders. Substituted at write-time by
-  `setup-claude-code` from the installed package version. Drift cannot
-  recur.
-
-**Documentation refresh**
-
-- **`UPGRADE_TO_1.9.md`** — replaces `UPGRADE_TO_1.7.md`. Covers
-  Sentinel reframe (1.8.0), domain registry, three-vector model, lean
-  core, plugin rename, EPP, listener subsystem, cockpit.
-- **`PROJECT_SWITCHING_FOR_AIS.md`** — full rewrite as authoritative
-  reference for cross-project work. Old guide retired.
-- **`TMUX_MULTI_PANE_GUIDE.md`** — added Cockpit section + cross-link
-  to `instance_isolation/README.md`.
-
-**Internal**
-
-- **`EvidenceItem.direction`** + has/get/direction helpers on
-  `EvidenceBundle` — uniform access for one-sided evaluators.
-- **9 compliance consistency regression tests** — property-test sweep
-  locks in single-source-of-truth invariant for the 11-check
-  compliance pipeline.
-- **40+ tests added** for criterion evaluators, post-test goal
-  integration, stylometry, criterion parser, provenance nudge,
-  semantic index, sentinel shell constructs, projects-discover,
-  template render.
+**Documentation refresh** — `UPGRADE_TO_1.9.md` (replaces 1.7), full rewrite
+of `PROJECT_SWITCHING_FOR_AIS.md`, `TMUX_MULTI_PANE_GUIDE.md` cockpit section.
 
 ## What's New in 1.8.20
 
@@ -503,6 +498,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.9.0
+**Version:** 1.9.1
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*

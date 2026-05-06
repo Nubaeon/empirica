@@ -7,6 +7,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — v0.5 LOCAL-ARTIFACTS daemon (T1-T5)
+
+The `empirica serve` daemon gains 16 new endpoints for local artifact access,
+unblocking the Empirica chrome extension's full Artifacts pane evolution.
+Empirica-only users (no Cortex account) can now see their artifacts in the
+extension for the first time. Hybrid users get faster active-project queries
+than Cortex roundtrips. Cortex-only users are unaffected.
+
+- **`/api/v1/health` extension** — adds `project_id` (canonical UUID),
+  `project_path`, `project_name`, `project_slug`, `repo_url` so the extension
+  can match dropdown's active project against the daemon's bound project and
+  populate the dropdown for users without Cortex.
+- **8 per-type list endpoints** — `/goals`, `/findings`, `/decisions`,
+  `/unknowns`, `/dead-ends`, `/mistakes`, `/assumptions`, `/sources`. Each row
+  carries `related_to[]` from the new `artifact_edges` table.
+  Type-specific filters (`?status=`, `?confidence_min=`).
+- **4 single-artifact CRUD endpoints** — `GET /artifacts/{id}` (polymorphic
+  type resolution + edge neighborhood), `PATCH /artifacts/{id}/resolve`
+  (per-type semantics), `PATCH /artifacts/{id}` (whitelisted partial update),
+  `DELETE /artifacts/{id}` (three-layer cleanup: sqlite + edges + Qdrant +
+  git notes).
+- **Graph endpoint** `GET /artifacts/graph` — bidirectional BFS over
+  `artifact_edges` with `seed_id` / `session_id` / `types` / `depth` /
+  `max_nodes` filters.
+- **3 batch endpoints** — `POST /artifacts/log` (proxies `log_artifacts_graph()`
+  pure function), `POST /artifacts/resolve`, `POST /artifacts/delete`.
+- **Migration 041** — new `artifact_edges` table with PRIMARY KEY (from_id,
+  to_id, relation), `(to_id, relation)` inverse-query index, `metadata` JSON
+  column for forward-compat. Backfills existing edges from `data.edges` JSON
+  in artifact tables. Fixes silent edge-drop bug where assumptions and
+  decisions (which had no `data` column) lost edges entirely.
+- **Migration 042** — adds `impact REAL DEFAULT 0.5` to `project_dead_ends`
+  and `mistakes_made` on long-lived DBs. Migrations 007/012 only covered
+  findings/unknowns; the schema CREATE TABLE has it for fresh DBs but no
+  ALTER existed for upgrades. Without this migration, `GET /api/v1/dead-ends`
+  500s on real-world DBs.
+- **Daemon project resolver** at `empirica/api/daemon_project.py`. Two-layer
+  resolution: `InstanceResolver.project_path()` (canonical chain) → CWD walk-up
+  for `.empirica/project.yaml` (daemon-specific tail for "no CC instance"
+  case canonical fails-fast on by design). Slug→UUID lookup via the `projects`
+  table when yaml's `project_id` is a slug. Process-lifetime cache.
+
+### Fixed
+
+- **`/api/v1/dead-ends` 500 on real-world DBs** — root-caused to missing
+  `impact` column on long-lived `project_dead_ends`/`mistakes_made` tables.
+  Migration 042 closes the gap.
+- **CORS preflight 400 from chrome-extension origins** — the daemon's CORS
+  config previously used `allow_origins=["chrome-extension://*", ...]` with
+  literal globs, which Starlette does not expand. Real chrome-extension
+  origins were silently rejected. Switched to `allow_origin_regex`.
+- **Project_id slug-vs-UUID mismatch** — `.empirica/project.yaml.project_id`
+  is often a slug (e.g. `"empirica"`) matching `projects.name`, not the
+  canonical UUID used in artifact tables. Daemon now does the slug→UUID
+  lookup so `/health.project_id` and per-project queries use the right
+  identifier.
+- **`empirica delete-artifacts` git-notes gap** — CLI delete was leaving
+  stale git notes at `refs/notes/empirica/{type}/{id}` after sqlite + Qdrant
+  cleanup. The CLI now also runs `git update-ref -d` to clean the third
+  storage layer, matching the new daemon `DELETE /artifacts/{id}` behavior.
+- **Silent edge drop on assumptions/decisions** — pre-migration 041, edges
+  pointing from these types had no storage location (their tables had no
+  `data` JSON column) and `_store_edge` no-op'd them. Now persisted in the
+  normalized `artifact_edges` table.
+
+### Internal
+
+- `log_artifacts_graph()` factored as a pure function in `graph_commands.py`
+  so the daemon's `POST /artifacts/log` calls it directly without subprocess
+  overhead. CLI handler is now a thin wrapper.
+- `_ReadOnlyDB` wrapper (sqlite3 direct, no `SessionDatabase` init chain) for
+  daemon read endpoints. Avoids dragging in the migration runner / repository
+  init for endpoints that are pure read paths.
+- 96 new tests across 5 transactions: 37 (T1) + 15 (T2) + 15 (T3) + 14 (T4) +
+  15 (T5). Includes E2E subprocess + httpx tests that exercise real uvicorn
+  binding and CORS preflight (caught the CORS bug).
+- Wire-shape ping committed at `empirica-extension/docs/v0.5-LOCAL-ARTIFACTS.md`
+  (commit cd5fa2e in that repo) flagging the three bug fixes for the extension
+  consumer migration.
+
+## [1.9.0] — 2026-05-06
+
 ### Added — Goal-driven post-tests bridge
 
 Goals can now declare measurable success criteria that auto-evaluate at
