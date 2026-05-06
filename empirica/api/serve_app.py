@@ -106,9 +106,13 @@ def create_serve_app() -> FastAPI:
             "http://localhost:*",
             "http://127.0.0.1:*",
         ],
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
+
+    # v0.5+ artifact endpoints (per-type lists, per spec docs/v0.5-LOCAL-ARTIFACTS.md)
+    from empirica.api.routes.artifacts import router as artifacts_router
+    app.include_router(artifacts_router)
 
     @app.get("/api/v1/health", response_model=HealthResponse)
     async def health():  # pyright: ignore[reportUnusedFunction]
