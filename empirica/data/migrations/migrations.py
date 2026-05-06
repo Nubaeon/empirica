@@ -1266,6 +1266,7 @@ ALL_MIGRATIONS: list[tuple[str, str, Callable]] = [
     ("039_artifact_visibility", "Add visibility tier (public/shared/local, default shared) to artifact tables for Phase 0 visibility primitive (PROPOSAL_VISIBILITY_TIERS.md)", lambda cursor: migration_039_artifact_visibility(cursor)),
     ("040_epistemic_source", "Add epistemic_source field (intuition/search/mixed/NULL) to artifact tables for source-aware Sentinel calibration substrate (PROMPT_FOR_EMPIRICA_CLAUDE_source_aware_sentinel.md)", lambda cursor: migration_040_epistemic_source(cursor)),
     ("041_artifact_edges", "Add normalized artifact_edges table + backfill from data.edges JSON (v0.5 LOCAL-ARTIFACTS daemon — fixes silent edge-drop on assumptions/decisions, enables cheap inverse queries)", lambda cursor: migration_041_artifact_edges(cursor)),
+    ("042_impact_on_dead_ends_and_mistakes", "Add impact column to project_dead_ends and mistakes_made (long-lived DBs missed migrations 007/012 for these two tables — daemon /dead-ends endpoint 500s without this)", lambda cursor: migration_042_impact_on_dead_ends_and_mistakes(cursor)),
 ]
 
 
@@ -1576,4 +1577,26 @@ def migration_041_artifact_edges(cursor: sqlite3.Cursor):
 
     logger.info(
         f"✅ Migration 041 complete: artifact_edges table created, {backfilled_total} edges backfilled"
+    )
+
+
+def migration_042_impact_on_dead_ends_and_mistakes(cursor: sqlite3.Cursor):
+    """Add impact column to project_dead_ends and mistakes_made on long-lived DBs.
+
+    Migrations 007 and 012 added impact to project_findings and project_unknowns
+    but never extended it to project_dead_ends or mistakes_made. Fresh DBs
+    created from the schema file's CREATE TABLE statements already have the
+    column (the schema file has it inline), but long-lived DBs that were
+    created before that schema update never got the ALTER.
+
+    The daemon's GET /api/v1/dead-ends endpoint (v0.5 LOCAL-ARTIFACTS T2)
+    queries `impact` directly — without this migration, it 500s against
+    real long-lived DBs (extension Claude caught this in their integration test).
+
+    Idempotent via add_column_if_missing — safe to re-run.
+    """
+    add_column_if_missing(cursor, "project_dead_ends", "impact", "REAL", "0.5")
+    add_column_if_missing(cursor, "mistakes_made", "impact", "REAL", "0.5")
+    logger.info(
+        "✅ Migration 042 complete: impact column added to project_dead_ends and mistakes_made"
     )

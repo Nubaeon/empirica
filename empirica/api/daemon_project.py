@@ -145,11 +145,21 @@ def resolve_daemon_project() -> dict | None:
     if project_path is None:
         return None
 
-    # Read project.yaml for project_id and any display_name
+    # Read project.yaml — provides display name + slug-like project_id field.
+    # In long-lived projects, yaml's `project_id` is typically a human-readable
+    # slug (e.g. "empirica") that matches `projects.name`, NOT the canonical
+    # `projects.id` UUID used as the foreign key in artifact tables.
     project_yaml = _read_project_yaml(project_path)
-    project_id = project_yaml.get("project_id")  # None if local-only project
     project_name = project_yaml.get("display_name") or project_yaml.get("name") or project_path.name
-    project_slug = _slugify_project_name(project_name)
+    yaml_id = project_yaml.get("project_id")  # slug for old projects, UUID for new
+
+    # Canonical UUID resolution. Two-step lookup:
+    #   1. If yaml_id looks UUID-shaped → trust it.
+    #   2. Otherwise treat yaml_id as a slug and look up projects.id WHERE name=?
+    project_uuid = _resolve_project_uuid(project_path, yaml_id)
+
+    project_id = project_uuid or yaml_id  # UUID preferred; fall back to whatever yaml had
+    project_slug = _slugify_project_name(yaml_id) if (yaml_id and not _looks_uuid(yaml_id)) else _slugify_project_name(project_name)
     repo_url = _read_git_remote(project_path)
 
     return {
@@ -159,6 +169,54 @@ def resolve_daemon_project() -> dict | None:
         "project_slug": project_slug,
         "repo_url": repo_url,
     }
+
+
+def _looks_uuid(value: str | None) -> bool:
+    """Cheap UUID-shape check (8-4-4-4-12 hex). Doesn't validate, just shape."""
+    if not value or not isinstance(value, str):
+        return False
+    parts = value.split("-")
+    return (
+        len(parts) == 5
+        and len(parts[0]) == 8 and len(parts[1]) == 4 and len(parts[2]) == 4
+        and len(parts[3]) == 4 and len(parts[4]) == 12
+    )
+
+
+def _resolve_project_uuid(project_path: Path, yaml_id: str | None) -> str | None:
+    """Get the canonical UUID for the project.
+
+    If yaml_id is UUID-shaped, return it as-is. Otherwise treat it as a slug
+    and look up `projects.id WHERE name = ?` in the local sqlite. Falls back
+    to None if no match — caller treats that as a local-only project.
+    """
+    if yaml_id and _looks_uuid(yaml_id):
+        return yaml_id
+
+    db_path = project_path / ".empirica" / "sessions" / "sessions.db"
+    if not db_path.exists():
+        return None
+
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+        # Try by name (yaml_id as slug)
+        if yaml_id:
+            cursor.execute("SELECT id FROM projects WHERE name = ? LIMIT 1", (yaml_id,))
+            row = cursor.fetchone()
+            if row:
+                conn.close()
+                return row[0]
+        # Try by folder name as a last resort
+        folder_name = project_path.name
+        cursor.execute("SELECT id FROM projects WHERE name = ? LIMIT 1", (folder_name,))
+        row = cursor.fetchone()
+        conn.close()
+        return row[0] if row else None
+    except Exception as e:
+        logger.debug(f"_resolve_project_uuid: lookup failed: {e}")
+        return None
 
 
 # Process-lifetime cache. The daemon holds one project for its lifetime;

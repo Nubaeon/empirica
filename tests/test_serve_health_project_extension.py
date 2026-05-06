@@ -41,7 +41,10 @@ def reset_daemon_cache():
 
 
 def test_health_includes_project_fields_when_project_resolves(tmp_path, monkeypatch, reset_daemon_cache):
-    proj = _make_project(tmp_path, "extension-test", project_id="cortex-uuid-xyz")
+    """When yaml has a real UUID-shaped project_id, daemon trusts it directly,
+    and slug derives from the project name (folder name)."""
+    real_uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    proj = _make_project(tmp_path, "extension-test", project_id=real_uuid)
 
     with patch("empirica.utils.session_resolver.InstanceResolver.project_path", return_value=str(proj)):
         monkeypatch.chdir(proj)
@@ -52,10 +55,34 @@ def test_health_includes_project_fields_when_project_resolves(tmp_path, monkeypa
     assert response.status_code == 200
     data = response.json()
     assert data["ok"] is True
-    assert data["project_id"] == "cortex-uuid-xyz"
+    assert data["project_id"] == real_uuid
     assert data["project_name"] == "extension-test"
     assert data["project_slug"] == "extension-test"
     assert data["project_path"] == str(proj)
+
+
+def test_health_with_slug_style_yaml_project_id(tmp_path, monkeypatch, reset_daemon_cache):
+    """When yaml's project_id is a slug (not UUID-shaped) and no projects table
+    matches the slug, project_id passes through and slug derives from yaml_id.
+
+    Mirrors the live empirica project's setup: yaml says project_id: empirica,
+    sessions/findings carry a UUID, projects table maps "empirica" → UUID.
+    """
+    proj = _make_project(tmp_path, "my-project-folder", project_id="my-slug")
+    # No sessions.db / projects table → no UUID lookup possible → fall back to yaml's slug
+
+    with patch("empirica.utils.session_resolver.InstanceResolver.project_path", return_value=str(proj)):
+        monkeypatch.chdir(proj)
+        monkeypatch.setenv("PWD", str(proj))
+        client = TestClient(create_serve_app())
+        response = client.get("/api/v1/health")
+
+    data = response.json()
+    # yaml_id "my-slug" is NOT UUID-shaped, no DB lookup match → project_id falls through to yaml value
+    assert data["project_id"] == "my-slug"
+    # Slug derives from yaml_id when present and non-UUID
+    assert data["project_slug"] == "my-slug"
+    assert data["project_name"] == "my-project-folder"
 
 
 def test_health_returns_null_project_fields_outside_any_project(tmp_path, monkeypatch, reset_daemon_cache):

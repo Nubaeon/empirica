@@ -98,14 +98,14 @@ def create_serve_app() -> FastAPI:
         version="0.1.0",
     )
 
-    # CORS: Allow chrome-extension:// and localhost origins
+    # CORS: Allow chrome-extension:// and localhost origins.
+    # NOTE: Starlette's `allow_origins` does exact-string match, NOT glob expansion.
+    # The previous config (with "chrome-extension://*" as a literal) silently
+    # rejected every real chrome-extension origin. Using `allow_origin_regex`
+    # makes the intent work — confirmed by the E2E CORS preflight test.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "chrome-extension://*",
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-        ],
+        allow_origin_regex=r"^(chrome-extension://.*|http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?)$",
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
