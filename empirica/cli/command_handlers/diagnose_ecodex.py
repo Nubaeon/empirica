@@ -550,6 +550,80 @@ def check_ecodex_cargo_check() -> CheckResult:
 
 
 # ---------------------------------------------------------------------------
+# Instance isolation key (ecodex T81 Tx-Z)
+# ---------------------------------------------------------------------------
+
+
+def check_ecodex_instance_isolation_key() -> CheckResult:
+    """Verify the ecodex Rust source propagates EMPIRICA_INSTANCE_ID.
+
+    Empirica's get_instance_id() priority list reads EMPIRICA_INSTANCE_ID
+    first. ecodex's plugin (empirica_cli.rs) and TUI (chatwidget.rs) both
+    set it from codex's session_id (thread_id UUID) so the entire
+    empirica pipeline keys on codex's session — works identically across
+    tmux/non-tmux/ssh/container/headless. Tx-Z's regression detector.
+
+    This is a source-grep (like the statusline runtime check) — confirms
+    the propagation is wired, not that it's running. Combined with the
+    statusline-script-runnable + plugin-installed checks, that's enough
+    coverage for the integration. A live env-var probe would only cover
+    the doctor's OWN process, not ecodex's.
+    """
+    # Locate ecodex source
+    candidates = [
+        Path(os.environ.get("ECODEX_REPO_ROOT", "")) if os.environ.get("ECODEX_REPO_ROOT") else None,
+        Path.home() / "empirical-ai" / "ecodex",
+    ]
+    repo_root: Path | None = None
+    for c in candidates:
+        if c is None:
+            continue
+        if (c / "codex-rs" / "Cargo.toml").is_file():
+            repo_root = c
+            break
+    if repo_root is None:
+        return CheckResult(
+            name="ecodex instance isolation key propagated",
+            status=SKIP,
+            detail="ecodex source not found locally — check skipped",
+            hint="Set ECODEX_REPO_ROOT to your ecodex checkout",
+        )
+    plugin_cli = repo_root / "codex-rs" / "codex-empirica-plugin" / "src" / "empirica_cli.rs"
+    tui_chat = repo_root / "codex-rs" / "tui" / "src" / "chatwidget.rs"
+    missing: list[str] = []
+    if plugin_cli.is_file():
+        text = plugin_cli.read_text()
+        if 'EMPIRICA_INSTANCE_ID' not in text:
+            missing.append("plugin/empirica_cli.rs (hook subprocesses won't get the key)")
+    else:
+        missing.append("plugin/empirica_cli.rs (file missing)")
+    if tui_chat.is_file():
+        text = tui_chat.read_text()
+        if 'EMPIRICA_INSTANCE_ID' not in text:
+            missing.append("tui/chatwidget.rs (statusline subprocess won't get the key)")
+    else:
+        missing.append("tui/chatwidget.rs (file missing)")
+    if missing:
+        return CheckResult(
+            name="ecodex instance isolation key propagated",
+            status=FAIL,
+            detail=f"EMPIRICA_INSTANCE_ID propagation missing in: {', '.join(missing)}",
+            hint=(
+                "Tx-Z fix: plugin's empirica_cli.rs run_hook_script() must "
+                "extract session_id from input JSON and set "
+                "EMPIRICA_INSTANCE_ID on subprocess env; TUI's chatwidget.rs "
+                "must `unsafe { std::env::set_var('EMPIRICA_INSTANCE_ID', "
+                "session.thread_id.to_string()) }` at session bootstrap"
+            ),
+        )
+    return CheckResult(
+        name="ecodex instance isolation key propagated",
+        status=PASS,
+        detail="EMPIRICA_INSTANCE_ID propagated from plugin + TUI",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Top-level orchestrator
 # ---------------------------------------------------------------------------
 
@@ -571,6 +645,9 @@ def run_all_checks_ecodex(*, fast: bool = False) -> list[CheckResult]:
     # Statusline (the path most likely to break invisibly)
     results.append(check_ecodex_statusline_runtime_stdin())
     results.append(check_ecodex_statusline_script_runs())
+    # Instance isolation — the layer that makes multi-instance work in any
+    # terminal context (Tx-Z propagates codex thread_id as EMPIRICA_INSTANCE_ID)
+    results.append(check_ecodex_instance_isolation_key())
     # Translator (Anthropic-protocol providers depend on this)
     results.append(check_ecodex_translator_listening())
     results.append(check_ecodex_translator_healthz())
