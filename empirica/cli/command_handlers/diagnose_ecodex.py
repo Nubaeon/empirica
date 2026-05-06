@@ -167,16 +167,21 @@ def check_ecodex_statusline_runtime_stdin() -> CheckResult:
             ),
         )
     text = runtime_file.read_text()
-    if "Stdio::null()" in text:
+    # Only flag stdin's Stdio::null — stderr being nulled is correct
+    # (we don't want script noise polluting the TUI footer), and the doc
+    # comment explaining the fix mentions the old `Stdio::null()` literally.
+    # Look specifically for `.stdin(Stdio::null())`.
+    if ".stdin(Stdio::null())" in text:
         return CheckResult(
             name="ecodex statusline runtime pipes session_id",
             status=FAIL,
             detail=(
-                f"plugin_statusline_runtime.rs still uses Stdio::null() — "
-                f"script will receive no input and render [ecodex:inactive]"
+                "plugin_statusline_runtime.rs still calls .stdin(Stdio::null()) "
+                "for the script subprocess — script will receive no input and "
+                "render [ecodex:inactive]"
             ),
             hint=(
-                "Switch to Stdio::piped() and write "
+                "Switch to .stdin(Stdio::piped()) and write "
                 "{\"session_id\":\"...\",\"cwd\":\"...\"} to child stdin. "
                 "Resolve session_id from ~/.empirica/instance_projects/tmux_<pane>.json"
             ),
