@@ -167,6 +167,25 @@ Exit codes:
         default='human',
         help='Output format (default: human)'
     )
+    diagnose_parser.add_argument(
+        '--frontend',
+        choices=['claude-code', 'ecodex'],
+        default='claude-code',
+        help=(
+            'Which frontend to diagnose (default: claude-code). '
+            "'ecodex' runs the ecodex-specific check set: codex-empirica-plugin "
+            'install, statusline runtime stdin wiring, codex-empirica-translator '
+            'on 127.0.0.1:18080, curated provider env_keys, Rust cargo fmt+check.'
+        ),
+    )
+    diagnose_parser.add_argument(
+        '--fast',
+        action='store_true',
+        help=(
+            'Skip slow checks (cargo check). Useful for the /diagnose skill\'s '
+            'interactive walk-through; CI can leave this off.'
+        ),
+    )
 
     # Doctor command - Desktop + general install health (sibling of diagnose)
     doctor_parser = subparsers.add_parser(

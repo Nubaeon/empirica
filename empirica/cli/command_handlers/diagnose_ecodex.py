@@ -1,0 +1,579 @@
+"""Empirica Diagnose — ecodex frontend mode.
+
+Sibling to ``diagnose.py`` (which targets Claude Code). This module exposes
+the ecodex-specific checks: codex-empirica-plugin install state, statusline
+runtime stdin wiring, translator binary + ``/healthz``, curated model
+provider env keys, Rust compliance services (cargo fmt/clippy/check).
+
+Reuses the ``CheckResult`` dataclass and status constants from
+``diagnose.py`` so output formatting is identical and JSON consumers can
+treat both frontends uniformly.
+
+Wired into ``handle_diagnose_command`` via ``--frontend ecodex``.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import socket
+import subprocess
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+from empirica.cli.command_handlers.diagnose import (
+    FAIL,
+    PASS,
+    SKIP,
+    WARN,
+    CheckResult,
+    check_empirica_cli_on_path,
+    check_python_version,
+)
+
+
+_ECODEX_PLUGIN_KEY = "empirica@nubaeon"
+
+
+# ---------------------------------------------------------------------------
+# Plugin install — codex-empirica-plugin
+# ---------------------------------------------------------------------------
+
+
+def _ecodex_plugin_cache_dir() -> Path | None:
+    """Resolve the bundled-plugin cache dir.
+
+    ecodex's installer stages the plugin under
+    ``~/.codex/plugins/cache/nubaeon/empirica/<version>/``. Return the
+    highest-version dir if any, else None.
+    """
+    base = Path.home() / ".codex" / "plugins" / "cache" / "nubaeon" / "empirica"
+    if not base.is_dir():
+        return None
+    versioned = sorted((p for p in base.iterdir() if p.is_dir()), key=lambda p: p.name)
+    return versioned[-1] if versioned else None
+
+
+def check_ecodex_plugin_installed() -> CheckResult:
+    """Verify the codex-empirica-plugin is installed in ~/.codex/plugins/cache."""
+    cache_dir = _ecodex_plugin_cache_dir()
+    if cache_dir is None:
+        return CheckResult(
+            name="ecodex plugin installed",
+            status=FAIL,
+            detail="No `~/.codex/plugins/cache/nubaeon/empirica/` directory",
+            hint="Run `./ecodex/scripts/install.sh` from the ecodex repo",
+        )
+    # Codex plugin manifests live at <plugin>/.codex-plugin/plugin.json
+    manifest = cache_dir / ".codex-plugin" / "plugin.json"
+    if not manifest.is_file():
+        return CheckResult(
+            name="ecodex plugin installed",
+            status=FAIL,
+            detail=f"plugin.json missing at {manifest}",
+            hint="Reinstall: `./ecodex/scripts/install.sh`",
+            data={"cache_dir": str(cache_dir)},
+        )
+    try:
+        manifest_data = json.loads(manifest.read_text())
+    except json.JSONDecodeError as e:
+        return CheckResult(
+            name="ecodex plugin installed",
+            status=FAIL,
+            detail=f"plugin.json invalid JSON: {e}",
+            hint="Reinstall: `./ecodex/scripts/install.sh`",
+            data={"cache_dir": str(cache_dir)},
+        )
+    return CheckResult(
+        name="ecodex plugin installed",
+        status=PASS,
+        detail=f"{cache_dir.name} at {cache_dir}",
+        data={
+            "cache_dir": str(cache_dir),
+            "version": cache_dir.name,
+            "plugin_key": manifest_data.get("name", _ECODEX_PLUGIN_KEY),
+        },
+    )
+
+
+def check_ecodex_plugin_enabled_in_config() -> CheckResult:
+    """Verify ~/.codex/config.toml has `[plugins."empirica@nubaeon"]` enabled."""
+    config_path = Path.home() / ".codex" / "config.toml"
+    if not config_path.is_file():
+        return CheckResult(
+            name="ecodex plugin enabled in config",
+            status=FAIL,
+            detail=f"{config_path} missing",
+            hint="Run `./ecodex/scripts/install.sh` (will install default config)",
+        )
+    text = config_path.read_text()
+    if f'[plugins."{_ECODEX_PLUGIN_KEY}"]' not in text:
+        return CheckResult(
+            name="ecodex plugin enabled in config",
+            status=FAIL,
+            detail=f"No `[plugins.\"{_ECODEX_PLUGIN_KEY}\"]` section in config",
+            hint=f'Add to ~/.codex/config.toml:\n\n[plugins."{_ECODEX_PLUGIN_KEY}"]\nenabled = true',
+        )
+    # Coarse enabled check — toml parsing avoided to keep this stdlib-only
+    return CheckResult(
+        name="ecodex plugin enabled in config",
+        status=PASS,
+        detail=f"`[plugins.\"{_ECODEX_PLUGIN_KEY}\"]` declared",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Statusline — runtime stdin wiring
+# ---------------------------------------------------------------------------
+
+
+def check_ecodex_statusline_runtime_stdin() -> CheckResult:
+    """Verify ecodex's plugin_statusline_runtime pipes session_id to the script.
+
+    Known regression (T81 Tx-W diagnosis): ecodex's
+    ``codex-rs/tui/src/plugin_statusline_runtime.rs`` invoked the script with
+    ``Stdio::null()``, so the script always saw an empty input and rendered
+    ``[ecodex:inactive]``. The fix is to pipe ``{"session_id": "..."}`` to
+    the script's stdin (resolved from
+    ``~/.empirica/instance_projects/tmux_<pane>.json`` or by cwd match).
+
+    This check inspects the ecodex source directly when available and looks
+    for ``Stdio::null()`` near the statusline-script invocation.
+    """
+    # Locate ecodex source — heuristic: $ECODEX_REPO_ROOT or common dev dirs.
+    candidates = [
+        Path(os.environ.get("ECODEX_REPO_ROOT", "")) if os.environ.get("ECODEX_REPO_ROOT") else None,
+        Path.home() / "empirical-ai" / "ecodex",
+        Path("/workspace/ecodex"),
+    ]
+    runtime_file: Path | None = None
+    for c in candidates:
+        if c is None:
+            continue
+        candidate = c / "codex-rs" / "tui" / "src" / "plugin_statusline_runtime.rs"
+        if candidate.is_file():
+            runtime_file = candidate
+            break
+    if runtime_file is None:
+        return CheckResult(
+            name="ecodex statusline runtime pipes session_id",
+            status=SKIP,
+            detail="ecodex source not found locally — check skipped",
+            hint=(
+                "Set ECODEX_REPO_ROOT to your ecodex checkout, or rerun this "
+                "check from inside the ecodex repo"
+            ),
+        )
+    text = runtime_file.read_text()
+    if "Stdio::null()" in text:
+        return CheckResult(
+            name="ecodex statusline runtime pipes session_id",
+            status=FAIL,
+            detail=(
+                f"plugin_statusline_runtime.rs still uses Stdio::null() — "
+                f"script will receive no input and render [ecodex:inactive]"
+            ),
+            hint=(
+                "Switch to Stdio::piped() and write "
+                "{\"session_id\":\"...\",\"cwd\":\"...\"} to child stdin. "
+                "Resolve session_id from ~/.empirica/instance_projects/tmux_<pane>.json"
+            ),
+            data={"file": str(runtime_file)},
+        )
+    return CheckResult(
+        name="ecodex statusline runtime pipes session_id",
+        status=PASS,
+        detail="No Stdio::null() in plugin_statusline_runtime.rs",
+        data={"file": str(runtime_file)},
+    )
+
+
+def check_ecodex_statusline_script_runs() -> CheckResult:
+    """Verify the bundled statusline script is executable + returns non-empty."""
+    cache_dir = _ecodex_plugin_cache_dir()
+    if cache_dir is None:
+        return CheckResult(
+            name="ecodex statusline script runnable",
+            status=SKIP,
+            detail="Plugin not installed — skipped",
+            hint="See `ecodex plugin installed` check",
+        )
+    script = cache_dir / "hooks_scripts" / "scripts" / "statusline_empirica.py"
+    if not script.is_file():
+        return CheckResult(
+            name="ecodex statusline script runnable",
+            status=FAIL,
+            detail=f"statusline_empirica.py missing at {script}",
+            hint="Reinstall plugin: `./ecodex/scripts/install.sh`",
+        )
+    try:
+        result = subprocess.run(
+            [str(script)],
+            input="",
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return CheckResult(
+            name="ecodex statusline script runnable",
+            status=FAIL,
+            detail=f"Script invocation failed: {e}",
+            hint="Check the script is executable: `chmod +x` the file",
+            data={"script": str(script)},
+        )
+    output = (result.stdout or "").strip()
+    if not output:
+        return CheckResult(
+            name="ecodex statusline script runnable",
+            status=FAIL,
+            detail="Script ran but produced no output",
+            hint="Check Python error in stderr: " + (result.stderr or "(empty)"),
+            data={"script": str(script), "stderr": result.stderr},
+        )
+    return CheckResult(
+        name="ecodex statusline script runnable",
+        status=PASS,
+        detail=f"Script returned: {output[:80]}",
+        data={"script": str(script), "output_preview": output[:200]},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Translator (codex-empirica-translator)
+# ---------------------------------------------------------------------------
+
+
+def _translator_port_listening(port: int = 18080) -> bool:
+    """Cheap TCP probe — does anyone hold the translator port open?"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(0.5)
+    try:
+        return sock.connect_ex(("127.0.0.1", port)) == 0
+    finally:
+        sock.close()
+
+
+def check_ecodex_translator_listening() -> CheckResult:
+    """Verify the codex-empirica-translator is listening on its expected port."""
+    if not _translator_port_listening(18080):
+        return CheckResult(
+            name="ecodex translator listening",
+            status=WARN,
+            detail="Nothing listening on 127.0.0.1:18080",
+            hint=(
+                "Start the translator if you want to use Anthropic-protocol "
+                "providers (Kimi, Anthropic). Example: "
+                "`~/.local/bin/start-kimi-translator.sh &`"
+            ),
+        )
+    return CheckResult(
+        name="ecodex translator listening",
+        status=PASS,
+        detail="127.0.0.1:18080 accepting connections",
+    )
+
+
+def check_ecodex_translator_healthz() -> CheckResult:
+    """Probe the translator's /healthz endpoint."""
+    if not _translator_port_listening(18080):
+        return CheckResult(
+            name="ecodex translator /healthz",
+            status=SKIP,
+            detail="Translator not listening — skipped",
+            hint="See `ecodex translator listening` check",
+        )
+    try:
+        with urllib.request.urlopen(
+            "http://127.0.0.1:18080/healthz", timeout=2
+        ) as resp:
+            status = resp.status
+    except (urllib.error.URLError, TimeoutError) as e:
+        return CheckResult(
+            name="ecodex translator /healthz",
+            status=WARN,
+            detail=f"Translator on port but /healthz failed: {e}",
+            hint=(
+                "The translator may be an older build without /healthz. "
+                "Rebuild with `cargo build -p codex-empirica-translator --release`"
+            ),
+        )
+    if status >= 400:
+        return CheckResult(
+            name="ecodex translator /healthz",
+            status=FAIL,
+            detail=f"/healthz returned status {status}",
+            hint="Restart the translator and re-test",
+        )
+    return CheckResult(
+        name="ecodex translator /healthz",
+        status=PASS,
+        detail=f"/healthz returned {status}",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Provider keys + DNS reachability
+# ---------------------------------------------------------------------------
+
+
+def _read_codex_env_keys() -> set[str]:
+    """Return the set of var names present in ~/.codex/.env (no values)."""
+    env_path = Path.home() / ".codex" / ".env"
+    if not env_path.is_file():
+        return set()
+    keys: set[str] = set()
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" in line:
+            keys.add(line.split("=", 1)[0].strip())
+    return keys
+
+
+def check_ecodex_provider_env_keys() -> CheckResult:
+    """Verify env vars referenced by config.toml's [model_providers.*] are present in ~/.codex/.env.
+
+    Read each [model_providers.<id>] block's ``env_key`` field and check
+    membership in the .env file. Doesn't read values — just presence.
+    """
+    config_path = Path.home() / ".codex" / "config.toml"
+    if not config_path.is_file():
+        return CheckResult(
+            name="ecodex provider env keys",
+            status=SKIP,
+            detail="~/.codex/config.toml missing",
+            hint="See `ecodex plugin enabled in config` check",
+        )
+    text = config_path.read_text()
+    # Lightweight parse: find env_key = "X" lines under a [model_providers.*] section.
+    referenced_keys: list[tuple[str, str]] = []  # (provider_id, env_var)
+    current_provider: str | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[model_providers."):
+            current_provider = stripped[len("[model_providers.") : -1]
+        elif stripped.startswith("[") and not stripped.startswith("[model_providers."):
+            current_provider = None
+        elif current_provider and (
+            stripped.startswith("env_key ")
+            or stripped.startswith("env_key=")
+            or stripped.startswith('env_key"')
+        ):
+            # env_key = "FOO_API_KEY". Match the bare field — NOT env_key_instructions.
+            if "=" in stripped:
+                value = stripped.split("=", 1)[1].strip().strip('"').strip("'")
+                if value:
+                    referenced_keys.append((current_provider, value))
+    if not referenced_keys:
+        return CheckResult(
+            name="ecodex provider env keys",
+            status=PASS,
+            detail="No providers reference env_keys (all use unauthenticated endpoints)",
+        )
+    present = _read_codex_env_keys()
+    env_overrides = {k for k, v in os.environ.items() if v}
+    missing: list[tuple[str, str]] = []
+    for provider, var in referenced_keys:
+        if var in present or var in env_overrides:
+            continue
+        missing.append((provider, var))
+    if not missing:
+        return CheckResult(
+            name="ecodex provider env keys",
+            status=PASS,
+            detail=f"All {len(referenced_keys)} provider env_keys present",
+            data={"providers": [p for p, _ in referenced_keys]},
+        )
+    detail_lines = [f"{p} → ${v}" for p, v in missing]
+    return CheckResult(
+        name="ecodex provider env keys",
+        status=WARN,
+        detail=f"{len(missing)} provider env_keys missing: " + ", ".join(detail_lines),
+        hint=(
+            "Add the missing keys to ~/.codex/.env (chmod 600). The "
+            "corresponding providers will fail at first request without "
+            "them, but other providers continue to work."
+        ),
+        data={"missing": [{"provider": p, "env_var": v} for p, v in missing]},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Rust compliance — cargo fmt / clippy / check
+# ---------------------------------------------------------------------------
+
+
+def _ecodex_rust_workspace() -> Path | None:
+    """Locate ecodex's codex-rs Cargo workspace if available."""
+    candidates = [
+        Path(os.environ.get("ECODEX_REPO_ROOT", "")) if os.environ.get("ECODEX_REPO_ROOT") else None,
+        Path.home() / "empirical-ai" / "ecodex",
+    ]
+    for c in candidates:
+        if c is None:
+            continue
+        ws = c / "codex-rs" / "Cargo.toml"
+        if ws.is_file():
+            return ws.parent
+    return None
+
+
+def check_ecodex_cargo_present() -> CheckResult:
+    """Verify cargo is on PATH for the Rust compliance checks."""
+    cargo = shutil.which("cargo")
+    if cargo is None:
+        return CheckResult(
+            name="cargo on PATH",
+            status=WARN,
+            detail="`cargo` not found — Rust compliance checks unavailable",
+            hint="Install Rust via https://rustup.rs",
+        )
+    return CheckResult(
+        name="cargo on PATH",
+        status=PASS,
+        detail=cargo,
+    )
+
+
+def check_ecodex_cargo_fmt() -> CheckResult:
+    """Run ``cargo fmt --check`` against ecodex's codex-rs workspace.
+
+    Skipped when the workspace can't be located. WARN (not FAIL) when fmt
+    diffs exist — they're stylistic, not correctness, but worth surfacing.
+    """
+    if shutil.which("cargo") is None:
+        return CheckResult(
+            name="ecodex cargo fmt clean",
+            status=SKIP,
+            detail="cargo not on PATH",
+        )
+    workspace = _ecodex_rust_workspace()
+    if workspace is None:
+        return CheckResult(
+            name="ecodex cargo fmt clean",
+            status=SKIP,
+            detail="ecodex codex-rs workspace not found locally",
+            hint="Set ECODEX_REPO_ROOT to your ecodex checkout",
+        )
+    try:
+        result = subprocess.run(
+            ["cargo", "fmt", "--check"],
+            cwd=workspace,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return CheckResult(
+            name="ecodex cargo fmt clean",
+            status=WARN,
+            detail=f"cargo fmt invocation failed: {e}",
+            hint="Run manually: `cargo fmt --check` from codex-rs/",
+        )
+    if result.returncode == 0:
+        return CheckResult(
+            name="ecodex cargo fmt clean",
+            status=PASS,
+            detail="No formatting violations",
+        )
+    diff_count = sum(1 for ln in (result.stdout or "").splitlines() if ln.startswith("Diff"))
+    return CheckResult(
+        name="ecodex cargo fmt clean",
+        status=WARN,
+        detail=f"~{diff_count} fmt violation(s) in workspace",
+        hint="Run `cargo fmt` from codex-rs/ to fix; nightly `imports_granularity` warnings are expected",
+        data={"diff_count": diff_count},
+    )
+
+
+def check_ecodex_cargo_check() -> CheckResult:
+    """Run ``cargo check`` against ecodex's codex-rs workspace.
+
+    Acts as a fast type-checker for the whole Rust side. Slow on cold
+    cache (~30s) but fast on warm (~5s).
+    """
+    if shutil.which("cargo") is None:
+        return CheckResult(
+            name="ecodex cargo check passes",
+            status=SKIP,
+            detail="cargo not on PATH",
+        )
+    workspace = _ecodex_rust_workspace()
+    if workspace is None:
+        return CheckResult(
+            name="ecodex cargo check passes",
+            status=SKIP,
+            detail="ecodex codex-rs workspace not found locally",
+            hint="Set ECODEX_REPO_ROOT to your ecodex checkout",
+        )
+    try:
+        result = subprocess.run(
+            ["cargo", "check", "--workspace"],
+            cwd=workspace,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return CheckResult(
+            name="ecodex cargo check passes",
+            status=FAIL,
+            detail=f"cargo check invocation failed: {e}",
+            hint="Run manually: `cargo check --workspace` from codex-rs/",
+        )
+    if result.returncode == 0:
+        return CheckResult(
+            name="ecodex cargo check passes",
+            status=PASS,
+            detail="Workspace type-checks cleanly",
+        )
+    error_count = sum(1 for ln in (result.stderr or "").splitlines() if ln.startswith("error"))
+    return CheckResult(
+        name="ecodex cargo check passes",
+        status=FAIL,
+        detail=f"~{error_count} compile error(s)",
+        hint="Run `cargo check --workspace` from codex-rs/ for details",
+        data={"error_count": error_count},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Top-level orchestrator
+# ---------------------------------------------------------------------------
+
+
+def run_all_checks_ecodex(*, fast: bool = False) -> list[CheckResult]:
+    """Run every ecodex-frontend diagnostic check.
+
+    Args:
+        fast: When True, skip slow checks (cargo check). Useful for the
+              skill's interactive walk-through; CI can leave fast=False.
+    """
+    results: list[CheckResult] = []
+    # Foundation (shared with diagnose)
+    results.append(check_python_version())
+    results.append(check_empirica_cli_on_path())
+    # Plugin install state
+    results.append(check_ecodex_plugin_installed())
+    results.append(check_ecodex_plugin_enabled_in_config())
+    # Statusline (the path most likely to break invisibly)
+    results.append(check_ecodex_statusline_runtime_stdin())
+    results.append(check_ecodex_statusline_script_runs())
+    # Translator (Anthropic-protocol providers depend on this)
+    results.append(check_ecodex_translator_listening())
+    results.append(check_ecodex_translator_healthz())
+    # Provider config
+    results.append(check_ecodex_provider_env_keys())
+    # Rust compliance — slow checks gated behind fast=False
+    results.append(check_ecodex_cargo_present())
+    if not fast:
+        results.append(check_ecodex_cargo_fmt())
+        results.append(check_ecodex_cargo_check())
+    return results

@@ -666,10 +666,27 @@ def format_json(results: list[CheckResult]) -> str:
 
 
 def handle_diagnose_command(args) -> int:
-    """Handle `empirica diagnose` — run all integration checks and report."""
-    output_format = getattr(args, "output", "human")
+    """Handle `empirica diagnose` — run integration checks for the chosen frontend.
 
-    results = run_all_checks()
+    Frontends:
+      - ``claude-code`` (default) — checks the Claude Code integration
+        (~/.claude plugin install, statusline config, hooks, marketplace).
+      - ``ecodex`` — checks the ecodex install (codex-empirica-plugin in
+        ~/.codex, ecodex statusline runtime stdin wiring, codex-empirica-
+        translator on 127.0.0.1:18080, curated provider env_keys, Rust
+        cargo fmt+check). Implemented in :mod:`diagnose_ecodex`.
+    """
+    output_format = getattr(args, "output", "human")
+    frontend = getattr(args, "frontend", "claude-code")
+    fast = getattr(args, "fast", False)
+
+    if frontend == "ecodex":
+        from empirica.cli.command_handlers.diagnose_ecodex import (
+            run_all_checks_ecodex,
+        )
+        results = run_all_checks_ecodex(fast=fast)
+    else:
+        results = run_all_checks()
 
     if output_format == "json":
         print(format_json(results))
