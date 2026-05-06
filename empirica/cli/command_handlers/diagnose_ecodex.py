@@ -99,6 +99,80 @@ def check_ecodex_plugin_installed() -> CheckResult:
     )
 
 
+def check_ecodex_plugin_writable_roots_declared() -> CheckResult:
+    """Verify the empirica plugin's manifest declares ~/.empirica writable scope.
+
+    Tx-AI regression detector. Without ``writableRoots: ["~/.empirica"]`` in
+    the cached manifest, codex's WorkspaceWrite sandbox will block every
+    empirica state write (sessions DB, instance pointers, transaction state)
+    with EROFS — and sentinel-gate.py:2808 will catch the exception and
+    silently fail-open ('allow'), making the entire discipline framework
+    appear healthy while running as a no-op.
+
+    The carve-out flows: manifest declares → codex plugin loader merges into
+    SandboxPolicy.writable_roots at session bootstrap → landlock honors it.
+    Symptom of regression: ``empirica project-switch`` (or any other empirica
+    CLI invocation) hits 'Read-only file system' under ecodex's shell tool.
+    """
+    cache_dir = _ecodex_plugin_cache_dir()
+    if cache_dir is None:
+        return CheckResult(
+            name="ecodex plugin writable_roots declared",
+            status=SKIP,
+            detail="No plugin install — see `ecodex plugin installed` check",
+        )
+    manifest = cache_dir / ".codex-plugin" / "plugin.json"
+    if not manifest.is_file():
+        return CheckResult(
+            name="ecodex plugin writable_roots declared",
+            status=SKIP,
+            detail=f"plugin.json missing at {manifest}",
+        )
+    try:
+        manifest_data = json.loads(manifest.read_text())
+    except json.JSONDecodeError as e:
+        return CheckResult(
+            name="ecodex plugin writable_roots declared",
+            status=FAIL,
+            detail=f"plugin.json invalid JSON: {e}",
+            hint="Reinstall: `./ecodex/scripts/install.sh`",
+        )
+    declared = manifest_data.get("writableRoots") or []
+    if not isinstance(declared, list):
+        return CheckResult(
+            name="ecodex plugin writable_roots declared",
+            status=FAIL,
+            detail=f"writableRoots must be an array, got {type(declared).__name__}",
+            hint="Edit plugin manifest: writableRoots: [\"~/.empirica\"]",
+            data={"declared": declared},
+        )
+    has_empirica_home = any(
+        isinstance(entry, str) and entry.strip() in {"~/.empirica", "~/.empirica/"}
+        for entry in declared
+    )
+    if not has_empirica_home:
+        return CheckResult(
+            name="ecodex plugin writable_roots declared",
+            status=FAIL,
+            detail=(
+                "writableRoots does NOT include ~/.empirica — agent-driven "
+                "empirica CLI calls will hit EROFS under WorkspaceWrite sandbox "
+                "and silently fail-open via sentinel-gate.py:2808"
+            ),
+            hint=(
+                "Add to plugin manifest: writableRoots: [\"~/.empirica\"], "
+                "then reinstall: `./ecodex/scripts/install.sh`"
+            ),
+            data={"declared": declared},
+        )
+    return CheckResult(
+        name="ecodex plugin writable_roots declared",
+        status=PASS,
+        detail=f"writableRoots: {declared}",
+        data={"declared": declared},
+    )
+
+
 def check_ecodex_plugin_hooks_feature_enabled() -> CheckResult:
     """Verify codex's plugin_hooks feature gate is on.
 
@@ -762,6 +836,10 @@ def run_all_checks_ecodex(*, fast: bool = False) -> list[CheckResult]:
     # Plugin install state
     results.append(check_ecodex_plugin_installed())
     results.append(check_ecodex_plugin_enabled_in_config())
+    # Sandbox carve-out — without ~/.empirica in writableRoots, every empirica
+    # state write hits EROFS and sentinel silently fail-opens. Subtle dark
+    # failure (Tx-AI regression detector).
+    results.append(check_ecodex_plugin_writable_roots_declared())
     # Feature gate — without this on, the plugin's hooks ALL silently no-op.
     # Subtle failure mode (no error, just dark integration); doctor catches it.
     results.append(check_ecodex_plugin_hooks_feature_enabled())
