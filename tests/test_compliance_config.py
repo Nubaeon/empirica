@@ -224,3 +224,82 @@ def test_docpistemic_available_returns_bool():
         assert _docpistemic_available() is True
     with patch("shutil.which", return_value=None):
         assert _docpistemic_available() is False
+
+
+# ── _parse_docs_link_check_result ────────────────────────────────────────
+
+from empirica.cli.command_handlers.compliance_report_commands import (  # noqa: E402
+    _parse_docs_link_check_result,
+)
+
+
+def _link_check_payload(broken_total: int = 0, scanned: int = 100,
+                         tier_1: int = 0, tier_2: int = 0, tier_3: int = 0) -> str:
+    import json as _json
+    return _json.dumps({
+        "scanned_files": scanned,
+        "broken_total": broken_total,
+        "passed": broken_total == 0,
+        "tiers": {
+            "tier_1_top_readme": {"broken_total": tier_1, "files_with_breaks": 1 if tier_1 else 0, "files": []},
+            "tier_2_folder_readmes": {"broken_total": tier_2, "files_with_breaks": 0, "files": []},
+            "tier_3_other_md": {"broken_total": tier_3, "files_with_breaks": 0, "files": []},
+        },
+    })
+
+
+def test_parse_docs_link_check_pass_when_zero_broken():
+    raw = {"stdout": _link_check_payload(broken_total=0, scanned=226), "duration_seconds": 0.4, "passed": True}
+    out = _parse_docs_link_check_result(raw)
+    assert out["check"] == "tech_docs_links"
+    assert out["tool"] == "empirica docs-link-check"
+    assert out["passed"] is True
+    assert out["status"] == "pass"
+    assert out["scanned_files"] == 226
+    assert out["broken_total"] == 0
+
+
+def test_parse_docs_link_check_fail_when_any_broken():
+    raw = {"stdout": _link_check_payload(broken_total=5, tier_2=2, tier_3=3),
+           "duration_seconds": 0.5, "passed": False}
+    out = _parse_docs_link_check_result(raw)
+    assert out["passed"] is False
+    assert out["status"] == "fail"
+    assert out["broken_total"] == 5
+    assert out["broken_in_top_readme"] == 0
+    assert out["broken_in_folder_readmes"] == 2
+    assert out["broken_in_other_md"] == 3
+
+
+def test_parse_docs_link_check_surfaces_top_readme_breaks():
+    """Tier 1 (top-level README) breaks should be counted distinctly —
+    most user-visible failure mode worth flagging."""
+    raw = {"stdout": _link_check_payload(broken_total=1, tier_1=1),
+           "duration_seconds": 0.3, "passed": False}
+    out = _parse_docs_link_check_result(raw)
+    assert out["broken_in_top_readme"] == 1
+
+
+def test_parse_docs_link_check_invalid_json_returns_unavailable():
+    raw = {"stdout": "not json", "duration_seconds": 0.1, "passed": True}
+    out = _parse_docs_link_check_result(raw)
+    assert out["passed"] is None
+    assert out["status"] == "unavailable"
+
+
+def test_parse_docs_link_check_propagates_runner_error():
+    raw = {"error": "empirica command not found"}
+    out = _parse_docs_link_check_result(raw)
+    assert out["status"] == "unavailable"
+    assert out["error"] == "empirica command not found"
+
+
+def test_tech_docs_links_in_regulatory_map():
+    """The new check_id is registered in REGULATORY_MAP with EU AI Act + ISO 42001 mappings."""
+    from empirica.cli.command_handlers.compliance_report_commands import REGULATORY_MAP
+    assert "tech_docs_links" in REGULATORY_MAP
+    assert "eu_ai_act" in REGULATORY_MAP["tech_docs_links"]["frameworks"]
+    assert "iso_42001" in REGULATORY_MAP["tech_docs_links"]["frameworks"]
+    # Different ISO clause from tech_docs (7.5.3 vs 7.5.1) — distinguishes
+    # control-of-information from creation-and-updating.
+    assert REGULATORY_MAP["tech_docs_links"]["frameworks"]["iso_42001"]["clause"] == "7.5.3"

@@ -77,6 +77,13 @@ REGULATORY_MAP: dict[str, dict[str, Any]] = {
             "iso_42001": {"clause": "7.5.1", "requirement": "Documented information — creation and updating"},
         },
     },
+    "tech_docs_links": {
+        "check": "Technical documentation link integrity (docs-link-check)",
+        "frameworks": {
+            "eu_ai_act": {"article": "Art. 11 + Annex IV", "requirement": "Technical documentation — accuracy of cross-references"},
+            "iso_42001": {"clause": "7.5.3", "requirement": "Control of documented information — accessibility and integrity"},
+        },
+    },
     "release_chain": {
         "check": "Release chain integrity (publish verification)",
         "frameworks": {
@@ -785,6 +792,44 @@ def _docpistemic_available() -> bool:
     return shutil.which("docpistemic") is not None
 
 
+def _parse_docs_link_check_result(raw: dict[str, Any]) -> dict[str, Any]:
+    """Parse `empirica docs-link-check --output json` output.
+
+    Pass = 0 broken links across active markdown (excludes _archive/, etc.).
+    Tier 1 (top-level README) and Tier 2 (per-folder READMEs) breaks are
+    surfaced explicitly because they hit the most user-visible docs.
+    """
+    if raw.get("error"):
+        return {"check": "tech_docs_links", "passed": None, "status": "unavailable",
+                "error": raw["error"]}
+
+    try:
+        import json as _json
+        data = _json.loads(raw.get("stdout") or "{}")
+        broken_total = data.get("broken_total", 0)
+        scanned = data.get("scanned_files", 0)
+        tiers = data.get("tiers", {})
+        tier_1 = tiers.get("tier_1_top_readme", {}).get("broken_total", 0)
+        tier_2 = tiers.get("tier_2_folder_readmes", {}).get("broken_total", 0)
+        tier_3 = tiers.get("tier_3_other_md", {}).get("broken_total", 0)
+        passed = bool(data.get("passed", broken_total == 0))
+        return {
+            "check": "tech_docs_links",
+            "tool": "empirica docs-link-check",
+            "passed": passed,
+            "scanned_files": scanned,
+            "broken_total": broken_total,
+            "broken_in_top_readme": tier_1,
+            "broken_in_folder_readmes": tier_2,
+            "broken_in_other_md": tier_3,
+            "status": "pass" if passed else "fail",
+            "duration_seconds": raw["duration_seconds"],
+        }
+    except Exception:
+        return {"check": "tech_docs_links", "passed": None, "status": "unavailable",
+                "duration_seconds": raw.get("duration_seconds", 0)}
+
+
 def _build_repo_hygiene_check(project_root: Path, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """Check repository hygiene — files, structure, version consistency.
 
@@ -1081,6 +1126,16 @@ def run_compliance_report(
             "docs-assess", ["empirica", "docs-assess", "--output", "json"], timeout=60,
         )
         results.append(_parse_docs_result(docs_raw))
+
+    # Doc link integrity — separate from coverage. Pure file reads, fast,
+    # always-run. Catches the renumbering / restructure-drift / dangling-ref
+    # patterns coverage doesn't measure.
+    link_raw = _run_check(
+        "docs-link-check",
+        ["empirica", "docs-link-check", "--root", str(project_root), "--output", "json"],
+        timeout=30,
+    )
+    results.append(_parse_docs_link_check_result(link_raw))
 
     # Release chain (git + network checks)
     results.append(_build_release_chain_check(project_root))
