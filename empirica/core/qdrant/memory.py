@@ -60,6 +60,7 @@ def embed_single_memory_item(
             return False
 
         payload = {
+            "artifact_id": item_id,
             "type": item_type,
             "text": text[:500] if text else None,
             "text_full": text if len(text) <= 500 else None,

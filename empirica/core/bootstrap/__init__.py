@@ -16,5 +16,6 @@ Wire shape is `schema_version: "2"`.
 """
 
 from .payload import build_bootstrap_payload
+from .suggested_links import suggest_links_for_artifact
 
-__all__ = ["build_bootstrap_payload"]
+__all__ = ["build_bootstrap_payload", "suggest_links_for_artifact"]

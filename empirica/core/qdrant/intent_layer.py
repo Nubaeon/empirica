@@ -67,6 +67,7 @@ def embed_assumption(
             return False
 
         payload = {
+            "artifact_id": assumption_id,
             "type": "assumption",
             "assumption": assumption[:500],
             "assumption_full": assumption if len(assumption) <= 500 else None,
@@ -136,6 +137,7 @@ def embed_decision(
             return False
 
         payload = {
+            "artifact_id": decision_id,
             "type": "decision",
             "choice": choice[:500],
             "choice_full": choice if len(choice) <= 500 else None,

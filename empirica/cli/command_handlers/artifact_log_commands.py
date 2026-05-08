@@ -17,6 +17,18 @@ from empirica.utils.session_resolver import InstanceResolver as R
 from ..cli_utils import handle_cli_error
 from .project_commands import get_workspace_db_path
 
+
+def _suggest_links_safe(project_id: str | None, text: str, exclude_id: str) -> list[dict]:
+    """Wrapper that never raises — returns [] on any failure path."""
+    if not project_id or not text or not exclude_id:
+        return []
+    try:
+        from empirica.core.bootstrap import suggest_links_for_artifact
+        return suggest_links_for_artifact(project_id, text, exclude_id)
+    except Exception as e:
+        logger.debug(f"_suggest_links_safe: {e}")
+        return []
+
 logger = logging.getLogger(__name__)
 
 
@@ -883,6 +895,8 @@ def handle_finding_log_command(args):
         edges_declared = _collect_edges_from_args(args)
         edges_wired = _persist_edges("finding", finding_id, edges_declared) if edges_declared else 0
 
+        suggested_links = _suggest_links_safe(project_id, finding, finding_id)
+
         result = {
             "ok": True,
             "finding_id": finding_id,
@@ -898,6 +912,7 @@ def handle_finding_log_command(args):
             "eidetic": eidetic_result,  # "created" | "confirmed" | None
             "immune_decay": decayed_lessons if decayed_lessons else None,  # Lessons affected by this finding
             "eidetic_decayed": eidetic_decayed if eidetic_decayed else None,
+            "suggested_links": suggested_links,
             "message": "Finding logged to project scope"
         }
 
@@ -1038,6 +1053,8 @@ def handle_unknown_log_command(args):
         edges_declared = _collect_edges_from_args(args)
         edges_wired = _persist_edges("unknown", unknown_id, edges_declared) if edges_declared else 0
 
+        suggested_links = _suggest_links_safe(project_id, unknown, unknown_id)
+
         result = {
             "ok": True,
             "unknown_id": unknown_id,
@@ -1049,6 +1066,7 @@ def handle_unknown_log_command(args):
             "via": ctx['via'],
             "git_stored": git_stored,  # Git notes for sync
             "embedded": embedded,
+            "suggested_links": suggested_links,
             "message": "Unknown logged to project scope"
         }
 
@@ -1355,6 +1373,10 @@ def handle_deadend_log_command(args):
         edges_declared = _collect_edges_from_args(args)
         edges_wired = _persist_edges("dead_end", dead_end_id, edges_declared) if edges_declared else 0
 
+        suggested_links = _suggest_links_safe(
+            project_id, f"{approach} — Why failed: {why_failed}", dead_end_id
+        )
+
         result = {
             "ok": True,
             "dead_end_id": dead_end_id,
@@ -1366,6 +1388,7 @@ def handle_deadend_log_command(args):
             "via": ctx['via'],
             "git_stored": git_stored,
             "embedded": embedded,
+            "suggested_links": suggested_links,
             "message": "Dead end logged to project scope"
         }
 
@@ -1476,6 +1499,8 @@ def handle_assumption_log_command(args):
         edges_declared = _collect_edges_from_args(args)
         edges_wired = _persist_edges("assumption", assumption_id, edges_declared) if edges_declared else 0
 
+        suggested_links = _suggest_links_safe(ctx['project_id'], assumption, assumption_id)
+
         result = {
             "ok": True,
             "assumption_id": assumption_id,
@@ -1488,6 +1513,7 @@ def handle_assumption_log_command(args):
             "status": "unverified",
             "embedded": embedded,
             "git_stored": git_stored,
+            "suggested_links": suggested_links,
             "message": "Assumption logged",
         }
 
@@ -1617,6 +1643,10 @@ def handle_decision_log_command(args):
         edges_declared = _collect_edges_from_args(args, evidence_relation="evidence")
         edges_wired = _persist_edges("decision", decision_id, edges_declared) if edges_declared else 0
 
+        suggested_links = _suggest_links_safe(
+            ctx['project_id'], f"{choice}. Rationale: {rationale}", decision_id
+        )
+
         result = {
             "ok": True,
             "decision_id": decision_id,
@@ -1632,6 +1662,7 @@ def handle_decision_log_command(args):
             "evidence_refs": evidence_refs,
             "embedded": embedded,
             "git_stored": git_stored,
+            "suggested_links": suggested_links,
             "message": "Decision logged",
         }
 
@@ -2104,10 +2135,15 @@ def handle_mistake_log_command(args):
         edges_declared = _collect_edges_from_args(args)
         edges_wired = _persist_edges("mistake", mistake_id, edges_declared) if edges_declared else 0
 
+        suggested_links = _suggest_links_safe(
+            project_id, f"{mistake} — {why_wrong}", mistake_id
+        )
+
         result = {
             "ok": True, "mistake_id": mistake_id, "session_id": session_id,
             "project_id": project_id, "git_stored": git_stored, "embedded": embedded,
             "edges_wired": edges_wired,
+            "suggested_links": suggested_links,
             "message": "Mistake logged to project scope",
         }
 
