@@ -268,54 +268,72 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ## What's New in 1.9.2
 
-**v0.5 LOCAL-ARTIFACTS daemon** — 16 new endpoints unlock the chrome extension's
-full Artifacts pane evolution. Empirica-only users (no Cortex account) can see
-their artifacts in the extension for the first time.
+**Three-circle bootstrap aggregator (v0.6 spec)** — replaces uniform-decay
+artifact surfacing with a model that captures different *kinds* of relevance,
+not just recency.
 
-- **`/api/v1/health` extension** — `project_id` (canonical UUID),
-  `project_path`, `project_name`, `project_slug`, `repo_url` so the extension
-  can match its dropdown's active project against the daemon's bound project
-  and populate the dropdown for users without Cortex.
-- **8 per-type list endpoints** — `/goals`, `/findings`, `/decisions`,
-  `/unknowns`, `/dead-ends`, `/mistakes`, `/assumptions`, `/sources`. Each row
-  carries `related_to[]` from the new `artifact_edges` table.
-- **4 single-artifact CRUD endpoints** — `GET /artifacts/{id}`,
-  `PATCH /artifacts/{id}/resolve`, `PATCH /artifacts/{id}` (whitelisted partial
-  update), `DELETE /artifacts/{id}` (three-layer cleanup: sqlite + edges +
-  Qdrant + git notes).
-- **Graph endpoint** `GET /artifacts/graph` — bidirectional BFS over
-  `artifact_edges` with `seed_id` / `session_id` / `types` / `depth` filters.
-- **3 batch endpoints** — `POST /artifacts/log`, `POST /artifacts/resolve`,
-  `POST /artifacts/delete`.
+- **Circle 1 — `active_state`** — recency-decayed via per-type half-lives
+  (∞ for in-progress goals, 30d for findings/decisions, 14d for dead-ends/
+  mistakes). Tiebreaker only — circle is small.
+- **Circle 2 — `persistent_reference`** — never decays, fixed budgets.
+  Decisions with active outcome (rationale still load-bearing), verified or
+  falsified assumptions (now ground truth), sources (citation base).
+- **Circle 3 — `topic_relevant_backlog`** — Qdrant cosine similarity to active
+  topic. Surfaces open backlog plus completed-on-topic / resolved-on-topic /
+  dead-ends-on-topic for anti-clobber.
+- **Active topic detection** — deterministic 3-step fallback:
+  transaction.task_context + active_goal.objective → recent (7d) high-impact
+  findings → none.
+- **Public API**: `build_bootstrap_payload()` consumed by CLI hooks
+  (post-compact / session-init), daemon `GET /api/v1/bootstrap`, MCP tool
+  `mcp__empirica__bootstrap_context`, and the new `empirica bootstrap-context`
+  CLI verb.
 
-**Bug fixes**
+**Bootstrap injection trio** — three new surfaces that surface relevant
+artifacts at the moments the AI is making decisions, not just at session
+start.
 
-- **`/api/v1/dead-ends` 500 on real-world DBs** — migration 042 adds the
-  missing `impact` column on `project_dead_ends` and `mistakes_made` (long-
-  lived DBs missed migrations 007/012 for these two tables).
-- **CORS preflight 400 from chrome-extension origins** — the daemon's
-  `allow_origins=["chrome-extension://*", ...]` literal globs never matched
-  real origins (Starlette doesn't glob-expand). Switched to
-  `allow_origin_regex` so chrome-extension preflights actually pass now.
-- **Project_id slug-vs-UUID resolution** — yaml's `project_id` is often a
-  slug (e.g. `"empirica"`) matching `projects.name`, not the canonical UUID
-  used in artifact tables. Daemon now does the slug→UUID lookup.
-- **`empirica delete-artifacts` git-notes gap** — CLI delete now also runs
-  `git update-ref -d` on `refs/notes/empirica/{type}/{id}`, matching the new
-  daemon `DELETE /artifacts/{id}` three-layer cleanup.
+- **`*-log` response → `suggested_links`** — every `finding-log` /
+  `decision-log` / `deadend-log` / etc now returns up to 5 semantically
+  similar existing artifacts so the AI can immediately anchor edges via
+  `--related-to <id>`. Closes the "AI doesn't think to link artifacts" gap.
+- **PreToolUse → `FILE-RELEVANCE` nudge** — when the AI is about to
+  Edit/Write/MultiEdit a file, the sentinel surfaces a one-line summary of
+  artifacts already referencing it: `2 findings, 3 dead-ends reference this
+  file`. SQLite LIKE search, ~50ms hot-path budget.
+- **UserPromptSubmit → `<prior-context>` block** — every substantive prompt
+  triggers an embed → semantic search → top-3 most-similar artifacts injected
+  as additionalContext. The AI's first response is conditioned on prior
+  project knowledge rather than internal weights alone. ~200ms budget.
 
-**Database**
+**Compliance + lint**
 
-- **Migration 041** — `artifact_edges` table (PRIMARY KEY on from_id+to_id+
-  relation, `(to_id, relation)` inverse-query index, `metadata` JSON for
-  forward-compat). Backfills existing edges from `data.edges` JSON. Fixes
-  silent edge-drop bug for assumptions and decisions.
-- **Migration 042** — `impact REAL DEFAULT 0.5` on `project_dead_ends` and
-  `mistakes_made`.
+- **`empirica docs-link-check`** — general broken-link checker for tech docs
+  with tier-prioritized output. Standalone CLI verb plus opt-in compliance
+  check (`tech_docs_links`, separate from `tech_docs` coverage).
+- **`repo_hygiene` version_file** — accepts Rust `Cargo.toml` and Node
+  `package.json` shapes alongside Python `pyproject.toml` for cross-language
+  ecosystem repos.
+- **`rust-docs-assess`** — Rust-aware tech_docs check that understands
+  `cargo doc` semantics so Rust crates aren't penalized for missing
+  Python-style docstrings.
+- **Tx-AG investigation-proportionality budget** — sentinel-side runtime
+  enforcement of the per-prompt search budget (the soft block was empirically
+  ineffective; this is a hard constraint).
+- **Tx-AJ `EMPIRICA_SENTINEL_FAIL_CLOSED`** — opt-in fail-closed mode for
+  hardened deployments. Default unchanged (fail-open) for dev.
+- **`empirica-mcp/` brought into lint scope** — was previously outside
+  `tool.ruff.include`. 25 ruff errors cleaned in the process.
 
-96 new tests (37+15+15+14+15 across T1-T5), full suite **2194 passed**.
-See [SERVE_API.md](docs/reference/api/SERVE_API.md) for the full daemon API
-reference.
+**Side-fix surfaced by the trio**: Qdrant payloads in three embed functions
+previously omitted `artifact_id`, silently breaking
+`circle_3._qdrant_similarity_pull`. Fixed; the SQLite reverse-hash fallback in
+`suggested_links` resolves pre-fix points without requiring a `project-embed`
+rebuild.
+
+84 new tests across the bootstrap surface, full suite **2293 passed**.
+See [PROPOSAL_BOOTSTRAP_AGGREGATOR.md](docs/specs/PROPOSAL_BOOTSTRAP_AGGREGATOR.md)
+for the design rationale.
 
 ## What's New in 1.9.0
 
