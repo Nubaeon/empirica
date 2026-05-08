@@ -909,12 +909,23 @@ def _build_repo_hygiene_check(project_root: Path, overrides: dict[str, Any] | No
     else:
         details["no_tracked_secrets"] = f"FOUND: {', '.join(secrets_found[:3])}"
 
-    # 6. Version file exists (pyproject.toml or setup.py)
+    # 6. Version file exists. Recognized shapes:
+    #    - Python:  pyproject.toml | setup.py
+    #    - Rust:    Cargo.toml (workspace or package — both define [package].version
+    #               or [workspace.package].version)
+    #    - Node:    package.json (covers npm/yarn/bun/pnpm)
+    # Multi-language projects pass on the first match. Adding more language
+    # shapes is additive — keep the first-match-wins ordering stable so existing
+    # projects don't flip detection.
     checks_total += 1
-    has_version = (project_root / "pyproject.toml").exists() or (project_root / "setup.py").exists()
-    if has_version:
+    version_file_candidates = ("pyproject.toml", "setup.py", "Cargo.toml", "package.json")
+    detected_version_file = next(
+        (name for name in version_file_candidates if (project_root / name).exists()),
+        None,
+    )
+    if detected_version_file:
         checks_passed += 1
-        details["version_file"] = "present"
+        details["version_file"] = f"present ({detected_version_file})"
     else:
         details["version_file"] = "MISSING"
 
