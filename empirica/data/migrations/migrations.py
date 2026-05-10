@@ -1268,6 +1268,7 @@ ALL_MIGRATIONS: list[tuple[str, str, Callable]] = [
     ("041_artifact_edges", "Add normalized artifact_edges table + backfill from data.edges JSON (v0.5 LOCAL-ARTIFACTS daemon — fixes silent edge-drop on assumptions/decisions, enables cheap inverse queries)", lambda cursor: migration_041_artifact_edges(cursor)),
     ("042_impact_on_dead_ends_and_mistakes", "Add impact column to project_dead_ends and mistakes_made (long-lived DBs missed migrations 007/012 for these two tables — daemon /dead-ends endpoint 500s without this)", lambda cursor: migration_042_impact_on_dead_ends_and_mistakes(cursor)),
     ("043_goal_description", "Add description TEXT column to goals (Linear/GitHub/Jira pattern: title-shaped objective + optional rich body) — extension Claude flagged the title-vs-context-rich tension after the 1000→2000 mitigation in 1.9.2", lambda cursor: migration_043_goal_description(cursor)),
+    ("044_source_lifecycle", "Add archive lifecycle columns (archived, archive_reason, archive_target_id, lifecycle_audit_log) to epistemic_sources for SOURCES_LIFECYCLE_SPEC Phase 1 (soft-delete + supersession). Empirica-Core CLI parity per the Cortex spec; empirica is the authoritative store.", lambda cursor: migration_044_source_lifecycle(cursor)),
 ]
 
 
@@ -1578,6 +1579,41 @@ def migration_041_artifact_edges(cursor: sqlite3.Cursor):
 
     logger.info(
         f"✅ Migration 041 complete: artifact_edges table created, {backfilled_total} edges backfilled"
+    )
+
+
+def migration_044_source_lifecycle(cursor: sqlite3.Cursor):
+    """Add lifecycle columns to epistemic_sources for SOURCES_LIFECYCLE_SPEC Phase 1.
+
+    Soft-delete model: sources are never hard-deleted by default. They
+    transition active → archived with a reason; the audit chain (edges from
+    findings to sources) is preserved untouched.
+
+    Columns added:
+      - archived (BOOL, default 0): the lifecycle gate
+      - archive_reason (TEXT): user_deleted | file_missing |
+        url_unreachable | superseded
+      - archive_target_id (TEXT): pointer to the replacement source when
+        reason='superseded' (the chain forward)
+      - archived_at (REAL): epoch when archived
+      - lifecycle_audit_log (TEXT, JSON): append-only event log of state
+        transitions for forensics
+
+    NOT included in this slice (Phase 2+ in the spec):
+      - relevance_score, relevance_factors, relevance_computed_at
+      - last_accessed_at, last_validated_at, consecutive_validation_failures
+    Those belong to the daily cron pass; Phase 1 ships only the soft-delete
+    primitive and CLI verb so users can drag-to-trash and forensics works.
+
+    Idempotent via add_column_if_missing — safe to re-run.
+    """
+    add_column_if_missing(cursor, "epistemic_sources", "archived", "BOOLEAN", "0")
+    add_column_if_missing(cursor, "epistemic_sources", "archive_reason", "TEXT", "NULL")
+    add_column_if_missing(cursor, "epistemic_sources", "archive_target_id", "TEXT", "NULL")
+    add_column_if_missing(cursor, "epistemic_sources", "archived_at", "REAL", "NULL")
+    add_column_if_missing(cursor, "epistemic_sources", "lifecycle_audit_log", "TEXT", "NULL")
+    logger.info(
+        "✅ Migration 044 complete: source lifecycle columns added to epistemic_sources"
     )
 
 

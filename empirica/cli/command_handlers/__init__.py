@@ -18,6 +18,7 @@ from .artifact_log_commands import (
     handle_mistake_query_command,
     handle_refdoc_add_command,
     handle_source_add_command,
+    handle_source_archive_command,
     handle_source_list_command,
     handle_unknown_list_command,
     handle_unknown_log_command,
@@ -457,6 +458,7 @@ __all__ = [
     'handle_skill_fetch_command',
     'handle_skill_suggest_command',
     'handle_source_add_command',
+    'handle_source_archive_command',
     'handle_source_list_command',
     # Sync commands (git notes synchronization)
     'handle_sync_config_command',

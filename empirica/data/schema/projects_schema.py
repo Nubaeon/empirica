@@ -189,6 +189,13 @@ SCHEMAS = [
 
                     source_metadata TEXT,
 
+                    -- Lifecycle (added in migration 044, SOURCES_LIFECYCLE_SPEC Phase 1)
+                    archived BOOLEAN DEFAULT 0,
+                    archive_reason TEXT,            -- user_deleted | file_missing | url_unreachable | superseded
+                    archive_target_id TEXT,         -- replacement source UUID when reason='superseded'
+                    archived_at REAL,               -- epoch
+                    lifecycle_audit_log TEXT,       -- JSON list of state-transition events
+
                     FOREIGN KEY (project_id) REFERENCES projects(id),
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id)
                 )

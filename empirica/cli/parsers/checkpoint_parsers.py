@@ -673,8 +673,25 @@ def add_checkpoint_parsers(subparsers):
     source_list_parser.add_argument('--type', dest='source_type', help='Filter by source type (document, code, web, api, etc.)')
     source_list_parser.add_argument('--direction', choices=['noetic', 'praxic', 'all'], default='all',
         help='Filter by direction (noetic=evidence IN, praxic=output OUT)')
+    source_list_parser.add_argument('--include-archived', action='store_true',
+        help='Include soft-deleted/archived sources (forensics view; archived rows hidden by default)')
     source_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     source_list_parser.add_argument('--verbose', action='store_true', help='Show detailed info')
+
+    # Source archive command (SOURCES_LIFECYCLE_SPEC Phase 1 — soft-delete)
+    source_archive_parser = subparsers.add_parser(
+        'source-archive',
+        help='Soft-delete an epistemic source (preserves edges + citing artifacts)'
+    )
+    source_archive_parser.add_argument('--source-id', required=True,
+        help='Source UUID (or unique prefix) to archive')
+    source_archive_parser.add_argument('--reason', required=True,
+        choices=['user_deleted', 'file_missing', 'url_unreachable', 'superseded'],
+        help='Why this source is being archived')
+    source_archive_parser.add_argument('--target-id',
+        help='Replacement source UUID (REQUIRED when --reason superseded — the chain forward)')
+    source_archive_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    source_archive_parser.add_argument('--verbose', action='store_true', help='Verbose output')
 
     # Graph artifact commands — batch logging and resolution
     log_artifacts_parser = subparsers.add_parser(

@@ -605,6 +605,7 @@ def main(args=None):
             'delete-artifacts': handle_delete_artifacts_command,
             'source-add': handle_source_add_command,
             'source-list': handle_source_list_command,
+            'source-archive': handle_source_archive_command,
             'epp-activate': handle_epp_activate_command,
 
             # Training data export

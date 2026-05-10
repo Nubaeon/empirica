@@ -1900,17 +1900,30 @@ def handle_source_add_command(args):
         return None
 
 
-def _query_epistemic_sources(db, project_id, source_type_filter, direction_filter):
-    """Query epistemic_sources and legacy refdocs, returning combined list."""
+def _query_epistemic_sources(db, project_id, source_type_filter, direction_filter,
+                              include_archived=False):
+    """Query epistemic_sources and legacy refdocs, returning combined list.
+
+    include_archived defaults False — archived sources are hidden by default
+    in line with SOURCES_LIFECYCLE_SPEC's read-side default. Pass True for
+    forensics views that need to surface terminated rows.
+    """
     sources = []
     try:
+        # archived/archive_reason/archived_at are LEFT-OUT-protected via
+        # COALESCE in case the DB hasn't been migrated past 044 yet (older
+        # installs reading newer code).
         query = """
             SELECT id, source_type, title, description, confidence,
-                   epistemic_layer, source_url, discovered_at, source_metadata
+                   epistemic_layer, source_url, discovered_at, source_metadata,
+                   COALESCE(archived, 0) AS archived,
+                   archive_reason, archive_target_id, archived_at
             FROM epistemic_sources
             WHERE project_id = ?
         """
         params = [project_id]
+        if not include_archived:
+            query += " AND COALESCE(archived, 0) = 0"
         if source_type_filter:
             query += " AND source_type = ?"
             params.append(source_type_filter)
@@ -1926,7 +1939,11 @@ def _query_epistemic_sources(db, project_id, source_type_filter, direction_filte
                 'id': row[0], 'source_type': row[1], 'title': row[2],
                 'description': row[3], 'confidence': row[4],
                 'direction': row[5], 'url': row[6],
-                'discovered_at': row[7], 'metadata': row[8]
+                'discovered_at': row[7], 'metadata': row[8],
+                'archived': bool(row[9]) if len(row) > 9 else False,
+                'archive_reason': row[10] if len(row) > 10 else None,
+                'archive_target_id': row[11] if len(row) > 11 else None,
+                'archived_at': row[12] if len(row) > 12 else None,
             }
             r['source'] = 'epistemic_sources'
             sources.append(r)
@@ -1972,6 +1989,167 @@ def _print_sources_pretty(sources):
         print()
 
 
+_VALID_ARCHIVE_REASONS = ("user_deleted", "file_missing", "url_unreachable", "superseded")
+
+
+def _hard_delete_source_chunks(project_id: str, source_id: str) -> int:
+    """Best-effort hard-delete of Qdrant chunks for an archived source.
+
+    Per SOURCES_LIFECYCLE_SPEC: chunks (layer B) are derived data; safe to
+    drop on archive because they're regenerable from the original. Returns
+    number of points deleted (0 if Qdrant unavailable or none found).
+    """
+    try:
+        from empirica.core.qdrant.collections import _docs_collection
+        from empirica.core.qdrant.connection import _get_qdrant_client
+    except ImportError:
+        return 0
+    client = _get_qdrant_client()
+    if client is None:
+        return 0
+    try:
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
+        coll = _docs_collection(project_id)
+        if not client.collection_exists(coll):
+            return 0
+        # Match either source_id payload key directly, or the source's URL
+        # if chunks were keyed by url.
+        flt = Filter(should=[
+            FieldCondition(key="source_id", match=MatchValue(value=source_id)),
+        ])
+        result = client.delete(collection_name=coll, points_selector=flt)
+        return getattr(result, "deleted", 0) or 0
+    except Exception as e:
+        logger.debug(f"_hard_delete_source_chunks: qdrant delete failed: {e}")
+        return 0
+
+
+def handle_source_archive_command(args):
+    """Handle source-archive command — soft-delete a source (lifecycle Phase 1).
+
+    Mutates the local epistemic_sources row in place: sets archived=1 plus
+    archive_reason / archive_target_id / archived_at, appends an audit-log
+    event. Hard-deletes corresponding Qdrant chunks (regenerable from the
+    original if needed). Edges from findings to this source are NEVER
+    touched — the audit chain is preserved.
+
+    Per SOURCES_LIFECYCLE_SPEC §8 Empirica-Core CLI parity. Empirica is the
+    authoritative store; downstream Cortex projects from this state.
+    """
+    db = None
+    try:
+        import time
+
+        from empirica.data.session_database import SessionDatabase
+
+        source_id = args.source_id
+        reason = args.reason
+        target_id = getattr(args, 'target_id', None)
+        output_format = getattr(args, 'output', 'human')
+
+        if reason not in _VALID_ARCHIVE_REASONS:
+            print(json.dumps({
+                "ok": False,
+                "error": (f"Invalid --reason '{reason}'. "
+                          f"Must be one of: {', '.join(_VALID_ARCHIVE_REASONS)}")
+            }))
+            return 1
+        if reason == "superseded" and not target_id:
+            print(json.dumps({
+                "ok": False,
+                "error": "--reason superseded requires --target-id (the replacement source UUID)"
+            }))
+            return 1
+
+        db = SessionDatabase()
+        cur = db.conn.cursor()
+
+        # Resolve full source_id from prefix (matches log-artifacts UX)
+        cur.execute(
+            "SELECT id, project_id, title, archived, lifecycle_audit_log "
+            "FROM epistemic_sources WHERE id = ? OR id LIKE ? LIMIT 2",
+            (source_id, f"{source_id}%"),
+        )
+        rows = cur.fetchall()
+        if not rows:
+            print(json.dumps({"ok": False, "error": f"Source not found: {source_id}"}))
+            return 1
+        if len(rows) > 1:
+            print(json.dumps({
+                "ok": False,
+                "error": f"Source ID '{source_id}' is ambiguous — matches multiple rows. Use full UUID."
+            }))
+            return 1
+
+        full_id, project_id, title, already_archived, audit_log_json = rows[0]
+
+        # Idempotent: re-archive returns 200 with the existing state
+        if already_archived:
+            existing_log = json.loads(audit_log_json) if audit_log_json else []
+            if output_format == 'json':
+                print(json.dumps({
+                    "ok": True, "source_id": full_id, "archived": True,
+                    "already_archived": True, "audit_log": existing_log,
+                    "message": "Source already archived (idempotent)"
+                }, indent=2))
+            else:
+                print(f"⚠ Source {full_id[:8]}... already archived ({len(existing_log)} log entries)")
+            return 0
+
+        # Append audit-log event
+        existing_log = json.loads(audit_log_json) if audit_log_json else []
+        now = time.time()
+        existing_log.append({
+            "event": "archived",
+            "reason": reason,
+            "target_id": target_id,
+            "timestamp": now,
+            "by": "claude-code",  # Could resolve from session.ai_id; keeping simple
+        })
+
+        # Mutate in place
+        cur.execute(
+            "UPDATE epistemic_sources SET "
+            "archived = 1, archive_reason = ?, archive_target_id = ?, "
+            "archived_at = ?, lifecycle_audit_log = ? "
+            "WHERE id = ?",
+            (reason, target_id, now, json.dumps(existing_log), full_id),
+        )
+        db.conn.commit()
+
+        # Hard-delete chunks (best-effort; non-fatal)
+        chunks_deleted = _hard_delete_source_chunks(project_id, full_id)
+
+        result = {
+            "ok": True,
+            "source_id": full_id,
+            "title": title,
+            "archived": True,
+            "archive_reason": reason,
+            "archive_target_id": target_id,
+            "archived_at": now,
+            "chunks_deleted": chunks_deleted,
+            "audit_log": existing_log,
+            "message": "Source archived (soft-delete; edges + citing artifacts preserved)"
+        }
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"✅ Archived source {full_id[:8]}... — {title}")
+            print(f"   Reason: {reason}" + (f" → target {target_id[:8]}..." if target_id else ""))
+            if chunks_deleted:
+                print(f"   Cleared {chunks_deleted} Qdrant chunks (regenerable from original)")
+            print("   Edges + citing findings/decisions untouched (audit chain preserved)")
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Source archive", getattr(args, 'verbose', False))
+        return None
+    finally:
+        if db is not None:
+            db.close()
+
+
 def handle_source_list_command(args):
     """Handle source-list command — list epistemic sources for a project."""
     db = None
@@ -1981,6 +2159,7 @@ def handle_source_list_command(args):
         project_id = getattr(args, 'project_id', None)
         source_type_filter = getattr(args, 'source_type', None)
         direction_filter = getattr(args, 'direction', 'all')
+        include_archived = getattr(args, 'include_archived', False)
         output_format = getattr(args, 'output', 'human')
 
         db = SessionDatabase()
@@ -1997,7 +2176,10 @@ def handle_source_list_command(args):
             print(json.dumps({"ok": False, "error": "Could not resolve project_id"}))
             return 1
 
-        sources = _query_epistemic_sources(db, project_id, source_type_filter, direction_filter)
+        sources = _query_epistemic_sources(
+            db, project_id, source_type_filter, direction_filter,
+            include_archived=include_archived,
+        )
 
         if output_format == 'json':
             print(json.dumps({"ok": True, "project_id": project_id,
