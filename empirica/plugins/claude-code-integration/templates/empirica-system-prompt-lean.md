@@ -258,6 +258,9 @@ Infer epistemic actions from conversation naturally:
 | Error made | `mistake-log` |
 | Choice point | `decision-log` |
 | External material cited (URL, doc, paper, transcript) | `source-add` then link via `sourced_from` in `log-artifacts` |
+| Logging ≥3 related artifacts in one breath, or any artifact with edges to others | `log-artifacts -` (one batch with `nodes` + `edges` JSON) instead of N individual `*-log` calls |
+| Closing several open unknowns / verifying assumptions at once (typically pre-POSTFLIGHT cleanup) | `resolve-artifacts -` batch JSON, not N individual `unknown-resolve` calls |
+| Triaging stale, duplicate, or test-noise artifacts | `delete-artifacts -` batch JSON (dry-run by default; receipt logged as decision for audit) |
 | Logging an artifact you generated without external retrieval | `--epistemic-source intuition` — be honest, don't paper it as `search` |
 | Logging an artifact shaped by reads/greps/web/MCP this session | `--epistemic-source search` |
 | Intentional stub / placeholder created | `goals-create --status planned` at the same time — names what fills it and when, so stubs don't fall through the cracks |
