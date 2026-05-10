@@ -1,6 +1,14 @@
 # Empirica Integration Plugin - Distribution Guide
 
-This guide covers three ways to distribute the empirica plugin.
+This guide covers how to distribute the plugin.
+
+> **For end-user install:** since v1.8.14 the plugin is bundled with the
+> `empirica` Python package and wired up via `empirica setup-claude-code`.
+> See [`docs/human/end-users/02_INSTALLATION.md`](../../../docs/human/end-users/02_INSTALLATION.md)
+> for the supported user-facing install path. This document is for plugin
+> publishers (marketplace listings, alternate distribution channels).
+
+Three distribution paths are covered below.
 
 ---
 

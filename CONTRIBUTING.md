@@ -2,15 +2,6 @@
 
 Thanks for your interest in contributing. This guide covers the workflow, conventions, and tooling you'll need.
 
-## Repository layout
-
-- **GitHub** — `https://github.com/Nubaeon/empirica` (primary, public)
-- **Forgejo mirror** — `ssh://git@65.21.107.206:2222/empirica/empirica.git` (self-hosted backup)
-
-PRs land on GitHub. The forgejo remote is kept in sync via push.
-
----
-
 ## Branch strategy
 
 ```
