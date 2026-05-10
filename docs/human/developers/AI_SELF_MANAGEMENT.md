@@ -78,11 +78,15 @@ Scenario: Prompt says "empirica onboard" but command doesn't exist
 
 | File | When |
 |------|------|
-| `~/.claude/CLAUDE.md` | Live tuning (immediate effect) |
-| `docs/system-prompts/CANONICAL_CORE.md` | Core changes (all AIs) |
-| `docs/system-prompts/model_deltas/claude.md` | Claude-specific |
+| `~/.claude/empirica-system-prompt.md` | Live tuning (immediate effect; gets overwritten on next `empirica setup-claude-code --force`) |
+| `~/.claude/CLAUDE.md` | User overrides — preserved across `setup-claude-code` runs |
+| `empirica/plugins/claude-code-integration/templates/empirica-system-prompt-lean.md` | Canonical lean source (deployed on `setup-claude-code`) |
+| `empirica/plugins/claude-code-integration/templates/CLAUDE.md` | Legacy full-prompt template (only loaded with `--full-prompt`) |
 
-After editing canonical files, regenerate: `python3 scripts/sync_system_prompts.py`
+The previous `CANONICAL_CORE + model_deltas + sync_system_prompts.py`
+pipeline was retired in 1.7 in favor of the lean-prompt-by-default
+architecture. The canonical-core docs and the sync script are archived
+under `docs/_archive/` and `_archive/scripts/` respectively.
 
 ---
 

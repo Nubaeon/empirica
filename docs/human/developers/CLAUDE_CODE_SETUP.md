@@ -82,19 +82,19 @@ The full system prompt teaches Claude how to use Empirica with calibration data,
 cp ~/.claude/plugins/local/empirica/templates/CLAUDE.md ~/.claude/CLAUDE.md
 ```
 
-**Option B: Copy from source:**
-```bash
-# If you have the Empirica repo cloned
-cp /path/to/empirica/docs/human/developers/system-prompts/CLAUDE.md ~/.claude/CLAUDE.md
-```
+**Option B: Manual install (recommended for plugin users)**
 
-**Option C: Manual copy:**
+`empirica setup-claude-code` is the canonical path — it writes the lean
+prompt to `~/.claude/empirica-system-prompt.md` and prepends an
+`@~/.claude/empirica-system-prompt.md` include line to your existing
+`~/.claude/CLAUDE.md` (preserves any user overrides). Add `--full-prompt`
+if you want the legacy verbose template instead of the lean default.
 
-The authoritative system prompt is maintained at:
-- **Repo:** `docs/human/developers/system-prompts/CLAUDE.md`
-- **Plugin:** `templates/CLAUDE.md` (synced copy)
+The authoritative source lives in the plugin at:
+- **Lean (default):** `empirica/plugins/claude-code-integration/templates/empirica-system-prompt-lean.md`
+- **Full (legacy `--full-prompt` mode):** `empirica/plugins/claude-code-integration/templates/CLAUDE.md`
 
-Copy the full contents of that file to `~/.claude/CLAUDE.md`.
+Manual copies tend to drift; the setup command keeps you in sync on each release.
 
 **What the system prompt includes:**
 - Calibration data (3,194 observations, bias corrections per vector)
@@ -567,7 +567,7 @@ Note: `empirica-mcp` runs as stdio server, not CLI with --help.
 
 ## What's Next?
 
-- **Full system prompt:** [CLAUDE.md](system-prompts/CLAUDE.md) (179 lines)
+- **Live system prompt:** read `~/.claude/empirica-system-prompt.md` after running `empirica setup-claude-code` (~263 lines, lean default)
 - **All CLI commands:** [CLI Reference](CLI_COMMANDS_UNIFIED.md)
 - **Epistemic transaction workflow:** [Workflow Guide](../../architecture/NOETIC_PRAXIC_FRAMEWORK.md)
 

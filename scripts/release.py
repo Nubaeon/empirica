@@ -756,7 +756,6 @@ class ReleaseManager:
             "empirica/plugins/claude-code-integration/install.sh",
             "empirica/cli/command_handlers/setup_claude_code.py",
             ".empirica-project/PROJECT_CONFIG.yaml",
-            "docs/human/developers/system-prompts/CANONICAL_CORE.md",
         ])
         self.run_command([
             "git", "commit", "-m",
