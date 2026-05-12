@@ -2,7 +2,7 @@
 
 > **We Gave AI a Mirror. Now It Measures What It Believes.**
 
-[![Version](https://img.shields.io/badge/version-1.9.2-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.9.2)
+[![Version](https://img.shields.io/badge/version-1.9.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.9.3)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -100,13 +100,13 @@ empirica setup-claude-code
 
 ```bash
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.9.2-alpine
+docker pull nubaeon/empirica:1.9.3-alpine
 
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.9.2
+docker pull nubaeon/empirica:1.9.3
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.9.2 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.9.3 /bin/bash
 ```
 </details>
 
@@ -266,74 +266,62 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ---
 
-## What's New in 1.9.2
+## What's New in 1.9.3
 
-**Three-circle bootstrap aggregator (v0.6 spec)** — replaces uniform-decay
-artifact surfacing with a model that captures different *kinds* of relevance,
-not just recency.
+**Security — CVE-2026-42561 patched.** Direct pin
+`python-multipart>=0.0.27` in core `pyproject.toml` overrides the 0.0.26
+transitive resolution via `mcp` / `nicegui` / `p4-confidence-tracker`.
+`pip-audit` clean post-pin.
 
-- **Circle 1 — `active_state`** — recency-decayed via per-type half-lives
-  (∞ for in-progress goals, 30d for findings/decisions, 14d for dead-ends/
-  mistakes). Tiebreaker only — circle is small.
-- **Circle 2 — `persistent_reference`** — never decays, fixed budgets.
-  Decisions with active outcome (rationale still load-bearing), verified or
-  falsified assumptions (now ground truth), sources (citation base).
-- **Circle 3 — `topic_relevant_backlog`** — Qdrant cosine similarity to active
-  topic. Surfaces open backlog plus completed-on-topic / resolved-on-topic /
-  dead-ends-on-topic for anti-clobber.
-- **Active topic detection** — deterministic 3-step fallback:
-  transaction.task_context + active_goal.objective → recent (7d) high-impact
-  findings → none.
-- **Public API**: `build_bootstrap_payload()` consumed by CLI hooks
-  (post-compact / session-init), daemon `GET /api/v1/bootstrap`, MCP tool
-  `mcp__empirica__bootstrap_context`, and the new `empirica bootstrap-context`
-  CLI verb.
+**`empirica source-archive` CLI** — soft-delete verb for epistemic sources
+(SOURCES_LIFECYCLE_SPEC Phase 1). Layer A flips `archived=1` + audit log,
+Layer B (Qdrant chunks) hard-deletes via batched filter, Layer C (edges)
+stays immutable. Four reasons supported: `user_deleted`, `file_missing`,
+`url_unreachable`, `superseded` (requires `--target-id`). `source-list`
+excludes archived by default; `--include-archived` to see them.
 
-**Bootstrap injection trio** — three new surfaces that surface relevant
-artifacts at the moments the AI is making decisions, not just at session
-start.
+**`goals.description` field** (migration 043) — Linear/GitHub/Jira-style
+split. `objective` is the short title (≤200 chars), `description` is the
+long-form body with acceptance criteria, scope notes, success metrics. Max
+length bumped 1000 → 2000 chars. Older rows keep `description = NULL`; new
+rows fill both.
 
-- **`*-log` response → `suggested_links`** — every `finding-log` /
-  `decision-log` / `deadend-log` / etc now returns up to 5 semantically
-  similar existing artifacts so the AI can immediately anchor edges via
-  `--related-to <id>`. Closes the "AI doesn't think to link artifacts" gap.
-- **PreToolUse → `FILE-RELEVANCE` nudge** — when the AI is about to
-  Edit/Write/MultiEdit a file, the sentinel surfaces a one-line summary of
-  artifacts already referencing it: `2 findings, 3 dead-ends reference this
-  file`. SQLite LIKE search, ~50ms hot-path budget.
-- **UserPromptSubmit → `<prior-context>` block** — every substantive prompt
-  triggers an embed → semantic search → top-3 most-similar artifacts injected
-  as additionalContext. The AI's first response is conditioned on prior
-  project knowledge rather than internal weights alone. ~200ms budget.
+**AI-native goal-vs-subtask discipline** — system prompt + epistemic-
+transaction skill updated so AIs natively reach for `goals-add-subtask` and
+`goals-complete-subtask --evidence` without prompting. Plus batch-op
+signal→action rows for `log-artifacts`, `resolve-artifacts`,
+`delete-artifacts`, and `noetic-batch` guidance.
 
-**Compliance + lint**
+**Statusline glyph parity** — `⚙` (U+2699, ambiguous east-asian-width)
+swapped to `🔨` (U+1F528, wide) so the praxic-phase indicator no longer
+renders over the `%` confidence digit on terminals that don't normalize
+ambiguous-width glyphs.
 
-- **`empirica docs-link-check`** — general broken-link checker for tech docs
-  with tier-prioritized output. Standalone CLI verb plus opt-in compliance
-  check (`tech_docs_links`, separate from `tech_docs` coverage).
-- **`repo_hygiene` version_file** — accepts Rust `Cargo.toml` and Node
-  `package.json` shapes alongside Python `pyproject.toml` for cross-language
-  ecosystem repos.
-- **`rust-docs-assess`** — Rust-aware tech_docs check that understands
-  `cargo doc` semantics so Rust crates aren't penalized for missing
-  Python-style docstrings.
-- **Tx-AG investigation-proportionality budget** — sentinel-side runtime
-  enforcement of the per-prompt search budget (the soft block was empirically
-  ineffective; this is a hard constraint).
-- **Tx-AJ `EMPIRICA_SENTINEL_FAIL_CLOSED`** — opt-in fail-closed mode for
-  hardened deployments. Default unchanged (fail-open) for dev.
-- **`empirica-mcp/` brought into lint scope** — was previously outside
-  `tool.ruff.include`. 25 ruff errors cleaned in the process.
+**Bug fixes**
 
-**Side-fix surfaced by the trio**: Qdrant payloads in three embed functions
-previously omitted `artifact_id`, silently breaking
-`circle_3._qdrant_similarity_pull`. Fixed; the SQLite reverse-hash fallback in
-`suggested_links` resolves pre-fix points without requiring a `project-embed`
-rebuild.
+- **kars85 #102** — `strftime('%s', 'now')` dialect adapter now translates
+  to `EXTRACT(EPOCH FROM NOW())` on PostgreSQL. Was breaking
+  `project-bootstrap` on Postgres-backed deployments.
 
-84 new tests across the bootstrap surface, full suite **2293 passed**.
-See [PROPOSAL_BOOTSTRAP_AGGREGATOR.md](docs/specs/PROPOSAL_BOOTSTRAP_AGGREGATOR.md)
-for the design rationale.
+**Reverted**
+
+- **Statusline `🔎X%` provenance widget** — shipped briefly through
+  iterations, then pulled. The signal it surfaced (intuition vs search
+  ratio) doesn't apply in CLI surfaces: Claude Code *is* the harness, so
+  every artifact gets shaped by external reads/greps/web fetches by
+  definition. The widget belongs on Claude Desktop and chat surfaces
+  where context isn't externally grounded by default.
+
+**Docs**
+
+- **CONTRIBUTING.md** rewritten to reflect the current plugin + skill +
+  hook architecture.
+- Legacy `docs/human/developers/system-prompts/` directory deleted (kept
+  the lean template for opt-in `--full-prompt` mode).
+- Duplicate agent `.md` files de-duped; forgejo remote removed from
+  public docs (private mirror unchanged).
+
+Full suite **2274 passed, 4 skipped**.
 
 ## What's New in 1.9.0
 
@@ -516,6 +504,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.9.2
+**Version:** 1.9.3
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*
