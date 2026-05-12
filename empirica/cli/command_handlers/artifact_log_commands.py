@@ -2024,6 +2024,46 @@ def _hard_delete_source_chunks(project_id: str, source_id: str) -> int:
         return 0
 
 
+def _push_source_archive_to_cortex(
+    full_id: str, reason: str, target_id: str | None
+) -> dict | None:
+    """Best-effort `DELETE /v1/sources/{id}` to Cortex (Phase 1.5).
+
+    Returns a small status dict that the caller embeds in the JSON response
+    so the user can see whether the remote side was notified. Network or HTTP
+    failures NEVER fail the local archive — they're logged and reported.
+
+    No-op when CORTEX_REMOTE_URL or CORTEX_API_KEY are unset.
+    """
+    import os
+    import urllib.error
+    import urllib.request
+
+    url = os.environ.get("CORTEX_REMOTE_URL") or os.environ.get("CORTEX_URL")
+    key = os.environ.get("CORTEX_API_KEY")
+    if not url or not key:
+        return None
+
+    url = url.rstrip("/")
+    body = json.dumps({"reason": reason, "target_id": target_id}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{url}/v1/sources/{full_id}",
+        data=body,
+        method="DELETE",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {key}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10.0) as resp:
+            return {"synced": True, "status": resp.status}
+    except urllib.error.HTTPError as e:
+        return {"synced": False, "status": e.code, "error": f"HTTP {e.code}"}
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        return {"synced": False, "status": 0, "error": f"{type(e).__name__}: {e}"}
+
+
 def handle_source_archive_command(args):
     """Handle source-archive command — soft-delete a source (lifecycle Phase 1).
 
@@ -2035,6 +2075,11 @@ def handle_source_archive_command(args):
 
     Per SOURCES_LIFECYCLE_SPEC §8 Empirica-Core CLI parity. Empirica is the
     authoritative store; downstream Cortex projects from this state.
+
+    Phase 1.5 (v1.9.4+): when CORTEX_REMOTE_URL + CORTEX_API_KEY are set,
+    also `DELETE /v1/sources/{id}` on Cortex so the remote authoritative
+    side reflects the same archived state. Best-effort — the local archive
+    succeeds regardless of remote outcome.
     """
     db = None
     try:
@@ -2120,6 +2165,9 @@ def handle_source_archive_command(args):
         # Hard-delete chunks (best-effort; non-fatal)
         chunks_deleted = _hard_delete_source_chunks(project_id, full_id)
 
+        # Optional Cortex sync (Phase 1.5) — no-op when env vars unset
+        cortex_status = _push_source_archive_to_cortex(full_id, reason, target_id)
+
         result = {
             "ok": True,
             "source_id": full_id,
@@ -2132,6 +2180,8 @@ def handle_source_archive_command(args):
             "audit_log": existing_log,
             "message": "Source archived (soft-delete; edges + citing artifacts preserved)"
         }
+        if cortex_status is not None:
+            result["cortex"] = cortex_status
         if output_format == 'json':
             print(json.dumps(result, indent=2))
         else:
@@ -2139,6 +2189,11 @@ def handle_source_archive_command(args):
             print(f"   Reason: {reason}" + (f" → target {target_id[:8]}..." if target_id else ""))
             if chunks_deleted:
                 print(f"   Cleared {chunks_deleted} Qdrant chunks (regenerable from original)")
+            if cortex_status:
+                if cortex_status.get("synced"):
+                    print(f"   ☁ Cortex notified (HTTP {cortex_status['status']})")
+                else:
+                    print(f"   ⚠ Cortex sync failed: {cortex_status.get('error','unknown')} (local archive still succeeded)")
             print("   Edges + citing findings/decisions untouched (audit chain preserved)")
         return 0
 

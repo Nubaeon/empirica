@@ -13,6 +13,7 @@ import pytest
 
 from empirica.cli.command_handlers.artifact_log_commands import (
     _VALID_ARCHIVE_REASONS,
+    _push_source_archive_to_cortex,
     _query_epistemic_sources,
     handle_source_archive_command,
 )
@@ -301,3 +302,93 @@ def test_query_includes_archived_when_flag_set(project_db: Path):
     archived_row = next(s for s in sources if s["id"] == sid_archived)
     assert archived_row["archived"] is True
     conn.close()
+
+
+# ─── Cortex sync (Phase 1.5) ───────────────────────────────────────────
+
+
+def test_cortex_push_noop_when_env_unset(monkeypatch):
+    """No CORTEX_REMOTE_URL / CORTEX_API_KEY → return None (no-op)."""
+    monkeypatch.delenv("CORTEX_REMOTE_URL", raising=False)
+    monkeypatch.delenv("CORTEX_URL", raising=False)
+    monkeypatch.delenv("CORTEX_API_KEY", raising=False)
+    assert _push_source_archive_to_cortex("any-id", "user_deleted", None) is None
+
+
+def test_cortex_push_skips_when_only_url_set(monkeypatch):
+    monkeypatch.setenv("CORTEX_REMOTE_URL", "https://cortex.example.com")
+    monkeypatch.delenv("CORTEX_API_KEY", raising=False)
+    assert _push_source_archive_to_cortex("any-id", "user_deleted", None) is None
+
+
+def test_cortex_push_skips_when_only_key_set(monkeypatch):
+    monkeypatch.delenv("CORTEX_REMOTE_URL", raising=False)
+    monkeypatch.delenv("CORTEX_URL", raising=False)
+    monkeypatch.setenv("CORTEX_API_KEY", "sk-test")
+    assert _push_source_archive_to_cortex("any-id", "user_deleted", None) is None
+
+
+def test_cortex_push_success_path(monkeypatch):
+    monkeypatch.setenv("CORTEX_REMOTE_URL", "https://cortex.example.com")
+    monkeypatch.setenv("CORTEX_API_KEY", "sk-test")
+
+    class _FakeResponse:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, *a):
+            return False
+        def read(self):
+            return b""
+
+    with patch("urllib.request.urlopen", return_value=_FakeResponse()):
+        result = _push_source_archive_to_cortex("abc-id", "user_deleted", None)
+    assert result == {"synced": True, "status": 200}
+
+
+def test_cortex_push_returns_failure_on_http_error(monkeypatch):
+    import urllib.error
+    monkeypatch.setenv("CORTEX_REMOTE_URL", "https://cortex.example.com")
+    monkeypatch.setenv("CORTEX_API_KEY", "sk-test")
+
+    err = urllib.error.HTTPError(
+        url="x", code=404, msg="Not Found", hdrs=None, fp=None,  # type: ignore[arg-type]
+    )
+    with patch("urllib.request.urlopen", side_effect=err):
+        result = _push_source_archive_to_cortex("missing-id", "user_deleted", None)
+    assert result is not None
+    assert result["synced"] is False
+    assert result["status"] == 404
+
+
+def test_cortex_push_returns_failure_on_network_error(monkeypatch):
+    import urllib.error
+    monkeypatch.setenv("CORTEX_REMOTE_URL", "https://cortex.example.com")
+    monkeypatch.setenv("CORTEX_API_KEY", "sk-test")
+
+    with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("conn refused")):
+        result = _push_source_archive_to_cortex("any-id", "user_deleted", None)
+    assert result is not None
+    assert result["synced"] is False
+    assert result["status"] == 0
+    assert "URLError" in result["error"]
+
+
+def test_cortex_push_uses_cortex_url_fallback(monkeypatch):
+    """CORTEX_URL is accepted as an alias for CORTEX_REMOTE_URL."""
+    monkeypatch.delenv("CORTEX_REMOTE_URL", raising=False)
+    monkeypatch.setenv("CORTEX_URL", "https://cortex.example.com")
+    monkeypatch.setenv("CORTEX_API_KEY", "sk-test")
+
+    class _FakeResponse:
+        status = 204
+        def __enter__(self):
+            return self
+        def __exit__(self, *a):
+            return False
+        def read(self):
+            return b""
+
+    with patch("urllib.request.urlopen", return_value=_FakeResponse()):
+        result = _push_source_archive_to_cortex("abc-id", "superseded", "new-id")
+    assert result == {"synced": True, "status": 204}
