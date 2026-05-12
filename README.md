@@ -2,7 +2,7 @@
 
 > **We Gave AI a Mirror. Now It Measures What It Believes.**
 
-[![Version](https://img.shields.io/badge/version-1.9.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.9.3)
+[![Version](https://img.shields.io/badge/version-1.10.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.10.0)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -100,13 +100,13 @@ empirica setup-claude-code
 
 ```bash
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.9.3-alpine
+docker pull nubaeon/empirica:1.10.0-alpine
 
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.9.3
+docker pull nubaeon/empirica:1.10.0
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.9.3 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.10.0 /bin/bash
 ```
 </details>
 
@@ -266,7 +266,30 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ---
 
-## What's New in 1.9.3
+## What's New in 1.10.0
+
+**Daemon multi-project support — one `empirica serve` serves them all.**
+The daemon was CWD-bound at startup; Tier 2/3 users with multiple
+`.empirica/` directories had to restart it to switch context. v1.10.0
+adds:
+
+- **`~/.empirica/registry.yaml`** — atomic-write YAML registry of projects
+  the daemon is willing to serve. Hand-editable. Populated via
+  `empirica projects-discover --register` (idempotent; reads each
+  project's `.empirica/project.yaml` to extract the canonical project_id
+  — Cortex UUID when registered, slug otherwise).
+- **Per-request `?project_id=X` / `?path=Y`** on every GET `/api/v1/`
+  endpoint (`/health`, `/bootstrap`, `/goals`, `/findings`, `/decisions`,
+  `/unknowns`, `/mistakes`, `/dead-ends`, `/assumptions`, `/sources`,
+  `/artifacts/graph`, `/artifacts/{id}`). No param → existing CWD-bound
+  behavior. Backward-compatible.
+- **`/api/v1/health.known_projects[]`** — full registry surfaced in the
+  health response so the Chrome extension populates its project dropdown
+  without round-tripping Cortex.
+- **`empirica daemon-list`** — quick verb to print the registered set.
+- **`--register --prune`** — removes registry entries whose path no
+  longer exists.
+- **27 new tests** across `test_registry.py` + `test_daemon_multi_project.py`.
 
 **Security — CVE-2026-42561 patched.** Direct pin
 `python-multipart>=0.0.27` in core `pyproject.toml` overrides the 0.0.26
@@ -321,7 +344,7 @@ ambiguous-width glyphs.
 - Duplicate agent `.md` files de-duped; forgejo remote removed from
   public docs (private mirror unchanged).
 
-Full suite **2274 passed, 4 skipped**.
+Full suite **2350 passed, 4 skipped**.
 
 ## What's New in 1.9.0
 
@@ -504,6 +527,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.9.3
+**Version:** 1.10.0
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*
