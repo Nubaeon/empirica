@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.3] — 2026-05-12
+
+### Security
+
+- **CVE-2026-42561** — pin `python-multipart>=0.0.27` (was 0.0.26 transitively
+  via `mcp`/`nicegui`/`p4-confidence-tracker`). Direct pin in core
+  `pyproject.toml` overrides the transitive resolution. `pip-audit` clean.
+
+### Added
+
+- **`empirica source-archive` CLI** (SOURCES_LIFECYCLE_SPEC Phase 1) — soft-delete
+  verb for epistemic sources. Layer A (sources table) gets `archived=1` +
+  `archive_reason` + `archive_target_id` + audit log; Layer B (Qdrant chunks)
+  gets hard-deleted via batched filter; Layer C (artifact_edges) is immutable.
+  Four reasons supported: `user_deleted`, `file_missing`, `url_unreachable`,
+  `superseded` (requires `--target-id`). `source-list` excludes archived by
+  default; pass `--include-archived` to see them. Empirica is authoritative;
+  the Cortex API push is supplementary follow-up (Phase 1.5).
+- **`goals.description` field** (migration 043) — Linear/GitHub/Jira-style split:
+  `objective` is the short title (≤200 chars), `description` is the long-form
+  body with acceptance criteria, scope notes, success metrics. Both writable
+  via `empirica goals-create --objective "..." --description "..."`. Older
+  rows keep `description = NULL`; new rows fill both.
+
+### Changed
+
+- **Goal description max length** bumped from 1000 → 2000 chars for richer
+  acceptance-criteria capture. The 1000-char ceiling was tripping on standard
+  Linear-style spec bodies.
+- **System prompt + epistemic-transaction skill** updated to teach AIs the
+  goal-vs-subtask discipline natively: `goals-add-subtask` for decomposition,
+  `goals-complete-subtask --evidence` for closure with grounded evidence.
+  Plus batch-op signal→action rows (`log-artifacts`, `resolve-artifacts`,
+  `delete-artifacts`) and `noetic-batch` guidance.
+- **Statusline glyph parity** — swap `⚙` (U+2699, ambiguous east-asian-width)
+  to `🔨` (U+1F528, wide) so the praxic-phase indicator no longer renders over
+  the `%` confidence digit on terminals that don't normalize ambiguous-width
+  glyphs. Matches existing doc references which already used `🔨`.
+- **CONTRIBUTING.md** rewritten to reflect the current plugin + skill +
+  hook architecture; legacy `docs/human/developers/system-prompts/` directory
+  deleted (kept the lean template for opt-in `--full-prompt` mode); duplicate
+  agent `.md` files de-duped; forgejo remote removed from public docs.
+
+### Fixed
+
+- **kars85 #102** — `strftime('%s', 'now')` dialect adapter now translates to
+  `EXTRACT(EPOCH FROM NOW())` on PostgreSQL backends. Was breaking
+  `project-bootstrap` on Postgres-backed deployments.
+- **Statusline cascade-aware scoping** for the provenance widget (later
+  reverted — see below); recency-merge bug surfaced during widget development.
+
+### Reverted
+
+- **Statusline `🔎X%` provenance widget** — shipped briefly through
+  iterations, then pulled. The signal it was meant to surface (intuition vs
+  search ratio) doesn't apply in CLI surfaces: Claude Code *is* the harness,
+  so by definition every artifact gets shaped by external reads/greps/web
+  fetches. The widget belongs on Claude Desktop and chat surfaces where
+  context isn't externally grounded by default. Logged as article material;
+  zero net statusline behavior change after revert.
+
+### Notes
+
+- **Cryptography pin cap `>=44.0.1,<48`** carried over from 1.9.2 — keeps
+  shared-env compat with `pynitrokey`/`spsdk` and other hardware-token tools
+  that pin `cryptography<47`. We use no 48-only API.
+
 ## [1.9.2] — 2026-05-08
 
 ### Added — Three-circle bootstrap aggregator (v0.6 spec)
