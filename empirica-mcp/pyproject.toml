@@ -39,3 +39,14 @@ empirica-mcp = "empirica_mcp.server:run"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["empirica_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-mock>=3.11",
+    "ruff>=0.1.0",
+]

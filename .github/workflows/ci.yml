@@ -71,8 +71,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev,api]"
+          pip install -e "./empirica-mcp[dev]"
 
-      - name: pytest
+      - name: pytest (empirica)
+        run: pytest tests/ -q --tb=short
+
+      - name: pytest (empirica-mcp)
+        working-directory: empirica-mcp
         run: pytest tests/ -q --tb=short
 
   # ── Compliance + dep-audit ──────────────────────────────────────────
