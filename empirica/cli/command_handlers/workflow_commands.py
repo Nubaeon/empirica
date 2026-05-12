@@ -21,8 +21,6 @@ import directly from the phase modules.
 
 # Public handlers — the four CLI entry points.
 from ._workflow_check import handle_check_command, handle_check_submit_command
-from ._workflow_postflight import handle_postflight_submit_command
-from ._workflow_preflight import handle_preflight_submit_command
 
 # Internal helpers reached into by the existing test suite. Keep these
 # re-exports stable; deprecate gradually as tests are rewritten to import
@@ -33,7 +31,9 @@ from ._workflow_postflight import (
     _postflight_parse_config_or_legacy,
     _postflight_update_memory_hot_cache,
     _validate_postflight_preconditions,
+    handle_postflight_submit_command,
 )
+from ._workflow_preflight import handle_preflight_submit_command
 from ._workflow_shared import (
     _build_retrospective,
     _build_voice_guidance,
@@ -42,12 +42,6 @@ from ._workflow_shared import (
 )
 
 __all__ = [
-    # Public
-    'handle_check_command',
-    'handle_check_submit_command',
-    'handle_postflight_submit_command',
-    'handle_preflight_submit_command',
-    # Test-facing internals (legacy)
     '_build_postflight_result',
     '_build_retrospective',
     '_build_voice_guidance',
@@ -57,4 +51,8 @@ __all__ = [
     '_postflight_update_memory_hot_cache',
     '_soft_run',
     '_validate_postflight_preconditions',
+    'handle_check_command',
+    'handle_check_submit_command',
+    'handle_postflight_submit_command',
+    'handle_preflight_submit_command',
 ]

@@ -45,9 +45,11 @@ jobs:
         run: pyright empirica/ empirica-mcp/
 
   # ── Tests ───────────────────────────────────────────────────────────
-  # Matrix on min (3.10) and current (3.13) Python — declared range is
-  # 3.10-3.13 per pyproject classifiers. Skip 3.11/3.12 in CI; they're
-  # not where bugs live.
+  # Matrix on 3.11 (min for empirica-mcp) + 3.13 (current). empirica
+  # itself still declares 3.10 in classifiers, but empirica-mcp requires
+  # 3.11+ and we install it for the integration tests — so 3.10 doesn't
+  # fit the CI shape. If 3.10 support becomes a hard guarantee, split
+  # into separate jobs.
   test:
     name: Tests (Python ${{ matrix.python }})
     runs-on: ubuntu-latest
@@ -55,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false  # partial coverage > none
       matrix:
-        python: ["3.10", "3.13"]
+        python: ["3.11", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -67,10 +69,13 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      - name: Install (with dev extras)
+      - name: Install (with dev + optional extras)
+        # tui + vector extras: required because some tests import
+        # textual/qdrant_client at module top level (no skip-on-missing
+        # guard yet). Bundle them in CI rather than rewriting tests.
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,api]"
+          pip install -e ".[dev,api,tui,vector]"
           pip install -e "./empirica-mcp[dev]"
 
       - name: pytest (empirica)

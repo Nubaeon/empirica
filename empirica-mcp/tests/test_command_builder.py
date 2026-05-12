@@ -12,14 +12,12 @@ import json
 from unittest.mock import patch
 
 import mcp.types as types
-
 from empirica_mcp.server import (
     EMPIRICA_CLI,
     _build_cli_command,
     _err_text,
     _resolve_cwd,
 )
-
 
 # ─── _build_cli_command ────────────────────────────────────────────────
 
@@ -107,7 +105,7 @@ def test_bool_true_emits_bare_flag():
     assert "--grounded" in cmd
     # The next element shouldn't be "True" (the bool value)
     grounded_idx = cmd.index("--grounded")
-    assert grounded_idx == len(cmd) - 1 or not cmd[grounded_idx + 1] == "True"
+    assert grounded_idx == len(cmd) - 1 or cmd[grounded_idx + 1] != "True"
 
 
 def test_bool_false_omits_flag():

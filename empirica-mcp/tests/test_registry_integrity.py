@@ -10,7 +10,6 @@ tool months later.
 from __future__ import annotations
 
 import pytest
-
 from empirica_mcp.server import (
     _ENUM_PARAMS,
     TOOL_REGISTRY,

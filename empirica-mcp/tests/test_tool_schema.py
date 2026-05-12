@@ -10,7 +10,6 @@ stdin_json + submit_* tools.
 from __future__ import annotations
 
 import mcp.types as types
-
 from empirica_mcp.server import _build_tool_schema
 
 

@@ -268,8 +268,9 @@ from .workspace_commands import (
 from .workspace_init import handle_workspace_init_command
 from .workspace_search import handle_workspace_search_command
 
-# Export all handlers
-__all__ = [
+# Export all handlers — deliberately grouped by domain (comments separate
+# semantic clusters), so strict alphabetical sort would lose the structure.
+__all__ = [  # noqa: RUF022
     'handle_act_log_command',
     'handle_analyze_command',
     # Artifact generation
