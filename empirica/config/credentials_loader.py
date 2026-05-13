@@ -13,6 +13,7 @@ Features:
 import logging
 import os
 import re
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -181,6 +182,103 @@ class CredentialsLoader:
 
         logger.info(f"   Loaded {loaded_count} API keys from dotfiles")
         return credentials
+
+    def save_cortex_config(
+        self,
+        *,
+        url: str | None = None,
+        api_key: str | None = None,
+        config_path: Path | None = None,
+    ) -> Path:
+        """Persist Cortex {url, api_key} to credentials.yaml.
+
+        Merges into the existing `cortex:` block — never touches
+        `providers:`, `version:`, or any other top-level keys. At least
+        one of url/api_key must be provided.
+
+        Resolution order for target path (same as _find_config_file):
+          1. config_path argument (explicit override)
+          2. EMPIRICA_CREDENTIALS_PATH env var
+          3. existing credentials.yaml in repo or home dir (whichever
+             _find_config_file returns)
+          4. ~/.empirica/credentials.yaml (creates if missing)
+
+        Atomic write: tempfile + rename to avoid partial writes
+        corrupting the file. Resets the cache so subsequent reads see
+        the new values.
+
+        Returns the path written to.
+        """
+        if url is None and api_key is None:
+            raise ValueError(
+                "save_cortex_config: at least one of url/api_key required"
+            )
+
+        # Resolve target:
+        # 1. Explicit config_path argument
+        # 2. EMPIRICA_CREDENTIALS_PATH env var (even if file doesn't exist —
+        #    we're creating it, so existence check from _find_config_file
+        #    would falsely fall through)
+        # 3. _find_config_file (returns existing files only)
+        # 4. ~/.empirica/credentials.yaml (default home location)
+        target = config_path
+        if target is None:
+            env_path = os.getenv("EMPIRICA_CREDENTIALS_PATH")
+            if env_path:
+                target = Path(env_path)
+        if target is None:
+            target = self._find_config_file()
+        if target is None:
+            target = Path.home() / ".empirica" / "credentials.yaml"
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        # Load existing (preserve providers, etc.)
+        existing: dict = {}
+        if target.exists() and YAML_AVAILABLE:
+            try:
+                existing = yaml.safe_load(target.read_text(encoding="utf-8")) or {}
+            except Exception as e:
+                logger.warning(f"save_cortex_config: existing file unreadable, overwriting: {e}")
+                existing = {}
+
+        cortex_block = existing.get("cortex") or {}
+        if not isinstance(cortex_block, dict):
+            cortex_block = {}
+        if url is not None:
+            cortex_block["url"] = url.rstrip("/") or None
+        if api_key is not None:
+            cortex_block["api_key"] = api_key
+
+        existing["cortex"] = cortex_block
+        if "version" not in existing:
+            existing["version"] = "1.0"
+
+        if not YAML_AVAILABLE:
+            raise RuntimeError(
+                "save_cortex_config: PyYAML not installed (`pip install pyyaml`)",
+            )
+
+        # Atomic write (tempfile in same dir → rename)
+        tmp_fd, tmp_path = tempfile.mkstemp(
+            prefix=".credentials-", suffix=".yaml.tmp", dir=str(target.parent),
+        )
+        try:
+            with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+                yaml.dump(
+                    existing, f, default_flow_style=False,
+                    sort_keys=False, allow_unicode=True,
+                )
+            os.replace(tmp_path, target)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+
+        # Invalidate cache so next read sees the new values
+        self._credentials_cache = None
+        return target
 
     def get_cortex_config(self) -> dict[str, str | None]:
         """Return Cortex {url, api_key} resolved by precedence:

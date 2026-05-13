@@ -71,8 +71,38 @@ Per-field precedence: CLI flags → env vars → credentials file → None.
 Setting `CORTEX_API_KEY` in env still picks `url` up from the file —
 useful for CI where the key is a secret but the URL is stable.
 
-7 new tests in `tests/test_cortex_credentials_loader.py` covering the
-precedence matrix.
+### Added — Daemon credentials write endpoint (`POST /api/v1/credentials/cortex`)
+
+The Chrome extension stores `cortexUrl` + `cortexApiKey` in
+chrome.storage; chrome.storage can't reach the filesystem to populate
+the CLI's equivalent. v1.9.4 closes that loop with a daemon endpoint
+the extension POSTs to — the daemon (same machine, localhost-only)
+writes the file on the extension's behalf.
+
+```bash
+POST /api/v1/credentials/cortex
+  {"url": "https://...", "api_key": "ctx_..."}
+GET  /api/v1/credentials/cortex
+  → {"url": "...", "api_key_set": true, "api_key_preview": "...wxyz"}
+```
+
+Security model:
+- Localhost-only (inherits existing CORS restriction to
+  `chrome-extension://*` + `http://localhost*`)
+- Atomic file write (tempfile + `os.replace`) — no partial-write
+  corruption
+- Merge semantics: only the `cortex:` block is touched; `providers:`,
+  `version:`, and other sections are preserved verbatim
+- GET returns last-4-chars preview only — full key never crosses the
+  wire on reads, so even if CORS gets loosened later, exfiltration
+  isn't possible from the read path
+
+Per v0.7.9 handoff spec — extension v0.7.9 ships the matching
+"Also save to local CLI" Settings checkbox.
+
+16 tests in `tests/test_cortex_credentials_loader.py` covering reader
+precedence (7) + writer atomicity / preservation / cache invalidation
+(6) + endpoint round-trip / preview-only / empty-payload (3).
 
 ### Changed — `projects-bulk-register` sources from `registry.yaml`
 

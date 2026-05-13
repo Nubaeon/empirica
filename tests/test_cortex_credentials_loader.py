@@ -12,13 +12,25 @@ import pytest
 from empirica.config.credentials_loader import CredentialsLoader
 
 
-@pytest.fixture
-def isolated_loader(monkeypatch, tmp_path):
-    """Build a CredentialsLoader pointed at a tmp credentials.yaml."""
+@pytest.fixture(autouse=True)
+def isolate_home_and_env(monkeypatch, tmp_path):
+    """Universal isolation — every test gets a fake HOME and clean env.
+
+    Without this, tests that fall through to `~/.empirica/credentials.yaml`
+    can read OR overwrite the developer's real credentials file.
+    """
+    fake_home = tmp_path / "fake_home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
     monkeypatch.delenv("CORTEX_REMOTE_URL", raising=False)
     monkeypatch.delenv("CORTEX_URL", raising=False)
     monkeypatch.delenv("CORTEX_API_KEY", raising=False)
     monkeypatch.delenv("EMPIRICA_CREDENTIALS_PATH", raising=False)
+
+
+@pytest.fixture
+def isolated_loader(monkeypatch, tmp_path):
+    """Build a CredentialsLoader pointed at a tmp credentials.yaml."""
 
     # Reset singleton cache so the test gets a fresh load
     CredentialsLoader._instance = None
@@ -121,9 +133,225 @@ cortex:
     assert cfg["api_key"] is None
 
 
-def test_completely_missing_credentials_file(monkeypatch, isolated_loader):
+def test_completely_missing_credentials_file(isolated_loader):
     """No env, no file → (None, None) without crashing."""
     loader = isolated_loader(None)
     cfg = loader.get_cortex_config()
     assert cfg["url"] is None
     assert cfg["api_key"] is None
+
+
+# ─── save_cortex_config — write path ──────────────────────────────────
+
+
+def test_save_cortex_creates_file_when_missing(tmp_path, monkeypatch):
+    """No existing credentials.yaml → save creates it with cortex: block."""
+    target = tmp_path / "credentials.yaml"
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+
+    CredentialsLoader._instance = None
+    CredentialsLoader._credentials_cache = None
+    loader = CredentialsLoader()
+    path = loader.save_cortex_config(
+        url="https://cortex.example.com",
+        api_key="ctx_new_key",
+        config_path=target,
+    )
+
+    assert path == target
+    assert target.exists()
+    import yaml
+    parsed = yaml.safe_load(target.read_text())
+    assert parsed["cortex"]["url"] == "https://cortex.example.com"
+    assert parsed["cortex"]["api_key"] == "ctx_new_key"
+    assert parsed["version"] == "1.0"
+
+
+def test_save_cortex_preserves_providers_section(tmp_path, monkeypatch):
+    """Existing providers.qwen.api_key must survive a cortex save."""
+    target = tmp_path / "credentials.yaml"
+    target.write_text("""
+version: 1.0
+providers:
+  qwen:
+    api_key: qwen_secret_unchanged
+    base_url: https://qwen.example.com
+cortex:
+  url: https://old.example.com
+  api_key: old_key
+""")
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+
+    CredentialsLoader._instance = None
+    CredentialsLoader._credentials_cache = None
+    loader = CredentialsLoader()
+    loader.save_cortex_config(api_key="ctx_updated", config_path=target)
+
+    import yaml
+    parsed = yaml.safe_load(target.read_text())
+    assert parsed["providers"]["qwen"]["api_key"] == "qwen_secret_unchanged"
+    assert parsed["providers"]["qwen"]["base_url"] == "https://qwen.example.com"
+    assert parsed["cortex"]["api_key"] == "ctx_updated"
+    assert parsed["cortex"]["url"] == "https://old.example.com"  # untouched
+
+
+def test_save_cortex_partial_update_url_only(tmp_path, monkeypatch):
+    """save(url=X) without api_key keeps existing api_key intact."""
+    target = tmp_path / "credentials.yaml"
+    target.write_text("""
+version: 1.0
+cortex:
+  url: https://A.example.com
+  api_key: B
+""")
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+
+    CredentialsLoader._instance = None
+    CredentialsLoader._credentials_cache = None
+    loader = CredentialsLoader()
+    loader.save_cortex_config(url="https://C.example.com", config_path=target)
+
+    import yaml
+    parsed = yaml.safe_load(target.read_text())
+    assert parsed["cortex"]["url"] == "https://C.example.com"
+    assert parsed["cortex"]["api_key"] == "B"  # preserved
+
+
+def test_save_cortex_invalidates_cache(tmp_path, monkeypatch):
+    """After save, next get_cortex_config() reads the new value (not cached)."""
+    target = tmp_path / "credentials.yaml"
+    target.write_text("""
+version: 1.0
+cortex:
+  url: https://A.example.com
+  api_key: cached_key
+""")
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+    monkeypatch.delenv("CORTEX_REMOTE_URL", raising=False)
+    monkeypatch.delenv("CORTEX_URL", raising=False)
+    monkeypatch.delenv("CORTEX_API_KEY", raising=False)
+
+    CredentialsLoader._instance = None
+    CredentialsLoader._credentials_cache = None
+    loader = CredentialsLoader()
+    cached = loader.get_cortex_config()
+    assert cached["api_key"] == "cached_key"
+
+    loader.save_cortex_config(api_key="fresh_key", config_path=target)
+    fresh = loader.get_cortex_config()
+    assert fresh["api_key"] == "fresh_key"
+
+
+def test_save_cortex_requires_at_least_one_field(tmp_path, monkeypatch):
+    """save() with neither url nor api_key raises ValueError."""
+    target = tmp_path / "credentials.yaml"
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+
+    CredentialsLoader._instance = None
+    CredentialsLoader._credentials_cache = None
+    loader = CredentialsLoader()
+    with pytest.raises(ValueError, match="at least one of url/api_key"):
+        loader.save_cortex_config(config_path=target)
+
+
+def test_save_cortex_atomic_no_tempfile_leak(tmp_path, monkeypatch):
+    """After save, no `.credentials-*.yaml.tmp` files left behind."""
+    target = tmp_path / "credentials.yaml"
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+
+    CredentialsLoader._instance = None
+    CredentialsLoader._credentials_cache = None
+    loader = CredentialsLoader()
+    loader.save_cortex_config(
+        url="https://x.example.com", api_key="k", config_path=target,
+    )
+
+    tmp_files = list(tmp_path.glob(".credentials-*.tmp"))
+    assert tmp_files == [], f"Tempfiles leaked: {tmp_files}"
+
+
+# ─── Daemon endpoints ─────────────────────────────────────────────────
+
+
+def test_endpoint_post_cortex_writes_and_returns_preview(tmp_path, monkeypatch):
+    """POST /api/v1/credentials/cortex with url+api_key → 200 + preview only."""
+    from fastapi.testclient import TestClient
+
+    from empirica.api.serve_app import create_serve_app
+
+    target = tmp_path / "credentials.yaml"
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+    monkeypatch.delenv("CORTEX_REMOTE_URL", raising=False)
+    monkeypatch.delenv("CORTEX_URL", raising=False)
+    monkeypatch.delenv("CORTEX_API_KEY", raising=False)
+
+    CredentialsLoader._instance = None
+    CredentialsLoader._credentials_cache = None
+
+    app = create_serve_app()
+    with TestClient(app) as client:
+        resp = client.post(
+            "/api/v1/credentials/cortex",
+            json={"url": "https://cortex.example.com", "api_key": "ctx_abcdwxyz"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["url"] == "https://cortex.example.com"
+    assert body["api_key_set"] is True
+    assert body["api_key_preview"] == "...wxyz"  # last 4 only
+    assert "credentials.yaml" in body["written_path"]
+    # Verify file actually written
+    assert target.exists()
+
+
+def test_endpoint_get_cortex_never_returns_full_key(tmp_path, monkeypatch):
+    """GET /api/v1/credentials/cortex returns preview, NEVER raw key."""
+    from fastapi.testclient import TestClient
+
+    from empirica.api.serve_app import create_serve_app
+
+    target = tmp_path / "credentials.yaml"
+    target.write_text("""
+version: 1.0
+cortex:
+  url: https://x.example.com
+  api_key: ctx_dontleakme_zzz9
+""")
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+    monkeypatch.delenv("CORTEX_REMOTE_URL", raising=False)
+    monkeypatch.delenv("CORTEX_URL", raising=False)
+    monkeypatch.delenv("CORTEX_API_KEY", raising=False)
+
+    CredentialsLoader._instance = None
+    CredentialsLoader._credentials_cache = None
+
+    app = create_serve_app()
+    with TestClient(app) as client:
+        resp = client.get("/api/v1/credentials/cortex")
+
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["api_key_set"] is True
+    assert body["api_key_preview"] == "...zzz9"
+    # The raw key MUST NOT appear anywhere in the response
+    assert "ctx_dontleakme_zzz9" not in resp.text
+
+
+def test_endpoint_post_rejects_empty_payload(monkeypatch):
+    """POST with no url + no api_key → 200 ok=false with hint."""
+    from fastapi.testclient import TestClient
+
+    from empirica.api.serve_app import create_serve_app
+
+    monkeypatch.delenv("CORTEX_REMOTE_URL", raising=False)
+    monkeypatch.delenv("CORTEX_URL", raising=False)
+    monkeypatch.delenv("CORTEX_API_KEY", raising=False)
+
+    app = create_serve_app()
+    with TestClient(app) as client:
+        resp = client.post("/api/v1/credentials/cortex", json={})
+    assert resp.status_code == 200  # not 422 — surfaces as ok=false
+    body = resp.json()
+    assert body["ok"] is False
+    assert "required" in body["error"].lower()

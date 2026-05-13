@@ -76,6 +76,29 @@ class ArtifactImportResponse(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class CortexCredentialsRequest(BaseModel):
+    """Set Cortex creds via the daemon. At least one field required.
+
+    Extension flow: user enters cortexUrl + cortexApiKey in Settings,
+    extension POSTs to this endpoint, daemon writes to
+    ~/.empirica/credentials.yaml so the CLI sees the same creds.
+    """
+    url: str | None = None
+    api_key: str | None = None
+
+
+class CortexCredentialsResponse(BaseModel):
+    """Cortex creds GET/POST response. NEVER returns the full key over
+    the wire — `api_key_preview` is last-4-chars only, so even if CORS
+    gets loosened the secret doesn't leak via read."""
+    ok: bool
+    url: str | None = None
+    api_key_set: bool = False
+    api_key_preview: str | None = None
+    written_path: str | None = None
+    error: str | None = None
+
+
 class ProfileStatusResponse(BaseModel):
     """Matches extension's ProfileStatus interface."""
     ok: bool = True
@@ -169,6 +192,63 @@ def create_serve_app() -> FastAPI:
         except Exception as e:
             logger.error(f"Profile sync failed: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e)) from e
+
+    @app.post("/api/v1/credentials/cortex", response_model=CortexCredentialsResponse)
+    async def set_cortex_credentials(  # pyright: ignore[reportUnusedFunction]
+        req: CortexCredentialsRequest,
+    ) -> CortexCredentialsResponse:
+        """Write Cortex {url, api_key} into ~/.empirica/credentials.yaml.
+
+        Companion to the extension's chrome.storage save — extension
+        POSTs the user's entered creds here, daemon merges them into
+        the existing `cortex:` block without touching other sections.
+
+        At least one of url/api_key must be provided. Atomic write via
+        tempfile + rename — never partial-corrupts the file."""
+        if not req.url and not req.api_key:
+            return CortexCredentialsResponse(
+                ok=False, error="url or api_key required",
+            )
+        try:
+            from empirica.config.credentials_loader import CredentialsLoader
+            loader = CredentialsLoader()
+            path = loader.save_cortex_config(
+                url=req.url, api_key=req.api_key,
+            )
+            cfg = loader.get_cortex_config()
+            key = cfg.get("api_key") or ""
+            return CortexCredentialsResponse(
+                ok=True,
+                url=cfg.get("url"),
+                api_key_set=bool(key),
+                api_key_preview=f"...{key[-4:]}" if len(key) >= 4 else None,
+                written_path=str(path),
+            )
+        except Exception as e:
+            logger.error(f"set_cortex_credentials failed: {e}", exc_info=True)
+            return CortexCredentialsResponse(ok=False, error=str(e))
+
+    @app.get("/api/v1/credentials/cortex", response_model=CortexCredentialsResponse)
+    async def get_cortex_credentials() -> CortexCredentialsResponse:  # pyright: ignore[reportUnusedFunction]
+        """Read current Cortex creds from credentials.yaml (or env).
+
+        Returns url + key-set flag + last-4-chars preview. NEVER returns
+        the full key — exfiltration risk if CORS loosens in the future.
+        Use for drift detection on the extension side (compare preview
+        against the chrome.storage stored key)."""
+        try:
+            from empirica.config.credentials_loader import CredentialsLoader
+            cfg = CredentialsLoader().get_cortex_config()
+            key = cfg.get("api_key") or ""
+            return CortexCredentialsResponse(
+                ok=True,
+                url=cfg.get("url"),
+                api_key_set=bool(key),
+                api_key_preview=f"...{key[-4:]}" if len(key) >= 4 else None,
+            )
+        except Exception as e:
+            logger.error(f"get_cortex_credentials failed: {e}", exc_info=True)
+            return CortexCredentialsResponse(ok=False, error=str(e))
 
     return app
 
