@@ -940,6 +940,85 @@ brew install empirica
             self.run_command(["git", "merge", "main", "-m", f"Merge main — post-release {self.version}"])
             self.run_command(["git", "push", "origin", "develop"], check=False)
 
+    def run_ruff(self) -> bool:
+        """Lint gate — mirrors the CI ruff check step.
+
+        Caught 1.9.4 shipping with a leftover unused `import os` that broke
+        CI's lint job after the tag was already pushed. Lint failures at
+        this stage are cheap to fix; after the tag they cost a re-roll.
+        """
+        log("\n" + "=" * 60)
+        log("🧹 ruff check (lint gate)")
+        log("=" * 60)
+
+        if self.dry_run:
+            info("Would run: ruff check empirica/ empirica-mcp/ tests/")
+            return True
+
+        result = subprocess.run(
+            ["ruff", "check", "empirica/", "empirica-mcp/", "tests/"],
+            capture_output=True, text=True, timeout=120,
+            cwd=str(self.repo_root),
+        )
+        if result.returncode == 0:
+            success("ruff clean")
+            return True
+        log(f"\n{RED}ruff FAILED:{RESET}")
+        for line in (result.stdout + result.stderr).strip().splitlines()[-30:]:
+            log(f"  {line}")
+        return False
+
+    def run_pyright(self) -> bool:
+        """Type-check gate — mirrors the CI pyright step."""
+        log("\n" + "=" * 60)
+        log("🔬 pyright (type-check gate)")
+        log("=" * 60)
+
+        if self.dry_run:
+            info("Would run: pyright empirica/ empirica-mcp/")
+            return True
+
+        result = subprocess.run(
+            ["pyright", "empirica/", "empirica-mcp/"],
+            capture_output=True, text=True, timeout=300,
+            cwd=str(self.repo_root),
+        )
+        if result.returncode == 0:
+            success("pyright clean")
+            return True
+        log(f"\n{RED}pyright FAILED:{RESET}")
+        for line in (result.stdout + result.stderr).strip().splitlines()[-30:]:
+            log(f"  {line}")
+        return False
+
+    def run_pip_audit(self) -> bool:
+        """CVE scan — mirrors the CI pip-audit step (hard fail on CVEs)."""
+        log("\n" + "=" * 60)
+        log("🔒 pip-audit (CVE gate)")
+        log("=" * 60)
+
+        if self.dry_run:
+            info("Would run: pip-audit --skip-editable")
+            return True
+
+        try:
+            result = subprocess.run(
+                ["pip-audit", "--skip-editable"],
+                capture_output=True, text=True, timeout=300,
+                cwd=str(self.repo_root),
+            )
+        except FileNotFoundError:
+            warning("pip-audit not installed — skipping CVE gate (install via `pip install pip-audit`)")
+            return True  # informational on missing tool; CI is the source of truth
+
+        if result.returncode == 0:
+            success("pip-audit clean (no CVEs)")
+            return True
+        log(f"\n{RED}pip-audit FAILED:{RESET}")
+        for line in (result.stdout + result.stderr).strip().splitlines()[-30:]:
+            log(f"  {line}")
+        return False
+
     def run_tests(self) -> bool:
         """Run test suite as a release gate. Returns True if tests pass."""
         log("\n" + "=" * 60)
@@ -1091,6 +1170,27 @@ brew install empirica
             # Gate: import smoke test
             if not self.run_import_check():
                 error("Import check failed — fix before publishing.")
+
+            # Gate: ruff (lint) — mirrors CI's ruff check step. Cheap; catches
+            # the kind of leftover-import drift that broke v1.9.4's post-tag CI.
+            if not self.run_ruff():
+                warning("Lint failed. Fix issues before running --publish.")
+                warning("You are on the 'main' branch with built artifacts.")
+                warning("To abort: git checkout develop && git reset --hard origin/main")
+                info(f"\nOnce fixed, run: python scripts/release.py --publish")
+                sys.exit(1)
+
+            # Gate: pyright (types) — mirrors CI's pyright step.
+            if not self.run_pyright():
+                warning("Type-check failed. Fix issues before running --publish.")
+                info(f"\nOnce fixed, run: python scripts/release.py --publish")
+                sys.exit(1)
+
+            # Gate: pip-audit (CVE scan) — mirrors CI's pip-audit step.
+            if not self.run_pip_audit():
+                warning("CVE scan failed. Fix vulnerabilities before running --publish.")
+                info(f"\nOnce fixed, run: python scripts/release.py --publish")
+                sys.exit(1)
 
             # Gate: test suite
             if not self.run_tests():
