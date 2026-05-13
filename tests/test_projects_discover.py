@@ -321,10 +321,25 @@ def test_resolve_cortex_config_strips_trailing_slash(monkeypatch):
     assert url == "https://cortex.example.com"
 
 
-def test_resolve_cortex_config_returns_none_when_unset(monkeypatch):
+def test_resolve_cortex_config_returns_none_when_unset(monkeypatch, tmp_path):
+    # Isolate HOME so the loader doesn't fall through to the developer's
+    # real ~/.empirica/credentials.yaml (post-1.9.4 the loader is wired
+    # into _resolve_cortex_config via get_credentials_loader()).
+    fake_home = tmp_path / "fake_home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
     monkeypatch.delenv("CORTEX_REMOTE_URL", raising=False)
     monkeypatch.delenv("CORTEX_URL", raising=False)
     monkeypatch.delenv("CORTEX_API_KEY", raising=False)
+    monkeypatch.delenv("EMPIRICA_CREDENTIALS_PATH", raising=False)
+    # Reset loader singleton + module-level global so it re-reads from
+    # the isolated HOME (get_credentials_loader caches a module global).
+    from empirica.config import credentials_loader as cl_mod
+    from empirica.config.credentials_loader import CredentialsLoader
+    CredentialsLoader._instance = None
+    CredentialsLoader._credentials_cache = None
+    cl_mod._loader = None
+
     args = SimpleNamespace(cortex_url=None, api_key=None)
     url, key = _resolve_cortex_config(args)
     assert url is None
