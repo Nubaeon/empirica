@@ -1,6 +1,6 @@
 # CI/CD Architecture
 
-**Status:** v1 — initial scaffolding, shipped in v1.9.3 follow-up work.
+**Status:** v1 — initial scaffolding, shipped in v1.9.4 follow-up work.
 Patterned on ecodex's two-workflow split, translated to Python.
 
 ---

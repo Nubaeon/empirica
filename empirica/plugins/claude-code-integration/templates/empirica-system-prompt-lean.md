@@ -278,7 +278,7 @@ Infer epistemic actions from conversation naturally:
 - `shared` — visible across projects within the same org (Cortex tenancy)
 - `public` — visible to anyone with a Cortex account
 
-The companion pull-side: `empirica project-search --task "..." --global` queries the `global_learnings` Qdrant collection where high-confidence shared/public artifacts get promoted. **Caveat (v1.9.3):** `--global` only searches `global_learnings`, not the full per-project Qdrant collections yet — true cross-project semantic walk is a logged goal. For now, opt into sharing liberally on findings that have ecosystem-wide value (security patterns, cross-repo bugs, reusable lessons), keep tactical project-internal work `local`. The richer push-based "auto-surface relevant cross-project artifacts at project-bootstrap" model is a deferred architectural goal.
+The companion pull-side: `empirica project-search --task "..." --global` queries the `global_learnings` Qdrant collection where high-confidence shared/public artifacts get promoted. **Caveat (v1.9.4):** `--global` only searches `global_learnings`, not the full per-project Qdrant collections yet — true cross-project semantic walk is a logged goal. For now, opt into sharing liberally on findings that have ecosystem-wide value (security patterns, cross-repo bugs, reusable lessons), keep tactical project-internal work `local`. The richer push-based "auto-surface relevant cross-project artifacts at project-bootstrap" model is a deferred architectural goal.
 
 ---
 

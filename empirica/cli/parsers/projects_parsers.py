@@ -62,7 +62,7 @@ def add_projects_parsers(subparsers) -> None:
         help=(
             "After scanning, upsert each discovered project into "
             "~/.empirica/registry.yaml (the daemon's served set). Idempotent — "
-            "matches on project_id. (v1.9.3+)"
+            "matches on project_id. (v1.9.4+)"
         ),
     )
     discover.add_argument(
@@ -82,7 +82,7 @@ def add_projects_parsers(subparsers) -> None:
             "Print the contents of ~/.empirica/registry.yaml — the set of "
             "projects the local `empirica serve` daemon is willing to route "
             "?project_id= requests to. Populate via `empirica projects-discover "
-            "--register` or hand-edit the YAML. (v1.9.3+)"
+            "--register` or hand-edit the YAML. (v1.9.4+)"
         ),
     )
     daemon_list.add_argument(

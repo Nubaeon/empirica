@@ -237,7 +237,7 @@ def get_cached_daemon_project(refresh: bool = False) -> dict | None:
     return _cached_project
 
 
-# ── v1.9.3 multi-project resolution ───────────────────────────────────
+# ── v1.9.4 multi-project resolution ───────────────────────────────────
 
 
 def resolve_for_request(

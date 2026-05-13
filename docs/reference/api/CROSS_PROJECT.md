@@ -29,7 +29,7 @@ empirica finding-log --finding "Security note on dep X..." --impact 0.8 \
   --visibility public
 ```
 
-**MCP parity (v1.9.3+):** the `mcp__empirica__finding_log` (and the other 5
+**MCP parity (v1.9.4+):** the `mcp__empirica__finding_log` (and the other 5
 `*_log` MCP tools — `unknown_log`, `deadend_log`, `mistake_log`,
 `assumption_log`, `decision_log`) expose `visibility` and `epistemic_source`
 as enum params. The CLI/MCP surfaces are at parity — discipline is
@@ -56,7 +56,7 @@ another project, want this to surface in a project-search?"*
 ## Cross-Project Intelligence (history)
 
 The original 1.7.0 cross-project capabilities below predate the visibility
-flag and the v1.9.3 MCP parity work.
+flag and the v1.9.4 MCP parity work.
 
 ## Cross-Project Search
 
@@ -77,7 +77,7 @@ empirica project-search --project-id empirica --task "sentinel bypass" --global
 artifacts that have been promoted via the visibility flag (or fed in via
 older sync paths).
 
-**Caveat (v1.9.3 state):** the original 1.7.0 design described a "cross-
+**Caveat (v1.9.4 state):** the original 1.7.0 design described a "cross-
 project scan" that iterates ALL `project_{id}_{collection}` collections.
 That broader walk is implemented in `search_cross_project` (`empirica.core.qdrant.global_sync`)
 but the `--global` CLI flag currently only hits `global_learnings`. True

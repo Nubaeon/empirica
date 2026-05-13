@@ -1267,7 +1267,7 @@ ALL_MIGRATIONS: list[tuple[str, str, Callable]] = [
     ("040_epistemic_source", "Add epistemic_source field (intuition/search/mixed/NULL) to artifact tables for source-aware Sentinel calibration substrate (PROMPT_FOR_EMPIRICA_CLAUDE_source_aware_sentinel.md)", lambda cursor: migration_040_epistemic_source(cursor)),
     ("041_artifact_edges", "Add normalized artifact_edges table + backfill from data.edges JSON (v0.5 LOCAL-ARTIFACTS daemon — fixes silent edge-drop on assumptions/decisions, enables cheap inverse queries)", lambda cursor: migration_041_artifact_edges(cursor)),
     ("042_impact_on_dead_ends_and_mistakes", "Add impact column to project_dead_ends and mistakes_made (long-lived DBs missed migrations 007/012 for these two tables — daemon /dead-ends endpoint 500s without this)", lambda cursor: migration_042_impact_on_dead_ends_and_mistakes(cursor)),
-    ("043_goal_description", "Add description TEXT column to goals (Linear/GitHub/Jira pattern: title-shaped objective + optional rich body) — extension Claude flagged the title-vs-context-rich tension after the 1000→2000 mitigation in 1.9.3", lambda cursor: migration_043_goal_description(cursor)),
+    ("043_goal_description", "Add description TEXT column to goals (Linear/GitHub/Jira pattern: title-shaped objective + optional rich body) — extension Claude flagged the title-vs-context-rich tension after the 1000→2000 mitigation in 1.9.4", lambda cursor: migration_043_goal_description(cursor)),
     ("044_source_lifecycle", "Add archive lifecycle columns (archived, archive_reason, archive_target_id, lifecycle_audit_log) to epistemic_sources for SOURCES_LIFECYCLE_SPEC Phase 1 (soft-delete + supersession). Empirica-Core CLI parity per the Cortex spec; empirica is the authoritative store.", lambda cursor: migration_044_source_lifecycle(cursor)),
 ]
 
@@ -1622,7 +1622,7 @@ def migration_043_goal_description(cursor: sqlite3.Cursor):
 
     The single-`objective`-field design forces a tension between
     title-shaped (~256 chars) and context-rich (1000-8000 chars) usage.
-    1.9.3 bumped 1000→2000 as short-term mitigation; this is the
+    1.9.4 bumped 1000→2000 as short-term mitigation; this is the
     structural fix mirroring how Linear / GitHub Issues / Jira split
     title + body.
 

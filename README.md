@@ -2,7 +2,7 @@
 
 > **We Gave AI a Mirror. Now It Measures What It Believes.**
 
-[![Version](https://img.shields.io/badge/version-1.9.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.9.3)
+[![Version](https://img.shields.io/badge/version-1.9.4-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.9.4)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -100,13 +100,13 @@ empirica setup-claude-code
 
 ```bash
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.9.3-alpine
+docker pull nubaeon/empirica:1.9.4-alpine
 
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.9.3
+docker pull nubaeon/empirica:1.9.4
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.9.3 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.9.4 /bin/bash
 ```
 </details>
 
@@ -266,85 +266,94 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ---
 
-## What's New in 1.9.3
+## What's New in 1.9.4
 
-**Daemon multi-project support — one `empirica serve` serves them all.**
-The daemon was CWD-bound at startup; Tier 2/3 users with multiple
-`.empirica/` directories had to restart it to switch context. v1.9.3
-adds:
+**Empirica's first CI/CD harness.** Three GitHub Actions workflows
+shipped: `ci.yml` (ruff + pyright + pytest matrix on Python 3.11 + 3.13
++ `empirica compliance-report` + pip-audit), `release.yml` (tag-triggered
+PyPI publishing via OIDC trusted publishers + Docker + Homebrew tap
+auto-update), `dependency-scan.yml` (weekly pip-audit + Dependabot
+grouped updates). `docs/architecture/CI_CD.md` documents the full setup
+including OIDC trusted-publisher configuration steps. Compliance score
+on CI: 1.0 (8/8 deterministic checks).
 
-- **`~/.empirica/registry.yaml`** — atomic-write YAML registry of projects
-  the daemon is willing to serve. Hand-editable. Populated via
-  `empirica projects-discover --register` (idempotent; reads each
-  project's `.empirica/project.yaml` to extract the canonical project_id
-  — Cortex UUID when registered, slug otherwise).
-- **Per-request `?project_id=X` / `?path=Y`** on every GET `/api/v1/`
-  endpoint (`/health`, `/bootstrap`, `/goals`, `/findings`, `/decisions`,
-  `/unknowns`, `/mistakes`, `/dead-ends`, `/assumptions`, `/sources`,
-  `/artifacts/graph`, `/artifacts/{id}`). No param → existing CWD-bound
-  behavior. Backward-compatible.
-- **`/api/v1/health.known_projects[]`** — full registry surfaced in the
-  health response so the Chrome extension populates its project dropdown
-  without round-tripping Cortex.
-- **`empirica daemon-list`** — quick verb to print the registered set.
-- **`--register --prune`** — removes registry entries whose path no
-  longer exists.
-- **27 new tests** across `test_registry.py` + `test_daemon_multi_project.py`.
+**MCP / CLI parity for `--visibility` + `--epistemic-source`.** All 6
+`mcp__empirica__*_log` tools (finding/unknown/deadend/mistake/assumption/
+decision) now expose both flags as enum params. The cross-Claude
+intelligence-sharing discipline (`visibility ∈ {public, shared, local}`,
+`epistemic_source ∈ {intuition, search, mixed}`) is enforceable through
+either MCP or bash CLI — no more dropping to bash to tag through the
+right interface.
 
-**Security — CVE-2026-42561 patched.** Direct pin
-`python-multipart>=0.0.27` in core `pyproject.toml` overrides the 0.0.26
-transitive resolution via `mcp` / `nicegui` / `p4-confidence-tracker`.
-`pip-audit` clean post-pin.
+**Cross-project artifact sharing taught.** The `--visibility` flag and
+`project-search --global` have been available for releases, but nothing
+in the system prompt or docs taught AIs to use them as a coherent
+sharing workflow. v1.9.4 closes that gap:
 
-**`empirica source-archive` CLI** — soft-delete verb for epistemic sources
-(SOURCES_LIFECYCLE_SPEC Phase 1). Layer A flips `archived=1` + audit log,
-Layer B (Qdrant chunks) hard-deletes via batched filter, Layer C (edges)
-stays immutable. Four reasons supported: `user_deleted`, `file_missing`,
-`url_unreachable`, `superseded` (requires `--target-id`). `source-list`
-excludes archived by default; `--include-archived` to see them.
+- New signal→action rows in the lean system prompt's COLLABORATIVE MODE
+  table: cross-codebase finding → `--visibility shared`, starting work
+  on a new topic → `project-search --global` first, cross-project log →
+  `--project-id <name>`
+- New "Visibility (push side)" section in `docs/reference/api/CROSS_PROJECT.md`
+  with a when-to-use-which matrix (`local` for tactical, `shared` for
+  ecosystem patterns, `public` for security/reusable lessons)
+- Honest scope caveat in both surfaces: v1.9.4 `--global` only hits the
+  `global_learnings` Qdrant collection; the richer per-project walk +
+  push-based auto-surface at project-bootstrap are deferred goals
 
-**`goals.description` field** (migration 043) — Linear/GitHub/Jira-style
-split. `objective` is the short title (≤200 chars), `description` is the
-long-form body with acceptance criteria, scope notes, success metrics. Max
-length bumped 1000 → 2000 chars. Older rows keep `description = NULL`; new
-rows fill both.
+**`projects-bulk-register` — `--only-existing` + `--force-metadata-update`.**
+Extension Claude v0.7.8 work + David follow-up:
 
-**AI-native goal-vs-subtask discipline** — system prompt + epistemic-
-transaction skill updated so AIs natively reach for `goals-add-subtask` and
-`goals-complete-subtask --evidence` without prompting. Plus batch-op
-signal→action rows for `log-artifacts`, `resolve-artifacts`,
-`delete-artifacts`, and `noetic-batch` guidance.
+- `--force-metadata-update`: sets `force_metadata_update: true` in each
+  POST body so Cortex's safe-update logic backfills UUID-shaped names +
+  empty repo_urls on existing rows
+- `--only-existing`: pre-queries Cortex `GET /v1/collections` and
+  filters the manifest to the intersection (matches by name OR
+  repo_url to handle local-slug ↔ Cortex-UUID renames)
+- Both flags are independent and compose. The common case is
+  `bulk-register --only-existing --force-metadata-update` — refresh
+  metadata on the registered subset without trying to register
+  unregistered local projects
+- Mid-cycle fix: `--only-existing --dry-run` now correctly previews
+  the intersection (was incorrectly showing the full manifest)
+- POSTFLIGHT `/v1/sync` payload also enriched with `name + repo_url`
+  so Cortex's auto-create on unknown project_ids no longer seeds rows
+  with `name=<UUID>`, `repo_url=""` (root cause of the EC-2 contamination
+  identified in the handoff)
 
-**Statusline glyph parity** — `⚙` (U+2699, ambiguous east-asian-width)
-swapped to `🔨` (U+1F528, wide) so the praxic-phase indicator no longer
-renders over the `%` confidence digit on terminals that don't normalize
-ambiguous-width glyphs.
+**`source-archive` Cortex sync.** When `CORTEX_REMOTE_URL +
+CORTEX_API_KEY` are set, archiving locally now also calls Cortex's
+`DELETE /v1/sources/{id}`. Best-effort — failures never block local
+archive; status surfaces in response as
+`{"cortex": {"synced": true, "status": 200}}`.
 
-**Bug fixes**
+**`workflow_commands.py` split.** 3933 LOC → 4 focused modules
+(`_workflow_shared` 612 + `_workflow_preflight` 747 +
+`_workflow_check` 1103 + `_workflow_postflight` 1431) plus a 61-LOC
+re-export shim. Largest single-file refactor in the codebase.
+External imports preserved.
 
-- **kars85 #102** — `strftime('%s', 'now')` dialect adapter now translates
-  to `EXTRACT(EPOCH FROM NOW())` on PostgreSQL. Was breaking
-  `project-bootstrap` on Postgres-backed deployments.
+**empirica-mcp bootstrapped 319 tests.** Three new test files cover
+the `_build_cli_command` / `_resolve_cwd` / `_err_text` helpers from
+the v1.9.3 refactor, `_build_tool_schema` branches, and TOOL_REGISTRY
+integrity (parametrized over every entry). Plus `empirica-mcp/call_tool()`
+refactored from D27 → C14 cyclomatic complexity, dropping a noqa: C901.
 
-**Reverted**
+**Internal-only docs removed from public tree.** Audit pass found
+2 internal docs (`CHAT_OVERNIGHT_PLAN.md` — David's autonomous-build
+brief, and `PROMPT_FOR_EMPIRICA_CLAUDE_source_aware_sentinel.md` —
+AI-to-AI handoff prompt) shipped publicly. Moved to gitignored
+`.empirica/notes/historical/`. Also fixed 3 hardcoded `/home/yogapad/...`
+paths (docker-compose.yml, diagnose_ecodex.py, KNOWN_ISSUES.md). Added
+forward-looking `.gitignore` patterns: `docs/**/PROMPT_FOR_*.md` and
+`docs/**/*OVERNIGHT*PLAN*.md`.
 
-- **Statusline `🔎X%` provenance widget** — shipped briefly through
-  iterations, then pulled. The signal it surfaced (intuition vs search
-  ratio) doesn't apply in CLI surfaces: Claude Code *is* the harness, so
-  every artifact gets shaped by external reads/greps/web fetches by
-  definition. The widget belongs on Claude Desktop and chat surfaces
-  where context isn't externally grounded by default.
+**5 broken docs links fixed** — references to gitignored `docs/specs/`
+and `docs/research/` drafts in committed `.md` files converted to
+plain-text refs (links resolved locally where the targets exist, broke
+on fresh CI checkout where they don't).
 
-**Docs**
-
-- **CONTRIBUTING.md** rewritten to reflect the current plugin + skill +
-  hook architecture.
-- Legacy `docs/human/developers/system-prompts/` directory deleted (kept
-  the lean template for opt-in `--full-prompt` mode).
-- Duplicate agent `.md` files de-duped; forgejo remote removed from
-  public docs (private mirror unchanged).
-
-Full suite **2350 passed, 4 skipped**.
+Full suite **2320 passed, 4 skipped** (release-gate run).
 
 ## What's New in 1.9.0
 
@@ -527,6 +536,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.9.3
+**Version:** 1.9.4
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*

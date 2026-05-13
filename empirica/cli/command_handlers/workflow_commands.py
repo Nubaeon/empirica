@@ -1,7 +1,7 @@
 """Workflow Commands — MCP v2 Integration Commands.
 
 This module is now a re-export shim. The actual implementation lives in
-four sibling modules (split in v1.9.3+ follow-up to keep each module
+four sibling modules (split in v1.9.4+ follow-up to keep each module
 under 1500 LOC):
 
     _workflow_shared     — cross-cutting helpers (db, session resolution,
