@@ -107,6 +107,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history + tags so compliance-report's release_chain check
+          # can verify git_tag exists for the current version, and
+          # ai_transparency can sample the last 50 commit authors. Default
+          # fetch-depth: 1 makes both of those report false-negatives.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
@@ -115,10 +122,15 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      - name: Install (with dev extras)
+      - name: Install (with dev + optional extras)
+        # Match the lint job — pyright (run by compliance-report's
+        # type_safety check) needs all optional-extra imports resolvable
+        # (flask, fastapi, mcp, textual, qdrant_client). With just [dev]
+        # it flooded with 80+ reportMissingImports.
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev,api,tui,vector]"
+          pip install -e "./empirica-mcp[dev]"
           pip install pip-audit
 
       - name: empirica compliance-report
