@@ -177,12 +177,23 @@ def add_projects_parsers(subparsers) -> None:
         "--force-metadata-update",
         action="store_true",
         help=(
-            "Re-send name + display_name + repo_url for already-registered "
-            "projects, with `force_metadata_update: true` in the request body. "
-            "Cortex side updates UUID-shaped placeholder names + empty "
-            "repo_urls to the values from the local manifest. Use when "
-            "Cortex's existing rows have stale metadata (e.g. from /v1/sync "
-            "auto-creation). Idempotent. (v1.9.5+)"
+            "Set `force_metadata_update: true` in each request body. "
+            "Cortex's safe-update logic then backfills UUID-shaped "
+            "placeholder names + empty repo_urls on already-existing rows. "
+            "Composes with --only-existing for the common 'refresh what's "
+            "on Cortex' use case. (v1.9.5+)"
+        ),
+    )
+    register.add_argument(
+        "--only-existing",
+        action="store_true",
+        help=(
+            "Filter the manifest to projects ALREADY on Cortex (intersection "
+            "by name OR repo_url via GET /v1/collections). Skip the rest. "
+            "Useful when the local manifest has more projects than you've "
+            "registered and you don't want bulk-register to attempt to "
+            "register them. Usually paired with --force-metadata-update "
+            "to refresh metadata on the registered subset. (v1.9.5+)"
         ),
     )
     register.add_argument(

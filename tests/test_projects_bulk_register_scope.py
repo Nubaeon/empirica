@@ -1,10 +1,13 @@
-"""Tests for `projects-bulk-register --force-metadata-update` scope semantic
-(Extension Claude v0.7.8 follow-up).
+"""Tests for `projects-bulk-register` scope flags (Extension Claude v0.7.8
+follow-up + David's flag-decoupling pushback).
 
-When `--force-metadata-update` is set, bulk-register should only iterate
-projects that are ALREADY on Cortex (intersection by name or repo_url)
-rather than attempting to register all 27 discovered entries when the
-user only meant 'refresh the 7 I've already synced'.
+Two independent flags:
+- `--force-metadata-update` → sets `force_metadata_update: true` in body;
+  scope still full manifest (Cortex creates new + safe-updates existing).
+- `--only-existing` → filters manifest down to intersection with Cortex's
+  registered set (via GET /v1/collections). Independent of force flag.
+
+Common pairing: both flags = refresh metadata on already-registered subset.
 """
 
 from __future__ import annotations
@@ -68,7 +71,7 @@ def test_fetch_cortex_collections_returns_empty_on_bad_json():
     assert result == []
 
 
-# ─── --force-metadata-update scope filter ─────────────────────────────
+# ─── --only-existing scope filter (independent of --force-metadata-update) ──
 
 
 def _make_manifest(*names_and_repos: tuple[str, str | None]) -> dict:
@@ -81,8 +84,18 @@ def _make_manifest(*names_and_repos: tuple[str, str | None]) -> dict:
     }
 
 
-def test_force_metadata_update_intersects_by_name(monkeypatch, capsys):
-    """Discovered: 5. Registered on Cortex: 2 (by name). Should iterate 2."""
+def _make_args(*, only_existing=False, force_metadata_update=False):
+    return SimpleNamespace(
+        manifest_path=None, dry_run=False,
+        only_existing=only_existing,
+        force_metadata_update=force_metadata_update,
+        cortex_url="https://cortex.example.com", api_key="sk-test",
+        timeout=10.0, output="json", includes=None, excludes=None,
+    )
+
+
+def test_only_existing_intersects_by_name():
+    """Discovered: 5. Registered on Cortex: 2 (by name). --only-existing iterates 2."""
     from empirica.cli.command_handlers import projects_commands
 
     manifest = _make_manifest(
@@ -92,117 +105,137 @@ def test_force_metadata_update_intersects_by_name(monkeypatch, capsys):
         ("delta", None),
         ("epsilon", None),
     )
+    cortex_rows = [{"name": "alpha"}, {"name": "delta"}]
 
     posted: list[dict] = []
-
     def fake_register(project, *args, **kwargs):
         posted.append(project)
         return {"name": project["name"], "outcome": "registered", "status": 200}
 
-    cortex_rows = [{"name": "alpha"}, {"name": "delta"}]
-
-    args = SimpleNamespace(
-        manifest_path=None, dry_run=False, force_metadata_update=True,
-        cortex_url="https://cortex.example.com", api_key="sk-test",
-        timeout=10.0, output="json", includes=None, excludes=None,
-    )
-
     with patch.object(projects_commands, "load_manifest", return_value=manifest), \
          patch.object(projects_commands, "_fetch_cortex_collections", return_value=cortex_rows), \
          patch.object(projects_commands, "_register_one_project", side_effect=fake_register):
-        projects_commands.handle_projects_bulk_register_command(args)
+        projects_commands.handle_projects_bulk_register_command(_make_args(only_existing=True))
 
-    posted_names = {p["name"] for p in posted}
-    assert posted_names == {"alpha", "delta"}, f"Expected only registered set, got {posted_names}"
+    assert {p["name"] for p in posted} == {"alpha", "delta"}
 
 
-def test_force_metadata_update_intersects_by_repo_url(monkeypatch, capsys):
+def test_only_existing_intersects_by_repo_url():
     """Match by repo_url even when local slug differs from Cortex's name."""
     from empirica.cli.command_handlers import projects_commands
 
     manifest = _make_manifest(
-        ("local-alpha-renamed", "https://github.com/x/alpha"),  # repo matches Cortex
-        ("local-beta", "https://github.com/x/beta-different"),  # no match
+        ("local-alpha-renamed", "https://github.com/x/alpha"),
+        ("local-beta", "https://github.com/x/beta-different"),
     )
+    cortex_rows = [{"name": "alpha-cortex-name", "repo_url": "https://github.com/x/alpha"}]
 
     posted: list[dict] = []
-
     def fake_register(project, *args, **kwargs):
         posted.append(project)
         return {"name": project["name"], "outcome": "registered", "status": 200}
-
-    cortex_rows = [{"name": "alpha-cortex-name", "repo_url": "https://github.com/x/alpha"}]
-
-    args = SimpleNamespace(
-        manifest_path=None, dry_run=False, force_metadata_update=True,
-        cortex_url="https://cortex.example.com", api_key="sk-test",
-        timeout=10.0, output="json", includes=None, excludes=None,
-    )
 
     with patch.object(projects_commands, "load_manifest", return_value=manifest), \
          patch.object(projects_commands, "_fetch_cortex_collections", return_value=cortex_rows), \
          patch.object(projects_commands, "_register_one_project", side_effect=fake_register):
-        projects_commands.handle_projects_bulk_register_command(args)
+        projects_commands.handle_projects_bulk_register_command(_make_args(only_existing=True))
 
-    posted_names = {p["name"] for p in posted}
-    assert posted_names == {"local-alpha-renamed"}, f"Expected repo-url intersection, got {posted_names}"
+    assert {p["name"] for p in posted} == {"local-alpha-renamed"}
 
 
-def test_without_force_metadata_update_iterates_all(monkeypatch):
-    """Without the flag, bulk-register iterates the full manifest (existing
-    behavior — register new + skip existing as 409)."""
+def test_without_only_existing_iterates_all():
+    """No --only-existing → full manifest iterated (existing behavior)."""
     from empirica.cli.command_handlers import projects_commands
 
-    manifest = _make_manifest(
-        ("alpha", None), ("beta", None), ("gamma", None),
-    )
+    manifest = _make_manifest(("alpha", None), ("beta", None), ("gamma", None))
 
     posted: list[dict] = []
-
     def fake_register(project, *args, **kwargs):
         posted.append(project)
         return {"name": project["name"], "outcome": "registered", "status": 200}
 
-    args = SimpleNamespace(
-        manifest_path=None, dry_run=False, force_metadata_update=False,
-        cortex_url="https://cortex.example.com", api_key="sk-test",
-        timeout=10.0, output="json", includes=None, excludes=None,
-    )
-
-    # _fetch_cortex_collections should NOT be called when force_metadata_update=False
     with patch.object(projects_commands, "load_manifest", return_value=manifest), \
          patch.object(projects_commands, "_fetch_cortex_collections") as mock_fetch, \
          patch.object(projects_commands, "_register_one_project", side_effect=fake_register):
-        projects_commands.handle_projects_bulk_register_command(args)
+        projects_commands.handle_projects_bulk_register_command(_make_args())
         mock_fetch.assert_not_called()
 
-    posted_names = {p["name"] for p in posted}
-    assert posted_names == {"alpha", "beta", "gamma"}
+    assert {p["name"] for p in posted} == {"alpha", "beta", "gamma"}
 
 
-def test_force_metadata_update_empty_intersection_bails():
-    """When the intersection is empty (none of the local projects are on
-    Cortex), bail with a warning rather than POSTing nothing or all."""
+def test_only_existing_empty_intersection_bails():
+    """Empty intersection → bail with hint, no POSTs."""
     from empirica.cli.command_handlers import projects_commands
 
     manifest = _make_manifest(("alpha", None), ("beta", None))
     cortex_rows = [{"name": "totally-different"}]
 
     posted: list[dict] = []
-
     def fake_register(project, *args, **kwargs):
         posted.append(project)
         return {"name": project["name"], "outcome": "registered", "status": 200}
 
-    args = SimpleNamespace(
-        manifest_path=None, dry_run=False, force_metadata_update=True,
-        cortex_url="https://cortex.example.com", api_key="sk-test",
-        timeout=10.0, output="json", includes=None, excludes=None,
+    with patch.object(projects_commands, "load_manifest", return_value=manifest), \
+         patch.object(projects_commands, "_fetch_cortex_collections", return_value=cortex_rows), \
+         patch.object(projects_commands, "_register_one_project", side_effect=fake_register):
+        projects_commands.handle_projects_bulk_register_command(_make_args(only_existing=True))
+
+    assert posted == []
+
+
+# ─── --force-metadata-update independence ──────────────────────────────
+
+
+def test_force_metadata_update_alone_iterates_all():
+    """--force-metadata-update WITHOUT --only-existing → full manifest,
+    each POST carries the force flag in body. Preserves the use case
+    where someone wants register-new + refresh-old in one pass."""
+    from empirica.cli.command_handlers import projects_commands
+
+    manifest = _make_manifest(("alpha", None), ("beta", None), ("gamma", None))
+
+    posted: list[tuple[dict, bool]] = []
+    def fake_register(project, *args, **kwargs):
+        posted.append((project, kwargs.get("force_metadata_update", False)))
+        return {"name": project["name"], "outcome": "registered", "status": 200}
+
+    with patch.object(projects_commands, "load_manifest", return_value=manifest), \
+         patch.object(projects_commands, "_fetch_cortex_collections") as mock_fetch, \
+         patch.object(projects_commands, "_register_one_project", side_effect=fake_register):
+        projects_commands.handle_projects_bulk_register_command(
+            _make_args(force_metadata_update=True),
+        )
+        # Without --only-existing, no need to query Cortex for intersection
+        mock_fetch.assert_not_called()
+
+    assert {p[0]["name"] for p in posted} == {"alpha", "beta", "gamma"}
+    # Every POST carries force_metadata_update=True
+    assert all(force for _, force in posted)
+
+
+def test_both_flags_compose_for_common_use_case():
+    """--only-existing --force-metadata-update → refresh metadata on the
+    registered subset. David's main use case."""
+    from empirica.cli.command_handlers import projects_commands
+
+    manifest = _make_manifest(
+        ("alpha", None), ("beta", None),
+        ("gamma", None), ("delta", None),
     )
+    cortex_rows = [{"name": "alpha"}, {"name": "gamma"}]
+
+    posted: list[tuple[dict, bool]] = []
+    def fake_register(project, *args, **kwargs):
+        posted.append((project, kwargs.get("force_metadata_update", False)))
+        return {"name": project["name"], "outcome": "registered", "status": 200}
 
     with patch.object(projects_commands, "load_manifest", return_value=manifest), \
          patch.object(projects_commands, "_fetch_cortex_collections", return_value=cortex_rows), \
          patch.object(projects_commands, "_register_one_project", side_effect=fake_register):
-        projects_commands.handle_projects_bulk_register_command(args)
+        projects_commands.handle_projects_bulk_register_command(
+            _make_args(only_existing=True, force_metadata_update=True),
+        )
 
-    assert posted == [], "Should bail without registering when intersection is empty"
+    # Only 2 POSTed (intersection), both with force flag
+    assert {p[0]["name"] for p in posted} == {"alpha", "gamma"}
+    assert all(force for _, force in posted)

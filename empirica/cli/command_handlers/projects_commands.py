@@ -797,8 +797,15 @@ def handle_projects_bulk_register_command(args) -> None:
             )
 
         force_metadata = getattr(args, "force_metadata_update", False)
+        only_existing = getattr(args, "only_existing", False)
 
-        if force_metadata:
+        # --only-existing is an explicit scope filter (independent of
+        # --force-metadata-update). Common pairing: both flags set →
+        # refresh metadata on already-registered subset only. But each
+        # flag has a separate purpose — keeping them decoupled preserves
+        # the use case where someone wants force-update on the full
+        # manifest (e.g. one-shot register-new + refresh-old).
+        if only_existing:
             projects = _filter_to_registered(
                 projects, cortex_url, api_key, timeout, output_format,
             )
