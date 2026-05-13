@@ -5,7 +5,7 @@
 **Related:**
 - [`PROPOSAL_EVENT_LISTENER.md`](PROPOSAL_EVENT_LISTENER.md) — loop/listener primitives this rides on (shipped 1.9.3)
 - [`COCKPIT.md`](COCKPIT.md) — visibility surface; new `services` panel proposed alongside `compliance`
-- [`../research/COVERAGE_VECTORS_PAPER_OUTLINE.md`](../research/COVERAGE_VECTORS_PAPER_OUTLINE.md) — methodological companion: coverage as a first-class metric
+- *`docs/research/COVERAGE_VECTORS_PAPER_OUTLINE.md`* — methodological companion (local-only draft, not in public repo): coverage as a first-class metric
 
 ---
 
@@ -341,7 +341,7 @@ Three reasons, in increasing order of strategic importance:
 
 ## Companion: paper
 
-Methodological contribution (coverage vectors) is written up separately at [`docs/research/COVERAGE_VECTORS_PAPER_OUTLINE.md`](../research/COVERAGE_VECTORS_PAPER_OUTLINE.md). Product spec drives implementation; paper drives positioning + publication. Different audiences, mutually reinforcing.
+Methodological contribution (coverage vectors) is written up separately at *`docs/research/COVERAGE_VECTORS_PAPER_OUTLINE.md`* (local-only draft, not in public repo). Product spec drives implementation; paper drives positioning + publication. Different audiences, mutually reinforcing.
 
 ---
 

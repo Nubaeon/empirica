@@ -43,7 +43,8 @@ empirica goals-create \
 POSTFLIGHT response now includes a `goal_criteria` block per active goal.
 Self-diagnosing — if a quality_gate metric isn't in the evidence bundle,
 the response says exactly which evaluator was registered and why it
-didn't apply. See [PROPOSAL_GOAL_DRIVEN_POST_TESTS.md](../specs/PROPOSAL_GOAL_DRIVEN_POST_TESTS.md).
+didn't apply. (Design rationale lives in the local-only spec draft
+*`docs/specs/PROPOSAL_GOAL_DRIVEN_POST_TESTS.md`*, gitignored.)
 
 ### Stylometry / voice-drift collector (1.9, brand new)
 
@@ -177,5 +178,5 @@ If you want to revert to the verbose prompt, copy the template from
   guide to project resolution after the project-switch verb stabilized
 - [Tmux multi-pane + cockpit](./TMUX_MULTI_PANE_GUIDE.md) — Multi-instance orchestration
 - [Auto issue capture](./AUTO_ISSUE_CAPTURE_GUIDE.md) — Background bug capture
-- [Goal-driven post-tests proposal](../specs/PROPOSAL_GOAL_DRIVEN_POST_TESTS.md)
-- [Stylometry drift proposal](../specs/PROPOSAL_STYLOMETRIC_DRIFT_COLLECTOR.md)
+- *Goal-driven post-tests proposal* — `docs/specs/PROPOSAL_GOAL_DRIVEN_POST_TESTS.md` (local-only draft)
+- *Stylometry drift proposal* — `docs/specs/PROPOSAL_STYLOMETRIC_DRIFT_COLLECTOR.md` (local-only draft)
