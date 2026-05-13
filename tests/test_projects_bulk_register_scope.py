@@ -183,6 +183,63 @@ def test_only_existing_empty_intersection_bails():
     assert posted == []
 
 
+def test_dry_run_with_only_existing_shows_filtered_set(capsys):
+    """David's bug: `bulk-register --only-existing --dry-run` should show
+    the INTERSECTION as "would register", not the full discovered set."""
+    from empirica.cli.command_handlers import projects_commands
+
+    manifest = _make_manifest(
+        ("alpha", None), ("beta", None), ("gamma", None),
+        ("delta", None), ("epsilon", None),
+    )
+    cortex_rows = [{"name": "alpha"}, {"name": "gamma"}]
+
+    args = SimpleNamespace(
+        manifest_path=None, dry_run=True, only_existing=True,
+        force_metadata_update=False,
+        cortex_url="https://cortex.example.com", api_key="sk-test",
+        timeout=10.0, output="json", includes=None, excludes=None,
+    )
+
+    with patch.object(projects_commands, "load_manifest", return_value=manifest), \
+         patch.object(projects_commands, "_fetch_cortex_collections", return_value=cortex_rows):
+        projects_commands.handle_projects_bulk_register_command(args)
+
+    out = capsys.readouterr().out
+    import json
+    payload = json.loads(out)
+    # Should show only the intersection (2 of 5), not the full manifest
+    assert len(payload["results"]) == 2
+    assert {r["name"] for r in payload["results"]} == {"alpha", "gamma"}
+    assert payload["dry_run"] is True
+
+
+def test_plain_dry_run_does_not_require_cortex_config():
+    """`bulk-register --dry-run` (no scope flags) should not require
+    CORTEX_REMOTE_URL or CORTEX_API_KEY — it's just previewing."""
+    from empirica.cli.command_handlers import projects_commands
+
+    manifest = _make_manifest(("alpha", None), ("beta", None))
+
+    args = SimpleNamespace(
+        manifest_path=None, dry_run=True, only_existing=False,
+        force_metadata_update=False,
+        cortex_url=None, api_key=None,  # neither set
+        timeout=10.0, output="json", includes=None, excludes=None,
+    )
+
+    with patch.object(projects_commands, "load_manifest", return_value=manifest), \
+         patch.object(projects_commands, "_fetch_cortex_collections") as mock_fetch, \
+         patch.dict("os.environ", {}, clear=False) as _:
+        # Remove cortex env vars too
+        import os
+        for k in ("CORTEX_REMOTE_URL", "CORTEX_URL", "CORTEX_API_KEY"):
+            os.environ.pop(k, None)
+        # Should succeed without raising/exiting
+        projects_commands.handle_projects_bulk_register_command(args)
+        mock_fetch.assert_not_called()
+
+
 # ─── --force-metadata-update independence ──────────────────────────────
 
 

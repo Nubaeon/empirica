@@ -1,9 +1,62 @@
-# Cross-Project Intelligence (1.7.0)
+# Cross-Project Intelligence
 
-## Overview
+Empirica is multi-project by design. Three mechanisms compose:
 
-Empirica 1.7.0 adds cross-project capabilities: searching knowledge across
-all projects and writing artifacts to other projects without context-switching.
+| Mechanism | Direction | Use |
+|---|---|---|
+| `--visibility {public,shared,local}` on `*-log` commands | Push (opt-in) | Mark an artifact as shareable when logged |
+| `project-search --global` | Pull | Query the global-learnings pool across projects |
+| `--project-id <name>` on `*-log` commands | Cross-write | Log artifacts to OTHER projects without `project-switch` |
+
+The default workflow: **AIs log liberally with `--visibility shared` when an artifact
+has ecosystem-wide value, and call `project-search --global` proactively at
+session-start / topic-start to find what other Claudes have learned.**
+
+## Visibility (push side)
+
+Every `*-log` command accepts `--visibility {public,shared,local}`:
+
+```bash
+# Local: project-scoped only (default)
+empirica finding-log --finding "..." --impact 0.6
+
+# Shared: visible across projects in the same org/Cortex tenancy
+empirica finding-log --finding "Cross-codebase pattern: ..." --impact 0.7 \
+  --visibility shared
+
+# Public: visible to anyone with a Cortex account
+empirica finding-log --finding "Security note on dep X..." --impact 0.8 \
+  --visibility public
+```
+
+**MCP parity (v1.9.3+):** the `mcp__empirica__finding_log` (and the other 5
+`*_log` MCP tools — `unknown_log`, `deadend_log`, `mistake_log`,
+`assumption_log`, `decision_log`) expose `visibility` and `epistemic_source`
+as enum params. The CLI/MCP surfaces are at parity — discipline is
+enforceable through either interface.
+
+**When to use `shared` vs `local`:**
+
+| Pattern | Default |
+|---|---|
+| Bug fix specific to this codebase's logic | `local` |
+| Bug pattern that recurs across multiple repos | `shared` |
+| Tactical workflow note ("I tried X, doesn't work in this codebase") | `local` |
+| Cross-cutting lesson ("X library has Y gotcha in 0.4+") | `shared` |
+| CVE in a shared dep, security advisory | `public` |
+| Internal architecture decision for this project | `local` |
+| Reusable agent pattern, prompt template, framework | `shared` or `public` |
+
+Liberally-shared work compounds across the AI ecosystem. Over-sharing tactical
+chatter dilutes the signal. Calibrate by asking: *"would future-me, working in
+another project, want this to surface in a project-search?"*
+
+---
+
+## Cross-Project Intelligence (history)
+
+The original 1.7.0 cross-project capabilities below predate the visibility
+flag and the v1.9.3 MCP parity work.
 
 ## Cross-Project Search
 
@@ -20,15 +73,18 @@ empirica project-search --project-id empirica --task "sentinel bypass" --global
 
 ### How It Works
 
-`--global` triggers two searches:
-1. **Global learnings** — `global_learnings` collection (high-impact findings synced across projects)
-2. **Cross-project scan** — Iterates ALL `project_{id}_{collection}` collections in Qdrant
+`--global` queries the `global_learnings` Qdrant collection — high-impact
+artifacts that have been promoted via the visibility flag (or fed in via
+older sync paths).
 
-The cross-project scan:
-- Discovers project IDs from Qdrant collection names
-- Searches `memory`, `eidetic`, and `episodic` collections per project
-- Excludes the current project (avoids duplication)
-- Merges results by score, tags with source `project_id`
+**Caveat (v1.9.3 state):** the original 1.7.0 design described a "cross-
+project scan" that iterates ALL `project_{id}_{collection}` collections.
+That broader walk is implemented in `search_cross_project` (`empirica.core.qdrant.global_sync`)
+but the `--global` CLI flag currently only hits `global_learnings`. True
+cross-project semantic search across every registered project's full memory/
+eidetic/episodic surface is a logged goal — until it lands, the practical
+guidance is: log liberally with `--visibility shared` so your artifacts
+reach `global_learnings`, and call `--global` proactively to read it back.
 
 ### API
 

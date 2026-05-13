@@ -760,57 +760,57 @@ def handle_projects_bulk_register_command(args) -> None:
                 print("⚠ No projects match the include/exclude filters.", file=sys.stderr)
                 return
 
-        # Dry-run: short-circuit before resolving Cortex config
         dry_run = bool(getattr(args, "dry_run", False))
-        if dry_run:
-            output_format = getattr(args, "output", "human")
-            results = [{"name": p["name"], "outcome": "registered", "status": 0,
-                        "reason": "dry-run"} for p in projects]
-            sys.stdout.write(_format_register_summary(
-                results, output_format, dry_run=True, cortex_url=None,
-            ))
-            return
-
-        # Resolve Cortex config
-        cortex_url, api_key = _resolve_cortex_config(args)
-        if not cortex_url or not api_key:
-            missing = []
-            if not cortex_url:
-                missing.append("CORTEX_REMOTE_URL or --cortex-url")
-            if not api_key:
-                missing.append("CORTEX_API_KEY or --api-key")
-            print(
-                "⚠ Cortex configuration missing: " + ", ".join(missing) + "\n"
-                "  This command is Cortex-dependent. Set the env vars or pass "
-                "the flags explicitly.",
-                file=sys.stderr,
-            )
-            sys.exit(2)
-
-        timeout = float(getattr(args, "timeout", 10.0))
-        output_format = getattr(args, "output", "human")
-
-        if output_format == "human":
-            print(
-                f"📡 Registering {len(projects)} projects on Cortex at {cortex_url}",
-                file=sys.stderr,
-            )
-
         force_metadata = getattr(args, "force_metadata_update", False)
         only_existing = getattr(args, "only_existing", False)
+        output_format = getattr(args, "output", "human")
+        timeout = float(getattr(args, "timeout", 10.0))
 
-        # --only-existing is an explicit scope filter (independent of
-        # --force-metadata-update). Common pairing: both flags set →
-        # refresh metadata on already-registered subset only. But each
-        # flag has a separate purpose — keeping them decoupled preserves
-        # the use case where someone wants force-update on the full
-        # manifest (e.g. one-shot register-new + refresh-old).
+        # Resolve Cortex config UNLESS this is a plain dry-run with no
+        # scope-filter flags. --only-existing needs Cortex's /v1/collections
+        # to compute the intersection, even in dry-run mode (otherwise the
+        # dry-run lies: it shows "would register 27" when the actual
+        # intersection is 7).
+        needs_cortex = only_existing or not dry_run
+        cortex_url, api_key = (None, None)
+        if needs_cortex:
+            cortex_url, api_key = _resolve_cortex_config(args)
+            if not cortex_url or not api_key:
+                missing = []
+                if not cortex_url:
+                    missing.append("CORTEX_REMOTE_URL or --cortex-url")
+                if not api_key:
+                    missing.append("CORTEX_API_KEY or --api-key")
+                print(
+                    "⚠ Cortex configuration missing: " + ", ".join(missing) + "\n"
+                    "  This command is Cortex-dependent. Set the env vars or pass "
+                    "the flags explicitly.",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
+
+        # --only-existing scope filter runs BEFORE dry-run short-circuit
+        # so dry-run accurately previews what would be POSTed.
         if only_existing:
             projects = _filter_to_registered(
                 projects, cortex_url, api_key, timeout, output_format,
             )
             if not projects:
                 return
+
+        if dry_run:
+            results = [{"name": p["name"], "outcome": "registered", "status": 0,
+                        "reason": "dry-run"} for p in projects]
+            sys.stdout.write(_format_register_summary(
+                results, output_format, dry_run=True, cortex_url=cortex_url,
+            ))
+            return
+
+        if output_format == "human":
+            print(
+                f"📡 Registering {len(projects)} projects on Cortex at {cortex_url}",
+                file=sys.stderr,
+            )
 
         results = [
             _register_one_project(p, cortex_url, api_key, timeout,

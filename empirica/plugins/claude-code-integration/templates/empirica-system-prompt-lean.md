@@ -263,11 +263,22 @@ Infer epistemic actions from conversation naturally:
 | Triaging stale, duplicate, or test-noise artifacts | `delete-artifacts -` batch JSON (dry-run by default; receipt logged as decision for audit) |
 | Logging an artifact you generated without external retrieval | `--epistemic-source intuition` — be honest, don't paper it as `search` |
 | Logging an artifact shaped by reads/greps/web/MCP this session | `--epistemic-source search` |
+| Finding/decision/etc. could help a future Claude working in ANY project (cross-codebase pattern, ecosystem-wide lesson, security note) | `--visibility shared` (within-org) or `--visibility public` (anyone). Default `local` keeps it project-scoped. |
+| Starting work on something that another Claude (in this or another project) may have already learned about | `empirica project-search --task "<active topic>" --global` BEFORE diving in — surfaces eidetic facts + episodic narratives from other projects' artifacts |
+| Logging a finding about a target project you're not currently in (multi-project workflow) | `empirica finding-log --project-id <project-name> --finding "..."` — resolves name → DB path, writes directly. Supported on finding-log + unknown-log today; others need full UUID. |
 | Intentional stub / placeholder created | `goals-create --status planned` at the same time — names what fills it and when, so stubs don't fall through the cracks |
 | Low confidence | Stay noetic, investigate |
 | Ready to act | CHECK → praxic |
 
 **Source-aware Sentinel substrate** — the optional `--epistemic-source {intuition|search|mixed}` flag on every `*-log` command (and `data.epistemic_source` in `log-artifacts` payloads) tags how you arrived at the artifact. The POSTFLIGHT calibration_reflection surfaces a per-transaction `epistemic_provenance` block with intuition/search counts and a ratio. v0 is visibility-only — there's no routing rule yet. Be honest: vectors asserted high while every artifact is intuition-tagged is exactly the rubber-stamp CHECK pattern the substrate is built to expose.
+
+**Cross-project artifact sharing** — Empirica is multi-project by design. The `--visibility {public,shared,local}` flag on log commands is the *opt-in* mechanism for making your work discoverable by Claudes working in other projects:
+
+- `local` (default) — stays in this project only
+- `shared` — visible across projects within the same org (Cortex tenancy)
+- `public` — visible to anyone with a Cortex account
+
+The companion pull-side: `empirica project-search --task "..." --global` queries the `global_learnings` Qdrant collection where high-confidence shared/public artifacts get promoted. **Caveat (v1.9.3):** `--global` only searches `global_learnings`, not the full per-project Qdrant collections yet — true cross-project semantic walk is a logged goal. For now, opt into sharing liberally on findings that have ecosystem-wide value (security patterns, cross-repo bugs, reusable lessons), keep tactical project-internal work `local`. The richer push-based "auto-surface relevant cross-project artifacts at project-bootstrap" model is a deferred architectural goal.
 
 ---
 
