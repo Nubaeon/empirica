@@ -1736,6 +1736,126 @@ class SessionDatabase:
         return result
 
 
+    def _situation_active_transaction(self) -> dict | None:
+        """Read in-flight PREFLIGHT state from the transaction file."""
+        try:
+            from empirica.utils.session_resolver import InstanceResolver as R
+            tx = R.transaction_read()
+            if not tx:
+                return None
+            return {
+                'id': tx.get('transaction_id'),
+                'status': tx.get('status'),
+                'opened_at': tx.get('preflight_timestamp'),
+                'work_type': tx.get('work_type'),
+                'work_context': tx.get('work_context'),
+                'domain': tx.get('domain'),
+                'criticality': tx.get('criticality'),
+                'session_id': tx.get('session_id'),
+            }
+        except Exception as e:
+            logger.debug(f"Situation: transaction read skipped: {e}")
+            return None
+
+    def _situation_active_goal(self, project_id: str) -> dict | None:
+        """Most recent in_progress goal + full subtasks list."""
+        try:
+            cur = self._execute("""
+                SELECT g.id, g.objective, g.description, g.scope,
+                       g.created_timestamp
+                FROM goals g
+                WHERE g.session_id IN (
+                    SELECT session_id FROM sessions WHERE project_id = ?
+                )
+                AND g.status = 'in_progress' AND g.is_completed = 0
+                ORDER BY g.created_timestamp DESC
+                LIMIT 1
+            """, (project_id,))
+            row = cur.fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            # Decode scope JSON-string → dict (mirrors Goal 4b95b288 fix)
+            if isinstance(d.get('scope'), str) and d['scope']:
+                try:
+                    d['scope'] = json.loads(d['scope'])
+                except (ValueError, TypeError):
+                    pass
+            sub_cur = self._execute("""
+                SELECT id, description, epistemic_importance, status,
+                       created_timestamp
+                FROM subtasks
+                WHERE goal_id = ?
+                ORDER BY created_timestamp
+            """, (d['id'],))
+            d['subtasks'] = [dict(s) for s in sub_cur.fetchall()]
+            return d
+        except Exception as e:
+            logger.debug(f"Situation: active goal skipped: {e}")
+            return None
+
+    def _situation_last_praxic_action(self, project_root: str) -> dict | None:
+        """Most recent commit (sha + msg + at)."""
+        import subprocess
+        try:
+            result = subprocess.run(
+                ['git', 'log', '-1', '--format=%H%x00%s%x00%aI'],
+                cwd=project_root,
+                capture_output=True, text=True, timeout=2,
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                return None
+            parts = result.stdout.strip().split('\0', 2)
+            if len(parts) != 3:
+                return None
+            sha, msg, at = parts
+            return {'commit': sha[:9], 'message': msg, 'at': at}
+        except Exception as e:
+            logger.debug(f"Situation: last commit skipped: {e}")
+            return None
+
+    def _situation_project_shorthand(self, project_id: str, project_root: str) -> str | None:
+        """`<project_name> @ <branch>` — both best-effort."""
+        import subprocess
+        try:
+            cur = self._execute(
+                "SELECT name FROM projects WHERE id = ?", (project_id,),
+            )
+            row = cur.fetchone()
+            proj_name = row[0] if row else 'unknown'
+            br_result = subprocess.run(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                cwd=project_root, capture_output=True, text=True, timeout=2,
+            )
+            branch = (
+                br_result.stdout.strip()
+                if br_result.returncode == 0 else None
+            )
+            return f"{proj_name} @ {branch}" if branch else proj_name
+        except Exception as e:
+            logger.debug(f"Situation: project shorthand skipped: {e}")
+            return None
+
+    def _situation_next_focus(self, project_id: str, active_goal: dict | None) -> str:
+        """Priority cascade: pending subtask > oldest unknown > generic."""
+        if active_goal:
+            for sub in active_goal.get('subtasks', []):
+                if sub.get('status') in (None, 'pending', 'in_progress'):
+                    return f"Subtask: {sub.get('description', '')[:120]}"
+        try:
+            cur = self._execute("""
+                SELECT unknown FROM project_unknowns
+                WHERE project_id = ? AND is_resolved = 0
+                ORDER BY created_timestamp ASC
+                LIMIT 1
+            """, (project_id,))
+            row = cur.fetchone()
+            if row and row[0]:
+                return f"Open unknown: {row[0][:120]}"
+        except Exception:
+            pass
+        return "No specific focus — review goals-list / unknown-list"
+
     def _build_situation(self, project_id: str, project_root: str) -> dict:
         """Synthesize 'where am I right now' for compaction-recovery.
 
@@ -1751,133 +1871,29 @@ class SessionDatabase:
         - last_praxic_action: most recent commit (sha + msg + at)
         - next_focus: derived — pending subtask > oldest unknown > generic
 
-        All fields are best-effort — missing data → field omitted from
-        the result. Cost: ~5ms typical (transaction file read + 2-3 SQL
-        queries + 1 subprocess for git).
+        All sub-fields are best-effort — missing data → field omitted
+        from the result. Cost: ~5ms typical (transaction file read + 2-3
+        SQL queries + 1 subprocess for git).
         """
-        import subprocess
         situation: dict = {}
 
-        # 1. Active transaction (from filesystem — survives across CLI calls)
-        try:
-            from empirica.utils.session_resolver import InstanceResolver as R
-            tx = R.transaction_read()
-            if tx:
-                situation['active_transaction'] = {
-                    'id': tx.get('transaction_id'),
-                    'status': tx.get('status'),
-                    'opened_at': tx.get('preflight_timestamp'),
-                    'work_type': tx.get('work_type'),
-                    'work_context': tx.get('work_context'),
-                    'domain': tx.get('domain'),
-                    'criticality': tx.get('criticality'),
-                    'session_id': tx.get('session_id'),
-                }
-        except Exception as e:
-            logger.debug(f"Situation: transaction read skipped: {e}")
+        active_transaction = self._situation_active_transaction()
+        if active_transaction is not None:
+            situation['active_transaction'] = active_transaction
 
-        # 2. Active goal + subtasks list (not just count)
-        active_goal = None
-        try:
-            cur = self._execute("""
-                SELECT g.id, g.objective, g.description, g.scope,
-                       g.created_timestamp
-                FROM goals g
-                WHERE g.session_id IN (
-                    SELECT session_id FROM sessions WHERE project_id = ?
-                )
-                AND g.status = 'in_progress' AND g.is_completed = 0
-                ORDER BY g.created_timestamp DESC
-                LIMIT 1
-            """, (project_id,))
-            row = cur.fetchone()
-            if row:
-                d = dict(row)
-                goal_id = d['id']
-                # Decode scope JSON-string → dict (mirrors Goal 4b95b288 fix)
-                if isinstance(d.get('scope'), str) and d['scope']:
-                    try:
-                        d['scope'] = json.loads(d['scope'])
-                    except (ValueError, TypeError):
-                        pass
-                # Pull subtasks inline
-                sub_cur = self._execute("""
-                    SELECT id, description, epistemic_importance, status,
-                           created_timestamp
-                    FROM subtasks
-                    WHERE goal_id = ?
-                    ORDER BY created_timestamp
-                """, (goal_id,))
-                d['subtasks'] = [dict(s) for s in sub_cur.fetchall()]
-                active_goal = d
-                situation['active_goal'] = d
-        except Exception as e:
-            logger.debug(f"Situation: active goal skipped: {e}")
+        active_goal = self._situation_active_goal(project_id)
+        if active_goal is not None:
+            situation['active_goal'] = active_goal
 
-        # 3. Last praxic action (most recent commit)
-        try:
-            result = subprocess.run(
-                ['git', 'log', '-1', '--format=%H%x00%s%x00%aI'],
-                cwd=project_root,
-                capture_output=True, text=True, timeout=2,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                parts = result.stdout.strip().split('\0', 2)
-                if len(parts) == 3:
-                    sha, msg, at = parts
-                    situation['last_praxic_action'] = {
-                        'commit': sha[:9],
-                        'message': msg,
-                        'at': at,
-                    }
-        except Exception as e:
-            logger.debug(f"Situation: last commit skipped: {e}")
+        last_praxic = self._situation_last_praxic_action(project_root)
+        if last_praxic is not None:
+            situation['last_praxic_action'] = last_praxic
 
-        # 4. Project shorthand: "name @ branch"
-        try:
-            cur = self._execute(
-                "SELECT name FROM projects WHERE id = ?", (project_id,),
-            )
-            row = cur.fetchone()
-            proj_name = row[0] if row else 'unknown'
-            br_result = subprocess.run(
-                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
-                cwd=project_root, capture_output=True, text=True, timeout=2,
-            )
-            branch = (
-                br_result.stdout.strip()
-                if br_result.returncode == 0 else None
-            )
-            situation['project'] = (
-                f"{proj_name} @ {branch}" if branch else proj_name
-            )
-        except Exception as e:
-            logger.debug(f"Situation: project shorthand skipped: {e}")
+        project_shorthand = self._situation_project_shorthand(project_id, project_root)
+        if project_shorthand is not None:
+            situation['project'] = project_shorthand
 
-        # 5. next_focus — priority cascade
-        next_focus = None
-        if active_goal:
-            for sub in active_goal.get('subtasks', []):
-                if sub.get('status') in (None, 'pending', 'in_progress'):
-                    next_focus = f"Subtask: {sub.get('description', '')[:120]}"
-                    break
-        if not next_focus:
-            try:
-                cur = self._execute("""
-                    SELECT unknown FROM project_unknowns
-                    WHERE project_id = ? AND is_resolved = 0
-                    ORDER BY created_timestamp ASC
-                    LIMIT 1
-                """, (project_id,))
-                row = cur.fetchone()
-                if row and row[0]:
-                    next_focus = f"Open unknown: {row[0][:120]}"
-            except Exception:
-                pass
-        situation['next_focus'] = (
-            next_focus or "No specific focus — review goals-list / unknown-list"
-        )
-
+        situation['next_focus'] = self._situation_next_focus(project_id, active_goal)
         return situation
 
     def _count_project_artifacts(self, project_id: str) -> dict:
