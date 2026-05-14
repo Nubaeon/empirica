@@ -1,6 +1,6 @@
 # Multi-Project Storage Architecture
 
-**Version:** 1.9.4 | **Status:** Production
+**Version:** 1.9.5 | **Status:** Production
 
 ---
 

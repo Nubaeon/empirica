@@ -323,7 +323,7 @@ def test_resolve_cortex_config_strips_trailing_slash(monkeypatch):
 
 def test_resolve_cortex_config_returns_none_when_unset(monkeypatch, tmp_path):
     # Isolate HOME so the loader doesn't fall through to the developer's
-    # real ~/.empirica/credentials.yaml (post-1.9.4 the loader is wired
+    # real ~/.empirica/credentials.yaml (post-1.9.5 the loader is wired
     # into _resolve_cortex_config via get_credentials_loader()).
     fake_home = tmp_path / "fake_home"
     fake_home.mkdir()

@@ -7,6 +7,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.5] — 2026-05-14
+
+The "empirica-tightening" release — bootstrap is now genuinely useful for
+AI compaction-recovery, all epistemic artifacts support markdown bodies,
+and the cockpit gains a system-level canonical loop catalog with auto-install
+fallback.
+
+### Added — `situation` block in `project-bootstrap` output
+
+Top-level synthesized field answering "where am I right now?" for AI
+returning from compaction. Composes from filesystem + DB + git in one
+~5ms call:
+
+- `project`: `<name> @ <branch>` shorthand
+- `active_transaction`: in-flight PREFLIGHT state from filesystem
+  (id, status, opened_at, work_type, work_context, domain, criticality)
+- `active_goal`: most recent in_progress goal **with full subtasks list**
+  (was previously just `subtask_count`)
+- `last_praxic_action`: most recent commit (sha + msg + ISO timestamp)
+- `next_focus`: priority cascade — pending subtask > oldest unknown > generic
+
+Placed FIRST in the output (attention-decay-aware). Replaces the previous
+template-only `last_activity.summary` (was a raw epoch float) and
+`next_focus` (was a generic string).
+
+### Added — `--description` markdown body on all `*-log` commands
+
+Mirrors the goals `--objective + --description` pattern. Every artifact
+type now accepts an optional rich markdown body:
+
+| Command | Title field | Rich body |
+|---|---|---|
+| finding-log | `--finding` | `--description` |
+| unknown-log | `--unknown` | `--description` |
+| deadend-log | `--approach` + `--why-failed` | `--description` |
+| assumption-log | `--assumption` | `--description` |
+| decision-log | `--choice` + `--rationale` | `--description` |
+| mistake-log | `--mistake` + `--why-wrong` + `--prevention` | `--description` |
+
+Rendered as prettified markdown in the extension and skill surfaces.
+Storage: JSON-blob types store inside the existing `*_data` column;
+`assumptions` + `decisions` get a new `description TEXT` column (migration 045).
+
+### Added — Canonical loop catalog + TUI auto-install fallback
+
+`empirica/core/cockpit/canonical_loops.py` ships a system-level catalog
+the TUI cockpit consults when an instance has no loops registered AND
+no `.empirica/project.yaml` `cockpit.loops` block. First entry:
+
+- `cortex-mailbox-poll` — orchestration spine. 30s base, 5m max adaptive
+  interval. Body (in companion skill, TBD): `cortex_inbox_poll` +
+  `cortex_outbox_poll` via MCP. Self-throttles when an empirica transaction
+  is open.
+
+Precedence: project.yaml wins, canonical catalog is the fallback.
+
+### Fixed — Bootstrap JSON double-encoding
+
+`goals[*].scope`, `goals[*].goal_data`, `reference_docs[*].doc_data` were
+returned as JSON-encoded strings inside the row dicts. Consumers had to
+do a second `json.loads` per field. Now decoded to native dicts.
+
+### Fixed — Stale project counters backfilled
+
+`projects.total_sessions` and `total_goals` were denormalized columns
+never wired to insert triggers — bootstrap returned 0/0 on projects with
+hundreds of sessions. Replaced with live `COUNT(*)` queries in
+`_count_project_artifacts`. Also added `total_transactions` (the more
+meaningful unit-of-work measure — counted via `COUNT(DISTINCT
+transaction_id)` on the reflexes table). Live values on the empirica
+project itself: 915 transactions, 750 sessions, 741 goals.
+
+### Fixed — Daemon registry endpoints survive pre-edges-schema project DBs
+
+The daemon list + graph endpoints crashed when a project's
+`.empirica/sessions.db` predated migration 041 (artifact_edges
+normalization). Now resolves UUIDs vs slugs correctly + tolerates the
+missing edges table.
+
+### Fixed — Multiple lint cleanups
+
+- `import os` removed from `projects_commands.py` (leftover from bulk-register
+  simplification, broke v1.9.4 post-tag CI)
+- `gh release create` step in `release.yml` now idempotent (won't fail
+  when local `--publish` already created the release)
+- `release.py --prepare` now gates on `ruff` + `pyright` + `pip-audit` to
+  match CI's surface
+- B033 duplicate-value set literal in `test_daemon_project_resolver.py`
+- C901 complexity refactor on `_build_situation` (split into 5 helpers)
+- Test-isolation `~/.empirica/credentials.yaml` leakage in
+  `test_source_archive.py` (autouse HOME fixture)
+
+### Build — `ruff` pinned to `>=0.15.13,<0.16`
+
+Previous `ruff>=0.1.0` was floor-only — CI's fresh install grabbed latest
+patches with new rules while local installs lagged. Pinning to minor
+floor + ceiling: auto-pickup of patches, deterministic ruleset, manual
+minor bumps when adopting new rules.
+
 ## [1.9.4] — 2026-05-13
 
 ### Added — CI/CD scaffolding (.github/workflows/)

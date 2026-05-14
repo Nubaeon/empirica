@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class HealthResponse(BaseModel):
     """Matches extension's HealthResponse interface.
 
-    Includes the daemon's active-project info (v0.5+) and, since v1.9.4,
+    Includes the daemon's active-project info (v0.5+) and, since v1.9.5,
     the registry of locally-known projects (`known_projects`) so the
     extension can offer all of them in its dropdown without round-tripping
     Cortex.
@@ -48,7 +48,7 @@ class HealthResponse(BaseModel):
     project_slug: str | None = None
     repo_url: str | None = None
 
-    # Registry of locally-known projects (v1.9.4+). Empty list when
+    # Registry of locally-known projects (v1.9.5+). Empty list when
     # ~/.empirica/registry.yaml is absent — single-project mode.
     known_projects: list[dict] = Field(default_factory=list)
 
@@ -144,7 +144,7 @@ def create_serve_app() -> FastAPI:
     @app.get("/api/v1/health", response_model=HealthResponse)
     async def health():  # pyright: ignore[reportUnusedFunction]
         """Health check — reports integrations, active project info, and
-        the locally-known project registry (v1.9.4+)."""
+        the locally-known project registry (v1.9.5+)."""
         from empirica.api.daemon_project import get_cached_daemon_project
         from empirica.api.registry import list_known_projects
         project = get_cached_daemon_project() or {}

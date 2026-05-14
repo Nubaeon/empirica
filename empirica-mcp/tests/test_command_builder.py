@@ -1,6 +1,6 @@
 """Tests for empirica-mcp's command-building helpers.
 
-Covers the three pure helpers extracted from `call_tool()` in v1.9.4:
+Covers the three pure helpers extracted from `call_tool()` in v1.9.5:
 - _build_cli_command — argv + stdin assembly per TOOL_REGISTRY entry shape
 - _resolve_cwd — project_path arg → env var → session_resolver fallback chain
 - _err_text — JSON-wrap-as-TextContent error helper
