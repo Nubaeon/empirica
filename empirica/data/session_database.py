@@ -1736,6 +1736,150 @@ class SessionDatabase:
         return result
 
 
+    def _build_situation(self, project_id: str, project_root: str) -> dict:
+        """Synthesize 'where am I right now' for compaction-recovery.
+
+        Composes a compact narrative answer to "what was I doing two
+        minutes ago?" — the field an AI needs MOST after compaction
+        when its working memory has just been compressed. Top-level
+        block in project-bootstrap output.
+
+        Fields:
+        - project: "<name> @ <branch>" shorthand
+        - active_transaction: in-flight PREFLIGHT state from filesystem
+        - active_goal: most recent in_progress goal + full subtasks list
+        - last_praxic_action: most recent commit (sha + msg + at)
+        - next_focus: derived — pending subtask > oldest unknown > generic
+
+        All fields are best-effort — missing data → field omitted from
+        the result. Cost: ~5ms typical (transaction file read + 2-3 SQL
+        queries + 1 subprocess for git).
+        """
+        import subprocess
+        situation: dict = {}
+
+        # 1. Active transaction (from filesystem — survives across CLI calls)
+        try:
+            from empirica.utils.session_resolver import InstanceResolver as R
+            tx = R.transaction_read()
+            if tx:
+                situation['active_transaction'] = {
+                    'id': tx.get('transaction_id'),
+                    'status': tx.get('status'),
+                    'opened_at': tx.get('preflight_timestamp'),
+                    'work_type': tx.get('work_type'),
+                    'work_context': tx.get('work_context'),
+                    'domain': tx.get('domain'),
+                    'criticality': tx.get('criticality'),
+                    'session_id': tx.get('session_id'),
+                }
+        except Exception as e:
+            logger.debug(f"Situation: transaction read skipped: {e}")
+
+        # 2. Active goal + subtasks list (not just count)
+        active_goal = None
+        try:
+            cur = self._execute("""
+                SELECT g.id, g.objective, g.description, g.scope,
+                       g.created_timestamp
+                FROM goals g
+                WHERE g.session_id IN (
+                    SELECT session_id FROM sessions WHERE project_id = ?
+                )
+                AND g.status = 'in_progress' AND g.is_completed = 0
+                ORDER BY g.created_timestamp DESC
+                LIMIT 1
+            """, (project_id,))
+            row = cur.fetchone()
+            if row:
+                d = dict(row)
+                goal_id = d['id']
+                # Decode scope JSON-string → dict (mirrors Goal 4b95b288 fix)
+                if isinstance(d.get('scope'), str) and d['scope']:
+                    try:
+                        d['scope'] = json.loads(d['scope'])
+                    except (ValueError, TypeError):
+                        pass
+                # Pull subtasks inline
+                sub_cur = self._execute("""
+                    SELECT id, description, epistemic_importance, status,
+                           created_timestamp
+                    FROM subtasks
+                    WHERE goal_id = ?
+                    ORDER BY created_timestamp
+                """, (goal_id,))
+                d['subtasks'] = [dict(s) for s in sub_cur.fetchall()]
+                active_goal = d
+                situation['active_goal'] = d
+        except Exception as e:
+            logger.debug(f"Situation: active goal skipped: {e}")
+
+        # 3. Last praxic action (most recent commit)
+        try:
+            result = subprocess.run(
+                ['git', 'log', '-1', '--format=%H%x00%s%x00%aI'],
+                cwd=project_root,
+                capture_output=True, text=True, timeout=2,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                parts = result.stdout.strip().split('\0', 2)
+                if len(parts) == 3:
+                    sha, msg, at = parts
+                    situation['last_praxic_action'] = {
+                        'commit': sha[:9],
+                        'message': msg,
+                        'at': at,
+                    }
+        except Exception as e:
+            logger.debug(f"Situation: last commit skipped: {e}")
+
+        # 4. Project shorthand: "name @ branch"
+        try:
+            cur = self._execute(
+                "SELECT name FROM projects WHERE id = ?", (project_id,),
+            )
+            row = cur.fetchone()
+            proj_name = row[0] if row else 'unknown'
+            br_result = subprocess.run(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                cwd=project_root, capture_output=True, text=True, timeout=2,
+            )
+            branch = (
+                br_result.stdout.strip()
+                if br_result.returncode == 0 else None
+            )
+            situation['project'] = (
+                f"{proj_name} @ {branch}" if branch else proj_name
+            )
+        except Exception as e:
+            logger.debug(f"Situation: project shorthand skipped: {e}")
+
+        # 5. next_focus — priority cascade
+        next_focus = None
+        if active_goal:
+            for sub in active_goal.get('subtasks', []):
+                if sub.get('status') in (None, 'pending', 'in_progress'):
+                    next_focus = f"Subtask: {sub.get('description', '')[:120]}"
+                    break
+        if not next_focus:
+            try:
+                cur = self._execute("""
+                    SELECT unknown FROM project_unknowns
+                    WHERE project_id = ? AND is_resolved = 0
+                    ORDER BY created_timestamp ASC
+                    LIMIT 1
+                """, (project_id,))
+                row = cur.fetchone()
+                if row and row[0]:
+                    next_focus = f"Open unknown: {row[0][:120]}"
+            except Exception:
+                pass
+        situation['next_focus'] = (
+            next_focus or "No specific focus — review goals-list / unknown-list"
+        )
+
+        return situation
+
     def _count_project_artifacts(self, project_id: str) -> dict:
         """Live counts for a project — sessions + goals.
 
@@ -1965,23 +2109,47 @@ class SessionDatabase:
         if ai_epistemic_handoff:
             breadcrumbs['ai_epistemic_handoff'] = ai_epistemic_handoff
 
+        # 7. Synthesize 'situation' — the compaction-recovery narrative.
+        # Replaces the template-only `last_activity` field; carries
+        # active_transaction + active_goal + subtasks + last_commit + next_focus.
+        situation = self._build_situation(resolved_id, project_root)
+
+        # last_activity kept for backward-compat consumers; new narrative
+        # lives in `situation` and is the recommended source.
+        last_commit_msg = (
+            situation.get('last_praxic_action', {}).get('message')
+            if isinstance(situation.get('last_praxic_action'), dict) else None
+        )
+        last_at = (
+            situation.get('last_praxic_action', {}).get('at')
+            if isinstance(situation.get('last_praxic_action'), dict) else None
+        )
         breadcrumbs['last_activity'] = {
-            'summary': f"Last activity: {project.get('last_activity_timestamp', 'Unknown')}",
-            'next_focus': 'Continue with incomplete work and unknown resolutions'
+            'summary': (
+                f"Last commit: {last_commit_msg} (at {last_at})"
+                if last_commit_msg else
+                f"Last activity: {project.get('last_activity_timestamp', 'Unknown')}"
+            ),
+            'next_focus': situation.get(
+                'next_focus',
+                'Continue with incomplete work and unknown resolutions',
+            ),
         }
 
-        # 7. Generate context markdown if requested
+        # 8. Generate context markdown if requested
         if context_to_inject:
             breadcrumbs['context_markdown'] = generate_context_markdown(breadcrumbs)
 
-        # 8. Attach optional metrics (flow, health, feature status)
+        # 9. Attach optional metrics (flow, health, feature status)
         self._attach_optional_metrics(breadcrumbs, resolved_id, project_root)
 
-        # 9. Apply adaptive depth filtering LAST (after all fields populated)
+        # 10. Apply adaptive depth filtering LAST (after all fields populated)
         if depth != "auto" or trigger == "post_compact":
             breadcrumbs = self._apply_depth_filter(breadcrumbs, depth, trigger)
 
-        return breadcrumbs
+        # 11. Reorder so `situation` appears first in JSON output
+        # (attention-decay-aware — AI sees state-narrative before deep lists).
+        return {'situation': situation, **breadcrumbs}
 
 
     def _auto_resolve_session(self, project_id: str, trigger: str | None) -> str | None:
