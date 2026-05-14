@@ -897,6 +897,76 @@ def _init_dashboard(session_id: str, ai_id: str) -> str | None:
         return None
 
 
+def _maybe_auto_install_canonical_loops(project_root: Path) -> int:
+    """Zero-touch install: queue install-pending files for each canonical
+    loop when this instance is fresh on an empirica-aware project.
+
+    Gates (all must be true):
+      1. Instance has a resolvable instance_id (TMUX_PANE, WINDOWID, etc.)
+      2. Project has `.empirica/` (signals empirica intent, opted in)
+      3. Instance has no loops registered yet (fresh)
+      4. No stamp file yet (we only auto-install once per instance)
+
+    The stamp file is `~/.empirica/canonical_loops_installed_<instance_id>`.
+    If a user uninstalls a canonical loop later, the stamp stays — they
+    explicitly chose to remove it, don't re-install.
+
+    Returns the count of canonical loops queued (0 if any gate failed).
+    """
+    try:
+        from empirica.utils.session_resolver import get_instance_id
+        instance_id = get_instance_id()
+        if not instance_id:
+            return 0  # gate 1: no instance_id (headless / unknown)
+
+        empirica_dir = project_root / '.empirica'
+        if not empirica_dir.is_dir():
+            return 0  # gate 2: project hasn't been empirica-initialized
+
+        from pathlib import Path as _Path
+        stamp = _Path.home() / '.empirica' / f'canonical_loops_installed_{instance_id.replace(":", "_").replace("/", "-")}'
+        if stamp.exists():
+            return 0  # gate 4: already auto-installed for this instance
+
+        from empirica.core.cockpit.loop_registry import LoopRegistry
+        registry = LoopRegistry(instance_id)
+        existing = registry.list_loops()
+        if existing:
+            # Some loops already registered manually — write stamp so we
+            # don't auto-install on top of user intent next time.
+            stamp.parent.mkdir(parents=True, exist_ok=True)
+            stamp.write_text('skipped: registry already had entries\n')
+            return 0  # gate 3: not fresh
+
+        # All gates pass — queue install-pending for each canonical loop.
+        from empirica.core.cockpit.canonical_loops import CANONICAL_LOOPS
+        from empirica.core.cockpit.loop_install_request import write_pending
+
+        installed = 0
+        for entry in CANONICAL_LOOPS:
+            try:
+                write_pending(
+                    instance_id=instance_id,
+                    name=entry['name'],
+                    interval=entry.get('interval', '15m'),
+                    description=entry.get('description', ''),
+                    base_interval=entry.get('base_interval'),
+                    max_interval=entry.get('max_interval'),
+                    requested_by='session-init',
+                    body_skill=entry.get('body_skill'),
+                )
+                installed += 1
+            except Exception:
+                pass
+
+        if installed:
+            stamp.parent.mkdir(parents=True, exist_ok=True)
+            stamp.write_text(f'installed {installed} canonical loop(s) at session-init\n')
+        return installed
+    except Exception:
+        return 0
+
+
 def _build_preflight_prompt(session_id: str, context_text: str) -> str:
     """Build the PREFLIGHT prompt for a new session."""
     return f"""
@@ -992,6 +1062,10 @@ def main():
     budget_summary = _init_context_budget(session_id, result.get("project_context", {}))
     dashboard_status = _init_dashboard(session_id, ai_id)
 
+    # Zero-touch: auto-install canonical loops if this instance is fresh
+    # on an empirica-aware project. One-time per instance (stamp file).
+    canonical_loops_installed = _maybe_auto_install_canonical_loops(project_root)
+
     # Build output
     context_text = format_context(result.get("project_context"))
     prompt = _build_preflight_prompt(session_id, context_text)
@@ -1013,11 +1087,16 @@ def main():
         budget_msg = f"\nBudget: {budget_summary.get('tokens_used', 0):,}t used / {budget_summary.get('tokens_available', 0):,}t avail ({budget_summary.get('utilization_pct', 0)}%)"
     dash_msg = f"\n{dashboard_status}" if dashboard_status else ""
     drift_msg = f"\n{version_drift_warning}" if version_drift_warning else ""
+    loops_msg = (
+        f"\nQueued {canonical_loops_installed} canonical loop(s) for install — "
+        f"will surface on your next /loop invocation"
+        if canonical_loops_installed else ""
+    )
     print(f"""
 Empirica: New Session Initialized
 
 Session created: {session_id}
-Project context loaded{archive_msg}{budget_msg}{dash_msg}{drift_msg}
+Project context loaded{archive_msg}{budget_msg}{dash_msg}{drift_msg}{loops_msg}
 
 Run PREFLIGHT to establish baseline, then CHECK before actions.
 """, file=sys.stderr)
