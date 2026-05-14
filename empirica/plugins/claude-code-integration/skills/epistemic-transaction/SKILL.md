@@ -407,6 +407,66 @@ empirica deadend-log --approach "Tried passport.js" --why-failed "Too heavy for 
 empirica assumption-log --assumption "All routes need auth except /health" --confidence 0.8 --domain routing
 ```
 
+#### Rich markdown bodies — `--description` for nuance
+
+Every `*-log` command (finding, unknown, deadend, assumption, decision,
+mistake) accepts an optional `--description` flag carrying a **markdown
+body**. The extension and skill surfaces render this as prettified
+markdown — use sections, lists, code blocks, tables, links for nuance
+that doesn't fit the short title field.
+
+Three shape examples (no rigid template — pick what the artifact
+warrants):
+
+**1. Prose body** — short context behind a finding:
+```bash
+empirica finding-log \
+  --finding "Express 5 changed middleware signature to async" \
+  --description "Caught during the auth middleware port: synchronous \`next()\` callbacks now resolve as awaited promises, so error handlers must \`return next(err)\` instead of fire-and-forget. The legacy middleware in routes/auth.js silently swallowed errors because the old signature didn't propagate them. Documented in [Express 5 migration guide](https://expressjs.com/en/guide/migrating-5.html)." \
+  --impact 0.7
+```
+
+**2. Sectioned body** — decision with trade-offs:
+```bash
+empirica decision-log \
+  --choice "Use Redis for session store" \
+  --rationale "Available via docker-compose, supports TTL primitives, matches our existing infra" \
+  --description "## Why Redis over alternatives
+
+| Option | Verdict |
+|---|---|
+| In-memory (Map) | ❌ scales to 1 process only |
+| Postgres | ❌ heavy for ephemeral key/value |
+| Redis | ✅ matches existing infra |
+
+## What would reverse this
+- Single-region deployment requirement (Redis Sentinel adds ops)
+- Sub-millisecond write needs (consider DragonflyDB)" \
+  --reversibility committal
+```
+
+**3. Code-block body** — dead-end with reproducible signal:
+```bash
+empirica deadend-log \
+  --approach "Tried passport.js for auth middleware" \
+  --why-failed "Too heavy for JWT-only auth" \
+  --description "## Signal: bundle bloat
+
+\`\`\`
+passport@0.7.0 + passport-jwt@4.0.1 + dependencies = +180KB
+in-house JWT verifier = ~30 lines, +2KB
+\`\`\`
+
+Passport's value is its strategy ecosystem (OAuth, SAML, etc.) — we're
+JWT-only so the abstraction was pure overhead. Reverted to a minimal
+\`verify-jwt.js\` middleware."
+```
+
+Skip the body entirely when the title alone tells the full story.
+Over-describing trivial artifacts is its own anti-pattern — let the
+nuance threshold be "would someone reading this in 3 months understand
+without the body?"
+
 #### Sources — log when an artifact's origin matters
 
 An **epistemic source** is the external thing your finding/decision came
