@@ -787,12 +787,25 @@ class CockpitApp(App):
             pass
 
     def _install_loops_from_project(self, inst: dict[str, Any]) -> int:
-        """Install loops from the project's cockpit.loops config. Returns
-        the count installed. Zero means no config found or all entries
-        rejected — caller falls back to a CLI hint."""
+        """Install loops from the project's cockpit.loops config, falling
+        back to the system-level canonical catalog if no project config
+        is present. Returns the count installed. Zero means both sources
+        were empty or all entries rejected — caller falls back to a
+        CLI hint.
+
+        Precedence: project.yaml first (project-specific intent wins),
+        then canonical_loops.CANONICAL_LOOPS (sane default for any
+        empirica claude — currently the cortex-mailbox-poll orchestration
+        spine).
+        """
         configs = project_loops(inst.get('project_path'))
+        source_label = 'project.yaml'
         if not configs:
-            return 0
+            from empirica.core.cockpit.canonical_loops import CANONICAL_LOOPS
+            configs = list(CANONICAL_LOOPS)
+            source_label = 'canonical catalog'
+            if not configs:
+                return 0
         installed = 0
         for cfg in configs:
             args = Namespace(
@@ -813,6 +826,11 @@ class CockpitApp(App):
                 self._log_status(
                     f'{inst["instance_id"]} loop {cfg.get("name", "?")}: {e}'
                 )
+        if installed:
+            self._log_status(
+                f'{inst["instance_id"]}: installed {installed} loop(s) '
+                f'from {source_label}'
+            )
         return installed
 
     def _install_listeners_from_project(self, inst: dict[str, Any]) -> int:
