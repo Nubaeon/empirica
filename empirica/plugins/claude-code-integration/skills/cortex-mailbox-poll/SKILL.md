@@ -65,25 +65,48 @@ compromised, your re-verification via `cortex_inbox_poll(status="accepted")`
 against the proposal_id is the auth boundary — Cortex only returns
 ECO-decided state. Hijacking the wake signal cannot widen your authority.
 
-**What to do:**
+**What to do — depends on `direction`:**
 
-1. Read the event fields. The `proposal_id` + `status` tells you what
-   happened and to which item.
-2. **If mid-transaction:** log a goal `"Process proposal <proposal_id>: <title>"`
-   and pick up at the next natural break (EWM pattern). Do not interrupt
-   current work.
-3. **If idle (between user prompts):**
+### `direction: "inbox"` — proposal is FOR you (ECO-gated)
+
+The proposal targets this AI. ECO has decided. Authorization to act is
+verified by the status field (`accepted`/`changed`/`declined` — never
+`eco_review`).
+
+1. **If mid-transaction:** log a goal `"Process proposal <proposal_id>: <title>"`
+   and pick up at the next natural break (EWM pattern). Do not interrupt.
+2. **If idle:**
    - status `accepted` → fetch full proposal via
-     `cortex_inbox_poll(ai_id=<you>, status="accepted", limit=1)` filtered
-     to this proposal_id, then execute the proposal's payload (code change,
-     follow-up emit, etc.)
-   - status `changed` → ECO requested refinement. Read the
-     `eco_decision.note` and emit a parent_id-linked follow-up proposal
-     via `cortex_propose`.
-   - status `declined` → ECO said no. Update your mental model; no action.
-4. After handling, archive the proposal via `cortex_archive_proposal` to
-   clear it from active surfaces (and prevent re-emission if you see it
-   again on a later tick).
+     `cortex_inbox_poll(ai_id=<you>, status="accepted")` and find this
+     proposal_id, then execute the payload (code change, follow-up emit).
+     **When done, mark it `completed` via the cortex completion primitive
+     so the source AI gets the ack** — this is the AI-to-AI handshake.
+   - status `changed` → ECO requested refinement of a proposal SOMEONE ELSE
+     sent that targets you. Read `eco_decision.note` and proceed with the
+     adjusted scope.
+   - status `declined` → ECO said no to something pointed at you. Update
+     mental model; no action needed.
+3. Archive via `cortex_archive_proposal` after handling.
+
+### `direction: "outbox"` — proposal is FROM you (ack-style, no ECO gate)
+
+A proposal you emitted earlier just transitioned state. ECO already decided
+when it went out — these events are informational acks for the source AI.
+
+- status `completed` (T7 — David's AI-to-AI ack primitive)
+  → Target AI finished your work. Event carries `commit_sha` so you can
+  trace the landing. Log a finding (`empirica finding-log`) noting the
+  completion + commit. If there's a next-step you were waiting on, chain
+  to it now.
+- status `changed`
+  → ECO sent your emission back for refinement. Read `eco_decision.note`
+  and emit a `parent_id`-linked refined proposal via `cortex_propose`.
+- status `declined`
+  → ECO rejected your proposal. Update mental model. Optionally log a
+  decision artifact noting why it didn't fly so you don't re-propose.
+
+Outbox `accepted` is NEVER surfaced (informational — target will act on
+the next tick of their inbox poll). Saves chat noise.
 
 ### Heartbeat event (legacy fallback)
 

@@ -57,9 +57,25 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-# Status filter for content emission — these are the ECO-decided states.
-# `eco_review` is excluded: AI shouldn't act on proposals ECO hasn't reviewed.
-EMISSION_STATUSES = ("accepted", "changed", "declined")
+# Status filters per direction — what counts as a real wake signal.
+#
+# INBOX: proposals TARGETING this AI. ECO must have decided — that's the
+# canonical authorization boundary (David's ECO-gated autonomy property).
+# `eco_review` is excluded — AI must never act on ECO-undecided content.
+EMISSION_STATUSES_INBOX = ("accepted", "changed", "declined")
+
+# OUTBOX: proposals THIS AI emitted. ECO already decided at emission time;
+# downstream state transitions are informational acks rather than auth events.
+#  - 'changed'   → ECO sent back for refinement (real wake)
+#  - 'declined'  → ECO rejected (real wake — update mental model)
+#  - 'completed' → target AI finished the work (real wake — David's AI-to-AI
+#                  ack primitive, carries commit_sha in audit_log details)
+# 'accepted' on outbox is informational only (ECO approved your emission,
+# target will act) — skipping prevents noise.
+EMISSION_STATUSES_OUTBOX = ("changed", "declined", "completed")
+
+# Back-compat alias (T6 code referenced EMISSION_STATUSES for inbox).
+EMISSION_STATUSES = EMISSION_STATUSES_INBOX
 
 
 @dataclass
@@ -73,6 +89,8 @@ class ProposalEvent:
     action_category: str | None
     eco_actor: str | None
     new_or_changed: str  # "new" | "status_changed"
+    direction: str = "inbox"  # "inbox" | "outbox" — tells AI which reaction
+    commit_sha: str | None = None  # populated when status='completed'
 
     def to_log_line(self) -> str:
         """JSON line for ~/.empirica/loop_fires.log."""
@@ -82,12 +100,14 @@ class ProposalEvent:
             "instance_id": self.instance_id,
             "loop": self.loop_name,
             "event_type": "proposal_event",
+            "direction": self.direction,
             "proposal_id": self.proposal_id,
             "proposal_title": self.proposal_title,
             "status": self.status,
             "action_category": self.action_category,
             "eco_actor": self.eco_actor,
             "change_kind": self.new_or_changed,
+            "commit_sha": self.commit_sha,
         })
 
 
@@ -120,28 +140,24 @@ def save_state(state_path: Path, state: dict) -> None:
     tmp.replace(state_path)
 
 
-def fetch_cortex_inbox(
+def _fetch_orch(
     cortex_url: str,
     api_key: str,
     ai_id: str,
+    path: str,
+    statuses: tuple[str, ...],
     *,
     timeout: float = 10.0,
 ) -> list[dict]:
-    """GET /v1/orchestration/inbox?claude=<ai_id>&status=accepted,changed,declined.
-
-    Returns the proposals[] list. Raises on network errors (caller decides
-    whether to swallow — empty list is the conservative fallback so a
-    transient Cortex outage doesn't emit spurious events).
-    """
+    """Shared GET for /v1/orchestration/{inbox,outbox} with the same shape."""
     params = urllib.parse.urlencode({
-        "claude": ai_id,
-        "status": ",".join(EMISSION_STATUSES),
-        "related": "false",  # don't compute related_goals per proposal (faster)
+        "ai_id": ai_id,
+        "status": ",".join(statuses),
+        "related": "false",  # skip per-proposal Qdrant scroll for faster polls
     })
-    url = f"{cortex_url.rstrip('/')}/v1/orchestration/inbox?{params}"
+    url = f"{cortex_url.rstrip('/')}{path}?{params}"
     req = urllib.request.Request(
-        url,
-        method="GET",
+        url, method="GET",
         headers={"Authorization": f"Bearer {api_key}"},
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -149,6 +165,37 @@ def fetch_cortex_inbox(
         body = json.loads(raw) if raw else {}
     proposals = body.get("proposals", [])
     return proposals if isinstance(proposals, list) else []
+
+
+def fetch_cortex_inbox(
+    cortex_url: str,
+    api_key: str,
+    ai_id: str,
+    *,
+    timeout: float = 10.0,
+) -> list[dict]:
+    """GET /v1/orchestration/inbox — proposals where target_claudes contains ai_id."""
+    return _fetch_orch(cortex_url, api_key, ai_id,
+                       "/v1/orchestration/inbox", EMISSION_STATUSES_INBOX,
+                       timeout=timeout)
+
+
+def fetch_cortex_outbox(
+    cortex_url: str,
+    api_key: str,
+    ai_id: str,
+    *,
+    timeout: float = 10.0,
+) -> list[dict]:
+    """GET /v1/orchestration/outbox — proposals where source_claude == ai_id.
+
+    Used for completion/refinement wake signals. The AI emitting the proposal
+    is the audience: 'your work landed' (completed), 'ECO sent back' (changed),
+    'ECO rejected' (declined). No ECO gate needed — ECO already decided when
+    the proposal left."""
+    return _fetch_orch(cortex_url, api_key, ai_id,
+                       "/v1/orchestration/outbox", EMISSION_STATUSES_OUTBOX,
+                       timeout=timeout)
 
 
 def _proposal_status(p: dict) -> str:
@@ -162,11 +209,16 @@ def _proposal_id(p: dict) -> str:
 def diff_proposals(
     current: list[dict],
     last_seen: dict[str, str],
+    *,
+    valid_statuses: tuple[str, ...] = EMISSION_STATUSES_INBOX,
 ) -> list[tuple[dict, str]]:
     """Return (proposal, change_kind) for each new or status-changed item.
 
     change_kind ∈ {"new", "status_changed"}. Proposals whose ID + status are
     unchanged are filtered out — the AI already saw them.
+
+    `valid_statuses` is the security filter — defaults to INBOX statuses
+    (ECO-decided only). Callers polling outbox pass EMISSION_STATUSES_OUTBOX.
     """
     out: list[tuple[dict, str]] = []
     for p in current:
@@ -174,7 +226,7 @@ def diff_proposals(
         if not pid:
             continue
         status = _proposal_status(p)
-        if status not in EMISSION_STATUSES:
+        if status not in valid_statuses:
             continue
         prior = last_seen.get(pid)
         if prior is None:
@@ -184,19 +236,49 @@ def diff_proposals(
     return out
 
 
-def build_event(p: dict, change_kind: str, instance_id: str, loop_name: str) -> ProposalEvent:
-    """Compress a Cortex proposal payload into the emit shape."""
+def _extract_commit_sha(p: dict) -> str | None:
+    """Pull commit_sha from a 'completed' proposal's audit log.
+
+    The completion primitive (David, 2026-05-15) appends a 'completed' audit
+    entry with `details.commit_sha` so the source AI knows which commit
+    landed their work. Returns None when not present (status != completed,
+    or older proposals without the detail).
+    """
+    audit = p.get("audit_log") or []
+    if not isinstance(audit, list):
+        return None
+    for entry in reversed(audit):  # most recent first
+        if isinstance(entry, dict) and entry.get("action") == "completed":
+            details = entry.get("details") or {}
+            if isinstance(details, dict):
+                sha = details.get("commit_sha")
+                return str(sha) if sha else None
+    return None
+
+
+def build_event(
+    p: dict, change_kind: str, instance_id: str, loop_name: str,
+    *, direction: str = "inbox",
+) -> ProposalEvent:
+    """Compress a Cortex proposal payload into the emit shape.
+
+    `direction` is "inbox" or "outbox" — tells the AI which reaction protocol
+    applies (act on accepted vs ack a completion).
+    """
     eco_decision = p.get("eco_decision") or {}
     eco_actor = eco_decision.get("actor") if isinstance(eco_decision, dict) else None
+    status = _proposal_status(p)
     return ProposalEvent(
         instance_id=instance_id,
         loop_name=loop_name,
         proposal_id=_proposal_id(p),
         proposal_title=str(p.get("title", ""))[:200],
-        status=_proposal_status(p),
+        status=status,
         action_category=str(p.get("action_category") or "") or None,
         eco_actor=str(eco_actor) if eco_actor else None,
         new_or_changed=change_kind,
+        direction=direction,
+        commit_sha=_extract_commit_sha(p) if status == "completed" else None,
     )
 
 
@@ -207,57 +289,86 @@ def poll_and_diff(
     api_key: str,
     *,
     state_path: Path | None = None,
-    fetch_fn=fetch_cortex_inbox,
+    inbox_fetch_fn=fetch_cortex_inbox,
+    outbox_fetch_fn=fetch_cortex_outbox,
 ) -> list[ProposalEvent]:
-    """Pure-as-possible function for content-aware ticking.
+    """Poll both inbox + outbox, diff against last-seen, return wake events.
 
-    1. Fetch current ECO-decided proposals for `instance_id` from Cortex
-    2. Load last-seen state from `state_path`
-    3. Diff: emit events for new + status-changed proposals only
-    4. Save current state back
+    Two security/event classes (David's wake-event taxonomy, 2026-05-15):
 
-    Bootstrap: on first run (state file absent), record current proposals
-    as seen WITHOUT emitting — avoids flooding the chat with historical
-    inbox content when David first enables a loop.
+      INBOX  (target_claudes ∋ instance_id):
+          ECO-decided proposals → this AI acts on them.
+          EMISSION_STATUSES_INBOX = (accepted, changed, declined)
+          eco_review explicitly excluded — AI must not act on ECO-undecided.
 
-    `fetch_fn` is injectable for tests (default hits real Cortex via HTTP).
+      OUTBOX (source_claude == instance_id):
+          ACK-style transitions on what this AI emitted → informational.
+          EMISSION_STATUSES_OUTBOX = (changed, declined, completed)
+          'completed' carries commit_sha — the AI-to-AI handshake primitive.
 
-    Returns the list of events to emit. Caller writes them to fires log.
+    State file tracks both under a single proposals dict (proposal_ids are
+    UUIDs, so no collision possible between inbox and outbox items).
+
+    Bootstrap: on first run (state file absent), record everything as seen
+    WITHOUT emitting — no historical-content flood when a loop is first enabled.
+
+    `inbox_fetch_fn` / `outbox_fetch_fn` are injectable for tests.
+
+    Returns events in stable order (all inbox events first, then outbox).
     """
     if state_path is None:
         state_path = _state_path(instance_id, loop_name)
 
     state = load_state(state_path)
-    last_seen: dict[str, str] = state.get("proposals", {})
-    last_seen_statuses = {pid: p.get("status", "") for pid, p in last_seen.items()
-                          if isinstance(p, dict)} if isinstance(last_seen, dict) else {}
+    last_seen: dict = state.get("proposals", {})
+    last_seen_statuses = {
+        pid: p.get("status", "")
+        for pid, p in last_seen.items()
+        if isinstance(p, dict)
+    } if isinstance(last_seen, dict) else {}
 
-    try:
-        current = fetch_fn(cortex_url, api_key, instance_id)
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError, TimeoutError) as e:
-        # Transient network failure → emit nothing, don't update state.
-        # Next tick retries. AFK guarantee preserved.
-        logger.debug(f"content_poll fetch failed for {instance_id}/{loop_name}: {e}")
+    # Fetch both directions; degrade gracefully on either failure.
+    def _safe(fn):
+        try:
+            return fn(cortex_url, api_key, instance_id)
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError, TimeoutError) as e:
+            logger.debug(f"content_poll fetch failed: {e}")
+            return None
+
+    inbox = _safe(inbox_fetch_fn)
+    outbox = _safe(outbox_fetch_fn)
+    if inbox is None and outbox is None:
+        # Both failed → entire Cortex unreachable. Don't touch state.
         return []
+    inbox = inbox or []
+    outbox = outbox or []
 
     bootstrap = not state  # first run: state file was absent
 
-    diffs = diff_proposals(current, last_seen_statuses)
+    inbox_diffs = diff_proposals(inbox, last_seen_statuses,
+                                  valid_statuses=EMISSION_STATUSES_INBOX)
+    outbox_diffs = diff_proposals(outbox, last_seen_statuses,
+                                   valid_statuses=EMISSION_STATUSES_OUTBOX)
+
     events: list[ProposalEvent] = []
     if not bootstrap:
-        events = [build_event(p, kind, instance_id, loop_name) for (p, kind) in diffs]
+        for (p, kind) in inbox_diffs:
+            events.append(build_event(p, kind, instance_id, loop_name, direction="inbox"))
+        for (p, kind) in outbox_diffs:
+            events.append(build_event(p, kind, instance_id, loop_name, direction="outbox"))
 
-    # Always update state — even on bootstrap (records the status quo so the
-    # NEXT tick has a baseline) and even when emitting (so the same proposal
-    # doesn't re-emit on the next tick).
-    new_proposals_map = {
-        _proposal_id(p): {
-            "status": _proposal_status(p),
-            "seen_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
-        }
-        for p in current
-        if _proposal_id(p)
-    }
+    # Update state — single proposals map covers both directions (UUIDs unique).
+    new_proposals_map = {}
+    for source_list, direction in ((inbox, "inbox"), (outbox, "outbox")):
+        for p in source_list:
+            pid = _proposal_id(p)
+            if not pid:
+                continue
+            new_proposals_map[pid] = {
+                "status": _proposal_status(p),
+                "direction": direction,
+                "seen_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+            }
     save_state(state_path, {
         "last_poll_ts": _dt.datetime.now(_dt.timezone.utc).isoformat(),
         "proposals": new_proposals_map,
