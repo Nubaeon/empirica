@@ -155,7 +155,11 @@ class CockpitApp(App):
         # (e.g. 'def·M' for default/medium, 'leg·H' for legal/high). Helps
         # readers see which threshold profile each instance is operating
         # under — a writing project differs from a research/legal one.
-        table.add_columns('s', 'name', 'ph', 'dom', 'S', 'L', 'E', 'N')
+        # T9 (2026-05-15, David): collapsed loops + listeners + notifications
+        # into a single 'N' column. The listener (T8) is the unified wake
+        # mechanism — separate columns were noise. N now shows ⊕<count>
+        # when there are recent events for this instance, glyph otherwise.
+        table.add_columns('s', 'name', 'ph', 'dom', 'S', 'N')
         yield table
 
         with Horizontal(id='action-bar'):
@@ -254,10 +258,11 @@ class CockpitApp(App):
             phase = self._phase_short(inst.get('phase'), inst.get('asking', False))
             dom = self._domain_chip(inst.get('transaction'))
             sentinel = '○' if inst['sentinel']['paused'] else '●'
-            loops = self._loops_glyph(inst.get('loops') or {})
-            listeners = self._listeners_glyph(inst.get('listeners') or {})
-            notif = self._notif_glyph(inst.get('notifications') or {})
-            table.add_row(stat, name, phase, dom, sentinel, loops, listeners, notif, key=iid)
+            # T9: events cell = recent_events count (most actionable signal)
+            # falling back to the loops glyph if no events yet. listeners
+            # are subsumed (they're loops with held connections now).
+            events_cell = self._events_cell(inst)
+            table.add_row(stat, name, phase, dom, sentinel, events_cell, key=iid)
 
         if rows:
             target = previously_selected or rows[0]['instance_id']
@@ -353,6 +358,24 @@ class CockpitApp(App):
             return '·'
         return f'⊕{count}'
 
+    @staticmethod
+    def _events_cell(inst: dict[str, Any]) -> str:
+        """T9: unified events cell — replaces separate loops/listeners/notif
+        columns. Priority: recent-events count if any, else loop liveness."""
+        recent = inst.get('recent_events') or []
+        if recent:
+            # Show count of latest events as the wake-summary chip
+            return f'⊕{len(recent)}'
+        # No recent events — fall back to loop liveness (T5 _loops_glyph)
+        loops = inst.get('loops') or {}
+        if loops:
+            return CockpitApp._loops_glyph(loops)
+        # Also check listeners — registered but no recent events
+        listeners = inst.get('listeners') or {}
+        if listeners:
+            return CockpitApp._listeners_glyph(listeners)
+        return '·'
+
     def _selected_instance(self) -> dict[str, Any] | None:
         if not self.selected_instance_id:
             return None
@@ -433,9 +456,19 @@ class CockpitApp(App):
         )
 
     def _format_notifications(self, inst: dict[str, Any]) -> str:
+        # T9: prefer fires-log recent_events (the listener's wake events) —
+        # those are the actionable AI-orchestration signals. Fall back to
+        # project notifications (the older project-level audit notifs) when
+        # no event stream activity exists yet for this instance.
+        recent = inst.get('recent_events') or []
+        if recent:
+            lines = []
+            for ev in recent:
+                lines.append(_format_event_line(ev))
+            return '\n'.join(lines)
         items = notifications_for_project(inst.get('project_path'), limit=5)
         if not items:
-            return '(none for this project)'
+            return '(no events yet — listener silent or not armed)'
         return '\n'.join(_wrap_item('•', n.title) for n in items)
 
     def _format_compliance(self, inst: dict[str, Any]) -> str:
@@ -910,6 +943,28 @@ class CockpitApp(App):
                     f'{inst["instance_id"]} listener {cfg.get("name", "?")}: {e}'
                 )
         return installed
+
+
+def _format_event_line(ev: dict[str, Any]) -> str:
+    """T9: format one ProposalEvent for the latest-5 cockpit pane.
+
+    Shape per event:  <dir>·<status> <id8> · <eco_actor>  <title>
+      ▼·accepted prop_efs… · eco-phone  Close the push gap…
+      ▲·completed prop_ox6… · extension  Add completion primitive
+
+    Direction glyphs:
+      ▼ inbox (proposal TO this AI — AI acts)
+      ▲ outbox (proposal FROM this AI — ack received)
+      • unknown / legacy heartbeat
+    """
+    direction = (ev.get('direction') or '').lower()
+    dir_glyph = '▼' if direction == 'inbox' else '▲' if direction == 'outbox' else '•'
+    status = ev.get('status', '')
+    pid = (ev.get('proposal_id') or '')[:8]
+    eco = ev.get('eco_actor') or ev.get('commit_sha') or ''
+    title = (ev.get('proposal_title') or ev.get('loop') or '')[:48]
+    suffix = f' · {eco}' if eco else ''
+    return _wrap_item(f'{dir_glyph}·{status}', f'{pid}{suffix}  {title}')
 
 
 def _wrap_item(marker: str, text: str, width: int = _WRAP_WIDTH) -> str:

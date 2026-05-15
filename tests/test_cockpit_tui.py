@@ -105,7 +105,11 @@ async def test_tui_has_no_kill_button(cockpit_env):
 
 
 @pytest.mark.asyncio
-async def test_table_has_eight_columns(cockpit_env):
+async def test_table_has_six_columns(cockpit_env):
+    """T9 (2026-05-15, David): collapsed separate loops + listeners +
+    notifications columns into a unified 'N' (events). The listener (T8)
+    is the single wake mechanism now — three columns for the same concept
+    was noise."""
     from textual.widgets import DataTable
 
     from empirica.cli.tui import CockpitApp
@@ -116,9 +120,7 @@ async def test_table_has_eight_columns(cockpit_env):
         await pilot.pause()
         table = app.query_one('#inst-table', DataTable)
         col_labels = [c.label.plain for c in table.columns.values()]
-        # v1.8: added 'dom' column between ph and S — shows open
-        # transaction's domain · criticality glyph (e.g. 'def·M').
-        assert col_labels == ['s', 'name', 'ph', 'dom', 'S', 'L', 'E', 'N']
+        assert col_labels == ['s', 'name', 'ph', 'dom', 'S', 'N']
 
 
 # ─── data loading ─────────────────────────────────────────────────────────

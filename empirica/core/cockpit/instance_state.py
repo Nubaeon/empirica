@@ -327,6 +327,45 @@ def _newest_instance_file_mtime(instance_id: str) -> float | None:
     return _newest_mtime(candidates)
 
 
+def _read_recent_events_for_instance(instance_id: str, limit: int = 5) -> list[dict]:
+    """Tail ~/.empirica/loop_fires.log filtered to `instance_id`, return the
+    last `limit` events parsed as dicts.
+
+    T9 (goal f718156c): the cockpit's per-instance pane shows these as the
+    "latest 5" — the single human-readable surface for ECO-decided AI work
+    arriving via the listener push or content-poll catch-up. Lines that
+    don't parse are skipped silently.
+
+    Returns most-recent-first ordering."""
+    log = Path.home() / ".empirica" / "loop_fires.log"
+    if not log.exists():
+        return []
+    try:
+        # Read tail — modest log size expected (one line per emission); for
+        # very large files this could be optimized to seek-from-end, but
+        # T6/T7 emission is content-only so the log stays small in practice.
+        with open(log, encoding="utf-8") as f:
+            lines = f.readlines()
+    except OSError:
+        return []
+
+    out: list[dict] = []
+    for ln in reversed(lines):
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            event = json.loads(ln)
+        except json.JSONDecodeError:
+            continue
+        if event.get("instance_id") != instance_id:
+            continue
+        out.append(event)
+        if len(out) >= limit:
+            break
+    return out
+
+
 def _annotate_loops_with_systemd_state(
     instance_id: str, loops_dict: dict[str, Any],
 ) -> None:
@@ -503,6 +542,11 @@ def aggregate_instance_state(
         },
         'compliance': compliance,
         'services': services,
+        # T9: latest 5 fires-log events for the cockpit detail pane.
+        # ECO-decided proposal events surface here (one row per inbox-act
+        # or outbox-ack), making "notifications" the unified surface that
+        # subsumes the older separate loops/listeners columns.
+        'recent_events': _read_recent_events_for_instance(instance_id, limit=5),
     }
 
 
