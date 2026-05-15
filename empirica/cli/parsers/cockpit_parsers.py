@@ -248,6 +248,50 @@ def _add_loop_group(subparsers):
     _add_instance(status_p)
     _add_output(status_p)
 
+    # ── systemd-user scheduler (Phase 1a — goal f718156c) ─────────────────
+    # Replaces /loop's CronCreate as the firing mechanism. systemd timer
+    # appends to ~/.empirica/loop_fires.log; the SessionStart Monitor (Phase
+    # 1b) bridges new lines into the running Claude session. True external
+    # on/off via systemctl — no Claude cooperation needed to pause.
+    enable = loop_subs.add_parser(
+        'enable',
+        help='Install + start a systemd-user timer for this loop (Phase 1a — '
+             'wake-from-idle bridge via Monitor armed at SessionStart).',
+    )
+    enable.add_argument('name', help='Loop name')
+    enable.add_argument('--interval', required=True,
+                        help='systemd time spec: 30s | 5min | 1h')
+    _add_instance(enable)
+    _add_output(enable)
+
+    disable = loop_subs.add_parser(
+        'disable',
+        help='Stop + remove the systemd-user timer for this loop. Idempotent — '
+             'no error if the loop was never enabled.',
+    )
+    disable.add_argument('name', help='Loop name')
+    _add_instance(disable)
+    _add_output(disable)
+
+    systemd_status = loop_subs.add_parser(
+        'systemd-status',
+        help='Query systemctl for the timer state (is-active, is-enabled, '
+             'last/next trigger). Separate from `status` which inspects '
+             'the in-DB registry + pause sidecar.',
+    )
+    systemd_status.add_argument('name', help='Loop name')
+    _add_instance(systemd_status)
+    _add_output(systemd_status)
+
+    tick = loop_subs.add_parser(
+        'tick',
+        help='ExecStart target for systemd-user .service units. Appends one '
+             'JSON event to ~/.empirica/loop_fires.log (Monitor bridge input). '
+             'Internal — but callable manually for testing or manual fire.',
+    )
+    tick.add_argument('instance_id', help='Instance identifier')
+    tick.add_argument('name', help='Loop name')
+
 
 def _add_listener_group(subparsers):
     """Event-listener subcommands per PROPOSAL_EVENT_LISTENER.md.

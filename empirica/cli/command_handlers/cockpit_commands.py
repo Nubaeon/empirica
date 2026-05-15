@@ -659,6 +659,94 @@ def handle_loop_status_command(args) -> int:
     return _emit(args, payload, summary)
 
 
+# ─── systemd-user scheduler (Phase 1a — goal f718156c) ──────────────────────
+#
+# Replaces /loop's in-session CronCreate with an OS-level timer that fires
+# regardless of Claude's state. The wake-from-idle bridge into a running
+# session is the Monitor tool (armed at SessionStart — Phase 1b).
+#
+# True pause becomes `systemctl --user disable --now` — atomic, no Claude
+# cooperation needed. AFK token cost drops to zero while disabled.
+
+
+def handle_loop_enable_command(args) -> int:
+    from empirica.core.loop_scheduler import (
+        SystemdLoopScheduler,
+        SystemdUnavailable,
+    )
+    instance_id = _require_instance_id(args)
+    try:
+        sched = SystemdLoopScheduler()
+        paths = sched.enable(instance_id, args.name, args.interval)
+    except SystemdUnavailable as e:
+        return _emit(args, {'ok': False, 'error': str(e),
+                            'platform_hint': 'macOS uses launchd (Phase 2)'},
+                     f'systemd unavailable: {e}')
+    except Exception as e:
+        return _emit(args, {'ok': False, 'error': str(e)},
+                     f'enable failed: {e}')
+    payload = {
+        'ok': True, 'instance_id': instance_id, 'name': args.name,
+        'interval': args.interval,
+        'timer_path': str(paths.timer), 'service_path': str(paths.service),
+    }
+    return _emit(args, payload,
+                 f'enabled {args.name} (every {args.interval}) — timer + service installed')
+
+
+def handle_loop_disable_command(args) -> int:
+    from empirica.core.loop_scheduler import (
+        SystemdLoopScheduler,
+        SystemdUnavailable,
+    )
+    instance_id = _require_instance_id(args)
+    try:
+        sched = SystemdLoopScheduler()
+        removed = sched.disable(instance_id, args.name)
+    except SystemdUnavailable as e:
+        return _emit(args, {'ok': False, 'error': str(e)}, f'systemd unavailable: {e}')
+    payload = {'ok': True, 'instance_id': instance_id, 'name': args.name, 'removed': removed}
+    summary = (f'disabled {args.name} (unit files removed)' if removed
+               else f'{args.name} was not enabled — no-op')
+    return _emit(args, payload, summary)
+
+
+def handle_loop_systemd_status_command(args) -> int:
+    from empirica.core.loop_scheduler import (
+        SystemdLoopScheduler,
+        SystemdUnavailable,
+    )
+    instance_id = _require_instance_id(args)
+    try:
+        sched = SystemdLoopScheduler()
+        st = sched.status(instance_id, args.name)
+    except SystemdUnavailable as e:
+        return _emit(args, {'ok': False, 'error': str(e)}, f'systemd unavailable: {e}')
+    payload = {
+        'ok': True, 'instance_id': instance_id, 'name': args.name,
+        'active': st.active, 'enabled': st.enabled,
+        'last_trigger': st.last_trigger, 'next_trigger': st.next_trigger,
+    }
+    summary = (f'{args.name}: active={st.active} enabled={st.enabled} '
+               f'last={st.last_trigger or "—"} next={st.next_trigger or "—"}')
+    return _emit(args, payload, summary)
+
+
+def handle_loop_tick_command(args) -> int:
+    """systemd-user service ExecStart target. Appends one JSON event to the
+    fires log; the Monitor bridge tails this and relays into the running
+    Claude session. Must succeed even on systems without systemd (the log
+    write is the contract; the timer mechanism is separate)."""
+    from empirica.core.loop_scheduler import SystemdLoopScheduler
+    try:
+        path = SystemdLoopScheduler.tick(args.instance_id, args.name)
+    except Exception as e:
+        return _emit(args, {'ok': False, 'error': str(e)}, f'tick failed: {e}')
+    return _emit(args, {'ok': True, 'log_path': str(path),
+                        'instance_id': args.instance_id, 'name': args.name},
+                 f'tick: {args.instance_id}/{args.name}')
+
+
 # ─── empirica listener ──────────────────────────────────────────────────────
 #
 # Sister concept to `empirica loop` but event-driven (PROPOSAL_EVENT_LISTENER).
@@ -1220,6 +1308,11 @@ _LOOP_DISPATCH = {
     'install-request': handle_loop_install_request_command,
     'list': handle_loop_list_command,
     'status': handle_loop_status_command,
+    # systemd-user scheduler (Phase 1a)
+    'enable': handle_loop_enable_command,
+    'disable': handle_loop_disable_command,
+    'systemd-status': handle_loop_systemd_status_command,
+    'tick': handle_loop_tick_command,
 }
 
 
@@ -1306,6 +1399,8 @@ __all__ = [
     'handle_listener_resume_command',
     'handle_listener_status_command',
     'handle_listener_unregister_command',
+    'handle_loop_disable_command',
+    'handle_loop_enable_command',
     'handle_loop_group_command',
     'handle_loop_heartbeat_command',
     'handle_loop_list_command',
@@ -1316,6 +1411,8 @@ __all__ = [
     'handle_loop_set_interval_command',
     'handle_loop_should_fire_command',
     'handle_loop_status_command',
+    'handle_loop_systemd_status_command',
+    'handle_loop_tick_command',
     'handle_loop_unregister_command',
     'handle_sentinel_group_command',
     'handle_sentinel_pause_command',
