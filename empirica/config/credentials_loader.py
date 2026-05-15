@@ -331,7 +331,12 @@ class CredentialsLoader:
         """
         defaults = {
             "url": "https://ntfy.getempirica.com",
-            "topic": "orchestration-proposals",
+            # T12 (2026-05-15): cortex split topics so AI-wake events don't
+            # ping ECO's phone. `orchestration-events` is the AI-wake topic
+            # (both auto-accepted and ECO-accepted proposals emit here);
+            # `orchestration-proposals` is phone-only for ECO decisions.
+            # The listener subscribes to the AI-wake topic.
+            "topic": "orchestration-events",
         }
         env_map = {
             "url": os.getenv("ORCHESTRATION_NTFY_URL"),
