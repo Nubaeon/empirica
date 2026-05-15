@@ -18,10 +18,12 @@ from .systemd import (
     SystemdLoopScheduler,
     SystemdUnavailable,
     is_systemd_available,
+    list_active_loops_for_instance,
 )
 
 __all__ = [
     "SystemdLoopScheduler",
     "SystemdUnavailable",
     "is_systemd_available",
+    "list_active_loops_for_instance",
 ]

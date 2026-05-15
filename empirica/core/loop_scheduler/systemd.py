@@ -321,3 +321,44 @@ class SystemdLoopScheduler:
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(event) + "\n")
         return path
+
+
+# ── Convenience: instance-scoped discovery (used by SessionStart hook) ───
+
+
+def list_active_loops_for_instance(instance_id: str) -> list[str]:
+    """Names of canonical loops with an active systemd timer for this instance.
+
+    Returns loop names (not unit names) — e.g. ['cortex-mailbox-poll'].
+    Empty list when systemd isn't available or no loops are enabled, never
+    raises. Caller uses this to decide whether to arm a Monitor at SessionStart.
+    """
+    if not is_systemd_available():
+        return []
+    try:
+        r = _systemctl(
+            "list-unit-files", "empirica-loop-*.timer", "--no-legend",
+        )
+    except Exception:
+        return []
+
+    safe_inst = _safe(instance_id)
+    prefix = f"empirica-loop-{safe_inst}-"
+    loops: list[str] = []
+    for ln in r.stdout.splitlines():
+        parts = ln.split()
+        if not parts or not parts[0].endswith(".timer"):
+            continue
+        unit = parts[0].removesuffix(".timer")
+        if not unit.startswith(prefix):
+            continue
+        loop_name = unit.removeprefix(prefix)
+        # Only count timers that are actually active (running), not just
+        # installed-but-disabled.
+        try:
+            chk = _systemctl("is-active", f"{unit}.timer")
+            if chk.stdout.strip() == "active":
+                loops.append(loop_name)
+        except Exception:
+            continue
+    return loops

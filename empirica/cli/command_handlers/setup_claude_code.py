@@ -263,19 +263,22 @@ def _register_all_hooks(settings, plugin_dir, python_cmd, output_format):
     postcompact_script = f"{python_cmd} {plugin_dir}/hooks/post-compact.py"
     sessioninit_script = f"{python_cmd} {plugin_dir}/hooks/session-init.py"
     ewm_script = f"{python_cmd} {plugin_dir}/hooks/ewm-protocol-loader.py"
+    monitor_arm_script = f"{python_cmd} {plugin_dir}/hooks/session-monitor-arm.py"
     _register_hook(settings, 'SessionStart', 'post-compact.py', [
         {
             "matcher": "compact",
             "hooks": [
                 {"type": "command", "command": postcompact_script, "timeout": 30},
-                {"type": "command", "command": ewm_script, "timeout": 10, "allowFailure": True}
+                {"type": "command", "command": ewm_script, "timeout": 10, "allowFailure": True},
+                {"type": "command", "command": monitor_arm_script, "timeout": 5, "allowFailure": True}
             ]
         },
         {
             "matcher": "startup|resume",
             "hooks": [
                 {"type": "command", "command": sessioninit_script, "timeout": 30},
-                {"type": "command", "command": ewm_script, "timeout": 10, "allowFailure": True}
+                {"type": "command", "command": ewm_script, "timeout": 10, "allowFailure": True},
+                {"type": "command", "command": monitor_arm_script, "timeout": 5, "allowFailure": True}
             ]
         },
     ], "SessionStart hooks", output_format, use_extend=True)
