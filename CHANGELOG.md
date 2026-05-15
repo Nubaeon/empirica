@@ -7,6 +7,133 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+The "epistemic email for the AI age" release — canonical loops decouple
+from Claude Code's in-session CronCreate. Push-primary wake via cortex
+ntfy, ECO-gated authorization, AI-to-AI completion acks with commit_sha,
+cross-platform parity (systemd-user on Linux/WSL2, launchd on macOS).
+Architecture name from David's session: AI orchestration as message
+passing through ECO with explicit acknowledgement back to source.
+
+### Added — Canonical loop scheduler (12 phases, full pipeline)
+
+Decoupled from CronCreate. OS-level scheduler + push-bridge into running
+Claude sessions via Monitor. Truly synchronous pause via `systemctl stop`
+or `launchctl unload`. Zero idle cost when nothing's happening.
+
+**Phase 1 — mechanism (Linux + macOS):**
+- `empirica.core.loop_scheduler.SystemdLoopScheduler` — Linux/WSL2 backend
+  via `~/.config/systemd/user/empirica-loop-<inst>-<name>.{timer,service}`
+- `empirica.core.loop_scheduler.LaunchdLoopScheduler` — macOS backend via
+  `~/Library/LaunchAgents/com.empirica.loop.<inst>.<name>.plist`
+- `get_loop_scheduler(empirica_bin)` factory — picks backend by `sys.platform`
+- New CLI verbs: `empirica loop {enable,disable,systemd-status,tick,listen}`
+  (`enable/disable` use `shutil.which()` to bake absolute binary path
+  into unit files — bare `empirica` fails silently on PATH-stripped
+  systemd-user)
+
+**Phase 2 — content-aware emission (ECO-gated security):**
+- `loop tick` polls Cortex inbox+outbox, diffs against per-loop state at
+  `~/.empirica/loop_state/<inst>_<name>.json`, emits one JSON line per
+  new-or-status-changed proposal to `~/.empirica/loop_fires.log`
+- `EMISSION_STATUSES_INBOX = (accepted, changed, declined)` — `eco_review`
+  excluded server-side (the ECO-gated autonomy boundary)
+- `EMISSION_STATUSES_OUTBOX = (changed, declined, completed)` — `accepted`
+  on outbox is informational (target will act)
+- `completed` events carry `commit_sha` from audit log details (David's
+  AI-to-AI ack primitive)
+- Tick throttles when target instance has an open empirica transaction
+  (no chat noise while AI is mid-work)
+- Bootstrap behavior: first run records state-of-the-world WITHOUT
+  emitting (no historical-flood when a loop is first enabled)
+
+**Phase 3 — push-primary bridge:**
+- `empirica loop listen --instance X` — holds authenticated stream to
+  cortex ntfy topic (`orchestration-events` by default), runs catch-up
+  content_poll on each push event AND on reconnect after drop. Bounded
+  exponential backoff (1s → 60s cap), 5min auth-failure backoff. Clean
+  SIGTERM exit code 0.
+- SessionStart hook `session-monitor-arm.py` injects `additionalContext`
+  instructing the AI to arm `Monitor(command="empirica loop listen ...",
+  persistent=True)` — the listener's stdout = wake events into the
+  running Claude session
+- ntfy treated as opaque wake-pinger; authoritative content comes from
+  catch-up content_poll (preserves ECO-gated auth boundary even under
+  ntfy compromise)
+
+**Phase 4 — TUI integration:**
+- TUI cockpit `L`-toggle dispatches per loop on `scheduling.scheduler_kind`:
+  `systemd-user` → systemctl enable/disable; legacy `cron-create` keeps
+  the file-flag pause path
+- TUI table collapsed: dropped separate loops + listeners + notifications
+  columns into a unified events column (⊕N count + glyph fallback)
+- Per-instance detail pane shows latest 5 ProposalEvents with direction
+  (▼ inbox / ▲ outbox), status, eco_actor, commit_sha, title
+- Live systemd/launchd state injection into aggregator
+  (`systemd_active`, `systemd_enabled`, `last_trigger`)
+
+**Phase 5 — TUI auto-accept (per-user, cortex-persisted):**
+- `a` keybinding flips `users.auto_accept_mode` toggle on cortex via
+  `POST /v1/users/me/auto-accept`
+- Summary line shows `⚡AUTO-ACCEPT` chip only when explicitly ON
+- Graceful 404/connection-error → chip hidden (no false reassurance)
+- 30s module-level cache so TUI refresh doesn't hammer cortex
+
+### Added — Cortex/empirica orchestration (3 outgoing proposals shipped same session)
+
+This session emitted 3 code_change_requests to cortex via `cortex_propose`;
+all 3 shipped within hours and the empirica side wired through, validating
+the orchestration architecture end-to-end via dogfooding:
+
+- Bootstrap `situation` block on daemon HTTP `/api/v1/bootstrap` — closes
+  empirica/cortex divergence noticed when extension v0.8.6 renderer
+  couldn't populate (proposal `prop_hseishpnrzg3xow2lsmdgxdew4`)
+- Sidecar bootstrap fields (`project / flow_metrics / git_status /
+  reference_docs_count`) on daemon HTTP
+  (proposal `prop_sf63hrj7xvd3je2gcbzitwsnbi`)
+- Cortex ntfy emission on `/respond` + `/complete` + topic split
+  (`orchestration-events` for AI-wake, `orchestration-proposals` for
+  phone-only ECO actions) + 60s reminder + 120s ECO escalation
+  (proposals `prop_efsdt3vidjdevmkngw2wvw6fhe` + `prop_mlezwhcaavffjjjiejidhaci7e`)
+
+### Added — Bootstrap picker recency
+
+`active_goal` picker now ranks `status='in_progress'` over `status='planned'`
+and within each tier orders by `created_timestamp DESC`. Previously
+excluded planned goals entirely, so a just-created "next-session" planned
+goal would never surface even when in_progress goals were stale.
+
+`next_focus` picker: pending subtask → goal-linked unknown (recency DESC)
+→ most-recent project unknown (was oldest). Stops surfacing the same
+stale unknown after compaction.
+
+### Changed — TUI cockpit table layout
+
+  Before: `s name ph dom S L E N` (sentinel, loops, listeners, notif)
+  After:  `s name ph dom S N`     (sentinel, events-unified)
+
+The unified events column shows ⊕N when there are recent ProposalEvents
+for the instance, or the loop-liveness glyph as fallback. Listener (T8)
+is the unified wake mechanism — three columns for the same concept was
+noise.
+
+### Fixed — Validation bug on `scheduler_kind` stamp
+
+Canonical loops carried `scheduler_kind='systemd'` but
+`VALID_SCHEDULER_KIND` in `loop_registry.py` is `('cron-create',
+'systemd-user', 'system-cron', 'at-queue', 'unknown')`. Heartbeat
+silently rejected the bad value (caught in `except ValueError`), so
+registry stayed unstamped and TUI dispatch never recognized systemd
+loops. Canonical value is `'systemd-user'`.
+
+### Fixed — systemd-user PATH for empirica binary
+
+`handle_loop_enable_command` now resolves the empirica binary to an
+absolute path via `shutil.which()` before constructing
+`SystemdLoopScheduler`. systemd-user environments don't inherit shell
+PATH; bare `empirica` in ExecStart failed silently when the binary
+lived in `~/.local/bin` (pipx) or a venv. Smoke-test caught this
+immediately on first real-host run.
+
 ## [1.9.5] — 2026-05-14
 
 The "empirica-tightening" release — bootstrap is now genuinely useful for
