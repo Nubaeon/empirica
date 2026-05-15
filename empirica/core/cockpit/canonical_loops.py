@@ -77,6 +77,11 @@ CANONICAL_LOOPS: list[dict[str, Any]] = [
         # pickup hook surfaces the pending file, the AI calls /loop with
         # the matching skill template.
         "body_skill": "cortex-mailbox-poll",
+        # Phase 1c (goal f718156c): mark this canonical loop for the systemd
+        # scheduler path. TUI install + toggle route through systemctl
+        # instead of CronCreate. The wake bridge into the running session is
+        # the Monitor armed at SessionStart (session-monitor-arm.py).
+        "scheduler_kind": "systemd",
     },
 ]
 

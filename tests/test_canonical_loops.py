@@ -109,3 +109,16 @@ def test_fallback_path_returns_canonical_when_project_has_none(fake_project_no_y
     assert project_loops(fake_project_no_yaml) == []
     # CANONICAL_LOOPS is the fallback the TUI uses when this returns []
     assert len(CANONICAL_LOOPS) > 0
+
+
+def test_cortex_mailbox_poll_uses_systemd_scheduler():
+    """Phase 1c (goal f718156c): cortex-mailbox-poll is the pilot loop for
+    the systemd scheduler path. The TUI's _install_loops_from_project +
+    action_toggle_loops dispatch on this field. Removing it reverts the
+    pilot to the legacy CronCreate path — log a decision if you do so."""
+    entry = canonical_loop_by_name('cortex-mailbox-poll')
+    assert entry is not None
+    assert entry.get('scheduler_kind') == 'systemd', (
+        "cortex-mailbox-poll must carry scheduler_kind='systemd' so the TUI "
+        "routes through systemctl rather than CronCreate"
+    )

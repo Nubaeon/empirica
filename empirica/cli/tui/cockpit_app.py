@@ -47,6 +47,8 @@ from empirica.cli.command_handlers.cockpit_commands import (
     handle_listener_install_request_command,
     handle_listener_pause_command,
     handle_listener_resume_command,
+    handle_loop_disable_command,
+    handle_loop_enable_command,
     handle_loop_install_request_command,
     handle_loop_pause_command,
     handle_loop_resume_command,
@@ -648,19 +650,41 @@ class CockpitApp(App):
             return
         any_unpaused = any(not v.get('paused') for v in loops.values())
         target_paused = bool(any_unpaused)
-        handler = handle_loop_pause_command if target_paused else handle_loop_resume_command
-        for name in loops:
-            args = Namespace(
-                name=name,
-                instance=inst['instance_id'],
-                output='json',
-            )
+        # Phase 1c (goal f718156c): route per-loop based on scheduler_kind.
+        # Systemd-managed loops use systemctl enable/disable (true external
+        # pause); legacy cron-create loops keep the file-flag pause path.
+        for name, loop_data in loops.items():
+            scheduler_kind = (loop_data.get('scheduler_kind') or '').lower()
+            if scheduler_kind == 'systemd':
+                handler = (handle_loop_disable_command if target_paused
+                           else handle_loop_enable_command)
+                args_dict = {
+                    'name': name,
+                    'instance': inst['instance_id'],
+                    'output': 'json',
+                }
+                if not target_paused:
+                    # Enable needs interval; derive from registry entry.
+                    args_dict['interval'] = (
+                        loop_data.get('interval')
+                        or loop_data.get('base_interval')
+                        or '30s'
+                    )
+                args = Namespace(**args_dict)
+            else:
+                handler = (handle_loop_pause_command if target_paused
+                           else handle_loop_resume_command)
+                args = Namespace(
+                    name=name,
+                    instance=inst['instance_id'],
+                    output='json',
+                )
             try:
                 handler(args)
             except Exception as e:
                 self._log_status(f'{inst["instance_id"]} {name}: {e}')
                 return
-        verb = 'paused' if target_paused else 'resumed'
+        verb = 'disabled/paused' if target_paused else 'enabled/resumed'
         self._log_status(f'{verb} {len(loops)} loop(s) on {inst["instance_id"]}')
         self.refresh_payload()
 
@@ -808,23 +832,38 @@ class CockpitApp(App):
                 return 0
         installed = 0
         for cfg in configs:
-            args = Namespace(
-                instance=inst['instance_id'],
-                name=cfg['name'],
-                kind=cfg.get('kind', 'cron'),
-                cron=cfg.get('cron'),
-                interval=cfg.get('interval'),
-                description=cfg.get('description', ''),
-                base_interval=cfg.get('base_interval'),
-                max_interval=cfg.get('max_interval'),
-                # Canonical loops carry an optional `body_skill` — the handler
-                # uses it to substitute the skill's actual prompt template
-                # instead of the generic `[... your actual work ...]` placeholder.
-                body_skill=cfg.get('body_skill'),
-                output='json',
-            )
+            scheduler_kind = (cfg.get('scheduler_kind') or '').lower()
             try:
-                handle_loop_install_request_command(args)
+                if scheduler_kind == 'systemd':
+                    # Phase 1c: systemd-scheduled loops install via systemctl
+                    # directly. No pending file, no AI cooperation needed —
+                    # the timer starts immediately. SessionStart's monitor-arm
+                    # hook (Phase 1b) wires the wake bridge on next session.
+                    args = Namespace(
+                        instance=inst['instance_id'],
+                        name=cfg['name'],
+                        interval=cfg.get('interval') or cfg.get('base_interval') or '30s',
+                        description=cfg.get('description', ''),
+                        output='json',
+                    )
+                    handle_loop_enable_command(args)
+                else:
+                    args = Namespace(
+                        instance=inst['instance_id'],
+                        name=cfg['name'],
+                        kind=cfg.get('kind', 'cron'),
+                        cron=cfg.get('cron'),
+                        interval=cfg.get('interval'),
+                        description=cfg.get('description', ''),
+                        base_interval=cfg.get('base_interval'),
+                        max_interval=cfg.get('max_interval'),
+                        # Canonical loops carry an optional `body_skill` — the
+                        # handler uses it to substitute the skill's actual
+                        # prompt template instead of the generic placeholder.
+                        body_skill=cfg.get('body_skill'),
+                        output='json',
+                    )
+                    handle_loop_install_request_command(args)
                 installed += 1
             except Exception as e:
                 self._log_status(

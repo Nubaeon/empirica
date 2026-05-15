@@ -670,6 +670,14 @@ def handle_loop_status_command(args) -> int:
 
 
 def handle_loop_enable_command(args) -> int:
+    """Install systemd-user timer + register loop in registry.
+
+    Combines two things the old CronCreate path required separate steps for:
+    (1) writing/starting the timer (via systemctl), (2) creating a registry
+    entry so the TUI/cockpit sees the loop. Registry entry is stamped with
+    scheduler_kind='systemd' so subsequent toggles route via systemctl, not
+    via the file-flag pause path.
+    """
     from empirica.core.loop_scheduler import (
         SystemdLoopScheduler,
         SystemdUnavailable,
@@ -685,16 +693,53 @@ def handle_loop_enable_command(args) -> int:
     except Exception as e:
         return _emit(args, {'ok': False, 'error': str(e)},
                      f'enable failed: {e}')
+
+    # Register in the cockpit's loop registry (idempotent — register catches
+    # the duplicate case). Stamp scheduler_kind='systemd' via heartbeat so
+    # later toggles know to route through systemctl rather than the legacy
+    # pause sidecar.
+    registry = LoopRegistry(instance_id)
+    description = getattr(args, 'description', '') or ''
+    try:
+        entry = registry.register(
+            name=args.name,
+            kind='interval',
+            interval=args.interval,
+            description=description,
+        )
+        registry.heartbeat(
+            name=args.name,
+            status=entry.last_status or 'ok',
+            result=entry.last_result,
+            message=entry.last_message,
+            scheduler_kind='systemd',
+        )
+    except ValueError:
+        # Already registered — refresh scheduler_kind only.
+        try:
+            existing = registry.get(args.name)
+            registry.heartbeat(
+                name=args.name,
+                status=existing.last_status if existing else 'ok',
+                result=existing.last_result if existing else None,
+                message=existing.last_message if existing else None,
+                scheduler_kind='systemd',
+            )
+        except Exception:
+            pass  # registry stamp is best-effort; systemd state is source of truth
+
     payload = {
         'ok': True, 'instance_id': instance_id, 'name': args.name,
-        'interval': args.interval,
+        'interval': args.interval, 'scheduler_kind': 'systemd',
         'timer_path': str(paths.timer), 'service_path': str(paths.service),
     }
     return _emit(args, payload,
-                 f'enabled {args.name} (every {args.interval}) — timer + service installed')
+                 f'enabled {args.name} (every {args.interval}) — timer + registry stamped systemd')
 
 
 def handle_loop_disable_command(args) -> int:
+    """Stop+remove systemd timer. Registry entry stays (toggle off shouldn't
+    forget the loop) — use `loop unregister` to fully forget."""
     from empirica.core.loop_scheduler import (
         SystemdLoopScheduler,
         SystemdUnavailable,

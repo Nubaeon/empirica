@@ -53,10 +53,12 @@ def _build_reaction_table(loop_names: list[str]) -> str:
 
 def _build_additional_context(instance_id: str, loop_names: list[str]) -> str:
     fires_log = "~/.empirica/loop_fires.log"
-    # tail -F + grep --line-buffered: one match line per event, filtered to
-    # this instance only (the log is shared across instances).
+    # tail -F -n 0: start from the END of the file (skip historical events
+    # accumulated while no session was running — they're stale, replaying
+    # them would flood the conversation). grep --line-buffered filters to
+    # this instance only since the log is shared across instances.
     monitor_cmd = (
-        f'tail -F {fires_log} 2>/dev/null | '
+        f'tail -F -n 0 {fires_log} 2>/dev/null | '
         f'grep --line-buffered \'"instance_id": "{instance_id}"\''
     )
     return f"""\
