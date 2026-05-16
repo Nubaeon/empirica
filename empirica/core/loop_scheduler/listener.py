@@ -225,17 +225,24 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
         err_stream.write(f"listener: ntfy config load failed: {e}\n")
         return 2
 
-    # Tag-filter subscription (opt-in via EMPIRICA_NTFY_TAG_FILTER=true).
-    # Requires cortex to publish with `X-Tags: <source>,<targets...>` —
-    # pending cortex proposal 2026-05-16. Until shipped, leave the env
-    # var off (default) so listener receives all messages on the topic.
-    # Filter value is the instance's ai_id so we only get events tagged
-    # for this instance.
+    # Tag-filter subscription. Cortex publishes events with
+    # `X-Tags: zap,orchestration_event,<source_claude>,<target_claudes...>`
+    # (commit ae92166 shipped 2026-05-16). Default ON — listeners
+    # subscribe with `?tags=<their_ai_id>` so they only receive events
+    # touching their instance. Reduces per-event wake traffic from
+    # O(N_instances) to O(involved_instances). Verified live against
+    # cortex prod: positive case (source=empirica) delivered; negative
+    # case (source=ecodex, target=cortex) silenced as expected.
+    #
+    # Override: set `EMPIRICA_NTFY_TAG_FILTER=false` to disable and
+    # receive every event on the topic. Useful for debugging or for
+    # listeners that need cross-instance visibility (e.g., audit
+    # dashboards).
     import os as _os
     tag_filter = (
-        instance_id
-        if _os.getenv("EMPIRICA_NTFY_TAG_FILTER", "").lower() == "true"
-        else None
+        None
+        if _os.getenv("EMPIRICA_NTFY_TAG_FILTER", "true").lower() == "false"
+        else instance_id
     )
     url = _build_subscribe_url(ntfy["url"], ntfy["topic"], tag_filter=tag_filter)
     headers = _ntfy_auth_header(
