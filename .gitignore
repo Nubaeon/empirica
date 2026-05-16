@@ -115,6 +115,14 @@ docs/FEATURE_STATUS.md
 docs/SEMANTIC_INDEX.yaml
 docs/reference/epistemic/
 
+# Internal design work — proposals + ecosystem map stay local. Same shape
+# as docs/specs/: design history is proprietary, shipped outcomes already
+# live in docs/architecture/ as the canonical reference (e.g. CI_CD.md,
+# EPP_ARCHITECTURE.md) or directly in code + CHANGELOG.
+docs/superpowers/
+docs/architecture/PROPOSAL_*.md
+docs/architecture/ECOSYSTEM_MAP.md
+
 # Session data files (never commit)
 session_*.json
 
