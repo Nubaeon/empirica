@@ -1,10 +1,10 @@
-"""Tests for `projects-bulk-register` source-selection (1.9.5 redesign).
+"""Tests for `projects-bulk-register` source-selection (1.9.6 redesign).
 
 Sources from `~/.empirica/registry.yaml` by default. Falls back to
 discovered_projects.yaml with `--from-discovered`. Explicit `--from <path>`
 overrides both.
 
-The pre-1.9.5 `--only-existing` flag + Cortex /v1/collections intersection
+The pre-1.9.6 `--only-existing` flag + Cortex /v1/collections intersection
 logic was removed: registry.yaml IS the user's curated subset, so the
 intersection happens at curation time, not at command time.
 

@@ -296,7 +296,7 @@ def handle_projects_discover_command(args) -> None:
             except OSError as e:
                 print(f"⚠ Failed to write manifest cache: {e}", file=sys.stderr)
 
-        # v1.9.5+: --register also upserts into ~/.empirica/registry.yaml
+        # v1.9.6+: --register also upserts into ~/.empirica/registry.yaml
         # (the daemon's served set). --prune additionally drops stale entries.
         if getattr(args, "register", False):
             try:
@@ -404,7 +404,7 @@ def _read_project_yaml_for_registry(raw_path: str) -> dict[str, Any]:
 
 
 def handle_daemon_list_command(args) -> None:
-    """Handle the daemon-list command (v1.9.5).
+    """Handle the daemon-list command (v1.9.6).
 
     Prints the contents of ~/.empirica/registry.yaml — the daemon's served set.
     """

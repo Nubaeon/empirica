@@ -124,7 +124,7 @@ TOOL_REGISTRY: dict[str, dict] = {
     # search/mixed) are part of the cross-Claude intelligence-sharing
     # discipline — exposed on every log verb so the MCP path stays at
     # parity with the CLI and the provenance flags are enforceable
-    # through either interface (v1.9.5+).
+    # through either interface (v1.9.6+).
     "finding_log": {
         "cli": "finding-log",
         "params": {"finding": "--finding", "impact": "--impact", "session_id": "--session-id",

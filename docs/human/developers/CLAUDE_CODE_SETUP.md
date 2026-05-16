@@ -191,8 +191,8 @@ So at POSTFLIGHT you can legitimately see `K=95% C=95%` (high know/context — w
 
 **What's not on the live statusline**
 
-- `↕XX%` Sentinel threshold (know gate) was removed in 1.9.5 — Sentinel-scoped, not actionable mid-tool-call. Available via `empirica sentinel-status` for debug.
-- An external-grounding share indicator (intuition vs search ratio) was tried in 1.9.5 and pulled in 1.9.5. The signal is highly diagnostic in surfaces that *lack* a grounding harness (Claude Desktop chat, plain web LLM UIs). In Claude Code the AI is grounded by default — codebase reads, hooks, MCP, project bootstrap, sentinel — so the indicator hovered high and didn't actionably shift behavior. The `epistemic_provenance` block surfaced in POSTFLIGHT calibration_reflection still carries the same data for retrospective analysis.
+- `↕XX%` Sentinel threshold (know gate) was removed in 1.9.6 — Sentinel-scoped, not actionable mid-tool-call. Available via `empirica sentinel-status` for debug.
+- An external-grounding share indicator (intuition vs search ratio) was tried in 1.9.6 and pulled in 1.9.6. The signal is highly diagnostic in surfaces that *lack* a grounding harness (Claude Desktop chat, plain web LLM UIs). In Claude Code the AI is grounded by default — codebase reads, hooks, MCP, project bootstrap, sentinel — so the indicator hovered high and didn't actionably shift behavior. The `epistemic_provenance` block surfaced in POSTFLIGHT calibration_reflection still carries the same data for retrospective analysis.
 
 ---
 

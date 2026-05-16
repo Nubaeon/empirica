@@ -2,7 +2,7 @@
 
 > **We Gave AI a Mirror. Now It Measures What It Believes.**
 
-[![Version](https://img.shields.io/badge/version-1.9.5-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.9.5)
+[![Version](https://img.shields.io/badge/version-1.9.6-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.9.6)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -100,13 +100,13 @@ empirica setup-claude-code
 
 ```bash
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.9.5-alpine
+docker pull nubaeon/empirica:1.9.6-alpine
 
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.9.5
+docker pull nubaeon/empirica:1.9.6
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.9.5 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.9.6 /bin/bash
 ```
 </details>
 
@@ -266,7 +266,7 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ---
 
-## What's New in 1.9.5
+## What's New in 1.9.6
 
 **Empirica's first CI/CD harness.** Three GitHub Actions workflows
 shipped: `ci.yml` (ruff + pyright + pytest matrix on Python 3.11 + 3.13
@@ -288,7 +288,7 @@ right interface.
 **Cross-project artifact sharing taught.** The `--visibility` flag and
 `project-search --global` have been available for releases, but nothing
 in the system prompt or docs taught AIs to use them as a coherent
-sharing workflow. v1.9.5 closes that gap:
+sharing workflow. v1.9.6 closes that gap:
 
 - New signal→action rows in the lean system prompt's COLLABORATIVE MODE
   table: cross-codebase finding → `--visibility shared`, starting work
@@ -297,12 +297,12 @@ sharing workflow. v1.9.5 closes that gap:
 - New "Visibility (push side)" section in `docs/reference/api/CROSS_PROJECT.md`
   with a when-to-use-which matrix (`local` for tactical, `shared` for
   ecosystem patterns, `public` for security/reusable lessons)
-- Honest scope caveat in both surfaces: v1.9.5 `--global` only hits the
+- Honest scope caveat in both surfaces: v1.9.6 `--global` only hits the
   `global_learnings` Qdrant collection; the richer per-project walk +
   push-based auto-surface at project-bootstrap are deferred goals
 
 **Cortex creds via `~/.empirica/credentials.yaml`.** The browser
-extension saves cortex url + api_key to chrome.storage; v1.9.5 wires
+extension saves cortex url + api_key to chrome.storage; v1.9.6 wires
 the CLI equivalent. A `cortex:` block in `~/.empirica/credentials.yaml`
 is now picked up by `projects-bulk-register`, `source-archive` Cortex
 sync, and POSTFLIGHT `/v1/sync` push. Precedence: CLI flags → env vars
@@ -546,6 +546,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.9.5
+**Version:** 1.9.6
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*

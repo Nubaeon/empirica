@@ -62,7 +62,7 @@ def add_projects_parsers(subparsers) -> None:
         help=(
             "After scanning, upsert each discovered project into "
             "~/.empirica/registry.yaml (the daemon's served set). Idempotent — "
-            "matches on project_id. (v1.9.5+)"
+            "matches on project_id. (v1.9.6+)"
         ),
     )
     discover.add_argument(
@@ -82,7 +82,7 @@ def add_projects_parsers(subparsers) -> None:
             "Print the contents of ~/.empirica/registry.yaml — the set of "
             "projects the local `empirica serve` daemon is willing to route "
             "?project_id= requests to. Populate via `empirica projects-discover "
-            "--register` or hand-edit the YAML. (v1.9.5+)"
+            "--register` or hand-edit the YAML. (v1.9.6+)"
         ),
     )
     daemon_list.add_argument(
@@ -181,7 +181,7 @@ def add_projects_parsers(subparsers) -> None:
             "Cortex's safe-update logic then backfills UUID-shaped "
             "placeholder names + empty repo_urls on already-existing rows. "
             "Useful when Cortex has stale metadata that should be refreshed "
-            "from the local registry. (v1.9.5+)"
+            "from the local registry. (v1.9.6+)"
         ),
     )
     register.add_argument(
@@ -192,7 +192,7 @@ def add_projects_parsers(subparsers) -> None:
             "(~/.empirica/discovered_projects.yaml) instead of the curated "
             "daemon registry (~/.empirica/registry.yaml, the default). Use "
             "when you want to register EVERY project you have on disk, "
-            "not just the curated set the daemon serves. (v1.9.5+)"
+            "not just the curated set the daemon serves. (v1.9.6+)"
         ),
     )
     register.add_argument(

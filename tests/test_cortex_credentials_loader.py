@@ -1,5 +1,5 @@
 """Tests for `CredentialsLoader.get_cortex_config()` — Cortex creds resolution
-via env-vars + ~/.empirica/credentials.yaml (1.9.5+).
+via env-vars + ~/.empirica/credentials.yaml (1.9.6+).
 
 Mirrors the extension's chrome.storage save (`cortexUrl` + `cortexApiKey`)
 for CLI users so they don't have to export env vars in every shell.

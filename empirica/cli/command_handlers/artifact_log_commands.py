@@ -2087,7 +2087,7 @@ def handle_source_archive_command(args):
     Per SOURCES_LIFECYCLE_SPEC §8 Empirica-Core CLI parity. Empirica is the
     authoritative store; downstream Cortex projects from this state.
 
-    Phase 1.5 (v1.9.5+): when CORTEX_REMOTE_URL + CORTEX_API_KEY are set,
+    Phase 1.5 (v1.9.6+): when CORTEX_REMOTE_URL + CORTEX_API_KEY are set,
     also `DELETE /v1/sources/{id}` on Cortex so the remote authoritative
     side reflects the same archived state. Best-effort — the local archive
     succeeds regardless of remote outcome.

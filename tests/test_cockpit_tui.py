@@ -500,7 +500,7 @@ async def test_no_recent_widget(cockpit_env):
             app.query_one('#recent')
 
 
-# ─── L button mechanical-kill regression (1.9.5 + this commit) ────────────
+# ─── L button mechanical-kill regression (1.9.6 + this commit) ────────────
 
 
 @pytest.mark.asyncio
@@ -689,10 +689,10 @@ async def test_l_click_empty_registry_installs_from_project_yaml(cockpit_env):
 @pytest.mark.asyncio
 async def test_l_click_empty_registry_no_yaml_falls_back_to_canonical_catalog(cockpit_env):
     """When project.yaml has no cockpit.loops block, L click should
-    fall back to the system-level canonical catalog (v1.9.5+) and
+    fall back to the system-level canonical catalog (v1.9.6+) and
     install the canonical loops instead of just showing a hint.
 
-    Previously (pre-1.9.5) this test asserted a 'cockpit.loops or
+    Previously (pre-1.9.6) this test asserted a 'cockpit.loops or
     install-request' hint message in the notif widget — but the new
     fallback intentionally supersedes that path so users don't have to
     manually configure every instance to get the orchestration spine
@@ -769,7 +769,7 @@ async def test_e_click_empty_registry_installs_listener_from_project_yaml(cockpi
     assert len(pending) == 1
 
 
-# ─── Compliance panel + domain chip (1.9.5) ───────────────────────────────
+# ─── Compliance panel + domain chip (1.9.6) ───────────────────────────────
 
 
 def _write_project_id(project: Path, project_id: str) -> None:
