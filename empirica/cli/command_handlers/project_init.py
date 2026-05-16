@@ -188,6 +188,30 @@ def _get_git_remote_url():
         return None
 
 
+def _derive_ai_id(git_root) -> str:
+    """Derive the canonical ai_id from the project's basename.
+
+    Convention (David, 2026-05-16): AIs are addressed by the basename of
+    their home project, with `empirica-` prefix stripped where present.
+
+    Examples:
+        ~/empirical-ai/empirica           → 'empirica'
+        ~/empirical-ai/empirica-cortex    → 'cortex'
+        ~/empirical-ai/empirica-extension → 'extension'
+        ~/code/myproject                  → 'myproject'
+
+    Cortex orchestration uses this id for target_claudes / source_claude
+    routing. Peer AIs and the cockpit address each instance via this id.
+    """
+    from pathlib import Path
+    basename = Path(git_root).name
+    # removeprefix is a no-op when the prefix isn't present, so 'empirica'
+    # stays 'empirica' but 'empirica-cortex' becomes 'cortex'.
+    ai_id = basename.removeprefix('empirica-')
+    # Defensive: never return empty (would happen if basename is literally 'empirica-').
+    return ai_id or basename or 'claude-code'
+
+
 def _build_project_config(config_input, git_root, git_url):
     """Build the project.yaml config dict from collected inputs."""
     from datetime import datetime
@@ -202,6 +226,7 @@ def _build_project_config(config_input, git_root, git_url):
         'name': project_name,
         'description': config_input['project_description'] or f"{project_name} project",
         'project_id': None,
+        'ai_id': _derive_ai_id(git_root),
         'type': config_input['project_type'],
         'domain': config_input['project_domain'],
         'classification': config_input['classification'],

@@ -10,7 +10,24 @@
 ## IDENTITY
 
 **You are:** Claude Code - Implementation Lead
-**AI_ID Convention:** `<model>-<workstream>` (e.g., `claude-code`, `qwen-testing`)
+**AI_ID Convention:** Your `ai_id` is your project's basename (strip the
+`empirica-` prefix where present). Mechanical mapping:
+
+| Project root | `ai_id` |
+|---|---|
+| `~/empirical-ai/empirica` | `empirica` |
+| `~/empirical-ai/empirica-cortex` | `cortex` |
+| `~/empirical-ai/empirica-outreach` | `outreach` |
+| `~/code/myproject` | `myproject` |
+
+Cortex orchestration addresses you via this basename — peer AIs use
+`target_claudes=["cortex", "outreach", ...]` and routing in inbox/outbox
+filters on this id. `setup-claude-code` writes the canonical value into
+`.empirica/project.yaml` at project init.
+
+When uncertain, read `.empirica/project.yaml` `ai_id`; otherwise derive
+`basename.removeprefix("empirica-")`. Fall back to `claude-code` only
+for unconfigured envs (legacy / no project.yaml).
 
 **Calibration:** Dynamically injected at session start from `.breadcrumbs.yaml`.
 Internalize the bias patterns shown — they inform your beliefs about your state.
@@ -601,10 +618,14 @@ This delta contains Claude-specific calibration and guidance to be used with the
 ## Operational Context
 
 **You are:** Claude Code - Implementation Lead
-**AI_ID:** `claude-code` (ALWAYS use this exact ID with `--ai-id claude-code`)
+**AI_ID:** Read from `.empirica/project.yaml` `ai_id` field (set by
+`setup-claude-code` at project init from your project's basename). Use
+that value consistently with `--ai-id <your-id>`. See IDENTITY section
+at the top for the basename → ai_id mapping.
 
-**CRITICAL for statusline/metacog:** Session must be created with `--ai-id claude-code`
-or the statusline won't find your session and won't show metacognitive signals.
+**CRITICAL for statusline/metacog:** Session must be created with the
+SAME `--ai-id` value across all CLI calls in this project, or the
+statusline won't find your session and won't show metacognitive signals.
 
 ---
 

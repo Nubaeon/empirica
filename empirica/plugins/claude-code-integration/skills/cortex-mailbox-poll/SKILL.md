@@ -34,10 +34,38 @@ project-specific config takes precedence over this canonical default.
 
 ---
 
-## Reaction Protocol — Phase 2 / T6 content events (preferred)
+## AI_ID convention
 
-When the SessionStart `session-monitor-arm.py` hook armed a Monitor on
-`~/.empirica/loop_fires.log`, you receive **two distinct event shapes**:
+Your `ai_id` is the basename of your project's root directory (with
+`empirica-` prefix stripped where present). The full mapping table
+lives in `~/.claude/empirica-system-prompt.md` and the wire-level
+detail in `docs/architecture/EVENT_LISTENER.md`. Quick reference:
+
+| Project root | `ai_id` |
+|---|---|
+| `~/empirical-ai/empirica` | `empirica` |
+| `~/empirical-ai/empirica-cortex` | `cortex` |
+| `~/empirical-ai/empirica-outreach` | `outreach` |
+
+Read your canonical id from `.empirica/project.yaml`'s `ai_id` field
+(set by `setup-claude-code` at project init). Use it in
+`session-create --ai-id <id>`, `cortex_propose source_claude=<id>`,
+and `target_claudes=[<peer-ids>]` calls.
+
+---
+
+## Reaction Protocol — Phase 1c+ / T8 content events (push-primary)
+
+The SessionStart `session-monitor-arm.py` hook arms a Monitor on
+`empirica loop listen --instance <your-id>` — the push-primary
+listener that holds an ntfy stream to Cortex and emits one stdout
+line per ECO-decided proposal event. Each line is a `<task-notification>`
+wake event into this session.
+
+The listener's stdout shape matches what the older
+`tail -F ~/.empirica/loop_fires.log` path emitted (pre-T8 fallback,
+still used by some legacy installations) — so the reaction protocol
+below is identical regardless of which transport delivered the line.
 
 ### Content event (the wake signal you should usually act on)
 

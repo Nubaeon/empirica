@@ -193,6 +193,54 @@ next natural break.
 
 ---
 
+## Naming convention — `ai_id` ↔ project root
+
+AIs are addressed in cortex orchestration (`target_claudes`,
+`source_claude`, inbox routing) by an `ai_id` derived from their
+project root's basename, with the `empirica-` prefix stripped where
+present.
+
+| Project root | `ai_id` |
+|---|---|
+| `~/empirical-ai/empirica` | `empirica` |
+| `~/empirical-ai/empirica-cortex` | `cortex` |
+| `~/empirical-ai/empirica-outreach` | `outreach` |
+| `~/empirical-ai/empirica-extension` | `extension` |
+| `~/code/myproject` | `myproject` |
+
+**Where it's written:** `setup-claude-code` (via the `project_init`
+handler) derives this value and persists it as `ai_id` in
+`.empirica/project.yaml`. The mechanical implementation is
+`basename.removeprefix('empirica-')` — see
+`empirica.cli.command_handlers.project_init._derive_ai_id`.
+
+**Where it's read:** AI sessions read `ai_id` from project.yaml at
+session start. CLI commands accept `--ai-id` explicitly. Cortex's
+listener uses the value as the `instance_id` argument to
+`empirica loop listen --instance <id>` and as the `ai_id` filter
+when querying `/v1/orchestration/inbox?ai_id=<id>`.
+
+**Why this convention:** AIs are bound to projects (not models or
+workstreams), so the project's identity is the natural addressing
+layer. A user with a single project has a single AI. A user with
+multiple projects gets multiple addressable AIs out-of-the-box,
+keyed by their project layout. Cross-project orchestration falls
+out naturally because peer AIs already know each other's project
+names.
+
+**Migration:** Pre-2026-05-16 projects may have `ai_id` unset in
+`project.yaml` (the field is new). Falling back to `claude-code` is
+the legacy default. Re-running `setup-claude-code --force` on those
+projects refreshes the field. Project-internal callers should:
+
+```python
+ai_id = (project_yaml.get('ai_id')
+         or basename.removeprefix('empirica-')
+         or 'claude-code')
+```
+
+---
+
 ## State files
 
 | Path | Owner | Purpose |
