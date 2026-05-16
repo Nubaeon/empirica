@@ -314,20 +314,25 @@ class CredentialsLoader:
         }
 
     def get_ntfy_config(self) -> dict[str, str | None]:
-        """Return ntfy {url, topic, user, password} resolved by precedence:
+        """Return ntfy {url, topic, user, password, token} resolved by precedence:
 
-        1. Env vars (ORCHESTRATION_NTFY_URL, ORCHESTRATION_NTFY_TOPIC,
-           ORCHESTRATION_NTFY_USER, ORCHESTRATION_NTFY_PASS)
+        1. Env vars (ORCHESTRATION_NTFY_URL/_TOPIC/_USER/_PASS/_TOKEN)
         2. `ntfy:` block in credentials file (~/.empirica/credentials.yaml)
-        3. Defaults: cortex's prod ntfy server + default topic
+        3. `backends.ntfy` block in ~/.empirica/notify.yaml (the outbound
+           notify dispatcher's config — single source of truth for ntfy
+           when the extension has registered with cortex). Server URL +
+           the env var named by `auth_env` are read here.
+        4. Defaults: cortex's prod ntfy server + AI-wake topic.
 
         Used by the ntfy listener (`empirica loop listen`) to subscribe to
         the orchestration proposals topic and bridge push events into
-        running Claude sessions via Monitor.
+        running Claude sessions via Monitor. Also reusable by any other
+        ntfy-touching code that needs the canonical creds.
 
-        Returns: {"url", "topic", "user", "password"} — user/password are
-        None when the topic has anonymous read access, or when no creds
-        are configured (listener will surface the error).
+        Returns: {"url", "topic", "user", "password", "token"} — only one
+        of (user+password) or (token) needs to be set. Token is preferred
+        because ntfy access tokens (`tk_` prefix) are revocable + don't
+        expose the account password.
         """
         defaults = {
             "url": "https://ntfy.getempirica.com",
@@ -343,6 +348,7 @@ class CredentialsLoader:
             "topic": os.getenv("ORCHESTRATION_NTFY_TOPIC"),
             "user": os.getenv("ORCHESTRATION_NTFY_USER"),
             "password": os.getenv("ORCHESTRATION_NTFY_PASS"),
+            "token": os.getenv("ORCHESTRATION_NTFY_TOKEN"),
         }
 
         if not self._credentials_cache:
@@ -350,12 +356,77 @@ class CredentialsLoader:
         file_cfg = self._credentials_cache.get("ntfy") if self._credentials_cache else None
         file_map = file_cfg if isinstance(file_cfg, dict) else {}
 
+        # notify.yaml fallback — the outbound notify dispatcher already has
+        # ntfy server + auth configured (extension registers with cortex
+        # using the same creds). Resolve auth via the `auth_env` indirection
+        # the dispatcher uses (env var name → token value).
+        notify_map = self._load_notify_ntfy_block()
+
         return {
-            "url": (env_map["url"] or file_map.get("url") or defaults["url"]).rstrip("/"),
-            "topic": env_map["topic"] or file_map.get("topic") or defaults["topic"],
-            "user": env_map["user"] or file_map.get("user") or None,
-            "password": env_map["password"] or file_map.get("password") or None,
+            "url": (
+                env_map["url"]
+                or file_map.get("url")
+                or notify_map.get("url")
+                or defaults["url"]
+            ).rstrip("/"),
+            "topic": (
+                env_map["topic"]
+                or file_map.get("topic")
+                or notify_map.get("topic")
+                or defaults["topic"]
+            ),
+            "user": env_map["user"] or file_map.get("user") or notify_map.get("user") or None,
+            "password": (
+                env_map["password"] or file_map.get("password")
+                or notify_map.get("password") or None
+            ),
+            "token": (
+                env_map["token"] or file_map.get("token")
+                or notify_map.get("token") or None
+            ),
         }
+
+    def _load_notify_ntfy_block(self) -> dict[str, str | None]:
+        """Best-effort read of ~/.empirica/notify.yaml backends.ntfy.
+
+        Returns {url, topic, user, password, token} with the values that
+        the outbound notify dispatcher would use. `auth_env` is followed
+        — when present, the named env var's value becomes either the
+        token (if it starts with `tk_`) or the password (with empty user).
+
+        Returns empty dict on any failure — caller falls back to the
+        defaults.
+        """
+        from pathlib import Path
+        try:
+            import yaml
+            notify_path = Path.home() / ".empirica" / "notify.yaml"
+            if not notify_path.exists():
+                return {}
+            data = yaml.safe_load(notify_path.read_text()) or {}
+            backends = data.get("backends") or {}
+            ntfy_backend = backends.get("ntfy") or {}
+            if not isinstance(ntfy_backend, dict):
+                return {}
+        except Exception:
+            return {}
+
+        out: dict[str, str | None] = {
+            "url": ntfy_backend.get("server") or ntfy_backend.get("url"),
+            "topic": ntfy_backend.get("default_topic") or ntfy_backend.get("topic"),
+            "user": ntfy_backend.get("user"),
+            "password": ntfy_backend.get("password"),
+            "token": ntfy_backend.get("token"),
+        }
+        auth_env = ntfy_backend.get("auth_env")
+        if auth_env and not (out["token"] or out["password"]):
+            auth_value = os.getenv(auth_env)
+            if auth_value:
+                if auth_value.startswith("tk_"):
+                    out["token"] = auth_value
+                else:
+                    out["password"] = auth_value
+        return out
 
     def get_provider_config(self, provider: str) -> dict[str, Any] | None:
         """

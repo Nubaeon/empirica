@@ -81,13 +81,29 @@ def _build_subscribe_url(ntfy_url: str, topic: str) -> str:
     return f"{ntfy_url.rstrip('/')}/{safe_topic}/json"
 
 
-def _basic_auth_header(user: str | None, password: str | None) -> dict[str, str]:
+def _ntfy_auth_header(
+    user: str | None, password: str | None, token: str | None,
+) -> dict[str, str]:
+    """Resolve ntfy auth header by precedence: token (Bearer) > basic (user/pass).
+
+    ntfy access tokens are prefixed `tk_` and use Bearer auth. The empirica
+    extension obtains them when registering with the user's ntfy server +
+    sets them on cortex. Basic auth (user + password) is the legacy path
+    for username/password ntfy deployments. Either works; tokens are
+    preferred because they're revocable + don't expose the account password.
+    """
+    if token:
+        return {"Authorization": f"Bearer {token}"}
     if not user and not password:
         return {}
     encoded = base64.b64encode(
         f"{user or ''}:{password or ''}".encode()
     ).decode("ascii")
     return {"Authorization": f"Basic {encoded}"}
+
+
+# Back-compat alias for the old name (callers / tests may still reference it).
+_basic_auth_header = _ntfy_auth_header
 
 
 def _open_stream(
@@ -195,12 +211,17 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
         return 2
 
     url = _build_subscribe_url(ntfy["url"], ntfy["topic"])
-    headers = _basic_auth_header(ntfy.get("user"), ntfy.get("password"))
+    headers = _ntfy_auth_header(
+        ntfy.get("user"), ntfy.get("password"), ntfy.get("token"),
+    )
     if not headers:
         err_stream.write(
-            "listener: no ntfy basic-auth credentials configured. Add an "
-            "`ntfy:` block with user + password to ~/.empirica/credentials.yaml, "
-            "or set ORCHESTRATION_NTFY_USER / ORCHESTRATION_NTFY_PASS env vars.\n"
+            "listener: no ntfy credentials configured. Add an `ntfy:` block to "
+            "~/.empirica/credentials.yaml with one of:\n"
+            "  token: tk_...    # ntfy access token (Bearer auth, preferred)\n"
+            "  user: ...        # basic auth user + password (legacy)\n"
+            "  password: ...\n"
+            "Or set ORCHESTRATION_NTFY_USER / _PASS / _TOKEN env vars.\n"
         )
         return 2
 
