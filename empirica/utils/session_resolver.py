@@ -2112,8 +2112,9 @@ def resolve_project_identifier(identifier: str) -> dict | None:
         path = P(identifier).expanduser().resolve()
         if path.exists() and path.is_dir():
             folder_name = path.name
-            # Check if it has .empirica (valid project)
-            if (path / '.empirica').exists():
+            # Require a project marker, not just bare .empirica/ — stray
+            # cache-only .empirica/ dirs in subdirs would otherwise match.
+            if is_project_root(path):
                 # Try to get UUID from local sessions.db
                 project_id = _get_project_id_from_local_db(path)
                 return {
@@ -2276,7 +2277,7 @@ def _resolve_via_local_empirica(identifier: str) -> dict | None:
     ]
 
     for path in search_paths:
-        if path.exists() and path.is_dir() and (path / '.empirica').exists():
+        if path.exists() and path.is_dir() and is_project_root(path):
             project_id = _get_project_id_from_local_db(path)
             return {
                 'project_id': project_id,  # May be None if no sessions yet
@@ -2307,6 +2308,20 @@ def has_valid_db(project_path: Path) -> bool:
         return True
     except Exception:
         return False
+
+
+def is_project_root(path: Path | str) -> bool:
+    """True iff `path` looks like a real Empirica project root.
+
+    Requires a marker file (`.empirica/project.yaml` OR `.empirica/sessions/sessions.db`).
+    Bare existence of `.empirica/` is not enough — stray cache-only `.empirica/`
+    directories get created in subdirs when CLI commands run from a non-canonical
+    CWD. Resolvers that accept any `.empirica/` mis-identify those strays as
+    projects and then try to open a non-existent sessions.db.
+    """
+    p = Path(path)
+    return ((p / '.empirica' / 'project.yaml').exists() or
+            (p / '.empirica' / 'sessions' / 'sessions.db').exists())
 
 
 def _find_git_root() -> Path | None:

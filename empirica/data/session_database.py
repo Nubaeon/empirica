@@ -47,6 +47,30 @@ except ImportError:
 from .formatters import generate_context_markdown  # noqa: E402 — after conditional canonical import
 
 
+def _resolve_canonical_project_root() -> str | None:
+    """Resolve the canonical project root path without trusting CWD.
+
+    Returns None if unresolvable — never falls back to os.getcwd() because
+    a CWD inside a subdirectory pollutes that subdir with a stray .empirica/
+    when downstream code (e.g. dependency-graph cache) blindly mkdirs there.
+    """
+    try:
+        from empirica.utils.session_resolver import InstanceResolver as R
+        path = R.project_path()
+        if path:
+            return str(path)
+    except Exception:
+        pass
+    try:
+        from empirica.utils.session_resolver import find_project_root
+        p = find_project_root(allow_git_root=True)
+        if p:
+            return str(p)
+    except Exception:
+        pass
+    return None
+
+
 class SessionDatabase:
     """Central database for all session data (supports SQLite and PostgreSQL)"""
 
@@ -1512,6 +1536,13 @@ class SessionDatabase:
 
         root_path = Path(project_root)
 
+        # Belt-and-suspenders: refuse to mkdir .empirica/ under a path that
+        # isn't a real project root. Prevents stray .empirica/cache/ in subdirs
+        # when a future caller passes a non-canonical project_root.
+        if not ((root_path / ".empirica" / "project.yaml").exists() or
+                (root_path / ".empirica" / "sessions" / "sessions.db").exists()):
+            return None
+
         # Check cache (5-minute TTL)
         cache_dir = root_path / ".empirica" / "cache"
         cache_file = cache_dir / f"dep_graph_{root_path.name}.json"
@@ -1949,10 +1980,10 @@ class SessionDatabase:
 
         Returns quick context: findings, unknowns, dead_ends, mistakes, decisions, incomplete work.
         """
-        import os
-
         if project_root is None:
-            project_root = os.getcwd()
+            project_root = _resolve_canonical_project_root()
+            # If still unresolved, supplementary data (dep graph, git status) is skipped.
+            # Never fall back to os.getcwd() — that pollutes subdirs with stray .empirica/.
 
         # 1. Resolve and validate project
         project = self._resolve_and_validate_project(project_id)
@@ -1979,11 +2010,13 @@ class SessionDatabase:
         if all_warnings:
             breadcrumbs['truncation_warnings'] = all_warnings
 
-        # 5. Attach supplementary data (deps, git, issues, live state)
-        self._attach_supplementary_data(
-            breadcrumbs, resolved_id, project_root,
-            session_id, include_live_state, fresh_assess, trigger,
-        )
+        # 5. Attach supplementary data (deps, git, issues, live state) — only when
+        # project_root is resolved. Otherwise core breadcrumbs still ship.
+        if project_root:
+            self._attach_supplementary_data(
+                breadcrumbs, resolved_id, project_root,
+                session_id, include_live_state, fresh_assess, trigger,
+            )
 
         # 6. Build and enrich project metadata
         breadcrumbs['project'] = self._enrich_project_from_yaml(
