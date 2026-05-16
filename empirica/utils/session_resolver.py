@@ -206,6 +206,45 @@ class InstanceResolver:
         return _get_project_id_from_local_db(project_path)
 
     @staticmethod
+    def ai_id(claude_session_id: str | None = None) -> 'str | None':
+        """Resolve the canonical ai_id for the current instance.
+
+        Convention (David, 2026-05-16): the AI is identified by its
+        home project's basename (stripping `empirica-` prefix where
+        present). Source-of-truth is `.empirica/project.yaml`'s
+        `ai_id` field (written by setup-claude-code at project init).
+
+        Resolution chain:
+          1. project.yaml `ai_id` field
+          2. basename(project_path).removeprefix('empirica-')
+          3. None — caller falls back to tmux pane id or 'claude-code'
+
+        Used by:
+          - session-monitor-arm hook (timer name lookup)
+          - TUI install path (handle_loop_enable --instance <ai_id>)
+          - cortex_propose source_claude / target_claudes routing
+        """
+        from pathlib import Path
+        project_path = get_active_project_path(claude_session_id)
+        if not project_path:
+            return None
+        # Priority 1: explicit ai_id in project.yaml
+        try:
+            import yaml
+            proj_yaml = Path(project_path) / '.empirica' / 'project.yaml'
+            if proj_yaml.exists():
+                data = yaml.safe_load(proj_yaml.read_text()) or {}
+                aid = data.get('ai_id')
+                if aid:
+                    return str(aid)
+        except Exception:
+            pass
+        # Priority 2: derive from basename
+        basename = Path(project_path).name
+        derived = basename.removeprefix('empirica-')
+        return derived or basename or None
+
+    @staticmethod
     def resolve_workspace_project(identifier: str) -> 'dict | None':
         """Resolve a project name/path/id via the workspace database."""
         return _resolve_via_workspace_db(identifier)

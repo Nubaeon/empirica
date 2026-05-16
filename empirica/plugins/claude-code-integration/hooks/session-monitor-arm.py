@@ -108,8 +108,13 @@ identical command is a no-op the second time).
 
 
 def main() -> int:
+    # Use ai_id (project basename) for timer-name lookup, not the ephemeral
+    # tmux pane id. Timers are named `empirica-loop-<ai_id>-<loop>.timer`
+    # so they survive tmux restarts; the hook must query with the same
+    # stable id the installer used. Falls back to instance_id only for
+    # legacy/unconfigured environments. (David, 2026-05-16)
     try:
-        instance_id = InstanceResolver.instance_id()
+        instance_id = InstanceResolver.ai_id() or InstanceResolver.instance_id()
     except Exception:
         instance_id = None
     if not instance_id:

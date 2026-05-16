@@ -128,6 +128,33 @@ def _instance_label(instance_id: str, project_path: str | None = None) -> str:
     return instance_id
 
 
+def _project_ai_id(project_path: str | None) -> str | None:
+    """Read canonical ai_id from project.yaml, with basename fallback.
+
+    Mirrors InstanceResolver.ai_id() — source of truth is project.yaml's
+    `ai_id` field (set by setup-claude-code via _derive_ai_id at init).
+    Fallback: basename(project_path).removeprefix('empirica-').
+
+    The aggregator surfaces this so TUI install paths can name systemd
+    timers consistently with what session-monitor-arm queries (both use
+    ai_id; mismatch with tmux pane id was the 2026-05-16 wake bug).
+    """
+    if not project_path:
+        return None
+    try:
+        import yaml
+        proj_yaml = Path(project_path) / '.empirica' / 'project.yaml'
+        if proj_yaml.exists():
+            data = yaml.safe_load(proj_yaml.read_text()) or {}
+            aid = data.get('ai_id')
+            if aid:
+                return str(aid)
+    except Exception:
+        pass
+    basename = Path(project_path).name
+    return basename.removeprefix('empirica-') or basename or None
+
+
 def _instance_project_path(instance_id: str) -> str | None:
     """Return the project_path the instance is currently bound to, or None."""
     candidate = EMPIRICA_DIR / 'instance_projects' / f'{instance_id}.json'
@@ -518,6 +545,7 @@ def aggregate_instance_state(
 
     return {
         'instance_id': instance_id,
+        'ai_id': _project_ai_id(project_path),
         'label': label,
         'project_path': project_path,
         'session_id': tx_state['session_id'],

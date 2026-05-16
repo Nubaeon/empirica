@@ -652,15 +652,34 @@ async def test_e_button_toggles_listener_pause(cockpit_env):
 
 
 @pytest.mark.asyncio
-async def test_e_button_empty_registry_falls_back_to_canonical(cockpit_env):
+async def test_e_button_empty_registry_falls_back_to_canonical(
+    cockpit_env, monkeypatch,
+):
     """E with empty registries should bootstrap from the canonical catalog
     (cortex-mailbox-poll loop + inbox-listener). Tests the empty-state
-    install path of the consolidated Events action."""
+    install path of the consolidated Events action.
+
+    CRITICAL: stub handle_loop_enable_command so we don't actually
+    `systemctl --user enable` a real timer named for 'tmux_test' on
+    the dev machine. Discovered 2026-05-16 when David spotted a stray
+    `empirica-loop-tmux_test-cortex-mailbox-poll.timer` after a test
+    run — pre-stub fix the test installed a real systemd unit.
+    """
+    enable_calls: list[tuple[str, str]] = []
+
+    def fake_enable(args):
+        enable_calls.append((args.instance, args.name))
+        return 0
+
+    monkeypatch.setattr(
+        'empirica.cli.tui.cockpit_app.handle_loop_enable_command',
+        fake_enable,
+    )
+
     home, project = cockpit_env
     _bind_instance(home, project, 'tmux_test')
 
     from empirica.cli.tui import CockpitApp
-    from empirica.core.cockpit import LoopRegistry
 
     app = CockpitApp(include_dead=True)
     async with app.run_test(headless=True, size=(40, 24)) as pilot:
@@ -669,11 +688,13 @@ async def test_e_button_empty_registry_falls_back_to_canonical(cockpit_env):
         await pilot.press('e')
         await pilot.pause()
         # Canonical loop catalog provides cortex-mailbox-poll by default —
-        # pressing 'e' on an empty registry registers it.
-        reg = LoopRegistry('tmux_test')
-        loops = reg.list_loops()
-        assert any(entry.name == 'cortex-mailbox-poll' for entry in loops), (
-            f'expected canonical loop registered; got {[e.name for e in loops]}'
+        # pressing 'e' on an empty registry should install it via
+        # handle_loop_enable_command (systemd-user path, post-d96bde0c8).
+        # The instance arg should be the project's ai_id (basename
+        # 'project' here, not the tmux pane id 'tmux_test').
+        assert ('project', 'cortex-mailbox-poll') in enable_calls, (
+            f'expected systemd install for project/cortex-mailbox-poll; '
+            f'got {enable_calls}'
         )
 
 

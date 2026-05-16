@@ -109,6 +109,13 @@ def _run_hook(monkeypatch, instance_id: str | None, active_loops: list[str]) -> 
         mod.InstanceResolver, "instance_id",
         classmethod(lambda cls: instance_id),
     )
+    # Post-2026-05-16: hook now calls InstanceResolver.ai_id() first and
+    # falls back to instance_id. Stub ai_id to return the same value so
+    # tests stay deterministic regardless of the runner's project state.
+    monkeypatch.setattr(
+        mod.InstanceResolver, "ai_id",
+        classmethod(lambda cls, *a, **k: instance_id),
+    )
     monkeypatch.setattr(
         mod, "list_active_loops_for_instance",
         lambda iid: list(active_loops),

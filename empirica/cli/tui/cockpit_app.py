@@ -773,6 +773,19 @@ class CockpitApp(App):
         # enable/disable, legacy cron-create stays on file-flag pause.
         # VALID_SCHEDULER_KIND uses 'systemd-user'; match by prefix so
         # any systemd* variant routes through systemctl.
+        #
+        # Use ai_id for systemd timer naming (stable across tmux restarts);
+        # legacy cron-create paths still use instance_id (tied to the
+        # CronCreate in the current AI session, which IS tmux-pane-bound).
+        from pathlib import Path as _Path
+        ai_id_for_timer = (
+            inst.get('ai_id')
+            or (
+                _Path(inst.get('project_path') or '').name.removeprefix('empirica-')
+                if inst.get('project_path') else None
+            )
+            or inst['instance_id']
+        )
         for name, loop_data in loops.items():
             scheduler_kind = (loop_data.get('scheduler_kind') or '').lower()
             if scheduler_kind.startswith('systemd'):
@@ -780,7 +793,7 @@ class CockpitApp(App):
                            else handle_loop_enable_command)
                 args_dict = {
                     'name': name,
-                    'instance': inst['instance_id'],
+                    'instance': ai_id_for_timer,
                     'output': 'json',
                 }
                 if not target_paused:
@@ -919,6 +932,23 @@ class CockpitApp(App):
             if not configs:
                 return 0
         installed = 0
+        # For systemd-user timer naming, use the stable ai_id (project
+        # basename) rather than the ephemeral tmux pane id. The
+        # session-monitor-arm hook also queries by ai_id — both must
+        # agree or the hook finds no timer and emits empty
+        # additionalContext. ai_id is sourced from project.yaml's
+        # `ai_id` field (set by setup-claude-code via _derive_ai_id);
+        # fallback to project basename, then to pane instance_id for
+        # pre-convention installs.
+        from pathlib import Path as _Path
+        timer_instance = (
+            inst.get('ai_id')
+            or (
+                _Path(inst.get('project_path') or '').name.removeprefix('empirica-')
+                if inst.get('project_path') else None
+            )
+            or inst['instance_id']
+        )
         for cfg in configs:
             scheduler_kind = (cfg.get('scheduler_kind') or '').lower()
             try:
@@ -931,7 +961,7 @@ class CockpitApp(App):
                     # the timer starts immediately. SessionStart's monitor-arm
                     # hook (Phase 1b) wires the wake bridge on next session.
                     args = Namespace(
-                        instance=inst['instance_id'],
+                        instance=timer_instance,
                         name=cfg['name'],
                         interval=cfg.get('interval') or cfg.get('base_interval') or '30s',
                         description=cfg.get('description', ''),
