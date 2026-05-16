@@ -677,6 +677,45 @@ async def test_e_button_empty_registry_falls_back_to_canonical(cockpit_env):
         )
 
 
+@pytest.mark.asyncio
+async def test_e_button_empty_registry_actively_wakes_target_pane(
+    cockpit_env, monkeypatch,
+):
+    """E press on empty registry should ALSO actively wake the target pane
+    via tmux send-keys — without this, the AI doesn't process the pending
+    install until the user manually prompts. This was the gap David hit
+    2026-05-16: 'I enabled event listeners from TUI but instances showed
+    no event listener.'"""
+    from empirica.core.cockpit import instance_actions
+
+    captured: list[str] = []
+
+    def fake_wake(instance_id):
+        captured.append(instance_id)
+        return instance_actions.WakeResult(
+            instance_id=instance_id, success=True, method='tmux-send-keys',
+            detail='stubbed',
+        )
+
+    monkeypatch.setattr('empirica.cli.tui.cockpit_app.wake_instance', fake_wake)
+
+    home, project = cockpit_env
+    _bind_instance(home, project, 'tmux_test')
+
+    from empirica.cli.tui import CockpitApp
+
+    app = CockpitApp(include_dead=True)
+    async with app.run_test(headless=True, size=(40, 24)) as pilot:
+        await pilot.pause()
+        await pilot.pause()
+        await pilot.press('e')
+        await pilot.pause()
+
+    assert captured == ['tmux_test'], (
+        f'wake_instance should fire exactly once for the target; got {captured}'
+    )
+
+
 # ─── E column in instance table ────────────────────────────────────────────
 
 

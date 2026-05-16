@@ -155,6 +155,76 @@ class StopResult:
     method: str  # 'tmux-send-keys' | 'unreachable'
 
 
+@dataclass
+class WakeResult:
+    """Result of a `wake` action — nudge an idle AI to submit a turn so
+    UserPromptSubmit-stage hooks fire and surface queued pending state
+    (install requests, listener arms, etc.)."""
+    instance_id: str
+    success: bool
+    detail: str
+    method: str  # 'tmux-send-keys' | 'unreachable'
+
+
+def wake_instance(instance_id: str) -> WakeResult:
+    """Nudge an idle Claude Code session to submit a turn — the remote-Enter.
+
+    Sends a Space + Enter to the target pane via `tmux send-keys`. That
+    submits a one-character prompt which triggers UserPromptSubmit hooks
+    (loop-install-pickup, listener-install-pickup, ewm-protocol-loader,
+    tool-router) so any queued pending state gets surfaced as a
+    system-reminder to the AI on the very next turn — no waiting for the
+    user to type something.
+
+    Used by the TUI Events button so pressing Events ON for a fresh
+    instance actively triggers loop/listener install on the target AI
+    rather than just writing a pending file and hoping the user prompts
+    next. Closes the gap between "I clicked it" and "the AI is doing it."
+
+    For non-tmux instances we have no shell-agnostic way to inject a
+    keystroke — return unreachable. The pending file is still written
+    and will fire on the user's next manual prompt (graceful degrade).
+    """
+    if not instance_id:
+        raise ValueError('instance_id required')
+
+    m = TMUX_INSTANCE_PATTERN.match(instance_id)
+    if not m:
+        return WakeResult(
+            instance_id=instance_id, success=False, method='unreachable',
+            detail='non-tmux instance — pending request will fire on next user prompt',
+        )
+
+    pane_n = m.group(1)
+    if shutil.which('tmux') is None:
+        return WakeResult(
+            instance_id=instance_id, success=False, method='unreachable',
+            detail='tmux binary not found in PATH',
+        )
+
+    try:
+        result = subprocess.run(
+            ['tmux', 'send-keys', '-t', f'%{pane_n}', ' ', 'Enter'],
+            capture_output=True, text=True, timeout=3,
+        )
+    except subprocess.TimeoutExpired:
+        return WakeResult(
+            instance_id=instance_id, success=False, method='tmux-send-keys',
+            detail='tmux send-keys timed out',
+        )
+
+    if result.returncode == 0:
+        return WakeResult(
+            instance_id=instance_id, success=True, method='tmux-send-keys',
+            detail=f'sent Space+Enter to pane %{pane_n}',
+        )
+    stderr = (result.stderr or '').strip() or '<no stderr>'
+    return WakeResult(
+        instance_id=instance_id, success=False, method='tmux-send-keys',
+        detail=f'tmux send-keys returned {result.returncode}: {stderr}',
+    )
+
+
 def stop_instance(instance_id: str, key: str = 'Escape') -> StopResult:
     """Send a soft interrupt to a running Claude — the remote-spacebar.
 

@@ -65,6 +65,7 @@ from empirica.core.cockpit import (
     resume_sentinel,
     statusline_summary,
     stop_instance,
+    wake_instance,
 )
 from empirica.core.cockpit.project_cockpit_config import (
     project_listeners,
@@ -731,11 +732,21 @@ class CockpitApp(App):
             installed_e = self._install_listeners_from_project(inst)
             total = installed_l + installed_e
             if total:
+                # Active wake — without this, the AI doesn't process the
+                # pending install until the user manually prompts. With it,
+                # press-Events-and-it-just-works: Space+Enter into the pane
+                # triggers UserPromptSubmit hooks that surface the pending
+                # state as a system-reminder, AI processes immediately.
+                wake = wake_instance(inst['instance_id'])
+                wake_note = (
+                    ' · woke target pane'
+                    if wake.success
+                    else f' · wake unreachable ({wake.detail})'
+                )
                 self._log_status(
                     f'{inst["instance_id"]}: requested install of '
-                    f'{installed_l} loop(s) + {installed_e} listener(s) '
-                    'from project.yaml — owning Claude picks up via '
-                    'UserPromptSubmit'
+                    f'{installed_l} loop(s) + {installed_e} listener(s)'
+                    f'{wake_note}'
                 )
                 self.refresh_payload()
             else:

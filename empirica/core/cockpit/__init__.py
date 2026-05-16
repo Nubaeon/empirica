@@ -42,6 +42,7 @@ from empirica.core.cockpit.instance_actions import (
     kill_instance,
     set_label,
     stop_instance,
+    wake_instance,
 )
 from empirica.core.cockpit.instance_state import (
     aggregate_all,
@@ -130,5 +131,6 @@ __all__ = [
     'set_loop_paused',
     'statusline_summary',
     'stop_instance',
+    'wake_instance',
     'write_pending',
 ]

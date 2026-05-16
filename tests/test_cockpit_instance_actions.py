@@ -194,3 +194,66 @@ def test_kill_falls_back_to_tty_sessions_when_instance_projects_missing(fake_hom
 def test_kill_requires_instance_id(fake_home):
     with pytest.raises(ValueError):
         ia.kill_instance('')
+
+
+# ── wake_instance ─────────────────────────────────────────────────────────
+
+
+def test_wake_tmux_sends_space_enter(fake_home, monkeypatch):
+    """tmux instance → wake sends Space + Enter via tmux send-keys."""
+    sent = {}
+
+    class _Result:
+        returncode = 0
+        stderr = ''
+
+    def fake_run(args, **kw):
+        sent['args'] = args
+        return _Result()
+
+    monkeypatch.setattr(ia.shutil, 'which', lambda b: '/usr/bin/tmux' if b == 'tmux' else None)
+    monkeypatch.setattr(ia.subprocess, 'run', fake_run)
+
+    result = ia.wake_instance('tmux_5')
+    assert result.success is True
+    assert result.method == 'tmux-send-keys'
+    # Verify Space + Enter were sent
+    assert sent['args'][:3] == ['tmux', 'send-keys', '-t']
+    assert sent['args'][3] == '%5'
+    assert ' ' in sent['args'] and 'Enter' in sent['args']
+
+
+def test_wake_non_tmux_is_unreachable(fake_home):
+    """Non-tmux instances can't be wake'd — graceful degrade, pending file
+    still fires on next manual user prompt."""
+    result = ia.wake_instance('x11:104427765653088')
+    assert result.success is False
+    assert result.method == 'unreachable'
+    assert 'next user prompt' in result.detail
+
+
+def test_wake_when_tmux_not_installed_fails_clean(fake_home, monkeypatch):
+    monkeypatch.setattr(ia.shutil, 'which', lambda _: None)
+    result = ia.wake_instance('tmux_5')
+    assert result.success is False
+    assert result.method == 'unreachable'
+    assert 'tmux binary not found' in result.detail
+
+
+def test_wake_send_keys_failure_surfaces_stderr(fake_home, monkeypatch):
+    class _Result:
+        returncode = 1
+        stderr = "can't find pane: %99"
+
+    monkeypatch.setattr(ia.shutil, 'which', lambda b: '/usr/bin/tmux' if b == 'tmux' else None)
+    monkeypatch.setattr(ia.subprocess, 'run', lambda *a, **k: _Result())
+
+    result = ia.wake_instance('tmux_99')
+    assert result.success is False
+    assert result.method == 'tmux-send-keys'
+    assert "can't find pane" in result.detail
+
+
+def test_wake_requires_instance_id(fake_home):
+    with pytest.raises(ValueError):
+        ia.wake_instance('')
