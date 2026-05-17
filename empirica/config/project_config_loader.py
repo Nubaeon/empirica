@@ -230,3 +230,28 @@ def get_current_subject(project_config: ProjectConfig | None = None,
         current_path = Path.cwd()
 
     return project_config.get_subject_for_path(str(current_path))
+
+
+def compose_ai_id_forms(
+    *,
+    tenant_slug: str,
+    mesh_id_prefix: str,
+    basename: str,
+) -> dict[str, str]:
+    """Compose the three ai_id forms for cross-AI mesh addressing.
+
+    Mirrors cortex.tenant.compose_ai_id_forms — kept local so empirica doesn't
+    take a runtime dependency on the cortex package. Trusts `mesh_id_prefix`
+    as cortex returns it (via /v1/tenant/me or cortex_session_init) rather
+    than recomputing it, so we don't drift if cortex changes its slug rule.
+
+    Forms (progressively qualified — pick the narrowest that disambiguates):
+      - short:  `<basename>`                        — within-project default
+      - tenant: `<tenant_slug>_<basename>`          — within-tenant
+      - mesh:   `<mesh_id_prefix>_<basename>`       — cross-tenant / fully qualified
+    """
+    return {
+        "short": basename,
+        "tenant": f"{tenant_slug}_{basename}",
+        "mesh": f"{mesh_id_prefix}_{basename}",
+    }
