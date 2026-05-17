@@ -1,5 +1,5 @@
 """Tests for `CredentialsLoader.get_cortex_config()` — Cortex creds resolution
-via env-vars + ~/.empirica/credentials.yaml (1.9.6+).
+via env-vars + ~/.empirica/credentials.yaml (1.9.7+).
 
 Mirrors the extension's chrome.storage save (`cortexUrl` + `cortexApiKey`)
 for CLI users so they don't have to export env vars in every shell.
@@ -355,3 +355,120 @@ def test_endpoint_post_rejects_empty_payload(monkeypatch):
     body = resp.json()
     assert body["ok"] is False
     assert "required" in body["error"].lower()
+
+
+# ── save_ntfy_config (David, 2026-05-17 — first-run wizard) ──────────────
+
+
+# Test-fixture token/password strings — obviously synthetic, not real
+# secrets. Suppresses ruff S105/S106 false positives on hardcoded creds
+# in test files. Defined module-level so all save_ntfy tests share them.
+_FIXTURE_NTFY_TOKEN = "tk_test_abc123"  # noqa: S105
+_FIXTURE_NTFY_TOKEN_XYZ = "tk_xyz"  # noqa: S105
+_FIXTURE_NTFY_TOKEN_X = "tk_x"  # noqa: S105
+_FIXTURE_NTFY_PASSWORD = "s3cret"  # noqa: S105
+
+
+def test_save_ntfy_creates_file_when_missing(tmp_path, monkeypatch):
+    """Fresh install: setup-claude-code wizard writes a complete ntfy block
+    to a not-yet-existing credentials.yaml."""
+    target = tmp_path / "credentials.yaml"
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+    monkeypatch.delenv("ORCHESTRATION_NTFY_URL", raising=False)
+    monkeypatch.delenv("ORCHESTRATION_NTFY_TOPIC", raising=False)
+    monkeypatch.delenv("ORCHESTRATION_NTFY_TOKEN", raising=False)
+    monkeypatch.delenv("ORCHESTRATION_NTFY_USER", raising=False)
+    monkeypatch.delenv("ORCHESTRATION_NTFY_PASS", raising=False)
+
+    from empirica.config.credentials_loader import CredentialsLoader
+    loader = CredentialsLoader()
+    written = loader.save_ntfy_config(
+        url="https://ntfy.example.com",
+        topic="orchestration-events",
+        token=_FIXTURE_NTFY_TOKEN,
+    )
+
+    assert written == target
+    assert target.exists()
+    import yaml as _yaml
+    data = _yaml.safe_load(target.read_text())
+    assert data["ntfy"]["url"] == "https://ntfy.example.com"
+    assert data["ntfy"]["topic"] == "orchestration-events"
+    assert data["ntfy"]["token"] == _FIXTURE_NTFY_TOKEN
+    # version key written by default
+    assert data.get("version") == "1.0"
+
+
+def test_save_ntfy_preserves_existing_cortex_block(tmp_path, monkeypatch):
+    """The wizard runs after cortex is set (or vice versa). Writing the
+    ntfy block must NEVER blow away the cortex block — atomic merge only."""
+    target = tmp_path / "credentials.yaml"
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+    import yaml as _yaml
+    target.write_text(_yaml.dump({
+        "version": "1.0",
+        "cortex": {"url": "https://cortex.example.com", "api_key": "ctx_keep_me"},
+    }))
+
+    from empirica.config.credentials_loader import CredentialsLoader
+    loader = CredentialsLoader()
+    loader.save_ntfy_config(
+        url="https://ntfy.example.com",
+        topic="t",
+        token=_FIXTURE_NTFY_TOKEN_XYZ,
+    )
+
+    data = _yaml.safe_load(target.read_text())
+    # cortex block untouched
+    assert data["cortex"] == {"url": "https://cortex.example.com", "api_key": "ctx_keep_me"}
+    # ntfy block added
+    assert data["ntfy"]["token"] == _FIXTURE_NTFY_TOKEN_XYZ
+
+
+def test_save_ntfy_with_basic_auth_path(tmp_path, monkeypatch):
+    """token is preferred but legacy user+password path must still work
+    (some self-hosted ntfy installs predate access tokens)."""
+    target = tmp_path / "credentials.yaml"
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+
+    from empirica.config.credentials_loader import CredentialsLoader
+    loader = CredentialsLoader()
+    loader.save_ntfy_config(
+        url="https://ntfy.example.com",
+        topic="t",
+        user="alice",
+        password=_FIXTURE_NTFY_PASSWORD,
+    )
+
+    import yaml as _yaml
+    data = _yaml.safe_load(target.read_text())
+    assert data["ntfy"]["user"] == "alice"
+    assert data["ntfy"]["password"] == _FIXTURE_NTFY_PASSWORD
+    assert "token" not in data["ntfy"] or data["ntfy"].get("token") is None
+
+
+def test_save_ntfy_requires_at_least_one_field(tmp_path, monkeypatch):
+    """All-None call is misuse — surface as ValueError rather than silently
+    writing an empty block."""
+    target = tmp_path / "credentials.yaml"
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+
+    from empirica.config.credentials_loader import CredentialsLoader
+    loader = CredentialsLoader()
+    import pytest
+    with pytest.raises(ValueError, match="at least one field"):
+        loader.save_ntfy_config()
+
+
+def test_save_ntfy_strips_trailing_slash_on_url(tmp_path, monkeypatch):
+    """Mirrors save_cortex_config — server convention is no trailing slash."""
+    target = tmp_path / "credentials.yaml"
+    monkeypatch.setenv("EMPIRICA_CREDENTIALS_PATH", str(target))
+
+    from empirica.config.credentials_loader import CredentialsLoader
+    loader = CredentialsLoader()
+    loader.save_ntfy_config(url="https://ntfy.example.com/", topic="t", token=_FIXTURE_NTFY_TOKEN_X)
+
+    import yaml as _yaml
+    data = _yaml.safe_load(target.read_text())
+    assert data["ntfy"]["url"] == "https://ntfy.example.com"

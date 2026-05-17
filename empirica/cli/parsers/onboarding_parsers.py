@@ -43,6 +43,11 @@ Run this after 'brew install empirica' or 'pip install empirica'.
         help='Skip MCP server installation and configuration'
     )
     setup_cc_parser.add_argument(
+        '--skip-credentials',
+        action='store_true',
+        help='Skip the credentials validation + wizard (use env vars or pre-populated credentials.yaml)'
+    )
+    setup_cc_parser.add_argument(
         '--skip-claude-md',
         action='store_true',
         help='Skip CLAUDE.md installation (keep existing system prompt)'

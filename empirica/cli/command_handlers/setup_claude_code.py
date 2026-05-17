@@ -829,6 +829,180 @@ def _print_human_summary(plugin_dir, settings_file, mcp_installed, skip_claude_m
     print("🧠 Happy epistemic coding!")
 
 
+def _print_credentials_summary(state: dict) -> None:
+    """One-block credentials section for the human summary.
+
+    Shows status per credential type + actionable next-step lines when
+    something is missing. Quiet when both are green.
+    """
+    print()
+    print("━" * 60)
+    print("🔑 CREDENTIALS")
+    print("━" * 60)
+    cortex_glyph = "✓" if state["cortex_ok"] else "⚠"
+    ntfy_glyph = "✓" if state["ntfy_ok"] else "⚠"
+    print(f"   {cortex_glyph} cortex  ({state['cortex_url'] or 'not set'})")
+    print(f"   {ntfy_glyph} ntfy    ({state['ntfy_url'] or 'not set'})")
+    if state["issues"]:
+        print()
+        print("   To fix:")
+        for issue in state["issues"]:
+            print(f"     • {issue}")
+        print()
+        print("   Edit ~/.empirica/credentials.yaml directly, OR re-run")
+        print("   setup-claude-code in an interactive terminal for the wizard.")
+        print("   Skip this prompt next time: --skip-credentials")
+
+
+def _check_credentials_state() -> dict:
+    """Return current credentials state for the setup summary.
+
+    Reads via CredentialsLoader so env-var overrides count as 'set'.
+    Returns:
+      {
+        "cortex_ok": bool,          # url + api_key both present
+        "ntfy_ok": bool,            # url + topic + (token OR user+pw) present
+        "cortex_url": str | None,
+        "ntfy_url": str | None,
+        "issues": list[str],        # human-readable missing-piece messages
+      }
+    """
+    try:
+        from empirica.config.credentials_loader import get_credentials_loader
+        loader = get_credentials_loader()
+        loader.reload()  # bypass cache
+        cortex = loader.get_cortex_config()
+        ntfy = loader.get_ntfy_config()
+    except Exception as e:
+        return {
+            "cortex_ok": False, "ntfy_ok": False,
+            "cortex_url": None, "ntfy_url": None,
+            "issues": [f"Could not read credentials: {e}"],
+        }
+
+    issues: list[str] = []
+    cortex_ok = bool(cortex.get("url") and cortex.get("api_key"))
+    if not cortex_ok:
+        missing = []
+        if not cortex.get("url"):
+            missing.append("url")
+        if not cortex.get("api_key"):
+            missing.append("api_key")
+        issues.append(f"cortex: missing {', '.join(missing)}")
+
+    ntfy_url_ok = bool(ntfy.get("url"))
+    ntfy_topic_ok = bool(ntfy.get("topic"))
+    ntfy_auth_ok = bool(ntfy.get("token") or (ntfy.get("user") and ntfy.get("password")))
+    ntfy_ok = ntfy_url_ok and ntfy_topic_ok and ntfy_auth_ok
+    if not ntfy_ok:
+        missing = []
+        if not ntfy_url_ok:
+            missing.append("url")
+        if not ntfy_topic_ok:
+            missing.append("topic")
+        if not ntfy_auth_ok:
+            missing.append("token (or user+password)")
+        issues.append(f"ntfy: missing {', '.join(missing)}")
+
+    return {
+        "cortex_ok": cortex_ok,
+        "ntfy_ok": ntfy_ok,
+        "cortex_url": cortex.get("url"),
+        "ntfy_url": ntfy.get("url"),
+        "issues": issues,
+    }
+
+
+def _run_credentials_wizard(state: dict, output_format: str) -> dict:
+    """Interactive prompts to fill missing credentials.
+
+    Returns updated state after the wizard runs. No-ops when:
+      - output_format == 'json' (machine mode — don't block on stdin)
+      - stdin isn't a TTY (piped / non-interactive shells)
+      - both cortex and ntfy already OK
+
+    User can hit Enter at any prompt to skip that field — partial fills
+    are honored (the loader's env-var precedence means env-set values
+    still win for fields the user skips).
+
+    Writes via CredentialsLoader.save_cortex_config / save_ntfy_config —
+    atomic merge, preserves other top-level keys.
+    """
+    import sys as _sys
+
+    if state["cortex_ok"] and state["ntfy_ok"]:
+        return state
+    if output_format == 'json':
+        return state
+    if not _sys.stdin.isatty():
+        return state
+
+    print()
+    print("━" * 60)
+    print("🔑 Credentials wizard — fill missing pieces")
+    print("━" * 60)
+    print("Press Enter at any prompt to skip that field.")
+    print("Existing credentials.yaml values are preserved.")
+    print()
+
+    try:
+        from empirica.config.credentials_loader import get_credentials_loader
+        loader = get_credentials_loader()
+    except Exception as e:
+        print(f"⚠️  Could not load credentials helper: {e}")
+        return state
+
+    cortex_changed = False
+    if not state["cortex_ok"]:
+        print("→ Cortex (orchestration API)")
+        default_url = state["cortex_url"] or "https://cortex.getempirica.com"
+        url_in = input(f"   URL [{default_url}]: ").strip() or default_url
+        key_in = input("   API key (starts with ctx_): ").strip()
+        if url_in or key_in:
+            try:
+                loader.save_cortex_config(
+                    url=url_in or None,
+                    api_key=key_in or None,
+                )
+                cortex_changed = True
+                print("   ✓ cortex block written")
+            except Exception as e:
+                print(f"   ⚠️  Failed to write cortex block: {e}")
+        print()
+
+    ntfy_changed = False
+    if not state["ntfy_ok"]:
+        print("→ ntfy (push wake bridge — listener subscribes here)")
+        default_url = state["ntfy_url"] or "https://ntfy.getempirica.com"
+        url_in = input(f"   URL [{default_url}]: ").strip() or default_url
+        topic_in = input("   Topic [orchestration-events]: ").strip() or "orchestration-events"
+        print("   Auth: token (preferred) OR user+password")
+        token_in = input("   Access token (starts with tk_, leave blank to use basic auth): ").strip()
+        user_in = pw_in = ""
+        if not token_in:
+            user_in = input("   Username: ").strip()
+            pw_in = input("   Password: ").strip()
+        if url_in or topic_in or token_in or (user_in and pw_in):
+            try:
+                loader.save_ntfy_config(
+                    url=url_in or None,
+                    topic=topic_in or None,
+                    token=token_in or None,
+                    user=user_in or None,
+                    password=pw_in or None,
+                )
+                ntfy_changed = True
+                print("   ✓ ntfy block written")
+            except Exception as e:
+                print(f"   ⚠️  Failed to write ntfy block: {e}")
+        print()
+
+    if cortex_changed or ntfy_changed:
+        # Re-check after writes
+        return _check_credentials_state()
+    return state
+
+
 def handle_setup_claude_code_command(args):
     """Handle setup-claude-code command"""
     try:
@@ -836,6 +1010,7 @@ def handle_setup_claude_code_command(args):
         force = getattr(args, 'force', False)
         skip_mcp = getattr(args, 'skip_mcp', False)
         skip_claude_md = getattr(args, 'skip_claude_md', False)
+        skip_credentials = getattr(args, 'skip_credentials', False)
         use_full = getattr(args, 'full_prompt', False)
 
         # Find bundled plugins
@@ -886,6 +1061,14 @@ def handle_setup_claude_code_command(args):
         if not skip_mcp:
             mcp_installed, mcp_cmd = _configure_mcp_server(claude_dir, home, force, output_format)
 
+        # Stage 6.5: Credentials check + wizard. Fresh installs hit listener-
+        # exit-code-2 the moment they toggle Events because no ntfy creds were
+        # set (David, 2026-05-17). Run a state check; if interactive + missing,
+        # prompt for the gap. Always reflect the result in the summary.
+        creds_state = _check_credentials_state()
+        if not skip_credentials:
+            creds_state = _run_credentials_wizard(creds_state, output_format)
+
         # Stage 7: Output
         if output_format == 'json':
             return {
@@ -895,6 +1078,11 @@ def handle_setup_claude_code_command(args):
                 "settings_file": str(settings_file),
                 "mcp_configured": mcp_installed,
                 "mcp_command": mcp_cmd,
+                "credentials": {
+                    "cortex_ok": creds_state["cortex_ok"],
+                    "ntfy_ok": creds_state["ntfy_ok"],
+                    "issues": creds_state["issues"],
+                },
                 "hooks_configured": [
                     "PreToolUse (Sentinel)",
                     "PreCompact",
@@ -908,6 +1096,7 @@ def handle_setup_claude_code_command(args):
             }
         else:
             _print_human_summary(plugin_dir, settings_file, mcp_installed, skip_claude_md, claude_dir)
+            _print_credentials_summary(creds_state)
 
         return None
 

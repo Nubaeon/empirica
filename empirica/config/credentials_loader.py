@@ -280,6 +280,98 @@ class CredentialsLoader:
         self._credentials_cache = None
         return target
 
+    def save_ntfy_config(
+        self,
+        *,
+        url: str | None = None,
+        topic: str | None = None,
+        token: str | None = None,
+        user: str | None = None,
+        password: str | None = None,
+        config_path: Path | None = None,
+    ) -> Path:
+        """Persist ntfy {url, topic, token | user+password} to credentials.yaml.
+
+        Merges into the existing `ntfy:` block — never touches `cortex:`,
+        `providers:`, `version:`, or any other top-level keys. At least
+        one of token / user+password must be set for the listener to
+        authenticate (token preferred — revocable + no password exposure).
+
+        Resolution order for target path (same as save_cortex_config):
+          1. config_path argument (explicit override)
+          2. EMPIRICA_CREDENTIALS_PATH env var
+          3. existing credentials.yaml (if any) returned by _find_config_file
+          4. ~/.empirica/credentials.yaml (creates if missing)
+
+        Atomic write: tempfile + rename. Resets cache.
+        Returns the path written to.
+
+        Driver: setup-claude-code's first-run credentials wizard
+        (David, 2026-05-17) — fresh installs hit the listener-exit-code-2
+        wall without ntfy creds. Mirrors save_cortex_config.
+        """
+        if all(v is None for v in (url, topic, token, user, password)):
+            raise ValueError(
+                "save_ntfy_config: at least one field required"
+            )
+
+        target = config_path
+        if target is None:
+            env_path = os.getenv("EMPIRICA_CREDENTIALS_PATH")
+            if env_path:
+                target = Path(env_path)
+        if target is None:
+            target = self._find_config_file()
+        if target is None:
+            target = Path.home() / ".empirica" / "credentials.yaml"
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        existing: dict = {}
+        if target.exists() and YAML_AVAILABLE:
+            try:
+                existing = yaml.safe_load(target.read_text(encoding="utf-8")) or {}
+            except Exception as e:
+                logger.warning(f"save_ntfy_config: existing file unreadable, overwriting: {e}")
+                existing = {}
+
+        ntfy_block = existing.get("ntfy") or {}
+        if not isinstance(ntfy_block, dict):
+            ntfy_block = {}
+        # Merge non-None fields; url gets trailing-slash strip per server convention.
+        fields = {"url": url, "topic": topic, "token": token, "user": user, "password": password}
+        for key, val in fields.items():
+            if val is None:
+                continue
+            ntfy_block[key] = (val.rstrip("/") if key == "url" else val) or None
+        existing["ntfy"] = ntfy_block
+        if "version" not in existing:
+            existing["version"] = "1.0"
+
+        if not YAML_AVAILABLE:
+            raise RuntimeError(
+                "save_ntfy_config: PyYAML not installed (`pip install pyyaml`)",
+            )
+
+        tmp_fd, tmp_path = tempfile.mkstemp(
+            prefix=".credentials-", suffix=".yaml.tmp", dir=str(target.parent),
+        )
+        try:
+            with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+                yaml.dump(
+                    existing, f, default_flow_style=False,
+                    sort_keys=False, allow_unicode=True,
+                )
+            os.replace(tmp_path, target)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+
+        self._credentials_cache = None
+        return target
+
     def get_cortex_config(self) -> dict[str, str | None]:
         """Return Cortex {url, api_key} resolved by precedence:
 
