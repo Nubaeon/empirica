@@ -52,6 +52,7 @@ import subprocess
 import sys
 import time
 import urllib.parse
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -176,8 +177,23 @@ def _emit_catchup_events(
         return 0
 
     events = poll_and_diff(instance_id, loop_name, url, key)
+    # Tee target — cockpit TUI's `_read_recent_events_for_instance` tails
+    # ~/.empirica/loop_fires.log to render the "N" events column + the
+    # notifications detail pane. Post-T8 the listener streamed only to
+    # stdout (for Monitor consumption), which left the cockpit reading a
+    # stale log and showing "(no events yet — listener silent or not armed)"
+    # even when listeners were actively firing (David, 2026-05-17).
+    # Tee is best-effort: any write failure is logged + ignored so the
+    # primary Monitor stream stays unaffected.
+    log_path = Path.home() / ".empirica" / "loop_fires.log"
     for ev in events:
-        output_stream.write(ev.to_log_line() + "\n")
+        line = ev.to_log_line()
+        output_stream.write(line + "\n")
+        try:
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+        except OSError as e:
+            logger.debug(f"loop_fires.log tee failed (non-fatal): {e}")
     output_stream.flush()
     return len(events)
 

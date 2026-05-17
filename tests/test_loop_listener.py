@@ -312,3 +312,106 @@ def test_malformed_ntfy_line_skipped_not_crashed(monkeypatch):
     assert "skipping non-JSON line" in err.getvalue()
     # At least the valid message + initial + post-drop catchups
     assert catchup_count[0] >= 2
+
+
+# ── Tee to loop_fires.log (cockpit reader, 2026-05-17) ──────────────────
+
+
+def test_emit_catchup_events_tees_to_loop_fires_log(monkeypatch, tmp_path):
+    """Post-T8 the listener streamed only to stdout (Monitor), leaving
+    ~/.empirica/loop_fires.log empty. The cockpit TUI's recent_events
+    reader tails that log to render the N column + notifications detail
+    pane — without the tee it showed '(no events yet — listener silent
+    or not armed)' even when listeners were actively firing.
+
+    Contract: each event written to stdout MUST also append a matching
+    JSON line to ~/.empirica/loop_fires.log so the cockpit reader sees it.
+
+    David, 2026-05-17.
+    """
+    from empirica.config.credentials_loader import get_credentials_loader
+    from empirica.core.loop_scheduler import content_poll
+    from empirica.core.loop_scheduler import listener as lm
+
+    # Redirect Path.home() to tmp so the tee target is sandboxed
+    monkeypatch.setattr(lm.Path, "home", staticmethod(lambda: tmp_path))
+    (tmp_path / ".empirica").mkdir(parents=True, exist_ok=True)
+
+    loader = get_credentials_loader()
+    monkeypatch.setattr(loader, "get_ntfy_config", lambda: {
+        "url": "https://ntfy.test", "topic": "t",
+        "user": "u", "password": "p",
+    })
+    monkeypatch.setattr(loader, "get_cortex_config", lambda: {
+        "url": "https://cortex.test", "api_key": "k",
+    })
+
+    # Synthetic event from poll_and_diff
+    fake_event = content_poll.ProposalEvent(
+        instance_id="empirica", loop_name="cortex-mailbox-poll",
+        proposal_id="prop_abc12345", proposal_title="Test event",
+        status="accepted", action_category="TACTICAL",
+        eco_actor="eco-phone", new_or_changed="new",
+        direction="inbox", commit_sha=None,
+    )
+    monkeypatch.setattr(content_poll, "poll_and_diff",
+                        lambda *a, **kw: [fake_event])
+
+    out = io.StringIO()
+    count = lm._emit_catchup_events("empirica", "cortex-mailbox-poll", output_stream=out)
+    assert count == 1
+
+    # stdout (Monitor wake) received the event
+    stdout_lines = [l for l in out.getvalue().splitlines() if l.strip()]
+    assert len(stdout_lines) == 1
+    parsed_stdout = json.loads(stdout_lines[0])
+    assert parsed_stdout["proposal_id"] == "prop_abc12345"
+
+    # Tee target: loop_fires.log MUST contain the same event
+    log = tmp_path / ".empirica" / "loop_fires.log"
+    assert log.exists(), "loop_fires.log was not created — tee failed"
+    log_lines = [l for l in log.read_text().splitlines() if l.strip()]
+    assert len(log_lines) == 1
+    parsed_log = json.loads(log_lines[0])
+    assert parsed_log["proposal_id"] == "prop_abc12345"
+    assert parsed_log["instance_id"] == "empirica"
+    assert parsed_log["direction"] == "inbox"
+    assert parsed_log["status"] == "accepted"
+
+
+def test_tee_failure_does_not_break_stdout_stream(monkeypatch, tmp_path):
+    """Tee is best-effort: if loop_fires.log can't be written (disk full,
+    perms), the Monitor stdout stream must still deliver. We simulate by
+    making the log path point at a directory (open() will raise IsADirectoryError)."""
+    from empirica.config.credentials_loader import get_credentials_loader
+    from empirica.core.loop_scheduler import content_poll
+    from empirica.core.loop_scheduler import listener as lm
+
+    monkeypatch.setattr(lm.Path, "home", staticmethod(lambda: tmp_path))
+    # Make the tee target unwriteable by creating it as a directory
+    bad_path = tmp_path / ".empirica"
+    bad_path.mkdir()
+    (bad_path / "loop_fires.log").mkdir()  # directory, not a file
+
+    loader = get_credentials_loader()
+    monkeypatch.setattr(loader, "get_ntfy_config", lambda: {
+        "url": "x", "topic": "t", "user": "u", "password": "p",
+    })
+    monkeypatch.setattr(loader, "get_cortex_config", lambda: {
+        "url": "x", "api_key": "k",
+    })
+
+    fake_event = content_poll.ProposalEvent(
+        instance_id="x", loop_name="cortex-mailbox-poll",
+        proposal_id="p", proposal_title="t", status="accepted",
+        action_category="TACTICAL", eco_actor="a", new_or_changed="new",
+    )
+    monkeypatch.setattr(content_poll, "poll_and_diff",
+                        lambda *a, **kw: [fake_event])
+
+    out = io.StringIO()
+    # Should not raise even though tee fails
+    count = lm._emit_catchup_events("x", "cortex-mailbox-poll", output_stream=out)
+    assert count == 1
+    assert "prop_abc12345" not in out.getvalue()  # different proposal id
+    assert out.getvalue().strip(), "stdout was empty — tee failure shouldn't suppress it"
