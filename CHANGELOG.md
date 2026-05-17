@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Daemon ships goal/decision/assumption description through list endpoints
+- Migrations 043 + 045 added `description` columns to goals/decisions/
+  assumptions (Linear/GitHub/Jira title+body pattern), but the daemon's
+  GET `/api/v1/{goals,decisions,assumptions}` endpoints never updated
+  their SELECTs. The extension UI rendered title-only goals + decisions
+  + assumptions even when bodies were stored — David observed
+  2026-05-17: "goals are suddenly not carrying the full title and body."
+  The "suddenly" was the migration silently extending storage while the
+  read path stayed on the old shape.
+- All three `_list_*` helpers now include `description` in SELECT +
+  output dict. Schema-resilient via new `_table_has_column(db, table,
+  column)` PRAGMA-based helper — old project DBs from before the
+  migrations gracefully return `description=None` instead of 500-ing.
+- 3 regression tests added: present-and-shipped, old-schema-handled,
+  decisions-also-fixed. Daemon needs restart to pick up the new code.
+
+### Changed — Sharpened `--description` discipline in prompts
+- COLLABORATIVE MODE table row reframed from `(optionally --description
+  for context-rich body)` to an explicit "skip --description only for
+  truly trivial titles; title-only goals render as empty bodies in the
+  extension + lose all context after compaction."
+- Goal-per-transaction bullet adds the same explicit rule.
+- Constitution NATURAL INTERPRETATION table extends the bare
+  `goals-create` row with the same guidance. Discipline gap surfaced
+  by the same audit that found the daemon bug — 20-30% of recent peer-
+  AI goals were objective-only because the soft "optionally" wording
+  let the discipline slip.
+
 ### Added — Deferred-proposals POSTFLIGHT nudge
 - POSTFLIGHT retrospective now surfaces `deferred_proposals_note` listing
   open proposal-derived goals (project-scoped, `prop_*` token match on

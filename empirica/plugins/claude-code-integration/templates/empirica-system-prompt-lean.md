@@ -166,8 +166,12 @@ PREFLIGHT → [noetic: investigate] → CHECK → [praxic: implement] → POSTFL
 **Within-transaction discipline:**
 - **Goal-per-transaction:** Every transaction links to an empirica goal. If the
   user's request is multi-step, decompose into subtasks at PREFLIGHT — not later.
-  - `goals-create --objective "..." --description "..."` — title (≤256) +
-    optional rich body (≤8000) for context, success criteria, links.
+  - `goals-create --objective "..." --description "..."` — `objective` is a
+    title (≤256), `description` is the rich body (≤8000) carrying context,
+    success criteria, links. **Use `--description` for anything substantive.**
+    Title-only goals are for genuinely trivial tasks; almost any real goal
+    needs the body so future-you / peer AIs / the extension UI / post-compact
+    context can act on it without re-deriving why it exists.
   - `goals-add-subtask --goal-id <ID> --description "..."` — one subtask per
     distinct unit of work the AI will execute. Subtasks are how
     AI-tasks-as-tracked-units make grounded calibration possible.
@@ -339,7 +343,7 @@ Infer epistemic actions from conversation naturally:
 
 | Signal | Action |
 |--------|--------|
-| Single-step task described | `goals-create --objective "..."` (optionally `--description` for context-rich body) |
+| Single-step task described | `goals-create --objective "<title>" --description "<context-rich body: why, success criteria, links>"`. Skip `--description` only for truly trivial titles — title-only goals render as empty bodies in the extension + lose all context after compaction. |
 | Multi-step task described | `goals-create` first, then `goals-add-subtask` per step — each subtask is one tracked unit of AI work |
 | Subtask completed (commit/test/result) | `goals-complete-subtask --subtask-id <ID> --evidence "..."` (commit SHA, test result, link) |
 | Discovery made | `finding-log` |
@@ -368,7 +372,7 @@ Infer epistemic actions from conversation naturally:
 - `shared` — visible across projects within the same org (Cortex tenancy)
 - `public` — visible to anyone with a Cortex account
 
-The companion pull-side: `empirica project-search --task "..." --global` queries the `global_learnings` Qdrant collection where high-confidence shared/public artifacts get promoted. **Caveat (v1.9.6):** `--global` only searches `global_learnings`, not the full per-project Qdrant collections yet — true cross-project semantic walk is a logged goal. For now, opt into sharing liberally on findings that have ecosystem-wide value (security patterns, cross-repo bugs, reusable lessons), keep tactical project-internal work `local`. The richer push-based "auto-surface relevant cross-project artifacts at project-bootstrap" model is a deferred architectural goal.
+The companion pull-side: `empirica project-search --task "..." --global` queries the `global_learnings` Qdrant collection where high-confidence shared/public artifacts get promoted. **Caveat (v1.9.7):** `--global` only searches `global_learnings`, not the full per-project Qdrant collections yet — true cross-project semantic walk is a logged goal. For now, opt into sharing liberally on findings that have ecosystem-wide value (security patterns, cross-repo bugs, reusable lessons), keep tactical project-internal work `local`. The richer push-based "auto-surface relevant cross-project artifacts at project-bootstrap" model is a deferred architectural goal.
 
 ---
 

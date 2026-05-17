@@ -284,7 +284,7 @@ Don't wait for explicit commands. Infer the right mechanism from conversation:
 
 | Conversation Signal | Empirica Action |
 |--------------------|-----------------------|
-| Task described | `goals-create` |
+| Task described | `goals-create --objective "<title>" --description "<context-rich body>"`. Skip `--description` only for truly trivial single-line tasks — substantive goals need the body so peer AIs + the extension UI + post-compact context can act on them without re-deriving why they exist. |
 | Discovery made | `finding-log` |
 | Uncertainty expressed | `unknown-log` |
 | Approach failed | `deadend-log` |
