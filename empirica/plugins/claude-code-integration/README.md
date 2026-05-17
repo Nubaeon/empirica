@@ -20,8 +20,8 @@ empirica setup-claude-code --force # Reset/update (preserves non-Empirica hooks)
 
 | Component | Count | Location |
 |-----------|-------|----------|
-| Hooks | 18 | `~/.claude/plugins/local/empirica/hooks/` |
-| Skills | 10 | `~/.claude/plugins/local/empirica/skills/` |
+| Hooks | 23 | `~/.claude/plugins/local/empirica/hooks/` |
+| Skills | 14 | `~/.claude/plugins/local/empirica/skills/` |
 | Commands | 2 | `~/.claude/plugins/local/empirica/commands/` |
 | Agents | 9 | `~/.claude/plugins/local/empirica/agents/` |
 | Statusline | 1 | `scripts/statusline_empirica.py` |
@@ -88,16 +88,20 @@ Skills load on demand when the AI detects a relevant situation. Invoke with `/sk
 
 | Skill | Trigger | What It Does |
 |-------|---------|-------------|
-| **empirica-constitution** | Routing uncertainty, session start | 12-section governance decision tree — routes situations to the right Empirica mechanism |
+| **empirica-constitution** | Routing uncertainty, session start | Governance decision tree — routes situations to the right Empirica mechanism. Load before first PREFLIGHT in a session |
+| **epistemic-transaction** | Complex work, planning | Guides task decomposition into measured transactions — PREFLIGHT through POSTFLIGHT. Load when task spans 3+ files or 2+ goals |
 | **epistemic-persistence-protocol** | Disagreement, pushback | Calibrated position-holding under pushback — classifies pushback type, selects HOLD/SOFTEN/UPDATE/REFRAME response |
-| **epistemic-transaction** | Complex work, planning | Guides task decomposition into measured transactions — PREFLIGHT through POSTFLIGHT |
+| **cortex-mailbox-poll** | `<task-notification>` arrives carrying `proposal_event` | Receive side of the AI mesh — per-direction × per-status reaction protocol for incoming proposals. Auto-required when a listener Monitor is armed |
+| **cortex-mailbox-send** | Want to send to a peer AI | Send side of the AI mesh — `cortex_propose` flavors (collab auto-accept vs ECO-gated typed), target verification, completion-ack handshake. Auto-required when a listener Monitor is armed |
 | **code-audit** | `/code-audit`, quality review | Structured noetic investigation of code quality — runs ruff, radon, pyright, produces Empirica artifacts |
 | **code-docs-align** | `/code-docs-align`, doc accuracy | Verifies documentation matches code reality — bridges code-audit and docs-assess |
 | **dispatch-agent** | Agent spawning, complex tasks | Enriches agent prompts with Cortex context (dead-ends, findings, anti-patterns) |
 | **ewm-interview** | `/ewm-interview`, workflow setup | Interviews users to create personalized AI collaboration protocol (workflow-protocol.yaml) |
+| **inbox-listener** | Wake-on-event setup (held HTTP stream registration) | Sister to `loop-cron` for event-driven background work — arms `Monitor(persistent=True)` on a registered listener |
+| **loop-cron** | Recurring background work setup | Wires periodic tasks into the registry. Self-throttles when an empirica transaction is open. The body skill for cron-mode loops |
+| **services-auditor** | `/services-auditor`, compliance review | Phase 2 service-tier auditor — invoked from `empirica scan --explain` to hand off compliance findings to the calling AI session |
+| **services-audit-cron** | Recurring services audit | Scheduled wrapper for `services-auditor` — fires the audit on a cron interval |
 | **render** | `/render`, diagram rendering | Generates DiagramSpec JSON for ASCII art diagrams, renders via mdview to SVG |
-| **inkscape** | `/inkscape`, image generation | SVG generation with design patterns, Inkscape CLI for rendering and tracing |
-| **devto** | `/devto`, content publishing | Dev.to article pipeline — epistemic sources to validated publication |
 
 ---
 

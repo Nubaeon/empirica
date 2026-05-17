@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — AI mesh send side
+- **`cortex-mailbox-send` skill** (`4c09b6174`) — paired to `cortex-mailbox-poll`. Documents
+  when to use `cortex_propose`, the **collab vs ECO-gated** flavor split (TYPE × ACTION_CATEGORY),
+  target `ai_id` verification, the completion-ack handshake (`cortex_complete_proposal` with
+  `commit_sha`), and mis-target recovery (the wrapper-proposal pattern). Plumbed into 4
+  surfaces so peer AIs hitting send-side gaps discover it: constitution `NATURAL INTERPRETATION`
+  table, lean prompt template, full `CLAUDE.md` template, `EVENT_LISTENER.md`.
+- **Mesh-active skill-load precondition** (`c0fcc071c`) — when a listener Monitor is armed
+  for this session, both `/cortex-mailbox-poll` AND `/cortex-mailbox-send` MUST be loaded
+  before first transaction. `session-monitor-arm.py` hook emits a `REQUIRED` block in its
+  `additionalContext` payload listing both skills with "before your first transaction"
+  framing. Both templates carry a Mesh-active precondition paragraph in `IDENTITY` as the
+  no-timer backup. New test `test_hook_requires_both_mesh_skills_when_listener_armed`
+  locks the contract in.
+- **`WHEN TO LOAD SKILLS` section** in both templates (`c0fcc071c`) — behavioral load
+  triggers per skill (`/empirica-constitution`, `/epistemic-transaction`, mailbox skills,
+  `/empirica-commands`, `/code-audit`, `/code-docs-align`, `/epistemic-persistence-protocol`).
+  Fixes chronic under-loading where vague triggers ("when unsure") got skipped.
+- **Goals/subtasks worked example** in `TRANSACTION DISCIPLINE` (`c0fcc071c`) —
+  `goals-create` → `goals-add-subtask` → `goals-complete-subtask --evidence` decomposition,
+  showing what the discipline looks like in practice.
+
+### Fixed — Release pipeline
+- **Race-tolerant `create_github_release`** in `scripts/release.py` (`57870621c`). When the
+  CI workflow publishes the release before local `--publish` gets there, the previous
+  `gh release create` would non-zero-exit and `error()` would `sys.exit(1)`, silently
+  skipping all downstream steps (`update_homebrew_tap`, `build_and_push_chocolatey`). **This
+  is the verified root cause of v1.9.6 missing the Homebrew tap.** New behavior: try create
+  with `check=False`; on failure, `gh release view` to detect CI race; if release exists,
+  `gh release upload --clobber` to keep asset parity and continue. Only sys.exit on real
+  failures.
+- **Verbose `update_homebrew_tap` diagnostics** (`57870621c`). Per-candidate path logging
+  when searching for the tap repo, cleaner failure message with the literal commands to
+  run manually. Future skip will say exactly which paths were checked and why each missed.
+- **Lint cleanup**: `S110` noqa-with-reason on the `ai_id` fallback in
+  `empirica/core/cockpit/instance_state.py:152` (added during the basename rollout); `I001`
+  import-order auto-fixed in two `tests/test_cockpit_tui.py` spots. `ruff check` now clean
+  across the full repo.
+
+### Changed — CHECK gate framing (docs)
+Three refinement commits (`fbfbbf3f2` → `8d4e318f8` → `2f9eded88`) — final shape: the
+discriminator for "do I need to CHECK?" is **grounded predictive ability vs priors**, not
+vectors and not ceremony. External grounding includes web/MCP/cross-project searches, not
+just local `Read`/`Grep`/`investigate`. Removed vector-mechanic talk from user-facing
+templates (that talk was a bypass recipe — describing the gate is the gaming hint).
+Applied across both templates + the `feedback_pass_check_gate_before_praxic` memory.
+
+### Changed — Setup output
+- `setup-claude-code` summary header now honest about per-file behavior (`f8e96fb7a`):
+  `Empirica prompt (refreshed)` / `CLAUDE.md (preserved; include line added if missing)`.
+  Previous output listed `~/.claude/CLAUDE.md` as if it would be overwritten — false alarm
+  for users with personal content there.
+
+### Wake mesh — back-fill from 2026-05-16
+
+(Folded into 1.9.7 because they shipped post-tag without their own bump.)
+
+- **ntfy tag-filter subscription** (`fcd4ed0fa`, `c9981f35e`). Listener subscribes with
+  `?tags=<ai_id>` so per-event wake traffic scales `O(involved_instances)` not
+  `O(N_instances)`. Default on once cortex side ships matching publish-time tags. Override
+  `EMPIRICA_NTFY_TAG_FILTER=false` for unfiltered (audit dashboards, debugging).
+- **`ai_id = project basename` convention** (`2a19b2f0f`). Strip `empirica-` prefix where
+  present (`empirica-cortex` → `cortex`, `empirica-outreach` → `outreach`, plain `empirica`
+  stays `empirica`). Rolled out across 4 surfaces: system prompt + cortex-mailbox-poll
+  skill + `EVENT_LISTENER.md` + `setup-claude-code` writes the derived value into
+  `.empirica/project.yaml`. Replaces the old `<role>-claude` pattern.
+- **ntfy token + Bearer auth + `notify.yaml` fallback** (`9dd2ef86c`) — unblocks listener
+  subscription on fresh installs. Token (`tk_*` prefix) preferred over basic auth.
+- **Hook + TUI install path + aggregator aligned to `ai_id`** (`1aa74a3aa`). Was a mix of
+  pane IDs and basenames; now consistently the basename.
+- **TUI systemd matching via prefix** (`d96bde0c8`) — was matching the literal string
+  `'systemd'` which broke `systemd-user` detection.
+- **Bootstrap-emit pending wake events on first run** (`910bd52cd`). Previously
+  bootstrap recorded state-of-the-world WITHOUT emitting; now first run emits any
+  pending ECO-decided items so the AI processes the backlog without waiting for the
+  next push.
+- **TUI Events press actively wakes target pane** (`063e8556a`). Was advisory-only;
+  now sends Space+Enter into the target pane so the AI processes any queued state.
+- **TUI L+E collapsed into unified Events button** + always-visible `AutoAccept` chip
+  (`178659d29`).
+- **CLI stops creating stray `.empirica/` subdirs** (`77f64e4ab`) — bootstrap now resolves
+  the project root before any directory creation.
+- **`EVENT_LISTENER.md` — first-class architecture doc** for the push-primary wake bridge,
+  with full fresh-install path + common pitfalls table (`6f0cc2cab`, `ad6cf1ddc`).
+
 ## [1.9.6] — 2026-05-16
 
 The "epistemic email for the AI age" release — canonical loops decouple
