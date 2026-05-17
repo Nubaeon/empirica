@@ -630,3 +630,107 @@ def test_dead_ends_endpoint_returns_approach_and_why_failed(tmp_path, monkeypatc
     assert len(dead_ends) == 1
     assert dead_ends[0]["body"] == "tried passport.js"
     assert dead_ends[0]["why_failed"] == "too heavy"
+
+
+# ── description field shipping (David, 2026-05-17) ──────────────────────
+
+
+def test_goals_endpoint_ships_description_when_present(tmp_path, monkeypatch, reset_daemon_cache):
+    """Daemon /api/v1/goals must return the description column when the
+    DB has it (migration 043 ran). Pre-fix the SELECT didn't include
+    description so extension rendered title-only goals even when bodies
+    were stored — David observed it 2026-05-17."""
+    pid = str(uuid.uuid4())
+    proj = _make_project_with_db(tmp_path, pid)
+    db_path = proj / ".empirica" / "sessions" / "sessions.db"
+
+    body = "Long-form context: see PROPOSAL_X.md for the full ask + acceptance criteria."
+    conn = sqlite3.connect(str(db_path))
+    # Test fixture uses minimal schema — ALTER to match post-migration-043 shape.
+    conn.execute("ALTER TABLE goals ADD COLUMN description TEXT DEFAULT NULL")
+    conn.execute(
+        "INSERT INTO goals (id, project_id, objective, description, status, "
+        "is_completed, goal_data, created_timestamp) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (str(uuid.uuid4()), pid, "Short title", body, "in_progress", 0, "{}", time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+    with patch("empirica.utils.session_resolver.InstanceResolver.project_path", return_value=str(proj)):
+        monkeypatch.chdir(proj)
+        client = TestClient(create_serve_app())
+        goals = client.get("/api/v1/goals").json()["goals"]
+
+    assert len(goals) == 1
+    assert goals[0]["objective"] == "Short title"
+    assert goals[0]["description"] == body, "description must round-trip through the API"
+
+
+def test_goals_endpoint_handles_old_schema_without_description_column(tmp_path, monkeypatch, reset_daemon_cache):
+    """Old project DBs from before migration 043 don't have the
+    description column. The endpoint must NOT 500 on those — it should
+    return description=None and the rest of the row intact. PRAGMA-based
+    column check in _table_has_column gates the SELECT."""
+    pid = str(uuid.uuid4())
+    proj = _make_project_with_db(tmp_path, pid)
+    db_path = proj / ".empirica" / "sessions" / "sessions.db"
+
+    # Simulate pre-043 schema by dropping the description column.
+    conn = sqlite3.connect(str(db_path))
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(goals)").fetchall()]
+    if "description" in cols:
+        # SQLite supports DROP COLUMN since 3.35. Rebuild approach for portability:
+        keep = [c for c in cols if c != "description"]
+        col_list = ", ".join(keep)
+        conn.execute(f"CREATE TABLE goals_new AS SELECT {col_list} FROM goals")
+        conn.execute("DROP TABLE goals")
+        conn.execute("ALTER TABLE goals_new RENAME TO goals")
+    conn.execute(
+        "INSERT INTO goals (id, project_id, objective, status, is_completed, goal_data, created_timestamp) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (str(uuid.uuid4()), pid, "Pre-043 goal", "in_progress", 0, "{}", time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+    with patch("empirica.utils.session_resolver.InstanceResolver.project_path", return_value=str(proj)):
+        monkeypatch.chdir(proj)
+        client = TestClient(create_serve_app())
+        resp = client.get("/api/v1/goals")
+
+    assert resp.status_code == 200, "endpoint must not 500 on old-schema DB"
+    goals = resp.json()["goals"]
+    assert len(goals) == 1
+    assert goals[0]["objective"] == "Pre-043 goal"
+    assert goals[0]["description"] is None, "old-schema rows surface description=None"
+
+
+def test_decisions_endpoint_ships_description_when_present(tmp_path, monkeypatch, reset_daemon_cache):
+    """Same regression class as goals — migration 045 added description
+    to decisions+assumptions; daemon endpoint never SELECTed it."""
+    pid = str(uuid.uuid4())
+    proj = _make_project_with_db(tmp_path, pid)
+    db_path = proj / ".empirica" / "sessions" / "sessions.db"
+
+    body = "Long rationale with multi-paragraph context about trade-offs and alternatives."
+    conn = sqlite3.connect(str(db_path))
+    # Test fixture uses minimal schema — ALTER to match post-migration-045 shape.
+    conn.execute("ALTER TABLE decisions ADD COLUMN description TEXT DEFAULT NULL")
+    conn.execute(
+        "INSERT INTO decisions (id, project_id, choice, rationale, description, "
+        "confidence_at_decision, reversibility, created_timestamp) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (str(uuid.uuid4()), pid, "Use SQLite", "short rationale", body,
+         0.8, "exploratory", time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+    with patch("empirica.utils.session_resolver.InstanceResolver.project_path", return_value=str(proj)):
+        monkeypatch.chdir(proj)
+        client = TestClient(create_serve_app())
+        decisions = client.get("/api/v1/decisions").json()["decisions"]
+
+    assert len(decisions) == 1
+    assert decisions[0]["description"] == body

@@ -376,16 +376,40 @@ def _list_mistakes(db, project_id: str, limit: int) -> list[dict[str, Any]]:
     ]
 
 
+def _table_has_column(db, table: str, column: str) -> bool:
+    """Cheap PRAGMA-based column existence check.
+
+    Used to keep daemon endpoints schema-resilient: the same query shape
+    must work on old project DBs (migration 043/045 hasn't run yet —
+    no `description` column) and new ones (column present). Falls back
+    to False on any error so callers default to the old-shape SELECT.
+
+    Driver: David, 2026-05-17 — daemon's _list_goals/_list_assumptions/
+    _list_decisions all forgot to SELECT `description` after migrations
+    043+045 added the column. Extension rendered title-only goals even
+    when bodies were stored. This helper lets each list endpoint
+    conditionally include description without breaking old-schema DBs.
+    """
+    try:
+        cursor = db.conn.cursor()
+        cursor.execute(f"PRAGMA table_info({table})")
+        return any(row[1] == column for row in cursor.fetchall())
+    except Exception:
+        return False
+
+
 def _list_assumptions(
     db, project_id: str, confidence_min: float, limit: int
 ) -> list[dict[str, Any]]:
     cursor = db.conn.cursor()
+    has_desc = _table_has_column(db, "assumptions", "description")
+    desc_col = ", description" if has_desc else ""
     cursor.execute(
-        "SELECT id, assumption, confidence, status, resolution_finding_id, "
-        "session_id, goal_id, transaction_id, created_timestamp, resolved_timestamp, "
-        "epistemic_source "
-        "FROM assumptions WHERE project_id = ? AND confidence >= ? "
-        "ORDER BY created_timestamp DESC LIMIT ?",
+        f"SELECT id, assumption, confidence, status, resolution_finding_id, "
+        f"session_id, goal_id, transaction_id, created_timestamp, resolved_timestamp, "
+        f"epistemic_source{desc_col} "
+        f"FROM assumptions WHERE project_id = ? AND confidence >= ? "
+        f"ORDER BY created_timestamp DESC LIMIT ?",
         (project_id, confidence_min, limit),
     )
     rows = cursor.fetchall()
@@ -395,6 +419,7 @@ def _list_assumptions(
             "type": "assumption",
             "title": (r[1] or "")[:100],
             "body": r[1] or "",
+            "description": (r[11] if has_desc and len(r) > 11 else None),
             "confidence": r[2],
             "status": r[3],
             "resolution_finding_id": r[4],
@@ -411,12 +436,14 @@ def _list_assumptions(
 
 def _list_decisions(db, project_id: str, limit: int) -> list[dict[str, Any]]:
     cursor = db.conn.cursor()
+    has_desc = _table_has_column(db, "decisions", "description")
+    desc_col = ", description" if has_desc else ""
     cursor.execute(
-        "SELECT id, choice, rationale, alternatives, confidence_at_decision, "
-        "reversibility, outcome, regret_score, "
-        "session_id, goal_id, transaction_id, created_timestamp, epistemic_source "
-        "FROM decisions WHERE project_id = ? "
-        "ORDER BY created_timestamp DESC LIMIT ?",
+        f"SELECT id, choice, rationale, alternatives, confidence_at_decision, "
+        f"reversibility, outcome, regret_score, "
+        f"session_id, goal_id, transaction_id, created_timestamp, epistemic_source{desc_col} "
+        f"FROM decisions WHERE project_id = ? "
+        f"ORDER BY created_timestamp DESC LIMIT ?",
         (project_id, limit),
     )
     rows = cursor.fetchall()
@@ -437,6 +464,7 @@ def _list_decisions(db, project_id: str, limit: int) -> list[dict[str, Any]]:
             "transaction_id": r[10],
             "created_at": _to_iso(r[11]),
             "epistemic_source": r[12],
+            "description": (r[13] if has_desc and len(r) > 13 else None),
         }
         for r in rows
     ]
@@ -480,9 +508,11 @@ def _list_goals(db, project_id: str, status: str, limit: int) -> list[dict[str, 
         where += " AND is_completed = 1"
     elif status == "planned":
         where += " AND status = 'planned'"
+    has_desc = _table_has_column(db, "goals", "description")
+    desc_col = ", description" if has_desc else ""
     cursor.execute(
         f"SELECT id, objective, status, is_completed, goal_data, "
-        f"session_id, transaction_id, created_timestamp, completed_timestamp "
+        f"session_id, transaction_id, created_timestamp, completed_timestamp{desc_col} "
         f"FROM goals WHERE {where} "
         f"ORDER BY created_timestamp DESC LIMIT ?",
         (*params, limit),
@@ -495,6 +525,7 @@ def _list_goals(db, project_id: str, status: str, limit: int) -> list[dict[str, 
             "id": r[0],
             "type": "goal",
             "objective": r[1],
+            "description": (r[9] if has_desc and len(r) > 9 else None),
             "status": r[2],
             "is_completed": bool(r[3]),
             "subtasks": gd.get("subtasks", []),
