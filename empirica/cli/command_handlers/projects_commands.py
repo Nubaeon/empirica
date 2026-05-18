@@ -514,6 +514,7 @@ def filter_projects(
 
 CORTEX_REGISTER_PATH = "/v1/projects/register"
 CORTEX_ADMIN_PATH = "/v1/admin/projects"
+CORTEX_USER_PROJECTS_PATH = "/v1/users/me/projects"
 
 
 def _resolve_cortex_config(args) -> tuple[str | None, str | None]:
@@ -575,6 +576,42 @@ def _post_project(
             return e.code, None
 
 
+def _link_user_to_project(
+    cortex_url: str,
+    project_id: str,
+    api_key: str,
+    timeout: float,
+) -> dict[str, Any]:
+    """POST /v1/users/me/projects to add project_id to the caller's user.project_ids.
+
+    Cortex's `/v1/projects/register` runs link_user_to_project implicitly on
+    every call regardless of new-vs-existing (SHA 51da2d1, 2026-05-18). This
+    explicit call is **defensive depth** — eliminates the implicit dependency
+    so a future cortex change can't silently break the user-link path. Also
+    covers the `--force-metadata-update` case where the user expects the link
+    to be refreshed even on idempotent re-registers.
+
+    Returns: {linked: bool, status: int, reason?: str}.
+    Status semantics:
+      - 200/201/204 → linked (newly or already present)
+      - 409          → already-linked (treated as success)
+      - else         → failure (non-fatal — register itself already succeeded)
+
+    Closes prop_oqijggci4fctlejurnryhomccm (cortex AI, 2026-05-18).
+    """
+    payload = {"project_id": project_id}
+    try:
+        status, _body = _post_project(
+            cortex_url, CORTEX_USER_PROJECTS_PATH, payload, api_key, timeout,
+        )
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        return {"linked": False, "status": 0,
+                "reason": f"network: {type(e).__name__}: {e}"}
+    if status in (200, 201, 204, 409):
+        return {"linked": True, "status": status}
+    return {"linked": False, "status": status, "reason": f"http {status}"}
+
+
 def _register_one_project(
     project: dict[str, Any],
     cortex_url: str,
@@ -584,7 +621,7 @@ def _register_one_project(
 ) -> dict[str, Any]:
     """Try to register a single project. Returns a per-project result dict.
 
-    Result shape: {name, outcome: registered|skipped|failed, status, reason?}
+    Result shape: {name, outcome: registered|skipped|failed, status, reason?, link?}
 
     When force_metadata_update=True, the request body carries
     `force_metadata_update: true` so the Cortex side (when supported)
@@ -592,6 +629,11 @@ def _register_one_project(
     UUID-shaped placeholders to the real values from the local manifest.
     Without this flag, repeat POSTs return 409/already_exists and the
     stale row is preserved.
+
+    Post-register, attempts an explicit POST /v1/users/me/projects to link
+    the project to the caller's user.project_ids (defensive depth — see
+    `_link_user_to_project` docstring). The link is best-effort; failure
+    there does not flip the register outcome.
     """
     payload: dict[str, Any] = {"name": project["name"]}
     if project.get("repo_url"):
@@ -602,9 +644,11 @@ def _register_one_project(
         payload["force_metadata_update"] = True
 
     # Try the public register path first; fall back to admin on 404/405
+    register_result: dict[str, Any] | None = None
+    project_id: str | None = None
     for path in (CORTEX_REGISTER_PATH, CORTEX_ADMIN_PATH):
         try:
-            status, _body = _post_project(cortex_url, path, payload, api_key, timeout)
+            status, body = _post_project(cortex_url, path, payload, api_key, timeout)
         except (urllib.error.URLError, OSError, TimeoutError) as e:
             return {
                 "name": project["name"],
@@ -614,10 +658,22 @@ def _register_one_project(
             }
 
         if status in (200, 201):
-            return {"name": project["name"], "outcome": "registered", "status": status}
+            if isinstance(body, dict):
+                project_id = body.get("project_id") or body.get("id")
+            register_result = {
+                "name": project["name"], "outcome": "registered",
+                "status": status, "project_id": project_id,
+            }
+            break
         if status == 409:
-            return {"name": project["name"], "outcome": "skipped", "status": 409,
-                    "reason": "already_exists"}
+            if isinstance(body, dict):
+                project_id = body.get("project_id") or body.get("id")
+            register_result = {
+                "name": project["name"], "outcome": "skipped",
+                "status": 409, "reason": "already_exists",
+                "project_id": project_id,
+            }
+            break
         if status in (404, 405) and path == CORTEX_REGISTER_PATH:
             continue  # try admin path
         return {
@@ -627,8 +683,23 @@ def _register_one_project(
             "reason": f"http {status}",
         }
 
-    return {"name": project["name"], "outcome": "failed", "status": 0,
-            "reason": "exhausted endpoints"}
+    if register_result is None:
+        return {"name": project["name"], "outcome": "failed", "status": 0,
+                "reason": "exhausted endpoints"}
+
+    # Defensive user-link (closes prop_oqijggci4fctlejurnryhomccm). Best-effort —
+    # register itself already succeeded; a link failure does NOT flip the
+    # outcome. Surfaced under `link` so callers can surface stragglers.
+    if project_id:
+        register_result["link"] = _link_user_to_project(
+            cortex_url, project_id, api_key, timeout,
+        )
+    else:
+        register_result["link"] = {
+            "linked": False, "status": 0,
+            "reason": "no project_id in register response",
+        }
+    return register_result
 
 
 def _format_register_summary(
