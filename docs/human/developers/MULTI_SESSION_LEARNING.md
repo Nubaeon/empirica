@@ -1,372 +1,208 @@
-# Multi-Session Learning: Compounding Knowledge Across Sessions
+# Multi-Session Learning
 
-**Empirica's superpower:** Learning doesn't reset between sessions. Facts persist, epistemic state improves, agents become smarter over time.
+**Empirica's compounding mechanism:** learning doesn't reset between
+sessions. Findings persist, vectors start higher, transactions converge
+faster. The AI gets smarter on a given project the longer you've worked
+in it.
 
 ---
 
-## Core Concept: Facts + Epistemic State = Exponential Learning
+## The Mechanic
 
-Most systems treat each session as independent. Empirica treats each session as a **continuation**.
+Each transaction carries triple linkage on every noetic artifact:
 
-```
-Session 1, Transaction 1 (Start)
-  PREFLIGHT: know=0.4, uncertainty=0.9
-  ↓ (investigate, log findings)
-  POSTFLIGHT: know=0.65, uncertainty=0.6
-  → Findings stored with transaction_id linkage (~450 tokens)
-
-Session 2, Transaction 2 (Bootstrap)
-  Load findings from Transaction 1
-  PREFLIGHT: know=0.7, uncertainty=0.4  ← Higher starting point!
-  ↓ (investigate, fewer gaps to fill)
-  POSTFLIGHT: know=0.85, uncertainty=0.2  ← Faster convergence
-
-Session 3, Transaction 3 (Accelerated)
-  Load findings from Transactions 1 + 2
-  PREFLIGHT: know=0.8, uncertainty=0.25  ← Even higher!
-  ↓ (investigate, targeted deep-dives)
-  POSTFLIGHT: know=0.92, uncertainty=0.1
-```
-
-**The pattern:** Learning compounds exponentially. Transaction N builds on Transactions 1...N-1.
-
-**Triple linkage:** Every noetic artifact (finding, unknown, dead-end) carries:
-- `session_id` — temporal context (which context window)
+- `session_id` — temporal context (which working window)
+- `transaction_id` — measurement context (PREFLIGHT → POSTFLIGHT)
 - `goal_id` — structural context (which objective)
-- `transaction_id` — measurement context (which PREFLIGHT→POSTFLIGHT cycle)
+
+When Session N+1 opens, `project-bootstrap` loads the recent findings,
+open unknowns, dead-ends, and decisions from prior transactions —
+~800–2000 tokens of compressed prior state — so PREFLIGHT starts
+informed.
+
+```
+Session 1, Transaction 1
+  PREFLIGHT:  know=0.4, uncertainty=0.9
+  Noetic:     log findings, unknowns, dead-ends
+  POSTFLIGHT: know=0.65, uncertainty=0.55
+              → ~450 tokens of artifacts stored
+
+Session 2, Transaction 2 (project-bootstrap loaded)
+  PREFLIGHT:  know=0.70, uncertainty=0.40   ← Starts higher
+  Noetic:     fewer gaps to fill, targeted reads
+  POSTFLIGHT: know=0.85, uncertainty=0.20   ← Faster convergence
+
+Session N, Transaction N (compound)
+  PREFLIGHT:  know=0.85, uncertainty=0.20
+  Noetic:     surgical investigation of remaining unknowns
+  POSTFLIGHT: know=0.95, uncertainty=0.10
+```
+
+Each transaction builds on every transaction that came before it.
 
 ---
 
-## How It Works
+## Worked Example — Bug Fix Across 2 Sessions
 
-### 1. Transaction 1: Initial Investigation
-
+**Session 1:**
 ```bash
-# Start session
-empirica session-create --ai-id claude-rovo
-
-# PREFLIGHT: Opens transaction, establishes baseline
+empirica session-create --ai-id $(basename $PWD)
 empirica preflight-submit - << 'EOF'
 {
-  "session_id": "auto",
-  "task_description": "Investigate auth system",
-  "vectors": {"know": 0.4, "uncertainty": 0.9, "do": 0.1}
+  "task_context": "Fix auth bug in login flow",
+  "vectors": {"know": 0.7, "uncertainty": 0.5, "context": 0.6}
 }
 EOF
 
-# NOETIC: Investigate and log findings (session_id auto-derived)
-empirica finding-log --finding "Auth system uses OAuth2 + JWT" --impact 0.7
+empirica finding-log --finding "Login uses JWT, 1h expiry" --impact 0.7
+empirica finding-log --finding "Refresh endpoint at /auth/refresh" --impact 0.5
+empirica unknown-log --unknown "How are expired tokens handled?"
+empirica unknown-log --unknown "Is token revocation implemented?"
 
-empirica unknown-log --session-id <ID> \
-  --unknown "How are refresh tokens managed?"
-
-empirica deadend-log --session-id <ID> \
-  --approach "Token rotation" \
-  --why-failed "Logic not in main code"
-
-# POSTFLIGHT: Final assessment
-empirica postflight-submit \
-  --session-id <ID> \
-  --vectors '{"know": 0.65, "uncertainty": 0.6, ...}'
-
-# Git automatically stores findings in notes (~450 tokens)
+empirica postflight-submit - << 'EOF'
+{
+  "vectors": {"know": 0.8, "uncertainty": 0.4, "context": 0.75}
+}
+EOF
+# All artifacts stored — refs/notes/empirica_findings + sessions.db
 ```
 
-**What gets stored:**
-- All findings logged
-- All unknowns discovered
-- All dead-ends explored
-- Epistemic vectors (final state)
-- Session metadata
+**Session 2 (next day):**
+```bash
+empirica session-create --ai-id $(basename $PWD)
+empirica project-bootstrap     # loads Session 1's findings + unknowns
 
-### 2. Session 2: Bootstrap + Deep Dive
+# PREFLIGHT informed by Session 1's artifacts
+empirica preflight-submit - << 'EOF'
+{
+  "task_context": "Continue auth bug — target Session 1's open unknowns",
+  "vectors": {"know": 0.80, "uncertainty": 0.30, "context": 0.80}
+}
+EOF
+# ↑ Starts where Session 1 ended
+
+empirica finding-log --finding "Expired tokens → 401, redirect to /login" --impact 0.6
+empirica finding-log --finding "Token revocation via Redis blacklist (24h TTL)" --impact 0.7
+
+# Resolve the open unknowns from Session 1
+empirica unknown-resolve --unknown-id <ID> --resolution "401 + redirect; see auth.py:142"
+empirica unknown-resolve --unknown-id <ID> --resolution "Redis blacklist; see revoke.py"
+
+empirica postflight-submit - << 'EOF'
+{
+  "vectors": {"know": 0.92, "uncertainty": 0.10, "context": 0.90, "completion": 1.0}
+}
+EOF
+```
+
+**Result:** Two focused sessions, each with clear deltas, instead of one
+long uncertain one.
+
+---
+
+## Multi-AI Coordination
+
+Two AIs working the same repo see each other's artifacts (via git notes
+if pushed):
+
+```
+AI A (Day 1): Investigates database schema.
+              POSTFLIGHT logs 8 findings about indexes, FK constraints.
+              git push origin 'refs/notes/empirica_*'
+
+AI B (Day 2): empirica project-bootstrap loads AI A's findings.
+              PREFLIGHT starts with high context on the database.
+              Focuses on application layer instead of re-discovering schema.
+
+AI A (Day 3): Returns. project-bootstrap shows AI B's application-layer findings.
+              Full picture now.
+```
+
+**Push policy:** artifacts are local until you opt in:
+```bash
+git push origin 'refs/notes/empirica_*:refs/notes/empirica_*'
+git fetch origin 'refs/notes/empirica_*:refs/notes/empirica_*'
+```
+
+---
+
+## Best Practices
+
+### Log specifically
 
 ```bash
-# Start new session
-empirica session-create --ai-id claude-rovo
-
-# Bootstrap AUTOMATICALLY loads previous findings
-empirica preflight-submit \
-  --session-id <NEW_ID>
-  # Bootstrap fills in: prior findings, unknowns, dead-ends
-
-# Your PREFLIGHT now reflects prior learning
-# → know starts higher (0.7 vs 0.4)
-# → uncertainty lower (0.4 vs 0.9)
-
-# NOETIC: Targeted investigation (fewer gaps)
-empirica finding-log --session-id <NEW_ID> \
-  --finding "Refresh tokens stored in Redis"
-  # Resolves the unknown from Session 1!
-
-empirica finding-log --session-id <NEW_ID> \
-  --finding "Token rotation happens daily via scheduler"
-  # Resolves the dead-end from Session 1!
-
-# POSTFLIGHT: Faster convergence
-empirica postflight-submit \
-  --session-id <NEW_ID> \
-  --vectors '{"know": 0.85, "uncertainty": 0.2, ...}'
-```
-
-**Key insight:** Previous unknowns and dead-ends become investigation targets in next session.
-
-### 3. Session 3+: Accelerated Learning
-
-By Session 3, the agent:
-- Starts with higher confidence (bootstrapped findings)
-- Investigates fewer topics (already understood)
-- Converges faster (targeted deep-dives)
-- Builds on compound knowledge
-
----
-
-## Practical Examples
-
-### Example 1: Bug Fix Across 2 Sessions
-
-**Session 1:**
-```
-Task: "Fix authentication bug in login flow"
-
-PREFLIGHT: know=0.7, uncertainty=0.5
-  (Have general codebase knowledge, but uncertain about auth)
-
-NOETIC Investigation:
-  - Find: "Login uses JWT tokens with 1-hour expiry"
-  - Find: "Refresh endpoint at /auth/refresh"
-  - Unknown: "How are expired tokens handled?"
-  - Unknown: "Is token revocation implemented?"
-
-POSTFLIGHT: know=0.8, uncertainty=0.4
-  (Better understanding, but still gaps)
-
-Session ends. All findings logged to git.
-```
-
-**Session 2:**
-```
-PREFLIGHT (with bootstrap):
-  - Previous findings loaded
-  - Previous unknowns highlighted
-  - PREFLIGHT: know=0.8, uncertainty=0.3
-    (Starting where Session 1 left off!)
-
-NOETIC Investigation:
-  - Investigate: "Expired token handling"
-  - Find: "Expired tokens return 401, redirect to login"
-  - Find: "Token revocation implemented via Redis blacklist"
-  
-  All unknowns from Session 1 RESOLVED.
-
-POSTFLIGHT: know=0.92, uncertainty=0.1
-  (Nearly complete understanding)
-
-PRAXIC: Fix bug with full confidence
-```
-
-**Result:** Two targeted sessions instead of one long uncertain one.
-
----
-
-### Example 2: Complex Feature Across 3 Sessions
-
-**Session 1 (Architecture):**
-```
-PREFLIGHT: know=0.5, uncertainty=0.8
-Task: "Build payment processing integration"
-
-NOETIC:
-  - Find: "System uses Stripe for payments"
-  - Find: "Payments workflow: order → stripe → webhook → fulfillment"
-  - Unknown: "How are webhook credentials secured?"
-  - Dead-end: "Looked for API key storage, not in main code"
-
-POSTFLIGHT: know=0.65, uncertainty=0.65
-```
-
-**Session 2 (Security):**
-```
-PREFLIGHT (bootstrap): know=0.7, uncertainty=0.5
-
-NOETIC:
-  - Investigate: Previous unknowns
-  - Find: "Webhook secrets stored in Doppler secrets manager"
-  - Find: "Signature verification on all webhooks"
-  - Unknown: "What's the rotation policy for secrets?"
-  - Dead-end (previous): NOW RESOLVED - secrets in Doppler!
-
-POSTFLIGHT: know=0.8, uncertainty=0.3
-```
-
-**Session 3 (Implementation):**
-```
-PREFLIGHT (bootstrap): know=0.82, uncertainty=0.25
-
-NOETIC:
-  - Quick review of findings
-  - Targeted investigation: Rotation policy
-  - Find: "Annual rotation scheduled"
-
-POSTFLIGHT: know=0.9, uncertainty=0.15
-  Ready to implement with full confidence
-
-PRAXIC: Implement payment integration
-  → Faster (3rd session)
-  → More confident (compound learning)
-  → Fewer mistakes (previous dead-ends avoid pitfalls)
-```
-
----
-
-### Example 3: Team Multi-Agent Sessions
-
-**Scenario:** Two agents working on same project
-
-**Agent 1 (Day 1):**
-```
-Investigates: Database architecture
-POSTFLIGHT: Logs findings about schema, performance characteristics
-
-Results stored in git notes.
-```
-
-**Agent 2 (Day 2):**
-```
-Starts new session
-Bootstrap loads Agent 1's findings (same repo)
-
-PREFLIGHT:
-  - Already understands database architecture
-  - Can focus on application layer instead
-  
-More efficient than Agent 2 re-discovering what Agent 1 found
-```
-
-**Agent 1 (Day 3, Returns):**
-```
-Resumes session (or starts new with same repo)
-Bootstrap loads Agent 2's findings
-
-Continues work with full context from both previous sessions
-```
-
-**Result:** Team knowledge compounds, efficiency multiplies.
-
----
-
-## Best Practices for Multi-Session Learning
-
-### 1. Log Comprehensively
-```bash
-# Do this in Session N to help Session N+1
-empirica finding-log --finding "What you learned"
-empirica unknown-log --unknown "What's still unclear"
-empirica deadend-log --approach "What you tried" --why-failed "Why it failed"
-empirica mistake-log --mistake "Error made" --prevention "How to avoid"
-```
-
-### 2. Use Detailed Findings
-```bash
-# Bad (too vague)
+# ❌ Vague — useless to future you
 empirica finding-log --finding "Auth works"
 
-# Good (specific, actionable)
-empirica finding-log --finding "Auth system uses OAuth2 with Google provider, tokens expire after 1 hour, refresh tokens stored in Redis with 30-day TTL"
+# ✅ Specific — actionable
+empirica finding-log --finding "Auth uses OAuth2 with Google; access tokens 1h TTL, refresh in Redis 30d TTL" --impact 0.7
 ```
 
-### 3. Record Unknowns Early
+### Log unknowns early
+
 ```bash
-# Log unknowns as soon as you discover them
 empirica unknown-log --unknown "How are secrets rotated?"
-
-# Session N+1 will target these unknowns automatically
+# Next session's project-bootstrap surfaces this as an investigation target.
 ```
 
-### 4. Don't Repeat Dead-Ends
+### Log dead-ends with reasons
+
 ```bash
-# Log dead-ends to avoid repeating them
 empirica deadend-log \
-  --approach "Looked for token rotation in main code" \
-  --why-failed "Logic is in scheduler service, not main app"
-
-# Session N+1 knows to look in scheduler service instead
+  --approach "Looked for token rotation in main app code" \
+  --why-failed "Logic lives in scheduler service, not main app"
+# Future you (or another AI) won't waste time on the same hunt.
 ```
 
-### 5. POSTFLIGHT Honestly
-```bash
-# Be honest about uncertainty
-empirica postflight-submit \
-  --vectors '{"know": 0.75, "uncertainty": 0.35, ...}'
-
-# Not inflated:
-  # ✗ "know": 0.95 (overconfident)
-# Not deflated:
-  # ✗ "know": 0.5 (underconfident)
-
-# Honest assessment enables accurate bootstrap
-```
-
----
-
-## The Compounding Effect
-
-Each session improves the baseline for the next:
-
-```
-Session 1: know=0.65  (foundation)
-Session 2: know=0.80  (+0.15)  <- 23% improvement
-Session 3: know=0.90  (+0.10)  <- 12% improvement (diminishing returns, as expected)
-Session 4: know=0.94  (+0.04)  <- Approaching saturation
-```
-
-**Why it matters:**
-- Session 1: High investigation cost (many unknowns)
-- Session 2: Lower investigation cost (fewer unknowns to resolve)
-- Session 3+: Focused deep-dives (only remaining nuances)
-
-**Token efficiency:** Each session needs fewer investigative tokens because prior sessions resolved the broad gaps.
-
----
-
-## Advanced: Cross-Project Learning
-
-When multiple projects share knowledge:
+### POSTFLIGHT honestly
 
 ```bash
-# Project A, Session 1
-empirica finding-log --finding "Our OAuth provider uses standard OIDC"
-
-# Project B, Session 1 (different repo)
-# If bootstrapped from Project A's findings:
-# → Starts knowing about OIDC
-# → Can focus on project-specific integration
-
-# Result: Company-wide knowledge compounds
+# If uncertainty is still high, don't pretend it isn't
+empirica postflight-submit - << 'EOF'
+{
+  "vectors": {"know": 0.75, "uncertainty": 0.45, "completion": 0.7},
+  "reasoning": "Found root cause but didn't validate fix end-to-end. Test coverage gap."
+}
+EOF
 ```
 
----
-
-## Summary
-
-Multi-session learning in Empirica:
-
-1. **Persistent facts:** Findings stored in git notes, carry forward
-2. **Improving baseline:** Each session's PREFLIGHT starts higher
-3. **Targeted investigation:** Previous unknowns become next session's focus
-4. **Avoided dead-ends:** Dead-ends prevent repeated mistakes
-5. **Compounding confidence:** Uncertainty decreases exponentially
-
-The loop: **investigate → log → bootstrap → investigate deeper → log more → converge**
-
-By Session N, agents are working with compound knowledge from Sessions 1...N-1.
-
-This is why Empirica's epistemic approach is powerful: **facts + epistemic state = exponential learning**.
+The system rewards calibration (belief matching observation), not high
+scores.
 
 ---
 
-## Next Steps
+## Cross-Project Compounding
 
-- Read: [NOETIC_PRAXIC_FRAMEWORK.md](../../architecture/NOETIC_PRAXIC_FRAMEWORK.md) - How the loop works
-- Read: [SESSION_GOAL_WORKFLOW.md](../end-users/SESSION_GOAL_WORKFLOW.md) - Creating goals for multi-session work
-- Try: Create 2-3 sessions on same project, notice how bootstrap accelerates learning
+```bash
+# Search this project
+empirica project-search --task "auth flow"
+
+# Search across all projects' shared/public artifacts
+empirica project-search --task "auth flow" --global
+```
+
+Opt artifacts in via `--visibility shared` (within-org) or
+`--visibility public` (anyone) on `*-log` commands. Default is
+`local` — explicit choice to share cross-project.
+
+---
+
+## What Gets Stored
+
+| Storage | What | Where |
+|---|---|---|
+| SQLite | Sessions, transactions, artifacts | `.empirica/sessions/sessions.db` |
+| Git notes | Same artifacts (mirror) | `.git/refs/notes/empirica_*` |
+| Qdrant | Embeddings for semantic search | per-project + `global_learnings` |
+| Breadcrumbs | Per-AI calibration | `.empirica/breadcrumbs.yaml` |
+
+The SQLite is canonical; git notes are the shareable mirror.
+
+---
+
+## See Also
+
+- **CASCADE workflow:** [../end-users/EMPIRICA_NATURAL_LANGUAGE_GUIDE.md](../end-users/EMPIRICA_NATURAL_LANGUAGE_GUIDE.md)
+- **Bootstrap:** `empirica project-bootstrap --help`
+- **Cross-project search:** [../../reference/api/CROSS_PROJECT.md](../../reference/api/CROSS_PROJECT.md)
+- **AI self-management:** [AI_SELF_MANAGEMENT.md](AI_SELF_MANAGEMENT.md)

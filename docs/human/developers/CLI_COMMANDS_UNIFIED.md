@@ -1,9 +1,20 @@
-# Empirica CLI Commands - Unified Reference
+# Empirica CLI Commands — Unified Reference
 
-**Total Commands:** 138
-**Framework Version:** 1.6.6
-**Generated:** 2026-02-07
-**Status:** Production Ready
+**Framework Version:** 1.9.8+
+**Last comprehensive regeneration:** 2026-02-07 (against 1.6.6)
+**Status:** Production — partial currency, see disclaimer
+
+> **Currency disclaimer.** This document was last regenerated in February
+> 2026 against framework 1.6.6. Many commands have been added, renamed,
+> or had their flags refined since then (notably the canonical-loops
+> verbs, sources lifecycle, daemon/registry verbs, log-artifacts batch,
+> commit-context walker, projects-discover / projects-list /
+> projects-bulk-register, and the cortex-mediated mesh-orchestration set).
+> When in doubt, trust `empirica <command> --help` over this document.
+> Full regeneration from current parsers is tracked as a planned goal.
+>
+> For the authoritative current surface: `empirica` (no args — prints
+> the curated core surface) or `empirica --help` (full subparser list).
 
 > **API Reference:** For Python API details, see [API Reference](../../reference/api/README.md). Each API doc includes relevant CLI commands.
 

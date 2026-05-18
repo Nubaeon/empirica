@@ -1,16 +1,17 @@
 # Human Documentation
 
-**Documentation written for human readers - developers and end-users.**
+**Docs written for human readers — end-users and developers.**
 
 ---
 
-## Choose Your Path
+## Pick Your Path
 
-| You Are | Start Here | What You'll Learn |
-|---------|------------|-------------------|
-| **New to Empirica** | [end-users/01_START_HERE.md](end-users/01_START_HERE.md) | Installation, core concepts, first session |
-| **Developer integrating AI** | [developers/CLAUDE_CODE_SETUP.md](developers/CLAUDE_CODE_SETUP.md) | Claude Code hooks, system prompts, API |
-| **Want a simple overview** | [end-users/EMPIRICA_EXPLAINED_SIMPLE.md](end-users/EMPIRICA_EXPLAINED_SIMPLE.md) | Plain English explanation |
+| You are | Start here | What you'll learn |
+|---|---|---|
+| **New to Empirica** | [end-users/01_START_HERE.md](end-users/01_START_HERE.md) | Install + first transaction in 5 minutes |
+| **Want a plain-English overview** | [end-users/EMPIRICA_EXPLAINED_SIMPLE.md](end-users/EMPIRICA_EXPLAINED_SIMPLE.md) | What Empirica measures and why |
+| **Developer integrating AI** | [developers/CLAUDE_CODE_SETUP.md](developers/CLAUDE_CODE_SETUP.md) | Hooks, system prompts, MCP server |
+| **Building on Empirica** | [developers/EXTENDING_EMPIRICA.md](developers/EXTENDING_EMPIRICA.md) | Foundation layer + extension patterns |
 
 ---
 
@@ -18,40 +19,44 @@
 
 ### [end-users/](end-users/)
 
-Getting started guides and conceptual explanations.
+Getting-started guides and conceptual explanations.
 
-- **Installation & Setup** - How to install and configure Empirica
-- **Conceptual Guides** - Understanding vectors, workflows, and phases
-- **Troubleshooting** - Common issues and solutions
-- **Integrations** - BEADS, MCP, and other tools
+- **Setup & install** — project-init, setup-claude-code, troubleshooting
+- **Concepts** — the 13 vectors, sessions vs transactions, the measurement model
+- **Workflows** — CLI patterns, goal lifecycle, project management
+- **Integrations** — BEADS, MCP
 
 ### [developers/](developers/)
 
-Technical guides for AI integration.
+Technical guides for AI integration + building on Empirica.
 
-- **AI Integration** - Claude Code setup, multi-session learning
-- **System Prompts** - Model-specific prompts (Claude, Qwen, Gemini, etc.)
-- **CLI Reference** - Complete command documentation
-- **Skills** - Custom skill development
+- **AI integration** — Claude Code hooks, multi-session learning, self-management
+- **Reference** — CLI catalog, MCP server, epistemic health quick reference
+- **Building** — foundation layer extensions, skill pipeline, training-export
+- **Integrations** — BEADS architecture + git bridge
 
 ---
 
 ## Key Guides
 
 | Guide | Audience | Purpose |
-|-------|----------|---------|
+|---|---|---|
 | [Getting Started](end-users/01_START_HERE.md) | Everyone | First-time setup |
-| [Empirica Explained Simply](end-users/EMPIRICA_EXPLAINED_SIMPLE.md) | Everyone | Conceptual overview |
-| [Epistemic Vectors](end-users/05_EPISTEMIC_VECTORS_EXPLAINED.md) | Everyone | Understanding the 13 vectors |
-| [Claude Code Setup](developers/CLAUDE_CODE_SETUP.md) | Developers | AI integration |
-| [CLI Reference](developers/CLI_COMMANDS_UNIFIED.md) | Developers | All commands |
-| [AI Self-Management](developers/AI_SELF_MANAGEMENT.md) | Developers | System-prompt source of truth + edit paths |
+| [Empirica Explained Simply](end-users/EMPIRICA_EXPLAINED_SIMPLE.md) | Everyone | Plain-English overview |
+| [13 Epistemic Vectors](end-users/05_EPISTEMIC_VECTORS_EXPLAINED.md) | Everyone | The measurement model |
+| [Claude Code Setup](developers/CLAUDE_CODE_SETUP.md) | Developers | Plugin + hooks + statusline |
+| [CLI Reference](developers/CLI_COMMANDS_UNIFIED.md) | Developers | All commands (see currency disclaimer) |
+| [AI Self-Management](developers/AI_SELF_MANAGEMENT.md) | Developers | Self-serve docs + prompt improvement |
+| [Multi-Session Learning](developers/MULTI_SESSION_LEARNING.md) | Developers | How knowledge compounds across sessions |
 
 ---
 
-## For AI Context Loading
+## For AI Context
 
-These docs are **not indexed for AI context loading**. Use `docs/architecture/` for AI-readable documentation that maps to actual code classes.
+This `human/` tree is written for human readers (developers + end-users).
+For AI-readable architectural reference that maps to actual code, see
+[../architecture/](../architecture/). For Python API and schema details,
+see [../reference/](../reference/).
 
 ---
 

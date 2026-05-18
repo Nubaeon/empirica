@@ -1,136 +1,232 @@
-# Claude Code + Empirica Setup Guide
+# Claude Code + Empirica Setup
 
-**Time:** 5 minutes | **Cross-platform** | **Automated or manual**
-
-This guide sets up Empirica for Claude Code users on Linux, macOS, or Windows.
+**Time:** 2 minutes (automatic). Cross-platform.
 
 ---
 
-## What You're Installing
+## TL;DR
 
-| Component | Purpose | Location |
-|-----------|---------|----------|
-| `empirica` | CLI + Python library | pip package |
-| `empirica-mcp` | MCP server for Claude Code | pip package |
-| Claude Code plugin | Noetic firewall + epistemic transaction workflow | `~/.claude/plugins/local/` |
-| System prompt | Teaches Claude how to use Empirica | `~/.claude/CLAUDE.md` |
-| Statusline | Real-time epistemic status display | Plugin scripts/ |
-| MCP config | MCP server configuration | `~/.claude/mcp.json` |
+```bash
+pip install empirica empirica-mcp
+cd your-project
+empirica project-init
+empirica setup-claude-code      # the canonical path
+empirica diagnose               # sanity check
+```
 
-The plugin (v1.7.1) now bundles everything in one package:
-- **Sentinel gate** - Noetic firewall that gates praxic tools until CHECK passes
-- **Session hooks** - Auto-creates sessions, bootstraps projects, captures POSTFLIGHT
-- **Statusline script** - Shows epistemic state in terminal
-- **Templates** - CLAUDE.md, mcp.json, settings snippets
+That's the supported flow. The sections below explain what
+`setup-claude-code` does and how to interpret the statusline. Manual
+install is in the appendix only for environments where the automated
+flow can't run.
 
 ---
 
-## Quick Install (Recommended)
+## What Gets Installed
 
-Run the interactive installer from the Empirica repository:
+| Component | Purpose | Where |
+|---|---|---|
+| Plugin | Hooks (Sentinel, session lifecycle, compaction), skills, statusline script | `~/.claude/plugins/local/empirica/` |
+| `CLAUDE.md` | System prompt include (`@~/.claude/empirica-system-prompt.md`) | `~/.claude/CLAUDE.md` |
+| Lean system prompt | Canonical prompt rendered with installed version | `~/.claude/empirica-system-prompt.md` |
+| Settings | `statusLine` block + hooks for all events | `~/.claude/settings.json` |
+| MCP config | `empirica-mcp` server registration | `~/.claude/mcp.json` |
+| Marketplace | Local plugin registry | `~/.claude/plugins/known_marketplaces.json` |
 
-```bash
-# Clone or navigate to Empirica repo
-git clone https://github.com/Nubaeon/empirica.git
-cd empirica
-
-# Run installer
-python scripts/install.py
-```
-
-The installer will:
-- Install the Empirica package if needed
-- Ask about autopilot, auto-postflight, sentinel looping preferences
-- Configure Qdrant URL (for semantic search)
-- Set up Ollama embeddings (recommends `qwen3-embedding`)
-- Install the Claude Code plugin and skill
-- Update your shell profile with environment variables
-
-**Non-interactive mode** (use defaults):
-```bash
-python scripts/install.py --non-interactive
-```
+`setup-claude-code` is idempotent — re-running with `--force` updates
+files but preserves user overrides in `CLAUDE.md`.
 
 ---
 
-## Manual Installation
+## What the Hooks Do
 
-If you prefer manual setup or the installer doesn't work:
+| Hook | Event | Purpose |
+|---|---|---|
+| `sentinel-gate.py` | PreToolUse | Noetic firewall — blocks Edit/Write/Bash until valid CHECK |
+| `tool-router.py` | UserPromptSubmit | Context injection (active goals, artifact reminders) |
+| `pre-compact.py` | PreCompact | Saves epistemic state to breadcrumbs before context loss |
+| `session-init.py` | SessionStart (startup) | Creates session, bootstraps project, posts orientation |
+| `post-compact.py` | SessionStart (compact/resume) | Recovers state after compaction |
+| `ewm-protocol-loader.py` | SessionStart | Loads `workflow-protocol.yaml` if EWM interview ran |
+| `transaction-enforcer.py` | Stop | Reminds about open transaction before session end |
+| `subagent-start.py` / `subagent-stop.py` | SubagentStart/Stop | Child session lineage + findings rollup |
+| `session-end-postflight.py` | SessionEnd | Auto-POSTFLIGHT if a transaction is still open |
+| `curate-snapshots.py` | SessionEnd | Prunes old snapshots |
+| `session-monitor-arm.py` | SessionStart | Arms Monitor for canonical loops if registered |
 
-### Step 1: Install Package
-
-```bash
-pip install empirica
-
-pip install empirica-mcp
-```
-
-Verify:
-```bash
-empirica --version
-# Should show: 1.7.1 (or later)
-```
-
----
-
-## Step 2: Add System Prompt
-
-The full system prompt teaches Claude how to use Empirica with calibration data, memory commands, and workflow guidance.
-
-**Option A: Copy from plugin (recommended after Step 4):**
-```bash
-cp ~/.claude/plugins/local/empirica/templates/CLAUDE.md ~/.claude/CLAUDE.md
-```
-
-**Option B: Manual install (recommended for plugin users)**
-
-`empirica setup-claude-code` is the canonical path — it writes the lean
-prompt to `~/.claude/empirica-system-prompt.md` and prepends an
-`@~/.claude/empirica-system-prompt.md` include line to your existing
-`~/.claude/CLAUDE.md` (preserves any user overrides). Add `--full-prompt`
-if you want the legacy verbose template instead of the lean default.
-
-The authoritative source lives in the plugin at:
-- **Lean (default):** `empirica/plugins/claude-code-integration/templates/empirica-system-prompt-lean.md`
-- **Full (legacy `--full-prompt` mode):** `empirica/plugins/claude-code-integration/templates/CLAUDE.md`
-
-Manual copies tend to drift; the setup command keeps you in sync on each release.
-
-**What the system prompt includes:**
-- Calibration data (3,194 observations, bias corrections per vector)
-- Epistemic transaction workflow (PREFLIGHT → CHECK → POSTFLIGHT → POST-TEST)
-- Core commands with correct flags
-- Memory commands (Qdrant integration)
-- Cognitive immune system (lessons decay)
-- Proactive behaviors (pattern recognition, goal hygiene)
-- Epistemic-first task structure
-
-**Quick reference (subset):**
-```bash
-# Session lifecycle
-empirica session-create --ai-id claude-code --output json
-empirica project-bootstrap --session-id <ID> --output json
-
-# Transaction phases
-empirica preflight-submit -     # Baseline (JSON stdin)
-empirica check-submit -         # Gate (JSON stdin)
-empirica postflight-submit -    # Learning delta (JSON stdin)
-
-# Breadcrumbs
-empirica finding-log --finding "..." --impact 0.7
-empirica unknown-log --unknown "..."
-empirica deadend-log --approach "..." --why-failed "..."
-```
-
-**Readiness gate:** Sentinel computes thresholds dynamically from calibration data.
+The Sentinel firewall is the load-bearing one: it gates praxic tools
+(Edit/Write/Bash) until you've passed CHECK with sufficient confidence.
 
 ---
 
-## Step 3: Add Statusline (Recommended)
+## Wizard Flow
 
-The statusline shows real-time epistemic status in your Claude Code terminal.
+After plugin install, `setup-claude-code` runs the **credentials wizard**
+(skip with `--skip-credentials`):
 
-Add to `~/.claude/settings.json` (after installing the plugin in Step 4):
+1. **Cortex** (orchestration API) — URL + `ctx_…` API key
+2. **ntfy** (push wake bridge) — URL + topic + auth token
+3. **Tenant resolution** — after the api_key, fetches `/v1/tenant/me`
+   and persists `{org_id, tenant_slug, mesh_id_prefix}` to your
+   project.yaml. Skip with `--org-id <X>` / `--tenant-slug <Y>` /
+   `--mesh-id-prefix <Z>` flags if you want explicit values.
+
+Credentials land in `~/.empirica/credentials.yaml` (atomic merge,
+preserves other keys). The wizard skips fields you already have set in
+env vars.
+
+---
+
+## The Statusline
+
+A live render looks like:
+
+```
+[empirica] ⚡84% │ 🎯28 ❓47/23 │ CHK 🔨88%→ │ K:90% C:92% │ Δ ✓ │ 58%ctx
+```
+
+| Segment | What it shows |
+|---|---|
+| `[empirica]` | Project (truncated to 20 chars from `project.yaml`) |
+| `⚡84%` | **Overall confidence:** `0.40·know + 0.30·(1−uncertainty) + 0.20·context + 0.10·completion` |
+| `🎯N ❓N/N` | Open goals · open unknowns / blocking unknowns |
+| `PRE/CHK/POST` | Current transaction phase |
+| `🔍/🔨` | Noetic (investigating) / praxic (acting) |
+| `XX%` after phase | Phase composite — different aggregate per phase |
+| `→/…` | CHECK gate decision (proceed / investigate more) |
+| `K:X% C:X%` | Individual `know` and `context` vectors |
+| `Δ ✓/⚠/△` | POSTFLIGHT learning delta sign |
+| `N%ctx` | Context window used |
+
+**Phase composite vs overall confidence:** they're different aggregates
+over different subsets — by design. Phase composite asks "how am I doing
+on what matters for this phase?"; overall asks "what's my weighted
+confidence?" Both can legitimately differ.
+
+| Phase | Vectors averaged | Measures |
+|---|---|---|
+| CHECK composite | `know, context, clarity, coherence, signal, density` | Readiness to act |
+| POSTFLIGHT composite | `state, change, completion, impact` | Did the action deliver |
+| Noetic composite | `clarity, coherence, signal, density` | Investigation quality |
+| ⚡ overall | `know, 1−uncertainty, context, completion` | Weighted confidence band |
+
+Display modes via `EMPIRICA_STATUS_MODE` env var: `basic`, `default`,
+`learning`, `full`.
+
+---
+
+## Context Window Sizing
+
+Empirica's transactions work best at ~200K context boundaries.
+With Claude's 1M context, default compaction triggers too late and
+causes epistemic state drift:
+
+```bash
+# Compact at ~300K instead of ~900K
+export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=30
+```
+
+Or disable 1M entirely:
+```bash
+export CLAUDE_CODE_DISABLE_1M_CONTEXT=1
+```
+
+Add to `~/.bashrc` / `~/.zshrc`.
+
+---
+
+## Verify
+
+```bash
+empirica diagnose       # 10-check integration health
+empirica session-create --ai-id test-setup --output json
+empirica --version      # matches expected
+```
+
+In Claude Code, ask:
+> "Run `empirica project-bootstrap` and tell me what's in this project."
+
+Claude should run the command and surface findings + open goals.
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `empirica: command not found` | pip bin not on PATH | `export PATH="$HOME/.local/bin:$PATH"` |
+| Statusline not showing | Hook path wrong | `empirica setup-claude-code --force` then restart Claude Code |
+| Claude unaware of Empirica | CLAUDE.md missing the include | Re-run `setup-claude-code` |
+| Sentinel blocking everything | No valid CHECK | `empirica check-submit -` with `proceed: true` |
+| Plugin hooks not running | Plugin disabled | Check `~/.claude/settings.json` → `enabledPlugins.empirica@local: true` |
+| MCP not connecting | Path absolute vs relative | `which empirica-mcp` then put absolute path in `~/.claude/mcp.json` |
+
+The fastest path to a green status: `empirica diagnose` and follow the
+PASS/FAIL hints.
+
+---
+
+## Quick Reference
+
+```
+SESSION:    empirica session-create --ai-id $(basename $PWD) --output json
+BOOTSTRAP:  empirica project-bootstrap
+GOAL:       empirica goals-create --objective "..." --description "..."
+PREFLIGHT:  empirica preflight-submit -
+CHECK:      empirica check-submit -
+COMPLETE:   empirica goals-complete --goal-id <ID> --reason "..."
+POSTFLIGHT: empirica postflight-submit -
+FINDING:    empirica finding-log --finding "..." --impact 0.7
+HELP:       empirica --help
+```
+
+Inside an open transaction, `--session-id` is auto-derived.
+
+---
+
+## What's Next
+
+- **Live system prompt:** read `~/.claude/empirica-system-prompt.md` after install (~263 lines, lean default)
+- **All CLI commands:** [CLI_COMMANDS_UNIFIED.md](CLI_COMMANDS_UNIFIED.md)
+- **Epistemic transaction workflow:** [../../architecture/NOETIC_PRAXIC_FRAMEWORK.md](../../architecture/NOETIC_PRAXIC_FRAMEWORK.md)
+- **AI self-management patterns:** [AI_SELF_MANAGEMENT.md](AI_SELF_MANAGEMENT.md)
+
+---
+
+## Appendix — Manual Install
+
+Only use this if `empirica setup-claude-code` can't run (e.g., locked-down
+environment, custom Claude config path). Otherwise the automated flow is
+faster and stays in sync on each release.
+
+### 1. Plugin files
+
+```bash
+mkdir -p ~/.claude/plugins/local
+EMPIRICA_PATH=$(pip show empirica | grep Location | cut -d' ' -f2)
+cp -r "$EMPIRICA_PATH/empirica/../plugins/claude-code-integration" \
+       ~/.claude/plugins/local/empirica
+```
+
+### 2. System prompt
+
+```bash
+cp ~/.claude/plugins/local/empirica/templates/empirica-system-prompt-lean.md \
+   ~/.claude/empirica-system-prompt.md
+
+cat >> ~/.claude/CLAUDE.md <<'EOF'
+@~/.claude/empirica-system-prompt.md
+EOF
+```
+
+### 3. Settings + hooks
+
+Copy `~/.claude/plugins/local/empirica/templates/settings-hooks.json`
+into `~/.claude/settings.json` (merging existing content). The hooks
+table above shows what each one does — paste the block under
+`"hooks": {...}`.
+
+### 4. Statusline
+
 ```json
 {
   "statusLine": {
@@ -141,455 +237,17 @@ Add to `~/.claude/settings.json` (after installing the plugin in Step 4):
 }
 ```
 
-Or use the template from the plugin:
-```bash
-cat ~/.claude/plugins/local/empirica/templates/settings-statusline.json
-# Merge this into your settings.json
-```
-
-**Display modes** (set via `EMPIRICA_STATUS_MODE` env var):
-- `basic`: Just confidence + phase
-- `default`: Full status with vectors (recommended)
-- `learning`: Focus on vector changes
-- `full`: Everything with raw values
-
-### Reading the statusline
-
-A live render at CHECK looks like this:
-
-```
-[empirica] ⚡80% │ 🎯28 ❓47/23 │ CHK 🔨88%→ │ 🔎87% │ K:90% C:92% │ Δ ✓ │ 58%ctx
-```
-
-Each segment answers a different question:
-
-| Segment | Question answered | Formula |
-|---|---|---|
-| `[empirica]` | Which project? | `project.yaml display_name` (truncated to 20) |
-| `⚡84%` | **Overall confidence** | `0.40·know + 0.30·(1−uncertainty) + 0.20·context + 0.10·completion` |
-| `🎯N ❓N/N` | What's still open? | open goals · open unknowns / blocking unknowns |
-| `PRE / CHK / POST` | Where am I in the transaction? | `PREFLIGHT` / `CHECK` / `POSTFLIGHT` abbrev |
-| `🔍 / 🔨` | Investigating or acting? | `🔍` noetic, `🔨` praxic (work_phase) |
-| `XX%` after phase emoji | **Phase composite** — see breakdown below | per-phase formula |
-| `→ / …` | CHECK gate decision | `→` proceed (praxic next) · `…` investigate more |
-| `K:X% C:X%` | Individual `know` and `context` vectors | raw vector values, color-coded by tier |
-| `Δ ✓ / ⚠ / △` | Learning delta sign at POSTFLIGHT | net positive / negative / neutral |
-| `N%ctx` | Context window used | from Claude Code's stdin context block |
-
-**How phase composite (`PRE/CHK/POST XX%`) relates to overall confidence (`⚡XX%`)**
-
-They are *different aggregates over different vector subsets* by design. The phase composite asks "given what this phase is about, how am I doing on the vectors that matter for it?" The overall confidence asks "how confident is the AI overall, weighted by the four most-load-bearing vectors?"
-
-| Phase | Vectors averaged | What it measures |
-|---|---|---|
-| **CHECK** composite | `know, context, clarity, coherence, signal, density` | Readiness to act |
-| **POSTFLIGHT** composite | `state, change, completion, impact` | Did the action deliver |
-| **noetic** composite | `clarity, coherence, signal, density` | Investigation quality |
-| **⚡ overall** | `know, 1−uncertainty, context, completion` | Weighted confidence band |
-
-So at POSTFLIGHT you can legitimately see `K=95% C=95%` (high know/context — what you investigated landed solidly) yet `POST 🔨70%` (post composite around 70% because state/change/completion/impact averaged to that). Both numbers are correct on their own terms — they answer different questions.
-
-**What's not on the live statusline**
-
-- `↕XX%` Sentinel threshold (know gate) was removed in 1.9.6 — Sentinel-scoped, not actionable mid-tool-call. Available via `empirica sentinel-status` for debug.
-- An external-grounding share indicator (intuition vs search ratio) was tried in 1.9.6 and pulled in 1.9.6. The signal is highly diagnostic in surfaces that *lack* a grounding harness (Claude Desktop chat, plain web LLM UIs). In Claude Code the AI is grounded by default — codebase reads, hooks, MCP, project bootstrap, sentinel — so the indicator hovered high and didn't actionably shift behavior. The `epistemic_provenance` block surfaced in POSTFLIGHT calibration_reflection still carries the same data for retrospective analysis.
-
----
-
-## Step 4: Install Empirica Plugin (Recommended)
-
-The plugin (v1.7.1) enforces the epistemic transaction workflow and preserves epistemic state automatically.
-
-**What it includes:**
-- **Noetic firewall** (`sentinel-gate.py`): Gates praxic tools (Edit/Write/Bash) until CHECK passes
-- **Session hooks** (`session-init.py`, `post-compact.py`): Auto-creates session, bootstraps projects, detects git repos
-- **POSTFLIGHT capture** (`session-end-postflight.py`): Auto-captures learning at session end
-- **Tool router** (`tool-router.py`): Assesses each prompt against epistemic state and recommends tools/agents
-- **Transaction enforcer** (`transaction-enforcer.py`): Ensures open transactions get POSTFLIGHT before session ends
-- **Subagent lifecycle** (`subagent-start.py`, `subagent-stop.py`): Creates child sessions and rolls up findings from sub-agents
-- **EWM protocol** (`ewm-protocol-loader.py`): Loads personalized workflow protocol from `workflow-protocol.yaml`
-- **Pre-compact** (`pre-compact.py`): Saves epistemic state to git notes before memory compaction
-- **Templates**: CLAUDE.md, mcp.json, statusline config - ready to copy
-- **Statusline script**: Real-time epistemic state display
-
-### Option A: Full Plugin (Recommended)
-
-1. **Copy plugin to Claude plugins directory:**
-```bash
-# Create plugin directory
-mkdir -p ~/.claude/plugins/local
-
-# From Empirica source (if cloned)
-cp -r /path/to/empirica/plugins/claude-code-integration ~/.claude/plugins/local/empirica
-
-# Or if installed via pip:
-EMPIRICA_PATH=$(pip show empirica | grep Location | cut -d' ' -f2)
-cp -r "$EMPIRICA_PATH/empirica/../plugins/claude-code-integration" ~/.claude/plugins/local/empirica
-```
-
-2. **Copy templates to Claude config:**
-```bash
-# System prompt
-cp ~/.claude/plugins/local/empirica/templates/CLAUDE.md ~/.claude/CLAUDE.md
-
-# MCP server config (merge with existing if you have one)
-cp ~/.claude/plugins/local/empirica/templates/mcp.json ~/.claude/mcp.json
-```
-
-3. **Register local marketplace** (create `~/.claude/plugins/known_marketplaces.json`):
-```json
-{
-  "local": {
-    "source": {
-      "source": "directory",
-      "path": "~/.claude/plugins/local"
-    },
-    "installLocation": "~/.claude/plugins/local"
-  }
-}
-```
-
-4. **Add to installed plugins** (`~/.claude/plugins/installed_plugins.json`):
-```json
-{
-  "version": 2,
-  "plugins": {
-    "empirica@local": [
-      {
-        "scope": "user",
-        "installPath": "~/.claude/plugins/local/empirica",
-        "version": "1.7.1",
-        "isLocal": true
-      }
-    ]
-  }
-}
-```
-
-5. **Enable in settings** (`~/.claude/settings.json`):
-```json
-{
-  "enabledPlugins": {
-    "empirica@local": true
-  }
-}
-```
-
-6. **Add hooks to settings.json** (CRITICAL for Sentinel firewall):
-
-The Sentinel gate (noetic firewall) requires PreToolUse hooks. Add to `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/sentinel-gate.py", "timeout": 10}]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/sentinel-gate.py", "timeout": 10}]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "matcher": ".*",
-        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/tool-router.py", "timeout": 5}]
-      }
-    ],
-    "PreCompact": [
-      {
-        "matcher": "auto|manual",
-        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/pre-compact.py", "timeout": 30}]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "compact|resume",
-        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/post-compact.py", "timeout": 30}]
-      },
-      {
-        "matcher": "startup",
-        "hooks": [
-          {"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/session-init.py", "timeout": 30},
-          {"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/ewm-protocol-loader.py", "timeout": 10, "allowFailure": true}
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": ".*",
-        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/transaction-enforcer.py", "timeout": 5, "allowFailure": true}]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "matcher": ".*",
-        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/subagent-start.py", "timeout": 10, "allowFailure": true}]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "matcher": ".*",
-        "hooks": [{"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/subagent-stop.py", "timeout": 15, "allowFailure": true}]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/session-end-postflight.py", "timeout": 20},
-          {"type": "command", "command": "python3 ~/.claude/plugins/local/empirica/hooks/curate-snapshots.py --output json", "timeout": 15, "allowFailure": true}
-        ]
-      }
-    ]
-  }
-}
-```
-
-**Hook pipeline summary:**
-
-| Hook | Event | Purpose |
-|------|-------|---------|
-| `sentinel-gate.py` | PreToolUse | Gates Edit/Write/Bash until valid CHECK |
-| `tool-router.py` | UserPromptSubmit | Routes prompts to appropriate tools/agents based on epistemic state |
-| `pre-compact.py` | PreCompact | Saves epistemic state to git notes before compaction |
-| `session-init.py` | SessionStart:startup | Auto-creates session, bootstraps project, detects git repo |
-| `ewm-protocol-loader.py` | SessionStart:startup | Loads personalized workflow protocol |
-| `post-compact.py` | SessionStart:compact | Recovers session state after memory compaction |
-| `transaction-enforcer.py` | Stop | Ensures POSTFLIGHT before session ends if transaction is open |
-| `subagent-start.py` | SubagentStart | Creates child session with parent lineage |
-| `subagent-stop.py` | SubagentStop | Rolls up findings from sub-agent to parent session |
-| `session-end-postflight.py` | SessionEnd | Auto-captures POSTFLIGHT and cleans up |
-| `curate-snapshots.py` | SessionEnd | Prunes old snapshots to prevent data bloat |
-
-**Note:** Use absolute paths (replace `~` with your actual home directory like `/home/username`).
-
-See `templates/settings-hooks.json` for reference.
-
-7. **Restart Claude Code**
-
-### Option B: Simple Shell Hooks (Lightweight Alternative)
-
-If you prefer minimal setup without the full plugin:
-
-```bash
-mkdir -p ~/.claude/hooks
-```
-
-**Pre-compact hook** (`~/.claude/hooks/pre-compact.sh`):
-```bash
-cat > ~/.claude/hooks/pre-compact.sh << 'EOF'
-#!/bin/bash
-# Empirica pre-compact hook - saves epistemic state before memory compact
-empirica session-snapshot "$(empirica sessions-list --output json 2>/dev/null | jq -r '.sessions[0].id // empty')" --output json 2>/dev/null || true
-EOF
-chmod +x ~/.claude/hooks/pre-compact.sh
-```
-
-**Post-compact hook** (`~/.claude/hooks/post-compact.sh`):
-```bash
-cat > ~/.claude/hooks/post-compact.sh << 'EOF'
-#!/bin/bash
-# Empirica post-compact hook - reminds Claude to restore context
-echo "POST-COMPACT: Run 'empirica project-bootstrap' to restore epistemic context"
-EOF
-chmod +x ~/.claude/hooks/post-compact.sh
-```
-
----
-
-## Step 5: Configure MCP Server (Optional)
-
-The MCP server gives Claude direct access to Empirica tools.
-
-**Note:** Claude Code users typically don't need the MCP server—the CLI + hooks provide full functionality. The MCP server is primarily for Claude Desktop and Claude.ai integration where hooks aren't available.
-
-**If you used the Quick Install:** `~/.claude/mcp.json` is auto-configured with the correct path.
-
-**Manual configuration:** Edit `~/.claude/mcp.json`:
+### 5. MCP server
 
 ```json
 {
   "mcpServers": {
     "empirica": {
-      "command": "/home/YOUR_USER/.local/bin/empirica-mcp",
-      "args": ["--workspace", "/path/to/your/project"],
-      "type": "stdio",
-      "env": {
-        "EMPIRICA_EPISTEMIC_MODE": "true"
-      },
-      "tools": ["*"],
-      "description": "Empirica epistemic framework"
+      "command": "empirica-mcp",
+      "type": "stdio"
     }
   }
 }
 ```
 
-### Multi-Project Workspace Configuration (v1.5.0+)
-
-The MCP server needs to know which project's `.empirica/` directory to use. Without this, sessions may be created in the wrong location.
-
-**Option A: Explicit workspace (recommended for multi-project setups):**
-```json
-{
-  "args": ["--workspace", "/home/user/my-project"]
-}
-```
-
-**Option B: Auto-detection (works if MCP starts from project directory):**
-The server will auto-detect from:
-1. Git root (if `.empirica/` exists there)
-2. Common paths: `~/empirical-ai/empirica`, `~/empirica`
-
-**Option C: Environment variable:**
-```json
-{
-  "env": {
-    "EMPIRICA_WORKSPACE_ROOT": "/home/user/my-project"
-  }
-}
-```
-
-**IMPORTANT:** Use the **full absolute path** to `empirica-mcp`. Find it with:
-```bash
-which empirica-mcp
-# Usually: ~/.local/bin/empirica-mcp (pipx) or ~/.local/bin/empirica-mcp (pip --user)
-```
-
-**If installed from source**, use the venv path:
-```json
-{
-  "mcpServers": {
-    "empirica": {
-      "command": "/path/to/empirica/.venv-mcp/bin/empirica-mcp",
-      "args": [],
-      "type": "stdio",
-      "env": {
-        "PYTHONPATH": "/path/to/empirica",
-        "EMPIRICA_EPISTEMIC_MODE": "true"
-      },
-      "tools": ["*"]
-    }
-  }
-}
-```
-
-**Verify MCP is working** (in Claude Code):
-```
-/mcp
-# Should show: empirica (connected)
-```
-
----
-
-## Step 6: Set Context Window (Recommended)
-
-Empirica's epistemic transaction workflow is designed for ~200K context boundaries. With the
-1M context window, compaction triggers too late — causing epistemic state drift
-and degraded measurement quality.
-
-```bash
-# Add to ~/.bashrc or ~/.zshrc:
-export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=30
-```
-
-This compacts at ~300K of the 1M window, giving room for deep investigation
-while keeping epistemic transaction boundaries manageable.
-
-**Alternative:** Disable 1M entirely and stay on 200K:
-```bash
-export CLAUDE_CODE_DISABLE_1M_CONTEXT=1
-```
-
----
-
-## Step 7: Verify Setup
-
-```bash
-# Test CLI
-empirica session-create --ai-id test-setup --output json
-
-# Should return JSON with session_id
-
-# Verify statusline (if configured)
-python3 /path/to/empirica/scripts/statusline_empirica.py
-# Should show: [empirica] ⚡84% ↕70% │ 🎯3 ❓2 │ PRE 🔍65% │ K:90% C:85%
-#                                 ↑     ↑
-#                           open goals  open unknowns (project-wide)
-```
-
-In Claude Code, ask:
-> "Do you have access to Empirica? Try running `empirica --help`"
-
-Claude should now know about Empirica from the system prompt.
-
----
-
-## Troubleshooting
-
-### "empirica: command not found"
-```bash
-# Add pip bin to PATH
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-### Claude doesn't know about Empirica
-- Check `~/.claude/CLAUDE.md` exists and has content
-- Restart Claude Code to reload system prompt
-
-### Statusline not showing
-- Check the path to `statusline_empirica.py` is correct
-- Verify: `python3 /path/to/empirica/scripts/statusline_empirica.py`
-- Check `~/.claude/settings.json` has valid JSON
-
-### Plugin hooks not running
-- Verify plugin is enabled: check `~/.claude/settings.json` → `enabledPlugins`
-- Check hook logs: `.empirica/ref-docs/pre_summary_*.json`
-- Ensure `EMPIRICA_AI_ID` env var matches your session's ai_id
-
-### MCP server not working
-```bash
-# Verify MCP server is installed
-which empirica-mcp
-
-# Check mcp.json config syntax
-python3 -c "import json; json.load(open('$HOME/.claude/mcp.json'))" && echo "Valid JSON"
-
-# Test underlying CLI (MCP wraps this)
-empirica --version
-```
-Note: `empirica-mcp` runs as stdio server, not CLI with --help.
-
----
-
-## What's Next?
-
-- **Live system prompt:** read `~/.claude/empirica-system-prompt.md` after running `empirica setup-claude-code` (~263 lines, lean default)
-- **All CLI commands:** [CLI Reference](CLI_COMMANDS_UNIFIED.md)
-- **Epistemic transaction workflow:** [Workflow Guide](../../architecture/NOETIC_PRAXIC_FRAMEWORK.md)
-
----
-
-## Quick Reference Card
-
-**Transaction-first:** After PREFLIGHT, most commands auto-derive `--session-id` from the active transaction.
-
-```
-SESSION:    empirica session-create --ai-id claude-code --output json
-BOOTSTRAP:  empirica project-bootstrap --session-id <ID> --output json
-GOAL:       empirica goals-create --objective "..."        # session auto-derived after PREFLIGHT
-PREFLIGHT:  empirica preflight-submit -
-CHECK:      empirica check-submit -
-COMPLETE:   empirica goals-complete --goal-id <ID> --reason "..."
-POSTFLIGHT: empirica postflight-submit -
-FINDING:    empirica finding-log --finding "..." --impact 0.7  # session auto-derived
-UNKNOWN:    empirica unknown-log --unknown "..."               # session auto-derived
-HELP:       empirica --help
-```
-
----
-
-**Setup complete!** Claude Code now has Empirica integration.
+Restart Claude Code after all edits.
