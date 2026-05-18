@@ -727,9 +727,11 @@ class ReleaseManager:
 
         tag = f"v{self.version}"
 
-        # Commit ALL release updates (version sweep, README sync, packaging)
-        # Previously only staged packaging/ and Dockerfile, missing README,
-        # __init__.py, plugin.json, install.sh, and other swept files.
+        # Commit ALL release updates (version pointer regex bumps + packaging).
+        # Must include every file `update_version_strings` and friends touch.
+        # Drift here is silent: missed files stay on the old version in the
+        # release commit and need a follow-up bump. Keep this list in sync
+        # with the version_files list in update_version_strings.
         self.run_command(["git", "add",
             "pyproject.toml",
             "packaging/", "Dockerfile", "Dockerfile.alpine",
@@ -740,6 +742,11 @@ class ReleaseManager:
             "empirica/plugins/claude-code-integration/install.sh",
             "empirica/cli/command_handlers/setup_claude_code.py",
             ".empirica-project/PROJECT_CONFIG.yaml",
+            # docs/ current-version pointers (regex-bumped by update_version_strings)
+            "docs/README.md",
+            "docs/human/developers/EXTENDING_EMPIRICA.md",
+            "docs/human/developers/MCP_SERVER_REFERENCE.md",
+            "docs/human/end-users/02_INSTALLATION.md",
         ])
         self.run_command([
             "git", "commit", "-m",
