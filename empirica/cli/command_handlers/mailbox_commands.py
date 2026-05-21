@@ -75,8 +75,8 @@ def _default_http_post(url: str, body: dict, api_key: str,
 
 def _default_fetch_parent(cortex_url: str, api_key: str,
                          parent_id: str, timeout: float = 5.0) -> dict | None:
-    """GET /v1/orchestration/proposals/<id> for parent body."""
-    url = f"{cortex_url.rstrip('/')}/v1/orchestration/proposals/{parent_id}"
+    """GET /v1/orchestration/<id> for parent body. Response is the proposal object directly."""
+    url = f"{cortex_url.rstrip('/')}/v1/orchestration/{parent_id}"
     req = urllib.request.Request(
         url, method="GET",
         headers={"Authorization": f"Bearer {api_key}"},
@@ -84,8 +84,11 @@ def _default_fetch_parent(cortex_url: str, api_key: str,
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             body = json.loads(resp.read().decode("utf-8"))
-            if isinstance(body, dict):
-                return body.get("proposal") or body
+            if isinstance(body, dict) and (body.get("id") or body.get("title")):
+                return body
+            # Fallback for wrapped response shape (future-compat)
+            if isinstance(body, dict) and body.get("proposal"):
+                return body["proposal"]
             return None
     except Exception:
         return None
@@ -179,13 +182,16 @@ def handle_mailbox_reply_command(  # noqa: C901 — CLI handler with 7 validatio
         "payload": payload,
     }
     status, propose_resp = _http_post(propose_url, propose_body, api_key, 10.0)
-    if status >= 400 or status == -1 or not propose_resp.get("ok"):
+    # Cortex returns 2xx + proposal_id on success (no wrapper "ok" field).
+    # Treat HTTP 2xx with a proposal_id as success regardless of "ok" presence.
+    new_proposal_id = propose_resp.get("proposal_id") if isinstance(propose_resp, dict) else None
+    propose_ok = (200 <= status < 300) and new_proposal_id is not None
+    if not propose_ok:
         sys.stderr.write(
             f"mailbox reply: cortex_propose failed (status={status}): "
             f"{propose_resp}\n"
         )
         return 1
-    new_proposal_id = propose_resp.get("proposal_id")
     if not new_proposal_id:
         sys.stderr.write(
             f"mailbox reply: cortex_propose returned no proposal_id: {propose_resp}\n"
@@ -207,12 +213,18 @@ def handle_mailbox_reply_command(  # noqa: C901 — CLI handler with 7 validatio
         if commit_sha:
             complete_body["commit_sha"] = commit_sha
         c_status, complete_resp = _http_post(complete_url, complete_body, api_key, 10.0)
-        if c_status >= 400 or c_status == -1 or not complete_resp.get("ok"):
+        # Cortex returns 2xx on completion success (response shape varies).
+        complete_ok = (
+            isinstance(complete_resp, dict)
+            and 200 <= c_status < 300
+            and (complete_resp.get("ok") is not False)  # tolerate missing "ok"
+            and complete_resp.get("error") is None
+        )
+        if not complete_ok:
             sys.stderr.write(
                 f"mailbox reply: cortex_propose SUCCEEDED (new={new_proposal_id}) "
                 f"but parent close FAILED (status={c_status}): {complete_resp}. "
-                f"Run `empirica mailbox complete --parent-id {parent_id}` manually "
-                f"or call cortex_complete_proposal via MCP.\n"
+                f"Run cortex_complete_proposal via MCP to close manually.\n"
             )
             # Propose succeeded — surface the partial result rather than fail hard
         else:
