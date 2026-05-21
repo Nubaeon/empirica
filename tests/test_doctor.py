@@ -527,7 +527,60 @@ def test_check_outreach_warns_without_node_modules(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = check_outreach()
     assert result.status == WARN
-    assert "node_modules" in result.detail
+    assert "node" in result.detail.lower()
+    assert result.data["shape"] == "node"
+
+
+def test_check_outreach_warns_without_python_deps(tmp_path, monkeypatch):
+    """Python shape: pyproject.toml present but no .venv / egg-info → WARN."""
+    out_root = tmp_path / "empirical-ai" / "empirica-outreach"
+    out_root.mkdir(parents=True)
+    (out_root / "pyproject.toml").write_text("[project]\nname='empirica-outreach'\n")
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    result = check_outreach()
+    assert result.status == WARN
+    assert "python" in result.detail.lower()
+    assert "deps not installed" in result.detail
+    assert result.data["shape"] == "python"
+    assert "pip install -e ." in result.hint
+
+
+def test_check_outreach_passes_python_with_venv(tmp_path, monkeypatch):
+    """Python shape + .venv present → PASS."""
+    out_root = tmp_path / "empirical-ai" / "empirica-outreach"
+    out_root.mkdir(parents=True)
+    (out_root / "pyproject.toml").write_text("[project]\nname='empirica-outreach'\n")
+    (out_root / ".venv").mkdir()
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    result = check_outreach()
+    assert result.status == PASS
+    assert result.data["shape"] == "python"
+
+
+def test_check_outreach_passes_python_with_egg_info(tmp_path, monkeypatch):
+    """Python shape + *.egg-info (from `pip install -e .`) → PASS."""
+    out_root = tmp_path / "empirical-ai" / "empirica-outreach"
+    out_root.mkdir(parents=True)
+    (out_root / "pyproject.toml").write_text("[project]\nname='empirica-outreach'\n")
+    (out_root / "empirica_outreach.egg-info").mkdir()
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    result = check_outreach()
+    assert result.status == PASS
+    assert result.data["shape"] == "python"
+
+
+def test_check_outreach_warns_with_neither_shape(tmp_path, monkeypatch):
+    """Directory exists but neither pyproject.toml nor package.json → WARN."""
+    out_root = tmp_path / "empirical-ai" / "empirica-outreach"
+    out_root.mkdir(parents=True)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    result = check_outreach()
+    assert result.status == WARN
+    assert "neither pyproject.toml nor package.json" in result.detail
 
 
 # ─── Project drift (prop_ilf6uy4q) ─────────────────────────────────────

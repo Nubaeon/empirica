@@ -649,23 +649,43 @@ def check_extension() -> Check:
 
 
 def check_outreach() -> Check:
-    """empirica-outreach project presence + dependencies installed."""
+    """empirica-outreach project presence + dependencies installed.
+
+    Accepts either Python (pyproject.toml) or Node (package.json) shape —
+    the project has shipped in both over its history. Refinement from
+    cortex AI (prop_vvn45fwkfzcyldo2nk2cqrrr6e) after my completion note
+    on the original doctor patch flagged a Node-shape false-positive
+    when the local clone is Python.
+    """
     root = _sibling_project_root("empirica-outreach")
     if not root:
         return Check("Outreach project", SKIP, "empirica-outreach not found locally")
-    pkg = root / "package.json"
-    nm = root / "node_modules"
-    if not pkg.exists():
-        return Check("Outreach project", WARN, "package.json missing",
+    has_python = (root / "pyproject.toml").exists()
+    has_node = (root / "package.json").exists()
+    if not (has_python or has_node):
+        return Check("Outreach project", WARN,
+                     "neither pyproject.toml nor package.json found",
                      data={"root": str(root)})
-    if not nm.exists():
-        return Check("Outreach project", WARN, "node_modules missing — deps not installed",
-                     f"cd {root} && npm install",
-                     data={"root": str(root), "deps_installed": False})
+    shape = "python" if has_python else "node"
+    if has_python:
+        # Python deps probe: .venv dir OR any *.egg-info (covers both venv +
+        # `pip install -e .` patterns).
+        deps_installed = (root / ".venv").exists() or any(root.glob("*.egg-info"))
+        hint_cmd = f"cd {root} && pip install -e ."
+    else:
+        deps_installed = (root / "node_modules").exists()
+        hint_cmd = f"cd {root} && npm install"
     project_yaml = root / ".empirica" / "project.yaml"
-    detail = "deps installed" + (" + project.yaml" if project_yaml.exists() else "")
+    if not deps_installed:
+        return Check("Outreach project", WARN,
+                     f"{shape} project — deps not installed",
+                     hint_cmd,
+                     data={"root": str(root), "shape": shape,
+                           "deps_installed": False})
+    detail = f"{shape} deps installed" + (" + project.yaml" if project_yaml.exists() else "")
     return Check("Outreach project", PASS, detail,
-                 data={"root": str(root), "deps_installed": True,
+                 data={"root": str(root), "shape": shape,
+                       "deps_installed": True,
                        "has_project_yaml": project_yaml.exists()})
 
 
