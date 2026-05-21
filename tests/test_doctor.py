@@ -21,18 +21,24 @@ from empirica.cli.command_handlers.doctor import (
     SKIP,
     WARN,
     Check,
+    _sibling_project_root,
     check_claude_code_cli,
     check_cortex_auth,
     check_cortex_creds,
     check_empirica_folder,
+    check_extension,
     check_git_present,
     check_loops_registered,
     check_mcp_config,
     check_ntfy_auth,
     check_ntfy_creds,
+    check_ollama_backend,
+    check_outreach,
+    check_project_drift,
     check_project_yaml,
     check_python,
     check_sessions_db,
+    check_tailscale,
     handle_doctor_command,
     run_all_checks,
 )
@@ -364,3 +370,223 @@ def test_run_all_checks_returns_complete_list():
     assert "ntfy credentials configured" in names
     assert "canonical loops registered" in names
     assert "MCP servers configured" in names
+    # Mesh expansion checks (prop_ilf6uy4q from cortex)
+    assert "Project drift (Cortex membership)" in names
+    assert "Tailscale mesh" in names
+    assert "LLM backend (ollama)" in names
+    assert "Empirica extension build" in names
+    assert "Outreach project" in names
+
+
+def test_run_all_checks_count_is_23():
+    """Post-prop_ilf6uy4q expansion: 18 base + 5 mesh = 23 total."""
+    assert len(run_all_checks()) == 23
+
+
+# ─── Tailscale (prop_ilf6uy4q) ─────────────────────────────────────────
+
+
+def test_check_tailscale_skips_when_cli_missing():
+    with patch("empirica.cli.command_handlers.doctor._which", return_value=None):
+        result = check_tailscale()
+    assert result.status == SKIP
+    assert "not installed" in result.detail
+
+
+def test_check_tailscale_warns_when_status_fails():
+    with patch("empirica.cli.command_handlers.doctor._which", return_value="/usr/bin/tailscale"), \
+         patch("empirica.cli.command_handlers.doctor._run", return_value=(1, "", "not logged in")):
+        result = check_tailscale()
+    assert result.status == WARN
+    assert "tailscale up" in result.hint
+
+
+def test_check_tailscale_passes_when_connected():
+    payload = json.dumps({
+        "BackendState": "Running",
+        "Self": {"TailscaleIPs": ["100.64.0.1"]},
+        "Peer": {"k1": {}, "k2": {}},
+        "MagicDNSSuffix": "example.ts.net",
+    })
+    with patch("empirica.cli.command_handlers.doctor._which", return_value="/usr/bin/tailscale"), \
+         patch("empirica.cli.command_handlers.doctor._run", return_value=(0, payload, "")):
+        result = check_tailscale()
+    assert result.status == PASS
+    assert result.data["peers"] == 2
+    assert result.data["ip"] == "100.64.0.1"
+
+
+def test_check_tailscale_warns_when_backend_stopped():
+    payload = json.dumps({"BackendState": "Stopped", "Self": {}, "Peer": {}})
+    with patch("empirica.cli.command_handlers.doctor._which", return_value="/usr/bin/tailscale"), \
+         patch("empirica.cli.command_handlers.doctor._run", return_value=(0, payload, "")):
+        result = check_tailscale()
+    assert result.status == WARN
+    assert "Stopped" in result.detail
+
+
+# ─── LLM backend / ollama (prop_ilf6uy4q) ──────────────────────────────
+
+
+def test_check_ollama_skips_when_url_unset(monkeypatch):
+    monkeypatch.delenv("CORTEX_LLM_BACKEND_URL", raising=False)
+    result = check_ollama_backend()
+    assert result.status == SKIP
+
+
+def test_check_ollama_warns_on_network_failure(monkeypatch):
+    monkeypatch.setenv("CORTEX_LLM_BACKEND_URL", "http://nope.invalid")
+    with patch("empirica.cli.command_handlers.doctor._http_get",
+               return_value=(-1, "connection refused")):
+        result = check_ollama_backend()
+    assert result.status == WARN
+    assert "unreachable" in result.detail
+
+
+def test_check_ollama_passes_with_embed_and_chat(monkeypatch):
+    monkeypatch.setenv("CORTEX_LLM_BACKEND_URL", "http://ollama.example")
+    body = json.dumps({"models": [
+        {"name": "qwen3-embedding:0.6b"},
+        {"name": "qwen3:7b"},
+    ]})
+    with patch("empirica.cli.command_handlers.doctor._http_get", return_value=(200, body)):
+        result = check_ollama_backend()
+    assert result.status == PASS
+    assert "embedder + chat" in result.detail
+
+
+def test_check_ollama_warns_when_missing_embedder(monkeypatch):
+    monkeypatch.setenv("CORTEX_LLM_BACKEND_URL", "http://ollama.example")
+    body = json.dumps({"models": [{"name": "qwen3:7b"}]})
+    with patch("empirica.cli.command_handlers.doctor._http_get", return_value=(200, body)):
+        result = check_ollama_backend()
+    assert result.status == WARN
+    assert "embedder" in result.detail
+
+
+# ─── Sibling projects (prop_ilf6uy4q) ──────────────────────────────────
+
+
+def test_sibling_project_root_finds_under_empirical_ai(tmp_path, monkeypatch):
+    empirical = tmp_path / "empirical-ai"
+    target = empirical / "empirica-foo"
+    target.mkdir(parents=True)
+    other_cwd = tmp_path / "other-cwd"
+    other_cwd.mkdir()
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(other_cwd)
+    assert _sibling_project_root("empirica-foo") == target
+
+
+def test_sibling_project_root_returns_none_when_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    assert _sibling_project_root("not-there") is None
+
+
+def test_check_extension_skips_when_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    result = check_extension()
+    assert result.status == SKIP
+
+
+def test_check_extension_warns_when_not_built(tmp_path, monkeypatch):
+    ext_root = tmp_path / "empirical-ai" / "empirica-extension"
+    ext_root.mkdir(parents=True)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    result = check_extension()
+    assert result.status == WARN
+    assert "not built" in result.detail
+
+
+def test_check_extension_passes_when_built(tmp_path, monkeypatch):
+    ext_root = tmp_path / "empirical-ai" / "empirica-extension"
+    (ext_root / "dist").mkdir(parents=True)
+    (ext_root / "dist" / "manifest.json").write_text(json.dumps({"version": "0.9.1"}))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    result = check_extension()
+    assert result.status == PASS
+    assert "0.9.1" in result.detail
+
+
+def test_check_outreach_skips_when_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    result = check_outreach()
+    assert result.status == SKIP
+
+
+def test_check_outreach_warns_without_node_modules(tmp_path, monkeypatch):
+    out_root = tmp_path / "empirical-ai" / "empirica-outreach"
+    out_root.mkdir(parents=True)
+    (out_root / "package.json").write_text("{}")
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.chdir(tmp_path)
+    result = check_outreach()
+    assert result.status == WARN
+    assert "node_modules" in result.detail
+
+
+# ─── Project drift (prop_ilf6uy4q) ─────────────────────────────────────
+
+
+def test_check_project_drift_skips_without_project_yaml(tmp_path):
+    result = check_project_drift(tmp_path)
+    assert result.status == SKIP
+
+
+def test_check_project_drift_skips_without_project_id(tmp_path):
+    import yaml
+    (tmp_path / ".empirica").mkdir()
+    (tmp_path / ".empirica" / "project.yaml").write_text(yaml.safe_dump({"name": "x"}))
+    result = check_project_drift(tmp_path)
+    assert result.status == SKIP
+
+
+def test_check_project_drift_skips_without_cortex_creds(tmp_path, monkeypatch):
+    import yaml
+    (tmp_path / ".empirica").mkdir()
+    (tmp_path / ".empirica" / "project.yaml").write_text(
+        yaml.safe_dump({"project_id": "uuid-x"})
+    )
+    monkeypatch.delenv("CORTEX_API_KEY", raising=False)
+    monkeypatch.delenv("CORTEX_REMOTE_URL", raising=False)
+    monkeypatch.delenv("CORTEX_URL", raising=False)
+    with patch("empirica.config.credentials_loader.get_credentials_loader",
+               side_effect=Exception("no loader")):
+        result = check_project_drift(tmp_path)
+    assert result.status == SKIP
+
+
+def test_check_project_drift_passes_when_pid_in_scope(tmp_path, monkeypatch):
+    import yaml
+    (tmp_path / ".empirica").mkdir()
+    (tmp_path / ".empirica" / "project.yaml").write_text(
+        yaml.safe_dump({"project_id": "uuid-x"})
+    )
+    monkeypatch.setenv("CORTEX_REMOTE_URL", "https://example.com")
+    monkeypatch.setenv("CORTEX_API_KEY", "ctx_test")
+    body = json.dumps({"projects": [{"project_id": "uuid-x"}, {"project_id": "uuid-y"}]})
+    with patch("empirica.cli.command_handlers.doctor._http_get", return_value=(200, body)):
+        result = check_project_drift(tmp_path)
+    assert result.status == PASS
+    assert result.data["scope_size"] == 2
+
+
+def test_check_project_drift_warns_when_pid_missing(tmp_path, monkeypatch):
+    import yaml
+    (tmp_path / ".empirica").mkdir()
+    (tmp_path / ".empirica" / "project.yaml").write_text(
+        yaml.safe_dump({"project_id": "uuid-x"})
+    )
+    monkeypatch.setenv("CORTEX_REMOTE_URL", "https://example.com")
+    monkeypatch.setenv("CORTEX_API_KEY", "ctx_test")
+    body = json.dumps({"projects": [{"project_id": "uuid-y"}]})
+    with patch("empirica.cli.command_handlers.doctor._http_get", return_value=(200, body)):
+        result = check_project_drift(tmp_path)
+    assert result.status == WARN
+    assert "NOT in user.project_ids" in result.detail
+    assert "uuid-x" in result.data["local_project_id"]

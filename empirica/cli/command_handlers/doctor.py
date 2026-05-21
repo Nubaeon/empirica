@@ -543,6 +543,175 @@ def check_cortex_reachability() -> Check:
                  data={"url": cortex_url, "error": last_error})
 
 
+# ─── Tailscale mesh ────────────────────────────────────────────────────
+
+
+def check_tailscale() -> Check:
+    """tailscale membership + peer count (needed for tailnet-routed Cortex / LLM backend)."""
+    if not _which("tailscale"):
+        return Check("Tailscale mesh", SKIP, "tailscale CLI not installed",
+                     "Install if you depend on tailnet routing for Cortex / LLM backend")
+    rc, out, err = _run(["tailscale", "status", "--json"], timeout=5.0)
+    if rc != 0:
+        return Check("Tailscale mesh", WARN, "`tailscale status` failed",
+                     "Run `tailscale up` to authenticate",
+                     data={"error": err or out})
+    try:
+        payload = json.loads(out) if out else {}
+    except json.JSONDecodeError:
+        return Check("Tailscale mesh", WARN, "malformed tailscale status output")
+    backend_state = payload.get("BackendState", "")
+    self_node = payload.get("Self", {}) or {}
+    peers = payload.get("Peer", {}) or {}
+    if backend_state != "Running":
+        return Check("Tailscale mesh", WARN, f"backend state: {backend_state}",
+                     "Run `tailscale up`",
+                     data={"backend_state": backend_state})
+    own_ips = self_node.get("TailscaleIPs") or []
+    own_ip = own_ips[0] if own_ips else ""
+    return Check("Tailscale mesh", PASS,
+                 f"connected ({own_ip}, {len(peers)} peer(s))",
+                 data={"ip": own_ip, "peers": len(peers),
+                       "magic_dns": payload.get("MagicDNSSuffix")})
+
+
+# ─── LLM backend (ollama) ──────────────────────────────────────────────
+
+
+def check_ollama_backend() -> Check:
+    """LLM backend reachable + at least one embedder loaded (TL;DR pipeline + Qdrant ingest)."""
+    backend_url = os.environ.get("CORTEX_LLM_BACKEND_URL")
+    if not backend_url:
+        return Check("LLM backend (ollama)", SKIP, "CORTEX_LLM_BACKEND_URL not set",
+                     "Set in env if you run the TL;DR-AI pipeline locally")
+    tags_url = f"{backend_url.rstrip('/')}/api/tags"
+    status, body = _http_get(tags_url, timeout=3.0)
+    if status == -1:
+        return Check("LLM backend (ollama)", WARN, f"{tags_url} unreachable: {body}",
+                     "Check ollama service / tailscale route",
+                     data={"url": backend_url, "error": body})
+    if status >= 400:
+        return Check("LLM backend (ollama)", FAIL, f"{tags_url} → {status}",
+                     data={"status": status})
+    try:
+        payload = json.loads(body) if body else {}
+        models = [m.get("name", "") for m in payload.get("models", [])]
+    except (json.JSONDecodeError, AttributeError):
+        return Check("LLM backend (ollama)", WARN, f"{tags_url} → {status} but malformed JSON")
+    has_embed = any("embed" in m.lower() for m in models)
+    has_chat = any("embed" not in m.lower() for m in models if m)
+    if has_embed and has_chat:
+        return Check("LLM backend (ollama)", PASS,
+                     f"{len(models)} models loaded (embedder + chat present)",
+                     data={"url": backend_url, "models": models})
+    missing = []
+    if not has_embed:
+        missing.append("embedder")
+    if not has_chat:
+        missing.append("chat model")
+    return Check("LLM backend (ollama)", WARN, f"reachable but missing: {', '.join(missing)}",
+                 "ollama pull qwen3-embedding:0.6b  (or matching embedder for your stack)",
+                 data={"url": backend_url, "models": models, "missing": missing})
+
+
+# ─── Sibling projects (extension + outreach) ───────────────────────────
+
+
+def _sibling_project_root(name: str) -> Path | None:
+    """Locate a sibling empirica-* project relative to cwd's parent or ~/empirical-ai."""
+    cwd = Path.cwd()
+    candidates = [cwd.parent / name, Path.home() / "empirical-ai" / name]
+    for c in candidates:
+        if c.is_dir():
+            return c
+    return None
+
+
+def check_extension() -> Check:
+    """empirica-extension presence + build state (Chrome / Desktop AI-mesh extension)."""
+    root = _sibling_project_root("empirica-extension")
+    if not root:
+        return Check("Empirica extension build", SKIP, "empirica-extension not found locally",
+                     "Clone if you want the AI-mesh extension")
+    dist = root / "dist"
+    manifest = dist / "manifest.json"
+    if not manifest.exists():
+        return Check("Empirica extension build", WARN, "dist/manifest.json missing — not built",
+                     f"cd {root} && npm install && npm run build",
+                     data={"root": str(root), "built": False})
+    try:
+        m = json.loads(manifest.read_text())
+        version = m.get("version", "?")
+    except (json.JSONDecodeError, OSError):
+        version = "?"
+    return Check("Empirica extension build", PASS, f"built (v{version})",
+                 data={"root": str(root), "version": version, "built": True})
+
+
+def check_outreach() -> Check:
+    """empirica-outreach project presence + dependencies installed."""
+    root = _sibling_project_root("empirica-outreach")
+    if not root:
+        return Check("Outreach project", SKIP, "empirica-outreach not found locally")
+    pkg = root / "package.json"
+    nm = root / "node_modules"
+    if not pkg.exists():
+        return Check("Outreach project", WARN, "package.json missing",
+                     data={"root": str(root)})
+    if not nm.exists():
+        return Check("Outreach project", WARN, "node_modules missing — deps not installed",
+                     f"cd {root} && npm install",
+                     data={"root": str(root), "deps_installed": False})
+    project_yaml = root / ".empirica" / "project.yaml"
+    detail = "deps installed" + (" + project.yaml" if project_yaml.exists() else "")
+    return Check("Outreach project", PASS, detail,
+                 data={"root": str(root), "deps_installed": True,
+                       "has_project_yaml": project_yaml.exists()})
+
+
+# ─── Project drift (local project.yaml vs Cortex membership) ───────────
+
+
+def check_project_drift(cwd: Path | None = None) -> Check:
+    """Local project_id should appear in /v1/users/me/projects (Cortex tenant scope)."""
+    cwd = cwd or Path.cwd()
+    project_yaml = cwd / ".empirica" / "project.yaml"
+    if not project_yaml.exists():
+        return Check("Project drift (Cortex membership)", SKIP, "no .empirica/project.yaml here")
+    try:
+        import yaml
+        cfg = yaml.safe_load(project_yaml.read_text()) or {}
+        local_pid = cfg.get("project_id")
+    except Exception as e:
+        return Check("Project drift (Cortex membership)", WARN, f"project.yaml unreadable: {e}")
+    if not local_pid:
+        return Check("Project drift (Cortex membership)", SKIP, "no project_id in project.yaml")
+    url, api_key = _resolve_cortex_creds()
+    if not (url and api_key):
+        return Check("Project drift (Cortex membership)", SKIP, "no Cortex creds")
+    me_url = f"{url}/v1/users/me/projects"
+    status, body = _http_get(me_url, headers={"Authorization": f"Bearer {api_key}"})
+    if status == -1:
+        return Check("Project drift (Cortex membership)", WARN, f"{me_url} unreachable")
+    if status >= 400:
+        return Check("Project drift (Cortex membership)", WARN, f"{me_url} → {status}",
+                     data={"status": status})
+    try:
+        payload = json.loads(body) if body else {}
+        projects = payload.get("projects", []) if isinstance(payload, dict) else (payload or [])
+        ids = {p.get("project_id") for p in projects if isinstance(p, dict)}
+    except (json.JSONDecodeError, AttributeError):
+        return Check("Project drift (Cortex membership)", WARN, "malformed projects payload")
+    if local_pid in ids:
+        return Check("Project drift (Cortex membership)", PASS,
+                     f"local project_id {local_pid[:8]}… present in Cortex user-scope ({len(ids)} total)",
+                     data={"project_id": local_pid, "scope_size": len(ids)})
+    return Check("Project drift (Cortex membership)", WARN,
+                 f"local project_id {local_pid[:8]}… NOT in user.project_ids ({len(ids)} known)",
+                 'POST /v1/users/me/projects body={"project_id": "..."} to auto-link',
+                 data={"local_project_id": local_pid, "remote_ids": list(ids)})
+
+
 # ─── Top-level orchestrator ────────────────────────────────────────────
 
 
@@ -571,10 +740,19 @@ def run_all_checks(cwd: Path | None = None) -> list[Check]:
         check_cortex_creds(),
         check_cortex_reachability(),
         check_cortex_auth(),
+        check_project_drift(cwd),
 
         # ntfy mesh
         check_ntfy_creds(),
         check_ntfy_auth(),
+
+        # Tailscale + LLM backend (optional infrastructure)
+        check_tailscale(),
+        check_ollama_backend(),
+
+        # Sibling projects (mesh-adjacent)
+        check_extension(),
+        check_outreach(),
 
         # Listener / loops + MCP config
         check_loops_registered(),
