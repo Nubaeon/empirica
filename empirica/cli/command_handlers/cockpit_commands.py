@@ -1507,6 +1507,275 @@ _LOOP_DISPATCH = {
 }
 
 
+# ─── AI-ergonomic on/arm/off facade (prop_oxrhoehv4) ───────────────────────
+# Three new verbs that collapse the multi-step in-session arming protocol
+# to single tool calls. The 9 verbs above stay as power-user primitives.
+
+
+def _resolve_canonical_ai_id(args) -> str | None:
+    """Resolve ai_id for the canonical mesh listener (soft — returns None on failure).
+
+    Priority: --ai-id flag > .empirica/project.yaml ai_id field >
+    basename(project_path).removeprefix('empirica-') > None.
+
+    Distinct from `_resolve_listener_ai_id` (used by `loop listen-install`)
+    which falls back to instance_id and raises if no instance.
+    """
+    explicit = getattr(args, 'ai_id', None)
+    if explicit:
+        return explicit
+    try:
+        from empirica.utils.session_resolver import InstanceResolver
+        ai_id = InstanceResolver.ai_id()
+        if ai_id:
+            return ai_id
+    except Exception:
+        pass
+    return None
+
+
+def handle_listener_on_command(args) -> int:
+    """`empirica listener on` — arm the canonical mesh listener for ai_id.
+
+    Auto-resolves name (default `<ai_id>-inbox`), topic (canonical
+    `ntfy:orchestration-events?tags=<ai_id>`), and instance_id.
+
+    Short-circuits when the persistent OS listener service is running
+    for `ai_id` (per persistent_listener.is_listener_running): no
+    in-session Monitor needed because the systemd-user / launchd
+    service already holds the ntfy stream.
+
+    Otherwise: register the listener in the per-instance registry,
+    write `listener_active_*.json` with a placeholder monitor_task_id,
+    and emit structured JSON containing the Monitor command Claude
+    should arm — plus `after_arm: empirica listener arm <task_id>`
+    for the followup state-file update.
+    """
+    ai_id = _resolve_canonical_ai_id(args)
+    if not ai_id:
+        return _emit(args, {
+            'ok': False,
+            'error': 'ai_id unresolved — pass --ai-id or set ai_id in .empirica/project.yaml',
+        }, 'error: ai_id unresolved')
+
+    name = getattr(args, 'name', None) or f'{ai_id}-inbox'
+    topic = getattr(args, 'topic', None) or f'ntfy:orchestration-events?tags={ai_id}'
+
+    # Short-circuit: persistent OS service already subscribed for this ai_id
+    try:
+        from empirica.core.loop_scheduler.persistent_listener import is_listener_running
+        if is_listener_running(ai_id):
+            payload = {
+                'ok': True,
+                'ai_id': ai_id,
+                'name': name,
+                'status': 'persistent_service_active',
+                'message': (
+                    f"Persistent listener service is running for ai_id={ai_id}. "
+                    f"No in-session Monitor needed — wake events arrive via the "
+                    f"system service. Verify: `empirica loop listen-status --ai-id {ai_id}`"
+                ),
+                'next_step': None,
+            }
+            summary = (
+                f'persistent service active for ai_id={ai_id} — '
+                f'no Monitor arming needed'
+            )
+            return _emit(args, payload, summary)
+    except Exception:
+        # is_listener_running is defensive; on any failure fall through
+        # to the in-session arming path. The body never blocks.
+        pass
+
+    # Register the listener in the per-instance registry (idempotent)
+    instance_id = _require_instance_id(args)
+    registry = ListenerRegistry(instance_id)
+    try:
+        entry = registry.register(
+            name=name,
+            topic=topic,
+            description=f'Canonical mesh listener for ai_id={ai_id}',
+            on_wake_template='',
+        )
+    except ValueError as e:
+        return _emit(args, {'ok': False, 'error': str(e)}, f'error: {e}')
+
+    # Write listener_active_*.json placeholder (monitor_task_id filled by `arm`)
+    active_path = listener_active_path(instance_id, name)
+    active_path.parent.mkdir(parents=True, exist_ok=True)
+    import time as _time
+    placeholder = {
+        'monitor_task_id': None,  # filled by `empirica listener arm <task_id>`
+        'curl_pid': None,
+        'armed_at': _time.time(),
+        'ai_id': ai_id,
+        'name': name,
+        'topic': entry.topic,
+    }
+    active_path.write_text(_json.dumps(placeholder, indent=2), encoding='utf-8')
+
+    # Canonical Monitor command — uses `empirica loop listen` (the
+    # subprocess that holds the ntfy stream + catches up via content_poll
+    # on every push arrival + reconnect). Mirrors session-monitor-arm.py's
+    # arming pattern but driven by an explicit CLI invocation.
+    monitor_cmd = f'empirica loop listen --instance {ai_id}'
+
+    payload = {
+        'ok': True,
+        'ai_id': ai_id,
+        'instance_id': instance_id,
+        'name': name,
+        'topic': entry.topic,
+        'state_file': str(active_path),
+        'status': 'awaiting_arm',
+        'next_step': {
+            'tool': 'Monitor',
+            'args': {
+                'description': f'Cortex orchestration push listener for {ai_id}',
+                'command': monitor_cmd,
+                'persistent': True,
+                'timeout_ms': 3600000,
+            },
+            'after_arm': f'empirica listener arm <monitor_task_id> --name {name}',
+        },
+    }
+    summary = (
+        f'Listener "{name}" registered for ai_id={ai_id} (topic={entry.topic}). '
+        f'Now arm Monitor with command "{monitor_cmd}" then run '
+        f'`empirica listener arm <task_id> --name {name}`.'
+    )
+    return _emit(args, payload, summary)
+
+
+def handle_listener_arm_command(args) -> int:
+    """`empirica listener arm <task_id>` — record the Monitor task_id post-arm.
+
+    Replaces the `monitor_task_id: null` placeholder in
+    `listener_active_<instance>_<name>.json` with the real Monitor
+    task id returned by Claude Code's Monitor tool. After this, `off`
+    knows what to TaskStop.
+    """
+    task_id = getattr(args, 'task_id', None)
+    if not task_id:
+        return _emit(args, {
+            'ok': False, 'error': 'task_id required (positional)',
+        }, 'error: task_id required')
+
+    instance_id = _require_instance_id(args)
+    ai_id = _resolve_canonical_ai_id(args)
+    name = getattr(args, 'name', None) or (f'{ai_id}-inbox' if ai_id else None)
+    if not name:
+        return _emit(args, {
+            'ok': False,
+            'error': 'name unresolved — pass --name or --ai-id',
+        }, 'error: name unresolved')
+
+    active_path = listener_active_path(instance_id, name)
+    if not active_path.exists():
+        return _emit(args, {
+            'ok': False, 'error': (
+                f'no active state file at {active_path} — '
+                f'run `empirica listener on` first'
+            ),
+        }, 'error: no active state file (run `empirica listener on` first)')
+
+    try:
+        with open(active_path, encoding='utf-8') as f:
+            data = _json.load(f)
+    except (OSError, _json.JSONDecodeError) as e:
+        return _emit(args, {
+            'ok': False, 'error': f'state file unreadable: {e}',
+        }, f'error: state file unreadable: {e}')
+
+    data['monitor_task_id'] = task_id
+    import time as _time
+    data['armed_at'] = _time.time()
+    active_path.write_text(_json.dumps(data, indent=2), encoding='utf-8')
+
+    payload = {
+        'ok': True,
+        'instance_id': instance_id,
+        'name': name,
+        'monitor_task_id': task_id,
+        'state_file': str(active_path),
+    }
+    summary = f'Listener "{name}" armed: monitor_task_id={task_id}'
+    return _emit(args, payload, summary)
+
+
+def handle_listener_off_command(args) -> int:
+    """`empirica listener off` — tear down the canonical mesh listener.
+
+    Reads `listener_active_<instance>_<name>.json` for the Monitor
+    task_id, then emits structured JSON instructing Claude to
+    `TaskStop(task_id)` followed by `empirica listener unregister <name>`.
+
+    The 2-step protocol mirrors `on`'s structured next_step shape so
+    the AI can chain mechanical actions without bespoke knowledge.
+    """
+    instance_id = _require_instance_id(args)
+    ai_id = _resolve_canonical_ai_id(args)
+    name = getattr(args, 'name', None) or (f'{ai_id}-inbox' if ai_id else None)
+    if not name:
+        return _emit(args, {
+            'ok': False,
+            'error': 'name unresolved — pass --name or --ai-id',
+        }, 'error: name unresolved')
+
+    active_path = listener_active_path(instance_id, name)
+    if not active_path.exists():
+        # Already off (or never armed). Emit unregister-only next_step
+        # so the caller can still clean up the registry entry if one exists.
+        payload = {
+            'ok': True,
+            'instance_id': instance_id,
+            'name': name,
+            'status': 'not_armed',
+            'next_step': {
+                'tool': None,
+                'after_stop': f'empirica listener unregister {name}',
+            },
+        }
+        summary = (
+            f'Listener "{name}" not armed (no state file). '
+            f'Run `empirica listener unregister {name}` to clear the registry entry.'
+        )
+        return _emit(args, payload, summary)
+
+    try:
+        with open(active_path, encoding='utf-8') as f:
+            data = _json.load(f)
+        monitor_task_id = data.get('monitor_task_id')
+    except (OSError, _json.JSONDecodeError) as e:
+        return _emit(args, {
+            'ok': False, 'error': f'state file unreadable: {e}',
+        }, f'error: state file unreadable: {e}')
+
+    payload = {
+        'ok': True,
+        'instance_id': instance_id,
+        'name': name,
+        'monitor_task_id': monitor_task_id,
+        'state_file': str(active_path),
+        'next_step': {
+            'tool': 'TaskStop' if monitor_task_id else None,
+            'args': {'task_id': monitor_task_id} if monitor_task_id else None,
+            'after_stop': f'empirica listener unregister {name}',
+        },
+    }
+    if monitor_task_id:
+        summary = (
+            f'Listener "{name}" — TaskStop({monitor_task_id}), '
+            f'then run `empirica listener unregister {name}`.'
+        )
+    else:
+        summary = (
+            f'Listener "{name}" has placeholder task_id (never armed). '
+            f'Run `empirica listener unregister {name}` to clean up.'
+        )
+    return _emit(args, payload, summary)
+
+
 _LISTENER_DISPATCH = {
     'register': handle_listener_register_command,
     'unregister': handle_listener_unregister_command,
@@ -1517,6 +1786,10 @@ _LISTENER_DISPATCH = {
     'install-request': handle_listener_install_request_command,
     'list': handle_listener_list_command,
     'status': handle_listener_status_command,
+    # AI-ergonomic facade (prop_oxrhoehv4)
+    'on': handle_listener_on_command,
+    'arm': handle_listener_arm_command,
+    'off': handle_listener_off_command,
 }
 
 
@@ -1557,7 +1830,7 @@ def handle_listener_group_command(args) -> int:
     action = getattr(args, 'listener_action', None)
     if not action:
         sys.stdout.write(
-            'usage: empirica listener <register|unregister|pause|resume|'
+            'usage: empirica listener <on|arm|off|register|unregister|pause|resume|'
             'record-wake|fire|install-request|list|status> [args...]\n'
         )
         return 2
@@ -1580,10 +1853,13 @@ __all__ = [
     'handle_instance_group_command',
     'handle_instance_kill_command',
     'handle_instance_label_command',
+    'handle_listener_arm_command',
     'handle_listener_fire_command',
     'handle_listener_group_command',
     'handle_listener_install_request_command',
     'handle_listener_list_command',
+    'handle_listener_off_command',
+    'handle_listener_on_command',
     'handle_listener_pause_command',
     'handle_listener_record_wake_command',
     'handle_listener_register_command',

@@ -422,6 +422,42 @@ def _add_listener_group(subparsers):
     _add_instance(status_p)
     _add_output(status_p)
 
+    # ─── AI-ergonomic on/arm/off facade (prop_oxrhoehv4) ─────────────────
+    # 3 verbs that collapse the multi-step in-session arming protocol to
+    # single tool calls. Power-user verbs above stay untouched.
+
+    on_p = listener_subs.add_parser('on',
+        help='Arm the canonical mesh listener for ai_id (short-circuits '
+             'when persistent OS service is running)')
+    on_p.add_argument('--ai-id',
+        help='AI identifier (default: project basename via .empirica/project.yaml)')
+    on_p.add_argument('--name',
+        help='Listener name (default: <ai_id>-inbox)')
+    on_p.add_argument('--topic',
+        help='ntfy topic (default: ntfy:orchestration-events?tags=<ai_id>)')
+    _add_instance(on_p)
+    _add_output(on_p)
+
+    arm_p = listener_subs.add_parser('arm',
+        help='Record the Monitor task_id post-arm (chained after `on` + Monitor)')
+    arm_p.add_argument('task_id', help='Monitor task id (from the Monitor tool response)')
+    arm_p.add_argument('--name',
+        help='Listener name (default: <ai_id>-inbox)')
+    arm_p.add_argument('--ai-id',
+        help='AI identifier (default: project basename via .empirica/project.yaml)')
+    _add_instance(arm_p)
+    _add_output(arm_p)
+
+    off_p = listener_subs.add_parser('off',
+        help='Tear down the canonical mesh listener — emits TaskStop + '
+             '`unregister` next_step JSON')
+    off_p.add_argument('--name',
+        help='Listener name (default: <ai_id>-inbox)')
+    off_p.add_argument('--ai-id',
+        help='AI identifier (default: project basename via .empirica/project.yaml)')
+    _add_instance(off_p)
+    _add_output(off_p)
+
 
 def _add_status_command(subparsers):
     status = subparsers.add_parser(
