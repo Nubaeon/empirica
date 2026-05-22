@@ -1,7 +1,7 @@
 ---
 name: cortex-mailbox-send
 description: "Use when sending a message to a PEER AI in the mesh — discussion, FYI, question, request to do work, or completion-ack for a request a peer made of YOU. Pairs with /cortex-mailbox-poll (the receive side). Covers: when-to-send vs when-to-just-log-locally, choosing between collab flavor (auto-accept, conversational) vs ECO-gated flavor (typed action request that waits for a human decision), addressing peers by ai_id, completing inbound proposals so the source AI gets the ack, and recovery if a previous send mis-targeted. NOT for cortex_bus_* (system instance work queue, different concern) or cortex_collab_post (collab-doc events, web workflow only)."
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Sending in the AI Mesh
@@ -41,7 +41,7 @@ Use this skill any time you want to communicate something to another AI:
 | Need a peer AI to make an architectural decision | **ECO-gated** (`architecture_decision`) |
 | Need a peer AI to investigate something for you | **ECO-gated** (`investigation_request`) |
 | Want to publish something via Zernio / a downstream pipeline | **ECO-gated** (`publish`) |
-| **A peer's request to YOU just landed and you completed it** | **`cortex_complete_proposal`** (separate primitive — see Completion Ack below) |
+| **A peer's request to YOU just landed and you completed it** | **`empirica mailbox reply`** (atomic reply+close — see Completion Ack below) |
 
 If the work is purely yours (no peer needs to know, no peer needs to
 act), just `finding-log` / `decision-log` locally. The mesh is for
@@ -223,15 +223,71 @@ When a peer sends YOU an ECO-gated proposal and ECO accepts, YOUR
 source AI** so they wake with `direction=outbox, status=completed` and
 know their request landed.
 
+### Canonical path — `empirica mailbox reply` (atomic)
+
+The reply verb does propose+complete in **one CLI call** — the new
+reply collab_brief is posted AND the parent proposal is marked
+completed (with your commit_sha attached) in a single transaction.
+
+```bash
+empirica mailbox reply \
+  --parent-id <the-proposal-you-just-executed> \
+  --summary "<what you did, what the peer should know>" \
+  --commit-sha <sha>             # carried in the source AI's wake event
+  # Defaults applied automatically:
+  #   --type collab_brief        (reply flavor; auto-accepts on peer side)
+  #   --target-claudes <auto>    (derived from parent.source_claude)
+  #   --source-claude <auto>     (read from .empirica/project.yaml)
+  #   --result shipped           (or pass --result wont_fix / failed)
+  #   --title "Re: <parent.title>"  (truncated to 200 chars)
+```
+
+Common variations:
+
+```bash
+# Decided not to do it — still ack, honestly
+empirica mailbox reply --parent-id <pid> \
+  --result wont_fix \
+  --summary "Decided not to ship this because <reason>. <pointer to the alternative>."
+
+# Reply with a follow-up question, DON'T close the parent yet
+empirica mailbox reply --parent-id <pid> --no-close \
+  --summary "Before I implement: <question that needs answer first>"
+
+# CC additional peers beyond just the source
+empirica mailbox reply --parent-id <pid> \
+  --target-claudes "cortex,extension" \
+  --summary "Shipped — flagging both since this touches both projects."
+```
+
+Why prefer this over the raw MCP primitive: one call instead of two,
+no `api_key` to manage, defaults handle the routing arithmetic
+(parent → source_claude → your target_claudes) that's tedious to get
+right by hand, and you can't accidentally close the parent without
+sending a reply (or vice-versa) — they're atomic.
+
+### Fallback — raw `cortex_complete_proposal` (when reply doesn't fit)
+
+If you have an unusual flow — replying via different mechanism, posting
+the reply elsewhere, or completing without any reply at all — use the
+raw MCP primitives:
+
 ```python
 mcp__cortex__cortex_complete_proposal(
     api_key=<your-api-key>,
     proposal_id="<the proposal you just executed>",
     result="shipped",                  # or "wont_fix" if you decided not to do it
-    commit_sha="<the SHA your work landed on>",   # carried in the source AI's wake event
+    commit_sha="<the SHA your work landed on>",
     completion_note="<optional human-readable summary>",
 )
 ```
+
+This is the lower-level primitive `empirica mailbox reply` wraps. Reach
+for it when the atomic verb's defaults don't fit (e.g., you've already
+posted the reply context via a different mechanism and just need the
+close, or you're scripting bulk-ack across many proposals).
+
+### Closing the local goal
 
 **Pair with goals-complete to close both ends of the loop.** If you
 deferred this proposal via the `/cortex-mailbox-poll` convention (an
@@ -240,26 +296,28 @@ close that goal at the same time you ack the source AI:
 
 ```bash
 empirica goals-complete --goal-id <the-defer-goal-id> \
-  --reason "Completed via cortex_complete_proposal (commit <sha>)"
+  --reason "Completed via mailbox reply (commit <sha>)"
 ```
 
 Otherwise the POSTFLIGHT deferred-proposals nudge will keep surfacing it
 as still-open — the source AI's outbox correctly shows completed, but
 your inbox-side discipline doesn't.
 
-**Why this matters:** the AI-to-AI handshake is one-sided without this
-call. The source AI emitted, waited, and got nothing back — they have
-no way to know if you saw it, agreed with it, deferred it, or quietly
-abandoned it. The completion ack carries the `commit_sha` so they can
-trace exactly which commit closed their request. This is the structural
-analog of a function returning a value.
+### Why this matters
+
+The AI-to-AI handshake is one-sided without this call. The source AI
+emitted, waited, and got nothing back — they have no way to know if you
+saw it, agreed with it, deferred it, or quietly abandoned it. The
+completion ack carries the `commit_sha` so they can trace exactly which
+commit closed their request. This is the structural analog of a
+function returning a value.
 
 Skipping this is one of the most common send-side discipline gaps. The
 peer's outbox protocol expects it; without it their request stays
 visibly "accepted, no completion" indefinitely.
 
-If you decided NOT to do it: still ack, with `result="wont_fix"` and
-a note explaining why. Closes the loop honestly.
+If you decided NOT to do it: still ack, with `--result wont_fix` and a
+summary explaining why. Closes the loop honestly.
 
 ---
 
@@ -378,16 +436,18 @@ mcp__cortex__cortex_propose(
 **Step 4 — Wait.** ECO actor (David's phone, the extension, or Homer
 auto-accept if enabled) accepts. The `outreach` AI's listener fires.
 
-**Step 5 — `outreach` does the work, commits, and acks back:**
-```python
-mcp__cortex__cortex_complete_proposal(
-    api_key=<api-key>,
-    proposal_id="prop_<id>",
-    result="shipped",
-    commit_sha="def456",
-    completion_note="Renamed tone_legacy → tone, added migration comment.",
-)
+**Step 5 — `outreach` does the work, commits, and acks back via the
+atomic reply verb:**
+```bash
+empirica mailbox reply --parent-id prop_<id> \
+  --commit-sha def456 \
+  --summary "Renamed tone_legacy → tone, added migration comment. Loader test passes."
 ```
+
+This single call posts a `collab_brief` reply addressed back to
+`empirica` (auto-derived from `parent.source_claude`) AND marks the
+parent proposal as completed with `commit_sha=def456`. No `api_key`
+to manage, no two-step orchestration.
 
 **Step 6 — Your listener fires** with
 `direction=outbox, status=completed, commit_sha=def456`. Your
@@ -422,7 +482,8 @@ peer needs to read or act.
 | Sending without `source_claude` | Completion acks can't route back to you | Always set `source_claude` to your own `ai_id` |
 | `type="code_change_request"` for an FYI | Triggers ECO gate for what should be auto-accepted | Use `type="collab_brief"` + `action_category="REFLEX"` |
 | `type="collab_brief"` for "please change file X" | Auto-accepts a real action request without ECO review | Use the typed action request with `action_category="TACTICAL"` |
-| Forgetting to ack a completed proposal | One-sided handshake; source AI never knows you delivered | Always call `cortex_complete_proposal` with `commit_sha` |
+| Forgetting to ack a completed proposal | One-sided handshake; source AI never knows you delivered | `empirica mailbox reply --parent-id <pid> --commit-sha <sha> --summary "..."` (atomic) — falls back to raw `cortex_complete_proposal` only when the atomic verb doesn't fit |
+| Calling `cortex_propose` for the reply, then `cortex_complete_proposal` separately | Two calls, two chances to forget the second; non-atomic — if the close fails after the reply went out, the loop stays half-open | Use `empirica mailbox reply` — propose+complete in one atomic CLI call |
 | Wrapping a discussion in `architecture_decision` to "make it serious" | ECO has to gate every chat turn; discussion stalls | Discussion is `collab_brief`; only the final decision is `architecture_decision` |
 | Sending the same proposal to a wrong target and then `cortex_propose`-ing a "v2" with same content | Duplicate inbox entries, no audit trail of the re-route | Use the recovery pattern above — parent_id link + "[routing fix]" prefix |
 | Guessing a peer's `ai_id` | Silent mis-route | Verify via their project.yaml or ask David |
@@ -432,6 +493,7 @@ peer needs to read or act.
 ## Related
 
 - **`/cortex-mailbox-poll`** — the receive side. Pair with this skill: that one tells you what to do when a proposal arrives; this one tells you how to send.
+- **`empirica mailbox reply --help`** — canonical atomic reply+close verb (the path most completion-acks should go through).
 - **`docs/architecture/EVENT_LISTENER.md`** — the full pipeline (publisher → ntfy → listener → Monitor → reaction).
 - **`mcp__cortex__cortex_get_proposal`** — fetch any proposal by id (useful for verifying your own sends).
 - **`mcp__cortex__cortex_outbox_poll`** — see all proposals YOU've sent, with their current status.
