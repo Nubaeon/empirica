@@ -250,12 +250,23 @@ def _format_command_block(cmd: dict[str, Any], level: int = 4) -> str:
 
 _PROLOGUE = """# Empirica CLI Commands — Unified Reference
 
-> **Auto-generated.** This document is regenerated from the live argparse
-> tree by `scripts/generate_cli_docs.py`. Do not edit by hand — your edits
-> will be overwritten on the next regen. Add new commands by registering
+> **This document is reference-only.** It catalogs *what* commands and
+> flags exist. For *why* — when to use a command, workflow patterns,
+> decision trees — read the skills (`/empirica-constitution`,
+> `/epistemic-transaction`, `/cortex-mailbox-send`, `/cortex-mailbox-poll`)
+> and the `docs/architecture/` design docs. The split is intentional:
+> mechanical reference rots fastest, so we auto-generate it; conceptual
+> material is hand-curated where rot is slower and the cost of
+> mis-explanation is highest.
+>
+> **Auto-generated** from the live argparse tree by
+> `scripts/generate_cli_docs.py`. Do not edit by hand — your edits will
+> be overwritten on the next regen. Add new commands by registering
 > their parser via `add_*_parsers(subparsers)` in
 > `empirica/cli/parsers/__init__.py`; the generator picks them up
-> automatically.
+> automatically. Per-command depth (the `help="..."` strings) is sourced
+> from the parser definitions themselves — improving a description
+> means editing the `add_argument` / `add_parser` call, not this file.
 >
 > Categories below follow `_HELP_CATEGORIES` in
 > `empirica/cli/cli_core.py` — adding a new category means editing that
@@ -270,6 +281,10 @@ For the most up-to-date detail on any single command, prefer
 strings argparse uses at runtime, but argparse can render dynamic context
 (env-resolved defaults, conditional choices) that a static document
 cannot.
+
+For workflow guidance — "I want to do X, which command(s)?" — load
+the relevant skill instead of grepping this reference. The skills know
+the *why*; this doc only knows the *what*.
 
 ---
 
