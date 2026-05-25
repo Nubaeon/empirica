@@ -151,20 +151,11 @@ SCHEMAS = [
                 )
     """,
 
-    # Schema 7
-    """
-    CREATE TABLE IF NOT EXISTS project_reference_docs (
-                    id TEXT PRIMARY KEY,
-                    project_id TEXT NOT NULL,
-                    doc_path TEXT NOT NULL,
-                    doc_type TEXT,
-                    description TEXT,
-                    created_timestamp REAL NOT NULL,
-                    doc_data TEXT NOT NULL,
-
-                    FOREIGN KEY (project_id) REFERENCES projects(id)
-                )
-    """,
+    # Schema 7 — project_reference_docs table removed in goal 3d6aeb08
+    # Phase 3. Data migrated into epistemic_sources(source_type='pointer')
+    # via migration 046; CLI dropped via Phase 2 (refdoc-add gone). Migration
+    # 047 drops the legacy table from existing DBs. Schema number 7 retained
+    # as a comment to preserve sequencing (don't renumber 8+ retrospectively).
 
     # Schema 8
     """

@@ -253,7 +253,8 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_unknowns_project ON project_unknowns(project_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_unknowns_resolved ON project_unknowns(is_resolved)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_dead_ends_project ON project_dead_ends(project_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_reference_docs_project ON project_reference_docs(project_id)")
+        # idx_project_reference_docs_project dropped in goal 3d6aeb08 Phase 3 —
+        # the project_reference_docs table is dropped by migration 047.
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_epistemic_sources_project ON epistemic_sources(project_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_epistemic_sources_session ON epistemic_sources(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_epistemic_sources_type ON epistemic_sources(source_type)")

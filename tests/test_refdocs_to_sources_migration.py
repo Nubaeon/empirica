@@ -26,7 +26,10 @@ from pathlib import Path
 
 import pytest
 
-from empirica.data.migrations.migrations import migration_046_refdocs_to_sources
+from empirica.data.migrations.migrations import (
+    migration_046_refdocs_to_sources,
+    migration_047_drop_project_reference_docs,
+)
 from empirica.data.session_database import SessionDatabase
 
 
@@ -75,11 +78,12 @@ def test_add_reference_doc_writes_to_sources_not_legacy_table(db):
     assert src["epistemic_layer"] == "noetic"
     assert src["confidence"] == 0.7
 
-    legacy = cursor.execute(
-        "SELECT COUNT(*) FROM project_reference_docs WHERE id = ?",
-        (doc_id,),
-    ).fetchone()[0]
-    assert legacy == 0, "writer should not touch the legacy table"
+    # The legacy table was dropped in Phase 3 (migration 047) — confirm
+    # it's absent rather than checking row count.
+    legacy_table = cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='project_reference_docs'"
+    ).fetchone()
+    assert legacy_table is None, "Phase 3 dropped the legacy table"
 
 
 def test_add_reference_doc_preserves_doc_type_in_metadata(db):
@@ -165,6 +169,16 @@ def test_migration_046_copies_legacy_rows_into_sources(db):
     """Migration backfills any rows that exist in the legacy table."""
     project_id = db._test_project_id
     legacy_id = str(uuid.uuid4())
+    # Phase 3 dropped the legacy table. Re-create it here to simulate
+    # a long-lived DB that pre-dates Phase 3 (the migration's actual
+    # job is to handle exactly this case).
+    db.conn.execute(
+        """CREATE TABLE IF NOT EXISTS project_reference_docs (
+            id TEXT PRIMARY KEY, project_id TEXT NOT NULL,
+            doc_path TEXT NOT NULL, doc_type TEXT, description TEXT,
+            created_timestamp REAL NOT NULL, doc_data TEXT NOT NULL
+        )"""
+    )
     db.conn.execute(
         """INSERT INTO project_reference_docs
            (id, project_id, doc_path, doc_type, description,
@@ -196,6 +210,16 @@ def test_migration_046_is_idempotent(db):
     """Re-running the migration doesn't duplicate rows."""
     project_id = db._test_project_id
     legacy_id = str(uuid.uuid4())
+    # Phase 3 dropped the legacy table. Re-create it here to simulate
+    # a long-lived DB that pre-dates Phase 3 (the migration's actual
+    # job is to handle exactly this case).
+    db.conn.execute(
+        """CREATE TABLE IF NOT EXISTS project_reference_docs (
+            id TEXT PRIMARY KEY, project_id TEXT NOT NULL,
+            doc_path TEXT NOT NULL, doc_type TEXT, description TEXT,
+            created_timestamp REAL NOT NULL, doc_data TEXT NOT NULL
+        )"""
+    )
     db.conn.execute(
         """INSERT INTO project_reference_docs
            (id, project_id, doc_path, created_timestamp, doc_data)
@@ -274,6 +298,82 @@ def test_source_add_does_not_double_write_to_refdocs(db):
     assert row_type == "document"
 
 
+# ── Phase 3: migration 047 drops the legacy table ────────────────────
+
+
+def test_phase3_fresh_db_has_no_legacy_table(db):
+    """Phase 3 removed schema 7 entirely. Fresh DBs initialized post-Phase-3
+    don't have project_reference_docs at all — the table never existed."""
+    res = db.conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='project_reference_docs'"
+    ).fetchone()
+    assert res is None
+
+
+def test_migration_046_no_op_when_legacy_table_missing(db):
+    """Migration 046 must tolerate the table being absent (fresh DBs post-
+    Phase-3). Re-running on a DB that never had the table is a clean no-op."""
+    # On fresh DB the table is gone — migration must not raise
+    migration_046_refdocs_to_sources(db.conn.cursor())
+    db.conn.commit()  # implicit smoke: no exception
+
+
+def test_migration_047_drops_legacy_table_when_present(db):
+    """Long-lived DB simulation: re-create the table, run migration 047,
+    verify it's dropped (data was already migrated by 046)."""
+    db.conn.execute(
+        """CREATE TABLE project_reference_docs (
+            id TEXT, project_id TEXT, doc_path TEXT, doc_type TEXT,
+            description TEXT, created_timestamp REAL, doc_data TEXT
+        )"""
+    )
+    db.conn.commit()
+    # Sanity: table exists
+    assert db.conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='project_reference_docs'"
+    ).fetchone() is not None
+
+    migration_047_drop_project_reference_docs(db.conn.cursor())
+    db.conn.commit()
+
+    # Verify table is gone
+    assert db.conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='project_reference_docs'"
+    ).fetchone() is None
+
+
+def test_migration_047_is_idempotent_when_table_absent(db):
+    """Re-running on a DB that doesn't have the table is a clean no-op."""
+    # Run twice on a fresh DB (table never existed)
+    migration_047_drop_project_reference_docs(db.conn.cursor())
+    db.conn.commit()
+    migration_047_drop_project_reference_docs(db.conn.cursor())
+    db.conn.commit()
+    # No exception → idempotent
+
+
+def test_writer_still_works_after_phase3(db):
+    """Phase 3 dropped the table but the Python API stays (alias over
+    sources). add_reference_doc still routes to epistemic_sources(type='pointer')
+    and consumers get the same shape back from get_project_reference_docs."""
+    project_id = db._test_project_id
+    doc_id = db.add_reference_doc(
+        project_id=project_id, doc_path="docs/post-phase3.md",
+        doc_type="guide", description="Post-Phase-3 doc",
+    )
+    docs = db.get_project_reference_docs(project_id)
+    assert len(docs) == 1
+    assert docs[0]["doc_path"] == "docs/post-phase3.md"
+    assert docs[0]["doc_type"] == "guide"
+    assert docs[0]["description"] == "Post-Phase-3 doc"
+    # And it landed in epistemic_sources, not the (now-absent) legacy table
+    src_count = db.conn.execute(
+        "SELECT COUNT(*) FROM epistemic_sources WHERE id = ?",
+        (doc_id,),
+    ).fetchone()[0]
+    assert src_count == 1
+
+
 def test_reader_merges_new_writes_with_migrated_rows(db):
     """A mix of new writes (already in sources) + migrated legacy rows
     (after migration runs) all appear in one reader call."""
@@ -282,7 +382,15 @@ def test_reader_merges_new_writes_with_migrated_rows(db):
     # New-style write
     db.add_reference_doc(project_id=project_id, doc_path="docs/new.md")
 
-    # Legacy + migrate
+    # Legacy + migrate — Phase 3 dropped the table; re-create to simulate
+    # the long-lived-DB case migration 046 was built to handle.
+    db.conn.execute(
+        """CREATE TABLE IF NOT EXISTS project_reference_docs (
+            id TEXT PRIMARY KEY, project_id TEXT NOT NULL,
+            doc_path TEXT NOT NULL, doc_type TEXT, description TEXT,
+            created_timestamp REAL NOT NULL, doc_data TEXT NOT NULL
+        )"""
+    )
     legacy_id = str(uuid.uuid4())
     db.conn.execute(
         """INSERT INTO project_reference_docs

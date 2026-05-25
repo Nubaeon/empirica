@@ -1271,6 +1271,7 @@ ALL_MIGRATIONS: list[tuple[str, str, Callable]] = [
     ("044_source_lifecycle", "Add archive lifecycle columns (archived, archive_reason, archive_target_id, lifecycle_audit_log) to epistemic_sources for SOURCES_LIFECYCLE_SPEC Phase 1 (soft-delete + supersession). Empirica-Core CLI parity per the Cortex spec; empirica is the authoritative store.", lambda cursor: migration_044_source_lifecycle(cursor)),
     ("045_assumption_decision_description", "Add description TEXT column to assumptions + decisions (markdown-first artifacts series — mirrors goals migration 043). Extension renders as prettified markdown.", lambda cursor: migration_045_assumption_decision_description(cursor)),
     ("046_refdocs_to_sources", "Migrate project_reference_docs rows into epistemic_sources with source_type='pointer'. Phase 1 of refdocs→sources unification (goal 3d6aeb08). Idempotent — skips rows already migrated by id. The old table stays in place this phase; reader+writer switch over to sources, CLI drop + table drop in a follow-up.", lambda cursor: migration_046_refdocs_to_sources(cursor)),
+    ("047_drop_project_reference_docs", "Drop project_reference_docs table — Phase 3 of refdocs→sources unification (goal 3d6aeb08). All data was migrated to epistemic_sources(type='pointer') by migration 046; CLI surface was dropped in Phase 2 (no writers); reader was switched in Phase 1 (no readers). Final structural cleanup. Idempotent — skips when table doesn't exist (fresh DBs that never had it).", lambda cursor: migration_047_drop_project_reference_docs(cursor)),
 ]
 
 
@@ -1584,6 +1585,45 @@ def migration_041_artifact_edges(cursor: sqlite3.Cursor):
     )
 
 
+def migration_047_drop_project_reference_docs(cursor: sqlite3.Cursor):
+    """Drop the project_reference_docs table.
+
+    Phase 3 of refdocs → sources unification. Migration 046 moved all
+    rows into epistemic_sources(source_type='pointer'); Phase 2 (CLI
+    removal) ensured no writers remained; Phase 1 (reader switch)
+    ensured no readers remained. This migration completes the unification
+    by removing the now-empty/orphaned table.
+
+    Idempotent — DROP TABLE IF EXISTS handles:
+      - Long-lived DBs that have the table (drops it).
+      - Fresh DBs initialized after schema 7 was removed (no-op).
+      - Re-runs on already-migrated DBs (no-op).
+
+    Note: this also auto-drops the idx_project_reference_docs_project
+    index (SQLite drops dependent indexes when a table is dropped).
+    """
+    # Sanity log: row count before drop, so audit shows how many rows
+    # were ever in the legacy table for this DB (useful for diffing
+    # against the migration 046 'migrated' count).
+    try:
+        cursor.execute("SELECT COUNT(*) FROM project_reference_docs")
+        count = cursor.fetchone()[0]
+        had_table = True
+    except sqlite3.OperationalError:
+        # Table already absent
+        count = 0
+        had_table = False
+
+    cursor.execute("DROP TABLE IF EXISTS project_reference_docs")
+    if had_table:
+        logger.info(
+            f"✅ Migration 047 complete: dropped project_reference_docs "
+            f"({count} rows freed; data already in epistemic_sources via 046)"
+        )
+    else:
+        logger.info("✅ Migration 047 complete: project_reference_docs already absent (no-op)")
+
+
 def migration_046_refdocs_to_sources(cursor: sqlite3.Cursor):
     """Copy project_reference_docs rows into epistemic_sources(type='pointer').
 
@@ -1622,7 +1662,16 @@ def migration_046_refdocs_to_sources(cursor: sqlite3.Cursor):
     import os.path
     from datetime import datetime as _dt
 
-    cursor.execute("SELECT * FROM project_reference_docs")
+    # Schema 7 was removed in Phase 3 (this same goal) so fresh DBs no
+    # longer have project_reference_docs at all. That's a no-op — there's
+    # nothing to migrate. Long-lived DBs still have the table; we migrate
+    # rows out of it here, and migration 047 drops the table after.
+    try:
+        cursor.execute("SELECT * FROM project_reference_docs")
+    except sqlite3.OperationalError:
+        logger.info("✅ Migration 046 complete: project_reference_docs absent (fresh DB, no-op)")
+        return
+
     rows = cursor.fetchall()
     column_names = [d[0] for d in cursor.description] if cursor.description else []
     if not rows:
