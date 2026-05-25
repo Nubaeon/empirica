@@ -63,13 +63,13 @@ jobs:
         run: python -m build --wheel --sdist --outdir dist/
 
       - name: Upload empirica artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: empirica-dist
           path: dist/*
 
       - name: Upload empirica-mcp artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: empirica-mcp-dist
           path: empirica-mcp/dist/*
