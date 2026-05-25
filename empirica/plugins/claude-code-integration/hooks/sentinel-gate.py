@@ -479,7 +479,7 @@ EMPIRICA_TIER2_PREFIXES = (
     'empirica create-git-checkpoint', 'empirica load-git-checkpoint',
     'empirica memory-compact', 'empirica resume-previous-session',
     'empirica agent-spawn', 'empirica investigate',
-    'empirica refdoc-add', 'empirica source-add',
+    'empirica source-add',
     'empirica assumption-log', 'empirica decision-log',  # Noetic artifacts - assumptions/decisions
     'empirica lesson-create', 'empirica lesson-load', 'empirica lesson-path',
     'empirica lesson-replay-start', 'empirica lesson-replay-end',

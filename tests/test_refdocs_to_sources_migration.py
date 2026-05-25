@@ -225,6 +225,55 @@ def test_migration_046_handles_empty_legacy_table(db):
     db.conn.commit()
 
 
+def test_refdoc_add_cli_command_is_removed():
+    """Phase 2: the `empirica refdoc-add` CLI no longer exists.
+
+    Phase 2 of goal 3d6aeb08. The Python API (add_reference_doc /
+    get_project_reference_docs) is still in place for internal callers
+    — only the user-facing CLI surface is dropped. Users should use
+    `empirica source-add` instead (which routes to the same epistemic_sources
+    table; source_type='pointer' if they want strict equivalence).
+    """
+    import subprocess
+    proc = subprocess.run(
+        ["empirica", "refdoc-add", "--help"],
+        capture_output=True, text=True, check=False,
+    )
+    # Argparse exits 2 on unknown command + writes "invalid choice" to stderr
+    assert proc.returncode != 0
+    assert "invalid choice: 'refdoc-add'" in (proc.stderr or proc.stdout)
+
+
+def test_source_add_does_not_double_write_to_refdocs(db):
+    """Phase 2 fix: source-add used to dual-write (sources table + refdocs
+    back-compat). Post-Phase-1, add_reference_doc routes to sources too,
+    which made the dual-write a silent double-insert (one row with the
+    user's source_type, one with source_type='pointer'). The back-compat
+    write is removed in Phase 2; source-add now writes exactly one row.
+    """
+    project_id = db._test_project_id
+    source_id = db.add_epistemic_source(
+        project_id=project_id,
+        source_type="document",
+        title="My Doc",
+        source_url="docs/my.md",
+    )
+    cursor = db.conn.cursor()
+    # Exactly one row in epistemic_sources for this project
+    count = cursor.execute(
+        "SELECT COUNT(*) FROM epistemic_sources WHERE project_id = ?",
+        (project_id,),
+    ).fetchone()[0]
+    assert count == 1
+    assert source_id is not None
+    # The single row has the user's source_type, NOT 'pointer'
+    row_type = cursor.execute(
+        "SELECT source_type FROM epistemic_sources WHERE id = ?",
+        (source_id,),
+    ).fetchone()[0]
+    assert row_type == "document"
+
+
 def test_reader_merges_new_writes_with_migrated_rows(db):
     """A mix of new writes (already in sources) + migrated legacy rows
     (after migration runs) all appear in one reader call."""

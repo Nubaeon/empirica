@@ -1697,52 +1697,12 @@ def handle_decision_log_command(args):
             db.close()
 
 
-def handle_refdoc_add_command(args):
-    """Handle refdoc-add command (DEPRECATED — use source-add instead)"""
-    import sys as _sys
-    print("⚠️  refdoc-add is deprecated. Use 'empirica source-add' instead.", file=_sys.stderr)
-    print("   Example: empirica source-add --title 'My Doc' --path ./doc.md --noetic", file=_sys.stderr)
-    try:
-        from empirica.cli.utils.project_resolver import resolve_project_id
-        from empirica.data.session_database import SessionDatabase
-
-        # Get project_id from args (required argument)
-        project_id = args.project_id
-        doc_path = args.doc_path
-        doc_type = getattr(args, 'doc_type', None)
-        description = getattr(args, 'description', None)
-
-        db = SessionDatabase()
-
-        # Resolve project name to UUID
-        project_id = resolve_project_id(project_id, db)
-
-        doc_id = db.add_reference_doc(
-            project_id=project_id,
-            doc_path=doc_path,
-            doc_type=doc_type,
-            description=description
-        )
-        db.close()
-
-        if hasattr(args, 'output') and args.output == 'json':
-            result = {
-                "ok": True,
-                "doc_id": doc_id,
-                "project_id": project_id,
-                "message": "Reference doc added successfully"
-            }
-            print(json.dumps(result, indent=2))
-        else:
-            print("✅ Reference doc added successfully")
-            print(f"   Doc ID: {doc_id}")
-            print(f"   Path: {doc_path}")
-
-        return 0  # Success
-
-    except Exception as e:
-        handle_cli_error(e, "Reference doc add", getattr(args, 'verbose', False))
-        return None
+# handle_refdoc_add_command removed in goal 3d6aeb08 Phase 2.
+# The CLI surface is gone; use `empirica source-add` instead.
+# The Python API (SessionDatabase.add_reference_doc /
+# BreadcrumbRepository.add_reference_doc) is still in place for
+# internal callers and routes to epistemic_sources WHERE
+# source_type='pointer' since migration 046.
 
 
 def _source_persist_git_and_qdrant(source_id, project_id, session_id, title,
@@ -1870,12 +1830,12 @@ def handle_source_add_command(args):
                 discovered_via=via, transaction_id=transaction_id,
             )
 
-        if doc_path:
-            try:
-                db.add_reference_doc(project_id=project_id, doc_path=doc_path,
-                                     doc_type=source_type, description=description)
-            except Exception:
-                pass
+        # Refdoc back-compat dual-write removed in goal 3d6aeb08 Phase 2.
+        # Pre-Phase-1: this wrote a parallel row into project_reference_docs
+        # for any source with a doc_path, so legacy refdoc consumers could
+        # see it. Post-Phase-1: add_reference_doc routes to epistemic_sources
+        # too, which made this a double-insert (one row with the user's
+        # source_type, one duplicate with source_type='pointer'). Drop it.
 
         db.close()
 

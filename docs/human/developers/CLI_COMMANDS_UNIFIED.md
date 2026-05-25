@@ -22,9 +22,9 @@
 > `empirica/cli/cli_core.py` — adding a new category means editing that
 > dictionary, then running this script.
 
-**Framework version:** 1.9.10
-**Generated:** 2026-05-23 12:39:32 UTC
-**Total commands:** 231 (across 26 categories)
+**Framework version:** 1.9.11
+**Generated:** 2026-05-25 19:03:24 UTC
+**Total commands:** 230 (across 26 categories)
 
 For the most up-to-date detail on any single command, prefer
 `empirica <command> --help` — the generator extracts the same `help`
@@ -65,7 +65,7 @@ require `--session-id` (`project-bootstrap`, `sessions-show`,
 | [session](#session) | 8 | `session-create`, `sessions-list`, `sessions-show`, … |
 | [workflow](#workflow) | 4 | `preflight-submit`, `check`, `check-submit`, … |
 | [goals](#goals) | 16 | `goals-create`, `goals-list`, `goals-search`, … |
-| [logging](#logging) | 19 | `finding-log`, `unknown-log`, `unknown-list`, … |
+| [logging](#logging) | 20 | `finding-log`, `unknown-log`, `unknown-list`, … |
 | [project](#project) | 15 | `project-init`, `project-update`, `project-create`, … |
 | [workspace](#workspace) | 9 | `workspace-init`, `workspace-map`, `workspace-list`, … |
 | [checkpoint](#checkpoint) | 7 | `checkpoint-create`, `checkpoint-load`, `checkpoint-list`, … |
@@ -972,23 +972,6 @@ Look up logged mistakes — useful before tackling work that echoes a pattern yo
 - `--verbose` — optional · flag
   Show detailed operation info
 
-#### `empirica refdoc-add`
-
-DEPRECATED — use `source-add --source-type document` instead. Kept for backward compatibility with older scripts/skills. Sources are the unified surface for both noetic (evidence IN) and praxic (output OUT) external material; refdocs were noetic-only and lacked direction tagging.
-
-**Arguments:**
-
-- `--project-id` — **required**
-  Project UUID
-- `--doc-path` — **required**
-  Document path
-- `--doc-type` — optional
-  Document type (architecture, guide, api, design)
-- `--description` — optional
-  Document description
-- `--output` — optional · type=`choice` · choices={human, json} · default=`human`
-  Output format
-
 #### `empirica source-add`
 
 Register external material as a citable source. Use for any evidence outside the current code (RFC, paper, blog, customer call, design doc, screenshot, vendor contract). Pass --noetic when it informed your knowledge, --praxic when you produced it as output. Returns a source UUID — link it from findings / decisions / dead-ends via `--source <uuid>` on those *-log commands so the audit trail traces back to origin.
@@ -1021,6 +1004,42 @@ Register external material as a citable source. Use for any evidence outside the
   Entity UUID (organization, contact, or engagement ID)
 - `--via` — optional
   Discovery channel (cli, email, linkedin, calendar, agent, web)
+- `--output` — optional · type=`choice` · choices={human, json} · default=`human`
+  Output format
+- `--verbose` — optional · flag
+  Verbose output
+
+#### `empirica source-list`
+
+List registered sources for a project. Filter by --type (document/code/web/api/…) or --direction (noetic/praxic/all). Useful for finding the source UUID to cite in a new artifact, or for auditing what external material has informed the project. Archived sources are hidden by default — pass --include-archived for forensics.
+
+**Arguments:**
+
+- `--project-id` — optional
+  Project UUID or name (auto-derived from context)
+- `--type` — optional
+  Filter by source type (document, code, web, api, etc.)
+- `--direction` — optional · type=`choice` · choices={noetic, praxic, all} · default=`all`
+  Filter by direction (noetic=evidence IN, praxic=output OUT)
+- `--include-archived` — optional · flag
+  Include soft-deleted/archived sources (forensics view; archived rows hidden by default)
+- `--output` — optional · type=`choice` · choices={human, json} · default=`human`
+  Output format
+- `--verbose` — optional · flag
+  Show detailed info
+
+#### `empirica source-archive`
+
+Soft-delete a source. Use when the source is no longer valid (file deleted, URL dead, superseded by newer material). Edges from citing artifacts are preserved so the audit trail stays intact — the source just disappears from default listings. Pass --reason superseded + --target-id <newer-uuid> to chain forward to the replacement.
+
+**Arguments:**
+
+- `--source-id` — **required**
+  Source UUID (or unique prefix) to archive
+- `--reason` — **required** · type=`choice` · choices={user_deleted, file_missing, url_unreachable, superseded}
+  Why this source is being archived
+- `--target-id` — optional
+  Replacement source UUID (REQUIRED when --reason superseded — the chain forward)
 - `--output` — optional · type=`choice` · choices={human, json} · default=`human`
   Output format
 - `--verbose` — optional · flag
@@ -4802,42 +4821,6 @@ One fire of the services-audit loop: scan + diff vs prior + notify on novel serv
   Project UUID (overrides auto-resolution)
 - `--output` — optional · type=`choice` · choices={human, json} · default=`json`
   Output format (default: json — loop bodies consume this)
-
-#### `empirica source-archive`
-
-Soft-delete a source. Use when the source is no longer valid (file deleted, URL dead, superseded by newer material). Edges from citing artifacts are preserved so the audit trail stays intact — the source just disappears from default listings. Pass --reason superseded + --target-id <newer-uuid> to chain forward to the replacement.
-
-**Arguments:**
-
-- `--source-id` — **required**
-  Source UUID (or unique prefix) to archive
-- `--reason` — **required** · type=`choice` · choices={user_deleted, file_missing, url_unreachable, superseded}
-  Why this source is being archived
-- `--target-id` — optional
-  Replacement source UUID (REQUIRED when --reason superseded — the chain forward)
-- `--output` — optional · type=`choice` · choices={human, json} · default=`human`
-  Output format
-- `--verbose` — optional · flag
-  Verbose output
-
-#### `empirica source-list`
-
-List registered sources for a project. Filter by --type (document/code/web/api/…) or --direction (noetic/praxic/all). Useful for finding the source UUID to cite in a new artifact, or for auditing what external material has informed the project. Archived sources are hidden by default — pass --include-archived for forensics.
-
-**Arguments:**
-
-- `--project-id` — optional
-  Project UUID or name (auto-derived from context)
-- `--type` — optional
-  Filter by source type (document, code, web, api, etc.)
-- `--direction` — optional · type=`choice` · choices={noetic, praxic, all} · default=`all`
-  Filter by direction (noetic=evidence IN, praxic=output OUT)
-- `--include-archived` — optional · flag
-  Include soft-deleted/archived sources (forensics view; archived rows hidden by default)
-- `--output` — optional · type=`choice` · choices={human, json} · default=`human`
-  Output format
-- `--verbose` — optional · flag
-  Show detailed info
 
 #### `empirica system-status`
 

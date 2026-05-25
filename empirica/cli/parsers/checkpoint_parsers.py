@@ -699,22 +699,11 @@ def add_checkpoint_parsers(subparsers):
     decision_log_parser.add_argument('--epistemic-source', choices=['intuition', 'search', 'mixed'], help='How this artifact was arrived at: intuition (training data + loaded context, no external retrieval since goal opened), search (external retrieval this session), or mixed.')
     decision_log_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
 
-    # Reference doc add command
-    refdoc_add_parser = subparsers.add_parser(
-        'refdoc-add',
-        help=(
-            'DEPRECATED — use `source-add --source-type document` instead. '
-            'Kept for backward compatibility with older scripts/skills. '
-            'Sources are the unified surface for both noetic (evidence IN) '
-            'and praxic (output OUT) external material; refdocs were '
-            'noetic-only and lacked direction tagging.'
-        ),
-    )
-    refdoc_add_parser.add_argument('--project-id', required=True, help='Project UUID')
-    refdoc_add_parser.add_argument('--doc-path', required=True, help='Document path')
-    refdoc_add_parser.add_argument('--doc-type', help='Document type (architecture, guide, api, design)')
-    refdoc_add_parser.add_argument('--description', help='Document description')
-    refdoc_add_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    # refdoc-add CLI removed in goal 3d6aeb08 Phase 2. The Python API
+    # (BreadcrumbRepository.add_reference_doc / SessionDatabase.add_reference_doc)
+    # remains in place for internal callers; it routes to epistemic_sources
+    # WHERE source_type='pointer' since migration 046. Use source-add at
+    # the CLI surface.
 
     # Source add command — entity-agnostic source logging with direction
     source_add_parser = subparsers.add_parser(

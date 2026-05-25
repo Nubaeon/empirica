@@ -488,13 +488,10 @@ TOOL_REGISTRY: dict[str, dict] = {
     },
 
     # --- Docs ---
-    "refdoc_add": {
-        "cli": "refdoc-add",
-        "params": {"doc_path": "--doc-path", "doc_type": "--doc-type",
-                   "description": "--description", "project_id": "--project-id"},
-        "required": [],
-        "desc": "Register a reference document",
-    },
+    # refdoc_add removed in goal 3d6aeb08 Phase 2 — use source_add instead.
+    # MCP callers should pass source_type='pointer' to source_add for the
+    # same semantics (refdocs migrated to epistemic_sources WHERE
+    # source_type='pointer' via migration 046).
 
     # --- Dispatch Bus (cross-instance typed messaging) ---
     "bus_register": {
