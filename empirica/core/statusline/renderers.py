@@ -288,10 +288,17 @@ def render_default_line(
     deltas: dict | None = None,
     backend: Backend,
 ) -> str:
-    """`default` mode: open counts │ phase + composite │ K:.. C:.. │ Δ ..`.
+    """`default` mode: open counts │ phase + composite │ K/C or S/Δ │ Δ ..`.
 
     Each section is omitted when its inputs are empty.
     Used by chat StatuslinePanel's default render mode.
+
+    The vector pair adjacent to the composite is **phase-aware** so it's
+    drawn from the SAME vector set the composite represents — avoiding
+    the "POST 🔨75% │ K:95% C:95%" mis-inference where the eye reads
+    K/C as ingredients of the 75%, when in fact POSTFLIGHT's composite
+    uses execution vectors (state/change/completion/impact) and K/C are
+    noetic foundation vectors.
     """
     parts: list[str] = []
     parts.append(format_open_counts(open_counts, backend=backend))
@@ -301,12 +308,27 @@ def render_default_line(
         comp = calculate_phase_composite(vectors, composite_phase)
         parts.append(format_phase_state(phase, wp, comp, gate_decision, backend=backend))
     if vectors:
-        know = vectors.get("know", 0.0)
-        ctx = vectors.get("context", 0.0)
-        parts.append(
-            f"{format_vector_colored('K', know, backend=backend)} "
-            f"{format_vector_colored('C', ctx, backend=backend)}"
-        )
+        # Vector pair matches the composite's vector set:
+        #   composite_phase == 'check' or 'noetic' → readiness vectors (K/C)
+        #   composite_phase == 'praxic' → execution vectors (S/Δ)
+        # CHECK always uses 'check' formula regardless of gate_decision,
+        # so the K/C pair stays through CHECK→proceed too. POSTFLIGHT
+        # composite uses execution vectors, and the pair follows.
+        use_execution_pair = (phase is not None) and (composite_phase == "praxic")
+        if use_execution_pair:
+            state = vectors.get("state", 0.0)
+            change = vectors.get("change", 0.0)
+            parts.append(
+                f"{format_vector_colored('S', state, backend=backend)} "
+                f"{format_vector_colored('Δ', change, backend=backend)}"
+            )
+        else:
+            know = vectors.get("know", 0.0)
+            ctx = vectors.get("context", 0.0)
+            parts.append(
+                f"{format_vector_colored('K', know, backend=backend)} "
+                f"{format_vector_colored('C', ctx, backend=backend)}"
+            )
     if phase == "POSTFLIGHT" and deltas:
         delta_str = format_deltas(deltas, backend=backend)
         if delta_str:

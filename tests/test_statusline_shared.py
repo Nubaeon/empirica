@@ -335,3 +335,44 @@ class TestRenderDefaultLine:
         assert "CHK" not in s
         assert "PRE" not in s
         assert "POST" not in s
+
+    def test_postflight_shows_execution_pair_not_kc(self, backend):
+        """POSTFLIGHT composite uses execution vectors (state/change/completion/
+        impact) — the adjacent pair must do the same so the eye doesn't read
+        K/C as ingredients of the praxic composite. Pre-fix: POST 🔨X% │ K:Y% C:Z%
+        invited the wrong inference. Post-fix: POST 🔨X% │ S:Y% Δ:Z%."""
+        s = render_default_line(
+            vectors={
+                "know": 0.95, "context": 0.95,  # Should NOT appear in POST
+                "state": 0.6, "change": 0.4,     # SHOULD appear
+                "completion": 1.0, "impact": 0.5,
+            },
+            phase="POSTFLIGHT",
+            backend=backend,
+        )
+        assert "POST" in s
+        assert "S:60%" in s  # state
+        assert "Δ:40%" in s  # change
+        assert "K:" not in s  # K/C deliberately suppressed during praxic
+        assert "C:" not in s
+
+    def test_check_proceed_keeps_kc_pair(self, backend):
+        """CHECK composite uses 'check' formula regardless of gate_decision.
+        K/C pair must stay through CHECK→proceed so the visible pair matches
+        the composite's vector set (composite_phase stays 'check' even when
+        work_phase becomes 'praxic')."""
+        s = render_default_line(
+            vectors={
+                "know": 0.8, "context": 0.7, "clarity": 0.6,
+                "coherence": 0.6, "signal": 0.6, "density": 0.6,
+                "state": 0.0, "change": 0.0,  # Pre-execution — should NOT show
+            },
+            phase="CHECK",
+            gate_decision="proceed",
+            backend=backend,
+        )
+        assert "CHK" in s
+        assert "K:80%" in s
+        assert "C:70%" in s
+        assert "S:" not in s  # Execution pair only at POSTFLIGHT
+        assert "Δ:" not in s

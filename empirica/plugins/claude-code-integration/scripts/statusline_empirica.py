@@ -1051,16 +1051,31 @@ def _format_statusline_default(parts, phase, vectors, deltas, gate_decision, ope
     """Format the 'default' mode statusline sections."""
     parts.append(format_open_counts(open_counts))
 
+    composite_phase: str | None = None
     if phase:
         work_phase = determine_work_phase(phase, gate_decision)
         composite_phase = 'check' if phase == 'CHECK' else work_phase
         composite = calculate_phase_composite(vectors, composite_phase)
         parts.append(format_phase_state(phase, work_phase, composite, gate_decision))
 
+    # Vector pair adjacent to the composite. Drawn from the SAME vector
+    # set the composite represents — avoids the "POST 🔨75% │ K:95% C:95%"
+    # mis-inference where the eye reads K/C as "ingredients" of the 75%,
+    # when in fact POST's composite uses execution vectors
+    # (state/change/completion/impact) and K/C are foundation vectors.
+    #
+    # CHECK composite always uses 'check' formula regardless of gate
+    # decision, so K/C stays through CHECK→proceed (matches composite).
+    # POSTFLIGHT composite uses execution vectors, pair switches to S/Δ.
     if vectors:
-        know = vectors.get('know', 0.0)
-        context = vectors.get('context', 0.0)
-        parts.append(f"{format_vector_colored('K', know)} {format_vector_colored('C', context)}")
+        if composite_phase == 'praxic':
+            state = vectors.get('state', 0.0)
+            change = vectors.get('change', 0.0)
+            parts.append(f"{format_vector_colored('S', state)} {format_vector_colored('Δ', change)}")
+        else:
+            know = vectors.get('know', 0.0)
+            context = vectors.get('context', 0.0)
+            parts.append(f"{format_vector_colored('K', know)} {format_vector_colored('C', context)}")
 
     _append_postflight_deltas(parts, phase, deltas)
 
