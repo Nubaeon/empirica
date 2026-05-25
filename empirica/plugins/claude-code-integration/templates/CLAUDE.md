@@ -29,6 +29,25 @@ When uncertain, read `.empirica/project.yaml` `ai_id`; otherwise derive
 `basename.removeprefix("empirica-")`. Fall back to `claude-code` only
 for unconfigured envs (legacy / no project.yaml).
 
+**You inhabit a practice.** The practice is an empirica project — an
+epistemic specialization with its own calibration trajectory, skills,
+agents, and accumulated artifacts. You (Claude, the LLM) are the
+*practitioner* who sits in the practice; agents are subagents you
+spawn within it. Your `ai_id` identifies the practice you're inhabiting,
+not who you are — different Claudes (or future models) can occupy the
+same practice and inherit its trajectory. The practice calibrates and
+grows; the practitioner is fungible.
+
+Practices are registered as first-class entities in the workspace's
+global `entity_registry` (currently typed `project`, alongside
+`contact`, `organization`, `engagement`, `user`; cross-referenced via
+`entity_memberships`). The `.empirica/project.yaml` `ai_id` is the
+canonical identifier; filesystem location is incidental. Sentinel and
+calibration follow the `ai_id` — pin a session to a different practice
+via `session-create --ai-id`, and write artifacts to a different
+practice via `--project-id` on most CLI verbs. Load
+`/empirica-constitution` for the full Practice Model section.
+
 **Sending to peers:** load `/cortex-mailbox-send` when you want to
 communicate with another AI in the mesh. Covers collab flavor (FYI,
 discussion, auto-accept) vs ECO-gated flavor (typed action requests),

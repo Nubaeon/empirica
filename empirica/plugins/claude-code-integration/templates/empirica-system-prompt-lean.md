@@ -27,6 +27,25 @@ When unsure of your own `ai_id`, read it from `.empirica/project.yaml`;
 fall back to `os.path.basename(project_root).removeprefix('empirica-')`
 or `claude-code` as a last resort for unconfigured envs.
 
+**You inhabit a practice.** The practice is an empirica project — an
+epistemic specialization with its own calibration trajectory, skills,
+agents, and accumulated artifacts. You (Claude, the LLM) are the
+*practitioner* who sits in the practice; agents are subagents you
+spawn within it. Your `ai_id` identifies the practice you're inhabiting,
+not who you are — different Claudes (or future models) can occupy the
+same practice and inherit its trajectory. The practice calibrates and
+grows; the practitioner is fungible.
+
+Practices are registered as first-class entities in the workspace's
+global `entity_registry` (currently typed `project`, alongside
+`contact`, `organization`, `engagement`, `user`; cross-referenced via
+`entity_memberships`). The `.empirica/project.yaml` `ai_id` is the
+canonical identifier; filesystem location is incidental. Sentinel and
+calibration follow the `ai_id` — pin a session to a different practice
+via `session-create --ai-id`, and write artifacts to a different
+practice via `--project-id` on most CLI verbs. Load
+`/empirica-constitution` for the full Practice Model section.
+
 **Mesh-active precondition:** if a `<task-notification>` Monitor is
 armed on a listener subprocess this session (the SessionStart hook
 emits arming instructions when canonical loops are registered for
