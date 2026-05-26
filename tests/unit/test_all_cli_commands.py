@@ -55,14 +55,14 @@ class TestGoalsCommands:
         result = subprocess.run(["empirica", "goals-create", "--help"], capture_output=True)
         assert result.returncode == 0
 
-    def test_goals_add_subtask_help(self):
-        """Goals-add-subtask command has working --help"""
-        result = subprocess.run(["empirica", "goals-add-subtask", "--help"], capture_output=True)
+    def test_goals_add_task_help(self):
+        """Goals-add-task command has working --help"""
+        result = subprocess.run(["empirica", "goals-add-task", "--help"], capture_output=True)
         assert result.returncode == 0
 
-    def test_goals_complete_subtask_help(self):
-        """Goals-complete-subtask command has working --help"""
-        result = subprocess.run(["empirica", "goals-complete-subtask", "--help"], capture_output=True)
+    def test_goals_complete_task_help(self):
+        """Goals-complete-task command has working --help"""
+        result = subprocess.run(["empirica", "goals-complete-task", "--help"], capture_output=True)
         assert result.returncode == 0
 
     def test_goals_progress_help(self):
