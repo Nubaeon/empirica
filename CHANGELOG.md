@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] — 2026-05-26
+
+See [`docs/guides/UPGRADE_TO_1.10.md`](docs/guides/UPGRADE_TO_1.10.md)
+for a migration guide (CLI rename find/replace snippet, REST API
+field rename, MCP tool rename).
+
 ### Added — entity CLI surface (Practice Model backing)
 
 Four new verbs query the workspace's `entity_registry` + `entity_memberships`
