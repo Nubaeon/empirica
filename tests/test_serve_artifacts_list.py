@@ -530,8 +530,13 @@ def test_goals_status_filter(tmp_path, monkeypatch, reset_daemon_cache):
     assert len(all_g) == 3
 
 
-def test_goals_carry_subtasks_inline(tmp_path, monkeypatch, reset_daemon_cache):
-    """Per spec: goals embed subtasks[] inline from goal_data JSON."""
+def test_goals_carry_tasks_inline(tmp_path, monkeypatch, reset_daemon_cache):
+    """Per spec: goals embed tasks[] inline from goal_data JSON.
+
+    The internal storage key in goal_data stays `subtasks` (matches the
+    DB column `subtasks.id`); the REST response renames it to `tasks` for
+    CLI/AI vocabulary alignment.
+    """
     pid = str(uuid.uuid4())
     proj = _make_project_with_db(tmp_path, pid)
     db_path = proj / ".empirica" / "sessions" / "sessions.db"
@@ -541,7 +546,7 @@ def test_goals_carry_subtasks_inline(tmp_path, monkeypatch, reset_daemon_cache):
     conn.execute(
         "INSERT INTO goals (id, project_id, objective, status, is_completed, goal_data, created_timestamp) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (str(uuid.uuid4()), pid, "goal with subtasks", "in_progress", 0,
+        (str(uuid.uuid4()), pid, "goal with tasks", "in_progress", 0,
          json.dumps(goal_data), time.time()),
     )
     conn.commit()
@@ -553,8 +558,8 @@ def test_goals_carry_subtasks_inline(tmp_path, monkeypatch, reset_daemon_cache):
         response = client.get("/api/v1/goals?status=active")
 
     goal = response.json()["goals"][0]
-    assert len(goal["subtasks"]) == 2
-    assert goal["subtasks"][0]["name"] == "step 1"
+    assert len(goal["tasks"]) == 2
+    assert goal["tasks"][0]["name"] == "step 1"
 
 
 # ── Sources endpoint shape ───────────────────────────────────────────
