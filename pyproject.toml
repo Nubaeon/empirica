@@ -78,6 +78,8 @@ api = [
     "fastapi>=0.115.0,!=0.136.3", # Security: CVE-2024-24762, CVE-2024-47874 fixes;
                                   # MAL-2026-4750 — fastapi 0.136.3 ships hidden `fastar` dep
                                   # (dependency-confusion attack on [standard] extras group)
+    "starlette>=1.0.1",          # Security: PYSEC-2026-161 — host-header injection
+                                  # (transitive via fastapi; 1.0.0 vulnerable, fixed in 1.0.1)
     "uvicorn>=0.24",
 ]
 
