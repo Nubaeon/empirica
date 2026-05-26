@@ -38,6 +38,7 @@ AI coding agents today have no self-awareness about what they know:
 | **Shows confidence in real-time** | Live statusline in your terminal: `[empirica] ⚡94% ↕70% │ 🎯3 │ POST 🔍92% │ K:95% C:92%` |
 | **Calibrates against reality** | Three-vector model: self-assessed, observed (from deterministic checks), and AI-reasoned grounded state with rationale. Domain compliance loops iterate until all checks pass |
 | **Tracks your codebase** | Temporal entity model auto-extracts functions, classes, and imports from every file edit — the AI knows what's alive and what's stale |
+| **Coordinates with peer AIs** | Cross-Claude mesh via Cortex — peer AIs propose work, ECO accepts/declines, completion handshakes carry commit SHAs. A persistent listener wakes idle sessions on inbox events |
 | **Works through natural language** | You describe tasks normally. The AI operates the measurement system automatically |
 
 ---
@@ -227,6 +228,52 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 
 ---
 
+## Cross-AI Mesh
+
+Empirica isn't just per-session measurement — multiple Claude sessions across projects can coordinate as peers. The mesh runs on top of [Empirica Cortex](https://getempirica.com) (proprietary serving layer):
+
+```
+empirica AI ──cortex_propose──► ECO Accept/Decline ──► outreach AI wakes
+                                                             │
+                                       cortex_complete_proposal (commit SHA)
+                                                             │
+empirica AI wakes ◄─────── outbox/completed event ───────────┘
+```
+
+| Capability | What it does |
+|------------|-------------|
+| **`cortex_propose` (two flavors)** | `collab_brief` is auto-accepted (FYI / question / discussion). Code change / architecture / investigation requests are **ECO-gated** — they wait for an Accept/Decline decision before the target AI acts |
+| **`empirica mailbox reply`** | One verb does `cortex_propose` + `cortex_complete_proposal` atomically — closes the AI-to-AI handshake in a single step instead of two |
+| **Persistent listener service** | systemd-user / launchd daemon holds an ntfy stream open. Idle sessions wake the moment a peer's proposal is decided, not on next user prompt |
+| **Canonical loops** | `cortex-mailbox-poll` (30s adaptive) and `message-cleanup` (daily git-notes prune) auto-install per AI — no per-project config needed |
+
+The browser-side ECO surface (Accept/Decline, inbox triage, publish review) lives in the proprietary [Empirica Extension](https://getempirica.com).
+
+---
+
+## Practice Model + Entity Graph (1.10.0)
+
+Empirica's workspace stores entities (projects, contacts, organisations, engagements, users) in `entity_registry` with typed edges in `entity_memberships`. The **Practice Model** frames this consistently:
+
+| Term | Maps to |
+|------|---------|
+| **Practitioner** | the AI working on the project (you) |
+| **Practice** | the empirica project itself |
+| **Agent** | a subagent spawned during the work |
+
+Four CLI verbs query the graph without raw SQL:
+
+```bash
+empirica entity-list [--type project|contact|organization|engagement|user]
+empirica entity-show <type:id>          # full record + incoming/outgoing edges
+empirica entity-walk <type:id> --depth 3 # BFS membership graph, cycle-safe
+empirica entity-search "query" [--type T]
+```
+
+All read-only, all support `--output json`. Backs cross-project orchestration, CRM workflows, and the entity-aware POSTFLIGHT retrospective.
+
+---
+
 ## Platform Support
 
 | Platform | Integration Level | What You Get |
@@ -248,6 +295,8 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 | **[CLI Reference](docs/human/developers/CLI_COMMANDS_UNIFIED.md)** | All 150+ commands documented |
 | **[Architecture](docs/architecture/)** | Technical reference for contributors |
 | **[Claude Code Setup](docs/human/developers/CLAUDE_CODE_SETUP.md)** | Install + system prompt + plugin wiring |
+| **[Changelog](CHANGELOG.md)** | Full release history — every version since 1.0 |
+| **[Upgrade to 1.10](docs/guides/UPGRADE_TO_1.10.md)** | Migration guide for the `subtask` → `task` CLI rename |
 
 ---
 
@@ -261,172 +310,22 @@ The result: Claude Code's native capabilities, enhanced with measurement, gating
 | **[Breadcrumbs](https://github.com/Nubaeon/breadcrumbs)** | Survive context compacts with git notes — dead simple session continuity | Open source |
 | **[Empirica Cortex](https://getempirica.com)** | Cross-project intelligence layer — serves verified predictions and accumulated learnings to condition future work | Proprietary |
 | **[Empirica Workspace](https://getempirica.com)** | Entity Knowledge Graph, Epistemic Prompt Engine, CRM, portfolio dashboard | Proprietary |
+| **[Empirica Extension](https://getempirica.com)** | Chrome extension — desktop face of the mesh. ECO Accept/Decline, inbox/outbox triage, publish review, conversation extraction from Claude.ai / ChatGPT / Gemini / Grok | Proprietary |
 
 **Building something with Empirica?** [Open an issue](https://github.com/Nubaeon/empirica/issues) to get listed.
 
 ---
 
-## What's New in 1.9.8
+## What's New in 1.10.0
 
-- **`cortex-mailbox-send` skill** (`4c09b6174`) — paired to `cortex-mailbox-poll`. Documents
-- **Mesh-active skill-load precondition** (`c0fcc071c`) — when a listener Monitor is armed
-- **`WHEN TO LOAD SKILLS` section** in both templates (`c0fcc071c`) — behavioral load
-- **Goals/tasks worked example** in `TRANSACTION DISCIPLINE` (`c0fcc071c`) —
-- **Race-tolerant `create_github_release`** in `scripts/release.py` (`57870621c`). When the
-- **Verbose `update_homebrew_tap` diagnostics** (`57870621c`). Per-candidate path logging
-- **Lint cleanup**: `S110` noqa-with-reason on the `ai_id` fallback in
-- **ntfy tag-filter subscription** (`fcd4ed0fa`, `c9981f35e`). Listener subscribes with
-## What's New in 1.9.0
+**BREAKING — `subtask` → `task` CLI rename.** Verbs and flags renamed to align with Claude Code's `Task` primitive and broader AI vocabulary. Clean break, no aliases. See the [migration guide](docs/guides/UPGRADE_TO_1.10.md) for a find/replace snippet.
 
-**Goal-criterion bridge — quality gates that auto-evaluate**
+- **Entity CLI surface** — `entity-list`, `entity-show`, `entity-walk`, `entity-search` over `workspace.db`'s `entity_registry` + `entity_memberships`. Backs the Practice Model (practitioner = AI, practice = project, agent = subagent).
+- **Mesh housekeeping** — `mailbox reply` now auto-archives the parent proposal; `loop_fires.log` rotates with hysteresis; new daily `message-cleanup` canonical loop prunes expired git-notes mesh messages.
+- **Persistent listener push delivery** — sessions wake on peer-AI inbox events even when idle; in-session Monitor tails the shared fires log instead of duplicating ntfy curls.
+- **Bug fixes** — `goals-complete-task` silent-success on bad UUID (now exits 1 with 8 regression tests). Security: pinned `fastapi != 0.136.3` for MAL-2026-4750.
 
-- **`criterion_evaluators` package** — validation_method-keyed registry.
-  Goals declare `quality_gate:<metric>@<op>:<threshold>` and the bridge
-  routes to the right evaluator at POSTFLIGHT.
-- **`EvidenceMetricEvaluator`** — auto-evaluates any criterion whose
-  metric matches an evidence bundle key (test pass-rate, ruff violations,
-  stylometry drift, etc.).
-- **Typed criterion parser** — `goals-create --success-criteria
-  "quality_gate:test_pass_rate@>=:0.95"` parses to typed
-  `CriterionDeclaration`.
-
-**Stylometric drift collector — voice consistency for outreach work**
-
-- 12 prosodic markers (contractions, MTLD, sentence-length stdev, etc.)
-- Voice fingerprints at `~/.empirica/voice/<name>.fingerprint.json`
-- Drift direction inference (formal_pull / informal_pull / mixed / within_tolerance)
-
-**Content-aware source provenance nudge** — fires at moment of artifact
-creation when text shows citation but no `--source`. Closes 0% adoption gap.
-
-**Bulk project-link CLI** — `projects-discover` / `projects-list` /
-`projects-bulk-register` (Cortex-dependent).
-
-**Live-scan semantic index** — `semantic_index.json` regenerates when source
-docs are newer than the cache.
-
-**Sentinel quote-aware shell parsing** — false-positive `>` in quoted code
-fixed (`_has_dangerous_redirects` now uses `_contains_outside_quotes`).
-
-**Template version parameterization (Philipp #100)** — `CLAUDE.md` and
-`empirica-system-prompt-lean.md` use `{{ empirica_version }}` and
-`{{ generated_date }}` placeholders. Drift cannot recur.
-
-**Documentation refresh** — `UPGRADE_TO_1.9.md` (replaces 1.7), full rewrite
-of `PROJECT_SWITCHING_FOR_AIS.md`, `TMUX_MULTI_PANE_GUIDE.md` cockpit section.
-
-## What's New in 1.8.20
-
-- **`empirica commit-context <sha>`** (new CLI). Aggregates artifacts
-- **`--depth N` recursive walker.** Walks edges from each artifact's
-- **Inline edge declaration on individual `*-log` commands.** All six
-- **`edge_density_nudge`** — POSTFLIGHT retrospective +
-- **`sources_discipline_nudge`** — same shape, counts artifacts
-- **`--status {planned|in_progress|completed|all|drift}`** flag
-- **`drift` mode** surfaces rows where the `status` text and
-- **Default open count** now uses `is_completed = 0` as the canonical
-## What's New in 1.8.17
-
-- **Listener subsystem** — sister to cron loops, event-driven not
-  scheduled. `empirica listener register/heartbeat/list` + cockpit
-  E binding + project.yaml install hook.
-- **Mechanical pause for loops** — pause now cancels the next-fire
-  CronCreate token so paused really means silent (no token bleed).
-- **Cockpit sweep** — domain·criticality chip per row, compliance
-  panel with green/yellow/red glyph, services panel for scanner
-  snapshots.
-
-## What's New in 1.8.16
-
-- **#95 root-cause cluster closed** — Cortex sync reads project_id
-  from session row (no CWD); `_run_grounded_verification` accepts
-  `project_path`; `resolve_project_id` raises `ProjectNotFoundError`
-  instead of `sys.exit(1)`. SystemExit-walks-through-Exception hazard
-  closed at the source.
-- **Per-project compliance.yaml** — projects can `skip_checks`,
-  declare `extra_checks` with regulatory mapping, override
-  `repo_hygiene` sub-checks. Non-CLI/server projects no longer
-  fail tech_docs.
-- **KNOWN_ISSUES 11.29 + 11.30** — instance_isolation audit-trail
-  entries for the subagent CLI bleed fix and the SystemExit
-  propagation chain.
-
-## What's New in 1.8.15
-
-- **Validate-and-heal `session.project_id` at session boundaries** —
-  catches the ghost-project_id pattern (cross-project `--resume`,
-  ambiguous folder_name match, tmux pane reuse). Heals at post-compact
-  CONTINUE_TRANSACTION + NEW_SESSION_PREFLIGHT and at session-init
-  resume. Workspace.db `trajectory_path` is the canonical lookup —
-  never folder_name (no 11.10/11.27 regression).
-- **Voice CLI** — `empirica voice list / show / apply` loads prosodic
-  profiles for outreach drafting. Profiles in `~/.empirica/voice/*.yaml`
-  with project-local override at `.empirica/voice/`. Voice samples
-  themselves stay in Cortex/Qdrant; this CLI is the calling surface.
-- **PREFLIGHT `voice_guidance` block** — when `work_type=comms` or
-  the new `voice` field/`--voice` flag is set, response includes
-  voice tendencies + anti-patterns scoped to platform register
-  (mirrors the `noetic_guidance` pattern).
-- **Subagent CLI bleed fix (#95 Issue 1)** — `subagent-start` now
-  writes `~/.empirica/active_work_<subagent_uuid>.json` with
-  `is_subagent: true` so the subagent's CLI calls resolve to their
-  own `child_session_id` instead of falling through to the parent's
-  via TTY. `sentinel-gate._detect_subagent` reads the flag.
-  `subagent-stop` cleans up.
-- **POSTFLIGHT pipeline restructure (#95 Issue 3)** — Stage 0
-  pre-validates session row + project_id BEFORE any state mutation;
-  failure → early return with `loop_state: "open"`. Stages 5-7
-  wrapped in `_soft_run` — failures accumulate into
-  `result["warnings"]` without erasing the closed-loop reflex.
-  No more half-success.
-
-## What's New in 1.8.14
-
-- **Notify dispatcher** — single CLI verb (`empirica notify emit/config/
-  backends/test`) every loop and hook calls. Three v1 backends (stdout,
-  rotating JSONL log, ntfy) with first-match-wins routing and fail-loud
-  fallback to stdout when a backend isn't configured. Always-on audit
-  at `~/.empirica/notify-dispatcher.jsonl`. Cockpit + TUI surface 5
-  most recent emits, backend status, 24h fallback count, and a failure
-  banner. See [`docs/architecture/NOTIFY.md`](docs/architecture/NOTIFY.md).
-- **Project-scoped TUI notifications** — per-instance notifications
-  strip now reads `~/.empirica/enp/pending.json` (the file the ENP
-  watcher actually writes). Top-bar `⊕N` shows total unacked across
-  all projects.
-- **`empirica goals-prune`** — bulk goal cleanup with four modes
-  (test-pollution, planned, auto-stale, duplicates). Dry-run by default.
-- **Empirica Cockpit** — multi-instance state visibility +
-  per-instance controls. `empirica status [--all]` overview,
-  `empirica tui` interactive Textual app, `empirica
-  sentinel|loop|instance` subcommand groups. See
-  [`docs/architecture/COCKPIT.md`](docs/architecture/COCKPIT.md).
-- **Loop exponential backoff** — empty fires lengthen the gap;
-  found/fail snap back to base (15m → 30m → 1h → 2h → 4h cap).
-- **`noetic-batch` CLI primitive** — bundles N
-  reads/greps/globs/`investigate` into one Sentinel-noetic call.
-
-### Sentinel Reframe (1.8.0)
-
-The Sentinel is a **compliance loop coordinator**. Deterministic services produce information; the AI synthesizes the grounded epistemic state.
-
-- **Domain Registry** — `(work_type, domain, criticality)` tuples map to compliance checklists. 4 built-in domains: `default`, `remote-ops`, `cybersec`, `docs`. CLI: `domain-list`, `domain-show`, `domain-resolve`
-- **Domain-aware CHECK gate** — uncertainty threshold scales by criticality. `cybersec/high` is stricter than `default/low`
-- **Three-vector model** — `self_assessed`, `observed` (from deterministic checks), and AI-reasoned `grounded` state with rationale
-- **Compliance loop** — POSTFLIGHT runs domain checklist, reports status, advises on follow-up for failed checks
-- **Check-outcome Brier** — AI predicts P(check passes), Brier measures against actual outcomes. Falsifiable calibration
-- **Real check runners** — pytest, ruff, and git status execute as subprocess checks (not stubs)
-- **Test isolation** — tests no longer pollute live sessions via TMUX_PANE inheritance
-
-### Previous Highlights (1.7.0–1.7.13)
-
-- **Empirica Constitution** — 12-section governance framework routing situations to mechanisms
-- **Epistemic Persistence Protocol (EPP)** — Calibrated position-holding under pushback, replacing AAP
-- **Lean Core Prompt** — 81% reduction in always-loaded context. `setup-claude-code --lean`
-- **Cross-Project Search** — `--global` searches ALL projects' Qdrant collections
-- **Cross-Project Artifact Writing** — `finding-log --project-id <name>` writes to another project
-- **Plugin Renamed** — `empirica-integration` → `empirica`. Run `setup-claude-code --force`
-- **Brier Score Calibration** — Proper scoring rule with dynamic thresholds
-- **Profile Management** — `profile-sync`, `profile-prune`, `profile-status`
+**[Full Changelog →](CHANGELOG.md)** for every release since 1.0.
 
 ---
 
