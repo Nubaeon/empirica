@@ -87,11 +87,13 @@ def handle_entity_show_command(args):
                 "ok": False,
                 "error": "entity_reference_required",
                 "message": "Pass entity as 'type:id' (e.g. 'project:f73f3708') or use --type + --id",
+                "hint": "List available entities: empirica entity-list --type <type> --limit 5",
             }
             if output == 'json':
                 print(json.dumps(err, indent=2))
             else:
                 print(f"❌ {err['message']}", file=sys.stderr)
+                print(f"   {err['hint']}", file=sys.stderr)
             sys.exit(1)
         with WorkspaceDBRepository.open() as repo:
             entity = repo.get_entity(et, eid)
@@ -100,11 +102,13 @@ def handle_entity_show_command(args):
                     "ok": False,
                     "error": "entity_not_found",
                     "message": f"No entity matches {et}:{eid} (full id or unambiguous prefix required)",
+                    "hint": f"List candidates: empirica entity-list --type {et}",
                 }
                 if output == 'json':
                     print(json.dumps(err, indent=2))
                 else:
                     print(f"❌ {err['message']}", file=sys.stderr)
+                    print(f"   {err['hint']}", file=sys.stderr)
                 sys.exit(1)
             memberships = repo.get_entity_memberships(entity['entity_type'], entity['entity_id'])
         if output == 'json':
@@ -147,11 +151,13 @@ def handle_entity_walk_command(args):
                 "ok": False,
                 "error": "entity_reference_required",
                 "message": "Pass start entity as 'type:id' or use --type + --id",
+                "hint": "List available entities: empirica entity-list --type <type> --limit 5",
             }
             if output == 'json':
                 print(json.dumps(err, indent=2))
             else:
                 print(f"❌ {err['message']}", file=sys.stderr)
+                print(f"   {err['hint']}", file=sys.stderr)
             sys.exit(1)
         with WorkspaceDBRepository.open() as repo:
             result = repo.walk_entity_graph(et, eid, max_depth=depth)
@@ -160,11 +166,13 @@ def handle_entity_walk_command(args):
                 "ok": False,
                 "error": "entity_not_found",
                 "message": f"No entity matches {et}:{eid}",
+                "hint": f"List candidates: empirica entity-list --type {et}",
             }
             if output == 'json':
                 print(json.dumps(err, indent=2))
             else:
                 print(f"❌ {err['message']}", file=sys.stderr)
+                print(f"   {err['hint']}", file=sys.stderr)
             sys.exit(1)
         if output == 'json':
             print(json.dumps({
