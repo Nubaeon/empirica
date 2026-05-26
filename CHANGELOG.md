@@ -63,6 +63,15 @@ changes, no breaking changes. Safe to upgrade from 1.10.0.
   `psycopg2` imports. `pyright` now reports `0 errors, 0 warnings`
   (was `0 errors, 6 warnings`).
 
+### Security — pin `starlette>=1.0.1` (PYSEC-2026-161)
+
+starlette 1.0.0 (shipped transitively via fastapi) had a host-header
+injection vulnerability that could lead to authentication bypass when
+auth depends on the reconstructed URL path. Caught during pre-publish
+`pip-audit` for 1.10.1. `pyproject.toml` now pins `starlette>=1.0.1`
+explicitly alongside the existing fastapi pin. Affects only deployments
+running `empirica serve` exposed beyond localhost.
+
 ### Fixed — 1.10.0 rename regression in e2e tests
 
 - **`tests/integration/test_e2e_workflows.py`** — The `subtask → task`
