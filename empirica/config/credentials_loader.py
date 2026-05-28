@@ -373,11 +373,21 @@ class CredentialsLoader:
         return target
 
     def get_cortex_config(self) -> dict[str, str | None]:
-        """Return Cortex {url, api_key} resolved by precedence:
+        """Return Cortex {url, api_key} resolved file-first:
 
-        1. Env vars (CORTEX_REMOTE_URL / CORTEX_URL, CORTEX_API_KEY)
-        2. `cortex:` block in credentials file (~/.empirica/credentials.yaml)
-        3. Empty strings if neither
+        1. `cortex:` block in credentials file (~/.empirica/credentials.yaml)
+           — canonical, wins per-field
+        2. Env vars (CORTEX_REMOTE_URL / CORTEX_URL, CORTEX_API_KEY) fill
+           only fields the file does not provide
+        3. None if neither
+
+        File-first precedence (2026-05-28): a stale CORTEX_API_KEY exported
+        into a systemd-user env silently shadowed the valid file key for 10
+        days (listener-deaf incident). credentials.yaml is the single
+        canonical credential store across the ecosystem, so the file now
+        wins; env only fills gaps. When env is set AND disagrees with the
+        file, the env value is ignored and a warning is logged so the
+        divergence is visible instead of silent.
 
         The browser extension stores its own copy in chrome.storage
         (`cortexUrl` + `cortexApiKey`); this is the CLI-side equivalent
@@ -387,8 +397,6 @@ class CredentialsLoader:
         """
         env_url = os.getenv("CORTEX_REMOTE_URL") or os.getenv("CORTEX_URL")
         env_key = os.getenv("CORTEX_API_KEY")
-        if env_url and env_key:
-            return {"url": env_url.rstrip("/"), "api_key": env_key}
 
         if not self._credentials_cache:
             self._load_credentials()
@@ -397,9 +405,25 @@ class CredentialsLoader:
         file_url = file_cfg.get("url") if isinstance(file_cfg, dict) else None
         file_key = file_cfg.get("api_key") if isinstance(file_cfg, dict) else None
 
-        # Env wins per-field — partial-env-override is fine
-        url = env_url or file_url
-        key = env_key or file_key
+        # File is canonical. Warn (don't silently shadow) when a set env
+        # value disagrees with the file — this is the guard the listener-deaf
+        # incident needed.
+        if env_key and file_key and env_key != file_key:
+            logger.warning(
+                "CORTEX_API_KEY env var differs from credentials.yaml key; "
+                "ignoring env, file is canonical. Unset the env var to "
+                "silence this (a stale env key caused the 2026-05-28 "
+                "listener-deaf incident).",
+            )
+        if env_url and file_url and env_url.rstrip("/") != file_url.rstrip("/"):
+            logger.warning(
+                "CORTEX_REMOTE_URL env var differs from credentials.yaml url; "
+                "ignoring env, file is canonical.",
+            )
+
+        # File wins per-field; env only fills what the file lacks.
+        url = file_url or env_url
+        key = file_key or env_key
         return {
             "url": url.rstrip("/") if url else None,
             "api_key": key or None,

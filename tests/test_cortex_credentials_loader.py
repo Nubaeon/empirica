@@ -90,20 +90,57 @@ cortex:
     assert cfg["api_key"] == "ctx_file_key"
 
 
-def test_env_overrides_file_per_field(monkeypatch, isolated_loader):
-    """Env per-field overrides file. Partial env still works."""
+def test_file_wins_over_env_per_field(monkeypatch, isolated_loader):
+    """File is canonical (2026-05-28 flip): a set env key does NOT override
+    a file key. This is the guard against the listener-deaf incident, where a
+    stale env CORTEX_API_KEY silently shadowed the valid file key."""
     yaml_content = """
 version: 1.0
 cortex:
   url: https://cortex.file.com
   api_key: ctx_file_key
 """
-    monkeypatch.setenv("CORTEX_API_KEY", "ctx_env_key_overrides")
-    # No URL env — file's URL should win
+    monkeypatch.setenv("CORTEX_API_KEY", "ctx_stale_env_key")
     loader = isolated_loader(yaml_content)
     cfg = loader.get_cortex_config()
     assert cfg["url"] == "https://cortex.file.com"  # from file
-    assert cfg["api_key"] == "ctx_env_key_overrides"  # from env
+    assert cfg["api_key"] == "ctx_file_key"  # file wins, env ignored
+
+
+def test_env_fills_gap_file_lacks(monkeypatch, isolated_loader):
+    """Env still fills a field the file does not provide (no shadowing risk
+    when the file is silent on that field)."""
+    yaml_content = """
+version: 1.0
+cortex:
+  api_key: ctx_file_key
+"""
+    monkeypatch.setenv("CORTEX_REMOTE_URL", "https://cortex.env.com/")
+    loader = isolated_loader(yaml_content)
+    cfg = loader.get_cortex_config()
+    assert cfg["url"] == "https://cortex.env.com"  # env fills the missing url
+    assert cfg["api_key"] == "ctx_file_key"  # from file
+
+
+def test_env_file_mismatch_logs_warning(monkeypatch, isolated_loader, caplog):
+    """When env key differs from file key, the env is ignored AND a warning
+    is logged so the divergence is visible instead of silent."""
+    import logging
+
+    yaml_content = """
+version: 1.0
+cortex:
+  url: https://cortex.file.com
+  api_key: ctx_file_key
+"""
+    monkeypatch.setenv("CORTEX_API_KEY", "ctx_stale_env_key")
+    loader = isolated_loader(yaml_content)
+    with caplog.at_level(logging.WARNING):
+        cfg = loader.get_cortex_config()
+    assert cfg["api_key"] == "ctx_file_key"
+    assert any(
+        "CORTEX_API_KEY env var differs" in rec.message for rec in caplog.records
+    )
 
 
 def test_missing_cortex_block_returns_none(isolated_loader):
