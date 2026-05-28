@@ -783,39 +783,27 @@ def _ingest_finding_eidetic(project_id, finding_id, finding, subject, impact, se
 
 
 def _decay_related_lessons(finding, subject, project_id) -> list:
-    """Immune system: decay related lessons when findings are logged. Non-fatal."""
-    try:
-        from empirica.core.lessons.storage import LessonStorageManager
-        decayed = LessonStorageManager().decay_related_lessons(
-            finding_text=finding, domain=subject,
-            decay_amount=0.05, min_confidence=0.3, keywords_threshold=2)
-        if decayed:
-            logger.info(f"IMMUNE: Decayed {len(decayed)} related lessons in domain '{subject}'")
-            try:
-                from empirica.core.qdrant.vector_store import propagate_lesson_confidence_to_qdrant
-                if project_id:
-                    for dl in decayed:
-                        propagate_lesson_confidence_to_qdrant(
-                            project_id, dl.get('name', ''), dl.get('new_confidence', 0.3))
-            except Exception:
-                pass
-        return decayed
-    except Exception:
-        return []
+    """Immune-system glue for finding-log → lesson decay. DISABLED (see below)."""
+    # DISABLED 2026-05-28 (converged w/ cortex, decay thread prop_j7y7f4): the
+    # underlying LessonStorageManager.decay_related_lessons fires on keyword
+    # overlap (>=2 shared keywords), not actual contradiction — so a CONFIRMATORY
+    # finding decayed the lesson it confirmed (autoimmune erosion of the knowledge
+    # it should reinforce). Stop the erosion now; the machinery in storage.py stays
+    # intact and gets re-wired here gated on a real opposition predicate (goal
+    # 98055360 P2). Until then finding-log must NOT auto-decay lessons.
+    return []
 
 
 def _decay_eidetic_by_finding(project_id, finding, subject) -> int:
-    """Decay eidetic facts that contradict this finding. Non-fatal."""
-    if not (project_id and subject):
-        return 0
-    try:
-        from empirica.core.qdrant.vector_store import decay_eidetic_by_finding
-        count = decay_eidetic_by_finding(project_id, finding, domain=subject)
-        if count:
-            logger.info(f"IMMUNE: Decayed {count} eidetic facts by finding in domain '{subject}'")
-        return count
-    except Exception:
-        return 0
+    """Immune-system glue for finding-log → eidetic decay. DISABLED (see below)."""
+    # DISABLED 2026-05-28 (converged w/ cortex, decay thread prop_j7y7f4):
+    # qdrant.decay.decay_eidetic_by_finding decays on cosine similarity >= 0.85
+    # with no opposition check — a confirmatory finding decayed the fact it
+    # confirmed (inverse of confirm->raise). Stop the erosion now; the machinery
+    # in qdrant/decay.py stays intact and gets re-wired here gated on a real
+    # opposition predicate (goal 98055360 P2). Until then finding-log must NOT
+    # auto-decay eidetic facts.
+    return 0
 
 
 def handle_finding_log_command(args):
