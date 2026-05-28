@@ -2,7 +2,7 @@
 
 > **We Gave AI a Mirror. Now It Measures What It Believes.**
 
-[![Version](https://img.shields.io/badge/version-1.10.2-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.10.2)
+[![Version](https://img.shields.io/badge/version-1.10.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.10.3)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -101,13 +101,13 @@ empirica setup-claude-code
 
 ```bash
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.10.2-alpine
+docker pull nubaeon/empirica:1.10.3-alpine
 
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.10.2
+docker pull nubaeon/empirica:1.10.3
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.10.2 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.10.3 /bin/bash
 ```
 </details>
 
@@ -316,17 +316,14 @@ All read-only, all support `--output json`. Backs cross-project orchestration, C
 
 ---
 
-## What's New in 1.10.0
+## What's New in 1.10.3
 
-**BREAKING — `subtask` → `task` CLI rename.** Verbs and flags renamed to align with Claude Code's `Task` primitive and broader AI vocabulary. Clean break, no aliases. See the [migration guide](docs/guides/UPGRADE_TO_1.10.md) for a find/replace snippet.
-
-- **Entity CLI surface** — `entity-list`, `entity-show`, `entity-walk`, `entity-search` over `workspace.db`'s `entity_registry` + `entity_memberships`. Backs the Practice Model (practitioner = AI, practice = project, agent = subagent).
-- **Mesh housekeeping** — `mailbox reply` now auto-archives the parent proposal; `loop_fires.log` rotates with hysteresis; new daily `message-cleanup` canonical loop prunes expired git-notes mesh messages.
-- **Persistent listener push delivery** — sessions wake on peer-AI inbox events even when idle; in-session Monitor tails the shared fires log instead of duplicating ntfy curls.
-- **Bug fixes** — `goals-complete-task` silent-success on bad UUID (now exits 1 with 8 regression tests). Security: pinned `fastapi != 0.136.3` for MAL-2026-4750.
-
-**[Full Changelog →](CHANGELOG.md)** for every release since 1.0.
-
+- **Read-time recency ranking of findings in PREFLIGHT retrieval**
+- **Impact-modulated decay** — high-impact facts resist ageing instead of
+- **`get_cortex_config` flipped to file-first** — `credentials.yaml` is now the
+- **Listener: silent poll failures are now loud + surfaceable** — `content_poll`
+- **`finding-log` no longer auto-decays facts/lessons on mere relatedness.**
+- **Fresh-startup CWD overrides a stale pane binding** (KNOWN_ISSUES 11.26).
 ---
 
 ## Privacy & Data
@@ -356,6 +353,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.10.2
+**Version:** 1.10.3
 
 *Turtles all the way down — built with its own epistemic framework, measuring what it knows at every step.*

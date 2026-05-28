@@ -12,10 +12,10 @@ Key Features:
 - Session database (SQLite) with breadcrumb tracking
 - Drift detection and signaling
 
-Version: 1.10.2
+Version: 1.10.3
 """
 
-__version__ = "1.10.2"
+__version__ = "1.10.3"
 __author__ = "Empirica Project"
 
 # Lazy imports — heavy modules (git, cryptography, jsonschema) are only
