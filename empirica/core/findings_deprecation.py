@@ -21,7 +21,8 @@ class FindingsDeprecationEngine:
     """Calculate relevance scores and filter findings by depth."""
 
     # Deprecation constants
-    TIME_DECAY_HALF_LIFE = 30  # days - half-life for time decay
+    TIME_DECAY_TAU_DAYS = 30   # e-folding time constant for exp decay (~21d half-life)
+    IMPACT_DECAY_K = 2.0       # high-impact facts resist decay: tau = TAU * (1 + K*impact)
     COMPLETION_PENALTY = 0.3   # completed goals reduced by 30%
     DELTA_BOOST_FACTOR = 0.2   # execution state delta boost
 
@@ -34,22 +35,33 @@ class FindingsDeprecationEngine:
     }
 
     @staticmethod
-    def calculate_time_decay(created_timestamp) -> float:
+    def calculate_time_decay(created_timestamp, impact: float | None = None) -> float:
         """
-        Calculate time decay factor using exponential decay.
+        Exponential time-decay weight: exp(-age_days / tau).
 
-        Half-life: 30 days
-        At 30 days: score = 0.5
-        At 60 days: score = 0.25
-        At 90 days: score = 0.125
+        Base tau = 30 days (e-folding time, ~21-day half-life: 30d -> 0.37,
+        90d -> 0.05). NOTE: this is the e-folding constant, not the half-life —
+        the earlier docstring claiming "30d -> 0.5" was wrong.
+
+        Impact modulation (David-locked, decay thread prop_j7y7f4): when `impact`
+        is given, high-impact facts get a longer tau so structural knowledge does
+        not fade like tactical noise:
+            tau = 30 * (1 + 2*impact)   # impact 0->30d, 0.5->60d, 1.0->90d
+        e.g. an impact-0.9 fact: 30d->0.70, 90d->0.34, 180d->0.12.
+
+        When `impact` is None the curve is flat (current behaviour) — used by
+        calculate_relevance_score, which already weights impact separately and
+        must NOT double-count it here.
 
         Args:
-            created_timestamp: Unix timestamp (float or string) of finding creation
+            created_timestamp: Unix timestamp (float or numeric string) of creation
+            impact: Optional 0.0-1.0 impact; lengthens tau when provided
 
         Returns:
-            Float 0.0-1.0, where 1.0 = just created, 0.0 = very old
+            Float 0.0-1.0, where 1.0 = just created, ~0.0 = very old
         """
-        # Handle string timestamps
+        # Handle string timestamps (numeric only; ISO strings must be normalised
+        # to unix by the caller — float() would raise and we'd assume 0.5).
         if isinstance(created_timestamp, str):
             try:
                 created_timestamp = float(created_timestamp)
@@ -58,11 +70,13 @@ class FindingsDeprecationEngine:
                 return 0.5
 
         now = datetime.now().timestamp()
-        age_seconds = now - created_timestamp
-        age_days = age_seconds / 86400
+        age_days = (now - created_timestamp) / 86400
 
-        # Exponential decay: e^(-age / half_life)
-        decay = math.exp(-age_days / FindingsDeprecationEngine.TIME_DECAY_HALF_LIFE)
+        tau = FindingsDeprecationEngine.TIME_DECAY_TAU_DAYS
+        if impact is not None:
+            tau *= 1 + FindingsDeprecationEngine.IMPACT_DECAY_K * max(0.0, min(1.0, impact))
+
+        decay = math.exp(-age_days / tau)
         return max(0.0, min(1.0, decay))
 
     @staticmethod
@@ -110,7 +124,10 @@ class FindingsDeprecationEngine:
         Returns:
             Float 0.0-1.0 relevance score
         """
-        # Component 1: Time decay (40%)
+        # Component 1: Time decay (40%) — flat curve here ON PURPOSE: impact is
+        # weighted separately at component 2, so passing impact into the decay
+        # would double-count it. The impact-modulated tau is for the standalone
+        # recency-rerank path (pattern_retrieval._apply_findings_recency).
         created_ts = finding.get('created_timestamp')
         if not created_ts:
             time_score = 0.5

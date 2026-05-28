@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+from empirica.core.findings_deprecation import FindingsDeprecationEngine
 from empirica.core.qdrant.pattern_retrieval import _apply_findings_recency
 
 
@@ -53,3 +54,39 @@ def test_limit_truncates_after_rerank():
 
 def test_empty_input_returns_empty():
     assert _apply_findings_recency([], limit=3) == []
+
+
+# --- impact-modulated half-life (David-locked: tau = 30*(1+2*impact)) ---
+
+
+def test_high_impact_resists_decay_vs_low_impact_same_age():
+    ts = (datetime.now() - timedelta(days=90)).isoformat()
+    items = [
+        {"text": "low", "score": 0.8, "timestamp": ts, "impact": 0.1},
+        {"text": "high", "score": 0.8, "timestamp": ts, "impact": 0.9},
+    ]
+    ranked = _apply_findings_recency(items, limit=2)
+    high = next(f for f in ranked if f["text"] == "high")
+    low = next(f for f in ranked if f["text"] == "low")
+    # Same age + same cosine → impact alone decides: high-impact decays slower.
+    assert high["recency_weight"] > low["recency_weight"]
+    assert ranked[0]["text"] == "high"
+
+
+def test_calculate_time_decay_impact_lengthens_tau():
+    age_90d = (datetime.now() - timedelta(days=90)).timestamp()
+    flat = FindingsDeprecationEngine.calculate_time_decay(age_90d)            # tau=30
+    high = FindingsDeprecationEngine.calculate_time_decay(age_90d, impact=0.9)  # tau=84
+    assert high > flat
+    # impact=0.0 gives tau=30 too (same as None/flat); tolerance covers the
+    # microsecond drift between the two internal datetime.now() calls.
+    flat_zero = FindingsDeprecationEngine.calculate_time_decay(age_90d, impact=0.0)
+    assert abs(flat_zero - flat) < 1e-6
+
+
+def test_calculate_time_decay_backwards_compatible_default():
+    # No impact arg → same as before (flat 30d e-folding). Guards callers like
+    # calculate_relevance_score that must not get impact double-counted.
+    age_30d = (datetime.now() - timedelta(days=30)).timestamp()
+    weight = FindingsDeprecationEngine.calculate_time_decay(age_30d)
+    assert 0.35 < weight < 0.40  # exp(-1) ~= 0.368

@@ -370,7 +370,12 @@ def _apply_findings_recency(findings_raw: list[dict], limit: int) -> list[dict]:
 
         for f in findings_raw:
             unix_ts = _unix(f.get("timestamp"))
-            recency = FindingsDeprecationEngine.calculate_time_decay(unix_ts) if unix_ts else 1.0
+            # Impact-modulated decay: high-impact facts resist ageing (tau scales
+            # with impact) so structural knowledge does not fade like tactical noise.
+            recency = (
+                FindingsDeprecationEngine.calculate_time_decay(unix_ts, impact=f.get("impact"))
+                if unix_ts else 1.0
+            )
             f["recency_weight"] = round(recency, 4)
             f["effective_score"] = (f.get("score", 0.0) or 0.0) * recency
         findings_raw.sort(key=lambda f: f.get("effective_score", 0.0), reverse=True)
