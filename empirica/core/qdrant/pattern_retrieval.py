@@ -327,6 +327,59 @@ def _enrich_task_patterns(result, project_id, task_context, threshold, limits,
                             include_goals, include_assumptions, include_decisions, include_related_docs)
 
 
+# Over-fetch factor so recency re-ranking can actually drop a stale-but-similar
+# finding in favour of a fresher relevant one (not just reorder the top-N).
+_FINDINGS_RECENCY_OVERFETCH = 3
+
+
+def _apply_findings_recency(findings_raw: list[dict], limit: int) -> list[dict]:
+    """Re-rank findings by recency at READ time (decay P1/a): effective_score =
+    cosine score x time-decay weight, then take top `limit`.
+
+    Reuses FindingsDeprecationEngine.calculate_time_decay (30-day half-life) —
+    the canonical findings time-decay, which until now was applied only in the
+    breadcrumbs retrieval path, NOT in this Qdrant PREFLIGHT retrieval. So a
+    finding about code removed months ago no longer ranks identically to one
+    written today. Ranking-only: NO stored confidence mutation.
+
+    The memory payload stores `timestamp` as an ISO string (finding-log writes
+    datetime.now().isoformat()), but calculate_time_decay only float()s strings,
+    so the ISO value must be normalised to a unix ts first or it silently scores
+    0.5 for everything. Missing/unparseable timestamp -> neutral weight 1.0
+    (never penalise on bad data).
+    """
+    if not findings_raw:
+        return []
+    try:
+        from datetime import datetime
+
+        from empirica.core.findings_deprecation import FindingsDeprecationEngine
+
+        def _unix(ts):
+            if ts is None:
+                return None
+            if isinstance(ts, (int, float)):
+                return float(ts)
+            try:
+                return float(ts)  # already unix-stringified
+            except (ValueError, TypeError):
+                try:
+                    return datetime.fromisoformat(ts).timestamp()  # ISO-8601
+                except (ValueError, TypeError):
+                    return None
+
+        for f in findings_raw:
+            unix_ts = _unix(f.get("timestamp"))
+            recency = FindingsDeprecationEngine.calculate_time_decay(unix_ts) if unix_ts else 1.0
+            f["recency_weight"] = round(recency, 4)
+            f["effective_score"] = (f.get("score", 0.0) or 0.0) * recency
+        findings_raw.sort(key=lambda f: f.get("effective_score", 0.0), reverse=True)
+        return findings_raw[:limit]
+    except Exception as e:
+        logger.debug(f"_apply_findings_recency failed; falling back to score order: {e}")
+        return findings_raw[:limit]
+
+
 def retrieve_task_patterns(
     project_id: str,
     task_context: str,
@@ -415,21 +468,25 @@ def retrieve_task_patterns(
         for d in dead_ends_raw
     ]
 
-    # Search for relevant findings (high-impact facts)
+    # Search for relevant findings (high-impact facts). Over-fetch, then re-rank
+    # by recency at read-time so stale findings sink below fresh relevant ones.
     findings_raw = _search_memory_by_type(
         project_id,
         task_context,
         "finding",
-        limits["findings"],
+        limits["findings"] * _FINDINGS_RECENCY_OVERFETCH,
         threshold
     )
+    findings_ranked = _apply_findings_recency(findings_raw, limits["findings"])
     relevant_findings = [
         {
             "finding": f.get("text", ""),
             "impact": f.get("impact", 0.5),
-            "score": f.get("score", 0.0)
+            "score": f.get("score", 0.0),
+            "recency_weight": f.get("recency_weight", 1.0),
+            "effective_score": f.get("effective_score", f.get("score", 0.0)),
         }
-        for f in findings_raw
+        for f in findings_ranked
     ]
 
     # ANTI-GAMING: Calibration warnings (specific overestimate/underestimate patterns from
