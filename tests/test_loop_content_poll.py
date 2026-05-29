@@ -21,6 +21,7 @@ from empirica.core.loop_scheduler.content_poll import (
     EMISSION_STATUSES,
     ContentPollUnreachable,
     ProposalEvent,
+    _classify_actionability,
     build_event,
     diff_proposals,
     load_state,
@@ -519,3 +520,110 @@ def test_loud_warning_logged_on_total_failure(tmp_path, caplog):
     msgs = " ".join(r.message for r in caplog.records)
     assert "BOTH inbox+outbox fetches failed" in msgs
     assert "empirica" in msgs
+
+
+# ── actionability classification (wake-noise filter) ─────────────────────
+# A CC'd-but-non-actionable recipient should NOT be woken on convergence-ack
+# collab chatter ("conceded / +1 / green-light"). _classify_actionability
+# downgrades exactly that case to "fyi"; everything else stays "actionable".
+
+
+def test_deep_thread_collab_cc_is_fyi():
+    """REFLEX collab_brief, parent_id set, I'm a CC (not the source) → fyi."""
+    p = {
+        "id": "p", "status": "accepted", "type": "collab_brief",
+        "action_category": "REFLEX", "parent_id": "prop_root",
+        "source_claude": "cortex",
+    }
+    assert _classify_actionability(p, "empirica", "inbox") == "fyi"
+
+
+def test_thread_opener_collab_is_actionable():
+    """A fresh collab_brief (no parent) is a real question/FYI → wake."""
+    p = {
+        "id": "p", "status": "accepted", "type": "collab_brief",
+        "action_category": "REFLEX", "parent_id": None,
+        "source_claude": "extension",
+    }
+    assert _classify_actionability(p, "empirica", "inbox") == "actionable"
+
+
+def test_my_own_deep_thread_reply_is_actionable_not_fyi():
+    """If I'm the source of the thread, it's my own emission echoing — the
+    source!=me guard means we don't misclassify; treated actionable."""
+    p = {
+        "id": "p", "status": "accepted", "type": "collab_brief",
+        "action_category": "REFLEX", "parent_id": "prop_root",
+        "source_claude": "empirica",
+    }
+    assert _classify_actionability(p, "empirica", "inbox") == "actionable"
+
+
+def test_eco_gated_is_always_actionable():
+    """Non-REFLEX (ECO-decided) proposals always wake, even deep in a thread."""
+    p = {
+        "id": "p", "status": "accepted", "type": "code_change_request",
+        "action_category": "TACTICAL", "parent_id": "prop_root",
+        "source_claude": "cortex",
+    }
+    assert _classify_actionability(p, "empirica", "inbox") == "actionable"
+
+
+def test_direct_request_type_actionable_even_if_reflex():
+    p = {
+        "id": "p", "status": "accepted", "type": "investigation_request",
+        "action_category": "REFLEX", "parent_id": "prop_root",
+        "source_claude": "cortex",
+    }
+    assert _classify_actionability(p, "empirica", "inbox") == "actionable"
+
+
+def test_outbox_changed_is_actionable():
+    """ECO sent my proposal back for refinement → I must act."""
+    p = {
+        "id": "p", "status": "changed", "type": "collab_brief",
+        "action_category": "REFLEX", "parent_id": "prop_root",
+        "source_claude": "empirica",
+    }
+    assert _classify_actionability(p, "empirica", "outbox") == "actionable"
+
+
+def test_wake_hint_overrides_heuristic():
+    """Emit-side wake_hint (cortex option 3) is authoritative."""
+    # Would be actionable by heuristic (thread-opener) but tagged fyi.
+    p_fyi = {
+        "id": "p", "status": "accepted", "type": "collab_brief",
+        "action_category": "REFLEX", "parent_id": None,
+        "source_claude": "extension", "wake_hint": "fyi",
+    }
+    assert _classify_actionability(p_fyi, "empirica", "inbox") == "fyi"
+    # Would be fyi by heuristic (deep-thread CC) but tagged actionable.
+    p_act = {
+        "id": "p", "status": "accepted", "type": "collab_brief",
+        "action_category": "REFLEX", "parent_id": "prop_root",
+        "source_claude": "cortex", "wake_hint": "actionable",
+    }
+    assert _classify_actionability(p_act, "empirica", "inbox") == "actionable"
+
+
+def test_build_event_and_log_line_carry_actionability():
+    p = {
+        "id": "p", "status": "accepted", "type": "collab_brief",
+        "action_category": "REFLEX", "parent_id": "prop_root",
+        "source_claude": "cortex", "title": "Re: conceded",
+    }
+    ev = build_event(p, "new", "empirica", "cortex-mailbox-poll", direction="inbox")
+    assert ev.actionability == "fyi"
+    parsed = json.loads(ev.to_log_line())
+    assert parsed["actionability"] == "fyi"
+
+
+def test_actionability_defaults_actionable_on_log_line():
+    """Backward-compat: a plain ProposalEvent (no classification) defaults to
+    actionable so the exclude-fyi Monitor grep still wakes on it."""
+    ev = ProposalEvent(
+        instance_id="empirica", loop_name="cortex-mailbox-poll",
+        proposal_id="p", proposal_title="t", status="accepted",
+        action_category="TACTICAL", eco_actor=None, new_or_changed="new",
+    )
+    assert json.loads(ev.to_log_line())["actionability"] == "actionable"

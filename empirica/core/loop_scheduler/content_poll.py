@@ -105,6 +105,7 @@ class ProposalEvent:
     new_or_changed: str  # "new" | "status_changed"
     direction: str = "inbox"  # "inbox" | "outbox" — tells AI which reaction
     commit_sha: str | None = None  # populated when status='completed'
+    actionability: str = "actionable"  # "actionable" | "fyi" — wake gate
 
     def to_log_line(self) -> str:
         """JSON line for ~/.empirica/loop_fires.log."""
@@ -122,6 +123,7 @@ class ProposalEvent:
             "eco_actor": self.eco_actor,
             "change_kind": self.new_or_changed,
             "commit_sha": self.commit_sha,
+            "actionability": self.actionability,
         })
 
 
@@ -270,6 +272,49 @@ def _extract_commit_sha(p: dict) -> str | None:
     return None
 
 
+_DIRECT_REQUEST_TYPES = frozenset({
+    "code_change_request", "investigation_request", "architecture_decision",
+    "spec_updated", "trust_escalation_request", "publish",
+})
+
+
+def _classify_actionability(p: dict, instance_id: str, direction: str) -> str:
+    """Classify a proposal as "actionable" (worth a session wake) or "fyi"
+    (pure-observability convergence chatter — readable on next poll, no wake).
+
+    Conservative by design: defaults to "actionable" so nothing requiring
+    action is silently swallowed. Only one narrow case is downgraded to
+    "fyi" — a deep-thread REFLEX collab_brief the recipient is merely CC'd
+    on (the "conceded / +1 / green-light" tail that woke every CC'd peer
+    this session). An emitter-supplied wake_hint (cortex option 3) overrides.
+    """
+    # Authoritative emit-side hint (cortex option 3) wins when present.
+    hint = str(p.get("wake_hint") or "").lower()
+    if hint in ("actionable", "fyi"):
+        return hint
+
+    action_category = str(p.get("action_category") or "").upper()
+    ptype = str(p.get("type") or "").lower()
+
+    # ECO-gated (non-REFLEX) → ECO decided, recipient must act.
+    if action_category and action_category != "REFLEX":
+        return "actionable"
+    # Concrete work/decision requests always wake regardless of category.
+    if ptype in _DIRECT_REQUEST_TYPES:
+        return "actionable"
+    # Outbox refinement → the source AI must revise + re-emit.
+    if direction == "outbox" and _proposal_status(p) == "changed":
+        return "actionable"
+    # Inbox collab_brief: a thread-opener (no parent) is a fresh question/FYI
+    # worth surfacing; a deep-thread reply where I'm a CC (not the source) is
+    # convergence chatter → fyi.
+    if ptype == "collab_brief" and direction == "inbox":
+        source_claude = str(p.get("source_claude") or "")
+        if p.get("parent_id") and source_claude and source_claude != instance_id:
+            return "fyi"
+    return "actionable"
+
+
 def build_event(
     p: dict, change_kind: str, instance_id: str, loop_name: str,
     *, direction: str = "inbox",
@@ -293,6 +338,7 @@ def build_event(
         new_or_changed=change_kind,
         direction=direction,
         commit_sha=_extract_commit_sha(p) if status == "completed" else None,
+        actionability=_classify_actionability(p, instance_id, direction),
     )
 
 

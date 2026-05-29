@@ -1634,9 +1634,17 @@ def handle_listener_on_command(args) -> int:
     # catch-up on reconnect.
     if persistent_active:
         log_path = Path.home() / '.empirica' / 'loop_fires.log'
+        # Wake on events for this ai_id, EXCEPT explicit fyi (pure-observability
+        # convergence chatter — see content_poll._classify_actionability). The
+        # exclude-fyi form is backward-compatible: lines without an
+        # `actionability` field (older listeners, heartbeats) still wake; only
+        # lines that explicitly tag `"actionability": "fyi"` are filtered out,
+        # so a CC'd peer isn't woken on every "+1 / conceded / green-light".
+        # fyi events still land in loop_fires.log — readable on next poll.
         monitor_cmd = (
             f'tail -F -n 0 {log_path} 2>/dev/null | '
-            f'grep --line-buffered \'"instance_id": "{ai_id}"\''
+            f'grep --line-buffered \'"instance_id": "{ai_id}"\' | '
+            f'grep --line-buffered -v \'"actionability": "fyi"\''
         )
         description = f'Cortex orchestration log tail for {ai_id} (persistent-service mode)'
         status = 'persistent_service_tail_session'
