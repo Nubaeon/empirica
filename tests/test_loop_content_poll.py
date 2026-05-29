@@ -538,6 +538,19 @@ def test_deep_thread_collab_cc_is_fyi():
     assert _classify_actionability(p, "empirica", "inbox") == "fyi"
 
 
+def test_tactical_collab_brief_cc_is_still_fyi():
+    """Regression: a collab_brief auto-accepts by TYPE regardless of
+    action_category, so a TACTICAL one (senders are inconsistent about tagging
+    collab REFLEX vs TACTICAL) that the recipient is merely CC'd on is STILL
+    convergence chatter. Type must dominate the action_category gate."""
+    p = {
+        "id": "p", "status": "accepted", "type": "collab_brief",
+        "action_category": "TACTICAL", "parent_id": "prop_root",
+        "source_claude": "cortex",
+    }
+    assert _classify_actionability(p, "empirica", "inbox") == "fyi"
+
+
 def test_thread_opener_collab_is_actionable():
     """A fresh collab_brief (no parent) is a real question/FYI → wake."""
     p = {

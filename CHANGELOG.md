@@ -12,8 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Listener wake-noise filter — `actionability` on proposal_events.**
   Convergence-ack collab chatter (`conceded` / `+1` / `green-light`) on a thread
   a peer is merely CC'd on no longer wakes their session. `content_poll`
-  classifies each event `actionable|fyi` (`fyi` = a deep-thread REFLEX
-  `collab_brief` where the recipient is a CC, not the source), honoring an
+  classifies each event `actionable|fyi` (`fyi` = a deep-thread `collab_brief`
+  where the recipient is a CC, not the source — type dominates action_category
+  since collab auto-accepts by type), honoring an
   emitter-supplied `wake_hint` as an authoritative override. fyi events still
   land in `loop_fires.log` (readable on next poll); the persistent-service
   Monitor grep now excludes `"actionability": "fyi"` (backward-compatible —

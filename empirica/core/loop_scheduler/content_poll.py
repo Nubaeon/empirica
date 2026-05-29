@@ -293,9 +293,22 @@ def _classify_actionability(p: dict, instance_id: str, direction: str) -> str:
     if hint in ("actionable", "fyi"):
         return hint
 
-    action_category = str(p.get("action_category") or "").upper()
     ptype = str(p.get("type") or "").lower()
 
+    # collab_brief auto-accepts by TYPE (no ECO transit) regardless of its
+    # action_category, so its category never gates a wake — classify it purely
+    # by thread position, BEFORE the action_category gate below. (Senders are
+    # inconsistent about tagging collab REFLEX vs TACTICAL; type is the reliable
+    # signal.) A deep-thread reply the recipient is merely CC'd on (parent set,
+    # source != me) is convergence chatter → fyi; a thread-opener is a fresh
+    # question/FYI worth surfacing → wake.
+    if ptype == "collab_brief" and direction == "inbox":
+        source_claude = str(p.get("source_claude") or "")
+        if p.get("parent_id") and source_claude and source_claude != instance_id:
+            return "fyi"
+        return "actionable"
+
+    action_category = str(p.get("action_category") or "").upper()
     # ECO-gated (non-REFLEX) → ECO decided, recipient must act.
     if action_category and action_category != "REFLEX":
         return "actionable"
@@ -305,13 +318,6 @@ def _classify_actionability(p: dict, instance_id: str, direction: str) -> str:
     # Outbox refinement → the source AI must revise + re-emit.
     if direction == "outbox" and _proposal_status(p) == "changed":
         return "actionable"
-    # Inbox collab_brief: a thread-opener (no parent) is a fresh question/FYI
-    # worth surfacing; a deep-thread reply where I'm a CC (not the source) is
-    # convergence chatter → fyi.
-    if ptype == "collab_brief" and direction == "inbox":
-        source_claude = str(p.get("source_claude") or "")
-        if p.get("parent_id") and source_claude and source_claude != instance_id:
-            return "fyi"
     return "actionable"
 
 
