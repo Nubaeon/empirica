@@ -115,6 +115,8 @@ SAFE_BASH_PREFIXES = (
     'gh issue list', 'gh issue view', 'gh issue status',
     'gh pr list', 'gh pr view', 'gh pr diff', 'gh pr status', 'gh pr checks',
     'gh repo view', 'gh release list', 'gh release view',
+    'gh run list', 'gh run view', 'gh run watch',  # CI/workflow run inspection (read-only)
+    'gh workflow list', 'gh workflow view',
     'gh search ',  # Search repos, issues, PRs, code (read-only)
     'gh api ',  # API calls (read-only by default)
     # Environment inspection
