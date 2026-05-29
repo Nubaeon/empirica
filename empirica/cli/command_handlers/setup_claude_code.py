@@ -233,8 +233,12 @@ def _configure_statusline(settings, plugin_dir, python_cmd, output_format):
 
     Claude Code pipes session JSON to statusline stdin — do NOT redirect stdin.
     """
+    # Forward slashes: Claude Code runs `type: command` via Git Bash, which eats
+    # Windows backslashes and collapses the path (issue #111). Forward slashes are
+    # valid on Windows too, so normalise both the interpreter + script paths.
+    python_cmd = python_cmd.replace("\\", "/")
     if 'statusLine' not in settings:
-        statusline_script = plugin_dir / "scripts" / "statusline_empirica.py"
+        statusline_script = (plugin_dir / "scripts" / "statusline_empirica.py").as_posix()
         settings['statusLine'] = {
             "type": "command",
             "command": f"{python_cmd} {statusline_script}"
@@ -248,6 +252,11 @@ def _configure_statusline(settings, plugin_dir, python_cmd, output_format):
 
 def _register_all_hooks(settings, plugin_dir, python_cmd, output_format):
     """Register all Empirica hooks into settings['hooks']."""
+    # Forward slashes: Claude Code runs `type: command` hooks via Git Bash, which
+    # eats Windows backslashes -> "command not found" on every event (issue #111).
+    # Normalise the interpreter path + use POSIX plugin path (valid on Windows too).
+    python_cmd = python_cmd.replace("\\", "/")
+    plugin_dir = plugin_dir.as_posix()
     if 'hooks' not in settings:
         settings['hooks'] = {}
 
