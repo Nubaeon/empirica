@@ -48,6 +48,7 @@ import base64
 import importlib.metadata
 import json
 import logging
+import os
 import signal
 import subprocess
 import sys
@@ -86,7 +87,15 @@ def _check_version_drift() -> tuple[str, str] | None:
 
     Returns None on any error (missing dist-info, import failure) — drift
     check is best-effort, must never crash the listener.
+
+    Opt-out via EMPIRICA_LISTENER_NO_DRIFT_EXIT: the upgrade-exit assumes a
+    supervisor (systemd Restart=always / launchd KeepAlive) will relaunch
+    against the new code. Under a bare/non-supervised Monitor (e.g. a native
+    harness holding the stream, no relauncher) the self-exit just kills the
+    listener permanently, so honor the bypass and report no drift.
     """
+    if os.environ.get("EMPIRICA_LISTENER_NO_DRIFT_EXIT"):
+        return None
     try:
         from empirica import __version__ as in_process
         installed = importlib.metadata.version("empirica")

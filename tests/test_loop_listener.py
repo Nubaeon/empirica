@@ -518,3 +518,22 @@ def test_listener_continues_reconnect_when_no_drift(monkeypatch):
                       _initial_catchup=False)
     assert rc == 0
     assert len(sleeps) == 1  # took the backoff path, not the drift-exit path
+
+
+def test_drift_exit_env_bypass(monkeypatch):
+    """EMPIRICA_LISTENER_NO_DRIFT_EXIT suppresses the upgrade self-exit for a
+    non-supervised listener (no systemd/launchd to relaunch). Without it, a
+    version mismatch still reports drift so supervised installs keep
+    auto-relaunching on upgrade."""
+    import importlib.metadata
+    monkeypatch.setattr(importlib.metadata, "version", lambda name: "9.9.9-test")
+
+    # No bypass → forced mismatch reports drift (installed = mocked value).
+    monkeypatch.delenv("EMPIRICA_LISTENER_NO_DRIFT_EXIT", raising=False)
+    drift = listener_mod._check_version_drift()
+    assert drift is not None
+    assert drift[1] == "9.9.9-test"
+
+    # Bypass set → no drift reported despite the mismatch.
+    monkeypatch.setenv("EMPIRICA_LISTENER_NO_DRIFT_EXIT", "1")
+    assert listener_mod._check_version_drift() is None

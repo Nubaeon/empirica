@@ -29,6 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   overlap idempotent); best-effort (degrades to partial/empty, never aborts the
   sync). Beads `issue` nodes pending Cortex's `issue` node type.
 
+### Fixed
+
+- **Listener drift self-exit now bypassable for non-supervised hosts**
+  (`EMPIRICA_LISTENER_NO_DRIFT_EXIT`). `_check_version_drift`'s upgrade-exit
+  assumes a supervisor (systemd `Restart=always` / launchd `KeepAlive`) will
+  relaunch against new code; under a bare/non-supervised Monitor (e.g. a native
+  harness holding the ntfy stream) the self-exit just killed the listener
+  permanently. Setting the env var makes the drift check report no drift, so
+  the listener stays up regardless of install skew. Found by ecodex during mesh
+  onboarding.
+
 ## [1.10.4] — 2026-05-29
 
 Patch: a Windows-blocking hook-path bug + the cross-AI listener replay-storm fix,
