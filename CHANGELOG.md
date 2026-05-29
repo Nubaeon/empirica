@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.4] — 2026-05-29
+
+Patch: a Windows-blocking hook-path bug + the cross-AI listener replay-storm fix,
+plus the decay recency work extended to lessons/eidetic and a dev-tooling
+un-gating.
+
+### Fixed
+
+- **Windows: every hook failed on every event (issue #111).** `setup-claude-code`
+  wrote hook + statusLine commands with Windows backslash paths; Claude Code runs
+  `type: command` hooks via Git Bash, which eats `\` → `C:Users...python.exe:
+  command not found`. Now emits forward-slash paths (valid on Windows + bash);
+  MCP config untouched (direct exec, not bash). Reported + fix-verified by
+  graemester (#111).
+- **Listener replay storms (`loop_fires.log`).** `_rotate_fires_log_if_oversized`
+  rewrote the log in place, so the `tail -F` wake-Monitors re-read it on every
+  rotation and re-fired the retained window as duplicate wake events across all
+  mesh listeners. Now rotates BY RENAME (`<log>.1` + fresh empty file) — only new
+  appends fire. (autonomy)
+- **Sentinel un-gated `gh run`/`gh workflow` reads.** CI/workflow-status
+  inspection was classified praxic; added to the read-only safe-list so post-push
+  CI checks no longer need a CHECK gate.
+
+### Added
+
+- **Decay recency extended to lessons + eidetic facts.** The 1.10.3 read-time
+  recency rerank (findings) now also covers lessons + eidetic in PREFLIGHT
+  retrieval, generalised over a `longevity` modulator (impact for findings,
+  confidence for lessons/eidetic); eidetic ages off `first_seen`. Ranking-only,
+  no stored mutation.
+
+## [1.10.3] — 2026-05-28
+
 Cortex-credential hardening, epistemic-decay correctness (joint design with
 the cortex AI on the artifact decay/supersession thread), and a session-routing
 fix.
