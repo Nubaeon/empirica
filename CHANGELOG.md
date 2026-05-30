@@ -32,6 +32,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Wake-filter no longer suppresses substantive deep-thread replies + new
+  `bridge_position` server stamp plumbed through.** The v0
+  `_classify_actionability` heuristic ("deep-thread REFLEX collab_brief +
+  recipient is a CC = fyi") over-suppressed: same envelope shape catches
+  both convergence chatter ("conceded / +1 / green-light") AND substantive
+  deep-thread counter-arguments, decisions, and directions. Proven live
+  2026-05-30 (`loop_fires.log`): 4 substantive cortex messages including a
+  BUILD-now decision were correctly classified `fyi` by my own heuristic
+  and correctly excluded by the Monitor's exclude-fyi grep. Default flipped
+  to `actionable`; convergence-chatter suppression is now strictly opt-in
+  via emitter `wake_hint='fyi'` — the Phase B-intended boundary expressed at
+  the wire level. Cortex/extension can tag their own +1 acks; everything
+  else wakes. (Missing a substantive reply has a real cost; waking on a +1
+  is one event, no action.) Also: `bridge_position` is now passed through
+  `ProposalEvent` + `to_log_line()` per the `BEAD_COORDINATION_RECORD.md`
+  §6.5 amendment (cortex doc `6629265`) — cortex stamps it for
+  post-graduation states; pre-graduation labels stay client-derived.
+
 - **Standalone listener Monitor auto-relaunches after clean exits
   (supervisor-wrapper default).** The listener's design has always assumed a
   supervisor (systemd `Restart=always` / launchd `KeepAlive`) for the few

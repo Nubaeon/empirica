@@ -528,27 +528,44 @@ def test_loud_warning_logged_on_total_failure(tmp_path, caplog):
 # downgrades exactly that case to "fyi"; everything else stays "actionable".
 
 
-def test_deep_thread_collab_cc_is_fyi():
-    """REFLEX collab_brief, parent_id set, I'm a CC (not the source) → fyi."""
+def test_deep_thread_collab_cc_defaults_actionable_now():
+    """The v0 'deep-thread CC = fyi' heuristic over-suppressed (proven live
+    2026-05-30: 4 substantive cortex messages incl. a BUILD-now decision
+    filtered as fyi because the envelope shape is identical to convergence
+    chatter — counter-arguments + decisions + directions all match). Default
+    flipped to actionable; convergence suppression now requires explicit
+    emitter `wake_hint='fyi'`. Missing a substantive reply is a real cost;
+    waking on a +1 is cheap (one event, no action)."""
     p = {
         "id": "p", "status": "accepted", "type": "collab_brief",
         "action_category": "REFLEX", "parent_id": "prop_root",
         "source_claude": "cortex",
     }
+    assert _classify_actionability(p, "empirica", "inbox") == "actionable"
+
+
+def test_collab_with_explicit_wake_hint_fyi_suppresses():
+    """Convergence chatter suppression is opt-in via emitter wake_hint='fyi'
+    — cortex/extension tag their own 'conceded / +1 / green-light' acks; the
+    classifier honors that authoritatively above any other rule. This is the
+    Phase B-intended noetic/praxic boundary expressed at the wire level."""
+    p = {
+        "id": "p", "status": "accepted", "type": "collab_brief",
+        "action_category": "REFLEX", "parent_id": "prop_root",
+        "source_claude": "cortex", "wake_hint": "fyi",
+    }
     assert _classify_actionability(p, "empirica", "inbox") == "fyi"
 
 
-def test_tactical_collab_brief_cc_is_still_fyi():
-    """Regression: a collab_brief auto-accepts by TYPE regardless of
-    action_category, so a TACTICAL one (senders are inconsistent about tagging
-    collab REFLEX vs TACTICAL) that the recipient is merely CC'd on is STILL
-    convergence chatter. Type must dominate the action_category gate."""
+def test_tactical_collab_brief_defaults_actionable():
+    """Same flip applies to TACTICAL collab_briefs — type still dominates the
+    action_category gate, but the default is now actionable, not fyi."""
     p = {
         "id": "p", "status": "accepted", "type": "collab_brief",
         "action_category": "TACTICAL", "parent_id": "prop_root",
         "source_claude": "cortex",
     }
-    assert _classify_actionability(p, "empirica", "inbox") == "fyi"
+    assert _classify_actionability(p, "empirica", "inbox") == "actionable"
 
 
 def test_thread_opener_collab_is_actionable():
@@ -620,15 +637,24 @@ def test_wake_hint_overrides_heuristic():
 
 
 def test_build_event_and_log_line_carry_actionability():
+    """Deep-thread REFLEX collab_brief envelope shape (the v0 heuristic
+    used to mark this fyi); now classifies actionable by default. The
+    `wake_hint` field carries the explicit fyi/actionable signal end-to-end
+    instead of being derived locally from envelope shape."""
     p = {
         "id": "p", "status": "accepted", "type": "collab_brief",
         "action_category": "REFLEX", "parent_id": "prop_root",
-        "source_claude": "cortex", "title": "Re: conceded",
+        "source_claude": "cortex", "title": "Re: substantive counter",
     }
     ev = build_event(p, "new", "empirica", "cortex-mailbox-poll", direction="inbox")
-    assert ev.actionability == "fyi"
+    assert ev.actionability == "actionable"
     parsed = json.loads(ev.to_log_line())
-    assert parsed["actionability"] == "fyi"
+    assert parsed["actionability"] == "actionable"
+
+    # Same envelope, emitter tags wake_hint='fyi' for actual convergence ack.
+    p_fyi = dict(p, wake_hint="fyi", title="Re: conceded +1")
+    ev_fyi = build_event(p_fyi, "new", "empirica", "cortex-mailbox-poll", direction="inbox")
+    assert ev_fyi.actionability == "fyi"
 
 
 def test_actionability_defaults_actionable_on_log_line():
@@ -676,3 +702,33 @@ def test_bead_id_omitted_when_not_a_graduation():
                      direction="inbox")
     assert ev.bead_id is None
     assert json.loads(ev.to_log_line())["bead_id"] is None
+
+
+# ─── bridge_position passthrough (§6.5 6629265 amendment) ─────────────────
+
+
+def test_bridge_position_top_level_pulled_into_event():
+    """Cortex stamps `bridge_position` on the proposal envelope for post-
+    graduation states (BEAD_COORDINATION_RECORD.md §6.5, doc 6629265).
+    Receiver plumbs it through alongside bead_id; client only needs to derive
+    pre-graduation labels (noetic / needs-graduation) — those are absent."""
+    p = {"id": "p", "status": "accepted", "type": "code_change_request",
+         "title": "graduation fix",
+         "bead_id": "bd_abc", "bridge_position": "accepted"}
+    ev = build_event(p, "new", "empirica", "cortex-mailbox-poll",
+                     direction="inbox")
+    assert ev.bridge_position == "accepted"
+    parsed = json.loads(ev.to_log_line())
+    assert parsed["bridge_position"] == "accepted"
+    assert parsed["bead_id"] == "bd_abc"
+
+
+def test_bridge_position_absent_for_pre_graduation_states():
+    """Pre-graduation labels are client-derived from coordination_state ×
+    edge-presence × proposal.status — never stamped on the envelope."""
+    p = {"id": "p", "status": "accepted", "type": "collab_brief",
+         "title": "ordinary collab"}
+    ev = build_event(p, "new", "empirica", "cortex-mailbox-poll",
+                     direction="inbox")
+    assert ev.bridge_position is None
+    assert json.loads(ev.to_log_line())["bridge_position"] is None

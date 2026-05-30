@@ -109,6 +109,10 @@ class ProposalEvent:
     bead_id: str | None = None  # cortex stamps this when payload.bead_id is
     # present (graduation contract — BEAD_COORDINATION_RECORD.md §6.5). The
     # receiving AI uses it to look up the bead + render bridge-position.
+    bridge_position: str | None = None  # cortex stamps this for post-
+    # graduation states (BEAD_COORDINATION_RECORD.md §6.5 amendment, doc
+    # 6629265). Server-computed from proposal.status; pre-graduation states
+    # (noetic / needs-graduation) are client-derived and absent here.
 
     def to_log_line(self) -> str:
         """JSON line for ~/.empirica/loop_fires.log."""
@@ -128,6 +132,7 @@ class ProposalEvent:
             "commit_sha": self.commit_sha,
             "actionability": self.actionability,
             "bead_id": self.bead_id,
+            "bridge_position": self.bridge_position,
         })
 
 
@@ -299,17 +304,19 @@ def _classify_actionability(p: dict, instance_id: str, direction: str) -> str:
 
     ptype = str(p.get("type") or "").lower()
 
-    # collab_brief auto-accepts by TYPE (no ECO transit) regardless of its
-    # action_category, so its category never gates a wake — classify it purely
-    # by thread position, BEFORE the action_category gate below. (Senders are
-    # inconsistent about tagging collab REFLEX vs TACTICAL; type is the reliable
-    # signal.) A deep-thread reply the recipient is merely CC'd on (parent set,
-    # source != me) is convergence chatter → fyi; a thread-opener is a fresh
-    # question/FYI worth surfacing → wake.
+    # collab_brief: the prior heuristic ("deep-thread + I'm a CC = fyi") was a
+    # v0 compromise that conflated convergence chatter ("conceded / +1 /
+    # green-light") with substantive deep-thread replies (counter-arguments,
+    # decisions, direction). Same envelope shape; different content.
+    #
+    # Reverted to actionable-by-default: a wake is the safe option since
+    # missing a substantive reply is a real cost (loop_fires.log:2026-05-30,
+    # 4 missed cortex messages incl. a BUILD-now decision in a thread I was
+    # actively driving). Convergence-chatter suppression is now strictly
+    # opt-in via emitter `wake_hint='fyi'` — which is what Phase B always
+    # intended for the noetic/praxic boundary; cortex/extension can tag their
+    # own "conceded / +1" acks. The wake_hint check above handles it.
     if ptype == "collab_brief" and direction == "inbox":
-        source_claude = str(p.get("source_claude") or "")
-        if p.get("parent_id") and source_claude and source_claude != instance_id:
-            return "fyi"
         return "actionable"
 
     action_category = str(p.get("action_category") or "").upper()
@@ -350,7 +357,21 @@ def build_event(
         commit_sha=_extract_commit_sha(p) if status == "completed" else None,
         actionability=_classify_actionability(p, instance_id, direction),
         bead_id=_extract_bead_id(p),
+        bridge_position=_extract_bridge_position(p),
     )
+
+
+def _extract_bridge_position(p: dict) -> str | None:
+    """Pull `bridge_position` from a proposal envelope.
+
+    Per BEAD_COORDINATION_RECORD.md §6.5 amendment (cortex doc 6629265),
+    cortex computes the proposal's bridge-position label from `proposal.status`
+    and stamps it as a top-level field on the envelope for post-graduation
+    states. Pre-graduation labels (`noetic` / `needs-graduation`) are
+    client-derived and absent from the envelope.
+    """
+    bp = p.get("bridge_position")
+    return str(bp) if bp else None
 
 
 def _extract_bead_id(p: dict) -> str | None:
