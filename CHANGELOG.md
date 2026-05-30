@@ -57,6 +57,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Bead v0 schema language locked.** `bead` is now a recognized node type
+  (`NODE_REQUIRED_FIELDS['bead'] = ['coordination_state', 'updated_at']`) with
+  4 net-new edges in `VALID_RELATIONS`: `tracks` (bead→actionable courier
+  pointer), `owned_by`, `about`, `worked_by`. The bead is a courier of
+  coordination-state + references — never the canonical home of the artifact
+  it tracks; the `coordination_state` name (not bare `state`) keeps that
+  discipline visible at every read. Optional carried fields: `last_transition_actor`,
+  `beads_issue_id` (HYBRID passthrough when `tracks(issue)`), `scope`.
+  Per-edge attributes (e.g. `worked_by.role ∈ {required, participating}`)
+  ride the existing `artifact_edges.metadata` JSON column — no migration.
+  Names settled across a 3-way design exchange with cortex + extension on
+  2026-05-30 (threads `prop_5poy5gcuwvd6…` → `prop_dk7koed4i5d…` →
+  `prop_skopvh53ufc…`). `_create_node('bead')` is a logging stub for now;
+  the bead table + `db.log_bead` repo function land with cortex's
+  `BEAD_COORDINATION_RECORD.md` architecture doc.
+
 - **Mesh send guidance adopts Cortex Phase B (`cortex_collab` / `cortex_propose`
   / `cortex_publish`).** The `cortex-mailbox-send` skill, `empirica-constitution`
   decision tree, and the cortex mesh system-prompt now direct collab through

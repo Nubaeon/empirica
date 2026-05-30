@@ -22,16 +22,37 @@ NODE_REQUIRED_FIELDS = {
     'assumption': ['assumption', 'confidence'],
     'decision': ['choice', 'rationale'],
     'source': ['title'],
+    # bead v0 — coordination-record courier (3-way HYBRID, 2026-05-30).
+    # Schema language locked here; the bead table + log_bead repo function
+    # land with cortex's BEAD_COORDINATION_RECORD.md architecture doc.
+    # `coordination_state` (not bare `state`) keeps the courier-discipline
+    # visible at every read — bead carries coordination state, never the
+    # canonical artifact's status. `updated_at` is mandatory because bead is
+    # the first MUTABLE node type (triage feeds must order by recency-of-
+    # change, not creation). Optional carried fields: last_transition_actor,
+    # beads_issue_id (HYBRID passthrough when tracks(issue)), scope.
+    'bead': ['coordination_state', 'updated_at'],
 }
 
 # Valid edge relation types
 VALID_RELATIONS = {
     'evidence', 'raised_by', 'grounded_by', 'resolves',
     'invalidates', 'sourced_from', 'caused_by', 'prevents', 'attached_to',
+    # bead v0 — coordination-record edges (2026-05-30, 3-way HYBRID).
+    # `tracks` is the bead→actionable courier pointer (kind derived from the
+    # target's node type); intentionally distinct from generic `attached_to`.
+    # `owned_by` / `about` / `worked_by` carry the "who / about what /
+    # who-must-work-it" header. Per-edge attributes (e.g. worked_by.role ∈
+    # {required, participating}) ride the existing artifact_edges.metadata
+    # JSON column — no schema migration needed.
+    'tracks', 'owned_by', 'about', 'worked_by',
 }
 
-# Creation order — dependencies resolved top-down
-CREATION_ORDER = ['source', 'finding', 'unknown', 'dead_end', 'mistake', 'assumption', 'decision']
+# Creation order — dependencies resolved top-down. Bead is last because it
+# tracks/references other artifact types (its edges reach finding/source/
+# external actionables).
+CREATION_ORDER = ['source', 'finding', 'unknown', 'dead_end',
+                  'mistake', 'assumption', 'decision', 'bead']
 
 
 # ─── schemas (printed by --schema, used in error messages) ────────────────
@@ -40,9 +61,9 @@ LOG_ARTIFACTS_SCHEMA = {
     "nodes": [
         {
             "ref": "<local-id like 'f1' — referenced from edges>",
-            "type": "finding | unknown | dead_end | mistake | assumption | decision | source",
+            "type": "finding | unknown | dead_end | mistake | assumption | decision | source | bead",
             "data": {
-                "finding | unknown | choice | etc.": "<type-specific required fields>",
+                "finding | unknown | choice | coordination_state | etc.": "<type-specific required fields>",
                 "impact": "<float 0-1, optional>",
                 "subject": "<optional>",
                 "visibility": "<public | shared | local — optional, default 'shared'>",
@@ -54,7 +75,9 @@ LOG_ARTIFACTS_SCHEMA = {
             "from": "<ref or UUID>",
             "to": "<ref or UUID>",
             "relation": "evidence | raised_by | grounded_by | resolves | "
-                        "invalidates | sourced_from | caused_by | prevents | attached_to",
+                        "invalidates | sourced_from | caused_by | prevents | attached_to | "
+                        "tracks | owned_by | about | worked_by",
+            "metadata": "<optional JSON dict, e.g. {\"role\": \"required\"} on worked_by>",
         },
     ],
     "session_id": "<optional, auto-resolved from active context>",
@@ -307,6 +330,19 @@ def _create_node(db, node: dict, context: dict) -> str | None:
                 doc_type=data.get('source_type'),
                 description=data.get('description'),
             )
+        elif ntype == 'bead':
+            # v0 schema is locked (NODE_REQUIRED_FIELDS + VALID_RELATIONS above)
+            # but the bead table + db.log_bead repo function land alongside
+            # cortex's BEAD_COORDINATION_RECORD.md architecture doc. Returning
+            # None here is non-fatal — log-artifacts surfaces the unhandled
+            # node, and callers learn the contract is locked + the wiring is
+            # pending in one log line rather than a silent fallthrough.
+            logger.info(
+                "bead node creation deferred: schema locked, db wiring "
+                "pending cortex BEAD_COORDINATION_RECORD.md (ref=%s)",
+                node.get('ref'),
+            )
+            return None
     except Exception as e:
         logger.warning(f"Failed to create {ntype} node '{node.get('ref')}': {e}")
     return None

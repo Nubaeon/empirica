@@ -175,3 +175,45 @@ def test_validation_error_response_includes_schema_hint(monkeypatch, capsys):
     captured = capsys.readouterr()
     assert '--schema' in captured.out
     assert "'id'" in captured.out  # mentions the common pitfall
+
+
+# ─── bead v0 schema lock (2026-05-30, 3-way HYBRID convergence) ───────────
+# These tests lock the public-contract names so extension + cortex can spec
+# against them without coordination drift. Bead is the first MUTABLE node
+# type (courier of coordination-state); table wiring + db.log_bead repo
+# function follow with cortex's BEAD_COORDINATION_RECORD.md architecture
+# doc — but the names ARE the contract and they're locked here.
+
+
+def test_bead_in_node_required_fields():
+    """`bead` is a recognized node type with the v0 required data fields."""
+    assert 'bead' in gc.NODE_REQUIRED_FIELDS
+    required = gc.NODE_REQUIRED_FIELDS['bead']
+    # `coordination_state` (not bare `state`) keeps the courier-discipline
+    # visible at every read; `updated_at` is mandatory because bead is mutable.
+    assert 'coordination_state' in required
+    assert 'updated_at' in required
+
+
+def test_bead_v0_edge_relations_in_valid_relations():
+    """The 4 net-new bead edges: tracks + the entity triple."""
+    for rel in ('tracks', 'owned_by', 'about', 'worked_by'):
+        assert rel in gc.VALID_RELATIONS, f"missing bead v0 relation: {rel}"
+    # Pre-existing relations untouched.
+    for rel in ('attached_to', 'sourced_from', 'evidence'):
+        assert rel in gc.VALID_RELATIONS
+
+
+def test_bead_in_creation_order_last():
+    """Bead is last in CREATION_ORDER — its edges reach the other types,
+    so they create first."""
+    assert 'bead' in gc.CREATION_ORDER
+    assert gc.CREATION_ORDER[-1] == 'bead'
+
+
+def test_log_artifacts_schema_mentions_bead_and_new_relations():
+    """The printable schema (--schema output) advertises the new names."""
+    schema_str = str(gc.LOG_ARTIFACTS_SCHEMA)
+    assert 'bead' in schema_str
+    for rel in ('tracks', 'owned_by', 'about', 'worked_by'):
+        assert rel in schema_str
