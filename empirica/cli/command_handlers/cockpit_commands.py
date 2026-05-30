@@ -1653,10 +1653,28 @@ def handle_listener_on_command(args) -> int:
             f'log-tail Monitor (no duplicate ntfy subscriber)'
         )
     else:
-        monitor_cmd = f'empirica loop listen --instance {ai_id}'
-        description = f'Cortex orchestration push listener for {ai_id}'
+        # Standalone mode: this Monitor IS the listener process — no OS
+        # supervisor (systemd/launchd) is relaunching it. The listener itself
+        # exits cleanly on a few paths (SIGTERM during reconnect, ListenerUpgraded
+        # on pip-version drift, etc.) and its design DOCSTRINGS those exits as
+        # supervisor-relaunched. Without a supervisor, those clean exits look
+        # like silent death from the Monitor's perspective.
+        #
+        # Wrap in a while-true loop so the listener auto-relaunches after any
+        # exit. `sleep 3` keeps a crash-loop from pinning CPU; the listener
+        # itself does ntfy stream reconnect with backoff internally, so this
+        # only fires on a process-level exit (signal / drift / crash) — which
+        # is the original supervisor case the design assumed. Found by cortex
+        # (prop_6kevxb63: SIGTERM during reconnect under Claude Code Monitor,
+        # exit-144 wrapper encoding masked the underlying sig 15).
+        monitor_cmd = (
+            f'while true; do empirica loop listen --instance {ai_id}; sleep 3; done'
+        )
+        description = f'Cortex orchestration push listener for {ai_id} (supervised)'
         status = 'awaiting_arm'
-        mode_note = 'standalone Monitor (this session holds the ntfy stream)'
+        mode_note = ('standalone Monitor — wrapped in supervisor loop '
+                     '(matches listener\'s relaunch-on-clean-exit design intent; '
+                     'no systemd/launchd needed)')
 
     payload = {
         'ok': True,

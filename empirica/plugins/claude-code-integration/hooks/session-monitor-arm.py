@@ -103,14 +103,24 @@ def _build_monitor_block_from_cli(payload: dict | None, instance_id: str) -> str
     ns = (payload or {}).get("next_step") or {}
     monitor_args = ns.get("args") if isinstance(ns, dict) else None
     status = (payload or {}).get("status")
+    # Standalone fallback wraps the listener spawn in a while-true supervisor
+    # loop — the listener's design assumes a relauncher (systemd/launchd) on
+    # clean exits (SIGTERM during reconnect, ListenerUpgraded on pip-version
+    # drift), but Claude Code's Monitor isn't one. Wrapping here gives the
+    # same auto-relaunch semantics on hosts without an OS service. sleep 3
+    # keeps a crash-loop from pinning CPU; reconnect/backoff is handled
+    # internally by the listener loop itself. (cortex prop_6kevxb63 finding.)
+    _standalone_supervised = (
+        f"while true; do empirica loop listen --instance {instance_id}; sleep 3; done"
+    )
     if monitor_args:
         description = monitor_args.get("description", f"Cortex orchestration push listener for {instance_id}")
-        command = monitor_args.get("command", f"empirica loop listen --instance {instance_id}")
+        command = monitor_args.get("command", _standalone_supervised)
         persistent = monitor_args.get("persistent", True)
     else:
         # Fallback when CLI is unavailable — preserve pre-Phase-2 behavior
         description = f"Cortex orchestration push listener for {instance_id}"
-        command = f"empirica loop listen --instance {instance_id}"
+        command = _standalone_supervised
         persistent = True
     after_arm = ns.get("after_arm") if isinstance(ns, dict) else None
     after_arm_hint = (

@@ -32,6 +32,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Standalone listener Monitor auto-relaunches after clean exits
+  (supervisor-wrapper default).** The listener's design has always assumed a
+  supervisor (systemd `Restart=always` / launchd `KeepAlive`) for the few
+  clean-exit paths it intentionally takes — SIGTERM during reconnect,
+  `ListenerUpgraded` on pip-version drift, etc. — but Claude Code's Monitor
+  isn't a supervisor, so on hosts without the persistent OS service those
+  clean exits looked like silent death. The standalone monitor command
+  (`empirica listener on` + the session-arm hook fallback) now wraps the
+  listener in `while true; do empirica loop listen …; sleep 3; done` so the
+  intent matches across environments without requiring an OS service.
+  Persistent-service tail Monitor mode unchanged (the OS service supervises
+  the listener separately). Found by cortex (`prop_6kevxb63`) when
+  `EMPIRICA_LISTENER_NO_DRIFT_EXIT` didn't help because the exit wasn't
+  drift — it was SIGTERM during reconnect (signal 15 surfaced as exit-144
+  through Claude Code Monitor's wrapper encoding).
+
 - **Sentinel `work_type=remote-ops` no longer deadlocks SSH-recon.** The work-type
   gate-relaxation tuple in `is_safe_bash_command` covered `infra/config/debug`
   but omitted `remote-ops` (never-implemented gap, not a regression), so a
