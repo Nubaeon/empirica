@@ -38,31 +38,31 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-EMPIRICA_DIR = Path.home() / '.empirica'
-VALID_NAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$')
+EMPIRICA_DIR = Path.home() / ".empirica"
+VALID_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 
 # Topic URL scheme: <scheme>:<rest>. ntfy is the only V1 backend; sse,
 # websocket, gmail, whatsapp are deliberately listed as future-extensions
 # so the validator doesn't have to change when those land — extending
 # the registry to support them is a separate, intentional work item.
-VALID_TOPIC_SCHEMES = ('ntfy', 'sse', 'websocket', 'gmail', 'whatsapp')
-_TOPIC_RE = re.compile(r'^([a-z][a-z0-9+\-.]*):(.+)$')
+VALID_TOPIC_SCHEMES = ("ntfy", "sse", "websocket", "gmail", "whatsapp")
+_TOPIC_RE = re.compile(r"^([a-z][a-z0-9+\-.]*):(.+)$")
 
 
 def _safe_suffix(text: str) -> str:
-    return text.replace('/', '-').replace('%', '')
+    return text.replace("/", "-").replace("%", "")
 
 
 def registry_path(instance_id: str) -> Path:
-    return EMPIRICA_DIR / f'listeners_{_safe_suffix(instance_id)}.json'
+    return EMPIRICA_DIR / f"listeners_{_safe_suffix(instance_id)}.json"
 
 
 def listener_pause_path(instance_id: str, name: str) -> Path:
-    return EMPIRICA_DIR / f'listener_paused_{_safe_suffix(instance_id)}_{_safe_suffix(name)}'
+    return EMPIRICA_DIR / f"listener_paused_{_safe_suffix(instance_id)}_{_safe_suffix(name)}"
 
 
 def listener_active_path(instance_id: str, name: str) -> Path:
-    return EMPIRICA_DIR / f'listener_active_{_safe_suffix(instance_id)}_{_safe_suffix(name)}.json'
+    return EMPIRICA_DIR / f"listener_active_{_safe_suffix(instance_id)}_{_safe_suffix(name)}.json"
 
 
 def _now_iso() -> str:
@@ -71,9 +71,7 @@ def _now_iso() -> str:
 
 def _validate_name(name: str) -> None:
     if not VALID_NAME.match(name):
-        raise ValueError(
-            f"Invalid listener name '{name}' — must match {VALID_NAME.pattern}"
-        )
+        raise ValueError(f"Invalid listener name '{name}' — must match {VALID_NAME.pattern}")
 
 
 def _validate_topic(topic: str) -> None:
@@ -87,16 +85,10 @@ def _validate_topic(topic: str) -> None:
         raise ValueError('topic required (e.g. "ntfy:my-channel")')
     m = _TOPIC_RE.match(topic)
     if not m:
-        raise ValueError(
-            f"Invalid topic '{topic}' — expected '<scheme>:<rest>' "
-            f"(e.g. 'ntfy:my-channel')"
-        )
+        raise ValueError(f"Invalid topic '{topic}' — expected '<scheme>:<rest>' (e.g. 'ntfy:my-channel')")
     scheme = m.group(1)
     if scheme not in VALID_TOPIC_SCHEMES:
-        raise ValueError(
-            f"Unsupported topic scheme '{scheme}' — must be one of "
-            f"{VALID_TOPIC_SCHEMES}"
-        )
+        raise ValueError(f"Unsupported topic scheme '{scheme}' — must be one of {VALID_TOPIC_SCHEMES}")
 
 
 def is_listener_paused(instance_id: str, name: str) -> bool:
@@ -108,7 +100,7 @@ def set_listener_paused(instance_id: str, name: str, paused: bool) -> bool:
     EMPIRICA_DIR.mkdir(parents=True, exist_ok=True)
     path = listener_pause_path(instance_id, name)
     if paused:
-        path.write_text('', encoding='utf-8')
+        path.write_text("", encoding="utf-8")
     else:
         try:
             path.unlink()
@@ -138,11 +130,12 @@ class ListenerEntry:
     listener_active_*.json file and are managed by the listener body,
     not by this registry.
     """
+
     name: str
     topic: str
-    description: str = ''
-    on_wake_template: str = ''
-    registered_at: str = ''
+    description: str = ""
+    on_wake_template: str = ""
+    registered_at: str = ""
     last_wake_at: str | None = None
     last_message: str | None = None
     wake_count: int = 0
@@ -153,26 +146,26 @@ class ListenerEntry:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            'topic': self.topic,
-            'description': self.description,
-            'on_wake_template': self.on_wake_template,
-            'registered_at': self.registered_at,
-            'last_wake_at': self.last_wake_at,
-            'last_message': self.last_message,
-            'wake_count': self.wake_count,
+            "topic": self.topic,
+            "description": self.description,
+            "on_wake_template": self.on_wake_template,
+            "registered_at": self.registered_at,
+            "last_wake_at": self.last_wake_at,
+            "last_message": self.last_message,
+            "wake_count": self.wake_count,
         }
 
     @classmethod
     def from_dict(cls, name: str, data: dict[str, Any]) -> ListenerEntry:
         return cls(
             name=name,
-            topic=data.get('topic', ''),
-            description=data.get('description', '') or '',
-            on_wake_template=data.get('on_wake_template', '') or '',
-            registered_at=data.get('registered_at', _now_iso()),
-            last_wake_at=data.get('last_wake_at'),
-            last_message=data.get('last_message'),
-            wake_count=int(data.get('wake_count', 0) or 0),
+            topic=data.get("topic", ""),
+            description=data.get("description", "") or "",
+            on_wake_template=data.get("on_wake_template", "") or "",
+            registered_at=data.get("registered_at", _now_iso()),
+            last_wake_at=data.get("last_wake_at"),
+            last_message=data.get("last_message"),
+            wake_count=int(data.get("wake_count", 0) or 0),
         )
 
 
@@ -196,31 +189,29 @@ class ListenerRegistry:
     def _read(self) -> dict[str, Any]:
         if not self.path.exists():
             return {
-                'instance_id': self.instance_id,
-                'instance_label': self._label,
-                'listeners': {},
+                "instance_id": self.instance_id,
+                "instance_label": self._label,
+                "listeners": {},
             }
         try:
-            with open(self.path, encoding='utf-8') as f:
+            with open(self.path, encoding="utf-8") as f:
                 data = json.load(f)
-            data.setdefault('instance_id', self.instance_id)
-            data.setdefault('instance_label', self._label)
-            data.setdefault('listeners', {})
+            data.setdefault("instance_id", self.instance_id)
+            data.setdefault("instance_label", self._label)
+            data.setdefault("listeners", {})
             return data
         except (OSError, json.JSONDecodeError):
             return {
-                'instance_id': self.instance_id,
-                'instance_label': self._label,
-                'listeners': {},
+                "instance_id": self.instance_id,
+                "instance_label": self._label,
+                "listeners": {},
             }
 
     def _write(self, data: dict[str, Any]) -> None:
         EMPIRICA_DIR.mkdir(parents=True, exist_ok=True)
-        fd, tmp_path = tempfile.mkstemp(
-            prefix=self.path.name + '.', suffix='.tmp', dir=str(EMPIRICA_DIR)
-        )
+        fd, tmp_path = tempfile.mkstemp(prefix=self.path.name + ".", suffix=".tmp", dir=str(EMPIRICA_DIR))
         try:
-            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, sort_keys=True)
                 f.flush()
                 os.fsync(f.fileno())
@@ -234,14 +225,11 @@ class ListenerRegistry:
 
     def list_listeners(self) -> list[ListenerEntry]:
         data = self._read()
-        return [
-            ListenerEntry.from_dict(name, entry)
-            for name, entry in data['listeners'].items()
-        ]
+        return [ListenerEntry.from_dict(name, entry) for name, entry in data["listeners"].items()]
 
     def get(self, name: str) -> ListenerEntry | None:
         data = self._read()
-        entry = data['listeners'].get(name)
+        entry = data["listeners"].get(name)
         if entry is None:
             return None
         return ListenerEntry.from_dict(name, entry)
@@ -250,8 +238,8 @@ class ListenerRegistry:
         self,
         name: str,
         topic: str,
-        description: str = '',
-        on_wake_template: str = '',
+        description: str = "",
+        on_wake_template: str = "",
     ) -> ListenerEntry:
         """Register a listener. Idempotent on (instance_id, name).
 
@@ -264,7 +252,7 @@ class ListenerRegistry:
         _validate_topic(topic)
 
         data = self._read()
-        existing = data['listeners'].get(name)
+        existing = data["listeners"].get(name)
 
         if existing:
             entry = ListenerEntry.from_dict(name, existing)
@@ -279,9 +267,9 @@ class ListenerRegistry:
                 on_wake_template=on_wake_template,
             )
 
-        data['listeners'][name] = entry.to_dict()
+        data["listeners"][name] = entry.to_dict()
         if self._label:
-            data['instance_label'] = self._label
+            data["instance_label"] = self._label
         self._write(data)
         return entry
 
@@ -299,9 +287,9 @@ class ListenerRegistry:
         """
         _validate_name(name)
         data = self._read()
-        if name not in data['listeners']:
+        if name not in data["listeners"]:
             return False
-        del data['listeners'][name]
+        del data["listeners"][name]
         self._write(data)
         set_listener_paused(self.instance_id, name, False)
         # Clear all sidecar / pending / runtime files. Each unlink is
@@ -322,6 +310,7 @@ class ListenerRegistry:
             listener_install_request,
             listener_uninstall_request,
         )
+
         return [
             listener_active_path(self.instance_id, name),
             listener_install_request.pending_path(self.instance_id, name),
@@ -337,26 +326,26 @@ class ListenerRegistry:
         wake_count, updates last_wake_at and last_message."""
         _validate_name(name)
         data = self._read()
-        if name not in data['listeners']:
+        if name not in data["listeners"]:
             raise KeyError(f"Listener '{name}' not registered")
-        entry = ListenerEntry.from_dict(name, data['listeners'][name])
+        entry = ListenerEntry.from_dict(name, data["listeners"][name])
         entry.last_wake_at = _now_iso()
         entry.last_message = message
         entry.wake_count += 1
-        data['listeners'][name] = entry.to_dict()
+        data["listeners"][name] = entry.to_dict()
         self._write(data)
         return entry
 
 
 __all__ = [
-    'EMPIRICA_DIR',
-    'VALID_NAME',
-    'VALID_TOPIC_SCHEMES',
-    'ListenerEntry',
-    'ListenerRegistry',
-    'is_listener_paused',
-    'listener_active_path',
-    'listener_pause_path',
-    'registry_path',
-    'set_listener_paused',
+    "EMPIRICA_DIR",
+    "VALID_NAME",
+    "VALID_TOPIC_SCHEMES",
+    "ListenerEntry",
+    "ListenerRegistry",
+    "is_listener_paused",
+    "listener_active_path",
+    "listener_pause_path",
+    "registry_path",
+    "set_listener_paused",
 ]

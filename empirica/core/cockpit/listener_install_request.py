@@ -42,11 +42,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-EMPIRICA_DIR = Path.home() / '.empirica'
+EMPIRICA_DIR = Path.home() / ".empirica"
 
 
 def _safe_suffix(text: str) -> str:
-    return text.replace('/', '-').replace('%', '')
+    return text.replace("/", "-").replace("%", "")
 
 
 def pending_path(instance_id: str, name: str) -> Path:
@@ -54,20 +54,20 @@ def pending_path(instance_id: str, name: str) -> Path:
     loop install-request so writers and readers agree on the filename."""
     safe_inst = _safe_suffix(instance_id)
     safe_name = _safe_suffix(name)
-    return EMPIRICA_DIR / f'listener_install_pending_{safe_inst}_{safe_name}.json'
+    return EMPIRICA_DIR / f"listener_install_pending_{safe_inst}_{safe_name}.json"
 
 
 def list_pending(instance_id: str) -> list[Path]:
     """All pending install request files for the given instance."""
     safe_inst = _safe_suffix(instance_id)
-    return sorted(EMPIRICA_DIR.glob(f'listener_install_pending_{safe_inst}_*.json'))
+    return sorted(EMPIRICA_DIR.glob(f"listener_install_pending_{safe_inst}_*.json"))
 
 
 def render_inbox_listener_prompt(
     name: str,
     topic: str,
-    description: str = '',
-    on_wake_template: str = '',
+    description: str = "",
+    on_wake_template: str = "",
 ) -> str:
     """Render the inbox-listener skill template with placeholders substituted.
 
@@ -77,8 +77,8 @@ def render_inbox_listener_prompt(
     runtime metadata containing the Monitor task id + curl PID. On each
     wake, runs the on_wake_template, then stays armed.
     """
-    desc = description or f'{name} event listener'
-    wake_body = on_wake_template or '(no on-wake handler — record wake and continue)'
+    desc = description or f"{name} event listener"
+    wake_body = on_wake_template or "(no on-wake handler — record wake and continue)"
     return f"""\
 Run /inbox-listener with the following parameters:
 
@@ -124,43 +124,44 @@ class ListenerInstallRequest:
     show 'requested by tmux_7'); None when the request was made via CLI
     outside any tracked instance.
     """
+
     instance_id: str
     name: str
     topic: str
-    description: str = ''
-    on_wake_template: str = ''
-    requested_at: str = ''
+    description: str = ""
+    on_wake_template: str = ""
+    requested_at: str = ""
     requested_by: str | None = None
-    prompt_template: str = ''
+    prompt_template: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            'instance_id': self.instance_id,
-            'name': self.name,
-            'topic': self.topic,
-            'description': self.description,
-            'on_wake_template': self.on_wake_template,
-            'requested_at': self.requested_at,
-            'requested_by': self.requested_by,
-            'prompt_template': self.prompt_template,
+            "instance_id": self.instance_id,
+            "name": self.name,
+            "topic": self.topic,
+            "description": self.description,
+            "on_wake_template": self.on_wake_template,
+            "requested_at": self.requested_at,
+            "requested_by": self.requested_by,
+            "prompt_template": self.prompt_template,
         }
 
     @classmethod
     def from_path(cls, path: Path) -> ListenerInstallRequest | None:
         try:
-            with open(path, encoding='utf-8') as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except (OSError, json.JSONDecodeError):
             return None
         return cls(
-            instance_id=str(data.get('instance_id', '')),
-            name=str(data.get('name', '')),
-            topic=str(data.get('topic', '')),
-            description=str(data.get('description', '') or ''),
-            on_wake_template=str(data.get('on_wake_template', '') or ''),
-            requested_at=str(data.get('requested_at', '')),
-            requested_by=data.get('requested_by'),
-            prompt_template=str(data.get('prompt_template', '') or ''),
+            instance_id=str(data.get("instance_id", "")),
+            name=str(data.get("name", "")),
+            topic=str(data.get("topic", "")),
+            description=str(data.get("description", "") or ""),
+            on_wake_template=str(data.get("on_wake_template", "") or ""),
+            requested_at=str(data.get("requested_at", "")),
+            requested_by=data.get("requested_by"),
+            prompt_template=str(data.get("prompt_template", "") or ""),
         )
 
 
@@ -168,8 +169,8 @@ def write_pending(
     instance_id: str,
     name: str,
     topic: str,
-    description: str = '',
-    on_wake_template: str = '',
+    description: str = "",
+    on_wake_template: str = "",
     requested_by: str | None = None,
 ) -> Path:
     """Write a pending install request. Idempotent — overwrites existing
@@ -185,12 +186,13 @@ def write_pending(
         requested_at=datetime.now(tz=timezone.utc).isoformat(),
         requested_by=requested_by,
         prompt_template=render_inbox_listener_prompt(
-            name=name, topic=topic,
+            name=name,
+            topic=topic,
             description=description,
             on_wake_template=on_wake_template,
         ),
     )
-    with open(path, 'w', encoding='utf-8') as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(request.to_dict(), f, indent=2)
     return path
 
@@ -214,11 +216,11 @@ def consume_pending(instance_id: str) -> list[ListenerInstallRequest]:
 
 
 __all__ = [
-    'EMPIRICA_DIR',
-    'ListenerInstallRequest',
-    'consume_pending',
-    'list_pending',
-    'pending_path',
-    'render_inbox_listener_prompt',
-    'write_pending',
+    "EMPIRICA_DIR",
+    "ListenerInstallRequest",
+    "consume_pending",
+    "list_pending",
+    "pending_path",
+    "render_inbox_listener_prompt",
+    "write_pending",
 ]
