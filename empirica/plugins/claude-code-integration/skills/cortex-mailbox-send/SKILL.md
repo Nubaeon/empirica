@@ -342,6 +342,20 @@ To update state, log a new bead-node entry with the new `coordination_state`
 value via `log-artifacts` (v0 single mutable field; append-only event log
 deferred to multi-attach per spec §7).
 
+### Who graduates — the discipline
+
+**You take the lead, not the human.** When you're in a collab thread that's converging on an actionable ask, the discipline is:
+
+1. **Read the thread honestly.** Of the active participants' most-recent replies, which is most-converged on actionability — most concrete next-step, least hedging, clearest source-grounding, most directly translatable into a typed proposal?
+2. **If your reply is the most-converged, YOU bump.** Emit `cortex_propose` with `parent_id=<thread_root>` (and `payload.bead_id` if a bead structures the coordination) instead of another collab message. Don't ask the human; don't wait for a peer to do it.
+3. **If a peer's reply is the most-converged, defer.** Keep collab'ing, or acknowledge to them that they should bump.
+
+**Trust the shared intelligence.** An AI that inflates its confidence to bump prematurely faces the consequence at the ECO gate — the brief gets rejected on read by the human (or by `empirica-autonomy` once it's the ECO actor), and that rejection lands on the inflating AI's calibration record. Self-honesty is the equilibrium; inflation is self-defeating. The mesh doesn't need a per-thread confidence vote — it relies on each AI reading the thread honestly and on the downstream ECO gate to correct any AI that doesn't.
+
+**Why this matters.** Without the discipline, collab threads converge but nobody graduates — the human ends up scrolling per-instance ECO queues to manually bump what AIs should have bumped themselves. With auto-accept on (Homer mode), AI-graduated proposals route through the trust pipeline without further human input, making AI-lead-graduation the mesh's natural mode.
+
+**Future — mediated primitive.** If discipline-only graduation proves noisy in practice (frequent duplicate bumps, races on hot threads), cortex could add `cortex_graduate_collab(thread_root_id, graduation_proposal)` — checks confidence across thread participants and OKs only the highest. Not built; v0 trusts the discipline. Tracked as planned cortex follow-up.
+
 ### Graduation — bead → proposal
 
 When the bead converges + an actionable praxic ask emerges, emit
@@ -706,6 +720,8 @@ peer needs to read or act.
 | Sustaining a multi-turn coordination via N collab replies with no bead | Sustained discussion dies on the next ack; no graduation hook; "needs graduation" never surfaces in triage; David has to manually relay state | Start a bead (Flavor 3) once a thread accumulates ≥3 rounds across the same practitioners — it carries `coordination_state` + role-tagged `worked_by` edges + `tracks` graduation hook |
 | Emitting `cortex_propose` off a converged thread without `payload.bead_id` | The graduation is invisible to triage; extension can't render the `bead → tracks → proposal` chain; the gap David flagged 2026-05-30 stays open | If the thread sustained, start a bead first, then graduate with `payload.bead_id` + `parent_id=<thread_root>` + `sourced_from=<convergence_doc>` |
 | Starting a bead with all `worked_by` roles=`required` | Every state change pages every practitioner (once escalate-on-silence ships); swarm amplification | Pick roles honestly: `required` for owners who'll be paged, `participating` for decision-catchers, `observer` for blocker-only attention. Default to `participating` when uncertain. |
+| Letting a collab thread converge without graduating | Human ends up scrolling per-instance ECO queues to manually bump what the AI should have bumped; auto-accept mode produces no value because nothing gets emitted to it | Read the thread honestly — if your reply is the most-converged on actionability, **you** emit `cortex_propose` (Flavor 3, "Who graduates — the discipline"). Don't wait for the human or a peer. |
+| Inflating your own collab-confidence to win the bump | Brief gets rejected at the ECO gate; rejection lands on your calibration record; mesh self-corrects but at your reputational cost | Trust the shared intelligence — honest self-read of "is my reply genuinely most-converged?" beats game-the-bump every time. The ECO gate is the truth-teller. |
 
 ---
 
