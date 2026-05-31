@@ -1,7 +1,9 @@
 # Agents Orchestration API Reference
 
-**Version:** 1.6.6
+**Version:** 1.11.0
 **Purpose:** Parallel investigation agents with epistemic budget allocation
+
+> **Verified at 1.11.0.** All `agent-*` verbs below remain present and behave as documented. For user-facing walkthroughs of how agents fit into the overall workflow, see [SESSION_GOAL_WORKFLOW.md](../../human/end-users/SESSION_GOAL_WORKFLOW.md) and [LOGGING_AND_FINDING.md](../../human/end-users/LOGGING_AND_FINDING.md).
 
 ---
 

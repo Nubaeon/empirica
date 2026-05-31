@@ -1,19 +1,22 @@
 # Workspace Management API Reference
 
-**Version:** 1.6.6
+**Version:** 1.11.0
 **Database:** `~/.empirica/workspace/workspace.db`
-**Purpose:** Cross-project portfolio management and trajectory tracking
+**Purpose:** Cross-project portfolio management, trajectory tracking, and entity registry
 
 ---
 
 ## Overview
 
-The workspace system provides a **global registry** that tracks all Empirica projects. It enables:
+The workspace system provides a **global registry** that tracks all Empirica projects plus a typed entity graph (projects / contacts / organizations / engagements / users) connecting them. It enables:
 
 - Portfolio-level views across projects
 - Cross-project pattern discovery
 - Project switching and instance binding
 - Trajectory health monitoring
+- Entity walks across the Practice Model — `empirica entity-list`, `entity-show`, `entity-walk`, `entity-search` (shipped in 1.10; see [PROJECT_LIFECYCLE.md](../../human/end-users/PROJECT_LIFECYCLE.md) and [LOGGING_AND_FINDING.md § Entity Discovery](../../human/end-users/LOGGING_AND_FINDING.md#finding-3--entity-discovery) for usage)
+
+> **Verified at 1.11.0.** The `workspace-init`, `workspace-list`, `workspace-overview`, `workspace-map`, `project-list`, `project-switch`, `ecosystem-check` verbs documented below remain present. The 1.10 additions — the `entity-*` family + `entity_registry` / `entity_memberships` tables — are covered in the user-facing docs linked above rather than duplicated here; this doc focuses on the workspace-level CLI surface.
 
 ---
 

@@ -1,6 +1,6 @@
 # Epistemic Transaction Workflow API Reference
 
-**Version:** 1.8.14
+**Version:** 1.11.0
 **Purpose:** Epistemic measurement phases for AI self-assessment, domain compliance, and grounded calibration
 
 ---
@@ -18,6 +18,14 @@ PREFLIGHT ──► CHECK ──► POSTFLIGHT ──► POST-TEST ──► COM
 ```
 
 **Key concept:** The PREFLIGHT → POSTFLIGHT cycle is a **measurement window** (epistemic transaction), not a goal boundary. Between measurements, epistemic state is wave-like (continuous). PREFLIGHT/POSTFLIGHT collapse it to particles (discrete vectors).
+
+> **Verified at 1.11.0.** The three core verbs (`preflight-submit`, `check-submit`, `postflight-submit`) remain present and behave as documented. Notable additions since this doc was first written:
+> - **`work_type`** declarations expand the gate-relaxation tuple — `code`/`infra`/`research`/`release`/`debug`/`config`/`docs`/`data`/`comms`/`design`/`audit`/`remote-ops` (`remote-ops` recognises SSH/rsync/scp paths the local sentinel can't observe; calibration returns `ungrounded_remote_ops`)
+> - **Bead artifact type** (1.10.5) — coordination records for sustained mesh coordination; see [MESH_SETUP.md](../../human/end-users/MESH_SETUP.md) and the `/cortex-mailbox-send` skill's Flavor 3
+> - **Edge metadata persistence fix** (1.10.5) — per-edge `metadata` JSON on `worked_by` (and other typed-edge relations) now persists correctly through `log-artifacts`
+> - **The artifact graph + commit-context walker** for finding what you logged — see [LOGGING_AND_FINDING.md](../../human/end-users/LOGGING_AND_FINDING.md)
+>
+> User-facing walkthroughs: [SESSION_GOAL_WORKFLOW.md](../../human/end-users/SESSION_GOAL_WORKFLOW.md) and [LOGGING_AND_FINDING.md](../../human/end-users/LOGGING_AND_FINDING.md).
 
 ---
 

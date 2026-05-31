@@ -1,6 +1,6 @@
 # Investigation Tools API Reference
 
-**Version:** 1.6.6
+**Version:** 1.11.0
 **Module:** `empirica.cli.command_handlers.workflow_commands`
 **Purpose:** NOETIC phase tools for exploration, hypothesizing, and evidence gathering
 
@@ -15,6 +15,8 @@ Investigation tools support the **NOETIC phase** - exploring, hypothesizing, and
 - Git branch isolation for exploratory work
 - Structured logging of investigation results
 - Noetic artifact capture (findings, unknowns, dead-ends)
+
+> **Verified at 1.11.0.** All `investigate*` and artifact-log verbs documented below remain present. Sister surfaces shipped since this doc was first written: `noetic-batch` (`empirica noetic-batch -`) bundles ≥3 reads/greps/globs/investigates into one merged result (see the system prompt's noetic-batch section); the artifact graph + typed edges + `commit-context` walker are covered in the user-facing discovery-side walkthrough at [LOGGING_AND_FINDING.md](../../human/end-users/LOGGING_AND_FINDING.md). For semantic search across artifacts use `project-search --task "..."` (local) or `project-search --task "..." --global` (cross-project).
 
 ---
 

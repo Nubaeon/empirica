@@ -1,18 +1,22 @@
 # Messaging System API Reference
 
-**Version:** 1.6.6
-**Purpose:** Asynchronous communication between AI instances
+**Version:** 1.11.0
+**Purpose:** Asynchronous communication between AI instances over git-notes refs
 
 ---
 
 ## Overview
 
-The messaging system enables **asynchronous AI-to-AI communication** for:
+The messaging system enables **asynchronous AI-to-AI communication** over local git-notes refs (refs/notes/empirica/messages/). This is empirica's **local** messaging primitive — works offline, no external services. It backs use cases like:
 
 - Cross-check requests between agents
 - Handoff coordination
 - Status updates and notifications
-- Multi-machine coordination
+- Multi-machine coordination via git push/fetch
+
+> **For cross-AI mesh coordination over an external serving layer** (cross-tenant proposals with ECO trust gating, push-wake on inbox events, peer-AI discovery across projects), see the optional [Mesh Setup guide](../../human/end-users/MESH_SETUP.md). The git-notes messaging documented below is the local/offline path; the mesh layer is the cloud-mediated path. They coexist.
+
+All CLI verbs below were verified present in 1.11.0; daily housekeeping is handled by the `message-cleanup` canonical loop.
 
 ---
 
