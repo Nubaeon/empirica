@@ -357,9 +357,8 @@ def _wire_edges(db, edges: list[dict], ref_map: dict[str, str]) -> int:
         to_id = ref_map.get(edge['to'], edge['to'])
         relation = edge['relation']
 
-        # Store edge in the 'from' artifact's data column as JSON
         try:
-            _store_edge(db, from_id, to_id, relation)
+            _store_edge(db, from_id, to_id, relation, edge.get('metadata'))
             wired += 1
         except Exception as e:
             logger.debug(f"Failed to wire edge {edge}: {e}")
