@@ -326,7 +326,7 @@ class TestCortexExtractTransactionGraph:
         assert dnode["data"]["rationale"] == "grounded"
 
         # per-artifact goal edges + the canonical artifact_edges edge
-        goal_edges = [e for e in graph["edges"] if e["relation"] == "addresses_goal"]
+        goal_edges = [e for e in graph["edges"] if e["relation"] == "attached_to"]
         assert {e["from"] for e in goal_edges} == {fid, did}
         assert all(e["to"] == GID for e in goal_edges)
         assert any(e["relation"] == "supports" and e["from"] == fid and e["to"] == did
@@ -349,7 +349,7 @@ class TestCortexExtractTransactionGraph:
         wp = self._patch_tx(monkeypatch, db, TX)
         graph = wp._cortex_extract_transaction_graph(SID)
         assert len(graph["nodes"]) == 1
-        assert [e for e in graph["edges"] if e["relation"] == "addresses_goal"] == []
+        assert [e for e in graph["edges"] if e["relation"] == "attached_to"] == []
 
 
 # ─── beads v0 — log_bead + _create_node + graph extraction ────────────────
@@ -445,5 +445,5 @@ class TestBeadsV0:
         assert bn["data"]["description"] == "ride the sync"
         # per-artifact goal edge still emits for bead
         assert any(e["from"] == bid and e["to"] == GID
-                   and e["relation"] == "addresses_goal"
+                   and e["relation"] == "attached_to"
                    for e in graph["edges"])
