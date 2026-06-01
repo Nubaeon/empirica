@@ -426,7 +426,7 @@ the projection of every SER where your practice is a participant:
       ser_id, coordination_state, title, summary,
       participants: [{practice_id, role, last_ack_at, last_action_at}, ...],
       goal_refs: [...],
-      source_thread: <proposal_id>,
+      source_ref: <proposal_id>,    // canonical storage column name (was source_thread alias pre-89064a2)
       escalation_seconds,
       last_transition_at, last_transition_actor,
     },
