@@ -257,10 +257,10 @@ def search(project_id: str, query_text: str, kind: str = "focused", limit: int =
         "docs": (_docs_collection, ["doc_path", "tags", "concepts"]),
         "memory": (_memory_collection, ["type", "text", "session_id", "goal_id", "timestamp", "impact"]),
         "eidetic": (_eidetic_collection, ["type", "content", "confidence", "domain", "created_at", "first_seen"]),
-        "episodic": (_episodic_collection, ["type", "narrative", "session_id", "outcome"]),
-        "assumptions": (_assumptions_collection, ["assumption", "confidence", "status", "domain"]),
-        "decisions": (_decisions_collection, ["choice", "rationale", "reversibility"]),
-        "goals": (_goals_collection, ["objective", "status", "scope"]),
+        "episodic": (_episodic_collection, ["type", "narrative", "session_id", "outcome", "created_at", "timestamp"]),
+        "assumptions": (_assumptions_collection, ["assumption", "confidence", "status", "domain", "created_at", "timestamp"]),
+        "decisions": (_decisions_collection, ["choice", "rationale", "reversibility", "created_at", "timestamp"]),
+        "goals": (_goals_collection, ["objective", "status", "scope", "created_at"]),
     }
 
     # Boost weights per collection type — findings/decisions score higher than code docs

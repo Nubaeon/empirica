@@ -79,6 +79,7 @@ def embed_assumption(
             "session_id": session_id,
             "transaction_id": transaction_id,
             "domain": domain,
+            "created_at": ts,
             "timestamp": ts,
             "urgency_signal": urgency,
         }
@@ -149,6 +150,7 @@ def embed_decision(
             "entity_id": entity_id or project_id,
             "session_id": session_id,
             "transaction_id": transaction_id,
+            "created_at": timestamp or _time.time(),
             "timestamp": timestamp or _time.time(),
         }
 

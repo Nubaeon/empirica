@@ -68,6 +68,7 @@ def embed_episodic(
             "session_id": session_id,
             "ai_id": ai_id,
             "goal_id": goal_id,
+            "created_at": now,
             "timestamp": now,
             "learning_delta": learning_delta or {},
             "outcome": outcome,  # success, partial, failure, abandoned

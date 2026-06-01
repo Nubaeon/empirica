@@ -90,6 +90,7 @@ def embed_goal(
 
         payload = {
             "type": "goal",
+            "created_at": timestamp or time.time(),
             "objective": objective[:500] if objective else None,
             "objective_full": objective if len(objective) <= 500 else None,
             "description": description[:500] if description else None,
@@ -201,6 +202,7 @@ def embed_subtask(
             "completion_evidence": completion_evidence,
             "findings": findings or [],
             "unknowns": unknowns or [],
+            "created_at": timestamp or time.time(),
             "timestamp": timestamp or time.time(),
             "is_completed": status == "completed",
         }
