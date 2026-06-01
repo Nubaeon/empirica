@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] — 2026-06-01
+
+A substantial minor release. Three threads converge: (1) the user-facing doc surface for the cross-AI mesh gets a conceptual entry point (MESH_CONCEPTS.md) and the v0 bead concept retires in favor of the Shared Epistemic Record (SER) primitive landing cortex-side; (2) the listener substrate gains real reliability — `empirica mesh` diagnostic command, in-process curl-zombie watchdog, ntfy 429 detection; (3) the Qdrant relevance layer carries a unified `created_at` field across every temporal collection so the cortex serving-side composition-C decay applies uniformly. Cortex's Mesh Routing Protocol v0 lands four-way (empirica + cortex + extension + mesh-support) in the same window.
+
+### Added
+
+- **`empirica mesh` command cluster** — unified diagnostic + control surface across listener instances and the optional cortex bridge layer. Verbs: `status`, `diagnose`, `restart`, `on`, `off`, `tail`. Auto-flags the silent-zombie pattern (service active + curl alive + no fires for 30+ min) as RED. Reports two layers distinctly so empirica-core users see local-only diagnostics without cortex noise; cortex-configured users see both.
+- **Listener self-heal watchdog** — `empirica/core/loop_scheduler/listener.py` now spawns a daemon thread per stream that terminates curl when no activity is received for `EMPIRICA_LISTENER_STALE_THRESHOLD_SEC` (default 120s). Catches the silent TCP-zombie failure mode where the curl subprocess stays alive on a dead socket. Forces the outer reconnect loop.
+- **ntfy HTTP 429 detection + rate-limit backoff** — curl args switched to `-sSN -i` so HTTP status surfaces; new `_read_http_status()` parses the response code. On 429, the listener applies a long backoff (`EMPIRICA_LISTENER_RATE_LIMIT_BACKOFF_SEC`, default 1800s) and continues the catch-up poll every 300s during the window so events keep flowing via the pull path. Previously the rate limit was silently swallowed and the listener thrashed in 5-min auth-fail loops.
+- **`created_at` on every temporal Qdrant collection** — eidetic, memory (subtasks), decisions, assumptions, episodic, and goals all now write + project a standardized `created_at` field at embed time. Unblocks cortex's composition-C age-based decay (`tau_days = 30*(1 + 2*impact)`, prod `96bff49`) across the full artifact set rather than just memory. Cortex's fallback chain (`created_at → timestamp → first_seen`) handles existing rows during transition.
+- **MESH_CONCEPTS.md** (`docs/human/end-users/`) — conceptual entry point for the cross-AI mesh. Frames practitioner/practice as the load-bearing architectural choice (practices persist; practitioners are fungible LLMs that inhabit them), and lays out the epistemic envelope — what actually rides the wire between AIs beyond just text (calibrated vector state, source-tagged provenance, noetic/praxic intent, workflow arc, trust gate, coordination state).
+
+### Changed
+
+- **`addresses_goal` → `attached_to`** on the empirica-emitted goal-anchor edge. Cortex's `EDGE_RELATIONS` set didn't recognize `addresses_goal`, so the entire graph submission was rejected — empirica's per-artifact goal-anchor edges were silently dropped from `/v1/sync` graph branch. `attached_to` is cortex's existing any-to-goal relation, semantically equivalent, recognized at validation. One-line rename in `_workflow_postflight.py`; cortex accepts both for a transition window.
+- **`/cortex-mailbox-send` Flavor 3 rewritten** — bead-as-artifact-graph-node model retired in favor of SER (cortex-resident shared-state object). Documents the shipped `payload.action='create_ser'` + `ser_spec` wire shape, response shape (`proposal_id`, `ser_id`, `ser_state_verified`), participant role tiers (`required`/`participating`/`observer`), state lifecycle, AFK-ambassador pattern (`proxy_actor`), and the `/v1/sers` read endpoint patterns including `?thread_id=<root>` filter. Phase status table makes it explicit which actions are live (`/v1/sers` GET, `create_ser`) vs pending (`transition_ser`, `ser_ack`, escalation tick).
+- **Skill surfaces stripped to pure instructions** — `/cortex-mailbox-send`, `/cortex-mailbox-poll`, and the `empirica-cortex-prompt.md` sustained-coordination block all condensed to triggers + call shape + response shape + anti-patterns. Conceptual depth moved to MESH_CONCEPTS.md and the cortex-side SER spec. `/cortex-mailbox-send` Flavor 3: 770 → 648 lines (-16%). `empirica-cortex-prompt.md` sustained-coord block: 28 → 13 lines (-54%).
+- **`empirica-cortex-prompt.md` updated** to the 3-level canonical addressing convention (`org.tenant.project` with `.` delimiter) and the collab-auto-reply / ECO-surface discipline (don't surface noetic collabs to the user; auto-react via `empirica mailbox reply`).
+
+### Documentation
+
+- **`UPGRADE_TO_1.11.md`** — full upgrade guide rolling up the 1.10.5 + 1.10.6 patch content plus 1.11's new surface, with explicit cohort table for the bead v0 retirement.
+- **Bead v0 → SER vocab sweep** across `MESH_SETUP.md`, `LOGGING_AND_FINDING.md`, `cascade_workflow.md`. Coordination-concept references updated; `bd` issue-tracker integration references intentionally left alone (separate concept, predates the bead naming collision).
+- **Mesh Routing Protocol v0 endorsed three-way** — empirica's §1 (3 layers + A2A map), §2 isolation, §6.5 sender-side discipline review folded into cortex's `f8a966c` lock with mesh-support's §3 + extension's §5. Posture: L1/L2/L3 trust model is empirica/cortex layer above A2A; A2A wire format is borrowed where the shape fits.
+
+### Fixed
+
+- **Curl-immediate-exit silent failure mode on 4 of 7 systemd listeners** — root cause was reconnect-storm-driven ntfy rate limit (429) masked by `curl -s`. Both the 429 detection and the watchdog now catch silent-substrate failures from different angles; `empirica mesh status` makes them visible.
+- **Test fixture parity** — `tests/test_postflight_pipeline_restructure.py` renamed `addresses_goal` references to match the canonical `attached_to`.
+
+### Cortex / extension / mesh-support side (companion ships, separate repos)
+
+For context — these landed against the contract empirica updates above were written to:
+- **Cortex Mesh Routing Protocol v0** at `f8a966c` (DRAFT marker dropped after three-way review)
+- **Cortex SER v1 spec** at `85e5e46` (`SHARED_EPISTEMIC_RECORD.md`; v0 `BEAD_COORDINATION_RECORD.md` archived)
+- **Cortex SER Phase 1a** (`/v1/sers` GET endpoint live, `c7bccb3`)
+- **Cortex SER Phase 1b** (`payload.action='create_ser'` handler + atomic write + post-commit graph-integrity assert + wake emission, `003323c`; end-to-end verified)
+- **Cortex layer annotation on every proposal envelope + wake event** + `/v1/orchestration/threads` participant-scoping (`086ee2a`, `e93bad6`, `5593f9b`)
+- **Cortex ntfy dual-emit** (canonical 3-level id tag + short alias tag for transition, `d8d2dcc`) — restores push-channel delivery for listeners on legacy short-tag subscribe
+- **Cortex field-name alignment** (`source_thread` → `source_ref` canonical, `escalation_seconds` flat not nested, `89064a2`)
+- **Extension Reports tab shipped** (`v0.8.48`) binding to `/v1/sers` projection; Issues tab renamed to Reports per spec
+- **Extension layer annotation render** + self-tenant participation gate (`v0.8.46`) closing the cross-tenant collab visibility leak
+
 ## [1.10.6] — 2026-05-31
 
 Per cortex+extension contract 2026-05-31: the per-message `actionability`
