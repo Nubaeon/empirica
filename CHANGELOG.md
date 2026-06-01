@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.1] — 2026-06-01
+
+Hotfix for a misleading diagnostic that surfaced 90 minutes after 1.11.0 shipped: `mesh status` and `mesh diagnose` reported "curl subscription dead" for listeners that were intentionally in a 30-min ntfy 429 backoff window (curl killed by the Track 5 rate-limit handler from 1.11.0, sleeping until the limit lifts, catch-up poll still flowing). mesh-support's escalation interpreted the misleading status as a watchdog gap, but the watchdog handles a different failure mode (alive-but-stale curl); the actual issue was UX, not behavior.
+
+### Fixed
+
+- **`mesh status` and `mesh diagnose` now distinguish backoff states** — new `_detect_backoff_state()` reads the recent tail of `~/.empirica/logs/listener-<ai_id>.log` and reports `YELLOW "rate-limited — curl absent during 30-min backoff; catch-up poll still running"` instead of `RED "curl subscription dead"` when a 429 backoff explains the curl absence. Auth/4xx/5xx backoffs get their own YELLOW state too. RED is reserved for genuine curl-can't-spawn outages.
+
+### Known issue (escalated, not addressable from empirica side)
+
+Fleet-wide 429s suggest cortex's `ntfy.getempirica.com` per-IP / per-user rate limit is too tight for the active listener pool that 1.11's persistent listener architecture creates. Resolution requires server-side configuration on cortex's ntfy host — either bumping the limit or issuing per-listener tokens with separate buckets. Tracked in the mesh-support escalation thread (`prop_6wrrlvk2yj`).
+
 ## [1.11.0] — 2026-06-01
 
 A substantial minor release. Three threads converge: (1) the user-facing doc surface for the cross-AI mesh gets a conceptual entry point (MESH_CONCEPTS.md) and the v0 bead concept retires in favor of the Shared Epistemic Record (SER) primitive landing cortex-side; (2) the listener substrate gains real reliability — `empirica mesh` diagnostic command, in-process curl-zombie watchdog, ntfy 429 detection; (3) the Qdrant relevance layer carries a unified `created_at` field across every temporal collection so the cortex serving-side composition-C decay applies uniformly. Cortex's Mesh Routing Protocol v0 lands four-way (empirica + cortex + extension + mesh-support) in the same window.
