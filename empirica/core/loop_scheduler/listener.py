@@ -65,6 +65,18 @@ _RECONNECT_BASE_SEC = 1.0
 _RECONNECT_MAX_SEC = 60.0
 _AUTH_FAIL_BACKOFF_SEC = 300.0  # 5 min — auth issues rarely self-fix in seconds
 
+# Curl-zombie watchdog. ntfy sends 'keepalive' frames every ~45s by default;
+# any longer silence means the held TCP connection is dead. The curl
+# subprocess can't tell — it's blocked in a read() syscall on a socket the
+# OS hasn't reaped yet. We force-terminate it so the outer reconnect loop
+# kicks in. Default threshold (120s) is well above ntfy's keepalive cadence
+# but short enough that "no fires in N minutes" doesn't compound. Override
+# with EMPIRICA_LISTENER_STALE_THRESHOLD_SEC.
+_STALE_THRESHOLD_SEC = float(
+    os.environ.get("EMPIRICA_LISTENER_STALE_THRESHOLD_SEC", "120")
+)
+_WATCHDOG_CHECK_INTERVAL_SEC = 15.0
+
 
 class ListenerStopped(Exception):
     """Raised on SIGTERM/SIGINT so the main loop can exit cleanly."""
@@ -465,8 +477,38 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
                 err_stream.write("listener: stream factory returned no stdout — aborting\n")
                 return 1
             connected_ok = False
+            # Watchdog state — guards against silent TCP-dead-curl-alive zombies.
+            # Shared with the watchdog thread; protected by GIL (single-int
+            # writes/reads are atomic in CPython).
+            import threading as _threading
+            last_activity_at: list[float] = [time.time()]
+            watchdog_stop = _threading.Event()
+
+            def _watchdog() -> None:
+                while not watchdog_stop.wait(_WATCHDOG_CHECK_INTERVAL_SEC):
+                    idle = time.time() - last_activity_at[0]
+                    if idle > _STALE_THRESHOLD_SEC:
+                        err_stream.write(
+                            f"listener: stream stale for {idle:.0f}s "
+                            f"(>{_STALE_THRESHOLD_SEC:.0f}s threshold). "
+                            f"Terminating curl to force reconnect.\n"
+                        )
+                        err_stream.flush()
+                        try:
+                            proc.terminate()
+                        except Exception:
+                            pass
+                        return  # one-shot — outer loop handles reconnect
+
+            watchdog_thread = _threading.Thread(
+                target=_watchdog, name=f"listener-watchdog-{instance_id}",
+                daemon=True,
+            )
+            watchdog_thread.start()
+
             try:
                 for line in proc.stdout:
+                    last_activity_at[0] = time.time()  # ANY line resets staleness
                     line = line.strip()
                     if not line:
                         continue
@@ -484,7 +526,11 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
                         f"(id={msg.get('id','?')[:12]}) → running catch-up\n"
                     )
                     _emit_catchup_events(instance_id, loop_name, output_stream)
+                    # Catch-up can take a few seconds; refresh activity stamp
+                    # so the watchdog doesn't fire on a slow-but-healthy poll.
+                    last_activity_at[0] = time.time()
             finally:
+                watchdog_stop.set()
                 proc.terminate()
                 try:
                     proc.wait(timeout=2)
