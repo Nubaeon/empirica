@@ -256,7 +256,7 @@ def search(project_id: str, query_text: str, kind: str = "focused", limit: int =
     _SEARCH_COLLECTIONS = {
         "docs": (_docs_collection, ["doc_path", "tags", "concepts"]),
         "memory": (_memory_collection, ["type", "text", "session_id", "goal_id", "timestamp", "impact"]),
-        "eidetic": (_eidetic_collection, ["type", "content", "confidence", "domain"]),
+        "eidetic": (_eidetic_collection, ["type", "content", "confidence", "domain", "created_at", "first_seen"]),
         "episodic": (_episodic_collection, ["type", "narrative", "session_id", "outcome"]),
         "assumptions": (_assumptions_collection, ["assumption", "confidence", "status", "domain"]),
         "decisions": (_decisions_collection, ["choice", "rationale", "reversibility"]),

@@ -67,6 +67,7 @@ def embed_eidetic(
             "domain": domain,
             "confidence": confidence,
             "confirmation_count": confirmation_count,
+            "created_at": timestamp or time.time(),
             "first_seen": timestamp or time.time(),
             "last_confirmed": timestamp or time.time(),
             "source_sessions": source_sessions or [],
