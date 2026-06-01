@@ -156,6 +156,7 @@ from .command_handlers.mcp_commands import (
     handle_mcp_stop_command,
     handle_mcp_test_command,
 )
+from .command_handlers.mesh_commands import handle_mesh_group_command
 from .command_handlers.memory_commands import (
     handle_memory_prime_command,
     handle_memory_report_command,
@@ -218,6 +219,7 @@ from .parsers import (
     add_mailbox_parsers,
     add_mcp_parsers,
     add_memory_parsers,
+    add_mesh_parsers,
     add_message_parsers,
     add_monitor_parsers,
     add_notify_parsers,
@@ -309,6 +311,7 @@ def create_argument_parser():
     add_message_parsers(subparsers)
     add_mailbox_parsers(subparsers)
     add_bus_parsers(subparsers)
+    add_mesh_parsers(subparsers)
     add_cockpit_parsers(subparsers)
     add_cockpit_launcher_parsers(subparsers)
     add_chat_parsers(subparsers)
@@ -544,6 +547,9 @@ def main(args=None):
 
             # Cockpit launcher (proposal: PROPOSAL_COCKPIT_LAUNCHER.md, v1)
             'cockpit': handle_cockpit_group_command,
+
+            # Unified mesh diagnostic + control surface
+            'mesh': handle_mesh_group_command,
 
             # AI service scanner (proposal: PROPOSAL_AI_SERVICE_SCANNER.md)
             # Phase 1: scan (one-shot). Phase 3: scan-history/show/diff verbs.

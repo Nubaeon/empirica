@@ -61,6 +61,7 @@ from .lesson_parsers import add_lesson_parsers
 from .mailbox_parsers import add_mailbox_parsers
 from .mcp_parsers import add_mcp_parsers
 from .memory_parsers import add_memory_parsers
+from .mesh_parsers import add_mesh_parsers
 from .message_parsers import add_message_parsers
 from .monitor_parsers import add_monitor_parsers
 from .notify_parsers import add_notify_parsers
@@ -104,6 +105,7 @@ __all__ = [
     'add_mailbox_parsers',
     'add_mcp_parsers',
     'add_memory_parsers',
+    'add_mesh_parsers',
     'add_message_parsers',
     'add_monitor_parsers',
     'add_notify_parsers',

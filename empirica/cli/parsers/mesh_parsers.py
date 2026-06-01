@@ -1,0 +1,77 @@
+"""Parsers for `empirica mesh ...` — unified mesh diagnostic + control surface."""
+
+from __future__ import annotations
+
+
+def add_mesh_parsers(subparsers) -> None:
+    mesh_root = subparsers.add_parser(
+        "mesh",
+        help="Unified mesh diagnostic + control surface across listener "
+             "instances and (optional) cortex bridge",
+        description=(
+            "Consolidates per-instance listener service management, "
+            "health diagnostics, and zombie detection. Reports two layers: "
+            "LOCAL (systemd/launchd service + loop_fires.log + local loops) "
+            "and CORTEX BRIDGE (ntfy curl subscription + inbox poll), "
+            "surfacing the cortex layer only when configured."
+        ),
+    )
+    mesh_subs = mesh_root.add_subparsers(dest="mesh_action", metavar="action")
+
+    # status
+    status = mesh_subs.add_parser(
+        "status",
+        help="Show health table across mesh instances (green/yellow/red + reason)",
+    )
+    status.add_argument(
+        "instance", nargs="?",
+        help="ai_id (default: enumerate all installed listener services)",
+    )
+    status.add_argument(
+        "--output", choices=["human", "json"], default="human",
+    )
+
+    # diagnose
+    diag = mesh_subs.add_parser(
+        "diagnose",
+        help="Deep per-instance diagnostic + suggest exact fix command",
+    )
+    diag.add_argument("instance", help="ai_id to diagnose")
+
+    # restart
+    restart = mesh_subs.add_parser(
+        "restart",
+        help="Restart the listener service for an instance (clears curl zombies)",
+    )
+    restart.add_argument("instance", help="ai_id to restart")
+
+    # on
+    on = mesh_subs.add_parser(
+        "on",
+        help="Install + start + enable the listener service for an instance",
+    )
+    on.add_argument("instance", help="ai_id to bring online")
+
+    # off
+    off = mesh_subs.add_parser(
+        "off",
+        help="Stop the listener service for an instance",
+    )
+    off.add_argument("instance", help="ai_id to bring offline")
+    off.add_argument(
+        "--uninstall", action="store_true",
+        help="Also remove the systemd/launchd unit (default: stop only)",
+    )
+
+    # tail
+    tail = mesh_subs.add_parser(
+        "tail",
+        help="Live tail loop_fires.log filtered by instance(s)",
+    )
+    tail.add_argument(
+        "instance", nargs="?",
+        help="ai_id (default: tail all installed instances)",
+    )
+
+
+__all__ = ["add_mesh_parsers"]
