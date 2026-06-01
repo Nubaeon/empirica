@@ -193,18 +193,18 @@ def _gather_state(ai_id: str, cortex_configured: bool) -> MeshInstanceState:
         loops_count = len(list_active_loops_for_instance(ai_id) or [])
     except Exception:
         pass
-    s = dict(
-        ai_id=ai_id,
-        backend=svc.backend,
-        service_installed=svc.installed,
-        service_active=svc.active,
-        listener_process_pid=listener_pid,
-        curl_subprocess_pid=curl_pid,
-        last_fire_at_utc=last_fire,
-        fires_last_hour=fires_last_hour,
-        cortex_configured=cortex_configured,
-        loops_registered=loops_count,
-    )
+    s = {
+        "ai_id": ai_id,
+        "backend": svc.backend,
+        "service_installed": svc.installed,
+        "service_active": svc.active,
+        "listener_process_pid": listener_pid,
+        "curl_subprocess_pid": curl_pid,
+        "last_fire_at_utc": last_fire,
+        "fires_last_hour": fires_last_hour,
+        "cortex_configured": cortex_configured,
+        "loops_registered": loops_count,
+    }
     color, reason = _compute_health(s, cortex_configured)
     return MeshInstanceState(**s, health_color=color, health_reason=reason)
 
@@ -281,7 +281,7 @@ def handle_mesh_diagnose_command(args) -> int:
         idle = (datetime.now(tz=timezone.utc) - state.last_fire_at_utc).total_seconds()
         print(f"  Last fire:            {state.last_fire_at_utc.isoformat()}  ({_fmt_age(idle)} ago)")
     else:
-        print(f"  Last fire:            NEVER")
+        print("  Last fire:            NEVER")
     print(f"  Fires in last hour:   {state.fires_last_hour}")
     print()
     print(f"  Health: {state.health_color.upper()} -- {state.health_reason}")
@@ -301,7 +301,7 @@ def handle_mesh_diagnose_command(args) -> int:
         print("Likely curl-zombie (TCP died silently while process stayed alive).")
         print(f"Fix: empirica mesh restart {ai_id}")
     else:
-        print(f"Manual investigation needed.")
+        print("Manual investigation needed.")
         print(f"  journalctl --user -u empirica-listener-{ai_id}.service")
     return 1
 
@@ -428,8 +428,10 @@ def handle_mesh_tail_command(args) -> int:
         ["tail", "-F", "-n", "0", str(LOOP_FIRES_LOG)],
         stdout=subprocess.PIPE, text=True,
     )
+    if proc.stdout is None:
+        sys.stderr.write("tail subprocess returned no stdout\n")
+        return 1
     try:
-        assert proc.stdout is not None
         for line in proc.stdout:
             if pattern.search(line):
                 sys.stdout.write(line)
@@ -466,11 +468,11 @@ def handle_mesh_group_command(args) -> int:
 
 
 __all__ = [
-    "handle_mesh_group_command",
-    "handle_mesh_status_command",
     "handle_mesh_diagnose_command",
-    "handle_mesh_restart_command",
-    "handle_mesh_on_command",
+    "handle_mesh_group_command",
     "handle_mesh_off_command",
+    "handle_mesh_on_command",
+    "handle_mesh_restart_command",
+    "handle_mesh_status_command",
     "handle_mesh_tail_command",
 ]

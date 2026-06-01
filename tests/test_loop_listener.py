@@ -113,7 +113,7 @@ class _FakeProc:
     tests that exercise the HTTP error path themselves.
     """
 
-    _HTTP_OK_PREFIX = ["HTTP/1.1 200 OK\n", "content-type: application/json\n", "\n"]
+    _HTTP_OK_PREFIX = ("HTTP/1.1 200 OK\n", "content-type: application/json\n", "\n")
 
     def __init__(self, lines: list[str], *, skip_http_headers: bool = False):
         prefix = [] if skip_http_headers else list(self._HTTP_OK_PREFIX)

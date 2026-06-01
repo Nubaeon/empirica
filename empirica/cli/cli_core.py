@@ -156,7 +156,6 @@ from .command_handlers.mcp_commands import (
     handle_mcp_stop_command,
     handle_mcp_test_command,
 )
-from .command_handlers.mesh_commands import handle_mesh_group_command
 from .command_handlers.memory_commands import (
     handle_memory_prime_command,
     handle_memory_report_command,
@@ -165,6 +164,7 @@ from .command_handlers.memory_commands import (
     handle_pattern_check_command,
     handle_session_rollup_command,
 )
+from .command_handlers.mesh_commands import handle_mesh_group_command
 from .command_handlers.message_commands import (
     handle_message_channels_command,
     handle_message_cleanup_command,

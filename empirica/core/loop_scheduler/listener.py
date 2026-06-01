@@ -538,8 +538,10 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
                 except (subprocess.TimeoutExpired, Exception):
                     try:
                         proc.kill()
-                    except Exception:
-                        pass
+                    except Exception as kill_err:
+                        # Cleanup path — process is being torn down; logging
+                        # the kill failure is informational, not actionable.
+                        err_stream.write(f"listener: curl kill failed in 4xx/5xx cleanup: {kill_err}\n")
 
                 if http_status == 429:
                     # Rate-limited. Long backoff with periodic catch-up so
@@ -580,9 +582,16 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
             last_activity_at: list[float] = [time.time()]
             watchdog_stop = _threading.Event()
 
-            def _watchdog() -> None:
-                while not watchdog_stop.wait(_WATCHDOG_CHECK_INTERVAL_SEC):
-                    idle = time.time() - last_activity_at[0]
+            def _watchdog(
+                # Bind loop variables at function-definition time so the
+                # thread closure captures THIS iteration's values, not
+                # whatever they become in the next outer-loop iteration.
+                _stop_evt: _threading.Event = watchdog_stop,
+                _activity_ref: list[float] = last_activity_at,
+                _watched_proc: subprocess.Popen = proc,
+            ) -> None:
+                while not _stop_evt.wait(_WATCHDOG_CHECK_INTERVAL_SEC):
+                    idle = time.time() - _activity_ref[0]
                     if idle > _STALE_THRESHOLD_SEC:
                         err_stream.write(
                             f"listener: stream stale for {idle:.0f}s "
@@ -591,9 +600,11 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
                         )
                         err_stream.flush()
                         try:
-                            proc.terminate()
-                        except Exception:
-                            pass
+                            _watched_proc.terminate()
+                        except Exception as term_err:
+                            # Watchdog terminate is best-effort; the outer
+                            # loop will retry the reconnect path regardless.
+                            err_stream.write(f"listener: watchdog terminate failed: {term_err}\n")
                         return  # one-shot — outer loop handles reconnect
 
             watchdog_thread = _threading.Thread(
