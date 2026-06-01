@@ -583,6 +583,12 @@ def test_listener_applies_rate_limit_backoff_on_429(monkeypatch):
     """On HTTP 429, the listener must apply the long rate-limit backoff and
     keep running catch-up polls within that window — NOT loop into the
     5-min auth-fail backoff that would just re-trip the rate limit."""
+    from empirica.config.credentials_loader import get_credentials_loader
+    loader = get_credentials_loader()
+    monkeypatch.setattr(loader, "get_ntfy_config", lambda: {
+        "url": "https://ntfy.test", "topic": "t",
+        "user": "u", "password": "p",
+    })
 
     def fake_factory(url, headers):
         # Always return a 429 — simulates persistent rate limit.
