@@ -1142,8 +1142,12 @@ def _cortex_graph_artifact_nodes(sdb, tx_id):
             nodes.append({"ref": _aid, "type": _ntype, "data": _data})
             seen_ids.add(_aid)
             if _r["goal_id"]:
+                # `attached_to` is cortex's existing any->goal relation
+                # (artifacts.py EDGE_RELATIONS). Earlier `addresses_goal`
+                # was empirica-local and cortex silently rejected the
+                # entire graph submission containing it.
                 goal_edges.append({"from": _aid, "to": _r["goal_id"],
-                                   "relation": "addresses_goal"})
+                                   "relation": "attached_to"})
     return nodes, seen_ids, goal_edges
 
 
@@ -1209,7 +1213,7 @@ def _cortex_extract_transaction_graph(session_id):
     legacy 3 types for backward-compat; this graph carries the whole set
     (findings/unknowns/dead_ends/mistakes/assumptions/decisions + sources) plus
     edges, so Cortex's graph receiver (process_artifact_graph) embeds everything.
-    Edges = per-artifact `addresses_goal` edges + the canonical artifact_edges
+    Edges = per-artifact `attached_to` (any->goal) edges + the canonical artifact_edges
     rows. Wholly best-effort: any failure degrades to a partial/empty graph.
     """
     try:
