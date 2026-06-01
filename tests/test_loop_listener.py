@@ -105,10 +105,20 @@ def test_is_real_event_rejects_keepalive_and_open():
 
 class _FakeProc:
     """Mimics subprocess.Popen for the held curl stream. Yields one
-    pre-recorded line per iteration, then EOF."""
+    pre-recorded line per iteration, then EOF.
 
-    def __init__(self, lines: list[str]):
-        self._stdout = iter(lines)
+    Auto-prepends the HTTP/1.1 200 OK header block so `_read_http_status`
+    sees a healthy status before the JSON event stream (matches what
+    real curl -i produces). Pass `skip_http_headers=True` to opt out for
+    tests that exercise the HTTP error path themselves.
+    """
+
+    _HTTP_OK_PREFIX = ["HTTP/1.1 200 OK\n", "content-type: application/json\n", "\n"]
+
+    def __init__(self, lines: list[str], *, skip_http_headers: bool = False):
+        prefix = [] if skip_http_headers else list(self._HTTP_OK_PREFIX)
+        self._lines = prefix + list(lines)
+        self._stdout = iter(self._lines)
         self.stdout = self
         self.terminated = False
 
@@ -120,6 +130,12 @@ class _FakeProc:
             return next(self._stdout)
         except StopIteration:
             raise
+
+    def readline(self) -> str:
+        try:
+            return next(self._stdout)
+        except StopIteration:
+            return ""
 
     def terminate(self):
         self.terminated = True
@@ -537,3 +553,87 @@ def test_drift_exit_env_bypass(monkeypatch):
     # Bypass set → no drift reported despite the mismatch.
     monkeypatch.setenv("EMPIRICA_LISTENER_NO_DRIFT_EXIT", "1")
     assert listener_mod._check_version_drift() is None
+
+
+# ── HTTP status detection + rate-limit backoff ───────────────────────────
+
+
+def test_read_http_status_parses_200():
+    proc = _FakeProc([json.dumps({"event": "open"})])
+    assert listener_mod._read_http_status(proc) == 200
+
+
+def test_read_http_status_parses_429():
+    """Critical regression: ntfy rate limit must be detected, not silently
+    swallowed (root cause of curl-immediate-exit on 4 listeners 2026-06-01)."""
+    body = json.dumps({"code": 42901, "http": 429, "error": "limit reached"})
+    proc = _FakeProc(
+        [
+            "HTTP/1.1 429 Too Many Requests\n",
+            "content-type: application/json\n",
+            "\n",
+            body + "\n",
+        ],
+        skip_http_headers=True,
+    )
+    assert listener_mod._read_http_status(proc) == 429
+
+
+def test_listener_applies_rate_limit_backoff_on_429(monkeypatch):
+    """On HTTP 429, the listener must apply the long rate-limit backoff and
+    keep running catch-up polls within that window — NOT loop into the
+    5-min auth-fail backoff that would just re-trip the rate limit."""
+
+    def fake_factory(url, headers):
+        # Always return a 429 — simulates persistent rate limit.
+        return _FakeProc(
+            [
+                "HTTP/1.1 429 Too Many Requests\n",
+                "content-type: application/json\n",
+                "\n",
+                '{"error":"limit reached"}\n',
+            ],
+            skip_http_headers=True,
+        )
+
+    catchup_calls = []
+
+    def fake_catchup(instance_id, loop_name, output_stream):
+        catchup_calls.append(len(catchup_calls))
+        return 0
+
+    monkeypatch.setattr(listener_mod, "_emit_catchup_events", fake_catchup)
+    # Short backoff to keep the test fast.
+    monkeypatch.setattr(listener_mod, "_RATE_LIMIT_BACKOFF_SEC", 10.0)
+    monkeypatch.setattr(listener_mod, "_RATE_LIMIT_CATCHUP_INTERVAL_SEC", 2.0)
+
+    sleep_calls = []
+
+    def fake_sleep(seconds):
+        sleep_calls.append(seconds)
+        # Abort after the rate-limit window finishes its first cycle.
+        if len(sleep_calls) >= 5:
+            raise ListenerStopped("test stop")
+
+    out = io.StringIO()
+    err = io.StringIO()
+    rc = run_listener(
+        "empirica", output_stream=out, err_stream=err,
+        _stream_factory=fake_factory, _sleep=fake_sleep,
+        _initial_catchup=False,
+    )
+    assert rc == 0
+    # Should have run catch-up multiple times during the backoff window
+    # (every _RATE_LIMIT_CATCHUP_INTERVAL_SEC seconds).
+    assert len(catchup_calls) >= 2, (
+        f"catch-up should run multiple times during 429 backoff; "
+        f"got {len(catchup_calls)}"
+    )
+    # All sleeps should be the catchup interval (or shorter cap on final),
+    # NOT the 300s auth-fail backoff.
+    assert all(s <= 2.0 for s in sleep_calls), (
+        f"sleeps during 429 should be <= catch-up interval, got {sleep_calls}"
+    )
+    err_text = err.getvalue()
+    assert "429" in err_text
+    assert "rate limit" in err_text.lower()

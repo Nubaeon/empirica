@@ -65,6 +65,18 @@ _RECONNECT_BASE_SEC = 1.0
 _RECONNECT_MAX_SEC = 60.0
 _AUTH_FAIL_BACKOFF_SEC = 300.0  # 5 min — auth issues rarely self-fix in seconds
 
+# ntfy rate-limit (HTTP 429) backoff. Hammering ntfy with reconnects when
+# already rate-limited just re-trips the limit indefinitely. Apply a long
+# backoff so the limit window expires before we retry. Catch-up poll
+# (which hits cortex's HTTP inbox, not ntfy) continues at its own cadence
+# during this window — events still flow, just via the pull path.
+_RATE_LIMIT_BACKOFF_SEC = float(
+    os.environ.get("EMPIRICA_LISTENER_RATE_LIMIT_BACKOFF_SEC", "1800")  # 30 min
+)
+# Within the rate-limit backoff, run catch-up poll at this cadence so
+# events keep flowing via the pull path.
+_RATE_LIMIT_CATCHUP_INTERVAL_SEC = 300.0  # 5 min
+
 # Curl-zombie watchdog. ntfy sends 'keepalive' frames every ~45s by default;
 # any longer silence means the held TCP connection is dead. The curl
 # subprocess can't tell — it's blocked in a read() syscall on a socket the
@@ -176,8 +188,16 @@ def _open_stream(
     url: str, headers: dict[str, str],
 ) -> subprocess.Popen:
     """Spawn curl in held-connection mode. Returns the Popen so the caller
-    can iterate stdout + terminate on shutdown."""
-    args = ["curl", "-sN", "--no-buffer", "--keepalive-time", "30"]
+    can iterate stdout + terminate on shutdown.
+
+    `-sS` keeps progress silent but surfaces errors on stderr (ntfy rate
+    limits return HTTP 429 — without -S they were silently swallowed,
+    making the broken listener look indistinguishable from a quiet
+    healthy one). `-i` includes response headers on stdout for the FIRST
+    response so the caller can read the HTTP status line; the listener
+    body skips header lines until the empty-line separator.
+    """
+    args = ["curl", "-sSN", "-i", "--no-buffer", "--keepalive-time", "30"]
     for k, v in headers.items():
         args += ["-H", f"{k}: {v}"]
     args.append(url)
@@ -185,6 +205,31 @@ def _open_stream(
         args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         text=True, bufsize=1,  # line-buffered
     )
+
+
+def _read_http_status(proc: subprocess.Popen) -> int | None:
+    """Read curl's first response headers from stdout until the empty-line
+    separator. Returns the HTTP status code (200, 401, 429, etc.) or None
+    if the header block was malformed / stream ended before headers.
+
+    With ``curl -i``, every response begins with ``HTTP/1.1 <code> <reason>``.
+    Once we see the blank line, header parsing is done and the body
+    (JSON stream) follows.
+    """
+    if proc.stdout is None:
+        return None
+    status: int | None = None
+    while True:
+        line = proc.stdout.readline()
+        if not line:
+            return status
+        line = line.rstrip("\r\n")
+        if not line:
+            return status  # blank line = end of headers
+        if status is None and line.startswith("HTTP/"):
+            parts = line.split(None, 2)
+            if len(parts) >= 2 and parts[1].isdigit():
+                status = int(parts[1])
 
 
 def _is_real_event(ntfy_message: dict[str, Any]) -> bool:
@@ -476,6 +521,57 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
             if proc.stdout is None:
                 err_stream.write("listener: stream factory returned no stdout — aborting\n")
                 return 1
+
+            # With `curl -i`, the first response carries HTTP headers on
+            # stdout. Parse them so we can detect 429 (ntfy rate limit)
+            # explicitly instead of treating it as a generic connect failure.
+            http_status = _read_http_status(proc)
+            if http_status is not None and http_status >= 400:
+                err_stream.write(
+                    f"listener: ntfy returned HTTP {http_status}; "
+                    f"draining + applying error backoff\n"
+                )
+                err_stream.flush()
+                try:
+                    proc.terminate()
+                    proc.wait(timeout=2)
+                except (subprocess.TimeoutExpired, Exception):
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+
+                if http_status == 429:
+                    # Rate-limited. Long backoff with periodic catch-up so
+                    # events keep flowing via the cortex inbox HTTP path
+                    # (which is rate-limited separately, if at all).
+                    err_stream.write(
+                        f"listener: ntfy rate limit (429). Backing off "
+                        f"{_RATE_LIMIT_BACKOFF_SEC:.0f}s with catch-up every "
+                        f"{_RATE_LIMIT_CATCHUP_INTERVAL_SEC:.0f}s.\n"
+                    )
+                    err_stream.flush()
+                    elapsed = 0.0
+                    while elapsed < _RATE_LIMIT_BACKOFF_SEC:
+                        try:
+                            _emit_catchup_events(instance_id, loop_name, output_stream)
+                        except Exception as e:
+                            err_stream.write(
+                                f"listener: rate-limit-window catch-up failed: {e}\n"
+                            )
+                        sleep_for = min(
+                            _RATE_LIMIT_CATCHUP_INTERVAL_SEC,
+                            _RATE_LIMIT_BACKOFF_SEC - elapsed,
+                        )
+                        _sleep(sleep_for)
+                        elapsed += sleep_for
+                    backoff = _RECONNECT_BASE_SEC
+                    continue
+                # Other 4xx/5xx — treat as auth-fail-style backoff.
+                _sleep(_AUTH_FAIL_BACKOFF_SEC)
+                backoff = _RECONNECT_BASE_SEC
+                continue
+
             connected_ok = False
             # Watchdog state — guards against silent TCP-dead-curl-alive zombies.
             # Shared with the watchdog thread; protected by GIL (single-int
