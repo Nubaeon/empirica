@@ -181,9 +181,11 @@ empirica-mcp. The config shape is uniform: `command =
 empirica-mcp`, optional `env`, optional `args`. Empirica passes
 through whatever the harness sends.
 
-## What you get — 70 MCP tools
+## What you get — 70 MCP tools (65 standalone, 5 cortex-orchestrated)
 
-Run `empirica mcp-list-tools` to see the live, grouped list. Highlights:
+Run `empirica mcp-list-tools` to see the live, grouped list. Tools
+marked **🌐** require cortex (the mesh backend); the rest work
+standalone on base empirica without any backend service. Highlights:
 
 - **Session lifecycle** — `session_create`, `project_bootstrap`,
   `bootstrap_context` (three-circle artifact graph for chat-start
@@ -198,15 +200,35 @@ Run `empirica mcp-list-tools` to see the live, grouped list. Highlights:
 - **Project search** — `project_search` (Qdrant semantic across
   findings, decisions, episodic memory)
 - **Mesh primitives** (added 2026-06-03)
-  - `practice_context` — Ambassador addressbook, **verify canonical
-    3-form (`org.tenant.project`) before sending to a peer**
+  - 🌐 `practice_context` — Ambassador addressbook, **verify
+    canonical 3-form (`org.tenant.project`) before sending to a peer**
+    (requires cortex)
   - `commit_context` — walk artifacts anchored to git commits
-  - `listener_on` / `listener_arm` / `listener_off` — listener facade
+    (standalone)
+  - 🌐 `listener_on` / `listener_arm` / `listener_off` — listener
+    facade (works standalone against any ntfy topic; cortex unlocks
+    the mesh-event orchestration)
   - `loop_register` / `loop_heartbeat` / `loop_status` /
-    `loop_schedule_next` — adaptive scheduler
+    `loop_schedule_next` — adaptive scheduler (standalone)
   - `notify_emit` — multi-backend notification dispatcher
-  - `mailbox_reply` — atomic propose + complete on cortex mesh
-  - `mesh_status` — mesh health table
+    (standalone — ntfy / macos / dbus / slack / email)
+  - 🌐 `mailbox_reply` — atomic propose + complete on cortex mesh
+    (requires cortex)
+  - 🌐 `mesh_status` — mesh health table (local layer always works;
+    cortex-bridge layer needs cortex)
+
+### Where empirica ends and cortex begins
+
+Base empirica is fully usable standalone: epistemic transactions,
+artifact graph, calibration, goals, project search, sentinel discipline,
+the local sentinel CLI. The 🌐 tools listed above are **client-side
+primitives** for a mesh backend — cortex is the reference backend, but
+the surface is the same regardless of which mesh you point at.
+
+If you run `empirica mcp-list-tools` without cortex configured, the
+🌐 tools still show in the list but will return a clear "cortex config
+missing" error when called. They are not hidden — knowing they exist
+helps you decide if you want to enable the mesh path later.
 - **Calibration** — `calibration_report`, `assess_state`,
   `profile_status`
 - **Entity registry** — entity walk, search, show

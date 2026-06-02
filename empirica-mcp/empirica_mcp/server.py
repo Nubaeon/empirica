@@ -557,11 +557,13 @@ TOOL_REGISTRY: dict[str, dict] = {
             "timeout": "--timeout",
         },
         "required": [],
+        "requires": "cortex",
         "desc": (
-            "Ambassador addressbook — pulls /v1/users/me/roster from cortex "
-            "and projects each (tenant, project) seat with substrate annotation "
-            "(cortex|git|local). Optional --ai-id filter. Use this to verify the "
-            "canonical 3-form (`org.tenant.project`) before emitting target_claudes."
+            "[requires: cortex] Ambassador addressbook — pulls /v1/users/me/roster "
+            "from cortex and projects each (tenant, project) seat with substrate "
+            "(cortex|git|local). Use to verify canonical 3-form before emitting "
+            "target_claudes. Base empirica users (no cortex configured) will see "
+            "a clear 'cortex config missing' error."
         ),
     },
 
@@ -588,6 +590,10 @@ TOOL_REGISTRY: dict[str, dict] = {
     },
 
     # --- Listener facade (added 2026-06-03) ---
+    # Listener primitives are GENERIC (work against any ntfy topic) but the
+    # canonical orchestration target is cortex's per-org topic. Without
+    # cortex configured the listener still runs — it just won't receive
+    # mesh wake events. Marker indicates "cortex unlocks full value."
     "listener_on": {
         "cli": "listener on",
         "params": {
@@ -597,10 +603,11 @@ TOOL_REGISTRY: dict[str, dict] = {
             "instance_id": "--instance",
         },
         "required": [],
+        "requires": "cortex (for mesh events; runs standalone otherwise)",
         "desc": (
-            "Register listener + emit a Monitor command for in-session arming. "
-            "Idempotent. Pairs with `listener arm` (after Monitor returns a "
-            "task_id) and `listener off`."
+            "[cortex-orchestrated, runs standalone] Register listener + emit "
+            "Monitor command. Without cortex configured, listens to any "
+            "supplied ntfy --topic. Pairs with `listener arm` + `listener off`."
         ),
     },
     "listener_arm": {
@@ -719,23 +726,31 @@ TOOL_REGISTRY: dict[str, dict] = {
             "no_archive": "--no-archive",
         },
         "required": ["parent_id", "summary"],
+        "requires": "cortex",
         "desc": (
-            "Atomic cortex_propose reply + cortex_complete_proposal close in one "
-            "call. Fixes the AI ack-discipline gap (no separate completion step). "
-            "Type defaults to collab_brief; result {shipped,failed,wont_fix} on close."
+            "[requires: cortex] Atomic cortex_propose reply + "
+            "cortex_complete_proposal close in one call. Fixes the AI "
+            "ack-discipline gap (no separate completion step). Type defaults "
+            "to collab_brief; result {shipped,failed,wont_fix} on close."
         ),
     },
 
     # --- Mesh health (added 2026-06-03) ---
+    # Hybrid: LOCAL layer (systemd + loop_fires.log + loops) works without
+    # cortex; CORTEX BRIDGE layer surfaces only when cortex_configured=true.
+    # No hard requires marker — partial value without cortex.
     "mesh_status": {
         "cli": "mesh status",
         "params": {},
         "required": [],
         "positional": "instance",
+        "requires": "cortex (for mesh bridge layer; local layer runs standalone)",
         "desc": (
-            "Mesh health table — LOCAL (systemd/launchd service + loop_fires.log + "
-            "loops) and CORTEX BRIDGE (ntfy curl + inbox poll). Per-instance ai_id "
-            "rows, green/yellow/red, distinguishes DOWN vs WAITING (rate-limited)."
+            "[cortex-orchestrated, local layer standalone] Mesh health table — "
+            "LOCAL (systemd/launchd service + loop_fires.log + loops) ALWAYS "
+            "available; CORTEX BRIDGE (ntfy curl + inbox poll) only when cortex "
+            "is configured. Per-instance ai_id rows, green/yellow/red, "
+            "distinguishes DOWN vs WAITING."
         ),
     },
 }

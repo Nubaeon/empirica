@@ -36,22 +36,35 @@ def handle_mcp_list_tools_command(args):
             print("   Verify:  empirica-mcp --help")
             return 1
 
-        print_header(f"🔧 Empirica MCP Tools ({len(TOOL_REGISTRY)} registered)")
+        total = len(TOOL_REGISTRY)
+        cortex_required = sum(1 for e in TOOL_REGISTRY.values() if e.get("requires"))
+        standalone = total - cortex_required
+        print_header(
+            f"🔧 Empirica MCP Tools ({total} registered — "
+            f"{standalone} standalone, {cortex_required} cortex-orchestrated)"
+        )
 
         # Group by best-effort category prefix on the tool name
-        groups: dict[str, list[tuple[str, str]]] = {}
+        groups: dict[str, list[tuple[str, str, str]]] = {}
         for tool_name, entry in TOOL_REGISTRY.items():
             cli = entry.get("cli", "?")
             desc = entry.get("desc", "")
+            requires = entry.get("requires", "")
             prefix = tool_name.split("_", 1)[0]
-            groups.setdefault(prefix, []).append((tool_name, f"{cli} — {desc}"))
+            groups.setdefault(prefix, []).append((tool_name, f"{cli} — {desc}", requires))
 
         for prefix in sorted(groups):
             print(f"\n{prefix}:")
-            for tool_name, summary in sorted(groups[prefix]):
-                print(f"  {tool_name:38s} {summary[:90]}")
+            for tool_name, summary, requires in sorted(groups[prefix]):
+                marker = "  🌐" if requires else "    "
+                print(f"{marker}{tool_name:38s} {summary[:90]}")
 
         verbose = getattr(args, "verbose", False)
+        if cortex_required:
+            print("\n🌐 = requires cortex (mesh backend). Base empirica works standalone;")
+            print("   these tools surface 'cortex config missing' until you configure it.")
+            print("   See docs/human/end-users/MCP_FOR_DESKTOP_HARNESSES.md.")
+
         if verbose:
             print("\n💡 Tool params + required fields — read the TOOL_REGISTRY entries directly:")
             print(f"   {sys.executable} -c 'from empirica_mcp.server import TOOL_REGISTRY; "
