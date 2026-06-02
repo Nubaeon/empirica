@@ -7,12 +7,15 @@ MCP-compatible environment (Cursor, Gemini CLI, Codex, etc.). Track
 what AI knows, gate what it does, and compound learning across
 sessions — without needing Claude Code or Bash access.
 
-> **Tool surface (56 tools as of 1.11.2)** covers session lifecycle,
+> **Tool surface (70 tools as of 1.11.2)** covers session lifecycle,
 > the epistemic transaction loop, artifact logging, goals, project
-> search, calibration, lessons, sync, and entity registry. A backlog
-> exists to add the recent `practice-context`, `commit-context`,
-> `listener`, `loop`, `notify`, `mailbox`, and `mesh` primitive
-> groups — see the empirica goals DB for the refresh goal.
+> search, calibration, lessons, sync, entity registry, and (added
+> 2026-06-03) the mesh primitives: `practice_context` (Ambassador
+> addressbook), `commit_context` (temporal trail), `listener_on/arm/off`
+> (listener facade), `loop_*` (adaptive scheduler), `notify_emit`
+> (multi-backend dispatcher), `mailbox_reply` (atomic propose+complete),
+> `mesh_status` (mesh health). Run `empirica mcp-list-tools` to see
+> the live registry against your installed package.
 
 [![PyPI](https://img.shields.io/pypi/v/empirica-mcp)](https://pypi.org/project/empirica-mcp/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
