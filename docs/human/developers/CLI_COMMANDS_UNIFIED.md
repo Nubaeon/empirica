@@ -3848,50 +3848,22 @@ Show lesson storage statistics
 
 ## mcp
 
-#### `empirica mcp-start`
-
-Start Empirica MCP server in background
-
-**Arguments:**
-
-- `--verbose` / `-v` — optional · flag
-  Show detailed output
-
-#### `empirica mcp-stop`
-
-Stop Empirica MCP server
-
-**Arguments:**
-
-- `--verbose` / `-v` — optional · flag
-  Show detailed output
-
-#### `empirica mcp-status`
-
-Check Empirica MCP server status
-
-**Arguments:**
-
-- `--verbose` / `-v` — optional · flag
-  Show detailed process info
-
-#### `empirica mcp-test`
-
-Test Empirica MCP server connection
-
-**Arguments:**
-
-- `--verbose` / `-v` — optional · flag
-  Show detailed output
+> Note: `mcp-start`/`stop`/`status`/`test`/`call` were retired
+> 2026-06-03. The MCP server lifecycle is owned by the harness's
+> mcp.json config (Claude Desktop, Cursor, Gemini CLI, Codex) and the
+> `empirica-mcp` console script installed via pipx — not by empirica's
+> CLI. Only the read-only inspection command remains.
 
 #### `empirica mcp-list-tools`
 
-List available MCP tools
+List MCP tools registered in the installed empirica-mcp package
+(reads TOOL_REGISTRY dynamically — reflects the live state of the
+running server, not a hardcoded snapshot).
 
 **Arguments:**
 
 - `--verbose` / `-v` — optional · flag
-  Show usage examples
+  Show tip for inspecting per-tool param schemas
 
 #### `empirica mcp-call`
 

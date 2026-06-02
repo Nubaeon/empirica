@@ -247,7 +247,7 @@ Claude Code (recommended):
    # Installs plugin, hooks, CLAUDE.md, MCP server
 
 MCP Server (for any AI agent):
-   $ empirica mcp-start
+   $ empirica mcp-list-tools  # inspection only
    # Exposes Empirica as MCP tools
 
 Python API:

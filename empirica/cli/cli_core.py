@@ -148,14 +148,7 @@ from .command_handlers.concept_graph_commands import (
 from .command_handlers.docs_commands import handle_docs_assess, handle_docs_explain
 from .command_handlers.docs_link_check_commands import handle_docs_link_check_command
 from .command_handlers.mailbox_commands import handle_mailbox_group_command
-from .command_handlers.mcp_commands import (
-    handle_mcp_call_command,
-    handle_mcp_list_tools_command,
-    handle_mcp_start_command,
-    handle_mcp_status_command,
-    handle_mcp_stop_command,
-    handle_mcp_test_command,
-)
+from .command_handlers.mcp_commands import handle_mcp_list_tools_command
 from .command_handlers.memory_commands import (
     handle_memory_prime_command,
     handle_memory_report_command,
@@ -359,7 +352,7 @@ _HELP_CATEGORIES = {
     'sentinel': ['sentinel-orchestrate', 'sentinel-load-profile', 'sentinel-status', 'sentinel-check'],
     'personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find'],
     'lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats'],
-    'mcp': ['mcp-start', 'mcp-stop', 'mcp-status', 'mcp-test', 'mcp-list-tools', 'mcp-call'],
+    'mcp': ['mcp-list-tools'],
     'memory': ['memory-prime', 'memory-scope', 'memory-value', 'pattern-check', 'session-rollup', 'memory-report'],
     'vision': ['vision'],
     'domains': ['domain-list', 'domain-show', 'domain-resolve', 'domain-validate'],
@@ -749,13 +742,8 @@ def main(args=None):
             'concept-top': handle_concept_top,
             'concept-related': handle_concept_related,
 
-            # MCP server management commands
-            'mcp-start': handle_mcp_start_command,
-            'mcp-stop': handle_mcp_stop_command,
-            'mcp-status': handle_mcp_status_command,
-            'mcp-test': handle_mcp_test_command,
+            # MCP inspection (lifecycle now owned by harness mcp.json configs)
             'mcp-list-tools': handle_mcp_list_tools_command,
-            'mcp-call': handle_mcp_call_command,
 
             # Inter-agent messaging commands
             'message-send': handle_message_send_command,
