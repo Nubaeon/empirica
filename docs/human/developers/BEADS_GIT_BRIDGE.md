@@ -83,7 +83,7 @@ Persisted at `.empirica/branch_mappings.json`. Schema:
       "goal_id": "uuid",
       "beads_issue_id": "empirica-a1b2",
       "session_id": "uuid",
-      "ai_id": "claude-code",
+      "ai_id": "empirica",
       "started_at": "2026-05-18T08:30:00Z",
       "status": "in_progress",
       "preflight_vectors": {"know": 0.65, "uncertainty": 0.35}
