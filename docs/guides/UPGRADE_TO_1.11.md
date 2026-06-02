@@ -54,6 +54,46 @@ Five existing user-facing docs got their mesh-vs-core framing sharpened (README,
 
 ---
 
+## Patch series after 1.11.0
+
+If you're upgrading mid-stream and want a single-doc summary of what
+each 1.11.x patch added on top of 1.11.0, here it is. Full details
+remain in `CHANGELOG.md`.
+
+- **1.11.1 (2026-06-01)** — `mesh status` and `mesh diagnose` now
+  distinguish `RED "curl subscription dead"` from
+  `YELLOW "rate-limited — curl absent during 30-min backoff"`. UX-only
+  fix; no behavior change. Surfaced 90 minutes after 1.11.0 by
+  mesh-support escalation when a listener entered intentional 429
+  backoff and the previous status was misleading.
+- **1.11.2 (2026-06-02)** — code-side completion of the bead v0 →
+  SER migration. `bead` node type, the 4 v0 edges
+  (`tracks`/`owned_by`/`about`/`worked_by`), the `_workflow_postflight`
+  beads-sync group, and `bead_id`/`bridge_position` listener event
+  fields all removed. `'blocked'` added to the goal status enum.
+  `/cortex-mailbox-send` skill bead vocab residuals retired.
+- **1.11.3 (2026-06-03)** — naming hygiene + MCP refresh + new
+  `practice-context` CLI:
+  - New `empirica practice-context` CLI for verifying canonical 3-form
+    (`<org>.<tenant>.<project>`) addresses before mesh sends.
+  - 13 mesh primitives added to `empirica-mcp` `TOOL_REGISTRY` (now
+    70 tools total, up from 57). Desktop harnesses (Claude Desktop,
+    Cursor, Gemini CLI, Codex) can now reach the full surface.
+  - `requires: cortex` marker + 🌐 prefix in `mcp-list-tools` makes
+    the empirica/cortex boundary visible (65 standalone, 4
+    cortex-orchestrated).
+  - 5 obsolete MCP CLI commands deleted
+    (`mcp-start`/`stop`/`status`/`test`/`call` — targeted a dead path);
+    `mcp-list-tools` rebuilt to read the live registry.
+  - Internal sentinel + cache + canonical-git layers retired the
+    `'claude-code'` hardcoded ai_id default in favor of the
+    `InstanceResolver` chain — important for multi-practice setups
+    where the same machine runs several ai_ids.
+  - Listener tests no longer require cortex creds in CI (autouse mock).
+  - New end-user doc: `docs/human/end-users/MCP_FOR_DESKTOP_HARNESSES.md`.
+
+---
+
 ## Highlights since 1.10.4
 
 If you skipped 1.10.5 + 1.10.6 patches and are jumping straight from 1.10.4, you pick up the rolled-up patch content. (If you've already been running 1.10.6 these are review only.)
