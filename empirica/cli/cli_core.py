@@ -128,7 +128,6 @@ from .command_handlers.architecture_commands import (
     handle_assess_directory_command,
 )
 from .command_handlers.bootstrap_context_commands import handle_bootstrap_context_command
-from .command_handlers.practice_context_commands import handle_practice_context_command
 from .command_handlers.chat_commands import handle_chat_command
 from .command_handlers.cockpit_commands import (
     handle_instance_group_command,
@@ -181,6 +180,7 @@ from .command_handlers.persona_commands import (
     handle_persona_promote_command,
     handle_persona_show_command,
 )
+from .command_handlers.practice_context_commands import handle_practice_context_command
 from .command_handlers.query_commands import handle_query_command
 from .command_handlers.release_commands import handle_release_command, handle_release_ready_command
 from .command_handlers.rust_docs_commands import handle_rust_docs_assess
