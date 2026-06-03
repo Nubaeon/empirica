@@ -539,3 +539,140 @@ def test_bead_fields_not_in_wake_event():
     parsed = json.loads(ev.to_log_line())
     assert "bead_id" not in parsed
     assert "bridge_position" not in parsed
+
+
+# ─── Canonical ai_id resolution (2026-06-03 silent-break fix) ─────────
+
+
+class TestCanonicalResolver:
+    """Cortex's /v1/orchestration/{inbox,outbox} now require canonical
+    3-form ai_ids. The bare basename returns 0 proposals — silently
+    breaking every listener. Resolver looks up `ai_id_mesh` via roster.
+    """
+
+    def _mock_roster_response(self, monkeypatch, body):
+        from unittest.mock import MagicMock
+        from empirica.core.loop_scheduler import content_poll
+        # Reset cache for clean tests
+        content_poll._CANONICAL_AI_ID_CACHE.clear()
+
+        class _Resp:
+            def __init__(self, payload):
+                import json
+                self._payload = json.dumps(payload).encode()
+            def __enter__(self): return self
+            def __exit__(self, *a): pass
+            def read(self): return self._payload
+
+        mock_urlopen = MagicMock(return_value=_Resp(body))
+        monkeypatch.setattr(
+            "empirica.core.loop_scheduler.content_poll.urllib.request.urlopen",
+            mock_urlopen,
+        )
+
+    def test_resolves_root_practice_via_exact_short_match(self, monkeypatch):
+        from empirica.core.loop_scheduler.content_poll import _resolve_canonical_ai_id
+        self._mock_roster_response(monkeypatch, {
+            "self": {"tenant_slug": "david"},
+            "org": {"tenants": [{
+                "tenant_slug": "david",
+                "projects": [{
+                    "ai_id_short": "empirica",
+                    "ai_id_mesh": "empirica.david.empirica",
+                }],
+            }]},
+        })
+        assert _resolve_canonical_ai_id("https://c.test", "k", "empirica") == \
+            "empirica.david.empirica"
+
+    def test_resolves_prefixed_basename_via_empirica_prefix_fallback(self, monkeypatch):
+        """Listener basenames are empirica-stripped (`extension`) but
+        roster stores full slug (`empirica-extension`) — the resolver
+        tries both."""
+        from empirica.core.loop_scheduler.content_poll import _resolve_canonical_ai_id
+        self._mock_roster_response(monkeypatch, {
+            "self": {"tenant_slug": "david"},
+            "org": {"tenants": [{
+                "tenant_slug": "david",
+                "projects": [{
+                    "ai_id_short": "empirica-extension",
+                    "ai_id_mesh": "empirica.david.empirica-extension",
+                }],
+            }]},
+        })
+        assert _resolve_canonical_ai_id("https://c.test", "k", "extension") == \
+            "empirica.david.empirica-extension"
+
+    def test_falls_back_to_basename_on_roster_failure(self, monkeypatch):
+        """Failed roster fetch → return basename unchanged. Loud (logged)
+        but doesn't crash the listener."""
+        from empirica.core.loop_scheduler import content_poll
+        content_poll._CANONICAL_AI_ID_CACHE.clear()
+
+        def _boom(*a, **kw):
+            raise urllib.error.URLError("network down")
+
+        monkeypatch.setattr(
+            "empirica.core.loop_scheduler.content_poll.urllib.request.urlopen",
+            _boom,
+        )
+        from empirica.core.loop_scheduler.content_poll import _resolve_canonical_ai_id
+        assert _resolve_canonical_ai_id("https://c.test", "k", "extension") == \
+            "extension"
+
+    def test_skips_peer_tenants_only_matches_self_tenant(self, monkeypatch):
+        """Even with the prefix-match fallback, only the caller's own
+        tenant's projects are considered — peer tenants ignored."""
+        from empirica.core.loop_scheduler.content_poll import _resolve_canonical_ai_id
+        self._mock_roster_response(monkeypatch, {
+            "self": {"tenant_slug": "david"},
+            "org": {"tenants": [
+                {
+                    "tenant_slug": "philipp",
+                    "projects": [{
+                        "ai_id_short": "empirica-extension",
+                        "ai_id_mesh": "empirica.philipp.empirica-extension",
+                    }],
+                },
+                {
+                    "tenant_slug": "david",
+                    "projects": [{
+                        "ai_id_short": "empirica-extension",
+                        "ai_id_mesh": "empirica.david.empirica-extension",
+                    }],
+                },
+            ]},
+        })
+        assert _resolve_canonical_ai_id("https://c.test", "k", "extension") == \
+            "empirica.david.empirica-extension"
+
+    def test_cached_after_first_resolution(self, monkeypatch):
+        """Second call doesn't hit roster again."""
+        from empirica.core.loop_scheduler import content_poll
+        from unittest.mock import MagicMock
+
+        content_poll._CANONICAL_AI_ID_CACHE.clear()
+
+        # Prime cache
+        self._mock_roster_response(monkeypatch, {
+            "self": {"tenant_slug": "david"},
+            "org": {"tenants": [{
+                "tenant_slug": "david",
+                "projects": [{
+                    "ai_id_short": "empirica",
+                    "ai_id_mesh": "empirica.david.empirica",
+                }],
+            }]},
+        })
+        content_poll._resolve_canonical_ai_id("https://c.test", "k", "empirica")
+
+        # Replace urlopen with a sentinel that explodes if called
+        kaboom = MagicMock(side_effect=AssertionError("should be cached"))
+        monkeypatch.setattr(
+            "empirica.core.loop_scheduler.content_poll.urllib.request.urlopen",
+            kaboom,
+        )
+        # Second call must use cache
+        assert content_poll._resolve_canonical_ai_id("https://c.test", "k", "empirica") == \
+            "empirica.david.empirica"
+        kaboom.assert_not_called()

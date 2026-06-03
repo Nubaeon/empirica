@@ -154,6 +154,78 @@ def save_state(state_path: Path, state: dict) -> None:
     tmp.replace(state_path)
 
 
+# Per-listener resolved canonical id cache.
+# Maps (cortex_url, api_key, basename) → canonical ai_id_mesh.
+# Cortex's orchestration endpoints now require the canonical 3-form
+# (`<org>.<tenant>.<project>`) — the bare basename returns 0 proposals.
+# Resolving on every poll would add a roster fetch per call; cache by tuple
+# scoped per-process. Refresh implicit on listener restart (version drift
+# triggers self-relaunch, dropping the cache).
+_CANONICAL_AI_ID_CACHE: dict[tuple[str, str, str], str] = {}
+
+
+def _resolve_canonical_ai_id(
+    cortex_url: str, api_key: str, basename: str, *, timeout: float = 10.0,
+) -> str:
+    """Look up the canonical 3-form (org.tenant.project) for a basename.
+
+    Reads cortex's `/v1/users/me/roster` once per (cortex_url, api_key,
+    basename) tuple, finds the row in the caller's tenant where
+    `ai_id_short == basename`, returns its `ai_id_mesh`.
+
+    On any failure → returns the basename unchanged. The listener's
+    existing fetch failure path will then surface 0-result warnings, so
+    the failure is loud rather than silent.
+    """
+    cache_key = (cortex_url, api_key, basename)
+    cached = _CANONICAL_AI_ID_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        req = urllib.request.Request(
+            f"{cortex_url.rstrip('/')}/v1/users/me/roster",
+            method="GET",
+            headers={"Accept": "application/json",
+                     "Authorization": f"Bearer {api_key}"},
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8")
+            body = json.loads(raw) if raw else {}
+        self_meta = body.get("self") or {}
+        self_tenant = self_meta.get("tenant_slug")
+        # The listener is invoked with `--instance <basename>` where
+        # basename is the empirica-prefix-stripped short form
+        # (`extension`, `cortex`, etc.) per the practitioner-name
+        # convention. The roster stores `ai_id_short` as the full slug
+        # (`empirica-extension`, `empirica-cortex`), so we try both:
+        #   1. exact match on basename (covers the root `empirica` case)
+        #   2. `empirica-<basename>` prefixed form (covers all
+        #      empirica-prefix derivatives)
+        # First hit wins, scoped to the caller's tenant.
+        candidates = (basename, f"empirica-{basename}")
+        for tenant in (body.get("org") or {}).get("tenants", []) or []:
+            if tenant.get("tenant_slug") != self_tenant:
+                continue
+            for proj in tenant.get("projects", []) or []:
+                if proj.get("ai_id_short") in candidates:
+                    canonical = proj.get("ai_id_mesh") or basename
+                    _CANONICAL_AI_ID_CACHE[cache_key] = canonical
+                    return canonical
+    except Exception as e:
+        logger.warning(
+            "content_poll: canonical ai_id resolution failed for %s: %s "
+            "(falling back to basename — orchestration endpoints will "
+            "likely return 0 proposals)",
+            basename, e,
+        )
+
+    # Cache the basename fallback too so we don't hammer roster on every poll
+    # when cortex is unreachable. Listener restart drops the cache.
+    _CANONICAL_AI_ID_CACHE[cache_key] = basename
+    return basename
+
+
 def _fetch_orch(
     cortex_url: str,
     api_key: str,
@@ -163,9 +235,16 @@ def _fetch_orch(
     *,
     timeout: float = 10.0,
 ) -> list[dict]:
-    """Shared GET for /v1/orchestration/{inbox,outbox} with the same shape."""
+    """Shared GET for /v1/orchestration/{inbox,outbox} with the same shape.
+
+    Resolves `ai_id` (basename) → canonical 3-form (`org.tenant.project`)
+    via cortex roster before the GET. Cortex's orchestration endpoints
+    require the canonical form as of 2026-06-03; the bare basename
+    returns 0 proposals (silent break that left every listener deaf).
+    """
+    canonical = _resolve_canonical_ai_id(cortex_url, api_key, ai_id)
     params = urllib.parse.urlencode({
-        "ai_id": ai_id,
+        "ai_id": canonical,
         "status": ",".join(statuses),
         "related": "false",  # skip per-proposal Qdrant scroll for faster polls
     })
