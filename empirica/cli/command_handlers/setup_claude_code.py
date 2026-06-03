@@ -50,12 +50,64 @@ def _resolve_empirica_version() -> str:
             return "unknown"
 
 
-def _render_versioned_template(src: Path, dst: Path) -> None:
+def _is_cortex_configured() -> bool:
+    """True iff `cortex:` block in credentials.yaml carries usable url+api_key.
+
+    Used to decide whether to inject cortex-specific guidance (mesh
+    addressing, mailbox skills, ECO routing) into the rendered system
+    prompt. Base empirica users without cortex shouldn't see guidance
+    for primitives that will return 'cortex config missing' errors.
+    """
+    try:
+        from empirica.config.credentials_loader import get_credentials_loader
+        cfg = get_credentials_loader().get_cortex_config()
+        return bool(cfg.get("url") and cfg.get("api_key"))
+    except Exception:
+        return False
+
+
+def _strip_cortex_blocks(text: str) -> str:
+    """Remove `{% if cortex %}…{% endif %}` chunks; strip the tags around
+    `{% if cortex %}…{% endif %}` retentions are handled by the cortex-on
+    path (we just drop the tags).
+
+    Cortex-on path: tags stripped, content kept.
+    Cortex-off path: tags + content dropped.
+    """
+    import re
+    # DOTALL so .*? spans newlines inside the block.
+    return re.sub(
+        r"\{%\s*if cortex\s*%\}.*?\{%\s*endif\s*%\}\s*",
+        "",
+        text,
+        flags=re.DOTALL,
+    )
+
+
+def _strip_cortex_tags(text: str) -> str:
+    """Cortex-on: drop just the tags, keep the content."""
+    import re
+    text = re.sub(r"\{%\s*if cortex\s*%\}\s*", "", text)
+    text = re.sub(r"\s*\{%\s*endif\s*%\}", "", text)
+    return text
+
+
+def _render_versioned_template(
+    src: Path,
+    dst: Path,
+    cortex_enabled: bool | None = None,
+) -> None:
     """Write `src` to `dst` with template placeholders substituted.
 
     Placeholders:
       {{ empirica_version }}  → installed empirica version (e.g. "1.9.8")
       {{ generated_date }}    → today's UTC date (e.g. "2026-05-05")
+
+    Conditional blocks (cortex-specific guidance):
+      {% if cortex %}…{% endif %} — kept when cortex configured, dropped
+      otherwise. Detection via `~/.empirica/credentials.yaml` `cortex:`
+      block (url + api_key both present). Override with the
+      `cortex_enabled` arg for tests / explicit force.
 
     Closes Philipp's #100 — without this, the template's hardcoded version
     string drifts every release.
@@ -65,6 +117,15 @@ def _render_versioned_template(src: Path, dst: Path) -> None:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     text = text.replace("{{ empirica_version }}", version)
     text = text.replace("{{ generated_date }}", today)
+
+    if cortex_enabled is None:
+        cortex_enabled = _is_cortex_configured()
+
+    if cortex_enabled:
+        text = _strip_cortex_tags(text)
+    else:
+        text = _strip_cortex_blocks(text)
+
     dst.write_text(text, encoding="utf-8")
 
 

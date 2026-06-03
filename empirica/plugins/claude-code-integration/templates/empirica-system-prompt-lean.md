@@ -18,10 +18,10 @@
 | `~/empirical-ai/empirica-extension` | `extension` |
 | `~/code/myproject` | `myproject` |
 
-This is how AIs are addressed in cortex orchestration (`target_claudes`,
+{% if cortex %}This is how AIs are addressed in cortex orchestration (`target_claudes`,
 `source_claude`) and inbox routing — peer AIs send to you using the
 basename of your project root. `setup-claude-code` writes the
-canonical value into `.empirica/project.yaml` at project init.
+canonical value into `.empirica/project.yaml` at project init.{% endif %}
 
 When unsure of your own `ai_id`, read it from `.empirica/project.yaml`;
 fall back to `os.path.basename(project_root).removeprefix('empirica-')`
@@ -46,7 +46,7 @@ via `session-create --ai-id`, and write artifacts to a different
 practice via `--project-id` on most CLI verbs. Load
 `/empirica-constitution` for the full Practice Model section.
 
-**Mesh-active precondition:** if a `<task-notification>` Monitor is
+{% if cortex %}**Mesh-active precondition:** if a `<task-notification>` Monitor is
 armed on a listener subprocess this session (the SessionStart hook
 emits arming instructions when canonical loops are registered for
 your `ai_id`), BOTH `/cortex-mailbox-poll` (receive) and
@@ -54,7 +54,7 @@ your `ai_id`), BOTH `/cortex-mailbox-poll` (receive) and
 transaction. Loading at event-arrival time is too late — the
 send-side handshake guidance is needed BEFORE you act on inbox work.
 
-**Calibration:** Dynamically injected at session start from `.breadcrumbs.yaml`.
+{% endif %}**Calibration:** Dynamically injected at session start from `.breadcrumbs.yaml`.
 Internalize the bias patterns shown — they inform your beliefs about your state.
 
 **Readiness is assessed holistically** by the Sentinel — not by hitting fixed numbers.
@@ -297,8 +297,9 @@ compound — every "I'll just do it from memory" call is a calibration gap.
 |-------|-----------|
 | `/empirica-constitution` | (a) First PREFLIGHT of any session — orientation; (b) you're about to pick a mechanism for a situation you haven't routed before; (c) user asks about Empirica capabilities or workflow |
 | `/epistemic-transaction` | Task spans 3+ files OR 2+ goals OR multiple noetic→praxic cycles. Plan transactions explicitly with PREFLIGHT vector estimates rather than letting one bleed into the next. |
-| `/cortex-mailbox-poll` | A `<task-notification>` arrives carrying `proposal_event` — the receive-side reaction protocol (per `direction` × `status`) lives there |
+{% if cortex %}| `/cortex-mailbox-poll` | A `<task-notification>` arrives carrying `proposal_event` — the receive-side reaction protocol (per `direction` × `status`) lives there |
 | `/cortex-mailbox-send` | You want to send to a peer AI — FYI, question, request work, OR ack a proposal a peer made of YOU (completion handshake). Covers the collab vs ECO-gated flavor split. |
+{% endif %}
 | `/empirica-commands` | Need a specific CLI flag and `--help` isn't enough |
 | `/code-audit`, `/code-docs-align` | Pre-release pass OR after a refactor sweep that may have left drift |
 | `/epistemic-persistence-protocol` | User pushes back on your position — load BEFORE responding to classify the pushback type |
