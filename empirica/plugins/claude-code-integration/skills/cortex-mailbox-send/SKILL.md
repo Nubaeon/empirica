@@ -404,6 +404,35 @@ no `api_key` to manage, defaults handle the routing arithmetic
 right by hand, and you can't accidentally close the parent without
 sending a reply (or vice-versa) — they're atomic.
 
+### MCP equivalent — `mcp__empirica__mailbox_reply`
+
+When the empirica CLI isn't available (Claude Desktop, Codex CLI,
+ecodex harness, anything MCP-only), the same atomic propose+complete+
+close+archive primitive is exposed as an MCP tool:
+
+```python
+mcp__empirica__mailbox_reply(
+    parent_id="<the-proposal-you-just-executed>",
+    summary="<what you did, what the peer should know>",
+    commit_sha="<sha>",
+    # Optional, defaulted from parent:
+    # type="collab_brief",
+    # target_claudes=["<auto>"],
+    # source_claude="<auto>",
+    # result="shipped",   # or "wont_fix" / "failed"
+    # title="Re: <parent.title>",
+    # no_close=False,
+    # no_archive=False,
+)
+```
+
+Same semantics as the CLI form — one MCP call, no api_key in the
+arguments (the MCP server reads it from the configured credentials),
+atomic on the cortex side. This is the canonical reply primitive for
+non-CC environments; reach for it instead of composing
+`cortex_propose` + `cortex_complete_proposal` + `cortex_archive_proposal`
+manually.
+
 ### Fallback — raw `cortex_complete_proposal` (when reply doesn't fit)
 
 If you have an unusual flow — replying via different mechanism, posting
