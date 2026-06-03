@@ -110,10 +110,12 @@ def test_on_persistent_service_returns_tail_monitor(tmp_path, monkeypatch, capsy
     cmd = ns['args']['command']
     assert 'tail -F' in cmd
     assert 'loop_fires.log' in cmd
-    # Filter scopes the tail to events for this ai_id. Accepts both the
-    # legacy stripped form (`extension`) and the canonical exact-basename
-    # form (`empirica-extension`) — see cockpit_commands grep filter.
-    assert '"instance_id": "(empirica-)?empirica"' in cmd
+    # Filter scopes the tail to events for this ai_id. Strict-canonical
+    # match (transition-compat `(empirica-)?` form retired in 1.11.8 —
+    # session-init's project.yaml ai_id heal runs before the Monitor
+    # arms, so the canonical form is always what reaches loop_fires.log).
+    assert '"instance_id": "empirica"' in cmd
+    assert '(empirica-)?' not in cmd  # transition-compat regex retired
     # Crucially, no duplicate ntfy subscriber
     assert 'empirica loop listen' not in cmd
     assert 'curl' not in cmd

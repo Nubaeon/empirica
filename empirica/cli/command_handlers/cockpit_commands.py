@@ -1645,16 +1645,16 @@ def handle_listener_on_command(args) -> int:
         log_path = Path.home() / '.empirica' / 'loop_fires.log'
         # Wake on every proposal_event for this ai_id. The listener writes
         # `"instance_id": "<exact-project-basename>"` (e.g.
-        # `empirica-extension`). Some legacy project.yaml entries still
-        # carry the stripped form (`extension`) — accept BOTH via regex
-        # so this Monitor matches whether project.yaml has been migrated
-        # to the canonical exact basename or not. The trailing `"` anchor
-        # keeps the match scoped to the field, no over-matching.
-        ai_id_stripped = ai_id.removeprefix('empirica-')
-        if ai_id_stripped == ai_id:
-            grep_filter = f'"instance_id": "(empirica-)?{ai_id}"'
-        else:
-            grep_filter = f'"instance_id": "(empirica-)?{ai_id_stripped}"'
+        # `empirica-extension`). The trailing `"` anchor keeps the match
+        # scoped to the field, no over-matching.
+        #
+        # Strict-canonical match. The transition-compat `(empirica-)?`
+        # form (accepting both stripped + canonical) shipped in 1.11.6
+        # and was retired here in 1.11.8 — session-init's
+        # _heal_project_yaml_ai_id_at_init (shipped 1.11.7) runs BEFORE
+        # the Monitor arms, so any session new enough to reach this code
+        # path already saw its project.yaml migrated to canonical form.
+        grep_filter = f'"instance_id": "{ai_id}"'
         monitor_cmd = (
             f'tail -F -n 0 {log_path} 2>/dev/null | '
             f'grep -E --line-buffered \'{grep_filter}\''
