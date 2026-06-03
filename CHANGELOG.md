@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.11.5] — 2026-06-03
 
-A follow-up patch (third in one day) addressing the source-side companion to 1.11.4's target-side fix. Cortex's router now also requires `source_claude` to be the canonical 3-form — basename / 2-level / alias sources hard-fail silently with `status=failed` and no error explanation. The `/cortex-mailbox-send` skill still taught basename `source_claude` in its examples + anti-pattern table. Updated to match the strict-canonical rule already applied to `target_claudes` in 1.11.4.
+A follow-up patch completing the canonical-3-form alignment across all listener / sender paths. Cortex's `800683e` deploy retired the basename/alias bridge in both the publish tag set AND the orchestration-fetch path, leaving listeners that subscribed by basename silently push-deaf (only catch-up worked). Skill still taught basename `source_claude`. Rolled up here.
+
+### Fixed
+
+- **Listener ntfy subscription now uses canonical 3-form tag** (`empirica/core/loop_scheduler/listener.py`). The subscribe URL was built with `?tags=<basename>` (`empirica`, `extension`, etc.) while cortex publishes with `?tags=<canonical>` (`empirica.david.empirica`, `empirica.david.empirica-extension`, etc.) since the bridge retirement. NO match → live pushes silently dropped → only the catch-up poll (fixed in 1.11.4) caught anything. Resolver reuses the same `_resolve_canonical_ai_id` helper. Verified live: all 5 listeners on this box now subscribe canonical post-restart. Surfaced by mesh-support's `prop_dluul` item 3.
 
 ### Changed
 
