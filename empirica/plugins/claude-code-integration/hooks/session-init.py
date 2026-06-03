@@ -265,6 +265,66 @@ _PROJECT_ID_UUID_RE = re.compile(
 )
 
 
+def _heal_project_yaml_ai_id_at_init(project_root: str | None) -> None:
+    """Validate-and-heal .empirica/project.yaml ai_id at session-init.
+
+    Post-strict-canonical (1.11.x) the canonical ai_id IS the exact
+    project basename — the `empirica-` prefix is KEPT. Legacy
+    project.yamls written before the strict-canonical decision may
+    still carry the stripped form (e.g. `ai_id: extension` instead of
+    `ai_id: empirica-extension`). Cortex's strict-canonical addressing
+    bounces those as `delivery_failed`.
+
+    Heal rule (conservative):
+      - if ai_id matches basename → no-op (already canonical)
+      - if ai_id matches basename.removeprefix('empirica-') AND that
+        differs from basename → heal to basename (known stripped form)
+      - any other value → leave alone (custom provisioned, ecodex
+        sandbox identity, etc. — don't second-guess)
+      - ai_id absent → leave alone (project-init handles that case)
+
+    Non-fatal — logs to stderr on issue, never blocks session boot.
+    Pairs with the (empirica-)? Monitor-grep transition-compat regex
+    in cockpit_commands.py; once installed practices migrate, that
+    regex can be tightened to exact-match.
+    """
+    if not project_root:
+        return
+    try:
+        import yaml
+        project_yaml = Path(project_root) / '.empirica' / 'project.yaml'
+        if not project_yaml.exists():
+            return
+        cfg = yaml.safe_load(project_yaml.read_text()) or {}
+        current = cfg.get('ai_id')
+        if not current:
+            return  # absent — don't auto-introduce, let project-init handle it
+        canonical = Path(project_root).name
+        if not canonical:
+            return  # defensive — empty basename, nothing to heal toward
+        if current == canonical:
+            return  # already canonical
+        stripped = canonical.removeprefix('empirica-')
+        if stripped == canonical:
+            return  # no prefix to strip — can't be a stripped-legacy value
+        if current != stripped:
+            return  # not a known legacy form — leave alone (custom provisioner)
+
+        # Heal: stripped → canonical
+        cfg['ai_id'] = canonical
+        project_yaml.write_text(yaml.safe_dump(cfg, sort_keys=False))
+        print(
+            f"session-init: healed project.yaml ai_id "
+            f"{current!r} → {canonical!r} (stripped-prefix legacy)",
+            file=sys.stderr,
+        )
+    except Exception as e:
+        print(
+            f"session-init: project.yaml ai_id heal skipped ({e})",
+            file=sys.stderr,
+        )
+
+
 def _heal_project_yaml_project_id_at_init(project_root: str | None) -> None:
     """Validate-and-heal .empirica/project.yaml project_id at session-init.
 
@@ -412,6 +472,10 @@ def create_session_and_bootstrap(ai_id: str, project_id: str | None = None) -> d
         # Step 1c: Heal .empirica/project.yaml project_id if it's a slug-shape
         # legacy value (pre-UUID project-init era). Idempotent.
         _heal_project_yaml_project_id_at_init(os.environ.get('PWD') or os.getcwd())
+
+        # Step 1d: Heal .empirica/project.yaml ai_id if it's a stripped-prefix
+        # legacy value (pre-strict-canonical era, 1.11.x). Idempotent.
+        _heal_project_yaml_ai_id_at_init(os.environ.get('PWD') or os.getcwd())
 
         # Step 2: Run bootstrap
         bootstrap_data, project_context = _run_bootstrap(session_id, env)
