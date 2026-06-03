@@ -236,11 +236,16 @@ def _handle_auto_init(args, output_format, project_id):
     """Handle --auto-init flag: initialize .empirica/ if missing.
 
     Returns:
-        (auto_init_performed, project_id) — updated project_id if auto-init created one.
+        (auto_init_performed, project_id, auto_init_project_path) —
+        updated project_id if auto-init created one, and the project_path
+        (git_root) of the just-created project so the caller can wire
+        instance_projects/active_work without depending on the resolver
+        chain (which can't yet see the brand-new project).
     """
     auto_init_performed = False
+    auto_init_project_path = None
     if not getattr(args, 'auto_init', False):
-        return auto_init_performed, project_id
+        return auto_init_performed, project_id, auto_init_project_path
 
     from empirica.config.path_resolver import get_git_root
     git_root = get_git_root()
@@ -256,6 +261,11 @@ def _handle_auto_init(args, output_format, project_id):
             print("❌ Cannot auto-init: Not in a git repository")
             print("   Run 'git init' first, then try again")
         sys.exit(1)
+
+    # The just-created (or already-initialized) project lives at git_root.
+    # Hand this back to the caller so it can wire instance_projects without
+    # relying on the resolver chain that doesn't yet know about the new project.
+    auto_init_project_path = str(git_root)
 
     empirica_config = git_root / '.empirica' / 'config.yaml'
     if not empirica_config.exists():
@@ -302,7 +312,7 @@ def _handle_auto_init(args, output_format, project_id):
                 print("   Run 'empirica project-init' manually")
             sys.exit(1)
 
-    return auto_init_performed, project_id
+    return auto_init_performed, project_id, auto_init_project_path
 
 
 def _require_project_initialized(ai_id, output_format):
@@ -605,14 +615,23 @@ def _write_active_session_file(session_id, ai_id):
     return None
 
 
-def _write_tty_session(session_id):
-    """Write TTY session file for multi-instance isolation (best-effort)."""
+def _write_tty_session(session_id, project_path_override=None):
+    """Write TTY session file for multi-instance isolation (best-effort).
+
+    Args:
+        session_id: The Empirica session UUID to bind to this terminal.
+        project_path_override: When non-None, used as the project_path
+            instead of the resolver chain. Set by --auto-init so the
+            instance_projects file points at the just-created project
+            (the resolver can't yet see it because instance_projects /
+            active_work haven't been written by this point in the flow).
+    """
     try:
-        existing_project = R.project_path()
-        if existing_project:
+        project_path = project_path_override or R.project_path()
+        if project_path:
             R.tty_write(
                 empirica_session_id=session_id,
-                project_path=existing_project
+                project_path=project_path
             )
     except Exception:
         pass
@@ -736,7 +755,8 @@ def handle_session_create_command(args):
             print()
 
         # Stage 4: Auto-init if requested
-        auto_init_performed, project_id = _handle_auto_init(args, output_format, project_id)
+        auto_init_performed, project_id, auto_init_project_path = _handle_auto_init(
+            args, output_format, project_id)
 
         # Stage 5: Require project initialization
         _require_project_initialized(ai_id, output_format)
@@ -754,7 +774,11 @@ def handle_session_create_command(args):
             return error
 
         # Stage 9: Write TTY session
-        _write_tty_session(session_id)
+        # auto_init_project_path overrides the resolver when --auto-init just
+        # created the project — without it, instance_projects never gets the
+        # new project_path written and subsequent commands hit "Cannot resolve
+        # project path" (ecodex prop_zwfsl26r7fc7ddj6oemkfcwa44).
+        _write_tty_session(session_id, project_path_override=auto_init_project_path)
 
         # Stage 10: Initialize auto-capture
         _init_auto_capture(session_id, output_format)
