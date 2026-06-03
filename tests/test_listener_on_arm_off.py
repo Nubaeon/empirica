@@ -110,8 +110,10 @@ def test_on_persistent_service_returns_tail_monitor(tmp_path, monkeypatch, capsy
     cmd = ns['args']['command']
     assert 'tail -F' in cmd
     assert 'loop_fires.log' in cmd
-    # Filter scopes the tail to events for this ai_id
-    assert '"instance_id": "empirica"' in cmd
+    # Filter scopes the tail to events for this ai_id. Accepts both the
+    # legacy stripped form (`extension`) and the canonical exact-basename
+    # form (`empirica-extension`) — see cockpit_commands grep filter.
+    assert '"instance_id": "(empirica-)?empirica"' in cmd
     # Crucially, no duplicate ntfy subscriber
     assert 'empirica loop listen' not in cmd
     assert 'curl' not in cmd

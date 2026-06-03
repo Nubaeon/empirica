@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.6] — 2026-06-03
+
+A hotfix for a follow-on bug surfaced by extension (`prop_3p6iiqz`): the listener's `instance_id` in `loop_fires.log` is now the full project basename (`empirica-extension`) while some legacy `.empirica/project.yaml` entries still carry the stripped form (`extension`). The SessionStart Monitor's grep filter was anchored on the project.yaml value, so Monitors armed against stale project.yamls silently stopped matching at 10:20 UTC today — log fills, Monitor delivers nothing.
+
+### Fixed
+
+- **Persistent-service-tail Monitor grep accepts both forms** (`empirica/cli/command_handlers/cockpit_commands.py`). Filter changed from literal `'"instance_id": "<ai_id>"'` to regex `'"instance_id": "(empirica-)?<basename>"'` so the Monitor matches whether the project.yaml has been migrated to the canonical exact basename or still carries the legacy stripped form. Transition-compatible — no project.yaml migration required for Monitors to resume delivery. Surfaced by extension `prop_3p6iiqz` minutes after 1.11.5 published.
+
+### Note
+
+The right structural follow-up is migrating stale stripped-form `ai_id` in `.empirica/project.yaml` to the canonical exact basename (e.g. `extension` → `empirica-extension`). That's a separate sweep — not blocking because this Monitor fix accepts both forms.
+
 ## [1.11.5] — 2026-06-03
 
 A follow-up patch completing the canonical-3-form alignment across all listener / sender paths. Cortex's `800683e` deploy retired the basename/alias bridge in both the publish tag set AND the orchestration-fetch path, leaving listeners that subscribed by basename silently push-deaf (only catch-up worked). Skill still taught basename `source_claude`. Rolled up here.

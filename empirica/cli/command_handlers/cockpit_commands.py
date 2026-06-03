@@ -1643,15 +1643,21 @@ def handle_listener_on_command(args) -> int:
     # catch-up on reconnect.
     if persistent_active:
         log_path = Path.home() / '.empirica' / 'loop_fires.log'
-        # Wake on every proposal_event for this ai_id. Per the cortex+extension
-        # contract (Contract 2, 2026-05-31): the tool split (cortex_collab vs
-        # cortex_propose) IS the actionability signal; the per-message
-        # actionability/wake_hint flag was redundant + lossy. Drop the
-        # exclude-fyi filter — every event wakes; a wake is cheap, a missed
-        # substantive reply is not.
+        # Wake on every proposal_event for this ai_id. The listener writes
+        # `"instance_id": "<exact-project-basename>"` (e.g.
+        # `empirica-extension`). Some legacy project.yaml entries still
+        # carry the stripped form (`extension`) — accept BOTH via regex
+        # so this Monitor matches whether project.yaml has been migrated
+        # to the canonical exact basename or not. The trailing `"` anchor
+        # keeps the match scoped to the field, no over-matching.
+        ai_id_stripped = ai_id.removeprefix('empirica-')
+        if ai_id_stripped == ai_id:
+            grep_filter = f'"instance_id": "(empirica-)?{ai_id}"'
+        else:
+            grep_filter = f'"instance_id": "(empirica-)?{ai_id_stripped}"'
         monitor_cmd = (
             f'tail -F -n 0 {log_path} 2>/dev/null | '
-            f'grep --line-buffered \'"instance_id": "{ai_id}"\''
+            f'grep -E --line-buffered \'{grep_filter}\''
         )
         description = f'Cortex orchestration log tail for {ai_id} (persistent-service mode)'
         status = 'persistent_service_tail_session'
