@@ -16,6 +16,11 @@ proposal-shaped document.
   is the human-readable inventory; the DB is the source of truth.
 - When you change directories, your project context changes. Use
   `empirica project-switch <name>` to make it explicit and verifiable.
+- The **practice anchor** is `ai_id` (set in `.empirica/project.yaml`), not
+  cwd or folder basename. cwd is just working-context. See
+  [AI_ID_AS_ANCHOR.md](../architecture/AI_ID_AS_ANCHOR.md) for the full
+  resolution chain — the canonical mechanism that makes practices portable
+  across filesystems and provisioning models.
 
 ---
 

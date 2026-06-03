@@ -131,28 +131,12 @@ def _instance_label(instance_id: str, project_path: str | None = None) -> str:
 def _project_ai_id(project_path: str | None) -> str | None:
     """Read canonical ai_id from project.yaml, with basename fallback.
 
-    Mirrors InstanceResolver.ai_id() — source of truth is project.yaml's
-    `ai_id` field (set by setup-claude-code via _derive_ai_id at init).
-    Fallback: basename(project_path).removeprefix('empirica-').
-
-    The aggregator surfaces this so TUI install paths can name systemd
-    timers consistently with what session-monitor-arm queries (both use
-    ai_id; mismatch with tmux pane id was the 2026-05-16 wake bug).
+    Delegates to InstanceResolver.ai_id(project_path=...) — single
+    source of truth for the resolution chain (project.yaml → basename
+    derivation). See docs/architecture/AI_ID_AS_ANCHOR.md.
     """
-    if not project_path:
-        return None
-    try:
-        import yaml
-        proj_yaml = Path(project_path) / '.empirica' / 'project.yaml'
-        if proj_yaml.exists():
-            data = yaml.safe_load(proj_yaml.read_text()) or {}
-            aid = data.get('ai_id')
-            if aid:
-                return str(aid)
-    except Exception:  # noqa: S110 — fallback chain; malformed YAML / missing yaml module → derive from basename below
-        pass
-    basename = Path(project_path).name
-    return basename.removeprefix('empirica-') or basename or None
+    from empirica.utils.session_resolver import InstanceResolver
+    return InstanceResolver.ai_id(project_path=project_path)
 
 
 def _instance_project_path(instance_id: str) -> str | None:

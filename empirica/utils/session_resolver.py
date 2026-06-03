@@ -206,32 +206,48 @@ class InstanceResolver:
         return _get_project_id_from_local_db(project_path)
 
     @staticmethod
-    def ai_id(claude_session_id: str | None = None) -> 'str | None':
-        """Resolve the canonical ai_id for the current instance.
+    def ai_id(
+        claude_session_id: str | None = None,
+        project_path: 'str | Path | None' = None,
+    ) -> 'str | None':
+        """Resolve the canonical ai_id.
 
         Convention (David, 2026-05-16): the AI is identified by its
         home project's basename (stripping `empirica-` prefix where
         present). Source-of-truth is `.empirica/project.yaml`'s
         `ai_id` field (written by setup-claude-code at project init).
 
+        ai_id is THE anchor for cross-machine portability. cwd is just
+        working-context. See docs/architecture/AI_ID_AS_ANCHOR.md.
+
         Resolution chain:
-          1. project.yaml `ai_id` field
-          2. basename(project_path).removeprefix('empirica-')
-          3. None — caller falls back to tmux pane id or 'claude-code'
+          1. explicit project_path argument (skip resolver chain — used
+             when caller already has the path, e.g. iterating cockpit
+             instances each with their own project_path)
+          2. otherwise resolve via get_active_project_path(claude_session_id)
+          3. project.yaml `ai_id` field at that path
+          4. basename(project_path).removeprefix('empirica-')
+          5. None — caller falls back to tmux pane id or 'claude-code'
 
         Used by:
           - session-monitor-arm hook (timer name lookup)
           - TUI install path (handle_loop_enable --instance <ai_id>)
           - cortex_propose source_claude / target_claudes routing
+          - cockpit per-instance ai_id rendering
+          - project_init at provisioning time
         """
         from pathlib import Path
-        project_path = get_active_project_path(claude_session_id)
-        if not project_path:
+        resolved_path = (
+            str(project_path)
+            if project_path is not None
+            else get_active_project_path(claude_session_id)
+        )
+        if not resolved_path:
             return None
-        # Priority 1: explicit ai_id in project.yaml
+        # Priority: explicit ai_id in project.yaml
         try:
             import yaml
-            proj_yaml = Path(project_path) / '.empirica' / 'project.yaml'
+            proj_yaml = Path(resolved_path) / '.empirica' / 'project.yaml'
             if proj_yaml.exists():
                 data = yaml.safe_load(proj_yaml.read_text()) or {}
                 aid = data.get('ai_id')
@@ -239,8 +255,8 @@ class InstanceResolver:
                     return str(aid)
         except Exception:
             pass
-        # Priority 2: derive from basename
-        basename = Path(project_path).name
+        # Fallback: derive from basename
+        basename = Path(resolved_path).name
         derived = basename.removeprefix('empirica-')
         return derived or basename or None
 

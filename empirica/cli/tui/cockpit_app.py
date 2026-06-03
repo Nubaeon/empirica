@@ -777,13 +777,10 @@ class CockpitApp(App):
         # Use ai_id for systemd timer naming (stable across tmux restarts);
         # legacy cron-create paths still use instance_id (tied to the
         # CronCreate in the current AI session, which IS tmux-pane-bound).
-        from pathlib import Path as _Path
+        from empirica.utils.session_resolver import InstanceResolver
         ai_id_for_timer = (
             inst.get('ai_id')
-            or (
-                _Path(inst.get('project_path') or '').name.removeprefix('empirica-')
-                if inst.get('project_path') else None
-            )
+            or InstanceResolver.ai_id(project_path=inst.get('project_path'))
             or inst['instance_id']
         )
         for name, loop_data in loops.items():
@@ -940,13 +937,10 @@ class CockpitApp(App):
         # `ai_id` field (set by setup-claude-code via _derive_ai_id);
         # fallback to project basename, then to pane instance_id for
         # pre-convention installs.
-        from pathlib import Path as _Path
+        from empirica.utils.session_resolver import InstanceResolver
         timer_instance = (
             inst.get('ai_id')
-            or (
-                _Path(inst.get('project_path') or '').name.removeprefix('empirica-')
-                if inst.get('project_path') else None
-            )
+            or InstanceResolver.ai_id(project_path=inst.get('project_path'))
             or inst['instance_id']
         )
         for cfg in configs:

@@ -251,6 +251,11 @@ def _derive_ai_id(git_root) -> str:
     Convention (David, 2026-05-16): AIs are addressed by the basename of
     their home project, with `empirica-` prefix stripped where present.
 
+    At project-init time project.yaml doesn't exist yet, so InstanceResolver
+    falls through to basename derivation — same result as the prior local
+    implementation, but routed through the single canonical resolver. See
+    docs/architecture/AI_ID_AS_ANCHOR.md.
+
     Examples:
         ~/empirical-ai/empirica           → 'empirica'
         ~/empirical-ai/empirica-cortex    → 'cortex'
@@ -260,13 +265,10 @@ def _derive_ai_id(git_root) -> str:
     Cortex orchestration uses this id for target_claudes / source_claude
     routing. Peer AIs and the cockpit address each instance via this id.
     """
-    from pathlib import Path
-    basename = Path(git_root).name
-    # removeprefix is a no-op when the prefix isn't present, so 'empirica'
-    # stays 'empirica' but 'empirica-cortex' becomes 'cortex'.
-    ai_id = basename.removeprefix('empirica-')
-    # Defensive: never return empty (would happen if basename is literally 'empirica-').
-    return ai_id or basename or 'claude-code'
+    from empirica.utils.session_resolver import InstanceResolver
+    # Defensive: never return empty (would happen if basename is literally
+    # 'empirica-' and resolver returns None or empty).
+    return InstanceResolver.ai_id(project_path=str(git_root)) or 'claude-code'
 
 
 def _build_project_config(config_input, git_root, git_url):
