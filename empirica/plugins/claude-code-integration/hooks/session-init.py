@@ -265,6 +265,57 @@ _PROJECT_ID_UUID_RE = re.compile(
 )
 
 
+def _resolve_ai_id_for_session(project_root: str | Path | None) -> str:
+    """Resolve the canonical ai_id at session-init time.
+
+    Resolution precedence (anchor model — see docs/architecture/AI_ID_AS_ANCHOR.md):
+      1. EMPIRICA_AI_ID env var (explicit override; preserved for harnesses that
+         pass it in their launch config — codex/Kimi/ecodex-lab pattern)
+      2. .empirica/project.yaml `ai_id` field (the canonical declared
+         practitioner — what every consumer surface already reads)
+      3. basename(project_root) (canonical anchor; empirica- prefix KEPT
+         per the 1.11.x strict-canonical decision)
+      4. 'claude-code' with stderr warning (final fallback — surfaces
+         silent identity-misattribution that previously rode unseen)
+
+    Non-CC harnesses (codex, Kimi, ecodex-lab) report as their declared
+    practitioner via project.yaml. Prevents the silent 'every non-CC session
+    stamped as claude-code' mesh-identity bug (ecodex prop_vwmutw7nu).
+    """
+    env_override = os.environ.get('EMPIRICA_AI_ID', '').strip()
+    if env_override:
+        return env_override
+
+    if project_root:
+        try:
+            import yaml
+            proj_yaml = Path(project_root) / '.empirica' / 'project.yaml'
+            if proj_yaml.exists():
+                cfg = yaml.safe_load(proj_yaml.read_text()) or {}
+                declared = cfg.get('ai_id')
+                if declared:
+                    return str(declared)
+        except Exception as exc:
+            print(
+                f"session-init: project.yaml ai_id read failed ({exc}); "
+                f"falling back to basename",
+                file=sys.stderr,
+            )
+
+        basename = Path(project_root).name
+        if basename:
+            return basename
+
+    print(
+        "session-init: ai_id unresolvable (no EMPIRICA_AI_ID env, no "
+        "project.yaml ai_id field, no project basename) — defaulting to "
+        "'claude-code'. This will misattribute mesh identity for non-CC "
+        "harnesses; set EMPIRICA_AI_ID or run 'empirica project-init'.",
+        file=sys.stderr,
+    )
+    return 'claude-code'
+
+
 def _heal_project_yaml_ai_id_at_init(project_root: str | None) -> None:
     """Validate-and-heal .empirica/project.yaml ai_id at session-init.
 
@@ -1243,7 +1294,7 @@ def main():
                 project_root, _find_git_root() or Path.cwd(), _get_instance_suffix())
 
     os.chdir(project_root)
-    ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
+    ai_id = _resolve_ai_id_for_session(project_root)
 
     # Housekeeping
     _run_stale_cleanup(claude_session_id)

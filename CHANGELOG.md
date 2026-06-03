@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+A hotfix completing the anchor refactor that landed in 1.11.7. Surfaced live by ecodex-lab (a codex/Kimi-hosted practice) within an hour of 1.11.7 publishing: `session-init.py:1246` still resolved `ai_id` from `os.getenv('EMPIRICA_AI_ID', 'claude-code')` — env var or silent `claude-code` fallback. The hook never read the canonical `.empirica/project.yaml` `ai_id` field that every other consumer surface uses, so every non-Claude-Code harness's session was created under `ai_id='claude-code'` regardless of declared practice. Wrong mesh identity meant `cortex_propose(target=<practice>)` was never picked up — silent delivery failure.
+
+### Fixed
+
+- **`session-init.py` resolves `ai_id` via canonical chain** (`empirica/plugins/claude-code-integration/hooks/session-init.py`). New `_resolve_ai_id_for_session()` helper with precedence: `EMPIRICA_AI_ID` env (explicit override, preserved for launch-config callers) → `.empirica/project.yaml` `ai_id` field (declared practitioner) → `basename(project_root)` (canonical anchor, `empirica-` prefix kept per 1.11.x strict-canonical) → `'claude-code'` with stderr warning (final fallback, surfaces what was previously silent). Replaces the env-or-hardcode lookup at the single bind point. Per ecodex `prop_vwmutw7nu`. 10 tests covering env override, yaml precedence, basename fallback, prefix preservation, empty-string env handling, missing yaml/None root warnings, malformed yaml graceful degradation. Plugin mirror synced.
+
+## [1.11.7] — 2026-06-03
+
 A patch consolidating the ecodex onboarding-substrate work surfaced this week. Three threads land together: project-init recovery paths for sandboxed harnesses (read-only `.git/` mounts and prior-provisioned identities), an anchor-model refactor that promotes `ai_id` to THE canonical identity and demotes cwd to working-context, and an idempotent migration that heals legacy stripped-prefix `ai_id` values in `.empirica/project.yaml` to their canonical exact-basename form.
 
 ### Added
