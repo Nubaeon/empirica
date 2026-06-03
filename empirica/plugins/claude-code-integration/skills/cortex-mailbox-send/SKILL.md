@@ -9,8 +9,8 @@ version: 1.1.0
 The companion to `/cortex-mailbox-poll`. That skill handles what arrives
 in your inbox. **This skill handles what you SEND out.**
 
-The mesh has THREE messaging primitives (Phase B, prod `b09b76e`). The
-**tool name IS the noetic/praxic boundary** — pick by what you're doing:
+The mesh has THREE messaging primitives. The **tool name IS the
+noetic/praxic boundary** — pick by what you're doing:
 
 | Tool | Phase | What it's for | ECO involvement |
 |---|---|---|---|
@@ -18,14 +18,9 @@ The mesh has THREE messaging primitives (Phase B, prod `b09b76e`). The
 | **`cortex_propose`** | Praxic | "Please do this concrete thing" — typed work requests (code change, architecture decision, investigation) | ECO-gated: human Accept/Decline (or auto-accept mode). |
 | **`cortex_publish`** | Praxic | Outreach / voice publish via a downstream pipeline (Zernio) | ECO-gated. |
 
-**Use `cortex_collab` for collab going forward.** Same split the extension
-surfaces (collab → friction-free observability; proposals → ECO queue), now
-gated by the *tool you call* rather than by `type`/`action_category` flags.
-`cortex_propose(type="collab_brief")` still works today (non-breaking) but is
-deprecated for collab — a B.2 fast-follow hard-excludes `collab_brief` from
-`cortex_propose` once the mesh has adopted `cortex_collab`. Bonus: `cortex_collab`
-forces `REFLEX`, so collabs can't be mis-tagged `TACTICAL` (which would defeat
-the listener wake-noise filter).
+Use `cortex_collab` for collab. `cortex_collab` forces `REFLEX`, so
+collabs can't be mis-tagged `TACTICAL` (which would defeat the listener
+wake-noise filter).
 
 Don't reach for `cortex_collab_post` (collab-DOC events, web workflow — a
 DIFFERENT tool despite the similar name) or `cortex_bus_*` (system instance
@@ -69,10 +64,8 @@ content that crosses a project boundary.
 
 **Canonical wire form is the fully-qualified `org.tenant.project` triple.** Every level is unique within the level above it, so the triple is globally unique by construction. Two tenants with the same project slug (e.g. each tenant having an `empirica` project) don't collide: `empirica.alice.empirica` ≠ `empirica.bob.empirica`.
 
-**Strict canonical — no lenient resolution anymore (2026-06-02, commit
-`629bb29`).** Older 2-level slugs and short aliases bounce via
-`delivery_failed`. The 3-form is the ONLY form that resolves on the
-wire.
+**Strict canonical.** The 3-form is the ONLY form that resolves on the
+wire. Bare basename / 2-level / alias forms bounce via `delivery_failed`.
 
 | Form | Example | Status |
 |---|---|---|
@@ -111,7 +104,7 @@ canonical_id.split(".", 2)  # → [org, tenant, project_slug]
 |---|---|
 | `cortex` (short alias) | `<org>.<tenant>.empirica-cortex` (3-level canonical) |
 | `empirica-cortex` (bare slug) | `<org>.<tenant>.empirica-cortex` (3-level canonical) |
-| `empirica-claude`, `claude-code`, `cortex-claude` | the project's 3-level canonical form (`-claude` / `claude-` decorations are legacy artifacts and don't resolve) |
+| `empirica-claude`, `claude-code`, `cortex-claude` | the project's 3-level canonical form |
 | The model name (`opus`, `sonnet`) | the project's 3-level canonical form |
 | Stripping the `empirica-` prefix | KEEP the prefix — it's part of the exact project name |
 
@@ -121,13 +114,12 @@ All non-canonical forms bounce via `delivery_failed` — your listener wakes wit
 
 ## Your own `source_claude`
 
-**Strict canonical: `source_claude` MUST be your full 3-form
+**`source_claude` MUST be your full 3-form
 `<org>.<tenant>.<exact-project-name>` (e.g.
 `empirica.david.empirica-mesh-support`).** Cortex's router rejects
 basename / 2-level / alias sources — `status=failed` silently with no
-error explaining why. This is the same canonical-only rule the wire
-applies to `target_claudes`; it now applies to `source_claude` too
-(cortex deploy, 2026-06-03).
+error explaining why. Same canonical-only rule the wire applies to
+`target_claudes`.
 
 Worked construction:
 
@@ -229,7 +221,7 @@ mcp__cortex__cortex_propose(
 | `publish` | Compose & dispatch via Zernio (downstream publisher) — voice-aware |
 | `spec_updated` | Notify peer that a shared spec has changed (consume via their archive flow) |
 | `trust_escalation_request` | Ask ECO to raise the peer's action-category trust level (rare, security-sensitive) |
-| `collab_brief` | **Deprecated for collab — use `cortex_collab`.** Still accepted by `cortex_propose` today (non-breaking), but B.2 hard-excludes it once the mesh adopts `cortex_collab`. |
+| `collab_brief` | Use `cortex_collab` instead — same shape, auto-coerced REFLEX, can't be mis-tagged TACTICAL. |
 
 Use the most specific type. The peer's `/cortex-mailbox-poll` reaction
 protocol routes off type — wrong type = wrong handler.
@@ -631,7 +623,7 @@ peer needs to read or act.
 | Pattern | Problem | Fix |
 |---|---|---|
 | Sending to `target_claudes=["empirica-claude"]` (or any `-claude` / `claude-` decoration) | Wrong id, cortex bounce-back fires `delivery_failed` back to you | Use the canonical 3-level triple (`<org>.<tenant>.empirica-cortex`); org-specific short aliases also resolve via the lenient resolver |
-| Stripping the `empirica-` prefix | Bounces via `delivery_failed` (no alias resolution on the wire anymore — 2026-06-02) | Use the canonical 3-form `<org>.<tenant>.<exact-project-name>` |
+| Stripping the `empirica-` prefix | Bounces via `delivery_failed` (no alias resolution on the wire) | Use the canonical 3-form `<org>.<tenant>.<exact-project-name>` |
 | Sending with basename `source_claude="empirica-mesh-support"` (or short alias `"mesh-support"`) | Cortex rejects with `status=failed` silently — no error explaining why | Use the canonical 3-form `<org>.<tenant>.<exact-project-name>` (e.g. `"empirica.david.empirica-mesh-support"`) |
 | Sending without `source_claude` | Completion acks can't route back to you | Always set `source_claude` to your own canonical 3-form |
 | `cortex_propose(type="code_change_request")` for an FYI | Triggers ECO gate for what should be auto-accepted | Use `cortex_collab` |

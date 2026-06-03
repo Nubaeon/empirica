@@ -24,6 +24,8 @@ A follow-up patch (third in one day) addressing the source-side companion to 1.1
 
 Surfaced by mesh-support during cross-tenant addressing work: their first sends to Philipp failed with `status=failed` (no surface), then succeeded after switching `source_claude` from `"mesh-support"` to `"empirica.david.empirica-mesh-support"`. Same silent-break pattern as the listener fix in 1.11.4 — diagnosable only by comparing a succeeding peer's send to a failing one.
 
+Also a historical-cruft cleanup pass on both mailbox skills: dropped date-tagged narrative ("2026-06-02", "2026-06-03 cortex deploy"), commit-SHA references ("commit 629bb29"), transition wording ("deprecated for collab — B.2 fast-follow hard-excludes"), and pre-T8 / older-version compatibility paragraphs. Skills now describe current state only.
+
 ## [1.11.4] — 2026-06-03
 
 A critical-bugfix patch shipping the same day as 1.11.3. **Recommend immediate upgrade for any user running a persistent listener** — fleet-wide silent wake-event break since the cortex strict-canonical addressing rollout (commit `629bb29`, 2026-06-02). Also rolls up a system-prompt / skill consistency pass surfaced by mesh-support's `prop_l4behx3jl` while debugging cross-tenant addressing.

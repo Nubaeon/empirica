@@ -61,18 +61,13 @@ Read your canonical id from `.empirica/project.yaml`'s `ai_id` field
 
 ---
 
-## Reaction Protocol — Phase 1c+ / T8 content events (push-primary)
+## Reaction Protocol — content events (push-primary)
 
 The SessionStart `session-monitor-arm.py` hook arms a Monitor on
 `empirica loop listen --instance <your-id>` — the push-primary
 listener that holds an ntfy stream to Cortex and emits one stdout
 line per ECO-decided proposal event. Each line is a `<task-notification>`
 wake event into this session.
-
-The listener's stdout shape matches what the older
-`tail -F ~/.empirica/loop_fires.log` path emitted (pre-T8 fallback,
-still used by some legacy installations) — so the reaction protocol
-below is identical regardless of which transport delivered the line.
 
 ### Content event (the wake signal you should usually act on)
 
@@ -270,17 +265,16 @@ proposals: log a goal `"Process ser_escalation: <ser_id>"` and pick up
 at the next natural break. SER escalations are designed to wait — the
 next tick fires another 10min later, not immediately.
 
-### Heartbeat event (legacy fallback)
+### Heartbeat event (content-free)
 
 ```json
 {"ts": "...", "instance_id": "<you>", "loop": "cortex-mailbox-poll"}
 ```
 
-Older empirica versions, or non-cortex-mailbox-poll loops, emit
-content-free heartbeats. If you receive one (no `event_type` field),
-fall through to the Cron Prompt Template below — poll inbox/outbox
-manually via MCP. This path costs more tokens; prefer the content-event
-path when available.
+Some loops emit content-free heartbeats. If you receive one (no
+`event_type` field), fall through to the Cron Prompt Template below —
+poll inbox/outbox manually via MCP. This path costs more tokens;
+prefer the content-event path when available.
 
 ---
 
