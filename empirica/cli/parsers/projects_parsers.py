@@ -351,3 +351,62 @@ def add_projects_parsers(subparsers) -> None:
         default="human",
         help="Output format for the summary (default: human).",
     )
+
+    # ── projects-unregister ────────────────────────────────────────────
+    unreg = subparsers.add_parser(
+        "projects-unregister",
+        help="Unregister a project from Cortex (soft archive by default; --purge to hard-delete).",
+        description=(
+            "Soft archive (default): sets is_archived=true + archived_at "
+            "on the cortex project row, removes the project_id from the "
+            "caller's user.project_ids so it stops surfacing in roster / "
+            "threads / sers projections. Proposals + SERs + artifacts stay "
+            "readable for audit. Reversible by re-running `projects-bulk-register` "
+            "on the same project.\n\n"
+            "Hard purge (--purge --confirm): deletes the project row and "
+            "cascade-deletes proposals + SERs + artifacts owned by it. "
+            "Irreversible. Requires --confirm to actually execute."
+        ),
+    )
+    unreg.add_argument(
+        "--project-id",
+        default=None,
+        help="Cortex project UUID. Mutually exclusive with --slug; one of them or .empirica/project.yaml required.",
+    )
+    unreg.add_argument(
+        "--slug",
+        default=None,
+        help="Project slug (resolves on the cortex side against caller's projects).",
+    )
+    unreg.add_argument(
+        "--purge",
+        action="store_true",
+        help="Hard-delete instead of soft-archive. Cascade-deletes proposals + SERs + artifacts. Requires --confirm.",
+    )
+    unreg.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Required with --purge — acknowledge the destructive operation.",
+    )
+    unreg.add_argument(
+        "--cortex-url",
+        default=None,
+        help="Override Cortex base URL.",
+    )
+    unreg.add_argument(
+        "--api-key",
+        default=None,
+        help="Override Cortex API key.",
+    )
+    unreg.add_argument(
+        "--timeout",
+        type=float,
+        default=10.0,
+        help="HTTP timeout in seconds (default: 10).",
+    )
+    unreg.add_argument(
+        "--output",
+        choices=["human", "json"],
+        default="human",
+        help="Output format (default: human).",
+    )

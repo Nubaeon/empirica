@@ -335,7 +335,7 @@ _HELP_CATEGORIES = {
     'workflow': ['preflight-submit', 'check', 'check-submit', 'postflight-submit'],
     'goals': ['goals-create', 'goals-list', 'goals-search', 'goals-complete', 'goals-claim', 'goals-add-task', 'goals-add-dependency', 'goals-complete-task', 'goals-get-tasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume', 'goals-mark-stale', 'goals-get-stale', 'goals-refresh'],
     'logging': ['finding-log', 'unknown-log', 'unknown-list', 'unknown-resolve', 'deadend-log', 'assumption-log', 'decision-log', 'mistake-log', 'mistake-query', 'source-add', 'source-list', 'source-archive', 'act-log', 'investigate-log', 'log-artifacts', 'resolve-artifacts', 'delete-artifacts', 'epistemics-list', 'epistemics-show', 'noetic-batch'],
-    'project': ['project-init', 'project-update', 'project-create', 'project-list', 'project-switch', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'code-embed', 'doc-check', 'bootstrap-context', 'practice-context', 'projects-sync', 'projects-discover', 'projects-list', 'projects-bulk-register'],
+    'project': ['project-init', 'project-update', 'project-create', 'project-list', 'project-switch', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'code-embed', 'doc-check', 'bootstrap-context', 'practice-context', 'projects-sync', 'projects-discover', 'projects-list', 'projects-bulk-register', 'projects-unregister'],
     'workspace': ['workspace-init', 'workspace-map', 'workspace-list', 'workspace-overview', 'workspace-search', 'engagement-focus', 'ecosystem-check', 'save', 'history', 'entity-list', 'entity-show', 'entity-walk', 'entity-search'],
     'checkpoint': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
     'sync': ['sync-config', 'sync-push', 'sync-pull', 'sync-status', 'rebuild', 'artifacts-generate'],
@@ -605,6 +605,7 @@ def main(args=None):
             'projects-list': handle_projects_list_command,
             'projects-sync': handle_projects_sync_command,
             'projects-bulk-register': handle_projects_bulk_register_command,
+            'projects-unregister': handle_projects_unregister_command,
             'daemon-list': handle_daemon_list_command,
 
             # Finding/unknown/deadend/assumption/decision logging

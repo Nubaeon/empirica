@@ -685,6 +685,7 @@ def filter_projects(
 
 
 CORTEX_REGISTER_PATH = "/v1/projects/register"
+CORTEX_UNREGISTER_PATH = "/v1/projects/unregister"
 CORTEX_ADMIN_PATH = "/v1/admin/projects"
 CORTEX_USER_PROJECTS_PATH = "/v1/users/me/projects"
 
@@ -1053,3 +1054,135 @@ def handle_projects_bulk_register_command(args) -> None:
         ))
     except Exception as e:
         handle_cli_error(e, "projects-bulk-register")
+
+
+# ── projects-unregister ─────────────────────────────────────────────────
+
+
+def handle_projects_unregister_command(args) -> None:
+    """Unregister a project from Cortex (soft archive by default, --purge to hard-delete).
+
+    Soft archive (default):
+      - Sets `projects.is_archived=true` and `archived_at=now()` on cortex.
+      - Removes the project_id from caller's `users.project_ids` (no longer
+        surfaces in roster, /threads, /sers projections).
+      - Preserves rows: proposals, SER records, artifact history — all stay
+        readable for audit.
+
+    Hard purge (--purge):
+      - DELETEs the project row from `projects`.
+      - Cascade-deletes proposals + SERs + artifacts owned by the project.
+      - Irreversible. Requires --confirm to actually execute.
+
+    Project resolution (precedence):
+      1. --project-id <uuid>
+      2. --slug <slug>      (resolves against current user's projects)
+      3. .empirica/project.yaml `project_id` (when run from a project tree)
+    """
+    try:
+        project_id = getattr(args, "project_id", None)
+        slug = getattr(args, "slug", None)
+        purge = bool(getattr(args, "purge", False))
+        confirm = bool(getattr(args, "confirm", False))
+        output_format = getattr(args, "output", "human")
+        timeout = float(getattr(args, "timeout", 10.0))
+
+        # Resolve project_id if not supplied directly
+        if not project_id:
+            if slug:
+                # Slug resolution happens at the cortex endpoint — pass it through
+                pass
+            else:
+                # Try to read project_id from .empirica/project.yaml
+                try:
+                    project_path = Path.cwd()
+                    for parent in [project_path, *project_path.parents]:
+                        yaml_path = parent / ".empirica" / "project.yaml"
+                        if yaml_path.exists():
+                            with open(yaml_path) as f:
+                                data = yaml.safe_load(f) or {}
+                            project_id = data.get("project_id")
+                            break
+                except Exception as e:
+                    logger.debug(f"project.yaml resolution failed: {e}")
+
+        if not project_id and not slug:
+            print(
+                "Error: project not identified. Pass --project-id <uuid> or "
+                "--slug <slug>, or run from inside a project tree with "
+                ".empirica/project.yaml.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+        if purge and not confirm:
+            print(
+                "Error: --purge is irreversible and requires --confirm. "
+                "Re-run with --confirm to hard-delete the project row + "
+                "cascade artifacts. Without --purge the default is a soft "
+                "archive (reversible).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+        cortex_url, api_key = _resolve_cortex_config(args)
+        if not cortex_url or not api_key:
+            print(
+                "Error: cortex config missing. Pass --cortex-url + --api-key, "
+                "set CORTEX_URL + CORTEX_API_KEY env, or configure cortex: "
+                "block in ~/.empirica/credentials.yaml.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+        payload: dict[str, Any] = {"purge": purge}
+        if project_id:
+            payload["project_id"] = project_id
+        if slug:
+            payload["slug"] = slug
+
+        status, body = _post_project(
+            cortex_url, CORTEX_UNREGISTER_PATH, payload, api_key, timeout,
+        )
+
+        outcome: str
+        if status in (200, 201, 204):
+            outcome = "purged" if purge else "archived"
+            ok = True
+        elif status == 404:
+            outcome = "not_found"
+            ok = False
+        elif status == 409:
+            outcome = "already_archived"
+            ok = True  # idempotent — already in target state
+        else:
+            outcome = "error"
+            ok = False
+
+        result = {
+            "ok": ok,
+            "outcome": outcome,
+            "status_code": status,
+            "project_id": project_id,
+            "slug": slug,
+            "purge": purge,
+            "reason": (body or {}).get("reason") if body else None,
+        }
+
+        if output_format == "json":
+            print(json.dumps(result, indent=2, default=str))
+        else:
+            verb = "Purged" if purge else "Archived"
+            if ok:
+                ident = project_id or slug or "?"
+                print(f"✅ {verb} project {ident} on cortex (status={status})")
+            else:
+                print(f"❌ Unregister failed: {outcome} (status={status})",
+                      file=sys.stderr)
+                if body and body.get("reason"):
+                    print(f"   {body['reason']}", file=sys.stderr)
+
+        if not ok:
+            sys.exit(1)
+    except Exception as e:
+        handle_cli_error(e, "projects-unregister")
