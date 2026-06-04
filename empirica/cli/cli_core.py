@@ -608,6 +608,7 @@ def main(args=None):
             'projects-sync': handle_projects_sync_command,
             'projects-bulk-register': handle_projects_bulk_register_command,
             'projects-unregister': handle_projects_unregister_command,
+            'project-register': handle_project_register_command,
             'daemon-list': handle_daemon_list_command,
 
             # Finding/unknown/deadend/assumption/decision logging

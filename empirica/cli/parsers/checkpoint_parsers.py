@@ -369,6 +369,27 @@ def add_checkpoint_parsers(subparsers):
     project_bootstrap_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
     project_bootstrap_parser.add_argument('--global', dest='include_global', action='store_true', help='Include global cross-project learnings (requires --task-description)')
 
+    # V1.5 — Single-project register (atomic discover-one + cortex POST)
+    project_register_parser = subparsers.add_parser(
+        'project-register',
+        help=(
+            "Atomic single-project register: read .empirica/project.yaml at PATH, "
+            "dual-write workspace.db (global_projects + entity_registry), upsert "
+            "~/.empirica/registry.yaml, POST to cortex with the local project_id. "
+            "Replaces the chained 'projects-discover --register NAME && "
+            "projects-bulk-register --include NAME' with one verb for the "
+            "AI-as-CLI-user / copy-prompt UX (extension's Discover/Register surface)."
+        ),
+    )
+    project_register_parser.add_argument('path', nargs='?', default='.', help='Project root path (default: current directory)')
+    project_register_parser.add_argument('--no-cortex', action='store_true', help='Stop after local writes (workspace.db + registry.yaml). Use offline-first or when cortex is down.')
+    project_register_parser.add_argument('--skip-user-link', action='store_true', help='Skip the defensive POST /v1/users/me/projects after register.')
+    project_register_parser.add_argument('--force-metadata-update', action='store_true', help='Carry force_metadata_update:true so cortex refreshes name/repo_url on an existing row.')
+    project_register_parser.add_argument('--cortex-url', help='Override cortex URL (default: ~/.empirica/credentials.yaml)')
+    project_register_parser.add_argument('--api-key', help='Override cortex API key (default: ~/.empirica/credentials.yaml)')
+    project_register_parser.add_argument('--timeout', type=float, default=10.0, help='Cortex POST timeout in seconds (default: 10)')
+    project_register_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+
     # Workspace overview command
     workspace_overview_parser = subparsers.add_parser(
         'workspace-overview',

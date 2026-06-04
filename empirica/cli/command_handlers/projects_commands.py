@@ -1244,3 +1244,333 @@ def handle_projects_unregister_command(args) -> None:
             sys.exit(1)
     except Exception as e:
         handle_cli_error(e, "projects-unregister")
+
+
+# ── V1.5: single-project register (atomic discover-one + dual-write + cortex POST) ──
+
+
+def _project_register_error(message: str, hint: str, output_format: str) -> int:
+    """Emit an actionable error for project-register. Returns the exit code."""
+    if output_format == 'json':
+        print(json.dumps({'ok': False, 'error': message, 'hint': hint}, indent=2))
+    else:
+        print(f"❌ {message}", file=sys.stderr)
+        print(f"   {hint}", file=sys.stderr)
+    return 1
+
+
+def handle_project_register_command(args) -> None:
+    """V1.5 single-project register — atomic discover-one + register-one.
+
+    Replaces the brittle chain of ``projects-discover --register NAME &&
+    projects-bulk-register --include NAME`` with one verb optimised for the
+    AI-as-CLI-user / copy-prompt UX (extension's prop_apevka5iwj Discover/Register
+    surface design depends on this).
+
+    Sequence (local-first atomic):
+      1. Resolve PATH (default: cwd). Require ``.empirica/project.yaml``.
+      2. Read project.yaml. project_id must be present; if absent, point the
+         user at ``empirica project-init`` (V1.5 doesn't mint — separation of
+         concerns).
+      3. Dual-write workspace.db via ``_register_in_workspace_db`` (T1 pattern:
+         both global_projects AND entity_registry get the same UUID).
+      4. Upsert ``~/.empirica/registry.yaml`` via ``api/registry.upsert_project``.
+      5. POST to cortex /v1/projects/register with the local project_id in the
+         payload so the (planned) adopt-local-UUID slice reconciles back to
+         the canonical UUID. On cortex 5xx the local writes stay; the user
+         can re-run safely.
+
+    Exit codes:
+      0 — local + cortex both shipped
+      1 — local writes failed (nothing got written) OR config error
+      2 — local writes shipped, cortex POST failed (re-runnable)
+    """
+    output_format = getattr(args, 'output', 'human')
+    no_cortex = getattr(args, 'no_cortex', False)
+    skip_link = getattr(args, 'skip_user_link', False)
+    timeout = float(getattr(args, 'timeout', 10.0))
+    force_metadata_update = getattr(args, 'force_metadata_update', False)
+
+    try:
+        # 1. Resolve path
+        raw_path = getattr(args, 'path', None) or '.'
+        project_path = Path(raw_path).resolve()
+        project_yaml_path = project_path / '.empirica' / 'project.yaml'
+
+        if not project_path.exists():
+            sys.exit(_project_register_error(
+                f"Path does not exist: {project_path}",
+                "Pass a path to a directory containing .empirica/project.yaml",
+                output_format,
+            ))
+        if not project_yaml_path.exists():
+            sys.exit(_project_register_error(
+                f"No .empirica/project.yaml at {project_path}",
+                f"Run 'empirica project-init' in {project_path} first.",
+                output_format,
+            ))
+
+        # 2. Read project.yaml
+        try:
+            project_yaml = yaml.safe_load(project_yaml_path.read_text(encoding='utf-8')) or {}
+        except (OSError, yaml.YAMLError) as e:
+            sys.exit(_project_register_error(
+                f"Could not read {project_yaml_path}: {e}",
+                "Check file permissions and YAML syntax.",
+                output_format,
+            ))
+
+        project_id = project_yaml.get('project_id')
+        if not project_id:
+            sys.exit(_project_register_error(
+                f"{project_yaml_path} has no project_id",
+                "Run 'empirica project-init --force' to mint and persist a project_id.",
+                output_format,
+            ))
+
+        name = (
+            project_yaml.get('display_name')
+            or project_yaml.get('name')
+            or project_path.name
+        )
+        description = project_yaml.get('description') or ''
+        project_type = project_yaml.get('type') or 'software'
+        repo_url = project_yaml.get('repository') or _git_remote_for_path(project_path)
+
+        # 3. Dual-write workspace.db (global_projects + entity_registry)
+        from .workspace_init import _register_in_workspace_db
+        ws_ok = _register_in_workspace_db(
+            project_id=project_id,
+            name=name,
+            trajectory_path=str(project_path / '.empirica'),
+            description=description,
+            git_remote_url=repo_url,
+            project_type=project_type,
+        )
+        if not ws_ok:
+            sys.exit(_project_register_error(
+                "Failed to write workspace.db",
+                "Check ~/.empirica/workspace/workspace.db permissions and disk space.",
+                output_format,
+            ))
+
+        # 4. Upsert registry.yaml
+        from empirica.api.registry import (
+            load_registry,
+            save_registry,
+            upsert_project,
+        )
+        registry = load_registry()
+        upsert_project(
+            registry,
+            project_id=project_id,
+            slug=project_yaml.get('slug') or name,
+            name=name,
+            path=str(project_path),
+            repo_url=repo_url,
+        )
+        save_registry(registry)
+
+        local_summary = {
+            'project_id': project_id,
+            'name': name,
+            'path': str(project_path),
+            'workspace_db': True,
+            'registry_yaml': True,
+        }
+
+        # 5. Cortex POST (unless --no-cortex)
+        cortex_outcome = _project_register_cortex_step(
+            args,
+            project_id=project_id,
+            name=name,
+            repo_url=repo_url,
+            no_cortex=no_cortex,
+            skip_link=skip_link,
+            force_metadata_update=force_metadata_update,
+            timeout=timeout,
+        )
+
+        # 6. Report + exit
+        result = {
+            'ok': True,
+            'local': local_summary,
+            'cortex': cortex_outcome,
+        }
+
+        cortex_failed = (
+            not no_cortex
+            and not cortex_outcome.get('skipped')
+            and not cortex_outcome.get('ok')
+        )
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            _format_project_register_human(result)
+
+        if cortex_failed:
+            sys.exit(2)
+        return
+
+    except SystemExit:
+        raise
+    except Exception as e:
+        handle_cli_error(e, "project-register")
+        sys.exit(1)
+
+
+def _project_register_cortex_step(
+    args,
+    *,
+    project_id: str,
+    name: str,
+    repo_url: str | None,
+    no_cortex: bool,
+    skip_link: bool,
+    force_metadata_update: bool,
+    timeout: float,
+) -> dict[str, Any]:
+    """The cortex POST step of handle_project_register_command.
+
+    Extracted to keep the outer handler under the complexity threshold.
+    Returns the cortex_outcome dict the handler emits in `result['cortex']`.
+    """
+    if no_cortex:
+        return {'skipped': True, 'reason': '--no-cortex'}
+
+    cortex_url, api_key = _resolve_cortex_config(args)
+    if not (cortex_url and api_key):
+        return {
+            'skipped': True,
+            'reason': 'no cortex_url/api_key resolved (configure ~/.empirica/credentials.yaml)',
+        }
+
+    payload: dict[str, Any] = {
+        'project_id': project_id,  # ask cortex to adopt the local UUID
+        'name': name,
+        'display_name': name,
+    }
+    if repo_url:
+        payload['repo_url'] = repo_url
+    if force_metadata_update:
+        payload['force_metadata_update'] = True
+
+    try:
+        status, body = _post_project(
+            cortex_url, CORTEX_REGISTER_PATH, payload, api_key, timeout,
+        )
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        return {
+            'ok': False,
+            'reason': f"network: {type(e).__name__}: {e}",
+        }
+
+    cortex_outcome = _interpret_cortex_register_response(status, body, project_id)
+    if cortex_outcome.get('ok') and not skip_link and cortex_outcome.get('project_id'):
+        cortex_outcome['link'] = _link_user_to_project(
+            cortex_url, cortex_outcome['project_id'], api_key, timeout,
+        )
+    return cortex_outcome
+
+
+def _git_remote_for_path(project_path: Path) -> str | None:
+    """git remote get-url origin in the given path. None on miss."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ['git', '-C', str(project_path), 'remote', 'get-url', 'origin'],
+            capture_output=True, text=True, timeout=5,
+        )
+        url = result.stdout.strip()
+        return url if (result.returncode == 0 and url) else None
+    except Exception:
+        return None
+
+
+def _interpret_cortex_register_response(
+    status: int,
+    body: dict[str, Any] | None,
+    local_project_id: str,
+) -> dict[str, Any]:
+    """Map cortex's /v1/projects/register response to a result dict.
+
+    Reads the project_id field from the body and flags any divergence from
+    the local UUID. Divergence is NOT a hard error — extension's prop_twit75
+    confirmed the V1 stance is zone-2 diagnostic (no merge button); we report
+    the mismatch so callers can surface it.
+    """
+    if status in (200, 201):
+        returned_id = (body or {}).get('project_id') or (body or {}).get('id')
+        diverged = bool(returned_id and returned_id != local_project_id)
+        return {
+            'ok': True,
+            'status': status,
+            'outcome': 'registered',
+            'project_id': returned_id or local_project_id,
+            'diverged': diverged,
+            'local_project_id': local_project_id if diverged else None,
+        }
+    if status == 409:
+        returned_id = (body or {}).get('project_id') or (body or {}).get('id')
+        diverged = bool(returned_id and returned_id != local_project_id)
+        return {
+            'ok': True,
+            'status': 409,
+            'outcome': 'already_registered',
+            'project_id': returned_id or local_project_id,
+            'diverged': diverged,
+            'local_project_id': local_project_id if diverged else None,
+        }
+    return {
+        'ok': False,
+        'status': status,
+        'outcome': 'failed',
+        'reason': f"http {status}",
+    }
+
+
+def _format_project_register_human(result: dict[str, Any]) -> None:
+    """Render the project-register result for human stdout."""
+    local = result['local']
+    cortex = result['cortex']
+
+    print("✅ Local: dual-write + registry.yaml")
+    print(f"   project_id:  {local['project_id']}")
+    print(f"   name:        {local['name']}")
+    print(f"   path:        {local['path']}")
+
+    if cortex.get('skipped'):
+        reason = cortex.get('reason') or 'skipped'
+        print(f"\n⊙ Cortex: skipped ({reason})")
+    elif cortex.get('ok'):
+        verb = 'registered' if cortex.get('outcome') == 'registered' else 'already registered'
+        print(f"\n✅ Cortex: {verb} (status={cortex.get('status')})")
+        if cortex.get('diverged'):
+            print(
+                f"   ⚠ project_id divergence: cortex returned "
+                f"{cortex.get('project_id')} (local: {cortex.get('local_project_id')})",
+                file=sys.stderr,
+            )
+            print(
+                "   This is the SER ser_542199e3 Break 1 path — the adopt-local-UUID slice "
+                "in cortex closes it. Today's local stores still use the local UUID; "
+                "extension renders the divergence diagnostically.",
+                file=sys.stderr,
+            )
+        link = cortex.get('link') or {}
+        if link.get('linked') is False and link.get('reason'):
+            print(f"   ⚠ user-link best-effort: {link.get('reason')}", file=sys.stderr)
+    else:
+        print(
+            f"\n❌ Cortex: {cortex.get('outcome', 'failed')} "
+            f"(status={cortex.get('status', 0)})",
+            file=sys.stderr,
+        )
+        if cortex.get('reason'):
+            print(f"   {cortex['reason']}", file=sys.stderr)
+        print(
+            "\n   Local writes succeeded — re-run 'empirica project register' "
+            "to retry cortex.",
+            file=sys.stderr,
+        )
