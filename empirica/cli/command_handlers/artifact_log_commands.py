@@ -2188,6 +2188,167 @@ def handle_source_archive_command(args):
             db.close()
 
 
+def handle_sources_map_command(args):
+    """Handle sources-map command — cross-mesh source discoverability view.
+
+    The Maven-POM-for-knowledge view (goal 74d35435): show me what
+    canonical reference material I own + what's discoverable across
+    other practices' Qdrant collections. v1 is a read-only assembly
+    over existing data — no new schema, no new embedding pipeline,
+    no cortex dependency. v2 candidates: incoming-reference graph
+    (who cites my sources), citation-weighted-by-calibration ranking,
+    cortex-side mesh aggregation endpoint.
+
+    Output structure:
+      - owned: sources in MY project's epistemic_sources table
+      - discoverable (--global only): sources from OTHER projects'
+        per-project Qdrant collections, filtered to item_type='source'
+    """
+    db = None
+    try:
+        from empirica.data.session_database import SessionDatabase
+
+        project_id = getattr(args, 'project_id', None)
+        include_global = getattr(args, 'include_global', False)
+        query_text = getattr(args, 'query', None) or ''
+        source_type_filter = getattr(args, 'source_type', None)
+        limit = getattr(args, 'limit', 20)
+        output_format = getattr(args, 'output', 'human')
+
+        db = SessionDatabase()
+
+        if not project_id:
+            try:
+                project_path = R.project_path()
+                if project_path:
+                    project_id = R.project_id_from_db(project_path)
+            except Exception:
+                pass
+
+        if not project_id:
+            print(json.dumps({"ok": False, "error": "Could not resolve project_id"}))
+            return 1
+
+        owned_sources = _query_epistemic_sources(
+            db, project_id, source_type_filter, 'all',
+            include_archived=False,
+        )
+
+        discoverable_sources = []
+        if include_global:
+            discoverable_sources = _query_cross_mesh_sources(
+                project_id=project_id, query_text=query_text,
+                source_type_filter=source_type_filter, limit=limit,
+            )
+
+        payload = {
+            "ok": True,
+            "project_id": project_id,
+            "owned": {
+                "count": len(owned_sources),
+                "sources": owned_sources,
+            },
+            "discoverable": {
+                "count": len(discoverable_sources),
+                "sources": discoverable_sources,
+                "scope": "cross-mesh" if include_global else "skipped (--global not set)",
+            },
+        }
+
+        if output_format == 'json':
+            print(json.dumps(payload, indent=2))
+        else:
+            _print_sources_map_pretty(payload)
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Sources map", getattr(args, 'verbose', False))
+        return None
+    finally:
+        if db is not None:
+            db.close()
+
+
+def _query_cross_mesh_sources(
+    project_id: str, query_text: str = '',
+    source_type_filter: str | None = None, limit: int = 20,
+) -> list[dict]:
+    """Walk other projects' Qdrant collections for type='source' items.
+
+    Filters out the current project (you already see those via owned).
+    Returns dicts with project_id provenance so consumers know who owns
+    each source. Falls back to empty list if Qdrant is unavailable —
+    discoverability is a nice-to-have, not a hard dependency.
+    """
+    try:
+        from empirica.core.qdrant.global_sync import search_cross_project
+    except Exception:
+        return []
+
+    # search_cross_project requires a query — if caller didn't provide
+    # one, use a neutral semantic anchor that still produces results.
+    # Empty string would fail embedding; a generic anchor surfaces a
+    # broad slice ordered by relevance to "source", which is the closest
+    # behaviour to "list recent sources" we can get without redesigning
+    # the underlying API.
+    effective_query = query_text.strip() or "epistemic source"
+
+    try:
+        raw = search_cross_project(
+            query_text=effective_query,
+            exclude_project_id=project_id,
+            limit=limit,
+        )
+    except Exception:
+        return []
+
+    out: list[dict] = []
+    for r in raw:
+        payload = r if isinstance(r, dict) else {}
+        # search_cross_project may not natively filter by type, so we
+        # post-filter on the payload's `type` field that
+        # embed_single_memory_item writes.
+        if payload.get('type') != 'source':
+            continue
+        if source_type_filter and payload.get('source_type') != source_type_filter:
+            continue
+        out.append({
+            'source_id': payload.get('item_id') or payload.get('id'),
+            'project_id': payload.get('project_id'),
+            'text': payload.get('text'),
+            'score': payload.get('score'),
+            'collection_type': payload.get('collection_type'),
+        })
+    return out
+
+
+def _print_sources_map_pretty(payload: dict) -> None:
+    """Human-readable rendering of the sources-map response."""
+    owned = payload.get('owned', {})
+    disc = payload.get('discoverable', {})
+    print(f"📍 Sources map for project {payload.get('project_id','?')[:12]}…")
+    print()
+    print(f"  Owned (locally): {owned.get('count', 0)}")
+    for s in owned.get('sources', [])[:10]:
+        title = s.get('title') or s.get('text') or '?'
+        sid = (s.get('id') or '')[:12]
+        stype = s.get('source_type') or ''
+        layer = s.get('epistemic_layer') or ''
+        print(f"    • {sid}… [{stype}/{layer}] {title[:60]}")
+    if owned.get('count', 0) > 10:
+        print(f"    … +{owned['count'] - 10} more")
+    print()
+    print(f"  Discoverable across mesh: {disc.get('count', 0)} ({disc.get('scope','')})")
+    for s in disc.get('sources', [])[:10]:
+        pid = (s.get('project_id') or '?')[:12]
+        sid = (s.get('source_id') or '')[:12]
+        text = (s.get('text') or '')[:60]
+        score = s.get('score')
+        print(f"    • {sid}… owned-by={pid}… {text}{f' (score={score:.2f})' if score is not None else ''}")
+    if disc.get('count', 0) > 10:
+        print(f"    … +{disc['count'] - 10} more")
+
+
 def handle_source_list_command(args):
     """Handle source-list command — list epistemic sources for a project."""
     db = None

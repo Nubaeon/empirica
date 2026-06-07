@@ -19,6 +19,7 @@ from .artifact_log_commands import (
     handle_source_add_command,
     handle_source_archive_command,
     handle_source_list_command,
+    handle_sources_map_command,
     handle_unknown_list_command,
     handle_unknown_log_command,
     handle_unknown_resolve_command,
@@ -468,6 +469,7 @@ __all__ = [  # noqa: RUF022
     'handle_source_add_command',
     'handle_source_archive_command',
     'handle_source_list_command',
+    'handle_sources_map_command',
     # Sync commands (git notes synchronization)
     'handle_sync_config_command',
     'handle_sync_pull_command',

@@ -855,6 +855,31 @@ def add_checkpoint_parsers(subparsers):
     source_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     source_list_parser.add_argument('--verbose', action='store_true', help='Show detailed info')
 
+    # Source map command — cross-mesh discoverability view (goal 74d35435)
+    sources_map_parser = subparsers.add_parser(
+        'sources-map',
+        help=(
+            'Show the cross-mesh source map for the current project. Locally '
+            'owned sources (from epistemic_sources) plus, with --global, '
+            'sources discoverable across other practices via project-scoped '
+            'Qdrant collections. The Maven-POM-for-knowledge view: who owns '
+            'what canonical reference material across the mesh.'
+        ),
+    )
+    sources_map_parser.add_argument('--project-id',
+        help='Project UUID or name (auto-derived from context)')
+    sources_map_parser.add_argument('--global', dest='include_global', action='store_true',
+        help='Include sources discoverable in other projects\' Qdrant collections (cross-mesh)')
+    sources_map_parser.add_argument('--query',
+        help='Optional semantic search query for cross-mesh discovery (default: empty → recent sources by upload order)')
+    sources_map_parser.add_argument('--type', dest='source_type',
+        help='Filter by source type (document, code, web, api, etc.)')
+    sources_map_parser.add_argument('--limit', type=int, default=20,
+        help='Max cross-mesh results to surface (default: 20)')
+    sources_map_parser.add_argument('--output', choices=['human', 'json'], default='human',
+        help='Output format')
+    sources_map_parser.add_argument('--verbose', action='store_true', help='Show detailed info')
+
     # Source archive command (SOURCES_LIFECYCLE_SPEC Phase 1 — soft-delete)
     source_archive_parser = subparsers.add_parser(
         'source-archive',
