@@ -146,13 +146,19 @@ def test_fresh_schema_includes_visibility():
 
 
 def test_source_in_artifact_tables_map():
-    """visibility list/show must cover sources."""
+    """visibility list/show must cover sources, with the right timestamp column.
+
+    epistemic_sources uses `discovered_at`, not `created_timestamp`, so the
+    visibility queries must read its column name from the table tuple or
+    they fail with `no such column: created_timestamp` at runtime.
+    """
     from empirica.cli.command_handlers.visibility_commands import _ARTIFACT_TABLES
 
     assert 'source' in _ARTIFACT_TABLES
-    table, content_col = _ARTIFACT_TABLES['source']
+    table, content_col, ts_col = _ARTIFACT_TABLES['source']
     assert table == 'epistemic_sources'
     assert content_col == 'title'
+    assert ts_col == 'discovered_at'
 
 
 # ── CLI handler ────────────────────────────────────────────────────────
