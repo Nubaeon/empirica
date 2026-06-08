@@ -540,6 +540,25 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
 
     backoff = _RECONNECT_BASE_SEC
 
+    # Start the liveness probe BEFORE initial catch-up so even an
+    # initial-catch-up hang triggers a hard exit + supervisor restart.
+    # Probe is decoupled from curl + catch-up — it runs its own
+    # bearer-authenticated GET on a periodic cadence, writes the positive
+    # liveness marker on success, and os._exit(2)s on N consecutive misses
+    # past the staleness threshold. Defeats the silent-zombie failure mode
+    # where the held curl stream silently drops AND the catch-up HTTP call
+    # hangs without ever returning (cortex's reported 95-min stall —
+    # 2026-06-08 field report by mesh-support, prop_rbrlwiu7zfgkxm245guu6f2ala).
+    probe = None
+    try:
+        from empirica.core.loop_scheduler.liveness_probe import LivenessProbe
+        probe = LivenessProbe(
+            ai_id=instance_id, loop_name=loop_name, _err_stream=err_stream,
+        )
+        probe.start()
+    except Exception as e:
+        err_stream.write(f"listener: liveness probe start failed (non-fatal): {e}\n")
+
     if _initial_catchup:
         # Catch-up on listener startup. Handles the gap between systemd
         # service start and the first ntfy message.
@@ -736,3 +755,8 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
                 heartbeat.stop(timeout=2.0)
             except Exception as e:
                 err_stream.write(f"listener: heartbeat stop failed (non-fatal): {e}\n")
+        if probe is not None:
+            try:
+                probe.stop(timeout=2.0)
+            except Exception as e:
+                err_stream.write(f"listener: liveness probe stop failed (non-fatal): {e}\n")

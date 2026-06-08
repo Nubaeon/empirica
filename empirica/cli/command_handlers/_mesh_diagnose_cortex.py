@@ -348,17 +348,65 @@ def run_cortex_checks(
     return results
 
 
+_BOX_WIDTH = 90  # outer width including the two │ borders
+
+
+def _wrap_message(prefix_width: int, msg: str, *, max_inner: int) -> list[str]:
+    """Word-wrap a message so each line fits within max_inner chars, on the
+    column to the right of the {glyph}{name} prefix. Returns the message
+    chunks (first chunk goes on the prefix line, subsequent chunks indent
+    under the message column).
+    """
+    available = max_inner - prefix_width
+    if available <= 0:
+        return [msg]
+    chunks: list[str] = []
+    remaining = msg
+    while remaining:
+        if len(remaining) <= available:
+            chunks.append(remaining)
+            break
+        # Break on the last space before `available`, fall back to hard cut.
+        cut = remaining.rfind(" ", 0, available + 1)
+        if cut <= 0:
+            cut = available
+        chunks.append(remaining[:cut].rstrip())
+        remaining = remaining[cut:].lstrip()
+    return chunks
+
+
 def render_results_human(results: list[CheckResult]) -> str:
-    """Box-drawing render per cortex's prop_dd3epjwqyb spec."""
-    lines = ["╭─ Cortex participation ──────────────────────────╮"]
+    """Box-drawing render per cortex's prop_dd3epjwqyb spec.
+
+    Lines wrap rather than overflow the box, and every content line carries
+    a closing │ so the visual frame is intact even at narrower terminals.
+    """
+    inner_width = _BOX_WIDTH - 2  # subtract the two │ borders
+    title = " Cortex participation "
+    header_pad = inner_width - len(title) - 1  # one leading ─
+    lines = [f"╭─{title}{'─' * header_pad}╮"]
     for r in results:
         glyph = {"pass": "✓", "warn": "⚠", "fail": "✗"}.get(r.status, "?")
-        # Truncate to fit roughly 47 chars of content
-        msg = r.message[:80]
-        lines.append(f"│ {glyph} {r.name:32s} {msg}")
+        prefix = f" {glyph} {r.name:32s} "
+        chunks = _wrap_message(len(prefix), r.message, max_inner=inner_width)
+        first = chunks[0] if chunks else ""
+        line_body = f"{prefix}{first}".ljust(inner_width)
+        lines.append(f"│{line_body}│")
+        # Continuation chunks indent under the message column.
+        cont_indent = " " * len(prefix)
+        for cont in chunks[1:]:
+            cont_body = f"{cont_indent}{cont}".ljust(inner_width)
+            lines.append(f"│{cont_body}│")
         if r.fix:
-            lines.append(f"│   → {r.fix[:80]}")
-    lines.append("╰─────────────────────────────────────────────────╯")
+            fix_prefix = "   → "
+            fix_chunks = _wrap_message(
+                len(fix_prefix), r.fix, max_inner=inner_width,
+            )
+            for i, chunk in enumerate(fix_chunks):
+                pre = fix_prefix if i == 0 else " " * len(fix_prefix)
+                body = f"{pre}{chunk}".ljust(inner_width)
+                lines.append(f"│{body}│")
+    lines.append(f"╰{'─' * inner_width}╯")
     return "\n".join(lines)
 
 
