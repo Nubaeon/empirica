@@ -432,6 +432,15 @@ def handle_mesh_diagnose_command(args) -> int:
     cortex_configured = _load_cortex_credentials() is not None
     state = _gather_state(ai_id, cortex_configured)
 
+    # Cortex-side participation checks (opt-in via --cortex). Runs the
+    # local diagnose render first, then appends the cortex panel.
+    cortex_results = None
+    if getattr(args, "cortex", False):
+        cortex_results = _run_cortex_panel(ai_id, getattr(args, "peer", None))
+
+    if getattr(args, "output", "human") == "json":
+        return _emit_diagnose_json(ai_id, state, cortex_results)
+
     print(f"=== mesh diagnose: {ai_id} ===")
     print()
     print(f"  Backend:              {state.backend}")
@@ -452,23 +461,105 @@ def handle_mesh_diagnose_command(args) -> int:
     print(f"  Health: {state.health_color.upper()} -- {state.health_reason}")
     print()
 
+    rc = 0
     if state.health_color == "green":
         print("No action needed.")
-        return 0
-    if not state.service_installed:
-        print(f"Fix: empirica mesh on {ai_id}")
-    elif not state.service_active:
-        print(f"Fix: empirica mesh restart {ai_id}")
-    elif cortex_configured and state.curl_subprocess_pid is None:
-        print(f"Fix: empirica mesh restart {ai_id}  (curl subprocess died; restart re-spawns)")
-    elif (state.last_fire_at_utc
-          and (datetime.now(tz=timezone.utc) - state.last_fire_at_utc).total_seconds() > ZOMBIE_THRESHOLD_SECONDS):
-        print("Likely curl-zombie (TCP died silently while process stayed alive).")
-        print(f"Fix: empirica mesh restart {ai_id}")
     else:
-        print("Manual investigation needed.")
-        print(f"  journalctl --user -u empirica-listener-{ai_id}.service")
-    return 1
+        rc = 1
+        if not state.service_installed:
+            print(f"Fix: empirica mesh on {ai_id}")
+        elif not state.service_active:
+            print(f"Fix: empirica mesh restart {ai_id}")
+        elif cortex_configured and state.curl_subprocess_pid is None:
+            print(f"Fix: empirica mesh restart {ai_id}  (curl subprocess died; restart re-spawns)")
+        elif (state.last_fire_at_utc
+              and (datetime.now(tz=timezone.utc) - state.last_fire_at_utc).total_seconds() > ZOMBIE_THRESHOLD_SECONDS):
+            print("Likely curl-zombie (TCP died silently while process stayed alive).")
+            print(f"Fix: empirica mesh restart {ai_id}")
+        else:
+            print("Manual investigation needed.")
+            print(f"  journalctl --user -u empirica-listener-{ai_id}.service")
+
+    if cortex_results is not None:
+        from ._mesh_diagnose_cortex import (
+            aggregate_exit_code,
+            render_results_human,
+        )
+        print()
+        print(render_results_human(cortex_results))
+        cortex_rc = aggregate_exit_code(cortex_results)
+        if cortex_rc > rc:
+            rc = cortex_rc
+
+    return rc
+
+
+def _run_cortex_panel(ai_id: str, peer: str | None):
+    """Load cortex creds + run the cortex-side check panel. Returns the
+    list of CheckResult or None on credential failure (in which case
+    the diagnose flow continues without a cortex panel)."""
+    cortex_block = _load_cortex_credentials()  # already-unwrapped flat dict
+    if not cortex_block:
+        sys.stderr.write(
+            "--cortex requested but no cortex creds in ~/.empirica/credentials.yaml; "
+            "skipping cortex-side panel.\n"
+        )
+        return None
+    cortex_url = cortex_block.get("url")
+    api_key = cortex_block.get("api_key")
+    if not (cortex_url and api_key):
+        sys.stderr.write(
+            "--cortex requested but credentials.yaml cortex block missing url/api_key; "
+            "skipping cortex-side panel.\n"
+        )
+        return None
+    # ntfy block lives at top level of credentials.yaml; reload to pick it up.
+    ntfy_url = None
+    ntfy_token = None
+    try:
+        import yaml
+        with CREDENTIALS_YAML.open() as f:
+            full = yaml.safe_load(f) or {}
+        ntfy_block = full.get("ntfy") or {}
+        ntfy_url = ntfy_block.get("url")
+        ntfy_token = ntfy_block.get("token")
+    except Exception:
+        pass
+    from ._mesh_diagnose_cortex import run_cortex_checks
+    return run_cortex_checks(
+        ai_id, cortex_url=cortex_url, api_key=api_key,
+        ntfy_url=ntfy_url, ntfy_token=ntfy_token, peer=peer,
+    )
+
+
+def _emit_diagnose_json(ai_id: str, state, cortex_results) -> int:
+    """JSON output path for --output json."""
+    payload = {
+        "ok": True,
+        "ai_id": ai_id,
+        "local": {
+            "backend": state.backend,
+            "service_installed": state.service_installed,
+            "service_active": state.service_active,
+            "listener_process_pid": state.listener_process_pid,
+            "curl_subprocess_pid": state.curl_subprocess_pid,
+            "last_fire_at_utc": (state.last_fire_at_utc.isoformat()
+                                 if state.last_fire_at_utc else None),
+            "fires_last_hour": state.fires_last_hour,
+            "loops_registered": state.loops_registered,
+            "health_color": state.health_color,
+            "health_reason": state.health_reason,
+        },
+    }
+    rc = 0 if state.health_color == "green" else 1
+    if cortex_results is not None:
+        from ._mesh_diagnose_cortex import aggregate_exit_code
+        payload["cortex"] = [r.to_dict() for r in cortex_results]
+        cortex_rc = aggregate_exit_code(cortex_results)
+        if cortex_rc > rc:
+            rc = cortex_rc
+    print(json.dumps(payload, indent=2))
+    return rc
 
 
 def handle_mesh_restart_command(args) -> int:

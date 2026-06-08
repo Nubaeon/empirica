@@ -37,6 +37,23 @@ def add_mesh_parsers(subparsers) -> None:
         help="Deep per-instance diagnostic + suggest exact fix command",
     )
     diag.add_argument("instance", help="ai_id to diagnose")
+    diag.add_argument(
+        "--cortex", action="store_true",
+        help="Also run cortex-side participation checks (identity + channels "
+             "endpoint + listener subscription URL + ntfy ACL probe + mesh "
+             "agreements). Cross-correlates the local view with cortex's view "
+             "of this practitioner so silent-failure classes (label mismatch, "
+             "topic drift, ACL 403, silent strand) surface at one verb.",
+    )
+    diag.add_argument(
+        "--peer", metavar="CANONICAL",
+        help="With --cortex, also probe mesh_sharing_agreement with this peer "
+             "(canonical 3-form like 'empirica.philipp.empirica-autonomy'). "
+             "Fails if the agreement row is missing.",
+    )
+    diag.add_argument(
+        "--output", choices=["human", "json"], default="human",
+    )
 
     # restart
     restart = mesh_subs.add_parser(
