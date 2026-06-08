@@ -71,11 +71,12 @@ def _run_gc(tmp_path: Path, monkeypatch, *, apply: bool = False,
     """Invoke the gc handler with HOME pinned to tmp_path."""
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    import io
+    import sys
+
     from empirica.cli.command_handlers.cockpit_commands import (
         handle_listener_gc_command,
     )
-    import io
-    import sys
     captured = io.StringIO()
     monkeypatch.setattr(sys, "stdout", captured)
     args = SimpleNamespace(apply=apply, age_days=age_days, output="json")
@@ -119,7 +120,7 @@ def test_gc_flags_bare_orchestration_events_as_legacy(tmp_path, monkeypatch):
                  topic="ntfy:orchestration-events?tags=empirica.david.empirica-cortex")
     _seed_service_unit(tmp_path, "empirica-cortex")  # has service
     _seed_health_marker(tmp_path, "empirica-cortex", age_seconds=60)  # fresh health
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch)
     assert payload["pruned_count"] == 1
     reasons = payload["pruned"][0]["reasons"]
     assert any("legacy_topic" in r for r in reasons)
@@ -132,7 +133,7 @@ def test_gc_flags_per_org_topic_as_legacy(tmp_path, monkeypatch):
                  topic="ntfy:empirica-orchestration-events?tags=empirica.david.empirica-cortex")
     _seed_service_unit(tmp_path, "empirica-cortex")
     _seed_health_marker(tmp_path, "empirica-cortex", age_seconds=60)
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch)
     assert payload["pruned_count"] == 1
     reasons = payload["pruned"][0]["reasons"]
     assert any("legacy_topic" in r for r in reasons)
@@ -145,7 +146,7 @@ def test_gc_keeps_per_tenant_topic(tmp_path, monkeypatch):
                  topic="ntfy:empirica-orchestration-events-david?tags=empirica.david.empirica-cortex")
     _seed_service_unit(tmp_path, "empirica-cortex")
     _seed_health_marker(tmp_path, "empirica-cortex", age_seconds=60)
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch)
     assert payload["pruned_count"] == 0
     assert payload["kept_count"] == 1
 
@@ -158,7 +159,7 @@ def test_gc_flags_no_service_and_no_recent_health(tmp_path, monkeypatch):
     → file is an orphan."""
     _seed_active(tmp_path, "empirica-mesh-support",
                  topic="ntfy:empirica-orchestration-events-david?tags=empirica.david.empirica-mesh-support")
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch)
     assert payload["pruned_count"] == 1
     reasons = payload["pruned"][0]["reasons"]
     assert any("no_service_or_health" in r for r in reasons)
@@ -169,7 +170,7 @@ def test_gc_keeps_when_service_exists(tmp_path, monkeypatch):
     _seed_active(tmp_path, "empirica-cortex",
                  topic="ntfy:empirica-orchestration-events-david?tags=empirica.david.empirica-cortex")
     _seed_service_unit(tmp_path, "empirica-cortex")
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch)
     assert payload["pruned_count"] == 0
     assert payload["kept_count"] == 1
 
@@ -180,7 +181,7 @@ def test_gc_keeps_when_health_marker_fresh_even_without_service(tmp_path, monkey
     _seed_active(tmp_path, "empirica-extension",
                  topic="ntfy:empirica-orchestration-events-david?tags=empirica.david.empirica-extension")
     _seed_health_marker(tmp_path, "empirica-extension", age_seconds=60)
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch)
     assert payload["pruned_count"] == 0
     assert payload["kept_count"] == 1
 
@@ -190,7 +191,7 @@ def test_gc_flags_when_health_marker_stale_and_no_service(tmp_path, monkeypatch)
     _seed_active(tmp_path, "empirica-autonomy",
                  topic="ntfy:empirica-orchestration-events-david?tags=empirica.david.empirica-autonomy")
     _seed_health_marker(tmp_path, "empirica-autonomy", age_seconds=3600)  # 1hr stale
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch)
     assert payload["pruned_count"] == 1
     reasons = payload["pruned"][0]["reasons"]
     assert any("no_service_or_health" in r for r in reasons)
@@ -207,7 +208,7 @@ def test_gc_flags_old_armed_at_with_no_wake(tmp_path, monkeypatch):
                  armed_at=old_armed)
     _seed_service_unit(tmp_path, "empirica-cortex")
     _seed_health_marker(tmp_path, "empirica-cortex", age_seconds=60)
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch, age_days=7)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch, age_days=7)
     assert payload["pruned_count"] == 1
     reasons = payload["pruned"][0]["reasons"]
     assert any("stale" in r for r in reasons)
@@ -223,7 +224,7 @@ def test_gc_keeps_old_armed_at_with_recent_wake(tmp_path, monkeypatch):
                  armed_at=old_armed, last_wake_at=recent_wake)
     _seed_service_unit(tmp_path, "empirica-cortex")
     _seed_health_marker(tmp_path, "empirica-cortex", age_seconds=60)
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch, age_days=7)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch, age_days=7)
     assert payload["pruned_count"] == 0
     assert payload["kept_count"] == 1
 
@@ -238,11 +239,11 @@ def test_gc_age_days_respected(tmp_path, monkeypatch):
     _seed_health_marker(tmp_path, "empirica-cortex", age_seconds=60)
 
     # 7d threshold: 3d-old not stale
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch, age_days=7)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch, age_days=7)
     assert payload["pruned_count"] == 0
 
     # 1d threshold: 3d-old is stale
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch, age_days=1)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch, age_days=1)
     assert payload["pruned_count"] == 1
 
 
@@ -254,7 +255,7 @@ def test_gc_apply_removes_file(tmp_path, monkeypatch):
     p = _seed_active(tmp_path, "empirica-cortex",
                      topic="ntfy:orchestration-events?tags=cortex")
     assert p.exists()
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch, apply=True)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch, apply=True)
     assert payload["pruned_count"] == 1
     assert payload["pruned"][0]["removed"] is True
     assert not p.exists()
@@ -268,7 +269,7 @@ def test_gc_handles_corrupt_active_file(tmp_path, monkeypatch):
     (tmp_path / ".empirica").mkdir()
     bad = tmp_path / ".empirica" / "listener_active_corrupt_corrupt-inbox.json"
     bad.write_text("not json {{{")
-    rc, payload, _ = _run_gc(tmp_path, monkeypatch)
+    _rc, payload, _ = _run_gc(tmp_path, monkeypatch)
     assert payload["pruned_count"] == 1
     reasons = payload["pruned"][0]["reasons"]
     assert any("unreadable" in r for r in reasons)

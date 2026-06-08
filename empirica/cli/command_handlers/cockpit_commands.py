@@ -1845,6 +1845,177 @@ def handle_listener_off_command(args) -> int:
     return _emit(args, payload, summary)
 
 
+def _gc_installed_service_ai_ids(home: Path) -> set[str]:
+    """Inventory of empirica-listener-* services on disk (systemd-user + launchd).
+
+    Used by the no_service_or_health prune criterion — read once rather than
+    per-file so a fleet GC stays fast.
+    """
+    ids: set[str] = set()
+    systemd_dir = home / '.config' / 'systemd' / 'user'
+    launchd_dir = home / 'Library' / 'LaunchAgents'
+    try:
+        for unit in systemd_dir.glob('empirica-listener-*.service'):
+            ids.add(unit.stem.removeprefix('empirica-listener-'))
+    except OSError:
+        pass
+    try:
+        for plist in launchd_dir.glob('com.empirica.listener.*.plist'):
+            ids.add(plist.stem.removeprefix('com.empirica.listener.'))
+    except OSError:
+        pass
+    return ids
+
+
+def _gc_legacy_topic_reason(topic: str) -> str | None:
+    """Classify a listener_active topic against the retired-topic patterns.
+
+    Returns a human-readable reason string for prune, or None if the topic
+    matches a current per-tenant shape.
+    """
+    if not topic:
+        return None
+    stripped = topic.replace('ntfy:', '', 1).split('?', 1)[0]
+    if stripped == 'orchestration-events':
+        return 'legacy_topic: bare orchestration-events (retired)'
+    # Per-org pattern like `empirica-orchestration-events` has 2 dashes;
+    # per-tenant `empirica-orchestration-events-david` has 3+. Below 3
+    # dashes → pre-T16/T17 per-org form.
+    if 'orchestration-events' in stripped and stripped.count('-') < 3:
+        return f'legacy_topic: pre-tenant per-org form {stripped!r}'
+    return None
+
+
+def _gc_no_service_or_health_reason(
+    ai_id: str, empirica_dir: Path, installed_ids: set[str], now: float,
+) -> str | None:
+    """Return prune reason if neither a persistent service nor a fresh
+    health marker is present for this ai_id."""
+    if not ai_id or ai_id in installed_ids:
+        return None
+    health_file = empirica_dir / f'listener_health_{ai_id}.json'
+    if health_file.exists():
+        try:
+            if now - health_file.stat().st_mtime <= 300:  # 5 min
+                return None
+        except OSError:
+            pass
+    return (
+        f'no_service_or_health: no empirica-listener-{ai_id}.service '
+        f'and no recent health marker'
+    )
+
+
+def _gc_stale_reason(
+    armed_at: float, last_wake_at: float, now: float,
+    age_threshold_sec: float, age_days: int,
+) -> str | None:
+    """Return prune reason if the active file's arm/wake history is older
+    than the age threshold."""
+    armed_age_sec = (now - armed_at) if armed_at else float('inf')
+    if armed_age_sec <= age_threshold_sec:
+        return None
+    if last_wake_at != 0 and (now - last_wake_at) <= age_threshold_sec:
+        return None
+    return (
+        f'stale: armed {int(armed_age_sec // 86400)}d ago, '
+        f'no recent wake activity (threshold {age_days}d)'
+    )
+
+
+def _gc_evaluate_file(
+    active_file: Path, empirica_dir: Path, installed_ids: set[str],
+    now: float, age_threshold_sec: float, age_days: int, apply: bool,
+) -> tuple[dict, bool]:
+    """Evaluate one listener_active file against the three criteria.
+
+    Returns (entry, was_pruned). `entry` is the JSON-shape dict for the
+    payload; `was_pruned` distinguishes pruned vs kept buckets.
+    """
+    try:
+        data = _json.loads(active_file.read_text(encoding='utf-8'))
+    except (OSError, _json.JSONDecodeError) as e:
+        # Unreadable → always-safe prune candidate.
+        entry: dict = {
+            'file': str(active_file),
+            'reasons': [f'unreadable: {e}'],
+            'removed': False,
+        }
+        if apply:
+            try:
+                active_file.unlink()
+                entry['removed'] = True
+            except OSError as rm_err:
+                entry['error'] = str(rm_err)
+        return entry, True
+
+    ai_id = data.get('ai_id') or ''
+    topic = data.get('topic') or ''
+    armed_at = float(data.get('armed_at') or 0)
+    last_wake_at = float(data.get('last_wake_at') or 0)
+
+    reasons: list[str] = []
+    for reason in (
+        _gc_legacy_topic_reason(topic),
+        _gc_no_service_or_health_reason(ai_id, empirica_dir, installed_ids, now),
+        _gc_stale_reason(armed_at, last_wake_at, now, age_threshold_sec, age_days),
+    ):
+        if reason:
+            reasons.append(reason)
+
+    if not reasons:
+        return {
+            'file': str(active_file),
+            'ai_id': ai_id,
+            'topic': topic,
+            'armed_at': armed_at,
+        }, False
+
+    entry = {
+        'file': str(active_file),
+        'ai_id': ai_id,
+        'topic': topic,
+        'armed_at': armed_at,
+        'reasons': reasons,
+        'removed': False,
+    }
+    if apply:
+        try:
+            active_file.unlink()
+            entry['removed'] = True
+        except OSError as e:
+            entry['error'] = str(e)
+    return entry, True
+
+
+def _gc_render_summary(pruned: list[dict], kept: list[dict],
+                       apply: bool, age_days: int) -> str:
+    """Build the human-readable summary string for GC results."""
+    lines = [
+        f'listener gc — {"APPLIED" if apply else "DRY RUN"} '
+        f'(age threshold: {age_days}d)',
+        f'  Pruned: {len(pruned)}',
+        f'  Kept:   {len(kept)}',
+    ]
+    if pruned:
+        lines.append('')
+        for entry in pruned[:20]:
+            tag = '✓ removed' if entry.get('removed') else (
+                '(would remove)' if not apply else f'! error: {entry.get("error")}'
+            )
+            reasons = '; '.join(entry.get('reasons', []))
+            lines.append(
+                f'  - {Path(entry["file"]).name}  {tag}\n'
+                f'      reasons: {reasons}'
+            )
+        if len(pruned) > 20:
+            lines.append(f'  … and {len(pruned) - 20} more')
+    if not apply and pruned:
+        lines.append('')
+        lines.append('  Run with --apply to actually remove.')
+    return '\n'.join(lines)
+
+
 def handle_listener_gc_command(args) -> int:
     """Garbage-collect stale ~/.empirica/listener_active_*.json files.
 
@@ -1886,148 +2057,21 @@ def handle_listener_gc_command(args) -> int:
     if not empirica_dir.is_dir():
         return _emit(
             args, {'ok': True, 'dry_run': not apply, 'pruned': [], 'kept': []},
-            f'No ~/.empirica/ directory — nothing to GC.',
+            'No ~/.empirica/ directory — nothing to GC.',
         )
 
     age_threshold_sec = age_days * 24 * 60 * 60
     now = _time.time()
-
-    # Inventory of services on disk for the no_service check (one read
-    # rather than per-file fanout).
-    systemd_unit_dir = home / '.config' / 'systemd' / 'user'
-    launchd_dir = home / 'Library' / 'LaunchAgents'
-    installed_service_ai_ids: set[str] = set()
-    try:
-        for unit in systemd_unit_dir.glob('empirica-listener-*.service'):
-            installed_service_ai_ids.add(unit.stem.removeprefix('empirica-listener-'))
-    except OSError:
-        pass
-    try:
-        for plist in launchd_dir.glob('com.empirica.listener.*.plist'):
-            installed_service_ai_ids.add(
-                plist.stem.removeprefix('com.empirica.listener.')
-            )
-    except OSError:
-        pass
+    installed_ids = _gc_installed_service_ai_ids(home)
 
     pruned: list[dict] = []
     kept: list[dict] = []
-
     for active_file in sorted(empirica_dir.glob('listener_active_*.json')):
-        try:
-            data = _json.loads(active_file.read_text(encoding='utf-8'))
-        except (OSError, _json.JSONDecodeError) as e:
-            # Unreadable → prune candidate (corrupt). Always-safe.
-            entry = {
-                'file': str(active_file),
-                'reasons': [f'unreadable: {e}'],
-                'removed': False,
-            }
-            if apply:
-                try:
-                    active_file.unlink()
-                    entry['removed'] = True
-                except OSError as rm_err:
-                    entry['error'] = str(rm_err)
-            pruned.append(entry)
-            continue
-
-        ai_id = data.get('ai_id') or ''
-        topic = data.get('topic') or ''
-        armed_at = float(data.get('armed_at') or 0)
-        last_wake_at = float(data.get('last_wake_at') or 0)
-
-        reasons: list[str] = []
-
-        # Criterion 1: legacy topic
-        # Retired patterns: bare `orchestration-events` (no `<org>-` prefix)
-        # OR per-org without `-<tenant>-` segment.
-        if topic:
-            stripped = topic.replace('ntfy:', '', 1).split('?', 1)[0]
-            if stripped == 'orchestration-events':
-                reasons.append('legacy_topic: bare orchestration-events (retired)')
-            elif 'orchestration-events' in stripped and stripped.count('-') < 3:
-                # Per-org pattern like `empirica-orchestration-events`
-                # has 2 dashes; per-tenant `empirica-orchestration-events-david`
-                # has 3+. Below 3 dashes → pre-T16/T17 per-org form.
-                reasons.append(
-                    f'legacy_topic: pre-tenant per-org form {stripped!r}'
-                )
-
-        # Criterion 2: no_service_or_health
-        if ai_id and ai_id not in installed_service_ai_ids:
-            health_file = empirica_dir / f'listener_health_{ai_id}.json'
-            health_fresh = False
-            if health_file.exists():
-                try:
-                    age = now - health_file.stat().st_mtime
-                    health_fresh = age <= 300  # 5 min
-                except OSError:
-                    pass
-            if not health_fresh:
-                reasons.append(
-                    f'no_service_or_health: no empirica-listener-{ai_id}.service '
-                    f'and no recent health marker'
-                )
-
-        # Criterion 3: stale
-        # Pruneable when both armed_at and last_wake_at are older than the
-        # age threshold (or last_wake_at is unset and armed_at is stale).
-        armed_age_sec = (now - armed_at) if armed_at else float('inf')
-        if armed_age_sec > age_threshold_sec:
-            if last_wake_at == 0 or (now - last_wake_at) > age_threshold_sec:
-                reasons.append(
-                    f'stale: armed {int(armed_age_sec // 86400)}d ago, '
-                    f'no recent wake activity (threshold {age_days}d)'
-                )
-
-        if not reasons:
-            kept.append({
-                'file': str(active_file),
-                'ai_id': ai_id,
-                'topic': topic,
-                'armed_at': armed_at,
-            })
-            continue
-
-        entry = {
-            'file': str(active_file),
-            'ai_id': ai_id,
-            'topic': topic,
-            'armed_at': armed_at,
-            'reasons': reasons,
-            'removed': False,
-        }
-        if apply:
-            try:
-                active_file.unlink()
-                entry['removed'] = True
-            except OSError as e:
-                entry['error'] = str(e)
-        pruned.append(entry)
-
-    summary_lines = [
-        f'listener gc — {"APPLIED" if apply else "DRY RUN"} '
-        f'(age threshold: {age_days}d)',
-        f'  Pruned: {len(pruned)}',
-        f'  Kept:   {len(kept)}',
-    ]
-    if pruned:
-        summary_lines.append('')
-        for entry in pruned[:20]:
-            tag = '✓ removed' if entry.get('removed') else (
-                '(would remove)' if not apply else f'! error: {entry.get("error")}'
-            )
-            reasons = '; '.join(entry.get('reasons', []))
-            summary_lines.append(
-                f'  - {Path(entry["file"]).name}  {tag}\n'
-                f'      reasons: {reasons}'
-            )
-        if len(pruned) > 20:
-            summary_lines.append(f'  … and {len(pruned) - 20} more')
-    if not apply and pruned:
-        summary_lines.append('')
-        summary_lines.append('  Run with --apply to actually remove.')
+        entry, was_pruned = _gc_evaluate_file(
+            active_file, empirica_dir, installed_ids,
+            now, age_threshold_sec, age_days, apply,
+        )
+        (pruned if was_pruned else kept).append(entry)
 
     payload = {
         'ok': True,
@@ -2038,7 +2082,7 @@ def handle_listener_gc_command(args) -> int:
         'pruned': pruned,
         'kept': kept,
     }
-    return _emit(args, payload, '\n'.join(summary_lines))
+    return _emit(args, payload, _gc_render_summary(pruned, kept, apply, age_days))
 
 
 _LISTENER_DISPATCH = {
