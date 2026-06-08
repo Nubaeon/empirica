@@ -39,8 +39,14 @@ Three tool calls. CLI handles the rest.
 ### 1. `empirica listener on --output json`
 
 Auto-resolves: `--ai-id` from `.empirica/project.yaml` (or pass explicitly),
-`--name` defaults to `<ai_id>-inbox`, topic defaults to canonical
-`ntfy:orchestration-events?tags=<ai_id>`.
+`--name` defaults to `<ai_id>-inbox`, topic is queried per-tenant from
+cortex's `GET /v1/users/me/notification-channels` registry (returns
+`<org>-orchestration-events-<tenant>` for the calling tenant — post-T16/T17
+isolation). The bare `orchestration-events` topic is RETIRED — cortex
+collapsed publish to per-tenant only and no longer fans out the bare
+fallback. Any listener still pinned to the bare topic receives zero
+traffic and must restart to pick up the per-tenant resolution from the
+channels endpoint.
 
 Two possible response shapes:
 
@@ -140,7 +146,9 @@ its `additionalContext`).
 external publisher (Cortex)
         │ HTTP POST with X-Tags including the target ai_id
         ▼
-   ntfy server (orchestration-events topic)
+   ntfy server (per-tenant topic, e.g.
+   <org>-orchestration-events-<tenant>;
+   resolved from /v1/users/me/notification-channels)
         │ held HTTP stream
         ▼
    ┌──────────────────────────────────────────────────┐
