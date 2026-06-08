@@ -227,6 +227,11 @@ def test_stream_drop_triggers_catchup_then_reconnect(monkeypatch):
     (captures any missed events from the drop window) then reconnects
     with backoff. The catch-up-on-drop is the key safety property."""
     from empirica.config.credentials_loader import get_credentials_loader
+    # Bypass version-drift exit so the post-drop reconnect path actually
+    # reaches _sleep(). When the installed package version on the test
+    # host differs from the in-process __version__, _check_version_drift
+    # otherwise raises ListenerUpgraded and the test never sees the sleep.
+    monkeypatch.setenv("EMPIRICA_LISTENER_NO_DRIFT_EXIT", "1")
     loader = get_credentials_loader()
     monkeypatch.setattr(loader, "get_ntfy_config", lambda: {
         "url": "https://ntfy.test", "topic": "t",

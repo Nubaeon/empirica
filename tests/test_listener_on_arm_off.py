@@ -65,18 +65,94 @@ def test_resolve_canonical_ai_id_uses_explicit_flag():
     assert _resolve_canonical_ai_id(args) == 'explicit-ai'
 
 
-def test_resolve_canonical_ai_id_returns_none_when_unresolvable():
+def test_resolve_canonical_ai_id_returns_none_when_unresolvable(tmp_path, monkeypatch):
+    """All five priority steps return nothing → None."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv('EMPIRICA_AI_ID', raising=False)
+    # tmp_path has no .empirica/project.yaml; basename(tmp_path) is
+    # non-empty so basename step would normally return, but we mock
+    # Path.cwd().name to '' to exercise the all-empty branch.
     args = _make_args(ai_id=None)
-    with patch('empirica.utils.session_resolver.InstanceResolver.ai_id',
-               return_value=None):
+    with patch(
+        'empirica.cli.command_handlers.cockpit_commands.Path.cwd',
+        return_value=Path('/'),
+    ), patch(
+        'empirica.utils.session_resolver.InstanceResolver.ai_id',
+        return_value=None,
+    ):
         assert _resolve_canonical_ai_id(args) is None
 
 
-def test_resolve_canonical_ai_id_falls_back_to_resolver():
+def test_resolve_canonical_ai_id_env_override_wins_over_cwd(tmp_path, monkeypatch):
+    """EMPIRICA_AI_ID env var wins over cwd-based resolution.
+
+    Codex/Kimi/ecodex-lab launch pattern: harness sets EMPIRICA_AI_ID at
+    process start so identity is explicit regardless of where the
+    process happens to be running from.
+    """
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv('EMPIRICA_AI_ID', 'launched-from-env')
+    args = _make_args(ai_id=None)
+    assert _resolve_canonical_ai_id(args) == 'launched-from-env'
+
+
+def test_resolve_canonical_ai_id_reads_cwd_project_yaml(tmp_path, monkeypatch):
+    """cwd/.empirica/project.yaml ai_id field wins over basename + resolver.
+
+    This is the lab→ecodex-lab case ecodex flagged in
+    prop_sdjcbttkcneptjatmvsc5tmkbq: practitioner running from
+    ~/empirical-ai/ecodex-lab declares `ai_id: ecodex-lab` in
+    project.yaml; the resolver must honor that even when the
+    session-bound InstanceResolver would return the unrelated `ecodex`.
+    """
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv('EMPIRICA_AI_ID', raising=False)
+    (tmp_path / '.empirica').mkdir()
+    (tmp_path / '.empirica' / 'project.yaml').write_text(
+        'ai_id: ecodex-lab\n', encoding='utf-8',
+    )
     args = _make_args(ai_id=None)
     with patch('empirica.utils.session_resolver.InstanceResolver.ai_id',
-               return_value='resolved-ai'):
-        assert _resolve_canonical_ai_id(args) == 'resolved-ai'
+               return_value='ecodex'):
+        # Without the fix, InstanceResolver returned 'ecodex' (wrong).
+        # With the fix, project.yaml resolves to 'ecodex-lab' first.
+        assert _resolve_canonical_ai_id(args) == 'ecodex-lab'
+
+
+def test_resolve_canonical_ai_id_falls_back_to_cwd_basename(tmp_path, monkeypatch):
+    """No flag, no env, no project.yaml → basename(cwd) (strict-canonical).
+
+    `empirica-` prefix kept per 1.11.x policy. So a session in
+    `~/empirical-ai/empirica-extension` with no project.yaml resolves
+    to `empirica-extension`, not the stripped `extension`.
+    """
+    monkeypatch.delenv('EMPIRICA_AI_ID', raising=False)
+    practice_dir = tmp_path / 'empirica-extension'
+    practice_dir.mkdir()
+    monkeypatch.chdir(practice_dir)
+    args = _make_args(ai_id=None)
+    with patch('empirica.utils.session_resolver.InstanceResolver.ai_id',
+               return_value='wrong-session-pointer'):
+        assert _resolve_canonical_ai_id(args) == 'empirica-extension'
+
+
+def test_resolve_canonical_ai_id_falls_back_to_instance_resolver(tmp_path, monkeypatch):
+    """Final fallback: InstanceResolver.ai_id() when cwd has no basename.
+
+    Edge case — only kicks in at filesystem root or other no-basename
+    paths. Documented as last-resort because it's session-bound, not
+    cwd-bound.
+    """
+    monkeypatch.delenv('EMPIRICA_AI_ID', raising=False)
+    args = _make_args(ai_id=None)
+    with patch(
+        'empirica.cli.command_handlers.cockpit_commands.Path.cwd',
+        return_value=Path('/'),
+    ), patch(
+        'empirica.utils.session_resolver.InstanceResolver.ai_id',
+        return_value='resolver-fallback',
+    ):
+        assert _resolve_canonical_ai_id(args) == 'resolver-fallback'
 
 
 # ─── on: short-circuit on persistent service ──────────────────────────
@@ -242,10 +318,21 @@ def test_on_writes_placeholder_state_file(tmp_path, monkeypatch):
     assert data['mode'] == 'standalone'  # distinguishes from tail-mode
 
 
-def test_on_errors_when_ai_id_unresolved(capsys):
+def test_on_errors_when_ai_id_unresolved(capsys, monkeypatch):
+    """Every priority step returns nothing → handler errors with 'ai_id unresolved'.
+
+    Mocks Path.cwd() to filesystem root (empty basename) so the new
+    cwd-anchored resolver can't pick up the test runner's cwd.
+    """
+    monkeypatch.delenv('EMPIRICA_AI_ID', raising=False)
     args = _make_args(ai_id=None)
-    with patch('empirica.utils.session_resolver.InstanceResolver.ai_id',
-               return_value=None):
+    with patch(
+        'empirica.cli.command_handlers.cockpit_commands.Path.cwd',
+        return_value=Path('/'),
+    ), patch(
+        'empirica.utils.session_resolver.InstanceResolver.ai_id',
+        return_value=None,
+    ):
         rc = handle_listener_on_command(args)
     assert rc == 1
     out = json.loads(capsys.readouterr().out)
@@ -301,9 +388,15 @@ def test_arm_errors_without_task_id(capsys):
 
 def test_arm_errors_when_name_unresolved(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(Path, 'home', classmethod(lambda cls: tmp_path))
+    monkeypatch.delenv('EMPIRICA_AI_ID', raising=False)
     args = _make_args(ai_id=None, name=None, task_id='tk_x')
-    with patch('empirica.utils.session_resolver.InstanceResolver.ai_id',
-               return_value=None):
+    with patch(
+        'empirica.cli.command_handlers.cockpit_commands.Path.cwd',
+        return_value=Path('/'),
+    ), patch(
+        'empirica.utils.session_resolver.InstanceResolver.ai_id',
+        return_value=None,
+    ):
         rc = handle_listener_arm_command(args)
     assert rc == 1
     out = json.loads(capsys.readouterr().out)
@@ -369,10 +462,16 @@ def test_off_handles_placeholder_task_id(tmp_path, monkeypatch, capsys):
     assert 'unregister' in out['next_step']['after_stop']
 
 
-def test_off_errors_when_name_unresolved(capsys):
+def test_off_errors_when_name_unresolved(capsys, monkeypatch):
+    monkeypatch.delenv('EMPIRICA_AI_ID', raising=False)
     args = _make_args(ai_id=None, name=None)
-    with patch('empirica.utils.session_resolver.InstanceResolver.ai_id',
-               return_value=None):
+    with patch(
+        'empirica.cli.command_handlers.cockpit_commands.Path.cwd',
+        return_value=Path('/'),
+    ), patch(
+        'empirica.utils.session_resolver.InstanceResolver.ai_id',
+        return_value=None,
+    ):
         rc = handle_listener_off_command(args)
     assert rc == 1
     out = json.loads(capsys.readouterr().out)

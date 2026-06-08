@@ -1516,8 +1516,21 @@ _LOOP_DISPATCH = {
 def _resolve_canonical_ai_id(args) -> str | None:
     """Resolve ai_id for the canonical mesh listener (soft — returns None on failure).
 
-    Priority: --ai-id flag > .empirica/project.yaml ai_id field >
-    basename(project_path) [strict-canonical, prefix kept] > None.
+    Priority (cwd-anchored, mirrors session-init.py:_resolve_ai_id_for_session):
+      1. --ai-id flag (explicit caller intent)
+      2. EMPIRICA_AI_ID env var (explicit override — codex/Kimi/ecodex-lab
+         pattern that launches with a declared practitioner)
+      3. <cwd>/.empirica/project.yaml `ai_id` field (declared practitioner)
+      4. basename(cwd) [strict-canonical, empirica- prefix KEPT per 1.11.x]
+      5. InstanceResolver.ai_id() — TTY/session-bound fallback (last resort
+         because it can return the GLOBAL active-instance pointer, which is
+         wrong when the caller is in a different practice's cwd)
+      6. None
+
+    Closes ecodex prop_sdjcbttkcneptjatmvsc5tmkbq + parent prop_3pptt:
+    a practitioner running in its own practice dir (e.g. cwd=
+    ~/empirical-ai/ecodex-lab) was getting the session-bound resolver's
+    answer (`ecodex`) instead of `ecodex-lab`. Steps 2–4 close that gap.
 
     Distinct from `_resolve_listener_ai_id` (used by `loop listen-install`)
     which falls back to instance_id and raises if no instance.
@@ -1525,6 +1538,30 @@ def _resolve_canonical_ai_id(args) -> str | None:
     explicit = getattr(args, 'ai_id', None)
     if explicit:
         return explicit
+
+    import os as _os
+    env_override = _os.environ.get('EMPIRICA_AI_ID', '').strip()
+    if env_override:
+        return env_override
+
+    try:
+        import yaml as _yaml
+        proj_yaml = Path.cwd() / '.empirica' / 'project.yaml'
+        if proj_yaml.exists():
+            cfg = _yaml.safe_load(proj_yaml.read_text()) or {}
+            declared = cfg.get('ai_id')
+            if declared:
+                return str(declared)
+    except Exception:
+        pass
+
+    try:
+        basename = Path.cwd().name
+        if basename:
+            return basename
+    except Exception:
+        pass
+
     try:
         from empirica.utils.session_resolver import InstanceResolver
         ai_id = InstanceResolver.ai_id()
