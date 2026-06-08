@@ -212,10 +212,16 @@ class InstanceResolver:
     ) -> 'str | None':
         """Resolve the canonical ai_id.
 
-        Convention (David, 2026-05-16): the AI is identified by its
-        home project's basename (stripping `empirica-` prefix where
-        present). Source-of-truth is `.empirica/project.yaml`'s
-        `ai_id` field (written by setup-claude-code at project init).
+        Strict-canonical convention: the AI is identified by its home
+        project's basename — **prefix KEPT**. `empirica-cortex` stays
+        `empirica-cortex`, not `cortex`. Short aliases (`cortex`,
+        `mesh-support`) are a human-conversational layer that lives in
+        skills + system prompt; code paths must use the full basename
+        so cortex orchestration + ntfy event filtering stay consistent.
+
+        Source-of-truth is `.empirica/project.yaml`'s `ai_id` field
+        (written by setup-claude-code at project init). The basename
+        fallback only fires when project.yaml is missing the field.
 
         ai_id is THE anchor for cross-machine portability. cwd is just
         working-context. See docs/architecture/AI_ID_AS_ANCHOR.md.
@@ -226,11 +232,11 @@ class InstanceResolver:
              instances each with their own project_path)
           2. otherwise resolve via get_active_project_path(claude_session_id)
           3. project.yaml `ai_id` field at that path
-          4. basename(project_path).removeprefix('empirica-')
+          4. basename(project_path) — exact, prefix kept
           5. None — caller falls back to tmux pane id or 'claude-code'
 
         Used by:
-          - session-monitor-arm hook (timer name lookup)
+          - session-monitor-arm hook (Monitor grep-filter lookup)
           - TUI install path (handle_loop_enable --instance <ai_id>)
           - cortex_propose source_claude / target_claudes routing
           - cockpit per-instance ai_id rendering
@@ -255,10 +261,9 @@ class InstanceResolver:
                     return str(aid)
         except Exception:
             pass
-        # Fallback: derive from basename
+        # Fallback: exact basename, prefix kept.
         basename = Path(resolved_path).name
-        derived = basename.removeprefix('empirica-')
-        return derived or basename or None
+        return basename or None
 
     @staticmethod
     def resolve_workspace_project(identifier: str) -> 'dict | None':

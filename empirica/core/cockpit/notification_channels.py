@@ -1,13 +1,16 @@
-"""Notification-channels discovery — cockpit's wire to cortex's per-org topic registry.
+"""Notification-channels discovery — cockpit's wire to cortex's per-tenant topic registry.
 
 Per cortex's ECO_COLLAB_RESCOPE Phase 4 (prop_oe7jz5...) the bare
-`orchestration-events` ntfy topic is being deprecated in favour of
-per-org-prefixed topics (e.g. `empirica-orchestration-events`). Cortex
-runs dual-emit during the transition; once Phase 5 lands, only the
+`orchestration-events` ntfy topic was deprecated in favour of
+org-prefixed topics (e.g. `empirica-orchestration-events`). T16/T17
+tightened isolation further so the channel registry is now per-tenant
+(each tenant's `/v1/users/me/notification-channels` returns the topic
+keyed for THAT tenant's wake stream). Cortex runs dual-emit during
+the transition; once Phase 5 lands, only the
 prefixed topic will be live and listeners hardcoded to bare break.
 
 This module queries cortex for the canonical topic names so the
-listener defaults to the per-org-prefixed shape automatically — no
+listener defaults to the per-tenant shape automatically — no
 env-var override needed, no version-pinned hardcoded topic.
 
 ## Endpoint (cortex side)
@@ -15,9 +18,12 @@ env-var override needed, no version-pinned hardcoded topic.
   GET /v1/users/me/notification-channels
       → {channels: [{topic: str, kind: str, ...}], system_topic: str}
 
-Each `channels[i].topic` is a fully-resolved per-org topic name like
-`empirica-orchestration-events`. Filtering by AI is still done with
-the `?tags=<ai_id>` suffix at subscription time.
+Each `channels[i].topic` is the fully-resolved topic name cortex
+wants THIS caller (tenant-scoped post-T16/T17) to subscribe to — e.g.
+`empirica-orchestration-events` for the org-shared topic, or a
+tenant-keyed variant where cortex has narrowed isolation further.
+Filtering by AI is still done with the `?tags=<ai_id>` suffix at
+subscription time.
 
 ## No silent bare fallback (legacy topic killed — 2026-06)
 

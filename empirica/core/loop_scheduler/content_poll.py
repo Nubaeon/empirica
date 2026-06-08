@@ -194,21 +194,17 @@ def _resolve_canonical_ai_id(
             body = json.loads(raw) if raw else {}
         self_meta = body.get("self") or {}
         self_tenant = self_meta.get("tenant_slug")
-        # The listener is invoked with `--instance <basename>` where
-        # basename is the empirica-prefix-stripped short form
-        # (`extension`, `cortex`, etc.) per the practitioner-name
-        # convention. The roster stores `ai_id_short` as the full slug
-        # (`empirica-extension`, `empirica-cortex`), so we try both:
-        #   1. exact match on basename (covers the root `empirica` case)
-        #   2. `empirica-<basename>` prefixed form (covers all
-        #      empirica-prefix derivatives)
-        # First hit wins, scoped to the caller's tenant.
-        candidates = (basename, f"empirica-{basename}")
+        # Strict-canonical: the listener is invoked with `--instance <basename>`
+        # where basename is the exact project directory name, prefix kept
+        # (`empirica-cortex`, `empirica-extension`, ... or just `empirica`
+        # for the root practice). The roster stores `ai_id_short` as the
+        # same full slug, so a direct match suffices — no dual-form
+        # candidate fallback needed.
         for tenant in (body.get("org") or {}).get("tenants", []) or []:
             if tenant.get("tenant_slug") != self_tenant:
                 continue
             for proj in tenant.get("projects", []) or []:
-                if proj.get("ai_id_short") in candidates:
+                if proj.get("ai_id_short") == basename:
                     canonical = proj.get("ai_id_mesh") or basename
                     _CANONICAL_AI_ID_CACHE[cache_key] = canonical
                     return canonical

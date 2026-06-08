@@ -2,9 +2,12 @@
 that bypasses the resolver chain for callers iterating known paths
 (cockpit per-instance ai_id, project_init at provisioning time).
 
-Part of the anchor refactor (goal 1029a40d): ai_id = THE anchor; the
-resolution chain consolidates here so caller sites stop re-implementing
-basename.removeprefix('empirica-').
+Strict-canonical convention: basename derivation returns the **exact**
+directory name with the `empirica-` prefix KEPT. Short aliases
+(`cortex`, `mesh-support`) live in human-conversational layers only;
+code paths must use the full basename so cortex routing + ntfy event
+filtering line up. Pre-strict-canonical the resolver stripped the
+prefix and caused silent mesh wake drops (cortex's prop_5egdlfyq4r).
 """
 
 from __future__ import annotations
@@ -26,10 +29,15 @@ def test_explicit_path_reads_project_yaml_ai_id(tmp_path):
 
 
 def test_explicit_path_falls_back_to_basename_when_no_yaml(tmp_path):
-    """No project.yaml → derive from basename, strip empirica- prefix."""
+    """No project.yaml → return the exact basename, prefix KEPT.
+
+    Strict-canonical: `empirica-mesh-support` stays `empirica-mesh-support`,
+    NOT stripped to `mesh-support`. Short aliases live in skills + system
+    prompt; code paths use the full basename.
+    """
     sub = tmp_path / "empirica-mesh-support"
     sub.mkdir()
-    assert InstanceResolver.ai_id(project_path=str(sub)) == "mesh-support"
+    assert InstanceResolver.ai_id(project_path=str(sub)) == "empirica-mesh-support"
 
 
 def test_explicit_path_basename_without_empirica_prefix(tmp_path):
@@ -49,12 +57,20 @@ def test_explicit_path_accepts_pathlib_path(tmp_path):
 
 
 def test_explicit_path_yaml_without_ai_id_falls_back_to_basename(tmp_path):
-    """project.yaml exists but no ai_id field → basename derivation."""
+    """project.yaml exists but no ai_id field → return exact basename, prefix KEPT.
+
+    Regression test for cortex's prop_5egdlfyq4r: pre-strict-canonical the
+    fallback stripped the prefix and returned `cortex`. SessionStart hook
+    then built the Monitor grep filter using `cortex` while ntfy events
+    actually emitted with `empirica-cortex` → filter mismatch → silent
+    mesh wake drop for hours. Strict-canonical keeps the prefix; the grep
+    filter lines up with the event payload; events get delivered.
+    """
     sub = tmp_path / "empirica-cortex"
     sub.mkdir()
     (sub / ".empirica").mkdir()
     (sub / ".empirica" / "project.yaml").write_text(yaml.dump({"name": "cortex"}))
-    assert InstanceResolver.ai_id(project_path=str(sub)) == "cortex"
+    assert InstanceResolver.ai_id(project_path=str(sub)) == "empirica-cortex"
 
 
 def test_explicit_path_none_returns_none_without_resolver_fallback(monkeypatch):
@@ -87,7 +103,7 @@ def test_explicit_path_takes_precedence_over_resolver(monkeypatch, tmp_path):
     # Explicit path
     explicit = tmp_path / "empirica-the-real-one"
     explicit.mkdir()
-    assert InstanceResolver.ai_id(project_path=str(explicit)) == "the-real-one"
+    assert InstanceResolver.ai_id(project_path=str(explicit)) == "empirica-the-real-one"
 
 
 def test_empty_project_path_treated_as_none(monkeypatch):

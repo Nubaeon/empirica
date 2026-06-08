@@ -492,13 +492,15 @@ def run_listener(  # noqa: C901 — held-connection loop; clarity beats decompos
                 f"pushes will be silently dropped\n"
             )
             tag_filter = instance_id
-    # Per-org wake topic. The legacy bare `orchestration-events` topic
+    # Per-tenant wake topic. The legacy bare `orchestration-events` topic
     # (credentials_loader default) has no ntfy ACL grant for non-admin
-    # users → every poll 403s. Resolve the org-prefixed topic
-    # (`empirica-orchestration-events`) from cortex's notification-channels
-    # registry instead. An explicit ORCHESTRATION_NTFY_TOPIC override still
-    # wins (debug / custom deployments); resolution failure falls back to
-    # the configured topic with a loud log rather than silently.
+    # users → every poll 403s. Resolve the canonical topic name from
+    # cortex's notification-channels registry instead — post-T16/T17 this
+    # is tenant-scoped per caller (cortex returns whatever topic THIS
+    # tenant should subscribe to). An explicit ORCHESTRATION_NTFY_TOPIC
+    # override still wins (debug / custom deployments); resolution
+    # failure falls back to the configured topic with a loud log rather
+    # than silently.
     base_topic = ntfy["topic"]
     if not _os.getenv("ORCHESTRATION_NTFY_TOPIC"):
         try:

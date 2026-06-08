@@ -114,7 +114,8 @@ silently dropped.
 **Branching logic, in order:**
 
 1. **Read your own `ai_id`** from `.empirica/project.yaml` `ai_id:`
-   field, or derive `basename.removeprefix('empirica-')`.
+   field, or fall back to the exact directory basename (prefix kept,
+   strict-canonical — `empirica-cortex` stays `empirica-cortex`).
 
 2. **If `event["instance_id"] == your ai_id`** — fast path. The event
    came through your own loop, so it's already targeted to you. Proceed

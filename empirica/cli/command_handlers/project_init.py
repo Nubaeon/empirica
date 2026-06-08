@@ -248,8 +248,12 @@ def _get_git_remote_url():
 def _derive_ai_id(git_root) -> str:
     """Derive the canonical ai_id from the project's basename.
 
-    Convention (David, 2026-05-16): AIs are addressed by the basename of
-    their home project, with `empirica-` prefix stripped where present.
+    Strict-canonical convention: AIs are addressed by the **exact**
+    directory basename — prefix kept. `empirica-cortex` stays
+    `empirica-cortex`, not `cortex`. Short aliases live only in
+    human-conversational layers (skills + system prompt); code paths
+    use the full basename so cortex routing + ntfy event filtering
+    line up.
 
     At project-init time project.yaml doesn't exist yet, so InstanceResolver
     falls through to basename derivation — same result as the prior local
@@ -258,8 +262,8 @@ def _derive_ai_id(git_root) -> str:
 
     Examples:
         ~/empirical-ai/empirica           → 'empirica'
-        ~/empirical-ai/empirica-cortex    → 'cortex'
-        ~/empirical-ai/empirica-extension → 'extension'
+        ~/empirical-ai/empirica-cortex    → 'empirica-cortex'
+        ~/empirical-ai/empirica-extension → 'empirica-extension'
         ~/code/myproject                  → 'myproject'
 
     Cortex orchestration uses this id for target_claudes / source_claude

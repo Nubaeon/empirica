@@ -1517,7 +1517,7 @@ def _resolve_canonical_ai_id(args) -> str | None:
     """Resolve ai_id for the canonical mesh listener (soft — returns None on failure).
 
     Priority: --ai-id flag > .empirica/project.yaml ai_id field >
-    basename(project_path).removeprefix('empirica-') > None.
+    basename(project_path) [strict-canonical, prefix kept] > None.
 
     Distinct from `_resolve_listener_ai_id` (used by `loop listen-install`)
     which falls back to instance_id and raises if no instance.

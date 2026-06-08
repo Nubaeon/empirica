@@ -586,10 +586,11 @@ class TestCanonicalResolver:
         assert _resolve_canonical_ai_id("https://c.test", "k", "empirica") == \
             "empirica.david.empirica"
 
-    def test_resolves_prefixed_basename_via_empirica_prefix_fallback(self, monkeypatch):
-        """Listener basenames are empirica-stripped (`extension`) but
-        roster stores full slug (`empirica-extension`) — the resolver
-        tries both."""
+    def test_resolves_basename_directly_strict_canonical(self, monkeypatch):
+        """Strict-canonical: listener basenames are the exact directory
+        name with `empirica-` prefix kept (`empirica-extension`), matching
+        the roster's `ai_id_short` directly. No dual-form candidate
+        fallback — the listener and the roster speak the same shape."""
         from empirica.core.loop_scheduler.content_poll import _resolve_canonical_ai_id
         self._mock_roster_response(monkeypatch, {
             "self": {"tenant_slug": "david"},
@@ -601,7 +602,7 @@ class TestCanonicalResolver:
                 }],
             }]},
         })
-        assert _resolve_canonical_ai_id("https://c.test", "k", "extension") == \
+        assert _resolve_canonical_ai_id("https://c.test", "k", "empirica-extension") == \
             "empirica.david.empirica-extension"
 
     def test_falls_back_to_basename_on_roster_failure(self, monkeypatch):
@@ -618,12 +619,13 @@ class TestCanonicalResolver:
             _boom,
         )
         from empirica.core.loop_scheduler.content_poll import _resolve_canonical_ai_id
-        assert _resolve_canonical_ai_id("https://c.test", "k", "extension") == \
-            "extension"
+        assert _resolve_canonical_ai_id("https://c.test", "k", "empirica-extension") == \
+            "empirica-extension"
 
     def test_skips_peer_tenants_only_matches_self_tenant(self, monkeypatch):
-        """Even with the prefix-match fallback, only the caller's own
-        tenant's projects are considered — peer tenants ignored."""
+        """Tenant-scoped resolution: only the caller's own tenant's
+        projects are considered — peer tenants with the same ai_id_short
+        ignored."""
         from empirica.core.loop_scheduler.content_poll import _resolve_canonical_ai_id
         self._mock_roster_response(monkeypatch, {
             "self": {"tenant_slug": "david"},
@@ -644,7 +646,7 @@ class TestCanonicalResolver:
                 },
             ]},
         })
-        assert _resolve_canonical_ai_id("https://c.test", "k", "extension") == \
+        assert _resolve_canonical_ai_id("https://c.test", "k", "empirica-extension") == \
             "empirica.david.empirica-extension"
 
     def test_cached_after_first_resolution(self, monkeypatch):
