@@ -35,22 +35,25 @@ def embed_single_memory_item(
     impact: float | None = None,
     is_resolved: bool | None = None,
     resolved_by: str | None = None,
-    timestamp: str | None = None
+    timestamp: str | None = None,
+    qdrant_url: str | None = None,
 ) -> bool:
     """
     Embed a single memory item (finding, unknown, mistake, dead_end) to Qdrant.
     Called automatically when logging epistemic breadcrumbs.
 
+    qdrant_url: optional per-request Qdrant URL (per-org routing); None = default resolution.
+
     Returns True if successful, False if Qdrant not available or embedding failed.
     This is a non-blocking operation - core Empirica works without it.
     """
     # Check if Qdrant is available (graceful degradation)
-    if not _check_qdrant_available():
+    if not _check_qdrant_available(qdrant_url=qdrant_url):
         return False
 
     try:
         _, _, _, PointStruct = _get_qdrant_imports()
-        client = _get_qdrant_client()
+        client = _get_qdrant_client(qdrant_url=qdrant_url)
         if client is None:
             return False
         coll = _memory_collection(project_id)
@@ -88,18 +91,19 @@ def embed_single_memory_item(
         return False
 
 
-def upsert_docs(project_id: str, docs: list[dict]) -> int:
+def upsert_docs(project_id: str, docs: list[dict], qdrant_url: str | None = None) -> int:
     """
     Upsert documentation embeddings.
     docs: List of {id, text, metadata:{doc_path, tags, concepts, questions, use_cases}}
+    qdrant_url: optional per-request Qdrant URL (per-org routing); None = default resolution.
     Returns number of docs upserted, or 0 if Qdrant not available.
     """
-    if not _check_qdrant_available():
+    if not _check_qdrant_available(qdrant_url=qdrant_url):
         return 0
 
     try:
         _, _, _, PointStruct = _get_qdrant_imports()
-        client = _get_qdrant_client()
+        client = _get_qdrant_client(qdrant_url=qdrant_url)
         if client is None:
             return 0
         coll = _docs_collection(project_id)
@@ -140,18 +144,19 @@ def upsert_docs(project_id: str, docs: list[dict]) -> int:
         return 0
 
 
-def upsert_memory(project_id: str, items: list[dict]) -> int:
+def upsert_memory(project_id: str, items: list[dict], qdrant_url: str | None = None) -> int:
     """
     Upsert memory embeddings (findings, unknowns, mistakes, dead_ends).
     items: List of {id, text, type, goal_id, subtask_id, session_id, timestamp, ...}
+    qdrant_url: optional per-request Qdrant URL (per-org routing); None = default resolution.
     Returns number of items upserted, or 0 if Qdrant not available.
     """
-    if not _check_qdrant_available():
+    if not _check_qdrant_available(qdrant_url=qdrant_url):
         return 0
 
     try:
         _, _, _, PointStruct = _get_qdrant_imports()
-        client = _get_qdrant_client()
+        client = _get_qdrant_client(qdrant_url=qdrant_url)
         if client is None:
             return 0
         coll = _memory_collection(project_id)
@@ -220,7 +225,8 @@ def upsert_memory(project_id: str, items: list[dict]) -> int:
         return 0
 
 
-def search(project_id: str, query_text: str, kind: str = "focused", limit: int = 5) -> dict[str, list[dict]]:
+def search(project_id: str, query_text: str, kind: str = "focused", limit: int = 5,
+           qdrant_url: str | None = None) -> dict[str, list[dict]]:
     """
     Semantic search over project knowledge.
 
@@ -229,6 +235,7 @@ def search(project_id: str, query_text: str, kind: str = "focused", limit: int =
         query_text: Search query
         kind: "focused" (docs + eidetic + episodic), "all", "intelligence", or single collection name
         limit: Max results per collection
+        qdrant_url: optional per-request Qdrant URL (per-org routing); None = default resolution
 
     Returns empty results if Qdrant not available.
 
@@ -249,7 +256,7 @@ def search(project_id: str, query_text: str, kind: str = "focused", limit: int =
         search_kinds = [kind]
     empty_result = {k: [] for k in search_kinds}
 
-    if not _check_qdrant_available():
+    if not _check_qdrant_available(qdrant_url=qdrant_url):
         return empty_result
 
     # Collection config: (name, collection_fn, payload_fields)
@@ -287,7 +294,7 @@ def search(project_id: str, query_text: str, kind: str = "focused", limit: int =
             pass
 
     results: dict[str, list[dict]] = {}
-    client = _get_qdrant_client()
+    client = _get_qdrant_client(qdrant_url=qdrant_url)
     if client is None:
         return empty_result
 
@@ -314,6 +321,7 @@ def search(project_id: str, query_text: str, kind: str = "focused", limit: int =
             coll_fn, fields = _SEARCH_COLLECTIONS[kind_name]
             results[kind_name] = _rest_search_collection(
                 client, coll_fn, project_id, query_text, fields, limit,
+                qdrant_url=qdrant_url,
             )
         return results
     except Exception as e:
@@ -344,7 +352,8 @@ def _search_single_collection(client, coll_fn, project_id, query_text,
         return []
 
 
-def _rest_search_collection(client, coll_fn, project_id, query_text, fields, limit):
+def _rest_search_collection(client, coll_fn, project_id, query_text, fields, limit,
+                            qdrant_url=None):
     """Search a single collection via REST fallback."""
     coll_name = coll_fn(project_id)
     if client.collection_exists(coll_name):
@@ -353,7 +362,7 @@ def _rest_search_collection(client, coll_fn, project_id, query_text, fields, lim
         qvec = None
     if qvec is None:
         return []
-    raw = _rest_search(coll_name, qvec, limit)
+    raw = _rest_search(coll_name, qvec, limit, qdrant_url=qdrant_url)
     return [
         {"score": d.get('score', 0.0),
          **{f: (d.get('payload') or {}).get(f) for f in fields}}

@@ -161,3 +161,107 @@ def test_omitting_qdrant_url_is_byte_for_byte_legacy_behavior(monkeypatch):
     assert legacy_call is not None
     assert new_call_with_none is not None
     assert mock_cls.call_args[1]["url"] == "http://legacy:6333"
+
+# ── embed_* / upsert_* / search threading (prop_t7s6whxwjncoploks5wwcdqssm) ──
+# The write-path gap cortex found: embed_single_memory_item / embed_assumption /
+# embed_decision called _get_qdrant_client() bare, so per-org writes landed on
+# the base URL. These tests pin that all 10 functions in memory.py +
+# intent_layer.py forward qdrant_url to BOTH the availability check and the
+# client factory.
+
+import inspect
+
+from empirica.core.qdrant import intent_layer as intent_mod
+from empirica.core.qdrant import memory as memory_mod
+
+_MEMORY_FNS = ["embed_single_memory_item", "upsert_docs", "upsert_memory", "search"]
+_INTENT_FNS = [
+    "embed_assumption", "embed_decision", "embed_intent_edge",
+    "search_assumptions", "search_decisions", "search_intents",
+]
+
+
+def test_all_memory_functions_accept_qdrant_url_defaulting_none():
+    for name in _MEMORY_FNS:
+        sig = inspect.signature(getattr(memory_mod, name))
+        assert "qdrant_url" in sig.parameters, f"{name} missing qdrant_url"
+        assert sig.parameters["qdrant_url"].default is None
+
+
+def test_all_intent_layer_functions_accept_qdrant_url_defaulting_none():
+    for name in _INTENT_FNS:
+        sig = inspect.signature(getattr(intent_mod, name))
+        assert "qdrant_url" in sig.parameters, f"{name} missing qdrant_url"
+        assert sig.parameters["qdrant_url"].default is None
+
+
+def test_embed_single_memory_item_threads_url_to_check_and_client():
+    """The exact repro from cortex: write must route to the per-org URL."""
+    with patch.object(memory_mod, "_check_qdrant_available", return_value=True) as mock_check, \
+         patch.object(memory_mod, "_get_qdrant_client", return_value=None) as mock_client:
+        memory_mod.embed_single_memory_item(
+            "proj", "item-1", "text", "finding",
+            qdrant_url="http://org-mod:7335",
+        )
+    mock_check.assert_called_once_with(qdrant_url="http://org-mod:7335")
+    mock_client.assert_called_once_with(qdrant_url="http://org-mod:7335")
+
+
+def test_embed_assumption_threads_url_to_check_and_client():
+    with patch.object(intent_mod, "_check_qdrant_available", return_value=True) as mock_check, \
+         patch.object(intent_mod, "_get_qdrant_client", return_value=None) as mock_client:
+        intent_mod.embed_assumption(
+            "proj", "a-1", "an assumption",
+            qdrant_url="http://org-mod:7335",
+        )
+    mock_check.assert_called_once_with(qdrant_url="http://org-mod:7335")
+    mock_client.assert_called_once_with(qdrant_url="http://org-mod:7335")
+
+
+def test_embed_decision_threads_url_to_check_and_client():
+    with patch.object(intent_mod, "_check_qdrant_available", return_value=True) as mock_check, \
+         patch.object(intent_mod, "_get_qdrant_client", return_value=None) as mock_client:
+        intent_mod.embed_decision(
+            "proj", "d-1", "a choice", "a rationale",
+            qdrant_url="http://org-mod:7335",
+        )
+    mock_check.assert_called_once_with(qdrant_url="http://org-mod:7335")
+    mock_client.assert_called_once_with(qdrant_url="http://org-mod:7335")
+
+
+def test_embed_intent_edge_threads_url_to_check_and_client():
+    with patch.object(intent_mod, "_check_qdrant_available", return_value=True) as mock_check, \
+         patch.object(intent_mod, "_get_qdrant_client", return_value=None) as mock_client:
+        intent_mod.embed_intent_edge(
+            "proj", "i-1", "noetic_to_praxic", "src", "finding", "tgt", "commit", 0.8,
+            qdrant_url="http://org-mod:7335",
+        )
+    mock_check.assert_called_once_with(qdrant_url="http://org-mod:7335")
+    mock_client.assert_called_once_with(qdrant_url="http://org-mod:7335")
+
+
+def test_upsert_memory_threads_url_to_check_and_client():
+    with patch.object(memory_mod, "_check_qdrant_available", return_value=True) as mock_check, \
+         patch.object(memory_mod, "_get_qdrant_client", return_value=None) as mock_client:
+        memory_mod.upsert_memory("proj", [{"id": "x", "text": "t"}],
+                                 qdrant_url="http://org-mod:7335")
+    mock_check.assert_called_once_with(qdrant_url="http://org-mod:7335")
+    mock_client.assert_called_once_with(qdrant_url="http://org-mod:7335")
+
+
+def test_search_threads_url_to_check_and_client():
+    with patch.object(memory_mod, "_check_qdrant_available", return_value=True) as mock_check, \
+         patch.object(memory_mod, "_get_qdrant_client", return_value=None) as mock_client:
+        memory_mod.search("proj", "query", qdrant_url="http://org-mod:7335")
+    mock_check.assert_called_once_with(qdrant_url="http://org-mod:7335")
+    mock_client.assert_called_once_with(qdrant_url="http://org-mod:7335")
+
+
+def test_embed_omitting_url_is_legacy_behavior():
+    """Backward-compat envelope for the embed layer: no kwarg = check/client
+    called with qdrant_url=None — exactly the pre-change resolution chain."""
+    with patch.object(memory_mod, "_check_qdrant_available", return_value=True) as mock_check, \
+         patch.object(memory_mod, "_get_qdrant_client", return_value=None) as mock_client:
+        memory_mod.embed_single_memory_item("proj", "item-1", "text", "finding")
+    mock_check.assert_called_once_with(qdrant_url=None)
+    mock_client.assert_called_once_with(qdrant_url=None)

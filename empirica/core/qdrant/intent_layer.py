@@ -32,20 +32,23 @@ def embed_assumption(
     transaction_id: str | None = None,
     domain: str | None = None,
     timestamp: float | None = None,
+    qdrant_url: str | None = None,
 ) -> bool:
     """Embed an assumption (unverified belief) for semantic search.
 
     Assumptions have an urgency_signal that increases with age for unverified
     items: older unverified = higher risk. Resolved assumptions: urgency=0.
+
+    qdrant_url: optional per-request Qdrant URL (per-org routing); None = default resolution.
     """
-    if not _check_qdrant_available():
+    if not _check_qdrant_available(qdrant_url=qdrant_url):
         return False
 
     try:
         import hashlib
         import time as _time
         _, _, VectorParams, PointStruct = _get_qdrant_imports()
-        client = _get_qdrant_client()
+        client = _get_qdrant_client(qdrant_url=qdrant_url)
         if client is None:
             return False
         coll = _assumptions_collection(project_id)
@@ -106,19 +109,22 @@ def embed_decision(
     session_id: str | None = None,
     transaction_id: str | None = None,
     timestamp: float | None = None,
+    qdrant_url: str | None = None,
 ) -> bool:
     """Embed a decision (recorded choice point) for semantic search.
 
     Decisions are permanent audit trail — no decay applied.
+
+    qdrant_url: optional per-request Qdrant URL (per-org routing); None = default resolution.
     """
-    if not _check_qdrant_available():
+    if not _check_qdrant_available(qdrant_url=qdrant_url):
         return False
 
     try:
         import hashlib
         import time as _time
         _, _, VectorParams, PointStruct = _get_qdrant_imports()
-        client = _get_qdrant_client()
+        client = _get_qdrant_client(qdrant_url=qdrant_url)
         if client is None:
             return False
         coll = _decisions_collection(project_id)
@@ -181,12 +187,15 @@ def embed_intent_edge(
     session_id: str | None = None,
     transaction_id: str | None = None,
     timestamp: float | None = None,
+    qdrant_url: str | None = None,
 ) -> bool:
     """Embed an IntentEdge (provenance graph: noetic↔praxic transform).
 
     IntentEdges are permanent provenance — no decay. Retrieval ranks by recency.
+
+    qdrant_url: optional per-request Qdrant URL (per-org routing); None = default resolution.
     """
-    if not _check_qdrant_available():
+    if not _check_qdrant_available(qdrant_url=qdrant_url):
         return False
 
     try:
@@ -194,7 +203,7 @@ def embed_intent_edge(
         import json as _json
         import time as _time
         _, _, VectorParams, PointStruct = _get_qdrant_imports()
-        client = _get_qdrant_client()
+        client = _get_qdrant_client(qdrant_url=qdrant_url)
         if client is None:
             return False
         coll = _intents_collection(project_id)
@@ -251,6 +260,7 @@ def search_assumptions(
     entity_type: str | None = None,
     min_urgency: float = 0.0,
     limit: int = 5,
+    qdrant_url: str | None = None,
 ) -> list[dict]:
     """Search assumptions by semantic similarity with optional filters.
 
@@ -258,12 +268,13 @@ def search_assumptions(
         status: Filter by 'unverified', 'verified', 'falsified'
         entity_type: Filter by entity type
         min_urgency: Minimum urgency_signal threshold (0.0-1.0)
+        qdrant_url: optional per-request Qdrant URL (per-org routing)
     """
-    if not _check_qdrant_available():
+    if not _check_qdrant_available(qdrant_url=qdrant_url):
         return []
 
     try:
-        client = _get_qdrant_client()
+        client = _get_qdrant_client(qdrant_url=qdrant_url)
         if client is None:
             return []
         coll = _assumptions_collection(project_id)
@@ -326,13 +337,17 @@ def search_decisions(
     reversibility: str | None = None,
     entity_type: str | None = None,
     limit: int = 5,
+    qdrant_url: str | None = None,
 ) -> list[dict]:
-    """Search decisions by semantic similarity with optional filters."""
-    if not _check_qdrant_available():
+    """Search decisions by semantic similarity with optional filters.
+
+    qdrant_url: optional per-request Qdrant URL (per-org routing); None = default resolution.
+    """
+    if not _check_qdrant_available(qdrant_url=qdrant_url):
         return []
 
     try:
-        client = _get_qdrant_client()
+        client = _get_qdrant_client(qdrant_url=qdrant_url)
         if client is None:
             return []
         coll = _decisions_collection(project_id)
@@ -388,13 +403,17 @@ def search_intents(
     direction: str | None = None,
     cascade_phase: str | None = None,
     limit: int = 5,
+    qdrant_url: str | None = None,
 ) -> list[dict]:
-    """Search IntentEdges by semantic similarity with optional filters."""
-    if not _check_qdrant_available():
+    """Search IntentEdges by semantic similarity with optional filters.
+
+    qdrant_url: optional per-request Qdrant URL (per-org routing); None = default resolution.
+    """
+    if not _check_qdrant_available(qdrant_url=qdrant_url):
         return []
 
     try:
-        client = _get_qdrant_client()
+        client = _get_qdrant_client(qdrant_url=qdrant_url)
         if client is None:
             return []
         coll = _intents_collection(project_id)
