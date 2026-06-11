@@ -189,6 +189,32 @@ def _build_monitor_block_from_cli(payload: dict | None, instance_id: str) -> str
     )
 
 
+def _build_orphan_warning() -> str:
+    """Markdown warning when orphan listener processes have accumulated.
+
+    Surfaces the buildup (cortex's orphan-accumulation report) before this
+    session arms yet another listener. Deliberately does NOT auto-reap —
+    killing processes is the user's call via `empirica listener gc --apply`.
+    Threshold of 3 keeps the common one-stale-process case quiet. Never
+    raises; any failure renders as no warning.
+    """
+    try:
+        from empirica.core.cockpit.listener_processes import (
+            walk_orphan_listener_processes,
+        )
+        orphan_count = len(walk_orphan_listener_processes())
+    except Exception:
+        return ""
+    if orphan_count <= 3:
+        return ""
+    return (
+        f"\n⚠️ **{orphan_count} orphan listener processes detected** — "
+        f"listener subprocesses from dead sessions are accumulating. "
+        f"Run `empirica listener gc` to review and "
+        f"`empirica listener gc --apply` to reap them.\n"
+    )
+
+
 def _build_additional_context(
     instance_id: str, loop_names: list[str], listener_running: bool = False,
     has_prior_intent: bool = False,
@@ -311,7 +337,7 @@ by `proposal_id` is the auth boundary.
 If you do not arm this Monitor, events will accumulate at Cortex but no
 work will trigger in this session. Arming is idempotent (Monitor with
 identical command is a no-op the second time).
-"""
+{_build_orphan_warning()}"""
 
 
 def main() -> int:

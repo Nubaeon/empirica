@@ -1818,7 +1818,20 @@ def handle_listener_off_command(args) -> int:
 
     The 2-step protocol mirrors `on`'s structured next_step shape so
     the AI can chain mechanical actions without bespoke knowledge.
+
+    Teardown does NOT rely on the arming session being alive: any
+    orphaned listener processes for this ai_id (parent session dead,
+    reparented to PID 1) are reaped directly (TERM → KILL), and the
+    state file is deleted regardless of kill outcome. The TaskStop
+    next_step still covers the live-session Monitor, which only the
+    harness can stop; `unregister` clears the registry entry and is
+    tolerant of the already-deleted state file.
     """
+    from empirica.core.cockpit.listener_processes import (
+        reap_processes,
+        walk_orphan_listener_processes,
+    )
+
     instance_id = _require_instance_id(args)
     ai_id = _resolve_canonical_ai_id(args)
     name = getattr(args, 'name', None) or (f'{ai_id}-inbox' if ai_id else None)
@@ -1827,6 +1840,10 @@ def handle_listener_off_command(args) -> int:
             'ok': False,
             'error': 'name unresolved — pass --name or --ai-id',
         }, 'error: name unresolved')
+
+    reaped = reap_processes(
+        walk_orphan_listener_processes(ai_id) if ai_id else [], apply=True,
+    )
 
     active_path = listener_active_path(instance_id, name)
     if not active_path.exists():
@@ -1837,6 +1854,7 @@ def handle_listener_off_command(args) -> int:
             'instance_id': instance_id,
             'name': name,
             'status': 'not_armed',
+            'reaped_orphans': reaped,
             'next_step': {
                 'tool': None,
                 'after_stop': f'empirica listener unregister {name}',
@@ -1857,27 +1875,38 @@ def handle_listener_off_command(args) -> int:
             'ok': False, 'error': f'state file unreadable: {e}',
         }, f'error: state file unreadable: {e}')
 
+    # Delete the state file now — teardown must not depend on the caller
+    # following through with unregister (whose unlink tolerates absence).
+    try:
+        active_path.unlink()
+        state_file_removed = True
+    except OSError:
+        state_file_removed = False
+
     payload = {
         'ok': True,
         'instance_id': instance_id,
         'name': name,
         'monitor_task_id': monitor_task_id,
         'state_file': str(active_path),
+        'state_file_removed': state_file_removed,
+        'reaped_orphans': reaped,
         'next_step': {
             'tool': 'TaskStop' if monitor_task_id else None,
             'args': {'task_id': monitor_task_id} if monitor_task_id else None,
             'after_stop': f'empirica listener unregister {name}',
         },
     }
+    reap_note = f' Reaped {len(reaped)} orphan process(es).' if reaped else ''
     if monitor_task_id:
         summary = (
             f'Listener "{name}" — TaskStop({monitor_task_id}), '
-            f'then run `empirica listener unregister {name}`.'
+            f'then run `empirica listener unregister {name}`.{reap_note}'
         )
     else:
         summary = (
             f'Listener "{name}" has placeholder task_id (never armed). '
-            f'Run `empirica listener unregister {name}` to clean up.'
+            f'Run `empirica listener unregister {name}` to clean up.{reap_note}'
         )
     return _emit(args, payload, summary)
 
@@ -2026,13 +2055,16 @@ def _gc_evaluate_file(
 
 
 def _gc_render_summary(pruned: list[dict], kept: list[dict],
-                       apply: bool, age_days: int) -> str:
+                       apply: bool, age_days: int,
+                       orphan_procs: list[dict] | None = None) -> str:
     """Build the human-readable summary string for GC results."""
+    orphan_procs = orphan_procs or []
     lines = [
         f'listener gc — {"APPLIED" if apply else "DRY RUN"} '
         f'(age threshold: {age_days}d)',
         f'  Pruned: {len(pruned)}',
         f'  Kept:   {len(kept)}',
+        f'  Orphan processes: {len(orphan_procs)}',
     ]
     if pruned:
         lines.append('')
@@ -2047,7 +2079,19 @@ def _gc_render_summary(pruned: list[dict], kept: list[dict],
             )
         if len(pruned) > 20:
             lines.append(f'  … and {len(pruned) - 20} more')
-    if not apply and pruned:
+    if orphan_procs:
+        lines.append('')
+        for proc in orphan_procs[:20]:
+            tag = '✓ reaped' if proc.get('removed') else (
+                '(would reap)' if not apply else f'! error: {proc.get("error")}'
+            )
+            lines.append(
+                f'  - pid {proc["pid"]} [{proc["kind"]}]  {tag}\n'
+                f'      cmd: {proc["cmdline"][:100]}'
+            )
+        if len(orphan_procs) > 20:
+            lines.append(f'  … and {len(orphan_procs) - 20} more')
+    if not apply and (pruned or orphan_procs):
         lines.append('')
         lines.append('  Run with --apply to actually remove.')
     return '\n'.join(lines)
@@ -2079,13 +2123,31 @@ def handle_listener_gc_command(args) -> int:
     determined from a CLI invocation. The age / topic / service
     checks cover the practical fleet-wide cleanup case.
 
-    Dry-run by default. Pass `--apply` to actually remove. Per-file
-    decision rationale is included in both the JSON payload and the
-    human render so audits can see why each file was flagged.
+    Beyond the state files, a PROCESS pass walks `ps` for orphaned
+    listener subprocesses — `empirica loop listen` workers (and their
+    supervisor shells) plus `tail -F loop_fires.log` session bridges
+    whose parent Claude Code session died (reparented to PID 1).
+    These outlive their session, accumulate across restarts, and were
+    previously only killable via manual pkill. systemd-user service
+    children are never flagged (their parent is the user manager, not
+    PID 1). Container PID-1 entrypoints legitimately parent listeners
+    — the dry-run default keeps that environment report-only.
 
-    Closes goal d75f2b7c (extension's listener_active GC ask).
+    Dry-run by default. Pass `--apply` to actually remove files AND
+    reap orphan processes (TERM, KILL after 3s). Per-item decision
+    rationale is included in both the JSON payload and the human
+    render so audits can see why each was flagged.
+
+    Closes goal d75f2b7c (extension's listener_active GC ask); process
+    reaping per cortex's orphan-accumulation report.
     """
     import time as _time
+
+    from empirica.core.cockpit.listener_processes import (
+        reap_processes,
+        walk_orphan_listener_processes,
+    )
+
     apply = bool(getattr(args, 'apply', False))
     age_days = int(getattr(args, 'age_days', 7))
 
@@ -2110,6 +2172,8 @@ def handle_listener_gc_command(args) -> int:
         )
         (pruned if was_pruned else kept).append(entry)
 
+    orphan_procs = reap_processes(walk_orphan_listener_processes(), apply)
+
     payload = {
         'ok': True,
         'dry_run': not apply,
@@ -2118,8 +2182,12 @@ def handle_listener_gc_command(args) -> int:
         'kept_count': len(kept),
         'pruned': pruned,
         'kept': kept,
+        'orphan_process_count': len(orphan_procs),
+        'orphan_processes': orphan_procs,
     }
-    return _emit(args, payload, _gc_render_summary(pruned, kept, apply, age_days))
+    return _emit(args, payload, _gc_render_summary(
+        pruned, kept, apply, age_days, orphan_procs,
+    ))
 
 
 _LISTENER_DISPATCH = {

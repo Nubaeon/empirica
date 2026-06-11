@@ -449,8 +449,9 @@ def _add_listener_group(subparsers):
     _add_output(arm_p)
 
     off_p = listener_subs.add_parser('off',
-        help='Tear down the canonical mesh listener — emits TaskStop + '
-             '`unregister` next_step JSON')
+        help='Tear down the canonical mesh listener — reaps orphan listener '
+             'processes for the ai_id, deletes the state file, and emits '
+             'TaskStop + `unregister` next_step JSON')
     off_p.add_argument('--name',
         help='Listener name (default: <ai_id>-inbox)')
     off_p.add_argument('--ai-id',
@@ -459,10 +460,12 @@ def _add_listener_group(subparsers):
     _add_output(off_p)
 
     gc_p = listener_subs.add_parser('gc',
-        help='Garbage-collect stale ~/.empirica/listener_active_*.json files. '
+        help='Garbage-collect stale ~/.empirica/listener_active_*.json files '
+             'AND orphaned listener processes (parent session dead). '
              'Dry-run by default; pass --apply to actually remove.')
     gc_p.add_argument('--apply', action='store_true',
-        help='Actually remove the stale files (default: dry-run shows what would be removed)')
+        help='Actually remove the stale files + reap orphan processes '
+             '(default: dry-run shows what would be removed)')
     gc_p.add_argument('--age-days', type=int, default=7,
         help='Age threshold in days for the stale criterion (default: 7). Files older than this with no recent wake activity are pruned.')
     _add_output(gc_p)
