@@ -61,7 +61,7 @@ def handle_practice_context_command(args) -> int:
 
     ai_id_filter = getattr(args, "ai_id", None)
     if ai_id_filter:
-        rows = [r for r in rows if r["ai_id"] == ai_id_filter]
+        rows = _filter_rows_by_ai_id(rows, ai_id_filter, roster)
 
     output = getattr(args, "output", "human")
     if output == "json":
@@ -69,6 +69,35 @@ def handle_practice_context_command(args) -> int:
     else:
         _render_human(rows)
     return 0
+
+
+def _filter_rows_by_ai_id(
+    rows: list[dict[str, Any]],
+    ai_id_filter: str,
+    roster: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Filter addressbook rows by `--ai-id`, collision-safe.
+
+    The short form (`mesh-support`) is a per-tenant slug: when the caller's
+    org has cross-tenant grants, two tenants can both own a project with the
+    same `ai_id_short`. A bare equality filter matches every colliding row
+    and the human renderer shows whichever comes first — the caller's own
+    practice may lose to a peer's cross-grant. Two-pass: prefer rows in the
+    caller's own tenant, fall back to any match so peer lookups still work.
+
+    The canonical 3-form (`<org>.<tenant>.<slug>`, detected by a dot) is
+    globally unique — match it exactly against `ai_id_mesh`.
+    """
+    if "." in ai_id_filter:
+        return [r for r in rows if r.get("ai_id_mesh") == ai_id_filter]
+
+    matches = [r for r in rows if r["ai_id"] == ai_id_filter]
+    self_tenant = (roster.get("self") or {}).get("tenant_slug")
+    if self_tenant:
+        own = [r for r in matches if r.get("tenant") == self_tenant]
+        if own:
+            return own
+    return matches
 
 
 def _resolve_cortex_config(args) -> tuple[str | None, str | None]:

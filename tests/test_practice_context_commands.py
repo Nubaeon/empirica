@@ -177,6 +177,120 @@ def test_command_filters_by_ai_id(capsys):
     assert out["practices"][0]["ai_id"] == "empirica-mesh-support"
 
 
+_COLLISION_ROSTER = {
+    "self": {
+        "user_id": "u-philipp",
+        "tenant_slug": "philipp",
+        "ai_ids": ["empirica-mesh-support"],
+    },
+    "org": {
+        "id": "org-empirica",
+        "slug": "empirica",
+        "name": "Empirica",
+        "tenants": [
+            {
+                "tenant_slug": "david",
+                "user_name": "David",
+                "is_admin": True,
+                "governance_mode": "tenant_priority",
+                "projects": [
+                    {
+                        "id": "p-david-mesh-support",
+                        "slug": "empirica-mesh-support",
+                        "display_name": "David Mesh Support (cross-grant)",
+                        "ai_id_short": "empirica-mesh-support",
+                        "ai_id_tenant": "david.empirica-mesh-support",
+                        "ai_id_mesh": "empirica.david.empirica-mesh-support",
+                        "substrate": "cortex",
+                    },
+                ],
+            },
+            {
+                "tenant_slug": "philipp",
+                "user_name": "Philipp",
+                "is_admin": False,
+                "governance_mode": "tenant_priority",
+                "projects": [
+                    {
+                        "id": "p-philipp-mesh-support",
+                        "slug": "empirica-mesh-support",
+                        "display_name": "Philipp Mesh Support",
+                        "ai_id_short": "empirica-mesh-support",
+                        "ai_id_tenant": "philipp.empirica-mesh-support",
+                        "ai_id_mesh": "empirica.philipp.empirica-mesh-support",
+                        "substrate": "git",
+                    },
+                    {
+                        "id": "p-philipp-research",
+                        "slug": "empirica-research",
+                        "display_name": "Philipp Research",
+                        "ai_id_short": "empirica-research",
+                        "ai_id_tenant": "philipp.empirica-research",
+                        "ai_id_mesh": "empirica.philipp.empirica-research",
+                        "substrate": "git",
+                    },
+                ],
+            },
+        ],
+    },
+    "version": 7,
+    "etag": "def456",
+}
+
+
+def _run_filter(roster, ai_id, self_ai_id, capsys):
+    args = _make_args(output='json', ai_id=ai_id)
+    with patch(
+        'empirica.cli.command_handlers.practice_context_commands._fetch_roster',
+        return_value=roster,
+    ), patch(
+        'empirica.cli.command_handlers.practice_context_commands._resolve_self_ai_id',
+        return_value=self_ai_id,
+    ):
+        handle_practice_context_command(args)
+    return json.loads(capsys.readouterr().out)
+
+
+def test_command_filter_prefers_own_tenant_on_slug_collision(capsys):
+    """Two tenants own the same ai_id_short — the caller's own tenant wins."""
+    out = _run_filter(
+        _COLLISION_ROSTER, 'empirica-mesh-support', 'empirica-mesh-support', capsys,
+    )
+    assert out["count"] == 1
+    assert out["practices"][0]["project_id"] == "p-philipp-mesh-support"
+    assert out["practices"][0]["tenant"] == "philipp"
+
+
+def test_command_filter_falls_back_to_peer_when_not_in_own_tenant(capsys):
+    """A slug that only a peer tenant owns still resolves (no own-tenant match)."""
+    david_seat = dict(_COLLISION_ROSTER)
+    david_seat["self"] = {"user_id": "u-david", "tenant_slug": "david", "ai_ids": []}
+    out = _run_filter(david_seat, 'empirica-research', None, capsys)
+    assert out["count"] == 1
+    assert out["practices"][0]["tenant"] == "philipp"
+
+
+def test_command_filter_canonical_3form_matches_exactly(capsys):
+    """A dotted filter is the canonical 3-form — exact ai_id_mesh match,
+    bypassing the own-tenant preference entirely."""
+    out = _run_filter(
+        _COLLISION_ROSTER,
+        'empirica.david.empirica-mesh-support',
+        'empirica-mesh-support',
+        capsys,
+    )
+    assert out["count"] == 1
+    assert out["practices"][0]["project_id"] == "p-david-mesh-support"
+    assert out["practices"][0]["tenant"] == "david"
+
+
+def test_command_filter_no_collision_baseline(capsys):
+    """Single-owner slug returns exactly that row (pre-fix behavior preserved)."""
+    out = _run_filter(_SAMPLE_ROSTER, 'empirica-mesh-support', 'empirica', capsys)
+    assert out["count"] == 1
+    assert out["practices"][0]["tenant"] == "philipp"
+
+
 def test_command_human_output_renders_table(capsys):
     args = _make_args(output='human')
     with patch(
