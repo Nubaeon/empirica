@@ -592,6 +592,7 @@ def main(args=None):
             'workspace-init': handle_workspace_init_command,
             'ecosystem-check': handle_ecosystem_check_command,
             'workspace-search': handle_workspace_search_command,
+            'entity-create': handle_entity_create_command,
             'entity-list': handle_entity_list_command,
             'entity-show': handle_entity_show_command,
             'entity-walk': handle_entity_walk_command,

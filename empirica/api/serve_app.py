@@ -173,6 +173,11 @@ def create_serve_app() -> FastAPI:
     from empirica.api.routes.credentials import router as credentials_router
     app.include_router(credentials_router)
 
+    # Entity mint (workspace entity_registry write surface — idempotent
+    # contact creation for same-box consumers like CRM MCP servers).
+    from empirica.api.routes.entities import router as entities_router
+    app.include_router(entities_router)
+
     @app.get("/api/v1/health", response_model=HealthResponse)
     async def health():  # pyright: ignore[reportUnusedFunction]
         """Health check — reports integrations, active project info, and

@@ -77,6 +77,166 @@ def handle_entity_list_command(args):
         handle_cli_error(e, "entity-list", getattr(args, 'verbose', False))
 
 
+def _slugify(text: str) -> str:
+    """Lowercase, non-alphanumerics → '-', collapsed and trimmed."""
+    out = []
+    prev_dash = False
+    for ch in text.lower():
+        if ch.isalnum():
+            out.append(ch)
+            prev_dash = False
+        elif not prev_dash:
+            out.append('-')
+            prev_dash = True
+    return ''.join(out).strip('-')
+
+
+def mint_contact(
+    name: str,
+    email: str | None = None,
+    phone: str | None = None,
+    role: str | None = None,
+    company_name: str | None = None,
+    description: str | None = None,
+    extra_metadata: dict | None = None,
+    repo: WorkspaceDBRepository | None = None,
+) -> dict[str, Any]:
+    """Idempotent contact mint into workspace.db entity_registry.
+
+    The directly-callable Python API behind `empirica entity-create` —
+    consumers on the same box (e.g. a CRM MCP server) can import and call
+    this instead of shelling out.
+
+    Identity resolution, in order:
+      1. **Email match** — an existing active contact whose metadata.email
+         equals the normalized email wins. Email is the strongest identity
+         key; the existing row is returned untouched (verified no-op).
+      2. **Deterministic slug** — ``c-<name-slug>[-<company-slug>]``,
+         matching the registry's existing human-readable convention
+         (NOT an opaque hash; the live rows + the EKG traversal +
+         extension rendering all use readable ids). Re-minting the same
+         identity returns the existing row.
+      3. **Collision disambiguation** — same slug but a DIFFERENT email
+         on the existing row means a different person: the new id gains
+         a deterministic 6-hex suffix derived from the new email/phone.
+
+    Re-calling with the same identity always returns the same entity_id
+    with created=False — double-execute is a verified no-op (the mesh
+    idempotent-ask convention applied to the mint write).
+    """
+    import hashlib
+    import time
+
+    if not name or not name.strip():
+        return {"ok": False, "error": "name is required"}
+    name = name.strip()
+    norm_email = email.strip().lower() if email else None
+
+    def _resolve(repo: WorkspaceDBRepository) -> dict[str, Any]:
+        contacts = repo.list_entities(entity_type='contact', status='active', limit=100000)
+
+        if norm_email:
+            for c in contacts:
+                try:
+                    meta = json.loads(c.get('metadata') or '{}')
+                except json.JSONDecodeError:
+                    continue
+                if (meta.get('email') or '').strip().lower() == norm_email:
+                    return {"ok": True, "entity_id": c['entity_id'],
+                            "created": False, "matched_by": "email"}
+
+        slug = f"c-{_slugify(name)}"
+        if company_name:
+            slug += f"-{_slugify(company_name)}"
+
+        entity_id = slug
+        existing = next((c for c in contacts if c['entity_id'] == slug), None)
+        if existing:
+            try:
+                existing_email = (json.loads(existing.get('metadata') or '{}')
+                                  .get('email') or '').strip().lower()
+            except json.JSONDecodeError:
+                existing_email = ''
+            if norm_email and existing_email and existing_email != norm_email:
+                # Same name/company, different person — disambiguate
+                # deterministically off the new identity's strongest key.
+                key = norm_email or (phone or '').strip()
+                suffix = hashlib.sha256(key.encode()).hexdigest()[:6]
+                entity_id = f"{slug}-{suffix}"
+                if any(c['entity_id'] == entity_id for c in contacts):
+                    return {"ok": True, "entity_id": entity_id,
+                            "created": False, "matched_by": "slug+suffix"}
+            else:
+                return {"ok": True, "entity_id": slug,
+                        "created": False, "matched_by": "slug"}
+
+        metadata = {k: v for k, v in {
+            "email": norm_email, "phone": phone, "role": role,
+            "company_name": company_name,
+            "minted_at": time.time(), "minted_by": "entity-create",
+        }.items() if v is not None}
+        if extra_metadata:
+            metadata.update(extra_metadata)
+
+        repo.upsert_entity(
+            entity_type='contact',
+            entity_id=entity_id,
+            display_name=name,
+            source_db='workspace',
+            source_table='contacts',
+            description=description,
+            metadata=json.dumps(metadata),
+        )
+        return {"ok": True, "entity_id": entity_id, "created": True,
+                "matched_by": None}
+
+    if repo is not None:
+        return _resolve(repo)
+    with WorkspaceDBRepository.open() as opened:
+        return _resolve(opened)
+
+
+def handle_entity_create_command(args):
+    """Handle entity-create command — idempotent contact mint (v1: contacts only)."""
+    try:
+        output = getattr(args, 'output', 'human')
+        entity_type = getattr(args, 'type', 'contact')
+        if entity_type != 'contact':
+            err = {"ok": False, "error": "unsupported_entity_type",
+                   "message": f"entity-create v1 mints contacts only (got {entity_type!r}). "
+                              "Other entity types are written by their owning pipelines."}
+            print(json.dumps(err, indent=2) if output == 'json'
+                  else f"❌ {err['message']}", file=sys.stderr if output != 'json' else sys.stdout)
+            sys.exit(1)
+
+        extra = None
+        raw_meta = getattr(args, 'metadata', None)
+        if raw_meta:
+            extra = json.loads(raw_meta)
+
+        result = mint_contact(
+            name=getattr(args, 'name', None),
+            email=getattr(args, 'email', None),
+            phone=getattr(args, 'phone', None),
+            role=getattr(args, 'role', None),
+            company_name=getattr(args, 'company', None),
+            description=getattr(args, 'description', None),
+            extra_metadata=extra,
+        )
+        if output == 'json':
+            print(json.dumps(result, indent=2, default=str))
+        elif result.get('ok'):
+            verb = "created" if result['created'] else f"exists (matched by {result['matched_by']})"
+            print(f"👤 Contact {verb}: {result['entity_id']}")
+        else:
+            print(f"❌ {result.get('error')}", file=sys.stderr)
+        sys.exit(0 if result.get('ok') else 1)
+    except SystemExit:
+        raise
+    except Exception as e:
+        handle_cli_error(e, "entity-create", getattr(args, 'verbose', False))
+
+
 def handle_entity_show_command(args):
     """Handle entity-show command."""
     try:

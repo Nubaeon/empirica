@@ -416,6 +416,30 @@ def add_checkpoint_parsers(subparsers):
     entity_list_parser.add_argument('--limit', type=int, default=100, help='Max rows (default: 100)')
     entity_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
 
+    entity_create_parser = subparsers.add_parser(
+        'entity-create',
+        help=(
+            'Idempotent contact mint into the workspace entity registry. '
+            'Identity resolution: email match first (strongest key), then '
+            "deterministic human-readable slug ('c-<name>[-<company>]') "
+            'matching the existing registry convention. Re-calling with the '
+            'same identity returns the existing entity_id with created=false '
+            '— double-execute is a verified no-op. v1 mints contacts only.'
+        ),
+    )
+    entity_create_parser.add_argument('--type', default='contact',
+        help='Entity type (v1: contact only)')
+    entity_create_parser.add_argument('--name', required=True,
+        help='Contact display name')
+    entity_create_parser.add_argument('--email', help='Email (primary identity key for dedupe)')
+    entity_create_parser.add_argument('--phone', help='Phone number')
+    entity_create_parser.add_argument('--role', help='Role/title at their organization')
+    entity_create_parser.add_argument('--company', help='Company/organization name (folded into the slug)')
+    entity_create_parser.add_argument('--description', help='Free-text context for the contact')
+    entity_create_parser.add_argument('--metadata', help='Extra metadata as a JSON object string')
+    entity_create_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    entity_create_parser.add_argument('--verbose', action='store_true', help='Verbose output')
+
     entity_show_parser = subparsers.add_parser(
         'entity-show',
         help=(
