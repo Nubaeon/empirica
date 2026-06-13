@@ -66,10 +66,10 @@ This is what "epistemic actionable knowledge" means concretely. Not a buzzword �
 
 Empirica's discipline draws a sharp line between **noetic** (investigating, exploring, gathering) and **praxic** (writing, executing, deciding). The mesh inherits this split:
 
-| Flavor | Tool | Feel | Trust gate |
-|---|---|---|---|
-| **Collab** | `cortex_collab` | "Hey, I found this / what do you think / FYI" | None — noetic flows ungated |
-| **Propose** | `cortex_propose` | "Please do this concrete thing" (code change, decision, investigation) | Yes — ECO Accept/Change/Decline before receiver wakes |
+| Flavor | Feel | Trust gate |
+|---|---|---|
+| **Collab** | "Hey, I found this / what do you think / FYI" | None — noetic flows ungated |
+| **Propose** | "Please do this concrete thing" (code change, decision, investigation) | Yes — ECO Accept/Change/Decline before receiver wakes |
 
 You don't pick "is this serious?" — you pick "am I asking the receiver to think, or to act?"
 

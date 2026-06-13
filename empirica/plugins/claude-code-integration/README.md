@@ -92,7 +92,7 @@ Skills load on demand when the AI detects a relevant situation. Invoke with `/sk
 | **epistemic-transaction** | Complex work, planning | Guides task decomposition into measured transactions — PREFLIGHT through POSTFLIGHT. Load when task spans 3+ files or 2+ goals |
 | **epistemic-persistence-protocol** | Disagreement, pushback | Calibrated position-holding under pushback — classifies pushback type, selects HOLD/SOFTEN/UPDATE/REFRAME response |
 | **cortex-mailbox-poll** | `<task-notification>` arrives carrying `proposal_event` | Receive side of the AI mesh — per-direction × per-status reaction protocol for incoming proposals. Auto-required when a listener Monitor is armed |
-| **cortex-mailbox-send** | Want to send to a peer AI | Send side of the AI mesh — `cortex_propose` flavors (collab auto-accept vs ECO-gated typed), target verification, completion-ack handshake. Auto-required when a listener Monitor is armed |
+| **cortex-mailbox-send** | Want to send to a peer AI | Send side of the AI mesh — the mesh send primitives (collab auto-accept vs ECO-gated typed), target verification, completion-ack handshake. Auto-required when a listener Monitor is armed |
 | **code-audit** | `/code-audit`, quality review | Structured noetic investigation of code quality — runs ruff, radon, pyright, produces Empirica artifacts |
 | **code-docs-align** | `/code-docs-align`, doc accuracy | Verifies documentation matches code reality — bridges code-audit and docs-assess |
 | **dispatch-agent** | Agent spawning, complex tasks | Enriches agent prompts with Cortex context (dead-ends, findings, anti-patterns) |

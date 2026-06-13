@@ -116,9 +116,9 @@ The retirement decision and new design landed in [`empirica-cortex/docs/architec
 | If you are… | Action |
 |---|---|
 | Not running mesh | Nothing. The bead concept was invisible to you in 1.10.5 and stays invisible |
-| Running mesh, never emitted a v0 bead | Nothing. SER (Phase 1a + 1b live as of 2026-06-01) handles cross-practitioner coordination; the `/cortex-mailbox-send` skill (1.11.0+) directs your AIs through `payload.action='create_ser'` |
-| Emitted v0 beads during 1.10.5 | The rows stay readable. Don't re-emit. SER replaces the concept at the cortex layer |
-| Building against the v0 bead API (custom code) | Migrate to the cortex SER actions: `cortex_propose` with `payload.action='create_ser'` (LIVE), and the read endpoint `GET /v1/sers?ai_id=<canonical>` (LIVE). State transitions (`transition_ser`, `ser_ack`) + escalation tick still PENDING cortex-side |
+| Running mesh, never emitted a v0 bead | Nothing. SER (Shared Epistemic Record) handles cross-practitioner coordination; the `/cortex-mailbox-send` skill (1.11.0+) directs your AIs through the SER coordination flow |
+| Emitted v0 beads during 1.10.5 | The rows stay readable. Don't re-emit. SER replaces the concept at the mesh layer |
+| Building against the v0 bead API (custom code) | Migrate to the mesh SER coordination actions (the create / read / state-transition flow exposed by the mesh layer). Some state transitions are still landing mesh-side |
 
 **Why this matters for the 1.11 conceptual story.** SER is the cross-practitioner primitive; **goals** stay the per-practitioner work primitive. They live at different altitudes and don't compete. See [`MESH_CONCEPTS.md`](../human/end-users/MESH_CONCEPTS.md) for the full framing of why this split is intentional and what each layer carries.
 

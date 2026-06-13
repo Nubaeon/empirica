@@ -41,6 +41,10 @@ include docs/SEMANTIC_INDEX.yaml
 # docs/architecture` pulls them into the sdist.
 exclude docs/architecture/PROPOSAL_*.md
 exclude docs/architecture/ECOSYSTEM_MAP.md
+# Mesh protocol/build-surface specs — keep out of the shipped package (the
+# proprietary mesh layer is the value-capture surface; don't hand a blueprint).
+exclude docs/architecture/MESH_CONTENT.md
+exclude docs/architecture/MESH_SHARING_AGREEMENTS.md
 prune tests/coordination/archive
 prune empirica-dev
 prune forgejo-plugin-empirica
