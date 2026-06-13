@@ -16,6 +16,21 @@ and a practitioner provisioned on your laptop can be the same practice
 (`empirica.david.ecodex`) — same identity, same calibration history,
 addressable by peers via the same canonical 3-form.
 
+### `project_id` vs `ai_id` — two identities, one project
+
+A project carries two distinct identifiers, and they answer different questions:
+
+| Identifier | What it is | Used for |
+|---|---|---|
+| `project_id` | a **single canonical UUID**, minted once by `project-init`, committed in `.empirica/project.yaml` | the internal/DB key; Cortex's canonical project id (adopted from the committed yaml at `project-register`) |
+| `ai_id` | the project **name** (git basename / `project.yaml` `ai_id`) | the practice/practitioner identity; the project component of the canonical 3-form on the wire |
+
+`project_id` is **git-intrinsic and authoritative in `project.yaml`** — workspace.db
+and sessions.db re-key *from* it, never the reverse. Legacy projects that still
+carry a slug `project_id` are migrated to a UUID on `setup-claude-code --force`
+(see `empirica.core.identity_migration`); the slug never survives as an
+*identity*, only the name does. There is no "slug-as-project_id" anymore.
+
 ## Canonical resolution chain
 
 ```
