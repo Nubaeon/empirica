@@ -22,9 +22,9 @@
 > `empirica/cli/cli_core.py` — adding a new category means editing that
 > dictionary, then running this script.
 
-**Framework version:** 1.11.11
-**Generated:** 2026-06-09 12:23:32 UTC
-**Total commands:** 240 (across 26 categories)
+**Framework version:** 1.12.0
+**Generated:** 2026-06-14 19:55:18 UTC
+**Total commands:** 242 (across 26 categories)
 
 For the most up-to-date detail on any single command, prefer
 `empirica <command> --help` — the generator extracts the same `help`
@@ -65,7 +65,7 @@ require `--session-id` (`project-bootstrap`, `sessions-show`,
 | [session](#session) | 8 | `session-create`, `sessions-list`, `sessions-show`, … |
 | [workflow](#workflow) | 4 | `preflight-submit`, `check`, `check-submit`, … |
 | [goals](#goals) | 16 | `goals-create`, `goals-list`, `goals-search`, … |
-| [logging](#logging) | 21 | `finding-log`, `unknown-log`, `unknown-list`, … |
+| [logging](#logging) | 22 | `finding-log`, `unknown-log`, `unknown-list`, … |
 | [project](#project) | 18 | `project-init`, `project-update`, `project-create`, … |
 | [workspace](#workspace) | 13 | `workspace-init`, `workspace-map`, `workspace-list`, … |
 | [checkpoint](#checkpoint) | 7 | `checkpoint-create`, `checkpoint-load`, `checkpoint-list`, … |
@@ -1048,6 +1048,25 @@ Show the cross-mesh source map for the current project. Locally owned sources (f
   Output format
 - `--verbose` — optional · flag
   Show detailed info
+
+#### `empirica sources-reconcile`
+
+Match local sources against the central catalogue by content identity and adopt the catalogue uuid (PK-swap + cascade of edges, supersession pointers, finding source_refs). Also lazy-backfills content_hash/size/canonical_path on file-backed rows that predate migration 050. Dry-run by default; pass --apply to perform the swaps. Run `empirica rebuild` after an applied reconcile to re-point Qdrant entries.
+
+**Arguments:**
+
+- `--apply` — optional · flag
+  Perform the confirmed swaps (default: dry-run report)
+- `--project-id` — optional
+  Project UUID (auto-derived from active session when omitted)
+- `--cortex-url` — optional
+  Cortex base URL (default: credentials.yaml / CORTEX_URL env)
+- `--api-key` — optional
+  Cortex API key (default: credentials.yaml / CORTEX_API_KEY env)
+- `--output` — optional · type=`choice` · choices={human, json} · default=`human`
+  Output format
+- `--verbose` — optional · flag
+  Verbose output
 
 #### `empirica source-archive`
 
@@ -3177,7 +3196,7 @@ Record the Monitor task_id post-arm (chained after `on` + Monitor)
 
 ##### `empirica listener off`
 
-Tear down the canonical mesh listener — emits TaskStop + `unregister` next_step JSON
+Tear down the canonical mesh listener — reaps orphan listener processes for the ai_id, deletes the state file, and emits TaskStop + `unregister` next_step JSON
 
 **Arguments:**
 
@@ -3193,12 +3212,12 @@ Tear down the canonical mesh listener — emits TaskStop + `unregister` next_ste
 
 ##### `empirica listener gc`
 
-Garbage-collect stale ~/.empirica/listener_active_*.json files. Dry-run by default; pass --apply to actually remove.
+Garbage-collect stale ~/.empirica/listener_active_*.json files AND orphaned listener processes (parent session dead). Dry-run by default; pass --apply to actually remove.
 
 **Arguments:**
 
 - `--apply` — optional · flag
-  Actually remove the stale files (default: dry-run shows what would be removed)
+  Actually remove the stale files + reap orphan processes (default: dry-run shows what would be removed)
 - `--age-days` — optional · type=`int` · default=`7`
   Age threshold in days for the stale criterion (default: 7). Files older than this with no recent wake activity are pruned.
 - `--output` — optional · type=`choice` · choices={human, json} · default=`human`
@@ -4253,7 +4272,7 @@ Start local daemon for Chrome extension integration
 **Arguments:**
 
 - `--port` — optional · type=`int` · default=`8000`
-  Port to listen on (default: 8000)
+  Port to listen on (default: 8000, or EMPIRICA_SERVE_PORT env; the explicit flag wins over the env var)
 - `--host` — optional · default=`127.0.0.1`
   Host to bind to (default: 127.0.0.1, use 0.0.0.0 for network access)
 - `--reload` — optional · flag
@@ -4544,6 +4563,33 @@ Edit file with metacognitive confidence assessment (prevents 80%% of edit failur
   Output format (optional, default: json)
 - `--verbose` — optional · flag
   Show detailed operation info
+
+#### `empirica entity-create`
+
+Idempotent contact mint into the workspace entity registry. Identity resolution: email match first (strongest key), then deterministic human-readable slug ('c-<name>[-<company>]') matching the existing registry convention. Re-calling with the same identity returns the existing entity_id with created=false — double-execute is a verified no-op. v1 mints contacts only.
+
+**Arguments:**
+
+- `--type` — optional · default=`contact`
+  Entity type (v1: contact only)
+- `--name` — **required**
+  Contact display name
+- `--email` — optional
+  Email (primary identity key for dedupe)
+- `--phone` — optional
+  Phone number
+- `--role` — optional
+  Role/title at their organization
+- `--company` — optional
+  Company/organization name (folded into the slug)
+- `--description` — optional
+  Free-text context for the contact
+- `--metadata` — optional
+  Extra metadata as a JSON object string
+- `--output` — optional · type=`choice` · choices={human, json} · default=`human`
+  Output format
+- `--verbose` — optional · flag
+  Verbose output
 
 #### `empirica epp-activate`
 
