@@ -296,6 +296,56 @@ def _cortex_installed() -> bool:
         return False
 
 
+def _make_cortex_slug_resolver(timeout: float = 8.0) -> CortexResolver:
+    """Build a (slug, tenant) -> canonical UUID resolver hitting cortex
+    ``GET /v1/projects/by-slug/{slug}`` (caller-scope; the caller's org+user is
+    derived from the bearer, so it returns *this* owner's project). Reads cortex
+    ``url`` + ``api_key`` from ~/.empirica/credentials.yaml. Returns None on
+    miss/unconfigured/error — never raises, so the migration degrades to the
+    route-to-``project-register`` path rather than guessing.
+
+    Endpoint contract (cortex a61587c): 200 ``{ok, project: {id, ...}}`` |
+    404 ``{ok: false, error: "not_found"}``. Archived projects are excluded.
+    """
+
+    def resolver(slug: str | None, tenant: str | None) -> str | None:
+        if not slug:
+            return None
+        try:
+            import json
+            import urllib.parse
+            import urllib.request
+
+            import yaml
+
+            cred = Path.home() / ".empirica" / "credentials.yaml"
+            if not cred.exists():
+                return None
+            cortex = (yaml.safe_load(cred.read_text(encoding="utf-8")) or {}).get(
+                "cortex"
+            ) or {}
+            url, key = cortex.get("url"), cortex.get("api_key")
+            if not url or not key:
+                return None
+            endpoint = (
+                url.rstrip("/")
+                + "/v1/projects/by-slug/"
+                + urllib.parse.quote(str(slug), safe="")
+            )
+            req = urllib.request.Request(
+                endpoint, headers={"Authorization": f"Bearer {key}"}
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+            if body.get("ok") and isinstance(body.get("project"), dict):
+                return body["project"].get("id")
+        except Exception:
+            return None
+        return None
+
+    return resolver
+
+
 def run_force_migration(
     project_root: str | Path,
     *,
@@ -323,7 +373,13 @@ def run_force_migration(
 
     installed = cortex_installed_fn()
     if installed:
-        resolver = cortex_resolver  # may be None until the endpoint ships
+        # Default to the live cortex slug→UUID resolver; an explicit injected
+        # resolver (incl. a stub) overrides it (tests / custom flows).
+        resolver = (
+            cortex_resolver
+            if cortex_resolver is not None
+            else _make_cortex_slug_resolver()
+        )
         mint_fn = None  # never fork a possibly-registered identity
     else:
         resolver = None

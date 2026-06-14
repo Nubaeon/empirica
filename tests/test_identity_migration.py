@@ -231,7 +231,7 @@ def test_force_cortex_installed_never_mints_routes_to_register(tmp_path):
     result = run_force_migration(
         root,
         cortex_installed_fn=lambda: True,
-        cortex_resolver=None,  # endpoint not yet available
+        cortex_resolver=lambda slug, tenant: None,  # cortex lookup misses
         mint=lambda: minted.append(1) or _UUID_A,  # must NOT be called
     )
     assert result["cortex_installed"] is True
@@ -259,3 +259,42 @@ def test_force_already_uuid_is_noop(tmp_path):
     root = _make_project(tmp_path, _UUID_A)
     result = run_force_migration(root, cortex_installed_fn=lambda: False)
     assert result["status"] == "already_uuid"
+
+
+# ── live cortex slug resolver (mocked transport) ────────────────────────
+
+
+def test_cortex_slug_resolver_parses_200_and_404(tmp_path, monkeypatch):
+    import io
+    import json as _json
+
+    from empirica.core import identity_migration as im
+
+    # credentials.yaml with a cortex url+key
+    cred_dir = tmp_path / ".empirica"
+    cred_dir.mkdir()
+    (cred_dir / "credentials.yaml").write_text(
+        yaml.safe_dump({"cortex": {"url": "https://cortex.example", "api_key": "ctx_x"}})
+    )
+    monkeypatch.setattr(im.Path, "home", classmethod(lambda cls: tmp_path))
+
+    class _Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def fake_urlopen(req, timeout=None):
+        slug = req.full_url.rsplit("/", 1)[-1]
+        assert req.headers.get("Authorization") == "Bearer ctx_x"
+        if slug == "found-slug":
+            return _Resp(_json.dumps({"ok": True, "project": {"id": _UUID_B}}).encode())
+        raise Exception("404 not_found")  # urllib raises HTTPError on 404
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+
+    resolver = im._make_cortex_slug_resolver()
+    assert resolver("found-slug", "david") == _UUID_B
+    assert resolver("missing-slug", "david") is None  # 404 → None, no raise
+    assert resolver("", "david") is None  # empty slug short-circuits
