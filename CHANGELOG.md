@@ -5,7 +5,24 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.12.0] — 2026-06-14
+
+Project identity becomes a single canonical UUID, and project registration + onboarding get a clean, copy-pastable model that the extension's Register UI mirrors. Plus an idempotent contact-mint primitive, the `sources-reconcile` verb (canonical source identity), per-org daemon env support, and listener-GC hardening.
+
+### Added
+
+- **Project identity is a single canonical UUID — slug-as-id migration** (`empirica/core/identity_migration.py`). A project's `project_id` is a UUID, minted once by `project-init`, committed in `.empirica/project.yaml`, and *adopted* (never re-minted) by `project-register`. `.empirica/project.yaml` is the git-intrinsic source of truth; the practice/`ai_id` identity stays the project *name*. Legacy projects init'd before the UUID switch carry a slug `project_id`; the migration engine resolves the canonical UUID (yaml → workspace.db → Cortex when installed) and re-keys it across every `project_id` column in every `.db` under `.empirica/` (schema-introspection — complete by construction, so history doesn't orphan). Resolution policy is Cortex-gated: with Cortex installed the project may already be registered, so an unresolvable case routes the user to `project-register` rather than minting a forked id; without Cortex (purely local) minting is safe. Runs on the `setup-claude-code --force` upgrade ritual (Stage 6.8, non-fatal, no-op when already a UUID), emitting an actionable message when it can't resolve so the rest can be finished by hand. 18 tests in `tests/test_identity_migration.py`.
+- **Register + management instruction set for end users** (`docs/human/end-users/REGISTER_AND_MANAGE_PROJECTS.md`). Copy-pastable command blocks for the three register paths — new project (`project-init && project-register .`), already-an-Empirica project (`git clone … && project-register .`), and cloud/Cowork (`cortex_project_register`) — plus the manage-many verbs (`projects-list` / `projects-sync` / `project-update`) and the canonical 3-form addressing convention. Built against real CLI behavior.
+- **Idempotent contact mint** — `empirica entity-create` CLI + `POST /api/v1/entities` (loopback) over one `mint_contact()` function. Identity resolution is email-first → deterministic readable slug (`c-<name>[-<company>]`) → 6-hex suffix on a genuine collision; re-minting the same identity is a verified no-op (`created=false`). Backs the contact round-trip for per-org daemon instances.
+- **`empirica sources-reconcile`** + **migration 050 (content-identity columns)**. Canonical source identity: `content_hash` / `size_bytes` / `canonical_path` / `mime_type` computed best-effort at `source-add`; the reconcile verb adopts catalogue UUIDs and backfills identity, cascading the re-key across `artifact_edges`, `archive_target_id`, and `project_findings.source_refs`. Catalogue lookups chunk to the 500-hash server cap.
+- **`EMPIRICA_SERVE_PORT` + `EMPIRICA_WORKSPACE_DB` env support** (`empirica serve`). Enables per-org daemon instances — a separate `workspace.db` + port per `HOME` — for multi-tenant hosting. The explicit `--port` flag still wins over the env var.
+
+### Fixed
+
+- **`empirica listener gc` reaps orphaned listener processes**, and `listener off` is hardened to reap an ai_id's orphans and delete its state file; a SessionStart warning surfaces when more than three orphans accumulate.
+- **`practice-context --ai-id` prefers the caller's own tenant on a slug collision** (`practice_context_commands.py`) — a two-pass own-tenant filter plus dotted→`ai_id_mesh` exact match, so a same-slug peer in another tenant no longer shadows your own row.
+
+## [1.11.11] — 2026-06-11
 
 Mesh-listener reliability + canonical-channel migration. Three convergent fixes that together kill a class of stale-proposal noise and align the client side with the per-tenant ntfy channel model: the orchestration poller no longer loses its seen-proposals state on a transient empty response, the credentials wizard stops seeding the retired bare topic into fresh installs, and a new `mesh migrate-topics` verb rewrites legacy installs in place. Plus a basic-auth path on the `mesh diagnose --cortex` ntfy probe so tenants without a bearer token aren't flagged as a false-negative.
 
@@ -16,7 +33,6 @@ Mesh-listener reliability + canonical-channel migration. Three convergent fixes 
 
 ### Added
 
-- **Project identity is a single canonical UUID — slug-as-id migration** (`empirica/core/identity_migration.py`). A project's `project_id` is a UUID, minted once by `project-init`, committed in `.empirica/project.yaml`, and *adopted* (never re-minted) by `project-register`. `.empirica/project.yaml` is the git-intrinsic source of truth; the practice/`ai_id` identity stays the project *name*. Legacy projects init'd before the UUID switch carry a slug `project_id`; the migration engine resolves the canonical UUID (yaml → workspace.db → Cortex when installed) and re-keys it across every `project_id` column in every `.db` under `.empirica/` (schema-introspection — complete by construction, so history doesn't orphan). Resolution policy is Cortex-gated: with Cortex installed the project may already be registered, so an unresolvable case routes the user to `project-register` rather than minting a forked id; without Cortex (purely local) minting is safe. Runs on the `setup-claude-code --force` upgrade ritual (Stage 6.8, non-fatal, no-op when already a UUID), emitting an actionable message when it can't resolve so the rest can be finished by hand. 17 tests in `tests/test_identity_migration.py`.
 - **`empirica mesh migrate-topics [--apply]`** (`empirica/cli/command_handlers/mesh_commands.py`). Inspects `~/.empirica/credentials.yaml` `ntfy.topic` and every `~/.empirica/listener_active_*.json` marker; detects retired topic forms (bare `orchestration-events`, the pre-tenant per-org form `<org>-orchestration-events`, or per-practice topics lacking the `-orchestration-events-` segment); queries the mesh-layer notification-channels registry for the canonical per-tenant topic; rewrites in place. Preserves the `?tags=<ai_id>` suffix on listener_active markers. Refuses to silently fall back if the canonical topic can't be resolved (exit 2 with actionable error). Dry-run by default; per-target reason rationale in both JSON payload and human render. 19 tests in `tests/test_mesh_migrate_topics.py`.
 
 ### Changed
