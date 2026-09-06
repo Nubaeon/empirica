@@ -97,4 +97,4 @@ def test_the_manifest_is_not_reported_as_a_local_edit(tmp_path):
 
     report = _install_plugin_files(source, plugin, "json")
 
-    assert not any(SKILL_OWNERSHIP_MANIFEST in b for b in report["backed_up"])
+    assert not any(SKILL_OWNERSHIP_MANIFEST in b for b in (report["backed_up"] or []))

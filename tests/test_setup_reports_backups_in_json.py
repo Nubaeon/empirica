@@ -34,8 +34,9 @@ def test_json_mode_reports_which_files_were_overwritten(tmp_path, capsys):
 
     assert report is not None, "json mode must get the backup list, not None"
     assert "skills/gardening/SKILL.md" in report["backed_up"]
-    assert report["backup_dir"].endswith(".bak")
-    assert Path(report["backup_dir"], "skills/gardening/SKILL.md").read_text() == "LOCALLY PATCHED\n"
+    backup_dir = str(report["backup_dir"])
+    assert backup_dir.endswith(".bak")
+    assert Path(backup_dir, "skills/gardening/SKILL.md").read_text() == "LOCALLY PATCHED\n"
     assert capsys.readouterr().out == "", "json mode must not print — it must REPORT"
 
 
