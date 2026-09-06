@@ -5,6 +5,117 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.39] - 2026-09-06
+
+**Three data-loss and data-integrity fixes.** The largest destroyed 4,781 points
+across up to 24 practices on a single box, silently and permanently, via a verb
+the gardening guidance recommended.
+
+### Fixed
+
+- **`rebuild` dropped seven collections nothing could refill.**
+  `recreate_project_collections` deleted TEN collections; the re-embed step
+  covered THREE. `rebuild.py` contained zero references to decisions or
+  assumptions. So `empirica rebuild --qdrant` and `--qdrant-only` emptied
+  calibration, episodic, goals, decisions, assumptions, epistemics and intents,
+  recreated them empty, and **reported success**. Measured on one box before the
+  fix: calibration 1,960 · episodic 1,688 · goals 1,036 · decisions 92 ·
+  assumptions 5 — **4,781 points across up to 24 practices**, unrecoverable
+  because nothing re-embedded them. A rebuild is precisely what someone runs when
+  they already suspect their index is wrong, and `--qdrant-only` was named in the
+  epistemic-gardening guidance as the way to refresh embedded payloads: **the
+  documented remedy was the loss.** Root cause was two hand-maintained lists in
+  different files, neither wrong alone. The drop set is now DERIVED from the
+  refill set, and preserved collections are named in the receipt with their point
+  counts. Two shipped code paths that told operators to run the destructive verb
+  were corrected — one printed it immediately after an identity rekey that
+  `--qdrant` would itself have reverted.
+
+- **Decisions and assumptions had no re-embed path at all** — and 584 of them had
+  never been embedded in the first place. `_embed_project_from_db` covered six
+  artifact types and named neither, which is what made the rebuild destructive
+  for them. Wiring it up took this practice from 11 decisions to 595 and 2
+  assumptions to 81: the collections a rebuild would have destroyed were already
+  98% empty. Both callers share one reader rather than a copy each.
+
+- **One destination per artifact type.** `decision-log` wrote the typed
+  collections while `log-artifacts` wrote `memory`, so where an artifact landed
+  depended on which verb was used — and the documented default is the batch verb.
+  Retrieval searches both, so the split never lost retrievability; it produced two
+  half-populated buckets and a duplicate for anything in both. Both verbs now
+  route decisions and assumptions to the typed collections, which carry the richer
+  payload (choice, rationale, alternatives, reversibility, confidence) and the
+  higher search boost.
+
+- **`mailbox reply` treated a timeout as a rejection and stranded the parent.**
+  `status = -1` comes only from the transport layer — no HTTP response arrived —
+  while a 4xx/5xx returns its real code. The handler called it `failed` and
+  returned before closing the parent, so a propose that HAD committed left the
+  peer holding the reply and the sender's handshake open, which is the exact
+  failure the verb exists to prevent. A second practice hit the mirror image and
+  double-sent after a "failed" reply that had succeeded. Now attaches a stable
+  idempotency key, retries once (the applied-keys ledger returns the original
+  proposal rather than minting a second), and on a second silence reports
+  UNRESOLVED with exit 2 — distinct from the 1 a real refusal returns — naming how
+  to check and that re-running is safe.
+
+- **`log-artifacts` accepted an invalid `epistemic_source` and stored NULL.** The
+  single `*-log` verbs refuse an out-of-vocabulary value at the parser; the batch
+  path passed it to a writer that discarded anything unrecognised and returned
+  `ok`. A full session of batch-logged artifacts lost their provenance label
+  silently. Validated up front now, with an error that names the confusion that
+  causes it: `ran`/`read`/`retrieved` are CHECK-grounding values, not epistemic
+  sources.
+
+- **Scoped list endpoints did not say what they filtered.** `/api/v1/engagements`
+  and `/api/v1/entities?type=engagement` apply different default scopes on
+  different columns, returning 44 and 41 against a store of 52. Both correct;
+  neither said so. From outside the serving layer that is indistinguishable from
+  data loss, and it cost a peer practice an investigation and blocked a deletion
+  decision. Both responses now carry `total_unfiltered` and a `scope` block naming
+  the exact field — and each names the sibling endpoint's different field, so the
+  two are reconcilable from the responses alone.
+
+- **`lesson-create` returned an id for a lesson no peer could fetch**, then
+  promised a retry that shared the failure. Federation ran only in the POSTFLIGHT
+  sweep, so a lesson could carry `sharing_policy: org`, read as shared everywhere
+  locally, and be invisible to the mesh — permanently, if the session ended
+  without a POSTFLIGHT. Now federates at write time and reports `not_requested` /
+  `published` / `deferred`. The first cut of that fix resolved the project one way
+  only and told the caller "POSTFLIGHT will retry" when the sweep resolves
+  identically: **a retry is only worth promising if it uses a different path than
+  the one that just failed.**
+
+- **The plugin backup was invisible under `--output json`** — files were backed up
+  and nothing said so, in the mode scripts and CI consume.
+
+- **Four more authenticated call sites onto the shared credential contract.** A
+  hand-parsed credentials file is blind to OAuth-only seats and to the loader's
+  precedence. The sharpest was `mesh_commands`, which gated on `api_key` being
+  present, so an OAuth seat returned nothing to every caller before any call was
+  attempted.
+
+### Added
+
+- **Empirica declares which skills it owns, versions and installs.**
+  `skills/.empirica-skills.json` records owner, version and a content digest per
+  skill. Ownership was previously inferred from absence in core's source tree,
+  which made a retired skill indistinguishable from a peer's and a local edit to
+  one of ours unattributable. Everything absent from the manifest belongs to the
+  ecosystem-update lane and is preserved untouched.
+
+- **A temporal doc-drift gate.** A test cannot judge whether a document is still
+  true, but it can refuse to let ageing pass unnoticed: past 180 days a tracked
+  doc must be fresh, archived, or registered with a reason. `pending_review` is a
+  deliberately distinct state from `verified_current` — "its subject still exists"
+  is evidence a doc is not describing dead code and is NOT evidence the content is
+  correct — and carries a deadline that fails the test when it passes.
+
+### Internal
+
+- The fail-closed error-reporting suite no longer writes real issues into the live
+  store.
+
 ## [1.13.38] - 2026-09-05
 
 A release about **the difference between "nothing is there" and "I could not
