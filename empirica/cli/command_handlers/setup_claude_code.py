@@ -807,7 +807,7 @@ def _install_plugin_files(source_dir, plugin_dir, output_format):
     # the sync stays unconditional and the destruction becomes recoverable and
     # loud instead: files that differ from what setup is about to write are
     # backed up with their relative paths, and each one is NAMED in the output.
-    _preserved = _backup_locally_modified_plugin_files(source_dir, plugin_dir, output_format)
+    preserved = _backup_locally_modified_plugin_files(source_dir, plugin_dir, output_format)
     # Snapshot bundle-installed skills the open plugin does not ship, BEFORE the
     # rmtree destroys them; restored after the copytree (Philipp mesh-support).
     _foreign_tmp, _foreign_names = _snapshot_foreign_skills(source_dir, plugin_dir)
@@ -836,6 +836,15 @@ def _install_plugin_files(source_dir, plugin_dir, output_format):
 
     if output_format != "json":
         print(f"   ✓ Plugin installed to {plugin_dir}")
+
+    # Hand the backup list back so the JSON caller can report it too. The human
+    # branch of `_backup_locally_modified_plugin_files` prints each preserved
+    # file; the json branch printed nothing and the caller discarded the return
+    # into `_preserved`. So under `--output json` the files were backed up and
+    # NOTHING said so — in the mode that scripts, CI and other tools consume,
+    # which is where a silent backup does the most harm and where a human is
+    # least likely to be watching stdout. Reported by cortex, 2026-09-06.
+    return {"backed_up": preserved, "backup_dir": str(plugin_dir.parent / f"{plugin_dir.name}.bak")}
 
 
 def _backup_locally_modified_plugin_files(source_dir: Path, plugin_dir: Path, output_format: str) -> list[str]:
@@ -2002,7 +2011,7 @@ def handle_setup_claude_code_command(args):
         home, claude_dir, plugins_dir, plugin_dir, marketplace_dir, _empirica_dir = _setup_directories(output_format)
 
         # Stage 2: Install plugin files
-        _install_plugin_files(source_dir, plugin_dir, output_format)
+        install_report = _install_plugin_files(source_dir, plugin_dir, output_format)
         _write_plugin_version_stamp(plugin_dir)  # drives drift-sync / session-init auto-heal
 
         # Stage 3: Install CLAUDE.md
@@ -2088,6 +2097,11 @@ def handle_setup_claude_code_command(args):
                     "ntfy_ok": creds_state["ntfy_ok"],
                     "issues": creds_state["issues"],
                 },
+                # Always present, even when empty: `"backed_up": []` is a
+                # statement that nothing was overwritten, which is a different
+                # fact from the key being absent — and only one of the two is
+                # checkable by the script reading this.
+                "plugin_files": install_report,
                 "tenant_metadata": tenant_metadata,
                 "listener_service": listener_service_result,
                 "serve_restarted": serve_restarted,
