@@ -144,60 +144,6 @@ def _read_decisions_and_assumptions(db, project_id: str) -> tuple[list[dict], li
     return decisions, assumptions
 
 
-def _build_decision_items(decisions: list[dict]) -> list[dict]:
-    """Memory items for decisions — choice AND rationale, matching the live batch writer.
-
-    The rationale is concatenated into `text` rather than carried as its own key,
-    because that is what `log-artifacts` produces today and a rebuild must
-    reproduce the writers, not improve on them. It is also why a decision in the
-    memory collection stays retrievable by its reasoning: the reasoning is inside
-    the embedded text even though there is no `rationale` field. (Settled by a
-    third independent measurement after two practices read the payload
-    differently, 2026-09-06.)
-    """
-    items = []
-    for d in decisions:
-        did = str(d.get("id", ""))
-        if not did:
-            continue
-        rationale = d.get("rationale") or ""
-        text = f"{d.get('choice', '')}: {rationale}" if rationale else (d.get("choice") or "")
-        if not text.strip():
-            continue
-        items.append(
-            {
-                "id": did,
-                "text": text,
-                "type": "decision",
-                "session_id": d.get("session_id"),
-                "goal_id": d.get("goal_id"),
-                "timestamp": d.get("created_timestamp"),
-            }
-        )
-    return items
-
-
-def _build_assumption_items(assumptions: list[dict]) -> list[dict]:
-    """Memory items for assumptions, mirroring the decision builder."""
-    items = []
-    for a in assumptions:
-        aid = str(a.get("id", ""))
-        text = (a.get("assumption") or "").strip()
-        if not aid or not text:
-            continue
-        items.append(
-            {
-                "id": aid,
-                "text": text,
-                "type": "assumption",
-                "session_id": a.get("session_id"),
-                "goal_id": a.get("goal_id"),
-                "timestamp": a.get("created_timestamp"),
-            }
-        )
-    return items
-
-
 def _embed_typed_decisions(project_id: str, decisions: list[dict]) -> int:
     """Refill `project_<id>_decisions`. Returns the count that landed, not the count tried."""
     from empirica.core.qdrant.intent_layer import embed_decision
@@ -452,13 +398,26 @@ def _embed_project_from_db(project_id: str, db_path: str, project_root: str) -> 
         mem_items.extend(_build_dead_end_items(dead_ends))
         mem_items.extend(_build_lesson_items(lessons))
         mem_items.extend(_build_snapshot_items(snapshots))
-        mem_items.extend(_build_decision_items(decisions))
-        mem_items.extend(_build_assumption_items(assumptions))
 
         upsert_memory(project_id, mem_items)
 
-        # ...and the TYPED collections, which is where the single verbs land and
-        # where nothing was refilling them.
+        # ONE destination per type: decisions and assumptions go to their TYPED
+        # collections, not to memory as well.
+        #
+        # bf0955f8 wrote BOTH, reasoning that a rebuild should reproduce what the
+        # writers would have written. That was wrong, and measuring showed why:
+        # retrieval searches memory AND the typed collections (both are in
+        # `_SEARCH_COLLECTIONS`) and keys results BY COLLECTION with no
+        # cross-collection dedup — so an artifact in both appears in both
+        # buckets. Reproducing two writers means duplicating every artifact they
+        # disagree about. 62 decisions were already double-listed; writing both
+        # would have made it all 595 on the next run.
+        #
+        # Typed wins because the payload is strictly richer — choice, rationale,
+        # alternatives, reversibility, confidence_at_decision, versus memory's
+        # single concatenated `text` — and it carries the higher search boost
+        # (1.3 against 1.2). Nothing is retrievable from memory that is not
+        # retrievable from typed.
         counts["decisions"] = _embed_typed_decisions(project_id, decisions)
         counts["assumptions"] = _embed_typed_assumptions(project_id, assumptions)
 

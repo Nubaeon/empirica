@@ -594,11 +594,47 @@ def _auto_embed_node(node: dict, artifact_id: str, context: dict):
             text = f"{data['approach']}: {data['why_failed']}"
         elif ntype == "mistake":
             text = f"{data['mistake']}: {data['why_wrong']}"
-        elif ntype == "assumption":
-            text = data["assumption"]
-        elif ntype == "decision":
-            text = f"{data['choice']}: {data['rationale']}"
-        else:
+        # ONE DESTINATION PER TYPE. Decisions and assumptions route to their
+        # TYPED collections here, exactly as the single `decision-log` /
+        # `assumption-log` verbs do — not to `memory`.
+        #
+        # They used to go to `memory` while the single verbs wrote typed, so the
+        # destination depended on WHICH VERB a practitioner happened to use. The
+        # documented default is this batch path, so the recommended way of
+        # logging a decision put it somewhere different from the alternative.
+        #
+        # Retrieval searches BOTH (`_SEARCH_COLLECTIONS` covers memory and the
+        # typed collections) and keys results by collection with no
+        # cross-collection dedup — so the split did not lose retrievability, it
+        # produced two half-populated buckets and, for anything written both
+        # ways, a duplicate. Typed wins because the payload is strictly richer —
+        # choice, rationale, alternatives, reversibility, confidence — against a
+        # single concatenated `text`, and carries the higher boost.
+        if ntype == "assumption":
+            from empirica.core.qdrant.intent_layer import embed_assumption
+
+            embed_assumption(
+                project_id=context["project_id"],
+                assumption_id=artifact_id,
+                assumption=data["assumption"],
+                confidence=data.get("confidence", 0.5),
+                session_id=context["session_id"],
+            )
+            return
+        if ntype == "decision":
+            from empirica.core.qdrant.intent_layer import embed_decision
+
+            embed_decision(
+                project_id=context["project_id"],
+                decision_id=artifact_id,
+                choice=data["choice"],
+                rationale=data.get("rationale", ""),
+                alternatives=data.get("alternatives"),
+                reversibility=data.get("reversibility") or "committal",
+                session_id=context["session_id"],
+            )
+            return
+        if ntype not in ("finding", "unknown", "dead_end", "mistake"):
             return
 
         embed_single_memory_item(

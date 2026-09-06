@@ -531,16 +531,12 @@ def handle_project_embed_command(args):
         # defect that produced the first two. Importing keeps ONE definition
         # until the deeper convergence lands.
         from empirica.core.qdrant.rebuild import (
-            _build_assumption_items,
-            _build_decision_items,
             _embed_typed_assumptions,
             _embed_typed_decisions,
             _read_decisions_and_assumptions,
         )
 
         decisions, assumptions = _read_decisions_and_assumptions(db, project_id)
-        mem_items.extend(_build_decision_items(decisions))
-        mem_items.extend(_build_assumption_items(assumptions))
         upsert_memory(project_id, mem_items)
 
         typed_decisions = _embed_typed_decisions(project_id, decisions)
