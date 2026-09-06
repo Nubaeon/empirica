@@ -1240,8 +1240,16 @@ def _check_semantic_layer():
             elif "nomic-embed-text" in result.stdout:
                 embedding_ok = True
                 print("✓ Ollama: installed, nomic-embed-text available (768d)")
+                # A dimension change is the one case where recreating IS needed —
+                # a collection at 1024d cannot accept 768d vectors. But say what
+                # the rebuild leaves behind: it recreates only the three
+                # collections it can refill, and the rest keep the OLD dimensions
+                # and will reject new writes until handled deliberately.
                 print("    If Qdrant collections were created at 1024d, switch models and run:")
-                print("    empirica rebuild --qdrant")
+                print("    empirica rebuild --qdrant-only   # recreates docs/memory/eidetic at the new dims")
+                print("    Goals, decisions, assumptions, episodic and calibration are PRESERVED,")
+                print("    which means they keep the old dimensions and will reject new vectors.")
+                print("    They have no re-embed path, so recreating them empty loses them for good.")
             else:
                 print("⚠ Ollama: installed, but no embedding model pulled")
                 print("    Fix: ollama pull qwen3-embedding")

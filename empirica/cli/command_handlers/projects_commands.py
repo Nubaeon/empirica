@@ -1588,7 +1588,19 @@ def _reconcile_identity_if_diverged(args, project_path, local_id, cortex_outcome
             print(
                 f"   🔧 Identity reconciled: local {local_id[:8]}… → cortex {cortex_id[:8]}… (all local stores rekeyed)"
             )
-            print("   ⚠ Run 'empirica rebuild --qdrant' to re-point Qdrant collections to the new id.")
+            # NOT `rebuild --qdrant`, which this said until 2026-09-06. That
+            # walks every project in workspace.db and, before the drop-set fix,
+            # emptied seven collections nothing refills. It also force-imports
+            # git notes into SQLite first, reverting the rekey that just ran.
+            #
+            # `project-embed` re-embeds THIS project under the new id. Say what
+            # it does not cover, because the old-id collections do not move and
+            # nothing else is going to mention them.
+            print("   ⚠ Run 'empirica project-embed' to populate Qdrant under the new id.")
+            print("     It covers docs/memory/eidetic. Collections still under the OLD id")
+            print("     (goals, decisions, assumptions, episodic, calibration) are NOT moved")
+            print("     and have no re-embed path — list them before deleting anything:")
+            print(f"       empirica qdrant-status | grep {local_id[:8]}")
     else:
         if output_format != "json":
             print(f"   ⚠ IDENTITY DIVERGENCE: local {local_id[:8]}… ≠ cortex-canonical {cortex_id[:8]}…")
