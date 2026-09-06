@@ -169,27 +169,71 @@ def recreate_collection(collection_name: str) -> bool:
         return False
 
 
+#: The ONLY collections a rebuild may drop — the ones `_embed_project_from_db`
+#: can actually put back. Deriving the drop set from the refill set is the whole
+#: point: two hand-maintained lists drifted, and the drift was silent and lossy.
+#:
+#: `recreate_project_collections` used to drop TEN collections while the refill
+#: covered three (docs / memory / eidetic, via upsert_memory, embed_eidetic and
+#: embed_project_code). `rebuild.py` contains ZERO references to decisions or
+#: assumptions. So `empirica rebuild --qdrant-only` — which the gardening
+#: guidance recommends as the way to refresh embedded payloads — permanently
+#: destroyed every point in the other seven and reported success.
+#:
+#: Measured 2026-09-06 on one box: 4,781 points across up to 24 practices —
+#: calibration 1,960, episodic 1,688, goals 1,036, decisions 92, assumptions 5.
+#: Not recoverable: nothing re-embeds them, so the loss is silent AND permanent.
+REBUILDABLE_COLLECTIONS = (_docs_collection, _memory_collection, _eidetic_collection)
+
+
 def recreate_project_collections(project_id: str) -> dict:
     """
-    Recreate all collections for a project with current embeddings dimensions.
+    Recreate the REBUILDABLE collections for a project at current dimensions.
 
-    Returns dict with success status for each collection.
+    Returns `{collection_name: bool}` for what was recreated, plus a `preserved`
+    key naming what was deliberately left alone and why.
+
+    **A collection nothing can refill is not dropped.** The alternative is
+    destroying it, because "recreate" here means delete-then-create-empty and
+    the refill step covers only three of the ten collections this used to clear.
+
+    The cost of preserving them is real and stated rather than hidden: if the
+    embedding dimensions changed, a preserved collection keeps the OLD ones and
+    will not accept new vectors. That is a loud failure at the next write, which
+    is strictly better than a silent, permanent, unrecoverable deletion — and
+    the caller is told, so it can be acted on rather than discovered.
     """
-    results = {}
-    for coll_fn in [
-        _docs_collection,
-        _memory_collection,
+    results: dict = {}
+    for coll_fn in REBUILDABLE_COLLECTIONS:
+        name = coll_fn(project_id)
+        results[name] = recreate_collection(name)
+
+    preserved = []
+    for coll_fn in (
         _epistemics_collection,
-        _eidetic_collection,
         _episodic_collection,
         _goals_collection,
         _calibration_collection,
         _assumptions_collection,
         _decisions_collection,
         _intents_collection,
-    ]:
+    ):
         name = coll_fn(project_id)
-        results[name] = recreate_collection(name)
+        try:
+            client = _get_qdrant_client()
+            if client is not None and client.collection_exists(name):
+                preserved.append({"collection": name, "points": client.count(name, exact=True).count})
+        except Exception as e:  # reporting-only; never let it block the rebuild
+            preserved.append({"collection": name, "points": None, "error": f"{type(e).__name__}: {e}"})
+
+    results["preserved"] = {
+        "collections": preserved,
+        "reason": (
+            "no rebuild path exists for these — the re-embed step covers docs/memory/eidetic only. "
+            "They are left intact rather than emptied. If embedding dimensions changed, they still "
+            "carry the old ones and will reject new vectors until re-created deliberately."
+        ),
+    }
     return results
 
 
