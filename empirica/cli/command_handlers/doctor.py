@@ -1490,6 +1490,104 @@ def check_project_drift(cwd: Path | None = None) -> Check:
 # ─── Top-level orchestrator ────────────────────────────────────────────
 
 
+def _handle_reconcile_notes(cwd: Path, apply_it: bool) -> int:
+    """`doctor --reconcile-notes` — plan by default, repair with --apply.
+
+    Dry-run first is not politeness: this rewrites history-adjacent refs, and an
+    operator who cannot read what would move cannot disagree with it. The plan
+    names every artifact id rather than counting them.
+    """
+    import json as _json
+
+    from empirica.core.canonical.empirica_git.note_reconcile import apply as _apply
+    from empirica.core.canonical.empirica_git.note_reconcile import plan as _plan
+    from empirica.data.session_database import SessionDatabase
+
+    db_path = cwd / ".empirica" / "sessions" / "sessions.db"
+    if not db_path.exists():
+        print(_json.dumps({"ok": False, "error": f"no sessions.db at {db_path}"}, indent=2))
+        return 1
+
+    db = SessionDatabase(db_path=str(db_path))
+    the_plan = _plan(db, str(cwd))
+
+    # The worktree collapse is REPORTED, never silent: N worktrees sharing one
+    # notes history reconcile ONCE, and a run that quietly skips the other N-1
+    # is indistinguishable from one that had a single path to begin with.
+    the_plan["note"] = (
+        "Reconciliation is keyed on the notes ROOT (git common dir), so worktrees sharing one "
+        "notes history are processed exactly once."
+    )
+
+    if not apply_it:
+        the_plan["dry_run"] = True
+        the_plan["next"] = "empirica doctor --reconcile-notes --apply"
+        print(_json.dumps(the_plan, indent=2, default=str))
+        return 0
+
+    receipt = _apply(db, str(cwd), the_plan)
+    receipt["dry_run"] = False
+    print(_json.dumps(receipt, indent=2, default=str))
+
+    # Receipt as a decision, same discipline as delete-artifacts: a destructive
+    # sweep whose only trace is stdout is a sweep nobody can audit later.
+    try:
+        db.log_decision(
+            project_id=None,
+            session_id=None,
+            choice=f"Reconciled notes to sqlite: {receipt['archived']} archived, {receipt['stamped']} stamped",
+            rationale=(
+                "Historical divergence from gardening that reached sqlite only. Notes for deleted "
+                "artifacts moved to refs/notes/empirica-archive/; resolutions stamped into notes "
+                "that never received them."
+            ),
+            reversibility="committal",
+        )
+    except Exception as e:  # never fail the repair on the receipt
+        print(_json.dumps({"receipt_log_warning": f"{type(e).__name__}: {e}"}, indent=2))
+    return 0 if not receipt["failed"] else 2
+
+
+def check_notes_sqlite_divergence(cwd: Path | None = None) -> Check:
+    """Do the ACTIVE git notes agree with sqlite?
+
+    Notes are the canonical log and `rebuild --qdrant` imports them back INTO
+    sqlite, so a note that disagrees is a PENDING REVERT rather than a stale
+    copy. Gardening reached sqlite only until 697bd613, so every practice
+    carries a historical backlog.
+
+    WARN rather than FAIL: the divergence is real and repairable, and nothing is
+    lost while it sits. A FAIL here would make `doctor` red on every practice in
+    the fleet on the day this shipped, which trains people to ignore it.
+    """
+    name = "notes/sqlite divergence"
+    root = cwd or Path.cwd()
+    try:
+        from empirica.core.canonical.empirica_git.note_reconcile import plan
+        from empirica.data.session_database import SessionDatabase
+
+        db_path = root / ".empirica" / "sessions" / "sessions.db"
+        if not db_path.exists():
+            return Check(name, SKIP, "no sessions.db here")
+        db = SessionDatabase(db_path=str(db_path))
+        p = plan(db, str(root))
+    except Exception as e:
+        # UNKNOWN is not clean. A check that cannot run must not report pass.
+        return Check(name, WARN, f"could not be measured: {type(e).__name__}: {e}")
+
+    orphaned, unstamped = p["orphaned_total"], p["unstamped_total"]
+    if orphaned == 0 and unstamped == 0:
+        return Check(name, PASS, "active notes mirror sqlite", data=p)
+    return Check(
+        name,
+        WARN,
+        f"{orphaned} note(s) for artifacts sqlite no longer has, {unstamped} resolution(s) notes never received",
+        hint="empirica doctor --reconcile-notes           (plan, nothing moves)\n"
+        "       empirica doctor --reconcile-notes --apply  (repair)",
+        data=p,
+    )
+
+
 def run_all_checks(cwd: Path | None = None) -> list[Check]:
     """Run every check in dependency order.
 
@@ -1510,6 +1608,7 @@ def run_all_checks(cwd: Path | None = None) -> list[Check]:
         check_empirica_folder(cwd),
         check_project_yaml(cwd),
         check_sessions_db(cwd),
+        check_notes_sqlite_divergence(cwd),
         check_git_remote(cwd),
         check_sync_state(cwd),
         check_engagement_registry_drift(),
@@ -1563,6 +1662,8 @@ def _format_human(checks: list[Check]) -> str:
 
 def handle_doctor_command(args: Any) -> int:
     cwd = Path.cwd()
+    if getattr(args, "reconcile_notes", False):
+        return _handle_reconcile_notes(cwd, apply_it=bool(getattr(args, "apply", False)))
     checks = run_all_checks(cwd)
     fails = sum(1 for c in checks if c.status == FAIL)
     warns = sum(1 for c in checks if c.status == WARN)

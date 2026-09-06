@@ -253,3 +253,21 @@ Exit codes:
         action="store_true",
         help="Exit code 2 when any WARN check fires (default: only FAIL fires non-zero exit)",
     )
+    # The reconciliation lands as a doctor FLAG rather than a new verb: doctor
+    # already owns "is this practice healthy", and pairing the check with its
+    # remedy in one place is what stops an operator finding the diagnosis and
+    # having to hunt the cure. (Standing steer: the default answer to a new verb
+    # is no.)
+    doctor_parser.add_argument(
+        "--reconcile-notes",
+        action="store_true",
+        help=(
+            "Repair historical notes/sqlite divergence: archive notes for artifacts sqlite no "
+            "longer has, stamp resolutions notes never received. DRY-RUN unless --apply."
+        ),
+    )
+    doctor_parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="With --reconcile-notes, actually write. Without it you get the plan and nothing moves.",
+    )
