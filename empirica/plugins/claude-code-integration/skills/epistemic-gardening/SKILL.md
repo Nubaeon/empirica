@@ -182,9 +182,21 @@ empirica project-search --task "<theme you just pruned>"
 empirica goals-list
 ```
 
-To refresh embedded payloads: **`rebuild --qdrant-only`**.
-**Never `rebuild --qdrant`** — it force-imports git notes into SQLite first and reverts any
-direct or bulk change not yet in notes, then embeds the reverted state.
+To refresh embedded payloads: **`project-embed`** — scoped to one project, no drop, and it
+re-upserts every point through the same embed path (deterministic ids, so payloads are
+rewritten rather than duplicated).
+
+**Not `rebuild`, either flavour.** Before v1.13.39 `--qdrant-only` dropped ten collections
+while the refill covered three, permanently emptying calibration / episodic / goals /
+decisions / assumptions and reporting success — 4,781 points across 24 practices on one
+box. Fixed by deriving the drop set from the refill set, but two reasons remain to prefer
+`project-embed` for a gardening refresh: `rebuild` walks **every project in workspace.db**,
+including your peers' (*never garden a peer's graph*), and `--qdrant` additionally
+force-imports git notes into SQLite first, reverting any direct or bulk change not yet in
+notes and then embedding the reverted state.
+
+**Decisions and assumptions have no rebuild path at all.** Nothing re-embeds them from
+SQLite, so a lost point is lost. Treat their Qdrant copies as write-once until that lands.
 
 ### 5 — POSTFLIGHT
 
