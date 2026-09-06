@@ -251,7 +251,29 @@ async def list_entities(
                 # stay for existing bindings; new keys ride under `metadata`.
                 entry["metadata"] = meta
             out.append(entry)
-    return {"ok": True, "count": len(out), "entities": out}
+        # SAY WHAT WAS FILTERED — the sibling of the same block in
+        # routes/engagements.py. `status` here is `entity_registry.status`,
+        # which for engagements mirrors `engagements.status` (verified 52/52 in
+        # sync). The engagements route scopes by `lifecycle_state` instead, a
+        # DIFFERENT field on the detail table — so the two endpoints legitimately
+        # return different counts for the same nouns and neither said so.
+        total = repo.count_entities(entity_type=type) if type else None
+    return {
+        "ok": True,
+        "count": len(out),
+        "total_unfiltered": total,
+        "scope": {
+            "field": "entity_registry.status",
+            "status": status,
+            "note": (
+                "status='active' is the default. /api/v1/engagements scopes by "
+                "engagements.lifecycle_state instead — a different field with an overlapping but "
+                "non-identical vocabulary, so the counts differ by design. `blocked` is inside the "
+                "engagements active-by-default set and outside status='active'."
+            ),
+        },
+        "entities": out,
+    }
 
 
 def _enrich_source_artifacts(artifacts: list[dict]) -> None:

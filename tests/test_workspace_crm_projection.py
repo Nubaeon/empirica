@@ -304,6 +304,14 @@ class _AliasSpyRepo:
     def get_contact_org_details_map(self):
         return {}
 
+    def count_entities(self, entity_type=None):
+        # The route now reports `total_unfiltered` so a scoped list states what
+        # it filtered FROM. A double that omits a method the real repo has is a
+        # fixture drifted from its interface — it fails loudly here rather than
+        # being papered over with a defensive getattr in the route, which would
+        # hide a genuinely missing method in production.
+        return 0
+
     def get_contact_detail_map(self):
         return {}
 

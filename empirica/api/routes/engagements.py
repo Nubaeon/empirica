@@ -111,7 +111,37 @@ async def list_engagements(
                     "metadata": {**proj["metadata"], "org_display": proj["org_display"]},
                 }
             )
-    return {"ok": True, "count": len(out), "engagements": out}
+    # SAY WHAT WAS FILTERED. `count` alone is a number, and a number looks fine.
+    #
+    # Two daemon endpoints serve engagements and apply DIFFERENT default scopes
+    # on DIFFERENT FIELDS: this one on `engagements.lifecycle_state`, and
+    # /api/v1/entities?type=engagement on `entity_registry.status`. Measured
+    # 2026-09-06: 52 in the store, 44 here, 41 there, and a consumer comparing
+    # them had no way to tell a designed filter from a dropped row. It cost a
+    # peer practice an investigation and blocked a deletion decision on the
+    # possibility of data loss that had not occurred.
+    #
+    # `total_unfiltered` makes completeness checkable FROM THE RESPONSE, which
+    # is the only place a consumer can check it.
+    with WorkspaceDBRepository.open() as repo:
+        total = repo.count_engagements()
+    return {
+        "ok": True,
+        "count": len(out),
+        "total_unfiltered": total,
+        "scope": {
+            "field": "engagements.lifecycle_state",
+            "lifecycle": lifecycle or ("all" if include_closed else "active-by-default"),
+            "include_closed": include_closed,
+            "note": (
+                "active-by-default is {open, in_progress, blocked}; `planned` and `closed` are "
+                "excluded unless requested. /api/v1/entities?type=engagement scopes by "
+                "entity_registry.status instead — a DIFFERENT field, so the two counts differ "
+                "legitimately and are not comparable without this block."
+            ),
+        },
+        "engagements": out,
+    }
 
 
 def _synthesize_title(severity: str | None, org_display: str | None) -> str:

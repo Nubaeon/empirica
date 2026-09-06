@@ -1988,6 +1988,40 @@ class WorkspaceDBRepository(BaseRepository):
         row = cursor.fetchone()
         return dict(row) if row else None
 
+    def count_entities(self, entity_type: str | None = None) -> int:
+        """Registry rows of a type, unfiltered by status — the scoped list's denominator.
+
+        Same purpose as `count_engagements`, one table over. Returns -1 rather
+        than 0 on failure: unknown is not zero, and a consumer comparing a count
+        against a 0 total would conclude everything had been filtered out.
+        """
+        try:
+            if entity_type:
+                row = self._execute(
+                    "SELECT COUNT(*) FROM entity_registry WHERE entity_type = ?", (entity_type,)
+                ).fetchone()
+            else:
+                row = self._execute("SELECT COUNT(*) FROM entity_registry").fetchone()
+            return int(row[0]) if row else 0
+        except Exception:
+            return -1
+
+    def count_engagements(self) -> int:
+        """Every engagement row, unfiltered — the denominator a scoped list needs.
+
+        Exists so a filtered response can state what it filtered FROM. Without a
+        source-side total, a consumer cannot tell a designed scope from a
+        dropped row, which is precisely how 52/44/41 across three surfaces read
+        as possible data loss on 2026-09-06.
+        """
+        try:
+            row = self._execute("SELECT COUNT(*) FROM engagements").fetchone()
+            return int(row[0]) if row else 0
+        except Exception:
+            # Unknown is not zero: a caller comparing count to a 0 total would
+            # conclude everything was filtered out. -1 is not a count.
+            return -1
+
     def list_engagements(
         self,
         *,
