@@ -1283,6 +1283,30 @@ def handle_resolve_artifacts_command(args):  # noqa: C901 — batch dispatcher f
                     )
                     if cursor.rowcount > 0:
                         resolved_count += 1
+                        # STAMP the note; it stays ACTIVE.
+                        #
+                        # Resolution reached sqlite and nothing else — measured
+                        # 2026-09-06, zero note references in the single or batch
+                        # resolve handlers. Since `rebuild --qdrant` imports notes
+                        # back INTO sqlite, an unstamped note is not a stale copy,
+                        # it is a pending revert of the resolution.
+                        #
+                        # NOT archived, deliberately: sqlite KEEPS resolved rows,
+                        # so the active ref must too. Archiving here would drop
+                        # every resolved artifact out of the active graph — a
+                        # second divergence in the opposite direction, and the
+                        # obvious-looking mistake.
+                        _stamp_note_resolution(
+                            "findings",
+                            artifact_id,
+                            {
+                                "is_resolved": True,
+                                "resolution": resolution,
+                                "resolution_kind": _kind,
+                                "resolved_timestamp": _tf.time(),
+                                "superseded_by": item.get("superseded_by"),
+                            },
+                        )
                         _deps = _dependents_safe(db, artifact_id)
                         if _deps:
                             dependents_seen[artifact_id] = _deps
@@ -1598,34 +1622,51 @@ def _read_deletion_input(args) -> dict | None:
     return data
 
 
+def _stamp_note_resolution(
+    artifact_type: str, artifact_id: str, resolution: dict, project_path: str | None = None
+) -> bool:
+    """Mirror a sqlite resolution into the ACTIVE note. Non-fatal, but LOUD on failure.
+
+    The counterpart to `_delete_artifact_git_notes`: delete archives, resolve
+    stamps. Both exist because notes are the canonical log and `rebuild --qdrant`
+    imports them back into sqlite — so a note that disagrees with sqlite is a
+    pending revert, not a stale copy.
+    """
+    from empirica.core.canonical.empirica_git.note_lifecycle import stamp_resolution
+
+    out = stamp_resolution(artifact_type, artifact_id, resolution, project_path)
+    if not out["stamped"] and out["reason"] != "not_present":
+        logger.warning(
+            f"note resolution stamp failed for {artifact_type}/{artifact_id}: {out['reason']} — "
+            "sqlite and notes now DISAGREE for this artifact; a rebuild would revert it"
+        )
+    return bool(out["stamped"])
+
+
 def _delete_artifact_git_notes(artifact_type: str, artifact_id: str, project_path: str | None = None) -> bool:
-    """Remove the artifact's git note ref at refs/notes/empirica/{type}/{id}.
+    """ARCHIVE the artifact's git note — move it out of the active namespace.
 
     Closes the documented delete-git-notes gap: previously only sqlite + Qdrant
     were cleaned on artifact delete, leaving stale notes that re-surfaced in
-    cross-session searches and `commit-context` output.
+    cross-session searches and `commit-context` output. That fix DESTROYED the
+    note; this one moves it to refs/notes/empirica-archive/ so the active ref
+    mirrors sqlite while the journey survives.
 
     project_path: optional project root to run git inside. Falls back to CWD.
     Returns True on success, False on any failure (non-fatal).
     """
-    import subprocess
+    # ARCHIVE, do not destroy. `git update-ref -d` removed the note outright,
+    # which cleared the active graph correctly and took the journey with it.
+    # David's requirement (2026-09-06): the active ref must read correct while
+    # the journey is never lost. The note moves to refs/notes/empirica-archive/…
+    # instead, copy-then-delete with the copy checked first.
+    from empirica.core.canonical.empirica_git.note_lifecycle import archive_note
 
-    ref = f"refs/notes/empirica/{artifact_type}/{artifact_id}"
-    try:
-        # `git update-ref -d <ref>` removes the ref atomically. Idempotent —
-        # exits 0 even if the ref doesn't exist (subject to git version).
-        result = subprocess.run(
-            ["git", "update-ref", "-d", ref],
-            cwd=project_path or None,
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
-        return result.returncode == 0
-    except (subprocess.SubprocessError, FileNotFoundError) as e:
-        logger.debug(f"_delete_artifact_git_notes: failed for {ref}: {e}")
-        return False
+    result = archive_note(artifact_type, artifact_id, project_path)
+    if not result["archived"] and result["reason"] != "not_present":
+        # Say so. A silent False here is what let notes and sqlite drift.
+        logger.warning(f"note archive failed for {artifact_type}/{artifact_id}: {result['reason']}")
+    return bool(result["archived"])
 
 
 def _delete_artifact_edges(cursor, artifact_id: str) -> int:
