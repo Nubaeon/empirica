@@ -48,6 +48,8 @@ def test_every_dropped_collection_has_a_refiller():
         "_docs_collection": {"upsert_memory", "embed_result"},
         "_memory_collection": {"upsert_memory"},
         "_eidetic_collection": {"embed_eidetic", "embed_project_code"},
+        "_decisions_collection": {"embed_decision"},
+        "_assumptions_collection": {"embed_assumption"},
     }
     for fn in REBUILDABLE_COLLECTIONS:
         expected = coverage.get(fn.__name__)
@@ -55,17 +57,32 @@ def test_every_dropped_collection_has_a_refiller():
         assert expected & refillers, f"{fn.__name__} is dropped but nothing in rebuild.py refills it"
 
 
-def test_decisions_and_assumptions_are_NOT_droppable():
-    """The two types with no rebuild path at all — `rebuild.py` never names them."""
-    names = {fn.__name__ for fn in REBUILDABLE_COLLECTIONS}
-    assert "_decisions_collection" not in names
-    assert "_assumptions_collection" not in names
+def test_decisions_and_assumptions_ARE_now_refilled():
+    """These two had no rebuild path at all until 2026-09-06.
 
+    This test previously asserted the OPPOSITE — that they must stay out of the
+    droppable set — and carried a note saying it was the reminder, not a
+    prohibition. It fired when the refillers landed, which is the whole point:
+    a collection becomes droppable by ACQUIRING a refiller, never by someone
+    deciding it is safe to lose.
+    """
+    names = {fn.__name__ for fn in REBUILDABLE_COLLECTIONS}
+    assert "_decisions_collection" in names
+    assert "_assumptions_collection" in names
+    assert _refill_calls() >= {"embed_decision", "embed_assumption"}
+
+
+def test_the_refill_reads_the_tables_that_actually_hold_them():
+    """`project_decisions` does not exist; the tables are `decisions` / `assumptions`.
+
+    A refiller querying the wrong table returns zero rows forever and reports a
+    successful rebuild — the zero-success-verb shape, indistinguishable from
+    "this project has no decisions".
+    """
     source = (SRC / "core" / "qdrant" / "rebuild.py").read_text()
-    assert "decision" not in source.lower().replace("decisions_collection", ""), (
-        "if rebuild.py has grown a decision refiller, add _decisions_collection to "
-        "REBUILDABLE_COLLECTIONS — this test is the reminder, not a prohibition"
-    )
+    assert "FROM decisions" in source
+    assert "FROM assumptions" in source
+    assert "FROM project_decisions" not in source, "project_decisions is not a table in sessions.db"
 
 
 def test_recreate_REPORTS_what_it_preserved_rather_than_silently_skipping(monkeypatch):

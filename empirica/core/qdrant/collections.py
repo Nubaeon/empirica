@@ -183,7 +183,17 @@ def recreate_collection(collection_name: str) -> bool:
 #: Measured 2026-09-06 on one box: 4,781 points across up to 24 practices —
 #: calibration 1,960, episodic 1,688, goals 1,036, decisions 92, assumptions 5.
 #: Not recoverable: nothing re-embeds them, so the loss is silent AND permanent.
-REBUILDABLE_COLLECTIONS = (_docs_collection, _memory_collection, _eidetic_collection)
+#: Decisions and assumptions JOINED this set on 2026-09-06, once `rebuild.py`
+#: grew `_embed_typed_decisions` / `_embed_typed_assumptions`. That is the
+#: intended direction of travel: a collection becomes droppable by acquiring a
+#: refiller, never by someone deciding it is safe to lose.
+REBUILDABLE_COLLECTIONS = (
+    _docs_collection,
+    _memory_collection,
+    _eidetic_collection,
+    _decisions_collection,
+    _assumptions_collection,
+)
 
 
 def recreate_project_collections(project_id: str) -> dict:

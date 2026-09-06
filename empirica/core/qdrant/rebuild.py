@@ -110,6 +110,161 @@ def _build_mistake_items(mistakes: list[dict]) -> list[dict]:
     return items
 
 
+def _read_decisions_and_assumptions(db, project_id: str) -> tuple[list[dict], list[dict]]:
+    """The two artifact types that had no re-embed path until 2026-09-06.
+
+    Shared by `_embed_project_from_db` AND the `project-embed` verb, which are
+    parallel implementations of the same job. Adding these types to each by
+    copy-paste would have made a third divergent path for exactly the defect that
+    produced the first two.
+
+    Note the table names: `decisions` and `assumptions`. `project_decisions` does
+    not exist — a query against it returns zero rows forever and reports a
+    successful rebuild.
+    """
+    cur = db.conn.cursor()
+    cur.execute(
+        """
+        SELECT id, choice, rationale, alternatives, confidence_at_decision, reversibility,
+               entity_type, entity_id, session_id, transaction_id, goal_id, created_timestamp
+        FROM decisions WHERE project_id = ? ORDER BY created_timestamp DESC
+        """,
+        (project_id,),
+    )
+    decisions = [dict(row) for row in cur.fetchall()]
+    cur.execute(
+        """
+        SELECT id, assumption, confidence, status, resolution_finding_id,
+               entity_type, entity_id, session_id, transaction_id, goal_id, created_timestamp
+        FROM assumptions WHERE project_id = ? ORDER BY created_timestamp DESC
+        """,
+        (project_id,),
+    )
+    assumptions = [dict(row) for row in cur.fetchall()]
+    return decisions, assumptions
+
+
+def _build_decision_items(decisions: list[dict]) -> list[dict]:
+    """Memory items for decisions — choice AND rationale, matching the live batch writer.
+
+    The rationale is concatenated into `text` rather than carried as its own key,
+    because that is what `log-artifacts` produces today and a rebuild must
+    reproduce the writers, not improve on them. It is also why a decision in the
+    memory collection stays retrievable by its reasoning: the reasoning is inside
+    the embedded text even though there is no `rationale` field. (Settled by a
+    third independent measurement after two practices read the payload
+    differently, 2026-09-06.)
+    """
+    items = []
+    for d in decisions:
+        did = str(d.get("id", ""))
+        if not did:
+            continue
+        rationale = d.get("rationale") or ""
+        text = f"{d.get('choice', '')}: {rationale}" if rationale else (d.get("choice") or "")
+        if not text.strip():
+            continue
+        items.append(
+            {
+                "id": did,
+                "text": text,
+                "type": "decision",
+                "session_id": d.get("session_id"),
+                "goal_id": d.get("goal_id"),
+                "timestamp": d.get("created_timestamp"),
+            }
+        )
+    return items
+
+
+def _build_assumption_items(assumptions: list[dict]) -> list[dict]:
+    """Memory items for assumptions, mirroring the decision builder."""
+    items = []
+    for a in assumptions:
+        aid = str(a.get("id", ""))
+        text = (a.get("assumption") or "").strip()
+        if not aid or not text:
+            continue
+        items.append(
+            {
+                "id": aid,
+                "text": text,
+                "type": "assumption",
+                "session_id": a.get("session_id"),
+                "goal_id": a.get("goal_id"),
+                "timestamp": a.get("created_timestamp"),
+            }
+        )
+    return items
+
+
+def _embed_typed_decisions(project_id: str, decisions: list[dict]) -> int:
+    """Refill `project_<id>_decisions`. Returns the count that landed, not the count tried."""
+    from empirica.core.qdrant.intent_layer import embed_decision
+
+    n = 0
+    for d in decisions:
+        did = str(d.get("id", ""))
+        if not did or not (d.get("choice") or "").strip():
+            continue
+        try:
+            ok = embed_decision(
+                project_id=project_id,
+                decision_id=did,
+                choice=d.get("choice") or "",
+                rationale=d.get("rationale") or "",
+                alternatives=d.get("alternatives"),
+                confidence_at_decision=d.get("confidence_at_decision"),
+                reversibility=d.get("reversibility") or "committal",
+                entity_type=d.get("entity_type") or "project",
+                entity_id=d.get("entity_id"),
+                session_id=d.get("session_id"),
+                transaction_id=d.get("transaction_id"),
+                timestamp=d.get("created_timestamp"),
+            )
+        except Exception as e:
+            logger.warning(f"decision {did} failed to re-embed: {e}")
+            continue
+        n += 1 if ok else 0
+    if n < len([d for d in decisions if (d.get("choice") or "").strip()]):
+        # Say so. A rebuild that silently under-fills is the shape that made this
+        # gap invisible for as long as it existed.
+        logger.warning(f"re-embedded {n} of {len(decisions)} decisions — the rest are NOT in Qdrant")
+    return n
+
+
+def _embed_typed_assumptions(project_id: str, assumptions: list[dict]) -> int:
+    """Refill `project_<id>_assumptions`. Returns the count that landed."""
+    from empirica.core.qdrant.intent_layer import embed_assumption
+
+    n = 0
+    for a in assumptions:
+        aid = str(a.get("id", ""))
+        if not aid or not (a.get("assumption") or "").strip():
+            continue
+        try:
+            ok = embed_assumption(
+                project_id=project_id,
+                assumption_id=aid,
+                assumption=a.get("assumption") or "",
+                confidence=a.get("confidence") if a.get("confidence") is not None else 0.5,
+                status=a.get("status") or "unverified",
+                resolution_finding_id=a.get("resolution_finding_id"),
+                entity_type=a.get("entity_type") or "project",
+                entity_id=a.get("entity_id"),
+                session_id=a.get("session_id"),
+                transaction_id=a.get("transaction_id"),
+                timestamp=a.get("created_timestamp"),
+            )
+        except Exception as e:
+            logger.warning(f"assumption {aid} failed to re-embed: {e}")
+            continue
+        n += 1 if ok else 0
+    if n < len([a for a in assumptions if (a.get("assumption") or "").strip()]):
+        logger.warning(f"re-embedded {n} of {len(assumptions)} assumptions — the rest are NOT in Qdrant")
+    return n
+
+
 def _build_dead_end_items(dead_ends: list[dict]) -> list[dict]:
     """Build memory items from dead ends."""
     items = []
@@ -204,6 +359,10 @@ def _embed_project_from_db(project_id: str, db_path: str, project_root: str) -> 
         "snapshots": 0,
         "eidetic": 0,
         "code_api": 0,
+        # Present from the start, so a zero is a measured zero rather than a
+        # missing key — the distinction that made this gap invisible.
+        "decisions": 0,
+        "assumptions": 0,
         "memory_total": 0,
     }
 
@@ -256,6 +415,19 @@ def _embed_project_from_db(project_id: str, db_path: str, project_root: str) -> 
         """)
         lessons = [dict(row) for row in cur.fetchall()]
 
+        # Decisions and assumptions — through the SHARED reader, which the
+        # `project-embed` verb also calls. These two types had NO re-embed path
+        # at all until 2026-09-06: this function covered six types and named
+        # neither, while `recreate_project_collections` dropped their
+        # collections, so a rebuild deleted every decision and assumption point
+        # permanently and reported success (drop side fixed in 8fdfe751).
+        #
+        # Both destinations are filled, deliberately. The single verbs write the
+        # TYPED collections; `log-artifacts` writes `memory`. Converging those
+        # two write paths is an open decision — a rebuild's job is to REPRODUCE
+        # what the writers would have written, not to pick the winner.
+        decisions, assumptions = _read_decisions_and_assumptions(db, project_id)
+
         # Epistemic snapshots (episodic memory)
         cur.execute(
             """
@@ -280,8 +452,15 @@ def _embed_project_from_db(project_id: str, db_path: str, project_root: str) -> 
         mem_items.extend(_build_dead_end_items(dead_ends))
         mem_items.extend(_build_lesson_items(lessons))
         mem_items.extend(_build_snapshot_items(snapshots))
+        mem_items.extend(_build_decision_items(decisions))
+        mem_items.extend(_build_assumption_items(assumptions))
 
         upsert_memory(project_id, mem_items)
+
+        # ...and the TYPED collections, which is where the single verbs land and
+        # where nothing was refilling them.
+        counts["decisions"] = _embed_typed_decisions(project_id, decisions)
+        counts["assumptions"] = _embed_typed_assumptions(project_id, assumptions)
 
         counts["findings"] = len(findings)
         counts["unknowns"] = len(unknowns)

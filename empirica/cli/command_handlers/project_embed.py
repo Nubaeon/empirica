@@ -519,7 +519,32 @@ def handle_project_embed_command(args):
         db.close()
 
         mem_items = _build_memory_items(findings, unknowns, mistakes, dead_ends, lessons, snapshots)
+
+        # Decisions and assumptions, through rebuild.py's builders rather than a
+        # copy of them.
+        #
+        # This verb and `_embed_project_from_db` are PARALLEL implementations of
+        # the same job — that function's docstring says it was "extracted for
+        # reuse by both project-embed and rebuild_qdrant_from_db", and the
+        # extraction happened but this caller never adopted it. So adding the two
+        # types here by copy-paste would have made a third divergent path for the
+        # defect that produced the first two. Importing keeps ONE definition
+        # until the deeper convergence lands.
+        from empirica.core.qdrant.rebuild import (
+            _build_assumption_items,
+            _build_decision_items,
+            _embed_typed_assumptions,
+            _embed_typed_decisions,
+            _read_decisions_and_assumptions,
+        )
+
+        decisions, assumptions = _read_decisions_and_assumptions(db, project_id)
+        mem_items.extend(_build_decision_items(decisions))
+        mem_items.extend(_build_assumption_items(assumptions))
         upsert_memory(project_id, mem_items)
+
+        typed_decisions = _embed_typed_decisions(project_id, decisions)
+        typed_assumptions = _embed_typed_assumptions(project_id, assumptions)
 
         eidetic_count = _rehydrate_eidetic(project_id, findings, embed_eidetic, _check_qdrant_available)
 
@@ -547,6 +572,12 @@ def handle_project_embed_command(args):
             "memory": len(mem_items),
             "eidetic": eidetic_count,
             "code_api": code_embedded,
+            # What LANDED in the typed collections, separate from what was read.
+            # A count of rows found and a count of points written are different
+            # facts, and reporting only the first is how a silently-failing embed
+            # reads as a successful one.
+            "typed_decisions": typed_decisions,
+            "typed_assumptions": typed_assumptions,
             "breakdown": {
                 "findings": len(findings),
                 "unknowns": len(unknowns),
@@ -554,6 +585,10 @@ def handle_project_embed_command(args):
                 "dead_ends": len(dead_ends),
                 "lessons": len(lessons),
                 "snapshots": len(snapshots),
+                # Always present, so a zero reads as "none to embed" rather than
+                # as a missing key — the distinction that hid this gap.
+                "decisions": len(decisions),
+                "assumptions": len(assumptions),
             },
             "global_synced": global_synced if sync_global else None,
         }
