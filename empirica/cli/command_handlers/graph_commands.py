@@ -11,6 +11,7 @@ import sys
 import time
 import uuid
 
+from empirica.data.epistemic_source import EPISTEMIC_SOURCES
 from empirica.data.id_guard import resolve_id_prefix
 
 from ..cli_utils import handle_cli_error
@@ -252,6 +253,17 @@ def _validate_graph(graph: dict) -> list[str]:
             if field not in data:
                 errors.append(f"Node '{ref}' ({ntype}): missing required field '{field}'")
 
+        # Validated UP FRONT with the other shape errors, not at write time: a
+        # mid-batch raise leaves half a graph committed and half rejected.
+        src = data.get("epistemic_source")
+        if src is not None and src not in EPISTEMIC_SOURCES:
+            errors.append(
+                f"Node '{ref}': invalid epistemic_source '{src}' "
+                f"(valid: {', '.join(sorted(EPISTEMIC_SOURCES))}). "
+                "`ran`/`read`/`retrieved` are CHECK grounding values, not epistemic sources — "
+                "an observation you ran or read is 'search'."
+            )
+
     for i, edge in enumerate(edges):
         from_ref = edge.get("from")
         to_ref = edge.get("to")
@@ -289,7 +301,6 @@ def _create_node(db, node: dict, context: dict) -> str | None:
     transaction_id = context.get("transaction_id")
     visibility = data.get("visibility")
     epistemic_source = data.get("epistemic_source")
-
     try:
         if ntype == "finding":
             return db.log_finding(
