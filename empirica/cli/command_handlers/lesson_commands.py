@@ -128,24 +128,49 @@ def _federate_now(lesson) -> dict:
             "detail": "policy is not federated — the lesson stays in this practice",
         }
 
+    # Resolve the project the way every other verb does.
+    #
+    # The first cut used `R.context()` alone, which returns no project_id in a
+    # plain CLI invocation — so a lesson authored at `sharing_policy: org` was
+    # reported `deferred` and never published. Measured 2026-09-06 on the first
+    # real use: context() gave None while `R.project_id_from_db(root)` resolved
+    # it immediately, and a direct `sync_lessons_to_global(pid)` synced 25 of 25.
+    #
+    # And the deferral message said "POSTFLIGHT will retry", which was a FALSE
+    # PROMISE: the sweep resolves the project the same way, so the retry shared
+    # the identical failure mode and could never succeed. A retry is only worth
+    # promising if it uses a DIFFERENT path than the one that just failed.
     project_id = None
     try:
+        import os
+
         from empirica.utils.session_resolver import InstanceResolver as R
 
         ctx = R.context()
         if ctx:
             project_id = ctx.get("project_id")
+        if not project_id:
+            root = R.project_path() or os.getcwd()
+            project_id = R.project_id_from_db(root)
     except Exception as e:  # pragma: no cover - resolution failure is reported, not raised
         return {
             "state": "deferred",
             "sharing_policy": policy,
-            "detail": f"could not resolve the current project ({type(e).__name__}: {e}) — POSTFLIGHT will retry",
+            "detail": (
+                f"could not resolve the current project ({type(e).__name__}: {e}). "
+                f"Publish explicitly once resolvable — the POSTFLIGHT sweep resolves the same way "
+                f"and will hit this too."
+            ),
         }
     if not project_id:
         return {
             "state": "deferred",
             "sharing_policy": policy,
-            "detail": "no current project id — POSTFLIGHT will retry",
+            "detail": (
+                "no resolvable project id from context OR the project db — the lesson is stored "
+                "locally and NOT shared. The POSTFLIGHT sweep resolves the same way, so it will "
+                "not rescue this; run from inside a registered project."
+            ),
         }
 
     try:

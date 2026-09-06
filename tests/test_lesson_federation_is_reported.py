@@ -86,8 +86,15 @@ def test_no_project_id_is_deferred_not_published(monkeypatch):
         "empirica.utils.session_resolver.InstanceResolver.context",
         staticmethod(lambda *a, **k: {}),
     )
+    monkeypatch.setattr(
+        "empirica.utils.session_resolver.InstanceResolver.project_id_from_db",
+        staticmethod(lambda *a, **k: None),
+    )
     out = lc._federate_now(_lesson("org"))
     assert out["state"] == "deferred"
+    # The deferral must NOT promise a retry that shares the failure mode.
+    assert "will not rescue this" in out["detail"]
+    assert "POSTFLIGHT will retry" not in out["detail"]
 
 
 def test_the_three_states_are_distinguishable(monkeypatch):
@@ -116,3 +123,36 @@ def test_the_three_states_are_distinguishable(monkeypatch):
     )
     seen.add(lc._federate_now(_lesson("org"))["state"])
     assert seen == {"not_requested", "published", "deferred"}
+
+
+def test_it_falls_back_to_the_project_db_when_context_is_empty(monkeypatch):
+    """`R.context()` returns no project_id in a plain CLI invocation.
+
+    The first cut used it alone, so a lesson authored at `sharing_policy: org`
+    reported `deferred` and was never shared — measured on the first real use,
+    where `R.project_id_from_db(root)` resolved it immediately and a direct sync
+    published 25 of 25.
+    """
+    monkeypatch.setattr(
+        "empirica.utils.session_resolver.InstanceResolver.context",
+        staticmethod(lambda *a, **k: {}),
+    )
+    monkeypatch.setattr(
+        "empirica.utils.session_resolver.InstanceResolver.project_path",
+        staticmethod(lambda *a, **k: "/tmp/x"),
+    )
+    monkeypatch.setattr(
+        "empirica.utils.session_resolver.InstanceResolver.project_id_from_db",
+        staticmethod(lambda *a, **k: "p-from-db"),
+    )
+    seen = {}
+
+    def sync(pid):
+        seen["pid"] = pid
+        return {"eligible": 1, "synced": 1, "failed": 0}
+
+    monkeypatch.setattr("empirica.core.qdrant.global_sync.sync_lessons_to_global", sync)
+
+    out = lc._federate_now(_lesson("org"))
+    assert out["state"] == "published"
+    assert seen["pid"] == "p-from-db", "the db fallback must actually be used, not just present"
