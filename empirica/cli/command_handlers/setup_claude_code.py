@@ -15,6 +15,7 @@ Author: Rovo Dev
 Date: 2026-02-10
 """
 
+import hashlib
 import json
 import logging
 import os
@@ -33,6 +34,29 @@ PLUGIN_VERSION = "1.13.38"
 # Written into the installed plugin dir; the empirica version its files came
 # from. Drives drift-sync (empirica plugin-sync / session-init auto-heal).
 PLUGIN_VERSION_STAMP = ".plugin-version"
+
+#: Declares which skills EMPIRICA owns, and at what version.
+#:
+#: The ownership boundary (David, 2026-09-06): **empirica owns, versions and
+#: installs the skills it carries** — that is this file's job. Practice packages,
+#: system prompts and every other skill belong to `empirica-mesh-support`'s
+#: ecosystem-update lane, and core must not touch them.
+#:
+#: Before this, ownership was INFERRED: `_snapshot_foreign_skills` treated
+#: anything absent from the source dir as somebody else's. Two failures follow
+#: from inferring rather than declaring:
+#:
+#: 1. A skill core STOPS shipping instantly becomes "foreign" and is preserved
+#:    forever — a retired skill of ours, kept alive as though it were a peer's,
+#:    with nothing able to tell the difference afterwards.
+#: 2. A local edit to a skill we DO ship is invisible as such. An unattributed
+#:    patch appeared in the shared skills dir on 2026-09-06 and no practice
+#:    claimed it; correct and benign, but nothing could say whose it was.
+#:
+#: The manifest makes both checkable: owned skills are named, each with the
+#: content hash we installed, so a later mismatch is a local modification of a
+#: KNOWN-OURS skill rather than an anonymous difference.
+SKILL_OWNERSHIP_MANIFEST = ".empirica-skills.json"
 
 # Timeout (seconds) for the lightweight per-prompt / per-SessionStart hooks
 # (tool-router, context-shift tracker, monitor-arm, the loop/listener pickups).
@@ -737,6 +761,97 @@ def _setup_directories(output_format):
     return home, claude_dir, plugins_dir, plugin_dir, marketplace_dir, empirica_dir
 
 
+def _skill_digest(skill_dir: Path) -> str:
+    """Content hash of one skill directory — stable across reruns, order-independent."""
+    h = hashlib.sha256()
+    for f in sorted(p for p in skill_dir.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
+        h.update(str(f.relative_to(skill_dir)).encode())
+        h.update(f.read_bytes())
+    return h.hexdigest()
+
+
+def _read_skill_manifest(plugin_dir: Path) -> dict:
+    """What core declared it owned at the last install. Empty when never written."""
+    try:
+        return json.loads((plugin_dir / "skills" / SKILL_OWNERSHIP_MANIFEST).read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def _write_skill_manifest(source_dir: Path, plugin_dir: Path, version: str | None = None) -> dict:
+    """Declare the skills empirica owns, and the content it installed for each.
+
+    **Names come from SOURCE, digests from the installed copy.** Enumerating the
+    installed directory instead looks equivalent and is not: it runs after
+    `_restore_foreign_skills`, so core would claim every peer skill sitting
+    beside its own — the precise ownership violation this manifest exists to
+    prevent. Caught by its own test before it shipped.
+
+    Returns the manifest for the caller to report; a declaration nobody can read
+    back is not a declaration.
+    """
+    source_skills = source_dir / "skills"
+    skills_dir = plugin_dir / "skills"
+    if not source_skills.is_dir() or not skills_dir.is_dir():
+        return {}
+    owned = {}
+    for p in sorted(source_skills.iterdir()):
+        if not p.is_dir() or p.name == "__pycache__":
+            continue
+        installed = skills_dir / p.name
+        if installed.is_dir():
+            owned[p.name] = _skill_digest(installed)
+    manifest = {
+        "owner": "empirica",
+        "version": (version or _resolve_empirica_version()).strip(),
+        "skills": owned,
+        "note": (
+            "Empirica owns, versions and installs these skills via setup-claude-code. "
+            "Skills NOT listed here belong to empirica-mesh-support's ecosystem-update "
+            "lane (practice packages, system prompts) and are preserved untouched."
+        ),
+    }
+    try:
+        (skills_dir / SKILL_OWNERSHIP_MANIFEST).write_text(json.dumps(manifest, indent=2) + "\n")
+    except OSError:
+        pass
+    return manifest
+
+
+def _locally_modified_owned_skills(plugin_dir: Path) -> list[str]:
+    """Owned skills whose installed content no longer matches what we installed.
+
+    This is the question the unattributed vendor patch could not answer: is this
+    difference a local edit to OUR skill, or someone else's file? Only a
+    declaration made at install time can distinguish them afterwards.
+    """
+    prior = _read_skill_manifest(plugin_dir)
+    declared = prior.get("skills") or {}
+    if not declared:
+        return []
+    skills_dir = plugin_dir / "skills"
+    modified = []
+    for name, digest in declared.items():
+        d = skills_dir / name
+        if d.is_dir() and _skill_digest(d) != digest:
+            modified.append(name)
+    return sorted(modified)
+
+
+def _print_ownership_summary(plugin_dir: Path, manifest: dict, modified_owned: list[str]) -> None:
+    """Human-mode view of the ownership boundary after an install."""
+    print(f"   ✓ Plugin installed to {plugin_dir}")
+    if manifest.get("skills"):
+        print(f"   📋 empirica owns {len(manifest['skills'])} skill(s) at {manifest['version']}")
+    if modified_owned:
+        # Named, because this is the question an unattributed patch could not
+        # answer: the edit was to a skill WE ship, not to a peer's file.
+        backup = plugin_dir.parent / f"{plugin_dir.name}.bak"
+        print(f"   ✏️  {len(modified_owned)} empirica-owned skill(s) had local edits, now replaced:")
+        for name in modified_owned:
+            print(f"      {name}  (prior copy in {backup}/skills/{name})")
+
+
 def _snapshot_foreign_skills(source_dir, plugin_dir):
     """Snapshot skill directories the OPEN plugin does not ship — i.e. skills
     installed on top of it by the CORTEX BUNDLE (present in the installed
@@ -752,7 +867,14 @@ def _snapshot_foreign_skills(source_dir, plugin_dir):
         return None, []
     source_skills = source_dir / "skills"
     shipped = {p.name for p in source_skills.iterdir()} if source_skills.is_dir() else set()
-    foreign = [p for p in installed_skills.iterdir() if p.is_dir() and p.name not in shipped]
+    # A skill we PREVIOUSLY declared as ours but no longer ship has been RETIRED,
+    # not adopted by someone else. Inferring foreign-ness from source-absence
+    # alone turns every retirement into a zombie: preserved forever, indefinitely,
+    # with nothing afterwards able to say it was once ours. The manifest is what
+    # makes retirement expressible.
+    previously_owned = set((_read_skill_manifest(plugin_dir).get("skills") or {}).keys())
+    retired = previously_owned - shipped
+    foreign = [p for p in installed_skills.iterdir() if p.is_dir() and p.name not in shipped and p.name not in retired]
     if not foreign:
         return None, []
     import tempfile
@@ -807,6 +929,10 @@ def _install_plugin_files(source_dir, plugin_dir, output_format):
     # the sync stays unconditional and the destruction becomes recoverable and
     # loud instead: files that differ from what setup is about to write are
     # backed up with their relative paths, and each one is NAMED in the output.
+    # Ask the ownership question BEFORE the rmtree, while the prior install's
+    # manifest and content are both still on disk. Afterwards there is nothing
+    # left to compare against.
+    modified_owned = _locally_modified_owned_skills(plugin_dir)
     preserved = _backup_locally_modified_plugin_files(source_dir, plugin_dir, output_format)
     # Snapshot bundle-installed skills the open plugin does not ship, BEFORE the
     # rmtree destroys them; restored after the copytree (Philipp mesh-support).
@@ -834,8 +960,11 @@ def _install_plugin_files(source_dir, plugin_dir, output_format):
         for script_file in scripts_dir.glob("*.py"):
             script_file.chmod(0o755)
 
+    # Declare ownership AFTER the copy, so the digests describe what is on disk.
+    manifest = _write_skill_manifest(source_dir, plugin_dir)
+
     if output_format != "json":
-        print(f"   ✓ Plugin installed to {plugin_dir}")
+        _print_ownership_summary(plugin_dir, manifest, modified_owned)
 
     # Hand the backup list back so the JSON caller can report it too. The human
     # branch of `_backup_locally_modified_plugin_files` prints each preserved
@@ -844,7 +973,17 @@ def _install_plugin_files(source_dir, plugin_dir, output_format):
     # NOTHING said so — in the mode that scripts, CI and other tools consume,
     # which is where a silent backup does the most harm and where a human is
     # least likely to be watching stdout. Reported by cortex, 2026-09-06.
-    return {"backed_up": preserved, "backup_dir": str(plugin_dir.parent / f"{plugin_dir.name}.bak")}
+    return {
+        "backed_up": preserved,
+        "backup_dir": str(plugin_dir.parent / f"{plugin_dir.name}.bak"),
+        # Core's half of the ownership boundary, reported so it is auditable:
+        # which skills empirica claims, at what version, and which of them a
+        # human had edited before this sync replaced them. Skills absent from
+        # `owned_skills` are mesh-support's ecosystem-update lane and untouched.
+        "owned_skills": sorted((manifest.get("skills") or {}).keys()),
+        "owned_version": manifest.get("version"),
+        "locally_modified_owned_skills": modified_owned,
+    }
 
 
 def _backup_locally_modified_plugin_files(source_dir: Path, plugin_dir: Path, output_format: str) -> list[str]:
@@ -871,7 +1010,13 @@ def _backup_locally_modified_plugin_files(source_dir: Path, plugin_dir: Path, ou
             if not installed.is_file():
                 continue
             rel = installed.relative_to(plugin_dir)
-            if "__pycache__" in rel.parts or rel.suffix == ".pyc" or rel.name == PLUGIN_VERSION_STAMP:
+            # The two stamps setup writes about ITSELF are never local edits —
+            # backing them up on every run would bury the files that are.
+            if (
+                "__pycache__" in rel.parts
+                or rel.suffix == ".pyc"
+                or rel.name in (PLUGIN_VERSION_STAMP, SKILL_OWNERSHIP_MANIFEST)
+            ):
                 continue
             src = source_dir / rel
             try:

@@ -171,4 +171,7 @@ def test_install_no_foreign_skills_is_clean(tmp_path):
 
     scc._install_plugin_files(source, install, "json")
     assert (install / "skills" / "open-skill" / "SKILL.md").read_text() == "open v2\n"
-    assert sorted(p.name for p in (install / "skills").iterdir()) == ["open-skill"]
+    # Directories only: the skills dir also carries setup's own ownership
+    # manifest (`.empirica-skills.json`), which is a declaration ABOUT the
+    # skills, not a skill. The assertion's subject is what survived the replace.
+    assert sorted(p.name for p in (install / "skills").iterdir() if p.is_dir()) == ["open-skill"]
