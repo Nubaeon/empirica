@@ -45,6 +45,37 @@ STALE_DAYS = 180
 DAY = 86400
 
 
+def _history_is_available() -> bool:
+    """Does this checkout HAVE the history these tests read?
+
+    CI clones shallow, so `git log -1 --format=%ct -- <path>` returns the clone
+    commit for every file and every doc reads as 0 days old. The gate then passes
+    vacuously and the registry-freshness check fails, both for the same reason:
+    the clock is not there.
+
+    This is the "tests must not measure the box" rule — a test that reads
+    repository history depends on clone depth, which differs between a working
+    tree and CI. Detected explicitly and SKIPPED with the remedy named, rather
+    than silently reporting a 0-day age as if it were measured.
+    """
+    shallow = (ROOT / ".git" / "shallow").exists()
+    if shallow:
+        return False
+    # A grafted/partial clone can lack `shallow` and still have no depth: if the
+    # oldest tracked doc is younger than the threshold, there is no history here.
+    r = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=ROOT, capture_output=True, text=True)
+    return int(r.stdout.strip() or 0) > 100
+
+
+requires_history = pytest.mark.skipif(
+    not _history_is_available(),
+    reason=(
+        "shallow or truncated clone — doc ages cannot be measured from git history here. "
+        "This is a SKIP, not a pass: run locally, or give CI `fetch-depth: 0` to enable it."
+    ),
+)
+
+
 def _tracked_markdown() -> list[Path]:
     out = subprocess.run(
         ["git", "ls-files", "*.md"], cwd=ROOT, capture_output=True, text=True, check=True
@@ -73,6 +104,7 @@ def _is_archived(rel: str) -> bool:
     return "_archive/" in rel or rel.startswith("_archive")
 
 
+@requires_history
 def test_every_stale_doc_is_archived_or_ACKNOWLEDGED():
     """The gate. A doc past the threshold with no recorded decision fails here.
 
@@ -144,6 +176,7 @@ def test_a_pending_review_entry_carries_a_DEADLINE_and_it_has_not_passed():
     )
 
 
+@requires_history
 def test_the_registry_has_no_entries_for_docs_that_are_FRESH_or_GONE():
     """A registry that outlives its subjects becomes noise nobody prunes.
 
@@ -163,6 +196,7 @@ def test_the_registry_has_no_entries_for_docs_that_are_FRESH_or_GONE():
     assert not stale_entries, "registry entries that no longer describe anything:\n  " + "\n  ".join(stale_entries)
 
 
+@requires_history
 def test_the_threshold_actually_bites():
     """Positive control.
 
