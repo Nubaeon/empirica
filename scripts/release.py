@@ -18,6 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -814,9 +815,33 @@ class ReleaseManager:
 
         results: list[tuple[str, bool, str]] = []
 
+        # A FETCH FAILURE IS NOT AN ABSENCE. `_get` returns None on any network
+        # error, and reporting that as "absent from the simple index" tells the
+        # operator the release did not land when the truth is that the check
+        # could not look — then names `--publish --local-artifacts` as the
+        # remedy, which races the GitHub release to fix a channel that is fine.
+        #
+        # Observed on the 1.13.39 cut: three consecutive verifies disagreed with
+        # each other and with a direct curl. Retried, because a transient is the
+        # common case and a real absence stays absent.
         for pkg, fname in (("empirica", f"empirica-{v}"), ("empirica-mcp", f"empirica_mcp-{v}")):
-            body = _get(f"https://pypi.org/simple/{pkg}/")
-            ok = bool(body and fname in body)
+            body = None
+            for _ in range(3):
+                body = _get(f"https://pypi.org/simple/{pkg}/")
+                if body:
+                    break
+                time.sleep(2)
+            if body is None:
+                results.append(
+                    (
+                        f"PyPI {pkg}",
+                        False,
+                        "COULD NOT REACH the simple index after 3 tries — this is UNKNOWN, not "
+                        "absent. Do not republish on this; curl the index yourself first.",
+                    )
+                )
+                continue
+            ok = fname in body
             results.append((f"PyPI {pkg}", ok, "simple index" if ok else "absent from the simple index"))
 
         for tag in (v, f"{v}-alpine"):
@@ -919,9 +944,23 @@ class ReleaseManager:
                             break
                 if got.get("empirica") == v and got.get("empirica-mcp") == v:
                     return True, f"pip -U resolves empirica {v} + empirica-mcp {v}"
+                # An OLD version here is not yet a verdict. `--no-cache-dir`
+                # defeats the LOCAL pip cache (added after 1.13.15) but not
+                # PyPI's CDN, whose edges propagate independently — measured on
+                # 1.13.39, three consecutive verifies resolved 1.13.38, then
+                # 1.13.39, then 1.13.38 again, while a direct `pip download
+                # --no-cache-dir` fetched the new wheel every time.
+                #
+                # So: say WHICH it is. A stale resolve that persists is a real
+                # self-reverting release; one that flips is propagation. Naming
+                # the flip is the point — two disagreeing answers from the same
+                # check IS the finding, and reporting either one alone is wrong.
                 return False, (
                     f"pip -U resolves empirica {got.get('empirica', '?')} + "
-                    f"empirica-mcp {got.get('empirica-mcp', '?')} — a sibling lag/pin DOWNGRADES the closure"
+                    f"empirica-mcp {got.get('empirica-mcp', '?')} — either a sibling lag/pin "
+                    f"DOWNGRADING the closure, or CDN propagation. Re-run --verify: if it "
+                    f"flips to {v} it was propagation; if it stays, the release is "
+                    f"self-reverting and needs the sibling republished."
                 )
         except Exception as e:
             return None, f"skipped — closure check errored: {str(e)[:120]}"
