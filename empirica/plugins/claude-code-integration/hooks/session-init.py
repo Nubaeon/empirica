@@ -670,13 +670,15 @@ def _heal_mesh_metadata_at_init(project_root: str | None) -> None:
             return  # nothing to compose a seat from — leave alone, never guess
 
         # Backfill needed — resolve cortex creds.
-        from empirica.config.credentials_loader import get_credentials_loader
+        # Through the SHARED credential contract: OAuth-first with an api_key
+        # fallback, skipping a key already recorded as terminally dead. A direct
+        # `cfg["api_key"]` read sees none of that, so an OAuth-only seat looks
+        # un-onboarded and this silently no-ops forever.
+        from empirica.core.auth import cortex_bearer
 
-        loader = get_credentials_loader()
-        loader.reload()
-        cortex_cfg = loader.get_cortex_config()
-        cortex_url = cortex_cfg.get("url")
-        api_key = cortex_cfg.get("api_key")
+        creds = cortex_bearer()
+        cortex_url = creds.get("url")
+        api_key = creds.get("bearer")
         if not (cortex_url and api_key):
             return  # offline / un-onboarded — silent no-op
 

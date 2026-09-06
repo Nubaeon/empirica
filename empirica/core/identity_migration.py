@@ -392,13 +392,16 @@ def _make_cortex_slug_resolver(timeout: float = 8.0) -> CortexResolver:
             import urllib.parse
             import urllib.request
 
-            import yaml
+            # Through the SHARED credential contract. Hand-parsing
+            # ~/.empirica/credentials.yaml is blind twice over: to OAuth-only
+            # seats (no api_key exists to find) and to the loader's own
+            # precedence, so a repo-local credentials file the loader honours is
+            # invisible to a reader that only opens HOME. Every private resolver
+            # is its own 401 contract.
+            from empirica.core.auth import cortex_bearer
 
-            cred = Path.home() / ".empirica" / "credentials.yaml"
-            if not cred.exists():
-                return None
-            cortex = (yaml.safe_load(cred.read_text(encoding="utf-8")) or {}).get("cortex") or {}
-            url, key = cortex.get("url"), cortex.get("api_key")
+            creds = cortex_bearer()
+            url, key = creds.get("url"), creds.get("bearer")
             if not url or not key:
                 return None
             endpoint = url.rstrip("/") + "/v1/projects/by-slug/" + urllib.parse.quote(str(slug), safe="")

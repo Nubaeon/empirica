@@ -264,13 +264,21 @@ def test_cortex_slug_resolver_parses_200_and_404(tmp_path, monkeypatch):
 
     from empirica.core import identity_migration as im
 
-    # credentials.yaml with a cortex url+key
-    cred_dir = tmp_path / ".empirica"
-    cred_dir.mkdir()
-    (cred_dir / "credentials.yaml").write_text(
-        yaml.safe_dump({"cortex": {"url": "https://cortex.example", "api_key": "ctx_x"}})
+    # The resolver now goes through the SHARED credential contract rather than
+    # hand-parsing ~/.empirica/credentials.yaml, so the double moves with it.
+    #
+    # The old setup wrote a credentials.yaml under tmp_path and patched
+    # `im.Path.home`. That worked against a hand-parser and is order-dependent
+    # against the loader, which caches a singleton — the test passed alone and
+    # failed in a group where an earlier test had already populated the cache.
+    #
+    # Patching `cortex_bearer` is also what this test MEANS: the subject is
+    # "does the slug resolver parse 200 and 404", and the credentials were only
+    # ever scaffolding to get past the guard.
+    monkeypatch.setattr(
+        "empirica.core.auth.cortex_bearer",
+        lambda *a, **k: {"url": "https://cortex.example", "bearer": "ctx_x", "source": "test"},
     )
-    monkeypatch.setattr(im.Path, "home", classmethod(lambda cls: tmp_path))
 
     class _Resp(io.BytesIO):
         def __enter__(self):

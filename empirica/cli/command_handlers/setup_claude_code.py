@@ -1672,15 +1672,16 @@ def _resolve_and_persist_tenant_metadata(
         metadata = overrides
     else:
         try:
-            from empirica.config.credentials_loader import get_credentials_loader
+            # Shared contract, not a private api_key read — an OAuth-only seat
+            # has no api_key to find and would fall through to the un-onboarded
+            # branch below with no indication why.
+            from empirica.core.auth import cortex_bearer
 
-            loader = get_credentials_loader()
-            loader.reload()
-            cortex_cfg = loader.get_cortex_config()
+            cortex_cfg = cortex_bearer()
         except Exception:
             cortex_cfg = {}
         cortex_url = cortex_cfg.get("url")
-        api_key = cortex_cfg.get("api_key")
+        api_key = cortex_cfg.get("bearer")
         if not (cortex_url and api_key):
             if any(overrides.values()) and output_format != "json":
                 # Flags partially supplied but no api_key to fill the rest.

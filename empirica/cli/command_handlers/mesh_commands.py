@@ -82,19 +82,28 @@ class MeshInstanceState(NamedTuple):
 
 
 def _load_cortex_credentials() -> dict | None:
-    if not CREDENTIALS_YAML.exists():
-        return None
-    try:
-        import yaml
+    """Cortex credentials through the SHARED contract.
 
-        with CREDENTIALS_YAML.open() as f:
-            data = yaml.safe_load(f) or {}
-        cortex = data.get("cortex")
-        if cortex and cortex.get("api_key"):
-            return cortex
+    Hand-parsed `~/.empirica/credentials.yaml` and gated on `api_key` being
+    present, which was blind twice: an OAuth-only seat has no api_key, so this
+    returned None and every caller reported "no cortex creds"; and a repo-local
+    credentials file that the loader honours was invisible to a reader that only
+    opened HOME. Every private resolver is its own 401 contract.
+
+    Returns the cortex block shape callers already expect — `url` plus `api_key`
+    carrying the resolved bearer, whatever its origin — so the two call sites
+    reading `.get("api_key")` keep working against an OAuth seat.
+    """
+    try:
+        from empirica.core.auth import cortex_bearer
+
+        creds = cortex_bearer()
     except Exception:
-        pass
-    return None
+        return None
+    url, bearer = creds.get("url"), creds.get("bearer")
+    if not (url and bearer):
+        return None
+    return {**creds, "url": url, "api_key": bearer}
 
 
 def _enumerate_instances() -> list[str]:
