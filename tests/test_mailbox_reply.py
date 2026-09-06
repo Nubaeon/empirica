@@ -396,7 +396,16 @@ def test_propose_failure_returns_1(capsys):
     )
     assert rc == 1
     err = capsys.readouterr().err
-    assert "cortex_propose failed" in err
+    # Was `"cortex_propose failed" in err`. The wording changed deliberately:
+    # "failed" was the word that conflated a server REFUSAL (this case, a real
+    # HTTP 500) with NO ANSWER AT ALL (status=-1, a transport timeout), and the
+    # conflation is what stranded a parent on 2026-09-06. A 500 is an answer.
+    #
+    # Asserting the contract rather than the phrasing: exit 1, the real status
+    # surfaced, and the server's own error carried through.
+    assert "REJECTED" in err
+    assert "500" in err
+    assert "server explosion" in err
 
 
 def test_complete_failure_returns_0_with_warning(capsys):

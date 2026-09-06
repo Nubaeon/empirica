@@ -364,13 +364,60 @@ def handle_mailbox_reply_command(  # noqa: C901 — CLI handler with 7 validatio
         "parent_id": parent_id,
         "payload": payload,
     }
+    # An idempotency key makes the retry below SAFE. Cortex's applied-keys ledger
+    # no-ops on a key it has seen and returns the original receipt, so re-sending
+    # after "no answer" cannot double-post. Derived from the reply's identity
+    # (type + targets + parent + summary), so the original and the retry compute
+    # the SAME key — which is the entire property being relied on.
+    try:
+        from empirica.core.mesh_content import idempotency_key
+
+        propose_body.setdefault("payload", {})
+        propose_body["payload"]["idempotency_key"] = idempotency_key(
+            proposal_type,
+            ",".join(sorted(target_claudes)),
+            {"parent_id": parent_id, "summary": summary},
+        )
+    except Exception as e:  # never block a reply on the key helper
+        sys.stderr.write(f"mailbox reply: could not compute idempotency_key ({e}) — retry disabled\n")
+
     status, propose_resp = _http_post(propose_url, propose_body, api_key, 10.0)
-    # Cortex returns 2xx + proposal_id on success (no wrapper "ok" field).
-    # Treat HTTP 2xx with a proposal_id as success regardless of "ok" presence.
+
+    # status == -1 is the TRANSPORT branch: no HTTP response arrived at all.
+    # That is "I never heard back", NOT "the server said no" — and the server may
+    # well have committed. Aborting here is what strands the parent: measured
+    # 2026-09-06, a read timeout left the peer holding the reply while the
+    # sender's parent stayed accepted with completed_at null, which is precisely
+    # the stalled handshake this verb exists to prevent. A second practice hit
+    # the other half and double-sent after a "failed" reply that had succeeded.
+    #
+    # Note the asymmetry this corrects: the step-2 failure below was ALREADY
+    # handled gracefully with a precise message. Whoever wrote it thought about a
+    # partial apply BETWEEN the steps and not about an unknown outcome WITHIN one.
+    if status == -1:
+        sys.stderr.write(
+            f"mailbox reply: no response from cortex ({propose_resp.get('error')}) — "
+            "UNKNOWN, not failed. Retrying with the idempotency key; if the first "
+            "propose committed, this returns that same proposal rather than a second one.\n"
+        )
+        status, propose_resp = _http_post(propose_url, propose_body, api_key, 20.0)
+
     new_proposal_id = propose_resp.get("proposal_id") if isinstance(propose_resp, dict) else None
     propose_ok = (200 <= status < 300) and new_proposal_id is not None
     if not propose_ok:
-        sys.stderr.write(f"mailbox reply: cortex_propose failed (status={status}): {propose_resp}\n")
+        if status == -1:
+            # Still no answer. Report the state honestly — UNRESOLVED, with the
+            # reconcile step — rather than claiming a rejection that may not have
+            # happened. Exit 2 so a caller can tell it from a real refusal.
+            sys.stderr.write(
+                f"mailbox reply: cortex did not respond, twice ({propose_resp.get('error')}). "
+                "The reply MAY have been delivered — this is UNKNOWN, not rejected.\n"
+                "  Check whether it landed:  empirica mailbox poll --outbox\n"
+                f"  If it did, close the parent with cortex_complete_proposal on {parent_id}.\n"
+                "  Re-running this command is safe: the idempotency key collapses a duplicate.\n"
+            )
+            return 2
+        sys.stderr.write(f"mailbox reply: cortex_propose was REJECTED (status={status}): {propose_resp}\n")
         return 1
     if not new_proposal_id:
         sys.stderr.write(f"mailbox reply: cortex_propose returned no proposal_id: {propose_resp}\n")
