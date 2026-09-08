@@ -123,3 +123,50 @@ def test_every_real_http_status_is_a_refusal_not_an_unknown(http_status, capsys)
     """Only -1 means 'no answer'. A 500 IS an answer — the server replied."""
     kw, _ = _harness([(http_status, {"error": "x"})])
     assert handle_mailbox_reply_command(_args(), **kw) == 1
+
+
+# --------------------------------------------------------------------------
+# The control that was WRITTEN, then LOST IN A REWRITE, then shipped a
+# regression. Restored here permanently.
+# --------------------------------------------------------------------------
+
+
+def test_DIFFERENT_replies_do_not_collide_into_one_key():
+    """The regression this file failed to prevent, and the reason it failed.
+
+    `parent_id` and `summary` are both in `_VOLATILE_PARAM_KEYS` — correctly, for
+    a generic propose. Passing them as the key's params therefore left `{}`, so
+    EVERY reply of the same type to the same peer computed the identical key. The
+    ledger swallowed genuinely new replies as replays and returned ok:true.
+    Reported 2026-09-08 after a distinct message was lost.
+
+    An assertion in this exact shape existed in the first draft of this file and
+    was dropped when the file was rewritten to drive the handler through its
+    injected poster. The rewrite was the right call and it silently removed the
+    one control that mattered — so this is pinned below the retry test rather
+    than folded into it, where a future rewrite would have to delete it on
+    purpose.
+    """
+    kw_a, calls_a = _harness([OK, COMPLETED])
+    handle_mailbox_reply_command(_args(parent_id="prop_ONE", summary="first"), **kw_a)
+
+    kw_b, calls_b = _harness([OK, COMPLETED])
+    handle_mailbox_reply_command(_args(parent_id="prop_TWO", summary="second"), **kw_b)
+
+    key_a = next(c["body"]["payload"]["idempotency_key"] for c in calls_a if c["url"].endswith("/propose"))
+    key_b = next(c["body"]["payload"]["idempotency_key"] for c in calls_b if c["url"].endswith("/propose"))
+    assert key_a and key_b
+    assert key_a != key_b, "two different replies collapsed to one key — the ledger will swallow the second"
+
+
+def test_the_SAME_reply_body_to_a_DIFFERENT_parent_is_still_distinct():
+    """The narrower half: identical prose, different thread. Acking two peers'
+    requests with the same wording is ordinary, and must not dedupe."""
+    kw_a, calls_a = _harness([OK, COMPLETED])
+    handle_mailbox_reply_command(_args(parent_id="prop_ONE", summary="done"), **kw_a)
+    kw_b, calls_b = _harness([OK, COMPLETED])
+    handle_mailbox_reply_command(_args(parent_id="prop_TWO", summary="done"), **kw_b)
+
+    key_a = next(c["body"]["payload"]["idempotency_key"] for c in calls_a if c["url"].endswith("/propose"))
+    key_b = next(c["body"]["payload"]["idempotency_key"] for c in calls_b if c["url"].endswith("/propose"))
+    assert key_a != key_b, "same wording to a different parent is a different action"

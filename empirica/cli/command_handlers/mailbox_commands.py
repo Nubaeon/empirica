@@ -370,13 +370,30 @@ def handle_mailbox_reply_command(  # noqa: C901 — CLI handler with 7 validatio
     # (type + targets + parent + summary), so the original and the retry compute
     # the SAME key — which is the entire property being relied on.
     try:
+        import hashlib as _hl
+
         from empirica.core.mesh_content import idempotency_key
 
+        # `parent_id` and `summary` are BOTH in `_VOLATILE_PARAM_KEYS` — stripped
+        # as per-emission ids and free-text prose. That is right for a generic
+        # propose and CATASTROPHIC here: passing them as params left `{}`, so
+        # every reply of the same type to the same peer computed the IDENTICAL
+        # key. The ledger then swallowed genuinely new replies as replays and
+        # returned ok:true. Reported 2026-09-08 — a distinct message lost, with
+        # the caller's own fields echoed back as if stored.
+        #
+        # For a REPLY the parent IS the action identity: "reply to X with body Y"
+        # is a different action from "reply to Z". So the same semantics ride
+        # non-volatile names — and the digest, not the prose, because the volatile
+        # list is right that free text should not key anything directly.
         propose_body.setdefault("payload", {})
         propose_body["payload"]["idempotency_key"] = idempotency_key(
             proposal_type,
             ",".join(sorted(target_claudes)),
-            {"parent_id": parent_id, "summary": summary},
+            {
+                "reply_to": parent_id,
+                "body_digest": _hl.sha256((summary or "").encode()).hexdigest()[:16],
+            },
         )
     except Exception as e:  # never block a reply on the key helper
         sys.stderr.write(f"mailbox reply: could not compute idempotency_key ({e}) — retry disabled\n")
