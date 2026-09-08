@@ -206,3 +206,36 @@ def test_a_SILENT_server_reports_UNKNOWN_not_fresh(capsys):
     would invent the answer — the exact shape of collapsing unknown into a
     definite value that this whole file exists about."""
     assert _reply_result([SILENT, COMPLETED], capsys)["idempotent_replay"] is None
+
+
+CONFLICT = (409, {"error": "idempotency_key_conflict", "detail": "stored fingerprint differs"})
+
+
+def test_a_KEY_CONFLICT_is_not_reported_as_an_ordinary_refusal(capsys):
+    """Cortex's server guard (b15f0223) returns 409 idempotency_key_conflict when a
+    key hit's stored fingerprint differs from the request — meaning OUR key
+    derivation is colliding, nothing was sent, nothing replayed.
+
+    A 403 is 'you may not do this'; this 409 is 'your client has the bug that
+    swallowed messages'. Same exit code would send the operator to permissions.
+    """
+    kw, _ = _harness([CONFLICT])
+    rc = handle_mailbox_reply_command(_args(), **kw)
+    err = capsys.readouterr().err
+
+    assert rc == 3, "a key conflict needs an exit code distinct from a refusal (1) and unknown (2)"
+    assert "NOT sent" in err and "nothing was replayed" in err
+    assert "key-derivation collision" in err
+    assert "not a permission problem" in err
+
+
+def test_an_ORDINARY_409_is_still_a_plain_refusal(capsys):
+    """Positive control: only the idempotency conflict gets the special path.
+    A 409 from anything else must not claim the client's keys are colliding."""
+    kw, _ = _harness([(409, {"error": "some other conflict"})])
+    rc = handle_mailbox_reply_command(_args(), **kw)
+    err = capsys.readouterr().err
+
+    assert rc == 1
+    assert "REJECTED" in err
+    assert "key-derivation" not in err

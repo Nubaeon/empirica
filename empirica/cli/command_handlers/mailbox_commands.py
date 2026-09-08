@@ -434,6 +434,26 @@ def handle_mailbox_reply_command(  # noqa: C901 — CLI handler with 7 validatio
                 "  Re-running this command is safe: the idempotency key collapses a duplicate.\n"
             )
             return 2
+        if status == 409 and isinstance(propose_resp, dict) and "idempotency_key_conflict" in str(propose_resp):
+            # NOT an ordinary refusal. Cortex's ledger stores a fingerprint of
+            # parent|title|summary — the fields a genuine retry cannot differ on
+            # — and a key hit whose fingerprint differs means OUR key derivation
+            # is colliding. Nothing was sent and nothing was replayed.
+            #
+            # Distinguished because the remedy is entirely different: a 403 is
+            # "you may not do this", a 409 here is "this client has the bug that
+            # swallowed messages in 1.13.39". Reporting it as a generic rejection
+            # would send the operator looking at permissions.
+            sys.stderr.write(
+                "mailbox reply: cortex REFUSED on an idempotency-key CONFLICT (409). Your message was "
+                "NOT sent and nothing was replayed — this is a client-side key-derivation collision, "
+                "not a permission problem.\n"
+                "  Two different replies computed the same key. Upgrade: 1.13.39 and earlier derived "
+                "the key from fields the hasher discards, so every reply of one type to one peer "
+                "collided.\n"
+                f"  Server detail: {propose_resp}\n"
+            )
+            return 3
         sys.stderr.write(f"mailbox reply: cortex_propose was REJECTED (status={status}): {propose_resp}\n")
         return 1
     if not new_proposal_id:
