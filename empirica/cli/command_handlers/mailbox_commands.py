@@ -508,10 +508,31 @@ def handle_mailbox_reply_command(  # noqa: C901 — CLI handler with 7 validatio
     # original name, kept as an alias so any out-of-repo consumer keeps working; both
     # always carry the same value. Cortex looked for `proposal_id`, found nothing, and
     # reported the ack path as an unverifiable success (prop_t5tl6noq).
+    # WAS THIS A FRESH WRITE OR A REPLAY? A correct key stops collisions; it does
+    # not make a legitimate replay distinguishable from a new store, and on the
+    # retry path that is exactly the operator's question — did my first propose
+    # land, or did this one create a second? Cortex signals it
+    # (`status='idempotent_replay'`, `replay_caught`); the client ignored it, so
+    # both outcomes rendered as an identical ok:true + proposal_id.
+    #
+    # `unknown` when the server said nothing: an older cortex does not emit the
+    # flag, and reporting "fresh" on its silence would be inventing the answer.
+    _replay = None
+    if isinstance(propose_resp, dict):
+        if propose_resp.get("replay_caught") is not None:
+            _replay = bool(propose_resp["replay_caught"])
+        elif propose_resp.get("status") == "idempotent_replay":
+            _replay = True
+        elif propose_resp.get("status"):
+            _replay = False
+
     result = {
         "ok": True,
         "proposal_id": new_proposal_id,
         "new_proposal_id": new_proposal_id,
+        # True = the ledger returned an EXISTING proposal (your earlier attempt
+        # landed). False = newly stored. None = the server did not say.
+        "idempotent_replay": _replay,
         "parent_id": parent_id,
         "parent_closed": parent_closed,
         "parent_archived": parent_archived,

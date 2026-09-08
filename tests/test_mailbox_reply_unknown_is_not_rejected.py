@@ -17,6 +17,7 @@ partial apply BETWEEN steps and not about an unknown outcome WITHIN one.
 
 from __future__ import annotations
 
+import json
 from argparse import Namespace
 
 import pytest
@@ -170,3 +171,38 @@ def test_the_SAME_reply_body_to_a_DIFFERENT_parent_is_still_distinct():
     key_a = next(c["body"]["payload"]["idempotency_key"] for c in calls_a if c["url"].endswith("/propose"))
     key_b = next(c["body"]["payload"]["idempotency_key"] for c in calls_b if c["url"].endswith("/propose"))
     assert key_a != key_b, "same wording to a different parent is a different action"
+
+
+# --------------------------------------------------------------------------
+# A correct key stops COLLISIONS. It does not make a legitimate replay
+# distinguishable from a fresh write — and on the retry path that is exactly
+# the question. Raised by a peer after the collision fix landed.
+# --------------------------------------------------------------------------
+
+REPLAYED = (200, {"proposal_id": "prop_new", "status": "idempotent_replay", "replay_caught": True})
+FRESH = (200, {"proposal_id": "prop_new", "status": "stored", "replay_caught": False})
+SILENT = (200, {"proposal_id": "prop_new"})
+
+
+def _reply_result(sequence, capsys):
+    kw, _ = _harness(sequence)
+    handle_mailbox_reply_command(_args(), **kw)
+    return json.loads(capsys.readouterr().out)
+
+
+def test_a_REPLAY_is_reported_as_a_replay(capsys):
+    """After a timeout retry, 'my first propose landed and this is it' must be
+    legible. It rendered identically to a fresh write."""
+    assert _reply_result([TIMEOUT, REPLAYED, COMPLETED], capsys)["idempotent_replay"] is True
+
+
+def test_a_FRESH_write_is_reported_as_fresh(capsys):
+    """Positive control: the flag must distinguish, not merely be present."""
+    assert _reply_result([FRESH, COMPLETED], capsys)["idempotent_replay"] is False
+
+
+def test_a_SILENT_server_reports_UNKNOWN_not_fresh(capsys):
+    """An older cortex does not emit the flag. Reporting `false` on its silence
+    would invent the answer — the exact shape of collapsing unknown into a
+    definite value that this whole file exists about."""
+    assert _reply_result([SILENT, COMPLETED], capsys)["idempotent_replay"] is None
